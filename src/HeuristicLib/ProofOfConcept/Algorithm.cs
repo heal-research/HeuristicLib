@@ -20,7 +20,7 @@ public interface ICrossover<TSolution>
   TSolution Crossover(TSolution parent1, TSolution parent2);
 }
 
-public interface IMutation<TSolution>
+public interface IMutator<TSolution>
 {
   TSolution Mutate(TSolution individual);
 }
@@ -37,24 +37,24 @@ public interface IEvaluator<TSolution>
 
 public interface ISelector<TSolution>
 {
-  List<TSolution> Select(List<TSolution> population, List<double> qualities, int count);
+  IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities, int count);
 }
 
 public interface IReplacement<TSolution>
 {
   int GetOffspringCount(int populationSize);
-  (List<TSolution> newPopulation, List<double> newQualities) Replace(
-    List<TSolution> previousPopulation, List<double> previousQualities,
-    List<TSolution> offspringPopulation, List<double> offspringQualities);
+  (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<double> newQualities) Replace(
+    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<double> previousQualities,
+    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<double> offspringQualities);
 }
 
 public class PlusSelectionReplacement<TSolution> : IReplacement<TSolution>
 {
   public int GetOffspringCount(int populationSize) => populationSize;
 
-  public (List<TSolution> newPopulation, List<double> newQualities) Replace(
-    List<TSolution> previousPopulation, List<double> previousQualities,
-    List<TSolution> offspringPopulation, List<double> offspringQualities)
+  public (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<double> newQualities) Replace(
+    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<double> previousQualities,
+    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<double> offspringQualities)
   {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
     var combinedQualities = previousQualities.Concat(offspringQualities).ToList();
@@ -83,9 +83,9 @@ public class ElitismReplacement<TSolution> : IReplacement<TSolution>
 
   public int GetOffspringCount(int populationSize) => populationSize - elites;
 
-  public (List<TSolution> newPopulation, List<double> newQualities) Replace(
-    List<TSolution> previousPopulation, List<double> previousQualities,
-    List<TSolution> offspringPopulation, List<double> offspringQualities)
+  public (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<double> newQualities) Replace(
+    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<double> previousQualities,
+    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<double> offspringQualities)
   {
     var sortedPreviousIndices = previousQualities
       .Select((quality, index) => new { quality, index })
@@ -119,13 +119,13 @@ public class SinglePointCrossover : ICrossover<double[]>
   }
 }
 
-public class GaussianMutation : IMutation<double[]>
+public class GaussianMutator : IMutator<double[]>
 {
   private readonly Random random = new();
   private readonly double mutationRate;
   private readonly double mutationStrength;
 
-  public GaussianMutation(double mutationRate, double mutationStrength)
+  public GaussianMutator(double mutationRate, double mutationStrength)
   {
     this.mutationRate = mutationRate;
     this.mutationStrength = mutationStrength;
@@ -173,7 +173,7 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution>
 {
   private readonly Random random = new();
 
-  public List<TSolution> Select(List<TSolution> population, List<double> qualities, int count)
+  public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities, int count)
   {
     var selected = new List<TSolution>();
     for (int j = 0; j < count; j++)
@@ -200,7 +200,7 @@ public class RandomSelector<TSolution> : ISelector<TSolution>
 {
   private readonly Random random = new();
 
-  public List<TSolution> Select(List<TSolution> population, List<double> qualities, int count)
+  public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities, int count)
   {
     var selected = new List<TSolution>();
     for (int i = 0; i < count; i++)
@@ -213,20 +213,20 @@ public class RandomSelector<TSolution> : ISelector<TSolution>
 }
 #endregion
 
-public record PopulationState<TSolution>(int CurrentGeneration, List<TSolution> Population, List<double> Qualities);
+public record PopulationState<TSolution>(int CurrentGeneration, IReadOnlyList<TSolution> Population, IReadOnlyList<double> Qualities);
 
 public class GeneticAlgorithm<TSolution>
   : IAlgorithm<PopulationState<TSolution>>
 {
   public GeneticAlgorithm(int populationSize,
-    ICreator<TSolution> creator, ICrossover<TSolution> crossover, IMutation<TSolution> mutation, double mutationRate,
+    ICreator<TSolution> creator, ICrossover<TSolution> crossover, IMutator<TSolution> mutator, double mutationRate,
     ITerminationCriterion<PopulationState<TSolution>> terminationCriterion, IEvaluator<TSolution> evaluator, Random random, ISelector<TSolution> selector, IReplacement<TSolution> replacement)
   {
     PopulationSize = populationSize;
     TerminationCriterion = terminationCriterion;
     Creator = creator;
     Crossover = crossover;
-    Mutation = mutation;
+    Mutator = mutator;
     MutationRate = mutationRate;
     Evaluator = evaluator;
     Random = random;
@@ -238,7 +238,7 @@ public class GeneticAlgorithm<TSolution>
   public ITerminationCriterion<PopulationState<TSolution>> TerminationCriterion { get; }
   public ICreator<TSolution> Creator { get; }
   public ICrossover<TSolution> Crossover { get; }
-  public IMutation<TSolution> Mutation { get; }
+  public IMutator<TSolution> Mutator { get; }
   public double MutationRate { get; }
   public IEvaluator<TSolution> Evaluator { get; }
   public Random Random { get; }
@@ -270,7 +270,7 @@ public class GeneticAlgorithm<TSolution>
     return currentState;
   }
 
-  private List<TSolution> InitializePopulation()
+  private IReadOnlyList<TSolution> InitializePopulation()
   {
     var population = new List<TSolution>();
     for (int i = 0; i < PopulationSize; i++) {
@@ -279,7 +279,7 @@ public class GeneticAlgorithm<TSolution>
     return population;
   }
 
-  private List<TSolution> EvolvePopulation(List<TSolution> population, int offspringCount)
+  private IReadOnlyList<TSolution> EvolvePopulation(IReadOnlyList<TSolution> population, int offspringCount)
   {
     var newPopulation = new List<TSolution>();
     var qualities = EvaluatePopulation(population);
@@ -291,20 +291,22 @@ public class GeneticAlgorithm<TSolution>
       var parent2 = parents[i + 1];
       var offspring = Crossover.Crossover(parent1, parent2);
       if (Random.NextDouble() < MutationRate) {
-        offspring = Mutation.Mutate(offspring);
+        offspring = Mutator.Mutate(offspring);
       }
       newPopulation.Add(offspring);
     }
     return newPopulation;
   }
 
-  private List<double> EvaluatePopulation(List<TSolution> population)
+  private IReadOnlyList<double> EvaluatePopulation(IReadOnlyList<TSolution> population)
   {
     return population.Select(individual => Evaluator.Evaluate(individual)).ToList();
   }
 
-  private TSolution GetBestIndividual(List<TSolution> population, List<double> qualities) {
-    var bestIndex = qualities.IndexOf(qualities.Min());
+  private TSolution GetBestIndividual(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities) {
+    var bestIndex = qualities.Select((quality, index) => new { quality, index })
+                             .OrderBy(x => x.quality)
+                             .First().index;
     return population[bestIndex];
   }
 }
@@ -372,7 +374,7 @@ public class GeneticAlgorithmBuilder<TSolution>
   private readonly List<ITerminationCriterion<PopulationState<TSolution>>> terminationCriteria = [];
   private ICreator<TSolution>? creator;
   private ICrossover<TSolution>? crossover;
-  private IMutation<TSolution>? mutation;
+  private IMutator<TSolution>? mutator;
   private IEvaluator<TSolution>? evaluator;
   private Action<TSolution>? onLiveResult;
   private double mutationRate;
@@ -390,8 +392,8 @@ public class GeneticAlgorithmBuilder<TSolution>
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithMutation(IMutation<TSolution> mutation) {
-    this.mutation = mutation;
+  public GeneticAlgorithmBuilder<TSolution> WithMutation(IMutator<TSolution> mutator) {
+    this.mutator = mutator;
     return this;
   }
 
@@ -444,6 +446,14 @@ public class GeneticAlgorithmBuilder<TSolution>
     onLiveResult = handler;
     return this;
   }
+  
+  public GeneticAlgorithmBuilder<TSolution> WithEncoding(IEncoding<TSolution> encoding)
+  {
+    creator = encoding.Creator;
+    mutator = encoding.Mutator;
+    crossover = encoding.Crossover;
+    return this;
+  }
 
   public GeneticAlgorithm<TSolution> Build() {
     var result = Validate();
@@ -455,7 +465,7 @@ public class GeneticAlgorithmBuilder<TSolution>
       populationSize,
       creator!,
       crossover!,
-      mutation!, mutationRate, new AnyTerminationCriterion<PopulationState<TSolution>>(terminationCriteria.ToList()),
+      mutator!, mutationRate, new AnyTerminationCriterion<PopulationState<TSolution>>(terminationCriteria.ToList()),
       evaluator!, random ?? new Random(), selector!, replacement!
     );
     if (onLiveResult != null) {
@@ -473,7 +483,7 @@ public class GeneticAlgorithmBuilder<TSolution>
     public GeneticAlgorithmBuilderValidator() {
       RuleFor(x => x.creator).NotNull().WithMessage("Creator must not be null.");
       RuleFor(x => x.crossover).NotNull().WithMessage("Crossover must not be null.");
-      RuleFor(x => x.mutation).NotNull().WithMessage("Mutation must not be null.");
+      RuleFor(x => x.mutator).NotNull().WithMessage("Mutation must not be null.");
       RuleFor(x => x.mutationRate)
         .InclusiveBetween(0, 1)
         .WithMessage("Mutation rate must be between 0 and 1.");
