@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.ProofOfConcept;
+﻿namespace HEAL.HeuristicLib._ProofOfConcept;
 
 public interface IRegressor
 {

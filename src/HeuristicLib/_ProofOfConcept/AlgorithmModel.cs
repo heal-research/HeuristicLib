@@ -1,4 +1,7 @@
-﻿namespace HEAL.HeuristicLib.ProofOfConcept;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators;
+
+namespace HEAL.HeuristicLib._ProofOfConcept;
 
 public interface IAlgorithmModel
 {

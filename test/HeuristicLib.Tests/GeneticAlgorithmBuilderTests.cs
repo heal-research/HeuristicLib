@@ -1,11 +1,13 @@
-using HEAL.HeuristicLib.ProofOfConcept;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
 using Xunit;
 
 namespace HEAL.HeuristicLib.Tests;
 
 public class GeneticAlgorithmBuilderTests {
   [Fact]
-  public void GeneticAlgorithmBuilder_ShouldBuildAlgorithm() {
+  public Task GeneticAlgorithmBuilder_ShouldBuildAlgorithm() {
     var builder = new GeneticAlgorithmBuilder<RealVector>()
       .WithPopulationSize(200)
       .WithCrossover(new SinglePointCrossover())
@@ -19,7 +21,7 @@ public class GeneticAlgorithmBuilderTests {
 
     var ga = builder.Build();
 
-    Verify(ga);
+    return Verify(ga);
   }
 
   private class MockEvaluator : IEvaluator<RealVector> {

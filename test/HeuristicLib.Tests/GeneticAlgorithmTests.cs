@@ -1,4 +1,6 @@
-using HEAL.HeuristicLib.ProofOfConcept;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -10,8 +12,8 @@ public class GeneticAlgorithmTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var evaluator = new MockEvaluator();
     var selector = new ProportionalSelector<RealVector>();
-    var replacement = new PlusSelectionReplacement<RealVector>();
-    var terminationCriterion = new ThresholdCriterion<PopulationState<RealVector>>(50, state => state.CurrentGeneration);
+    var replacement = new PlusSelectionReplacer<RealVector>();
+    var terminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.CurrentGeneration);
     var random = new Random();
 
     var ga = new GeneticAlgorithm<RealVector>(
@@ -30,9 +32,9 @@ public class GeneticAlgorithmTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var evaluator = new MockEvaluator();
     var selector = new ProportionalSelector<RealVector>();
-    var replacement = new PlusSelectionReplacement<RealVector>();
+    var replacement = new PlusSelectionReplacer<RealVector>();
     var pauseToken = new PauseToken();
-    var terminationCriterion = new PauseTokenCriterion<PopulationState<RealVector>>(pauseToken);
+    var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
     var random = new Random();
 
     var ga = new GeneticAlgorithm<RealVector>(
@@ -48,7 +50,7 @@ public class GeneticAlgorithmTests {
     Assert.True(pausedState.CurrentGeneration > 0);
 
     // Continue running the GA
-    var newTerminationCriterion = new ThresholdCriterion<PopulationState<RealVector>>(pausedState.CurrentGeneration + 50, state => state.CurrentGeneration);
+    var newTerminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(pausedState.CurrentGeneration + 50, state => state.CurrentGeneration);
     var continuedGA = new GeneticAlgorithm<RealVector>(
       200, creator, crossover, mutator, 0.05, newTerminationCriterion, evaluator, random, selector, replacement
     );
