@@ -105,21 +105,25 @@ public class ElitismReplacement<TSolution> : IReplacement<TSolution>
 
 #region Sample Operators
 
-public class SinglePointCrossover : ICrossover<double[]>
+public class SinglePointCrossover : ICrossover<RealVector>
 {
   private readonly Random random = new();
 
-  public double[] Crossover(double[] parent1, double[] parent2)
-  {
-    int crossoverPoint = random.Next(1, parent1.Length);
-    double[] offspring = new double[parent1.Length];
-    Array.Copy(parent1, offspring, crossoverPoint);
-    Array.Copy(parent2, crossoverPoint, offspring, crossoverPoint, parent2.Length - crossoverPoint);
-    return offspring;
+public RealVector Crossover(RealVector parent1, RealVector parent2)
+{
+  int crossoverPoint = random.Next(1, parent1.Count);
+  var offspringValues = new double[parent1.Count];
+  for (int i = 0; i < crossoverPoint; i++) {
+    offspringValues[i] = parent1[i];
   }
+  for (int i = crossoverPoint; i < parent2.Count; i++) {
+    offspringValues[i] = parent2[i];
+  }
+  return new RealVector(offspringValues);
+}
 }
 
-public class GaussianMutator : IMutator<double[]>
+public class GaussianMutator : IMutator<RealVector>
 {
   private readonly Random random = new();
   private readonly double mutationRate;
@@ -131,20 +135,21 @@ public class GaussianMutator : IMutator<double[]>
     this.mutationStrength = mutationStrength;
   }
 
-  public double[] Mutate(double[] individual)
-  {
-    for (int i = 0; i < individual.Length; i++)
+  public RealVector Mutate(RealVector individual) {
+    var mutatedValues = individual.ToList();
+
+    for (int i = 0; i < mutatedValues.Count; i++)
     {
       if (random.NextDouble() < mutationRate)
       {
-        individual[i] += random.NextDouble() * mutationStrength * 2 - mutationStrength;
+        mutatedValues[i] += random.NextDouble() * mutationStrength * 2 - mutationStrength;
       }
     }
-    return individual;
+    return new RealVector(mutatedValues);
   }
 }
 
-public class RandomCreator : ICreator<double[]>
+public class RandomCreator : ICreator<RealVector>
 {
   private readonly Random random = new();
   private readonly int chromosomeLength;
@@ -158,14 +163,14 @@ public class RandomCreator : ICreator<double[]>
     this.maxValue = maxValue;
   }
 
-  public double[] Create()
+  public RealVector Create()
   {
-    double[] individual = new double[chromosomeLength];
+    var values = new double[chromosomeLength];
     for (int i = 0; i < chromosomeLength; i++)
     {
-      individual[i] = random.NextDouble() * (maxValue - minValue) + minValue;
+      values[i] = random.NextDouble() * (maxValue - minValue) + minValue;
     }
-    return individual;
+    return new RealVector(values);
   }
 }
 

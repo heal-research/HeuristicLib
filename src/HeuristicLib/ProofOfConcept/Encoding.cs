@@ -60,7 +60,7 @@ public class AlphaBetaBlendCrossover : ICrossover<RealVector> {
   }
 }
 
-public class Permutation : IEnumerable<int> {
+public class Permutation : IEnumerable<int>, IReadOnlyList<int> {
   private readonly int[] elements;
 
   public Permutation(IEnumerable<int> elements) {
@@ -119,6 +119,10 @@ public class Permutation : IEnumerable<int> {
     (newElements[index1], newElements[index2]) = (newElements[index2], newElements[index1]);
     return new Permutation(newElements);
   }
+
+  public int Count => elements.Length;
+
+  public bool Contains(int value) => elements.Contains(value);
 }
 
 public class PermutationCreator : ICreator<Permutation> {
@@ -155,7 +159,7 @@ public class SwapMutation : IMutator<Permutation> {
   }
 }
 
-public class RealVector : IEnumerable<double> {
+public class RealVector : IEnumerable<double>, IReadOnlyList<double> {
   private readonly double[] elements;
 
   public RealVector(IEnumerable<double> elements) {
@@ -248,6 +252,10 @@ public class RealVector : IEnumerable<double> {
   public static RealVector operator -(RealVector a, RealVector b) => Subtract(a, b);
   public static RealVector operator *(RealVector a, RealVector b) => Multiply(a, b);
   public static RealVector operator /(RealVector a, RealVector b) => Divide(a, b);
+
+  public int Count => elements.Length;
+
+  public bool Contains(double value) => elements.Contains(value);
 }
 
 public class RealVectorCreator : ICreator<RealVector> {
