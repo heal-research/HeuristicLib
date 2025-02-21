@@ -34,7 +34,7 @@ public partial class GeneticAlgorithmModel
   public Parameter<int> MaxGenerations { get; }
 
   private partial void AutoAddParameters();
-  public override GeneticAlgorithm CreateAlgorithm() {
+  public override GeneticAlgorithm<double[]> CreateAlgorithm() {
     return null!;
     // return new GeneticAlgorithm(
     //   PopulationSize.Value,
@@ -57,7 +57,7 @@ class AlgorithmModelExample
   void Execute() {
     var pauseToken = new PauseToken();
 
-    var ga = new GeneticAlgorithmBuilder()
+    var ga = new GeneticAlgorithmBuilder<double[]>()
       .WithPopulationSize(200)
       .TerminateOnMaxGenerations(50)
       .TerminateOnPauseToken(pauseToken)
