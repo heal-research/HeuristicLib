@@ -3,7 +3,7 @@
 
 
 
-public interface IEvaluator<TSolution>
+public interface IEvaluator<in TPhenotype, out TObjective>
 {
-  double Evaluate(TSolution solution);
+  TObjective Evaluate(TPhenotype solution);
 }

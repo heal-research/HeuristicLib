@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Algorithms;
+
+namespace HEAL.HeuristicLib.Operators;
 
 
 
@@ -6,25 +8,25 @@
 public interface IReplacer<TSolution>
 {
   int GetOffspringCount(int populationSize);
-  (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<double> newQualities) Replace(
-    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<double> previousQualities,
-    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<double> offspringQualities);
+  (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<ObjectiveValue> newObjectives) Replace(
+    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<ObjectiveValue> previousQualities,
+    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<ObjectiveValue> offspringQualities);
 }
 
 public class PlusSelectionReplacer<TSolution> : IReplacer<TSolution>
 {
   public int GetOffspringCount(int populationSize) => populationSize;
 
-  public (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<double> newQualities) Replace(
-    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<double> previousQualities,
-    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<double> offspringQualities)
+  public (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<ObjectiveValue> newObjectives) Replace(
+    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<ObjectiveValue> previousQualities,
+    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<ObjectiveValue> offspringQualities)
   {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
     var combinedQualities = previousQualities.Concat(offspringQualities).ToList();
 
     var sortedIndices = combinedQualities
-      .Select((quality, index) => new { quality, index })
-      .OrderBy(x => x.quality)
+      .Select((objective, index) => new { objective, index })
+      .OrderBy(x => x.objective)
       .Select(x => x.index)
       .ToList();
 
@@ -46,9 +48,9 @@ public class ElitismReplacer<TSolution> : IReplacer<TSolution>
 
   public int GetOffspringCount(int populationSize) => populationSize - elites;
 
-  public (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<double> newQualities) Replace(
-    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<double> previousQualities,
-    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<double> offspringQualities)
+  public (IReadOnlyList<TSolution> newPopulation, IReadOnlyList<ObjectiveValue> newObjectives) Replace(
+    IReadOnlyList<TSolution> previousPopulation, IReadOnlyList<ObjectiveValue> previousQualities,
+    IReadOnlyList<TSolution> offspringPopulation, IReadOnlyList<ObjectiveValue> offspringQualities)
   {
     var sortedPreviousIndices = previousQualities
       .Select((quality, index) => new { quality, index })

@@ -1,9 +1,10 @@
-﻿using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class RealVectorTestFunctionProblem : ProblemBase<RealVector>
+public class RealVectorTestFunctionProblem : ProblemBase<RealVector, ObjectiveValue>
 {
   public enum FunctionType
   {
@@ -22,22 +23,23 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector>
     this.max = max;
   }
 
-  public override double Evaluate(RealVector solution)
+  public override ObjectiveValue Evaluate(RealVector solution)
   {
-    return functionType switch
+    double objective = functionType switch
     {
       FunctionType.Rastrigin => EvaluateRastrigin(solution),
       FunctionType.Sphere => EvaluateSphere(solution),
       _ => throw new NotImplementedException()
     };
+    return (objective, ObjectiveDirection.Minimize);
   }
 
-  public override IEvaluator<RealVector> CreateEvaluator()
+  public override IEvaluator<RealVector, ObjectiveValue> CreateEvaluator()
   {
     return new RealVectorTestFunctionEvaluator(this);
   }
 
-  private class RealVectorTestFunctionEvaluator : IEvaluator<RealVector>
+  private class RealVectorTestFunctionEvaluator : IEvaluator<RealVector, ObjectiveValue>
   {
     private readonly RealVectorTestFunctionProblem problem;
 
@@ -46,7 +48,7 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector>
       this.problem = problem;
     }
 
-    public double Evaluate(RealVector solution)
+    public ObjectiveValue Evaluate(RealVector solution)
     {
       return problem.Evaluate(solution);
     }
@@ -68,14 +70,32 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector>
     return solution.Sum(x => x * x);
   }
 
-  public RealVectorEncoding CreateRealVectorEncoding()
+  public TestFunctionRealVectorEncodingBundle CreateRealVectorEncodingBundle()
   {
-    var parameters = new RealVectorEncodingParameters(10, min, max); // Assuming length 10 for example
-    return new RealVectorEncoding(
-      parameters,
-      new RealVectorCreator(parameters),
-      new GaussianMutation(0.1, 0.1),
-      new AlphaBetaBlendCrossover(0.7, 0.3)
+    var encoding = new RealVectorEncoding(10, min, max); // Assuming length 10 for example
+
+    return new TestFunctionRealVectorEncodingBundle(
+      encoding,
+      UniformDistributedCreator.FromEncoding(encoding),
+      new AlphaBetaBlendCrossover(0.7, 0.3),
+      new GaussianMutation(0.1, 0.1)
     );
   }
 }
+
+public class TestFunctionRealVectorEncodingBundle : IEncodingBundle<RealVector, RealVectorEncoding>, ICreatorProvider<RealVector>, ICrossoverProvider<RealVector>, IMutatorProvider<RealVector>
+{
+  public RealVectorEncoding Encoding { get; }
+  public ICreator<RealVector> Creator { get; }
+  public ICrossover<RealVector> Crossover { get; }
+  public IMutator<RealVector> Mutator { get; }
+
+  public TestFunctionRealVectorEncodingBundle(RealVectorEncoding encoding, ICreator<RealVector> creator, ICrossover<RealVector> crossover, IMutator<RealVector> mutator)
+  {
+    Encoding = encoding;
+    Creator = creator;
+    Crossover = crossover;
+    Mutator = mutator;
+  }
+}
+

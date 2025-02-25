@@ -24,9 +24,9 @@ public class GeneticAlgorithmBuilderTests {
     return Verify(ga);
   }
 
-  private class MockEvaluator : IEvaluator<RealVector> {
-    public double Evaluate(RealVector solution) {
-      return solution.Sum();
+  private class MockEvaluator : IEvaluator<RealVector, ObjectiveValue> {
+    public ObjectiveValue Evaluate(RealVector solution) {
+      return (solution.Sum(), ObjectiveDirection.Minimize);
     }
   }
 }

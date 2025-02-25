@@ -1,31 +1,33 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Algorithms;
+
+namespace HEAL.HeuristicLib.Operators;
 
 using System.Linq;
 
 
-public interface ISelector<TSolution>
+public interface ISelector<TSolution, TObjective>
 {
-  IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities, int count);
+  IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<TObjective> objectives, int count);
 }
 
 
 
-public class ProportionalSelector<TSolution> : ISelector<TSolution>
+public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveValue>
 {
   private readonly Random random = new();
 
-  public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities, int count)
+  public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<ObjectiveValue> objectives, int count)
   {
     var selected = new List<TSolution>();
     for (int j = 0; j < count; j++)
     {
-      double totalQuality = qualities.Sum();
+      double totalQuality = objectives.Sum(o => o.Value);
       double randomValue = random.NextDouble() * totalQuality;
       double cumulativeQuality = 0.0;
 
       for (int i = 0; i < population.Count; i++)
       {
-        cumulativeQuality += qualities[i];
+        cumulativeQuality += objectives[i].Value;
         if (cumulativeQuality >= randomValue)
         {
           selected.Add(population[i]);
@@ -37,11 +39,11 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution>
   }
 }
 
-public class RandomSelector<TSolution> : ISelector<TSolution>
+public class RandomSelector<TSolution, TObjective> : ISelector<TSolution, TObjective>
 {
   private readonly Random random = new();
 
-  public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities, int count)
+  public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<TObjective> objectives, int count)
   {
     var selected = new List<TSolution>();
     for (int i = 0; i < count; i++)
@@ -53,8 +55,7 @@ public class RandomSelector<TSolution> : ISelector<TSolution>
   }
 }
 
-public class TournamentSelector<TSolution> : ISelector<TSolution>
-{
+public class TournamentSelector<TSolution> : ISelector<TSolution, ObjectiveValue> where TSolution : notnull {
   private readonly Random random = new();
   private readonly int tournamentSize;
 
@@ -63,11 +64,11 @@ public class TournamentSelector<TSolution> : ISelector<TSolution>
     this.tournamentSize = tournamentSize;
   }
 
-public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities, int count)
+public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<ObjectiveValue> objectives, int count)
   {
     var selected = new List<TSolution>();
     var populationIndexMap = population
-      .Select((solution, index) => new { solution, index })
+      .Select((solution, index) => (solution, index))
       .ToDictionary(x => x.solution, x => x.index);
 
     for (int i = 0; i < count; i++)
@@ -78,7 +79,7 @@ public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IRea
         int index = random.Next(population.Count);
         tournamentParticipants.Add(population[index]);
       }
-      var bestParticipant = tournamentParticipants.OrderBy(participant => qualities[populationIndexMap[participant]]).First();
+      var bestParticipant = tournamentParticipants.OrderBy(participant => objectives[populationIndexMap[participant]]).First();
       selected.Add(bestParticipant);
     }
     return selected;

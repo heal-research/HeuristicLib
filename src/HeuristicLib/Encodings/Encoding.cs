@@ -5,34 +5,47 @@ namespace HEAL.HeuristicLib.Encodings;
 public interface IEncoding {}
 
 public interface IEncoding<TGenotype> : IEncoding {
-  // ICreator<TSolution> Creator { get; }
-  // IMutator<TSolution> Mutator { get; }
-  // ICrossover<TSolution> Crossover { get; }
-  
-  bool IsValid(TGenotype genotype);
+  bool IsValidGenotype(TGenotype genotype);
   bool AreCompatible(params IEnumerable<TGenotype> genotypes);
 }
 
 public abstract class EncodingBase<TGenotype> : IEncoding<TGenotype> {
-  public abstract bool IsValid(TGenotype genotype);
+  
+  protected EncodingBase() { }
+  
+
+  public abstract bool IsValidGenotype(TGenotype genotype);
   public virtual bool AreCompatible(params IEnumerable<TGenotype> genotypes) {
-    return genotypes.All(IsValid);
+    return genotypes.All(IsValidGenotype);
   }
 }
 
-public interface IEncodingSpecificOperator<out TEncoding, TGenotype> 
-  where TEncoding : IEncoding<TGenotype>
-{
+
+public interface IEncodingBasedOperator<out TOperator, in TEncoding> {
+  static abstract TOperator FromEncoding(TEncoding encoding);
+}
+
+
+
+public interface IConfigurationBundle<TGenotype> {
+  
+}
+
+public interface IEncodingBundle<TGenotype, TEncoding> : IConfigurationBundle<TGenotype> {
   TEncoding Encoding { get; }
 }
 
-public abstract class EncodingSpecificOperator<TEncoding, TGenotype>
-  : IEncodingSpecificOperator<TEncoding, TGenotype>
-  where TEncoding : IEncoding<TGenotype>
+public interface ICreatorProvider<TGenotype>
 {
-  protected EncodingSpecificOperator(TEncoding encoding) {
-    Encoding = encoding;
-  }
+  ICreator<TGenotype> Creator { get; }
+}
 
-  public TEncoding Encoding { get; }
+public interface ICrossoverProvider<TGenotype>
+{
+  ICrossover<TGenotype> Crossover { get; }
+}
+
+public interface IMutatorProvider<TGenotype>
+{
+  IMutator<TGenotype> Mutator { get; }
 }

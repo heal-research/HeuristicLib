@@ -5,19 +5,27 @@ namespace HEAL.HeuristicLib.Encodings;
 
 
 
-public record RealVectorEncodingParameters(int Length, double Min, double Max);
+//public record RealVectorEncodingDescriptor(int Length, RealVector Minimum, RealVector Maximum);
 
-public class RealVectorEncoding : IEncoding<RealVector> {
-  public RealVectorEncodingParameters Parameters { get; }
-  public ICreator<RealVector> Creator { get; }
-  public IMutator<RealVector> Mutator { get; }
-  public ICrossover<RealVector> Crossover { get; }
+public class RealVectorEncoding : EncodingBase<RealVector> {
+  public int Length { get; }
+  public RealVector Minimum { get; }
+  public RealVector Maximum { get; }
 
-  public RealVectorEncoding(RealVectorEncodingParameters parameters, ICreator<RealVector> creator, IMutator<RealVector> mutator, ICrossover<RealVector> crossover) {
-    Parameters = parameters;
-    Creator = creator;
-    Mutator = mutator;
-    Crossover = crossover;
+
+  public RealVectorEncoding(int length, RealVector minimum, RealVector maximum) {
+    if (length != minimum.Count && minimum.Count != 1) throw new ArgumentException("Minimum vector must be of length 1 or match the encoding length");
+    if (length != maximum.Count && maximum.Count != 1) throw new ArgumentException("Maximum vector must be of length 1 or match the encoding length");
+    
+    Length = length;
+    Minimum = minimum;
+    Maximum = maximum;
+  }
+
+  public override bool IsValidGenotype(RealVector genotype) {
+    return genotype.Count == Length
+           && (genotype >= Minimum).All()
+           && (genotype <= Maximum).All();
   }
 }
 
@@ -25,17 +33,13 @@ public class AlphaBetaBlendCrossover : ICrossover<RealVector> {
   private readonly double alpha;
   private readonly double beta;
 
-  public AlphaBetaBlendCrossover(double alpha, double beta) {
+  public AlphaBetaBlendCrossover(double alpha = 0.7, double beta = 0.3) {
     this.alpha = alpha;
     this.beta = beta;
   }
 
   public RealVector Crossover(RealVector parent1, RealVector parent2) {
-    double[] newElements = new double[parent1.Count()];
-    for (int i = 0; i < newElements.Length; i++) {
-      newElements[i] = alpha * parent1[i] + beta * parent2[i];
-    }
-    return new RealVector(newElements);
+    return alpha * parent1 + beta * parent2;
   }
 }
 
@@ -137,20 +141,147 @@ public class RealVector : IReadOnlyList<double> {
   public int Count => elements.Length;
 
   public bool Contains(double value) => elements.Contains(value);
-}
 
-public class RealVectorCreator : ICreator<RealVector> {
-  private readonly RealVectorEncodingParameters parameters;
+  
+  public static bool AreCompatible(RealVector a, RealVector b) {
+    return a.Count == b.Count || a.Count == 1 || b.Count == 1;
+  }
+  public static bool AreCompatible(RealVector vector, params IEnumerable<RealVector> others) {
+    return others.All(v => AreCompatible(vector, v));
+  }
+  public static bool AreCompatible(int length, params IEnumerable<RealVector> vectors) {
+    return vectors.All(v => v.Count == length || v.Count == 1);
+  }
+  
+  public static int BroadcastLength(RealVector a, RealVector b) {
+    return Math.Max(a.Count, b.Count);
+  }
+  public static int BroadcastLength(RealVector vector, IEnumerable<RealVector> others) {
+    if (!AreCompatible(vector, others)) throw new ArgumentException("Vectors must be compatible for broadcasting");
+    return others.Max(v => v.Count);
+  }
+  
+  public static RealVector CreateNormal(RealVector mean, RealVector std, Random random) {
+    int targetLength = BroadcastLength(mean, std);
+    
+    // Box-Muller transform to generate normal distributed random values
+    RealVector u1 = 1.0 - new RealVector(Enumerable.Range(0, targetLength).Select(_ => random.NextDouble()));
+    RealVector u2 = 1.0 - new RealVector(Enumerable.Range(0, targetLength).Select(_ => random.NextDouble()));
+    RealVector randStdNormal = Sqrt(u1 * 2) * Sin(2 * Math.PI * u2);
+    
+    // Apply mean and sigma for this dimension
+    RealVector value = mean + std * randStdNormal;
 
-  public RealVectorCreator(RealVectorEncodingParameters parameters) {
-    this.parameters = parameters;
+    return value;
   }
 
-  public RealVector Create() {
-    var rnd = new Random();
-    return new RealVector(Enumerable.Range(0, parameters.Length)
-      .Select(_ => parameters.Min + rnd.NextDouble() * (parameters.Max - parameters.Min))
-    );
+  public static RealVector CreateUniform(RealVector low, RealVector high, Random random) {
+    int targetLength = BroadcastLength(low, high);
+    
+    RealVector value = new RealVector(Enumerable.Range(0, targetLength).Select(_ => random.NextDouble()));
+    value = low + (high - low) * value;
+    return value;
+  }
+
+  public static RealVector Sqrt(RealVector vector) {
+    return new RealVector(vector.Select(Math.Sqrt));
+  }
+
+  public static RealVector Sin(RealVector vector) {
+    return new RealVector(vector.Select(Math.Sin));
+  }
+  
+  public static RealVector Clamp(RealVector input, RealVector? min, RealVector? max) {
+    if (min == null && max == null) return input; // No clamping needed
+    
+    // Validate lengths
+    if (min != null && min.Count != 1 && min.Count != input.Count)
+        throw new ArgumentException($"Min vector must be of length 1 or match input length ({input.Count})");
+    
+    if (max != null && max.Count != 1 && max.Count != input.Count)
+        throw new ArgumentException($"Max vector must be of length 1 or match input length ({input.Count})");
+    
+    double[] result = new double[input.Count];
+    
+    for (int i = 0; i < input.Count; i++) {
+        double value = input[i];
+        
+        // Apply lower bound if present
+        if (min != null) {
+            double minValue = min.Count == 1 ? min[0] : min[i];
+            value = Math.Max(value, minValue);
+        }
+        
+        // Apply upper bound if present
+        if (max != null) {
+            double maxValue = max.Count == 1 ? max[0] : max[i];
+            value = Math.Min(value, maxValue);
+        }
+        
+        result[i] = value;
+    }
+    
+    return new RealVector(result);
+  }
+  
+  public static BoolVector operator >(RealVector a, RealVector b) {
+    if (!AreCompatible(a, b)) throw new ArgumentException("Vectors must be compatible for comparison");
+    
+    int length = BroadcastLength(a, b);
+    bool[] result = new bool[length];
+    
+    for (int i = 0; i < length; i++) {
+      double aValue = a.Count == 1 ? a[0] : a[i];
+      double bValue = b.Count == 1 ? b[0] : b[i];
+      result[i] = aValue > bValue;
+    }
+    
+    return new BoolVector(result);
+  }
+  
+  public static BoolVector operator <(RealVector a, RealVector b) {
+    if (!AreCompatible(a, b)) throw new ArgumentException("Vectors must be compatible for comparison");
+    
+    int length = BroadcastLength(a, b);
+    bool[] result = new bool[length];
+    
+    for (int i = 0; i < length; i++) {
+      double aValue = a.Count == 1 ? a[0] : a[i];
+      double bValue = b.Count == 1 ? b[0] : b[i];
+      result[i] = aValue < bValue;
+    }
+    
+    return new BoolVector(result);
+  }
+  
+  public static BoolVector operator >=(RealVector a, RealVector b) {
+    if (!AreCompatible(a, b)) throw new ArgumentException("Vectors must be compatible for comparison");
+    
+    int length = BroadcastLength(a, b);
+    bool[] result = new bool[length];
+    
+    for (int i = 0; i < length; i++) {
+      double aValue = a.Count == 1 ? a[0] : a[i];
+      double bValue = b.Count == 1 ? b[0] : b[i];
+      result[i] = aValue >= bValue;
+    }
+    
+    return new BoolVector(result);
+  }
+  
+  public static BoolVector operator <=(RealVector a, RealVector b) {
+    if (!AreCompatible(a, b)) throw new ArgumentException("Vectors must be compatible for comparison");
+    
+    int length = BroadcastLength(a, b);
+    bool[] result = new bool[length];
+    
+    for (int i = 0; i < length; i++) {
+      double aValue = a.Count == 1 ? a[0] : a[i];
+      double bValue = b.Count == 1 ? b[0] : b[i];
+      result[i] = aValue <= bValue;
+    }
+    
+    return new BoolVector(result);
   }
 }
 
@@ -220,27 +351,64 @@ public class GaussianMutator : IMutator<RealVector>
   }
 }
 
-public class RandomCreator : ICreator<RealVector>
+public class NormalDistributedCreator : ICreator<RealVector>
 {
   private readonly Random random = new();
-  private readonly int chromosomeLength;
-  private readonly double minValue;
-  private readonly double maxValue;
+  
+  public int Length { get; }
+  public RealVector Means { get; }
+  public RealVector Sigmas { get; }
+  public RealVector Minimum { get; }
+  public RealVector Maximum { get; }
 
-  public RandomCreator(int chromosomeLength, double minValue, double maxValue)
-  {
-    this.chromosomeLength = chromosomeLength;
-    this.minValue = minValue;
-    this.maxValue = maxValue;
+  public NormalDistributedCreator(int length, RealVector means, RealVector sigmas, RealVector minimum, RealVector maximum) {
+    if (!RealVector.AreCompatible(length, means, sigmas, minimum, maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+    
+    Length = length;
+    Means = means;
+    Sigmas = sigmas;
+    Minimum = minimum;
+    Maximum = maximum;
+  }
+
+  public RealVector Create() {
+    RealVector value = RealVector.CreateNormal(Means, Sigmas, random);
+    // Clamp value to min/max bounds
+    value = RealVector.Clamp(value, Minimum, Maximum);
+    return value;
+  }
+}
+
+public class NormalDistributedCreatorFactory : IOperatorFactory<NormalDistributedCreator, RealVectorEncoding> {
+
+  public NormalDistributedCreator Create(RealVectorEncoding encoding) {
+    return new NormalDistributedCreator(encoding.Length, encoding.Minimum, encoding.Maximum, encoding.Minimum, encoding.Maximum);
+  }
+}
+
+
+public class UniformDistributedCreator : ICreator<RealVector>
+{
+  private readonly Random random = new();
+  
+  public int Length { get; }
+  public RealVector Minimum { get; }
+  public RealVector Maximum { get; }
+
+  public UniformDistributedCreator(int length, RealVector minimum, RealVector maximum) {
+    if (!RealVector.AreCompatible(length, minimum, maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+    
+    Length = length;
+    Minimum = minimum;
+    Maximum = maximum;
   }
 
   public RealVector Create()
   {
-    var values = new double[chromosomeLength];
-    for (int i = 0; i < chromosomeLength; i++)
-    {
-      values[i] = random.NextDouble() * (maxValue - minValue) + minValue;
-    }
-    return new RealVector(values);
+    return RealVector.CreateUniform(Minimum, Minimum, random);
+  }
+  
+  public static UniformDistributedCreator FromEncoding(RealVectorEncoding encoding) {
+    return new UniformDistributedCreator(encoding.Length, encoding.Minimum, encoding.Maximum);
   }
 }

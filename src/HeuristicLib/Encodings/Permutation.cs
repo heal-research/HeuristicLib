@@ -4,33 +4,30 @@ using HEAL.HeuristicLib.Operators;
 namespace HEAL.HeuristicLib.Encodings;
 
 
-public class PermutationEncoding : EncodingBase<Permutation> {
-  public PermutationEncoding(int length) {
+public class PermutationEncoding : EncodingBase<Permutation>
+  //, ICreatorProvider<Permutation>, ICrossoverProvider<Permutation> 
+{
+  public PermutationEncoding(int length) 
+    : base() {
     Length = length;
   }
+  
   public int Length { get; }
 
-  public override bool IsValid(Permutation genotype) {
+  public override bool IsValidGenotype(Permutation genotype) {
     return genotype.Count == Length;
   }
+
+  // public ICrossover<Permutation> GetCreator() {
+  //   throw new NotImplementedException();
+  // }
+  // public ICrossover<Permutation> GetCrossover() {
+  //   throw new NotImplementedException();
+  // }
 }
 
 
-//public record PermutationEncodingParameters(int Length);
-//
-// public class PermutationEncoding : IEncoding<Permutation> {
-//   public PermutationEncodingParameters Parameters { get; }
-//   public ICreator<Permutation> Creator { get; }
-//   public IMutator<Permutation> Mutator { get; }
-//   public ICrossover<Permutation> Crossover { get; }
-//
-//   public PermutationEncoding(PermutationEncodingParameters parameters, ICreator<Permutation> creator, IMutator<Permutation> mutator, ICrossover<Permutation> crossover) {
-//     Parameters = parameters;
-//     Creator = creator;
-//     Mutator = mutator;
-//     Crossover = crossover;
-//   }
-// }
+
 
 
 public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
@@ -124,35 +121,29 @@ public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   }
 }
 
-public class PermutationCreator : ICreator<Permutation> {
-  private readonly PermutationEncodingParameters parameters;
+public class RandomPermutationCreator : ICreator<Permutation> {
+  public RandomPermutationCreator(int length) {
+    Length = length;
+  }
+  public int Length { get; }
 
-  public PermutationCreator(PermutationEncodingParameters parameters) {
-    this.parameters = parameters;
+  public Permutation Create() {
+    return Permutation.CreateRandom(Length);
   }
 
-  public Permutation Create() => Permutation.CreateRandom(parameters.Length);
+  public static RandomPermutationCreator FromEncoding(PermutationEncoding encoding) {
+    return new RandomPermutationCreator(encoding.Length);
+  }
 }
 
+
 public class OrderCrossover : ICrossover<Permutation> {
-  private readonly PermutationEncodingParameters parameters;
-
-  public OrderCrossover(PermutationEncodingParameters parameters) {
-    this.parameters = parameters;
-  }
-
   public Permutation Crossover(Permutation parent1, Permutation parent2) {
     return Permutation.OrderCrossover(parent1, parent2);
   }
 }
 
 public class SwapMutation : IMutator<Permutation> {
-  private readonly PermutationEncodingParameters parameters;
-
-  public SwapMutation(PermutationEncodingParameters parameters) {
-    this.parameters = parameters;
-  }
-
   public Permutation Mutate(Permutation solution) {
     return Permutation.SwapRandomElements(solution);
   }

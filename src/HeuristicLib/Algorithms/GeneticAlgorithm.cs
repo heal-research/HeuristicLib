@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Operators;
 namespace HEAL.HeuristicLib.Algorithms;
 
 
-public record PopulationState<TSolution>(int CurrentGeneration, IReadOnlyList<TSolution> Population, IReadOnlyList<double> Qualities);
+public record PopulationState<TSolution>(int CurrentGeneration, IReadOnlyList<TSolution> Population, IReadOnlyList<ObjectiveValue> Objectives);
 
 
 
@@ -16,7 +16,7 @@ public class GeneticAlgorithm<TGenotype>
 {
   public GeneticAlgorithm(int populationSize,
     ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
-    ITerminator<PopulationState<TGenotype>> terminator, IEvaluator<TGenotype> evaluator, Random random, ISelector<TGenotype> selector, IReplacer<TGenotype> replacer)
+    ITerminator<PopulationState<TGenotype>> terminator, IEvaluator<TGenotype, ObjectiveValue> evaluator, Random random, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer)
   {
     PopulationSize = populationSize;
     Terminator = terminator;
@@ -36,9 +36,9 @@ public class GeneticAlgorithm<TGenotype>
   public ICrossover<TGenotype> Crossover { get; }
   public IMutator<TGenotype> Mutator { get; }
   public double MutationRate { get; }
-  public IEvaluator<TGenotype> Evaluator { get; }
+  public IEvaluator<TGenotype, ObjectiveValue> Evaluator { get; }
   public Random Random { get; }
-  public ISelector<TGenotype> Selector { get; }
+  public ISelector<TGenotype, ObjectiveValue> Selector { get; }
   public IReplacer<TGenotype> Replacer { get; }
   // WIP
   public event Action<TGenotype>? OnLiveResult;
@@ -46,9 +46,9 @@ public class GeneticAlgorithm<TGenotype>
   public override PopulationState<TGenotype> Run(PopulationState<TGenotype>? state = null)
   {
     var population = state?.Population ?? InitializePopulation();
-    var qualities = state?.Qualities ?? EvaluatePopulation(population);
+    var objectives = state?.Objectives ?? EvaluatePopulation(population);
     var currentGeneration = state?.CurrentGeneration ?? 0;
-    var currentState = new PopulationState<TGenotype>(currentGeneration, population, qualities);
+    var currentState = new PopulationState<TGenotype>(currentGeneration, population, objectives);
 
     while (!Terminator.ShouldTerminate(currentState))
     {
@@ -56,11 +56,11 @@ public class GeneticAlgorithm<TGenotype>
       var offspringPopulation = EvolvePopulation(population, offspringCount);
       var offspringQualities = EvaluatePopulation(offspringPopulation);
 
-      (population, qualities) = Replacer.Replace(population, qualities, offspringPopulation, offspringQualities);
+      (population, objectives) = Replacer.Replace(population, objectives, offspringPopulation, offspringQualities);
 
-      var bestIndividual = GetBestIndividual(population, qualities);
+      var bestIndividual = GetBestIndividual(population, objectives);
       OnLiveResult?.Invoke(bestIndividual);
-      currentState = currentState with { CurrentGeneration = ++currentGeneration, Population = population, Qualities = qualities };
+      currentState = currentState with { CurrentGeneration = ++currentGeneration, Population = population, Objectives = objectives };
     }
 
     return currentState;
@@ -78,8 +78,8 @@ public class GeneticAlgorithm<TGenotype>
   private IReadOnlyList<TGenotype> EvolvePopulation(IReadOnlyList<TGenotype> population, int offspringCount)
   {
     var newPopulation = new List<TGenotype>();
-    var qualities = EvaluatePopulation(population);
-    var parents = Selector.Select(population, qualities, offspringCount * 2);
+    var objectives = EvaluatePopulation(population);
+    var parents = Selector.Select(population, objectives, offspringCount * 2);
 
     for (int i = 0; i < parents.Count; i += 2)
     {
@@ -94,16 +94,17 @@ public class GeneticAlgorithm<TGenotype>
     return newPopulation;
   }
 
-  private IReadOnlyList<double> EvaluatePopulation(IReadOnlyList<TGenotype> population)
+  private IReadOnlyList<ObjectiveValue> EvaluatePopulation(IReadOnlyList<TGenotype> population)
   {
     return population.Select(individual => Evaluator.Evaluate(individual)).ToList();
   }
 
-  private TGenotype GetBestIndividual(IReadOnlyList<TGenotype> population, IReadOnlyList<double> qualities)
+  private TGenotype GetBestIndividual(IReadOnlyList<TGenotype> population, IReadOnlyList<ObjectiveValue> objectives)
   {
-    var bestIndex = qualities.Select((quality, index) => new { quality, index })
-                             .OrderBy(x => x.quality)
-                             .First().index;
+    int bestIndex = objectives
+      .Select((objective, index) => new { objective, index })
+      .OrderBy(x => x.objective)
+      .First().index;
     return population[bestIndex];
   }
 }
@@ -116,11 +117,11 @@ public class GeneticAlgorithmBuilder<TSolution>
   private ICreator<TSolution>? creator;
   private ICrossover<TSolution>? crossover;
   private IMutator<TSolution>? mutator;
-  private IEvaluator<TSolution>? evaluator;
+  private IEvaluator<TSolution, ObjectiveValue>? evaluator;
   private Action<TSolution>? onLiveResult;
   private double mutationRate;
   private Random? random;
-  private ISelector<TSolution>? selector;
+  private ISelector<TSolution, ObjectiveValue>? selector;
   private IReplacer<TSolution>? replacement;
 
   public GeneticAlgorithmBuilder<TSolution> WithPopulationSize(int populationSize) {
@@ -143,7 +144,7 @@ public class GeneticAlgorithmBuilder<TSolution>
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithEvaluator(IEvaluator<TSolution> evaluator) {
+  public GeneticAlgorithmBuilder<TSolution> WithEvaluator(IEvaluator<TSolution, ObjectiveValue> evaluator) {
     this.evaluator = evaluator;
     return this;
   }
@@ -153,7 +154,7 @@ public class GeneticAlgorithmBuilder<TSolution>
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithSelector(ISelector<TSolution> selector) {
+  public GeneticAlgorithmBuilder<TSolution> WithSelector(ISelector<TSolution, ObjectiveValue> selector) {
     this.selector = selector;
     return this;
   }
@@ -188,11 +189,17 @@ public class GeneticAlgorithmBuilder<TSolution>
     return this;
   }
   
-  public GeneticAlgorithmBuilder<TSolution> WithEncoding(IEncoding<TSolution> encoding)
+  public GeneticAlgorithmBuilder<TSolution> WithEncodingBundle<TEncoding>(IEncodingBundle<TSolution, TEncoding> encoding)
   {
-    creator = encoding.Creator;
-    mutator = encoding.Mutator;
-    crossover = encoding.Crossover;
+    if (encoding is ICreatorProvider<TSolution> creatorProvider) {
+      creator = creatorProvider.Creator;
+    }
+    if (encoding is ICrossoverProvider<TSolution> crossoverProvider) {
+      crossover = crossoverProvider.Crossover;
+    }
+    if (encoding is IMutatorProvider<TSolution> mutatorProvider) {
+      mutator = mutatorProvider.Mutator;
+    }
     return this;
   }
 

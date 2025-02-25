@@ -8,11 +8,11 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmTests {
   [Fact]
   public Task GeneticAlgorithm_ShouldRunWithoutBuilder() {
-    var creator = new RandomCreator(10, -5, 5);
+    var creator = new UniformDistributedCreator(10, -5, 5);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var evaluator = new MockEvaluator();
-    var selector = new ProportionalSelector<RealVector>();
+    var selector = new RandomSelector<RealVector, ObjectiveValue>();
     var replacement = new PlusSelectionReplacer<RealVector>();
     var terminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.CurrentGeneration);
     var random = new Random();
@@ -28,7 +28,7 @@ public class GeneticAlgorithmTests {
 
   [Fact]
   public async Task GeneticAlgorithm_ShouldPauseAndContinue() {
-    var creator = new RandomCreator(10, -5, 5);
+    var creator = new UniformDistributedCreator(10, -5, 5);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var evaluator = new MockEvaluator();
@@ -75,7 +75,7 @@ public class GeneticAlgorithmTests {
     };
 
     var problem = new TravelingSalesmanProblem(distances);
-    var encoding = problem.CreatePermutationEncoding();
+    var encoding = problem.CreatePermutationEncodingBundle();
     var evaluator = problem.CreateEvaluator();
     var random = new Random(42);
 
@@ -87,7 +87,7 @@ public class GeneticAlgorithmTests {
       50, 
       encoding.Creator,
       encoding.Crossover,
-      encoding.Mutator,
+      new SwapMutation(),
       0.1,
       terminationCriterion,
       evaluator,
@@ -100,9 +100,9 @@ public class GeneticAlgorithmTests {
     return Verify(finalState);
   }
 
-  private class MockEvaluator : IEvaluator<RealVector> {
-    public double Evaluate(RealVector solution) {
-      return solution.Sum();
+  private class MockEvaluator : IEvaluator<RealVector, ObjectiveValue> {
+    public ObjectiveValue Evaluate(RealVector solution) {
+      return (solution.Sum(), ObjectiveDirection.Minimize);
     }
   }
 }

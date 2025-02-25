@@ -2,14 +2,14 @@
 
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IProblem<TPhenotype>
+public interface IProblem<in TPhenotype, out TObjective>
 {
-  IEvaluator<TPhenotype> CreateEvaluator();
-  double Evaluate(TPhenotype solution);
+  IEvaluator<TPhenotype, TObjective> CreateEvaluator();
+  TObjective Evaluate(TPhenotype solution);
 }
 
-public abstract class ProblemBase<TPhenotype> : IProblem<TPhenotype>
+public abstract class ProblemBase<TPhenotype, TObjective> : IProblem<TPhenotype, TObjective>
 {
-  public abstract IEvaluator<TPhenotype> CreateEvaluator();
-  public abstract double Evaluate(TPhenotype solution);
+  public abstract IEvaluator<TPhenotype, TObjective> CreateEvaluator();
+  public abstract TObjective Evaluate(TPhenotype solution);
 }
