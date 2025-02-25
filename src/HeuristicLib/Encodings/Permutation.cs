@@ -4,25 +4,36 @@ using HEAL.HeuristicLib.Operators;
 namespace HEAL.HeuristicLib.Encodings;
 
 
+public class PermutationEncoding : EncodingBase<Permutation> {
+  public PermutationEncoding(int length) {
+    Length = length;
+  }
+  public int Length { get; }
 
-public record PermutationEncodingParameters(int Length);
-
-public class PermutationEncoding : IEncoding<Permutation> {
-  public PermutationEncodingParameters Parameters { get; }
-  public ICreator<Permutation> Creator { get; }
-  public IMutator<Permutation> Mutator { get; }
-  public ICrossover<Permutation> Crossover { get; }
-
-  public PermutationEncoding(PermutationEncodingParameters parameters, ICreator<Permutation> creator, IMutator<Permutation> mutator, ICrossover<Permutation> crossover) {
-    Parameters = parameters;
-    Creator = creator;
-    Mutator = mutator;
-    Crossover = crossover;
+  public override bool IsValid(Permutation genotype) {
+    return genotype.Count == Length;
   }
 }
 
 
-public class Permutation : IReadOnlyList<int> {
+//public record PermutationEncodingParameters(int Length);
+//
+// public class PermutationEncoding : IEncoding<Permutation> {
+//   public PermutationEncodingParameters Parameters { get; }
+//   public ICreator<Permutation> Creator { get; }
+//   public IMutator<Permutation> Mutator { get; }
+//   public ICrossover<Permutation> Crossover { get; }
+//
+//   public PermutationEncoding(PermutationEncodingParameters parameters, ICreator<Permutation> creator, IMutator<Permutation> mutator, ICrossover<Permutation> crossover) {
+//     Parameters = parameters;
+//     Creator = creator;
+//     Mutator = mutator;
+//     Crossover = crossover;
+//   }
+// }
+
+
+public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   private readonly int[] elements;
 
   public Permutation(IEnumerable<int> elements) {
@@ -85,6 +96,32 @@ public class Permutation : IReadOnlyList<int> {
   public int Count => elements.Length;
 
   public bool Contains(int value) => elements.Contains(value);
+
+  public bool Equals(Permutation? other) {
+    if (other is null) return false;
+    if (ReferenceEquals(this, other)) return true;
+    if (Count != other.Count) return false;
+    return elements.SequenceEqual(other.elements);
+  }
+
+  public override bool Equals(object? obj) {
+    if (obj is null) return false;
+    if (ReferenceEquals(this, obj)) return true;
+    return obj is Permutation other && Equals(other);
+  }
+
+  public override int GetHashCode() {
+    return elements.Aggregate(17, (current, item) => current * 23 + item.GetHashCode());
+  }
+
+  public static bool operator ==(Permutation? left, Permutation? right) {
+    if (left is null) return right is null;
+    return left.Equals(right);
+  }
+
+  public static bool operator !=(Permutation? left, Permutation? right) {
+    return !(left == right);
+  }
 }
 
 public class PermutationCreator : ICreator<Permutation> {

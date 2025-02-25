@@ -1,5 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Operators;
 
+using System.Linq;
+
 
 public interface ISelector<TSolution>
 {
@@ -46,6 +48,38 @@ public class RandomSelector<TSolution> : ISelector<TSolution>
     {
       int index = random.Next(population.Count);
       selected.Add(population[index]);
+    }
+    return selected;
+  }
+}
+
+public class TournamentSelector<TSolution> : ISelector<TSolution>
+{
+  private readonly Random random = new();
+  private readonly int tournamentSize;
+
+  public TournamentSelector(int tournamentSize)
+  {
+    this.tournamentSize = tournamentSize;
+  }
+
+public IReadOnlyList<TSolution> Select(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities, int count)
+  {
+    var selected = new List<TSolution>();
+    var populationIndexMap = population
+      .Select((solution, index) => new { solution, index })
+      .ToDictionary(x => x.solution, x => x.index);
+
+    for (int i = 0; i < count; i++)
+    {
+      var tournamentParticipants = new List<TSolution>();
+      for (int j = 0; j < tournamentSize; j++)
+      {
+        int index = random.Next(population.Count);
+        tournamentParticipants.Add(population[index]);
+      }
+      var bestParticipant = tournamentParticipants.OrderBy(participant => qualities[populationIndexMap[participant]]).First();
+      selected.Add(bestParticipant);
     }
     return selected;
   }

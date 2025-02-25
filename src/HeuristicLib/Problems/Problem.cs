@@ -1,12 +1,15 @@
-﻿namespace HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Operators;
 
+namespace HEAL.HeuristicLib.Problems;
 
-public interface IProblem<TSolution>
+public interface IProblem<TPhenotype>
 {
-  double Evaluate(TSolution solution);
+  IEvaluator<TPhenotype> CreateEvaluator();
+  double Evaluate(TPhenotype solution);
 }
 
-public abstract class ProblemBase<TSolution> : IProblem<TSolution>
+public abstract class ProblemBase<TPhenotype> : IProblem<TPhenotype>
 {
-  public abstract double Evaluate(TSolution solution);
+  public abstract IEvaluator<TPhenotype> CreateEvaluator();
+  public abstract double Evaluate(TPhenotype solution);
 }

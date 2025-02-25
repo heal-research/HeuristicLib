@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -59,6 +60,44 @@ public class GeneticAlgorithmTests {
     Assert.True(finalState.CurrentGeneration > pausedState.CurrentGeneration);
 
     await Verify(finalState);
+  }
+
+  [Fact]
+  public Task GeneticAlgorithm_ShouldSolveTSPWithBuilder()
+  {
+    // Define a small TSP instance (5 cities)
+    var distances = new double[,] {
+      { 0, 2, 9, 10, 6 },
+      { 2, 0, 4, 8, 5 },
+      { 9, 4, 0, 3, 7 },
+      { 10, 8, 3, 0, 4 },
+      { 6, 5, 7, 4, 0 }
+    };
+
+    var problem = new TravelingSalesmanProblem(distances);
+    var encoding = problem.CreatePermutationEncoding();
+    var evaluator = problem.CreateEvaluator();
+    var random = new Random(42);
+
+    var terminationCriterion = new ThresholdTerminator<PopulationState<Permutation>>(100, state => state.CurrentGeneration);
+    var selector = new TournamentSelector<Permutation>(3);
+    var replacement = new ElitismReplacer<Permutation>(2);
+
+    var ga = new GeneticAlgorithm<Permutation>(
+      50, 
+      encoding.Creator,
+      encoding.Crossover,
+      encoding.Mutator,
+      0.1,
+      terminationCriterion,
+      evaluator,
+      random,
+      selector,
+      replacement
+    );
+
+    var finalState = ga.Run();
+    return Verify(finalState);
   }
 
   private class MockEvaluator : IEvaluator<RealVector> {

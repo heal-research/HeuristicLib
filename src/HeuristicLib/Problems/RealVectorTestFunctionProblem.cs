@@ -1,7 +1,7 @@
 ﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
-
 
 public class RealVectorTestFunctionProblem : ProblemBase<RealVector>
 {
@@ -32,6 +32,26 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector>
     };
   }
 
+  public override IEvaluator<RealVector> CreateEvaluator()
+  {
+    return new RealVectorTestFunctionEvaluator(this);
+  }
+
+  private class RealVectorTestFunctionEvaluator : IEvaluator<RealVector>
+  {
+    private readonly RealVectorTestFunctionProblem problem;
+
+    public RealVectorTestFunctionEvaluator(RealVectorTestFunctionProblem problem)
+    {
+      this.problem = problem;
+    }
+
+    public double Evaluate(RealVector solution)
+    {
+      return problem.Evaluate(solution);
+    }
+  }
+
   private static double EvaluateRastrigin(RealVector solution) {
     int n = solution.Count;
     double A = 10;
@@ -52,10 +72,10 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector>
   {
     var parameters = new RealVectorEncodingParameters(10, min, max); // Assuming length 10 for example
     return new RealVectorEncoding(
-    parameters,
-    new RealVectorCreator(parameters),
-    new GaussianMutation(0.1, 0.1),
-    new AlphaBetaBlendCrossover(0.7, 0.3)
+      parameters,
+      new RealVectorCreator(parameters),
+      new GaussianMutation(0.1, 0.1),
+      new AlphaBetaBlendCrossover(0.7, 0.3)
     );
   }
 }

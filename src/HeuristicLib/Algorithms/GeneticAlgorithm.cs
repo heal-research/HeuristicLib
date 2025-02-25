@@ -11,12 +11,12 @@ public record PopulationState<TSolution>(int CurrentGeneration, IReadOnlyList<TS
 
 
 
-public class GeneticAlgorithm<TSolution>
-  : AlgorithmBase<PopulationState<TSolution>>
+public class GeneticAlgorithm<TGenotype>
+  : AlgorithmBase<PopulationState<TGenotype>>
 {
   public GeneticAlgorithm(int populationSize,
-    ICreator<TSolution> creator, ICrossover<TSolution> crossover, IMutator<TSolution> mutator, double mutationRate,
-    ITerminator<PopulationState<TSolution>> terminator, IEvaluator<TSolution> evaluator, Random random, ISelector<TSolution> selector, IReplacer<TSolution> replacer)
+    ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
+    ITerminator<PopulationState<TGenotype>> terminator, IEvaluator<TGenotype> evaluator, Random random, ISelector<TGenotype> selector, IReplacer<TGenotype> replacer)
   {
     PopulationSize = populationSize;
     Terminator = terminator;
@@ -31,24 +31,24 @@ public class GeneticAlgorithm<TSolution>
   }
   
   public int PopulationSize { get; }
-  public ITerminator<PopulationState<TSolution>> Terminator { get; }
-  public ICreator<TSolution> Creator { get; }
-  public ICrossover<TSolution> Crossover { get; }
-  public IMutator<TSolution> Mutator { get; }
+  public ITerminator<PopulationState<TGenotype>> Terminator { get; }
+  public ICreator<TGenotype> Creator { get; }
+  public ICrossover<TGenotype> Crossover { get; }
+  public IMutator<TGenotype> Mutator { get; }
   public double MutationRate { get; }
-  public IEvaluator<TSolution> Evaluator { get; }
+  public IEvaluator<TGenotype> Evaluator { get; }
   public Random Random { get; }
-  public ISelector<TSolution> Selector { get; }
-  public IReplacer<TSolution> Replacer { get; }
+  public ISelector<TGenotype> Selector { get; }
+  public IReplacer<TGenotype> Replacer { get; }
   // WIP
-  public event Action<TSolution>? OnLiveResult;
+  public event Action<TGenotype>? OnLiveResult;
 
-  public override PopulationState<TSolution> Run(PopulationState<TSolution>? state = null)
+  public override PopulationState<TGenotype> Run(PopulationState<TGenotype>? state = null)
   {
     var population = state?.Population ?? InitializePopulation();
     var qualities = state?.Qualities ?? EvaluatePopulation(population);
     var currentGeneration = state?.CurrentGeneration ?? 0;
-    var currentState = new PopulationState<TSolution>(currentGeneration, population, qualities);
+    var currentState = new PopulationState<TGenotype>(currentGeneration, population, qualities);
 
     while (!Terminator.ShouldTerminate(currentState))
     {
@@ -66,18 +66,18 @@ public class GeneticAlgorithm<TSolution>
     return currentState;
   }
 
-  private IReadOnlyList<TSolution> InitializePopulation()
+  private IReadOnlyList<TGenotype> InitializePopulation()
   {
-    var population = new List<TSolution>();
+    var population = new List<TGenotype>();
     for (int i = 0; i < PopulationSize; i++) {
       population.Add(Creator.Create());
     }
     return population;
   }
 
-  private IReadOnlyList<TSolution> EvolvePopulation(IReadOnlyList<TSolution> population, int offspringCount)
+  private IReadOnlyList<TGenotype> EvolvePopulation(IReadOnlyList<TGenotype> population, int offspringCount)
   {
-    var newPopulation = new List<TSolution>();
+    var newPopulation = new List<TGenotype>();
     var qualities = EvaluatePopulation(population);
     var parents = Selector.Select(population, qualities, offspringCount * 2);
 
@@ -94,12 +94,12 @@ public class GeneticAlgorithm<TSolution>
     return newPopulation;
   }
 
-  private IReadOnlyList<double> EvaluatePopulation(IReadOnlyList<TSolution> population)
+  private IReadOnlyList<double> EvaluatePopulation(IReadOnlyList<TGenotype> population)
   {
     return population.Select(individual => Evaluator.Evaluate(individual)).ToList();
   }
 
-  private TSolution GetBestIndividual(IReadOnlyList<TSolution> population, IReadOnlyList<double> qualities)
+  private TGenotype GetBestIndividual(IReadOnlyList<TGenotype> population, IReadOnlyList<double> qualities)
   {
     var bestIndex = qualities.Select((quality, index) => new { quality, index })
                              .OrderBy(x => x.quality)
