@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 using Xunit;
@@ -14,7 +15,7 @@ public class GeneticAlgorithmBuilderTests {
       .WithMutation(new GaussianMutator(0.1, 0.1))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
-      .WithRandom(new Random())
+      .WithRandom(RandomGenerator.CreateDefault())
       .WithSelector(new ProportionalSelector<RealVector>())
       .WithPlusSelectionReplacement()
       .TerminateOnMaxGenerations(50);

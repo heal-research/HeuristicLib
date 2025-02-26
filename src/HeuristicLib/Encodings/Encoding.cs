@@ -1,4 +1,6 @@
-﻿using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Encodings;
 
@@ -48,4 +50,20 @@ public interface ICrossoverProvider<TGenotype>
 public interface IMutatorProvider<TGenotype>
 {
   IMutator<TGenotype> Mutator { get; }
+}
+
+public static class GeneticAlgorithmBuilderEncodingExtension {
+  public static GeneticAlgorithmBuilder<TSolution> WithEncodingBundle<TEncoding, TSolution>(this GeneticAlgorithmBuilder<TSolution> builder, IEncodingBundle<TSolution, TEncoding> encoding)
+  {
+    if (encoding is ICreatorProvider<TSolution> creatorProvider) {
+      builder.WithCreator(creatorProvider.Creator);
+    }
+    if (encoding is ICrossoverProvider<TSolution> crossoverProvider) {
+      builder.WithCrossover(crossoverProvider.Crossover);
+    }
+    if (encoding is IMutatorProvider<TSolution> mutatorProvider) {
+      builder.WithMutation(mutatorProvider.Mutator);
+    }
+    return builder;
+  }
 }

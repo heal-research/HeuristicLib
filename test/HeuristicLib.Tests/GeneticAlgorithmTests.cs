@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -15,7 +16,7 @@ public class GeneticAlgorithmTests {
     var selector = new RandomSelector<RealVector, ObjectiveValue>();
     var replacement = new PlusSelectionReplacer<RealVector>();
     var terminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.CurrentGeneration);
-    var random = new Random();
+    var random = RandomGenerator.CreateDefault();
 
     var ga = new GeneticAlgorithm<RealVector>(
       200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, random, selector, replacement
@@ -36,7 +37,7 @@ public class GeneticAlgorithmTests {
     var replacement = new PlusSelectionReplacer<RealVector>();
     var pauseToken = new PauseToken();
     var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
-    var random = new Random();
+    var random = RandomGenerator.CreateDefault();
 
     var ga = new GeneticAlgorithm<RealVector>(
       200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, random, selector, replacement
@@ -77,7 +78,7 @@ public class GeneticAlgorithmTests {
     var problem = new TravelingSalesmanProblem(distances);
     var encoding = problem.CreatePermutationEncodingBundle();
     var evaluator = problem.CreateEvaluator();
-    var random = new Random(42);
+    var random = RandomGenerator.CreateDefault(42);
 
     var terminationCriterion = new ThresholdTerminator<PopulationState<Permutation>>(100, state => state.CurrentGeneration);
     var selector = new TournamentSelector<Permutation>(3);
