@@ -6,20 +6,17 @@ namespace HEAL.HeuristicLib.Problems;
 
 //public record Tour(IReadOnlyList<int> Cities);
 
-public class TravelingSalesmanProblem 
-  : ProblemBase<Permutation, ObjectiveValue>
+public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
 {
   private readonly double[,] distances;
   private readonly int numberOfCities;
 
-  public TravelingSalesmanProblem(double[,] distances)
-  {
+  public TravelingSalesmanProblem(double[,] distances) {
     this.distances = distances;
     numberOfCities = distances.GetLength(0);
   }
 
-  public override ObjectiveValue Evaluate(Permutation solution)
-  {
+  public override ObjectiveValue Evaluate(Permutation solution) {
     var tour = solution;
     double totalDistance = 0.0;
     for (int i = 0; i < tour.Count - 1; i++)
@@ -30,47 +27,43 @@ public class TravelingSalesmanProblem
     return (totalDistance, ObjectiveDirection.Minimize);
   }
 
-  public override IEvaluator<Permutation, ObjectiveValue> CreateEvaluator()
-  {
+  public override IEvaluator<Permutation, ObjectiveValue> CreateEvaluator() {
     return new TSPEvaluator(this);
   }
 
-  private class TSPEvaluator : IEvaluator<Permutation, ObjectiveValue>
-  {
+  private class TSPEvaluator : EvaluatorBase<Permutation, ObjectiveValue> {
     private readonly TravelingSalesmanProblem problem;
 
-    public TSPEvaluator(TravelingSalesmanProblem problem)
-    {
+    public TSPEvaluator(TravelingSalesmanProblem problem) {
       this.problem = problem;
     }
 
-    public ObjectiveValue Evaluate(Permutation solution)
-    {
+    public override ObjectiveValue Evaluate(Permutation solution) {
       return problem.Evaluate(solution);
     }
   }
 
-  public TspPermutationEncodingBundle CreatePermutationEncodingBundle()
-  {
-    var encoding = new PermutationEncoding(numberOfCities);
-    
-    return new TspPermutationEncodingBundle(
-      encoding,
-      RandomPermutationCreator.FromEncoding(encoding),
-      new OrderCrossover()
-    );
-  }
+  // public TspPermutationEncodingBundle CreatePermutationEncodingBundle()
+  // {
+  //   var encoding = new PermutationEncoding(numberOfCities);
+  //   
+  //   return new TspPermutationEncodingBundle(
+  //     encoding,
+  //     RandomPermutationCreator.FromEncoding(encoding),
+  //     new OrderCrossover()
+  //   );
+  // }
 }
-
-public class TspPermutationEncodingBundle : IEncodingBundle<Permutation, PermutationEncoding>, ICreatorProvider<Permutation>, ICrossoverProvider<Permutation> {
-  public TspPermutationEncodingBundle(PermutationEncoding encoding, Func<CreatorParameters, ICreator<Permutation>> creatorFactory, ICrossover<Permutation> crossover) {
-    Encoding = encoding;
-    CreatorFactory = creatorFactory;
-    Crossover = crossover;
-  }
-
-  public PermutationEncoding Encoding { get; }
-
-  public Func<CreatorParameters, ICreator<Permutation>> CreatorFactory { get; }
-  public ICrossover<Permutation> Crossover { get; }
-}
+//
+// public class TspPermutationEncodingBundle : IEncodingBundle<Permutation, PermutationEncoding>, ICreatorProvider<Permutation>, ICrossoverProvider<Permutation> {
+//   public TspPermutationEncodingBundle(PermutationEncoding encoding, Func<CreatorParameters, ICreator<Permutation>> creatorFactory, ICrossover<Permutation> crossover) {
+//     Encoding = encoding;
+//     CreatorFactory = creatorFactory;
+//     Crossover = crossover;
+//   }
+//
+//   public PermutationEncoding Encoding { get; }
+//
+//   public Func<CreatorParameters, ICreator<Permutation>> CreatorFactory { get; }
+//   public ICrossover<Permutation> Crossover { get; }
+// }

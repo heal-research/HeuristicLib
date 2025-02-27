@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public class GeneticAlgorithmBuilder<TSolution> {
+public class GeneticAlgorithmBuilderBasic<TSolution> {
   
   private int? populationSize;
   private ITerminator<PopulationState<TSolution>>? terminationCriterion;
@@ -18,88 +18,88 @@ public class GeneticAlgorithmBuilder<TSolution> {
   private IEvaluator<TSolution, ObjectiveValue>? evaluator;
   private Action<TSolution>? onLiveResult;
   private double mutationRate;
-  private IRandomNumberGenerator? random;
+  private RandomSource? randomSource;
   private ISelector<TSolution, ObjectiveValue>? selector;
   private IReplacer<TSolution>? replacement;
 
-  public GeneticAlgorithmBuilder() {
+  public GeneticAlgorithmBuilderBasic() {
     populationSize = 100;
     terminationCriterion = new ThresholdTerminator<PopulationState<TSolution>>(50, state => state.CurrentGeneration);
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithPopulationSize(int populationSize) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithPopulationSize(int populationSize) {
     this.populationSize = populationSize;
     return this;
   }
   
   
-  public GeneticAlgorithmBuilder<TSolution> WithCreatorFactory(Func<CreatorParameters, ICreator<TSolution>> creatorFactory) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithCreatorFactory(Func<CreatorParameters, ICreator<TSolution>> creatorFactory) {
     this.creatorFactory = creatorFactory;
     return this;
   }
-  public GeneticAlgorithmBuilder<TSolution> WithCreator(ICreator<TSolution> creator) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithCreator(ICreator<TSolution> creator) {
     creatorFactory = _ => creator;
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithCrossover(ICrossover<TSolution> crossover) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithCrossover(ICrossover<TSolution> crossover) {
     this.crossover = crossover;
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithMutation(IMutator<TSolution> mutator) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithMutation(IMutator<TSolution> mutator) {
     this.mutator = mutator;
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithMutationRate(double mutationRate) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithMutationRate(double mutationRate) {
     this.mutationRate = mutationRate;
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithEvaluator(IEvaluator<TSolution, ObjectiveValue> evaluator) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithEvaluator(IEvaluator<TSolution, ObjectiveValue> evaluator) {
     this.evaluator = evaluator;
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithRandom(IRandomNumberGenerator random) {
-    this.random = random;
+  public GeneticAlgorithmBuilderBasic<TSolution> WithRandomSource(RandomSource randomSource) {
+    this.randomSource = randomSource;
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithSelector(ISelector<TSolution, ObjectiveValue> selector) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithSelector(ISelector<TSolution, ObjectiveValue> selector) {
     this.selector = selector;
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithReplacement(IReplacer<TSolution> replacer) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithReplacement(IReplacer<TSolution> replacer) {
     this.replacement = replacer;
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithPlusSelectionReplacement() {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithPlusSelectionReplacement() {
     replacement = new PlusSelectionReplacer<TSolution>();
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithElitismReplacement(int elites) {
+  public GeneticAlgorithmBuilderBasic<TSolution> WithElitismReplacement(int elites) {
     replacement = new ElitismReplacer<TSolution>(elites);
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> TerminateOnMaxGenerations(int maxGenerations) {
+  public GeneticAlgorithmBuilderBasic<TSolution> TerminateOnMaxGenerations(int maxGenerations) {
     // ToDo: add or replace criterion?
     terminationCriterion = new ThresholdTerminator<PopulationState<TSolution>>(maxGenerations, state => state.CurrentGeneration);
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> TerminateOnPauseToken(PauseToken pauseToken) {
+  public GeneticAlgorithmBuilderBasic<TSolution> TerminateOnPauseToken(PauseToken pauseToken) {
     // ToDo: add or replace criterion?
     terminationCriterion = new PauseTokenTerminator<PopulationState<TSolution>>(pauseToken);
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> OnLiveResult(Action<TSolution> handler) {
+  public GeneticAlgorithmBuilderBasic<TSolution> OnLiveResult(Action<TSolution> handler) {
     onLiveResult = handler;
     return this;
   }
@@ -120,7 +120,7 @@ public class GeneticAlgorithmBuilder<TSolution> {
       crossover!,
       mutator!, mutationRate, terminationCriterion!,
       evaluator!,
-      random ?? RandomGenerator.CreateDefault(),
+      randomSource ?? RandomSource.CreateDefault(42),
       selector!, replacement!
     );
     if (onLiveResult != null) {
@@ -134,7 +134,7 @@ public class GeneticAlgorithmBuilder<TSolution> {
     return validator.Validate(this);
   }
   
-  public class GeneticAlgorithmBuilderValidator : AbstractValidator<GeneticAlgorithmBuilder<TSolution>> {
+  public class GeneticAlgorithmBuilderValidator : AbstractValidator<GeneticAlgorithmBuilderBasic<TSolution>> {
     public GeneticAlgorithmBuilderValidator() {
       RuleFor(x => x.populationSize).NotNull().WithMessage("Population size must not be null.");
       RuleFor(x => x.creatorFactory).NotNull().WithMessage("Creator must not be null.");

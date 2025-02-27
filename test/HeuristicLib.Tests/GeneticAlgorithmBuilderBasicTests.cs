@@ -6,20 +6,19 @@ using Xunit;
 
 namespace HEAL.HeuristicLib.Tests;
 
-public class GeneticAlgorithmBuilderTests {
+public class GeneticAlgorithmBuilderBasicTests {
   [Fact]
   public Task GeneticAlgorithmBuilder_ShouldBuildAlgorithm() {
-    var random = RandomGenerator.CreateDefault(42);
-    var builder = new GeneticAlgorithmBuilder<RealVector>()
+    var randomSource = RandomSource.CreateDefault(42);
+    var builder = new GeneticAlgorithmBuilderBasic<RealVector>()
       .WithPopulationSize(200)
-      .WithCrossover(new SinglePointCrossover(random))
-      .WithMutation(new GaussianMutator(0.1, 0.1, random))
+      .WithCrossover(new SinglePointCrossover(randomSource))
+      .WithMutation(new GaussianMutator(0.1, 0.1, randomSource))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
-      .WithRandom(RandomGenerator.CreateDefault())
-      .WithSelector(new ProportionalSelector<RealVector>(random))
+      .WithRandomSource(RandomSource.CreateDefault())
+      .WithSelector(new ProportionalSelector<RealVector>(randomSource))
       .WithPlusSelectionReplacement()
-      .WithRandom(random)
       .TerminateOnMaxGenerations(50);
 
     var ga = builder.Build();

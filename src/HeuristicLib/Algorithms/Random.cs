@@ -2,6 +2,13 @@
 
 public abstract class RandomSource {
   public abstract IRandomNumberGenerator CreateRandomNumberGenerator();
+  
+  public static RandomSource CreateDefault(int? seed = null) {
+    return seed switch {
+      int s => new SeededRandomSource(s),
+      null => new StatefulRandomSource(new Random().Next())
+    };
+  }
 }
 
 public class SeededRandomSource : RandomSource {
@@ -37,8 +44,7 @@ public interface IRandomNumberGenerator {
   IRandomNumberGenerator[] Spawn(int count);
 }
 
-public static class RandomGeneratorExtensions
-{
+public static class RandomGeneratorExtensions {
   public static double[] Random(this IRandomNumberGenerator random, int length) {
     double[] values = new double[length];
     for (int i = 0; i < length; i++) {
@@ -61,14 +67,6 @@ public static class RandomGeneratorExtensions
   
   public static int[] Integers(this IRandomNumberGenerator random, int length, int high, bool endpoint = false) {
     return random.Integers(length, 0, high, endpoint);
-  }
-}
-
-
-public static class RandomGenerator {
-  public static IRandomNumberGenerator CreateDefault(int? seed = null) {
-    var random = seed.HasValue ? new Random(seed.Value) : new Random();
-    return new SystemRandomNumberGenerator(random);
   }
 }
 

@@ -91,12 +91,13 @@ public class ElitismReplacer<TSolution> : ReplacerBase<TSolution> {
 
     return (newPopulation, newQualities);
   }
-}
+  
+  public record Parameters(int Elites) : ReplacerParameters;
 
-public record ElitismReplacerParameters(int Elites) : ReplacerParameters;
-
-public class ElitismReplacerTemplate<TSolution> : ReplacerTemplateBase<ElitismReplacer<TSolution>, TSolution, ElitismReplacerParameters> {
-  public override ElitismReplacer<TSolution> Parameterize(ElitismReplacerParameters parameters) {
-    return new ElitismReplacer<TSolution>(parameters.Elites);
+  public class Template : ReplacerTemplateBase<ElitismReplacer<TSolution>, TSolution, Parameters> {
+    public override ElitismReplacer<TSolution> Parameterize(Parameters parameters) {
+      return new ElitismReplacer<TSolution>(parameters.Elites);
+    }
   }
+
 }

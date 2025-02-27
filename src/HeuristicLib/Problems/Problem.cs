@@ -19,10 +19,10 @@ public abstract class ProblemBase<TPhenotype, TObjective> : IProblem<TPhenotype,
 
 
 public static class GeneticAlgorithmBuilderProblemExtension {
-  public static GeneticAlgorithmBuilder<TSolution> WithProblemDefinition<TSolution>(this GeneticAlgorithmBuilder<TSolution> builder, IProblem<TSolution, ObjectiveValue> problem)
+  public static GeneticAlgorithmBuilderBasic<TSolution> WithProblemDefinition<TSolution>(this GeneticAlgorithmBuilderBasic<TSolution> builderBasic, IProblem<TSolution, ObjectiveValue> problem)
   {
     //builder.WithEncodingBundle(problem.GetDefaultEncoding())
-    builder.WithEvaluator(problem.CreateEvaluator());
-    return builder;
+    builderBasic.WithEvaluator(problem.CreateEvaluator());
+    return builderBasic;
   }
 }

@@ -122,39 +122,59 @@ public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   }
 }
 
-public class RandomPermutationCreator : ICreator<Permutation> {
-  public RandomPermutationCreator(int length) {
+public class RandomPermutationCreator : CreatorBase<Permutation> {
+  public RandomPermutationCreator(int length, RandomSource randomSource) {
     Length = length;
+    RandomSource = randomSource;
   }
   public int Length { get; }
+  public RandomSource RandomSource { get; }
 
-  public Permutation Create() {
-    return Permutation.CreateRandom(Length);
+  public override Permutation Create() {
+    var rng = RandomSource.CreateRandomNumberGenerator();
+    int[] elements = Enumerable.Range(0, Length).ToArray();
+    for (int i = elements.Length - 1; i > 0; i--) {
+      int j = rng.Integer(i + 1);
+      (elements[i], elements[j]) = (elements[j], elements[i]);
+    }
+    return new Permutation(elements);
   }
 
-  public static RandomPermutationCreator FromEncoding(PermutationEncoding encoding) {
-    return new RandomPermutationCreator(encoding.Length);
+  public record Parameters(int Length, RandomSource RandomSource) : CreatorParameters;
+  
+  public class Template : CreatorTemplateBase<RandomPermutationCreator, Permutation, Parameters> {
+    public override RandomPermutationCreator Parameterize(Parameters parameters) {
+      return new RandomPermutationCreator(parameters.Length, parameters.RandomSource);
+    }
   }
-
-  public record Parameters(int Length);
 }
 
 
-
-
-public class OrderCrossover : ICrossover<Permutation> {
-  public Permutation Crossover(Permutation parent1, Permutation parent2) {
+public class OrderCrossover : CrossoverBase<Permutation> {
+  public override Permutation Crossover(Permutation parent1, Permutation parent2) {
     return Permutation.OrderCrossover(parent1, parent2);
   }
 
-  public record Parameters();
+  public record Parameters() : CrossoverParameters;
+  
+  public class Template : CrossoverTemplateBase<OrderCrossover, Permutation, Parameters> {
+    public override OrderCrossover Parameterize(Parameters parameters) {
+      return new OrderCrossover();
+    }
+  }
 }
 
 
-public class SwapMutation : IMutator<Permutation> {
-  public Permutation Mutate(Permutation solution) {
+public class SwapMutator : MutatorBase<Permutation> {
+  public override Permutation Mutate(Permutation solution) {
     return Permutation.SwapRandomElements(solution);
   }
 
-  public record Parameters();
+  public record Parameters() : MutationParameters;
+  
+  public class Template : MutatorTemplateBase<SwapMutator, Permutation, Parameters> {
+    public override SwapMutator Parameterize(Parameters parameters) {
+      return new SwapMutator();
+    }
+  }
 }

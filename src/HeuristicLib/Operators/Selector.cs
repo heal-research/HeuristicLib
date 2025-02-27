@@ -29,17 +29,17 @@ public abstract class SelectorTemplateBase<TSelector, TSolution, TObjective, TPa
 }
 
 public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveValue> {
-  public ProportionalSelector(IRandomNumberGenerator random) {
-    Random = random;
+  public ProportionalSelector(RandomSource randomSource) {
+    RandomSource = randomSource;
   }
-  
-  public IRandomNumberGenerator Random { get; }
+  public RandomSource RandomSource { get; }
 
   public TSolution[] Select(TSolution[] population, ObjectiveValue[] objectives, int count) {
+    var rng = RandomSource.CreateRandomNumberGenerator();
     var selected = new TSolution[count];
     for (int j = 0; j < count; j++) {
       double totalQuality = objectives.Sum(o => o.Value);
-      double randomValue = Random.Random() * totalQuality;
+      double randomValue = rng.Random() * totalQuality;
       double cumulativeQuality = 0.0;
 
       for (int i = 0; i < population.Length(); i++) {
@@ -52,55 +52,55 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveVal
     }
     return selected;
   }
-}
+  
+  public record Parameters(RandomSource RandomSource) : SelectorParameters;
 
-public record ProportionalSelectorParameters(IRandomNumberGenerator Random) : SelectorParameters;
-
-public class ProportionalSelectorTemplate<TSolution> 
-  : SelectorTemplateBase<ProportionalSelector<TSolution>, TSolution, ObjectiveValue, ProportionalSelectorParameters> {
-  public override ProportionalSelector<TSolution> Parameterize(ProportionalSelectorParameters parameters) {
-    return new ProportionalSelector<TSolution>(parameters.Random);
+  public class Template : SelectorTemplateBase<ProportionalSelector<TSolution>, TSolution, ObjectiveValue, Parameters> {
+    public override ProportionalSelector<TSolution> Parameterize(Parameters parameters) {
+      return new ProportionalSelector<TSolution>(parameters.RandomSource);
+    }
   }
 }
+
+
 
 
 public class RandomSelector<TSolution, TObjective> : SelectorBase<TSolution, TObjective> {
-  public RandomSelector(IRandomNumberGenerator random) {
-    Random = random;
+  public RandomSelector(RandomSource randomSource) {
+    RandomSource = randomSource;
   }
-  
-  public IRandomNumberGenerator Random { get; }
+  public RandomSource RandomSource { get; }
 
   public override TSolution[] Select(TSolution[] population, TObjective[] objectives, int count) {
+    var rng = RandomSource.CreateRandomNumberGenerator();
     var selected = new TSolution[count];
     for (int i = 0; i < count; i++) {
-      int index = Random.Integer(population.Length);
+      int index = rng.Integer(population.Length);
       selected[i] = population[index];
     }
     return selected;
   }
-}
+  
+  public record Parameters(RandomSource RandomSource) : SelectorParameters;
 
-public record RandomSelectorParameters(IRandomNumberGenerator Random) : SelectorParameters;
-
-public class RandomSelectorTemplate<TSolution, TObjective> 
-  : SelectorTemplateBase<RandomSelector<TSolution, TObjective>, TSolution, TObjective, RandomSelectorParameters> {
-  public override RandomSelector<TSolution, TObjective> Parameterize(RandomSelectorParameters parameters) {
-    return new RandomSelector<TSolution, TObjective>(parameters.Random);
+  public class Template : SelectorTemplateBase<RandomSelector<TSolution, TObjective>, TSolution, TObjective, Parameters> {
+    public override RandomSelector<TSolution, TObjective> Parameterize(Parameters parameters) {
+      return new RandomSelector<TSolution, TObjective>(parameters.RandomSource);
+    }
   }
 }
 
-
 public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveValue> {
-  public TournamentSelector(int tournamentSize, IRandomNumberGenerator random) {
+  public TournamentSelector(int tournamentSize, RandomSource randomSource) {
     TournamentSize = tournamentSize;
-    Random = random;
+    RandomSource = randomSource;
   }
   
   public int TournamentSize { get; }
-  public IRandomNumberGenerator Random { get; }
+  public RandomSource RandomSource { get; }
 
   public override TSolution[] Select(TSolution[] population, ObjectiveValue[] objectives, int count) {
+    var rng = RandomSource.CreateRandomNumberGenerator();
     var selected = new TSolution[count];
     var populationIndexMap = population
       .Select((solution, index) => (solution, index))
@@ -109,7 +109,7 @@ public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveVa
     for (int i = 0; i < count; i++) {
       var tournamentParticipants = new List<TSolution>();
       for (int j = 0; j < TournamentSize; j++) {
-        int index = Random.Integer(population.Length);
+        int index = rng.Integer(population.Length);
         tournamentParticipants.Add(population[index]);
       }
       var bestParticipant = tournamentParticipants.OrderBy(participant => objectives[populationIndexMap[participant]]).First();
@@ -117,13 +117,14 @@ public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveVa
     }
     return selected;
   }
-}
+  
+  public record Parameters(int TournamentSize, RandomSource RandomSource) : SelectorParameters;
 
-public record TournamentSelectorParameters(int TournamentSize, IRandomNumberGenerator Random) : SelectorParameters;
-
-public class TournamentSelectorTemplate<TSolution> 
-  : SelectorTemplateBase<TournamentSelector<TSolution>, TSolution, ObjectiveValue, TournamentSelectorParameters> {
-  public override TournamentSelector<TSolution> Parameterize(TournamentSelectorParameters parameters) {
-    return new TournamentSelector<TSolution>(parameters.TournamentSize, parameters.Random);
+  public class Template : SelectorTemplateBase<TournamentSelector<TSolution>, TSolution, ObjectiveValue, Parameters> {
+    public override TournamentSelector<TSolution> Parameterize(Parameters parameters) {
+      return new TournamentSelector<TSolution>(parameters.TournamentSize, parameters.RandomSource);
+    }
   }
 }
+
+
