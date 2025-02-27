@@ -63,14 +63,14 @@ public class TravelingSalesmanProblem
 }
 
 public class TspPermutationEncodingBundle : IEncodingBundle<Permutation, PermutationEncoding>, ICreatorProvider<Permutation>, ICrossoverProvider<Permutation> {
-  public TspPermutationEncodingBundle(PermutationEncoding encoding, ICreator<Permutation> creator, ICrossover<Permutation> crossover) {
+  public TspPermutationEncodingBundle(PermutationEncoding encoding, Func<CreatorParameters, ICreator<Permutation>> creatorFactory, ICrossover<Permutation> crossover) {
     Encoding = encoding;
-    Creator = creator;
+    CreatorFactory = creatorFactory;
     Crossover = crossover;
   }
 
   public PermutationEncoding Encoding { get; }
 
-  public ICreator<Permutation> Creator { get; }
+  public Func<CreatorParameters, ICreator<Permutation>> CreatorFactory { get; }
   public ICrossover<Permutation> Crossover { get; }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Encodings;
@@ -134,17 +135,26 @@ public class RandomPermutationCreator : ICreator<Permutation> {
   public static RandomPermutationCreator FromEncoding(PermutationEncoding encoding) {
     return new RandomPermutationCreator(encoding.Length);
   }
+
+  public record Parameters(int Length);
 }
+
+
 
 
 public class OrderCrossover : ICrossover<Permutation> {
   public Permutation Crossover(Permutation parent1, Permutation parent2) {
     return Permutation.OrderCrossover(parent1, parent2);
   }
+
+  public record Parameters();
 }
+
 
 public class SwapMutation : IMutator<Permutation> {
   public Permutation Mutate(Permutation solution) {
     return Permutation.SwapRandomElements(solution);
   }
+
+  public record Parameters();
 }

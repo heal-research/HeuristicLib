@@ -8,13 +8,17 @@ public class GeneticAlgorithmBuilder<TSolution> {
   
   private int? populationSize;
   private ITerminator<PopulationState<TSolution>>? terminationCriterion;
-  private ICreator<TSolution>? creator;
+
+  private CreatorParameters? creatorParameters;
+  private Func<CreatorParameters, ICreator<TSolution>> creatorFactory;
+  
+  //private ICreator<TSolution>? creator;
   private ICrossover<TSolution>? crossover;
   private IMutator<TSolution>? mutator;
   private IEvaluator<TSolution, ObjectiveValue>? evaluator;
   private Action<TSolution>? onLiveResult;
   private double mutationRate;
-  private IRandomGenerator? random;
+  private IRandomNumberGenerator? random;
   private ISelector<TSolution, ObjectiveValue>? selector;
   private IReplacer<TSolution>? replacement;
 
@@ -28,8 +32,13 @@ public class GeneticAlgorithmBuilder<TSolution> {
     return this;
   }
   
+  
+  public GeneticAlgorithmBuilder<TSolution> WithCreatorFactory(Func<CreatorParameters, ICreator<TSolution>> creatorFactory) {
+    this.creatorFactory = creatorFactory;
+    return this;
+  }
   public GeneticAlgorithmBuilder<TSolution> WithCreator(ICreator<TSolution> creator) {
-    this.creator = creator;
+    creatorFactory = _ => creator;
     return this;
   }
 
@@ -53,7 +62,7 @@ public class GeneticAlgorithmBuilder<TSolution> {
     return this;
   }
 
-  public GeneticAlgorithmBuilder<TSolution> WithRandom(IRandomGenerator random) {
+  public GeneticAlgorithmBuilder<TSolution> WithRandom(IRandomNumberGenerator random) {
     this.random = random;
     return this;
   }
@@ -103,14 +112,16 @@ public class GeneticAlgorithmBuilder<TSolution> {
       throw new ValidationException(result.Errors);
     }
     
+    var creator = creatorFactory(creatorParameters!);
+    
     var ga = new GeneticAlgorithm<TSolution>(
-    populationSize!.Value,
-    creator!,
-    crossover!,
-    mutator!, mutationRate, terminationCriterion!,
-    evaluator!,
-    random ?? RandomGenerator.CreateDefault(),
-    selector!, replacement!
+      populationSize!.Value,
+      creator,
+      crossover!,
+      mutator!, mutationRate, terminationCriterion!,
+      evaluator!,
+      random ?? RandomGenerator.CreateDefault(),
+      selector!, replacement!
     );
     if (onLiveResult != null) {
       ga.OnLiveResult += onLiveResult;
@@ -126,7 +137,7 @@ public class GeneticAlgorithmBuilder<TSolution> {
   public class GeneticAlgorithmBuilderValidator : AbstractValidator<GeneticAlgorithmBuilder<TSolution>> {
     public GeneticAlgorithmBuilderValidator() {
       RuleFor(x => x.populationSize).NotNull().WithMessage("Population size must not be null.");
-      RuleFor(x => x.creator).NotNull().WithMessage("Creator must not be null.");
+      RuleFor(x => x.creatorFactory).NotNull().WithMessage("Creator must not be null.");
       RuleFor(x => x.crossover).NotNull().WithMessage("Crossover must not be null.");
       RuleFor(x => x.mutator).NotNull().WithMessage("Mutation must not be null.");
       RuleFor(x => x.mutationRate).InclusiveBetween(0, 1).WithMessage("Mutation rate must be between 0 and 1.");

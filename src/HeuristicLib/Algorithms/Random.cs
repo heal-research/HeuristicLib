@@ -1,16 +1,45 @@
 ﻿namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IRandomGenerator {
+public abstract class RandomSource {
+  public abstract IRandomNumberGenerator CreateRandomNumberGenerator();
+}
+
+public class SeededRandomSource : RandomSource {
+  public SeededRandomSource(int seed) {
+    Seed = seed;
+  }
+  public static implicit operator SeededRandomSource(int seed) => new SeededRandomSource(seed);
+  
+  public int Seed { get; }
+
+  public override IRandomNumberGenerator CreateRandomNumberGenerator() {
+    return new SystemRandomNumberGenerator(new Random(Seed));
+  }
+}
+
+public class StatefulRandomSource : RandomSource {
+  private readonly Random random;
+  public StatefulRandomSource(int seed) {
+    random = new Random(seed);
+  }
+  
+  public override IRandomNumberGenerator CreateRandomNumberGenerator() {
+    return new SystemRandomNumberGenerator(random);
+  }
+}
+
+
+public interface IRandomNumberGenerator {
   double Random();
-  int Integer(int low, int? high = null, bool endpoint = false);
+  int Integer(int low, int high, bool endpoint = false);
   byte[] Bytes(int length);
   
-  IReadOnlyList<IRandomGenerator> Spawn(int count);
+  IRandomNumberGenerator[] Spawn(int count);
 }
 
 public static class RandomGeneratorExtensions
 {
-  public static double[] Random(this IRandomGenerator random, int length) {
+  public static double[] Random(this IRandomNumberGenerator random, int length) {
     double[] values = new double[length];
     for (int i = 0; i < length; i++) {
       values[i] = random.Random();
@@ -18,39 +47,45 @@ public static class RandomGeneratorExtensions
     return values;
   }
 
-  public static int[] Integers(this IRandomGenerator random, int length, int low, int? high = null, bool endpoint = false) {
+  public static int Integer(this IRandomNumberGenerator random, int high, bool endpoint = false) {
+    return random.Integer(0, high, endpoint);
+  }
+  
+  public static int[] Integers(this IRandomNumberGenerator random, int length, int low, int high, bool endpoint = false) {
     int[] values = new int[length];
     for (int i = 0; i < length; i++) {
       values[i] = random.Integer(low, high, endpoint);
     }
     return values;
   }
+  
+  public static int[] Integers(this IRandomNumberGenerator random, int length, int high, bool endpoint = false) {
+    return random.Integers(length, 0, high, endpoint);
+  }
 }
 
 
 public static class RandomGenerator {
-  public static IRandomGenerator CreateDefault(int? seed = null) {
-    return new SystemRandomGenerator(seed);
+  public static IRandomNumberGenerator CreateDefault(int? seed = null) {
+    var random = seed.HasValue ? new Random(seed.Value) : new Random();
+    return new SystemRandomNumberGenerator(random);
   }
 }
 
-public class SystemRandomGenerator : IRandomGenerator {
+public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   private readonly Random random;
-  public SystemRandomGenerator(int? seed = null) {
-    random = seed is null ? new Random() : new Random(seed.Value);
+  public SystemRandomNumberGenerator(Random random) {
+    this.random = random;
   }
   
   public double Random() {
     return random.NextDouble();
   }
   
-  public int Integer(int low, int? high = null, bool endpoint = false) {
-    if (high is null) {
-      (low, high) = (0, low);
-    }
+  public int Integer(int low, int high, bool endpoint = false) {
     return endpoint switch {
-      false => random.Next(low, high.Value),
-      true => random.Next(low, high.Value + 1),
+      false => random.Next(low, high),
+      true => random.Next(low, high + 1),
     };
   }
   
@@ -60,9 +95,11 @@ public class SystemRandomGenerator : IRandomGenerator {
     return bytes;
   }
   
-  public IReadOnlyList<IRandomGenerator> Spawn(int count) {
-    int[] seeds = this.Integers(count, int.MaxValue);
-    return seeds.Select(seed => new SystemRandomGenerator(seed)).ToList();
+  public IRandomNumberGenerator[] Spawn(int count) {
+    return this
+      .Integers(count, int.MaxValue)
+      .Select(seed => new SystemRandomNumberGenerator(new Random(seed)))
+      .ToArray<IRandomNumberGenerator>();
   }
 }
 
@@ -77,11 +114,11 @@ public interface IDistribution {
 }
 
 public class UniformDistribution : IDistribution {
-  private readonly IRandomGenerator random;
+  private readonly IRandomNumberGenerator random;
   private readonly double low;
   private readonly double high;
   
-  public UniformDistribution(IRandomGenerator random, double low, double high) {
+  public UniformDistribution(IRandomNumberGenerator random, double low, double high) {
     this.random = random;
     this.low = low;
     this.high = high;
@@ -93,11 +130,11 @@ public class UniformDistribution : IDistribution {
 }
 
 public class NormalDistribution : IDistribution {
-  private readonly IRandomGenerator random;
+  private readonly IRandomNumberGenerator random;
   private readonly double mean;
   private readonly double standardDeviation;
   
-  public NormalDistribution(IRandomGenerator random, double mean, double standardDeviation) {
+  public NormalDistribution(IRandomNumberGenerator random, double mean, double standardDeviation) {
     this.random = random;
     this.mean = mean;
     this.standardDeviation = standardDeviation;

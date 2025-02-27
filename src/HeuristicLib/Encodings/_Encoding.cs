@@ -1,8 +1,9 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Operators;
+﻿namespace HEAL.HeuristicLib.Encodings;
 
-namespace HEAL.HeuristicLib.Encodings;
+using Algorithms.GeneticAlgorithm;
+using Operators;
+
+
 
 public interface IEncoding {}
 
@@ -37,9 +38,8 @@ public interface IEncodingBundle<TGenotype, TEncoding> : IConfigurationBundle<TG
   TEncoding Encoding { get; }
 }
 
-public interface ICreatorProvider<TGenotype>
-{
-  ICreator<TGenotype> Creator { get; }
+public interface ICreatorProvider<TGenotype, in TParams> {
+  ICreator<TGenotype> Create(TParams parameter);
 }
 
 public interface ICrossoverProvider<TGenotype>
@@ -56,7 +56,7 @@ public static class GeneticAlgorithmBuilderEncodingExtension {
   public static GeneticAlgorithmBuilder<TSolution> WithEncodingBundle<TEncoding, TSolution>(this GeneticAlgorithmBuilder<TSolution> builder, IEncodingBundle<TSolution, TEncoding> encoding)
   {
     if (encoding is ICreatorProvider<TSolution> creatorProvider) {
-      builder.WithCreator(creatorProvider.Creator);
+      builder.WithCreatorFactory(creatorProvider.CreatorFactory);
     }
     if (encoding is ICrossoverProvider<TSolution> crossoverProvider) {
       builder.WithCrossover(crossoverProvider.Crossover);

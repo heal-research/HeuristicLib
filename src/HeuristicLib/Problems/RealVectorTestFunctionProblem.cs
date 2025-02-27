@@ -76,24 +76,26 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, ObjectiveVa
 
     return new TestFunctionRealVectorEncodingBundle(
       encoding,
-      UniformDistributedCreator.FromEncoding(encoding),
+      new UniformDistributedCreatorProvider(),
       new AlphaBetaBlendCrossover(0.7, 0.3),
-      new GaussianMutation(0.1, 0.1)
+      new GaussianMutation(0.1, 0.1, null!)
     );
   }
 }
 
-public class TestFunctionRealVectorEncodingBundle : IEncodingBundle<RealVector, RealVectorEncoding>, ICreatorProvider<RealVector>, ICrossoverProvider<RealVector>, IMutatorProvider<RealVector>
+public class TestFunctionRealVectorEncodingBundle : IEncodingBundle<RealVector, RealVectorEncoding>, ICrossoverProvider<RealVector>, IMutatorProvider<RealVector>
 {
   public RealVectorEncoding Encoding { get; }
-  public ICreator<RealVector> Creator { get; }
+  public ICreatorProvider<RealVector, CreatorParameters> CreatorProvider { get; }
+  //public ICreator<RealVector> Creator { get; }
   public ICrossover<RealVector> Crossover { get; }
   public IMutator<RealVector> Mutator { get; }
 
-  public TestFunctionRealVectorEncodingBundle(RealVectorEncoding encoding, ICreator<RealVector> creator, ICrossover<RealVector> crossover, IMutator<RealVector> mutator)
+  //public TestFunctionRealVectorEncodingBundle(RealVectorEncoding encoding, ICreator<RealVector> creator, ICrossover<RealVector> crossover, IMutator<RealVector> mutator)
+  public TestFunctionRealVectorEncodingBundle(RealVectorEncoding encoding, ICreatorProvider<RealVector, CreatorParameters> creatorProvider, ICrossover<RealVector> crossover, IMutator<RealVector> mutator)
   {
     Encoding = encoding;
-    Creator = creator;
+    CreatorProvider = creatorProvider;
     Crossover = crossover;
     Mutator = mutator;
   }

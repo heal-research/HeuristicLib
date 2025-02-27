@@ -1,18 +1,18 @@
-﻿using HEAL.HeuristicLib.Operators;
+﻿namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using Operators;
 
+public record PopulationState<TSolution>(
+  int CurrentGeneration,
+  TSolution[] Population,
+  ObjectiveValue[] Objectives
+);
 
-public record PopulationState<TSolution>(int CurrentGeneration, IReadOnlyList<TSolution> Population, IReadOnlyList<ObjectiveValue> Objectives);
-
-
-
-
-public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenotype>>
-{
+public class GeneticAlgorithm<TGenotype>
+  : AlgorithmBase<PopulationState<TGenotype>> {
   public GeneticAlgorithm(int populationSize,
     ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
-    ITerminator<PopulationState<TGenotype>> terminator, IEvaluator<TGenotype, ObjectiveValue> evaluator, IRandomGenerator random, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer)
+    ITerminator<PopulationState<TGenotype>> terminator, IEvaluator<TGenotype, ObjectiveValue> evaluator, IRandomNumberGenerator random, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer)
   {
     PopulationSize = populationSize;
     Terminator = terminator;
@@ -33,7 +33,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   public IMutator<TGenotype> Mutator { get; }
   public double MutationRate { get; }
   public IEvaluator<TGenotype, ObjectiveValue> Evaluator { get; }
-  public IRandomGenerator Random { get; }
+  public IRandomNumberGenerator Random { get; }
   public ISelector<TGenotype, ObjectiveValue> Selector { get; }
   public IReplacer<TGenotype> Replacer { get; }
   // WIP
@@ -62,41 +62,36 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     return currentState;
   }
 
-  private IReadOnlyList<TGenotype> InitializePopulation()
-  {
-    var population = new List<TGenotype>();
+  private TGenotype[] InitializePopulation() {
+    var population = new TGenotype[PopulationSize];
     for (int i = 0; i < PopulationSize; i++) {
-      population.Add(Creator.Create());
+      population[i] = Creator.Create();
     }
     return population;
   }
 
-  private IReadOnlyList<TGenotype> EvolvePopulation(IReadOnlyList<TGenotype> population, int offspringCount)
-  {
-    var newPopulation = new List<TGenotype>();
+  private TGenotype[] EvolvePopulation(TGenotype[] population, int offspringCount) {
+    var newPopulation = new TGenotype[offspringCount];
     var objectives = EvaluatePopulation(population);
     var parents = Selector.Select(population, objectives, offspringCount * 2);
-
-    for (int i = 0; i < parents.Count; i += 2)
-    {
+  
+    for (int i = 0; i < parents.Length; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
       var offspring = Crossover.Crossover(parent1, parent2);
       if (Random.Random() < MutationRate) {
         offspring = Mutator.Mutate(offspring);
       }
-      newPopulation.Add(offspring);
+      newPopulation[i / 2] = offspring;
     }
     return newPopulation;
   }
 
-  private IReadOnlyList<ObjectiveValue> EvaluatePopulation(IReadOnlyList<TGenotype> population)
-  {
-    return population.Select(individual => Evaluator.Evaluate(individual)).ToList();
+  private ObjectiveValue[] EvaluatePopulation(TGenotype[] population) {
+    return population.Select(individual => Evaluator.Evaluate(individual)).ToArray();
   }
 
-  private TGenotype GetBestIndividual(IReadOnlyList<TGenotype> population, IReadOnlyList<ObjectiveValue> objectives)
-  {
+  private TGenotype GetBestIndividual(TGenotype[] population, ObjectiveValue[] objectives) {
     int bestIndex = objectives
       .Select((objective, index) => new { objective, index })
       .OrderBy(x => x.objective)

@@ -9,15 +9,15 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmTests {
   [Fact]
   public Task GeneticAlgorithm_ShouldRunWithoutBuilder() {
-    var creator = new UniformDistributedCreator(10, -5, 5);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
+    var random = RandomGenerator.CreateDefault(42);
+    var creator = new UniformDistributedCreator(10, -5, 5, random);
+    var crossover = new SinglePointCrossover(random);
+    var mutator = new GaussianMutator(0.1, 0.1, random);
     var evaluator = new MockEvaluator();
-    var selector = new RandomSelector<RealVector, ObjectiveValue>();
+    var selector = new RandomSelector<RealVector, ObjectiveValue>(random);
     var replacement = new PlusSelectionReplacer<RealVector>();
     var terminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.CurrentGeneration);
-    var random = RandomGenerator.CreateDefault();
-
+    
     var ga = new GeneticAlgorithm<RealVector>(
       200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, random, selector, replacement
     );
@@ -29,15 +29,15 @@ public class GeneticAlgorithmTests {
 
   [Fact]
   public async Task GeneticAlgorithm_ShouldPauseAndContinue() {
-    var creator = new UniformDistributedCreator(10, -5, 5);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
+    var random = RandomGenerator.CreateDefault(42);
+    var creator = new UniformDistributedCreator(10, -5, 5, random);
+    var crossover = new SinglePointCrossover(random);
+    var mutator = new GaussianMutator(0.1, 0.1, random);
     var evaluator = new MockEvaluator();
-    var selector = new ProportionalSelector<RealVector>();
+    var selector = new ProportionalSelector<RealVector>(random);
     var replacement = new PlusSelectionReplacer<RealVector>();
     var pauseToken = new PauseToken();
     var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
-    var random = RandomGenerator.CreateDefault();
 
     var ga = new GeneticAlgorithm<RealVector>(
       200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, random, selector, replacement
@@ -81,12 +81,13 @@ public class GeneticAlgorithmTests {
     var random = RandomGenerator.CreateDefault(42);
 
     var terminationCriterion = new ThresholdTerminator<PopulationState<Permutation>>(100, state => state.CurrentGeneration);
-    var selector = new TournamentSelector<Permutation>(3);
+    var selector = new TournamentSelector<Permutation>(3, random);
     var replacement = new ElitismReplacer<Permutation>(2);
-
+    //var creator = encoding.CreatorFactory(new CreatorParameters(5, random));
+    
     var ga = new GeneticAlgorithm<Permutation>(
       50, 
-      encoding.Creator,
+      null!,
       encoding.Crossover,
       new SwapMutation(),
       0.1,

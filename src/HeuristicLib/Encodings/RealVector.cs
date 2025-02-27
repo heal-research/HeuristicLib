@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Encodings;
@@ -161,12 +162,12 @@ public class RealVector : IReadOnlyList<double> {
     return others.Max(v => v.Count);
   }
   
-  public static RealVector CreateNormal(RealVector mean, RealVector std, Random random) {
+  public static RealVector CreateNormal(RealVector mean, RealVector std, IRandomNumberGenerator random) {
     int targetLength = BroadcastLength(mean, std);
     
     // Box-Muller transform to generate normal distributed random values
-    RealVector u1 = 1.0 - new RealVector(Enumerable.Range(0, targetLength).Select(_ => random.NextDouble()));
-    RealVector u2 = 1.0 - new RealVector(Enumerable.Range(0, targetLength).Select(_ => random.NextDouble()));
+    RealVector u1 = 1.0 - new RealVector(random.Random(targetLength));
+    RealVector u2 = 1.0 - new RealVector(random.Random(targetLength));
     RealVector randStdNormal = Sqrt(u1 * 2) * Sin(2 * Math.PI * u2);
     
     // Apply mean and sigma for this dimension
@@ -175,10 +176,10 @@ public class RealVector : IReadOnlyList<double> {
     return value;
   }
 
-  public static RealVector CreateUniform(RealVector low, RealVector high, Random random) {
+  public static RealVector CreateUniform(RealVector low, RealVector high, IRandomNumberGenerator random) {
     int targetLength = BroadcastLength(low, high);
     
-    RealVector value = new RealVector(Enumerable.Range(0, targetLength).Select(_ => random.NextDouble()));
+    RealVector value = new RealVector(random.Random(targetLength));
     value = low + (high - low) * value;
     return value;
   }
@@ -286,35 +287,41 @@ public class RealVector : IReadOnlyList<double> {
 }
 
 public class GaussianMutation : IMutator<RealVector> {
-  private readonly double mutationRate;
-  private readonly double mutationStrength;
+  public double MutationRate { get; }
+  public double MutationStrength { get; }
+  public IRandomNumberGenerator Random { get; }
 
-  public GaussianMutation(double mutationRate, double mutationStrength) {
-    this.mutationRate = mutationRate;
-    this.mutationStrength = mutationStrength;
+  public GaussianMutation(double mutationRate, double mutationStrength, IRandomNumberGenerator random) {
+    this.MutationRate = mutationRate;
+    this.MutationStrength = mutationStrength;
+    this.Random = random;
   }
 
   public RealVector Mutate(RealVector solution) {
-    var rnd = new Random();
-    var newElements = solution.ToArray();
+    double[] newElements = solution.ToArray();
     for (int i = 0; i < newElements.Length; i++) {
-      if (rnd.NextDouble() < mutationRate) {
-        newElements[i] += mutationStrength * (rnd.NextDouble() - 0.5);
+      if (Random.Random() < MutationRate) {
+        newElements[i] += MutationStrength * (Random.Random() - 0.5);
       }
     }
     return new RealVector(newElements);
   }
+  
+  public record Parameter(double MutationRate, double MutationStrength);
 }
 
 
 public class SinglePointCrossover : ICrossover<RealVector>
 {
-  private readonly Random random = new();
+  public SinglePointCrossover(IRandomNumberGenerator random) {
+    Random = random;
+  }
+  public IRandomNumberGenerator Random { get; }
 
   public RealVector Crossover(RealVector parent1, RealVector parent2)
   {
-    int crossoverPoint = random.Next(1, parent1.Count);
-    var offspringValues = new double[parent1.Count];
+    int crossoverPoint = Random.Integer(1, parent1.Count);
+    double[] offspringValues = new double[parent1.Count];
     for (int i = 0; i < crossoverPoint; i++) {
       offspringValues[i] = parent1[i];
     }
@@ -323,18 +330,21 @@ public class SinglePointCrossover : ICrossover<RealVector>
     }
     return new RealVector(offspringValues);
   }
+  
+  public record Parameter();
 }
 
 public class GaussianMutator : IMutator<RealVector>
 {
-  private readonly Random random = new();
-  private readonly double mutationRate;
-  private readonly double mutationStrength;
+  public double MutationRate { get; }
+  public double MutationStrength { get; }
+  public IRandomNumberGenerator Random { get; }
 
-  public GaussianMutator(double mutationRate, double mutationStrength)
+  public GaussianMutator(double mutationRate, double mutationStrength, IRandomNumberGenerator random)
   {
-    this.mutationRate = mutationRate;
-    this.mutationStrength = mutationStrength;
+    MutationRate = mutationRate;
+    MutationStrength = mutationStrength;
+    Random = random;
   }
 
   public RealVector Mutate(RealVector individual) {
@@ -342,26 +352,27 @@ public class GaussianMutator : IMutator<RealVector>
 
     for (int i = 0; i < mutatedValues.Count; i++)
     {
-      if (random.NextDouble() < mutationRate)
+      if (Random.Random() < MutationRate)
       {
-        mutatedValues[i] += random.NextDouble() * mutationStrength * 2 - mutationStrength;
+        mutatedValues[i] += Random.Random() * MutationStrength * 2 - MutationStrength;
       }
     }
     return new RealVector(mutatedValues);
   }
+  
+  public record Parameter(double MutationRate, double MutationStrength);
 }
 
 public class NormalDistributedCreator : ICreator<RealVector>
 {
-  private readonly Random random = new();
-  
   public int Length { get; }
   public RealVector Means { get; }
   public RealVector Sigmas { get; }
   public RealVector Minimum { get; }
   public RealVector Maximum { get; }
+  public IRandomNumberGenerator Random { get; }
 
-  public NormalDistributedCreator(int length, RealVector means, RealVector sigmas, RealVector minimum, RealVector maximum) {
+  public NormalDistributedCreator(int length, RealVector means, RealVector sigmas, RealVector minimum, RealVector maximum, IRandomNumberGenerator random) {
     if (!RealVector.AreCompatible(length, means, sigmas, minimum, maximum)) throw new ArgumentException("Vectors must have compatible lengths");
     
     Length = length;
@@ -369,46 +380,57 @@ public class NormalDistributedCreator : ICreator<RealVector>
     Sigmas = sigmas;
     Minimum = minimum;
     Maximum = maximum;
+    Random = random;
   }
 
   public RealVector Create() {
-    RealVector value = RealVector.CreateNormal(Means, Sigmas, random);
+    RealVector value = RealVector.CreateNormal(Means, Sigmas, Random);
     // Clamp value to min/max bounds
     value = RealVector.Clamp(value, Minimum, Maximum);
     return value;
   }
 }
 
-public class NormalDistributedCreatorFactory : IOperatorFactory<NormalDistributedCreator, RealVectorEncoding> {
+public record NormalDistributedCreatorParameters(int Length, RealVector Means, RealVector Sigmas, RealVector Minimum, RealVector Maximum, IRandomNumberGenerator Random)
+  : CreatorParameters;
 
-  public NormalDistributedCreator Create(RealVectorEncoding encoding) {
-    return new NormalDistributedCreator(encoding.Length, encoding.Minimum, encoding.Maximum, encoding.Minimum, encoding.Maximum);
+public class NormalDistributedCreatorProvider : ICreatorProvider<RealVector, NormalDistributedCreatorParameters> {
+  public ICreator<RealVector> Create(NormalDistributedCreatorParameters parameters) {
+    return new NormalDistributedCreator(parameters.Length, parameters.Means, parameters.Sigmas, parameters.Minimum, parameters.Maximum, parameters.Random);
   }
 }
 
-
 public class UniformDistributedCreator : ICreator<RealVector>
 {
-  private readonly Random random = new();
-  
   public int Length { get; }
   public RealVector Minimum { get; }
   public RealVector Maximum { get; }
+  public IRandomNumberGenerator Random { get; }
 
-  public UniformDistributedCreator(int length, RealVector minimum, RealVector maximum) {
+  public UniformDistributedCreator(int length, RealVector minimum, RealVector maximum, IRandomNumberGenerator random) {
     if (!RealVector.AreCompatible(length, minimum, maximum)) throw new ArgumentException("Vectors must have compatible lengths");
     
     Length = length;
     Minimum = minimum;
     Maximum = maximum;
+    Random = random;
   }
 
   public RealVector Create()
   {
-    return RealVector.CreateUniform(Minimum, Minimum, random);
+    return RealVector.CreateUniform(Minimum, Minimum, Random);
   }
   
-  public static UniformDistributedCreator FromEncoding(RealVectorEncoding encoding) {
-    return new UniformDistributedCreator(encoding.Length, encoding.Minimum, encoding.Maximum);
+  public static UniformDistributedCreator FromEncoding(RealVectorEncoding encoding, IRandomNumberGenerator random) {
+    return new UniformDistributedCreator(encoding.Length, encoding.Minimum, encoding.Maximum, random);
+  }
+}
+
+public record UniformDistributedCreatorParameters(int Length, RealVector Minimum, RealVector Maximum, IRandomNumberGenerator Random) : CreatorParameters;
+
+public class UniformDistributedCreatorProvider : ICreatorProvider<RealVector, UniformDistributedCreatorParameters> {
+  public ICreator<RealVector> Create(UniformDistributedCreatorParameters p) {
+    var parameters = (UniformDistributedCreatorParameters)p;
+    return new UniformDistributedCreator(parameters.Length, parameters.Minimum, parameters.Maximum, parameters.Random);
   }
 }
