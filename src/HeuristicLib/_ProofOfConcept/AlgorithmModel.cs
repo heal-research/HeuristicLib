@@ -61,7 +61,7 @@ class AlgorithmModelExample
   void Execute() {
     var pauseToken = new PauseToken();
 
-    var ga = new GeneticAlgorithmBuilderBasic<double[]>()
+    var ga = new GeneticAlgorithmBuilder<double[]>()
       .WithPopulationSize(200)
       .TerminateOnMaxGenerations(50)
       .TerminateOnPauseToken(pauseToken)
