@@ -35,7 +35,7 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     null!,
     //encoding.Crossover,
     null!,
-    new SwapMutator(),
+    new SwapMutator(null!),
     0.1,
     terminationCriterion,
     evaluator,

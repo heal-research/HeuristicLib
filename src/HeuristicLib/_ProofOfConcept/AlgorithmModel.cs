@@ -58,23 +58,23 @@ public partial class GeneticAlgorithmModel {
 
 class AlgorithmModelExample
 {
-  void Execute() {
-    var pauseToken = new PauseToken();
-
-    var ga = new GeneticAlgorithmBuilder<double[]>()
-      .WithPopulationSize(200)
-      .TerminateOnMaxGenerations(50)
-      .TerminateOnPauseToken(pauseToken)
-      .OnLiveResult(best => Console.WriteLine($"Best so far: {string.Join(",", best)}"))
-      .Build();
-
-    Task.Run(async () =>
-    {
-      await Task.Delay(1000);
-      pauseToken.RequestPause();
-    });
-
-    var finalState = ga.Run();
-    Console.WriteLine($"Paused at generation {finalState.CurrentGeneration}");
-  }
+  // void Execute() {
+  //   var pauseToken = new PauseToken();
+  //
+  //   var ga = new GeneticAlgorithmBuilder<double[]>()
+  //     .WithPopulationSize(200)
+  //     .TerminateOnMaxGenerations(50)
+  //     .TerminateOnPauseToken(pauseToken)
+  //     .OnLiveResult(best => Console.WriteLine($"Best so far: {string.Join(",", best)}"))
+  //     .Build();
+  //
+  //   Task.Run(async () =>
+  //   {
+  //     await Task.Delay(1000);
+  //     pauseToken.RequestPause();
+  //   });
+  //
+  //   var finalState = ga.Run();
+  //   Console.WriteLine($"Paused at generation {finalState.CurrentGeneration}");
+  // }
 }

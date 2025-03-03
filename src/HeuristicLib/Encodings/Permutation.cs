@@ -5,8 +5,8 @@ using HEAL.HeuristicLib.Operators;
 namespace HEAL.HeuristicLib.Encodings;
 
 
-public class PermutationEncoding : EncodingBase<Permutation>
-  //, ICreatorProvider<Permutation>, ICrossoverProvider<Permutation> 
+public class PermutationEncoding : EncodingBase<Permutation>, IEncoding
+//, ICreatorProvider<Permutation>, ICrossoverProvider<Permutation> 
 {
   public PermutationEncoding(int length) 
     : base() {
@@ -15,6 +15,14 @@ public class PermutationEncoding : EncodingBase<Permutation>
   
   public int Length { get; }
 
+  public override bool Equals(IEncoding<Permutation>? other) {
+    if (other is null) return false;
+    if (ReferenceEquals(this, other)) return true;
+    if (other is PermutationEncoding otherPermutationEncoding) {
+      return Length == otherPermutationEncoding.Length;
+    }
+    return false;
+  }
   public override bool IsValidGenotype(Permutation genotype) {
     return genotype.Count == Length;
   }
@@ -122,17 +130,18 @@ public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   }
 }
 
-public class RandomPermutationCreator : CreatorBase<Permutation> {
-  public RandomPermutationCreator(int length, RandomSource randomSource) {
-    Length = length;
+public class RandomPermutationCreator : CreatorBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
+  public PermutationEncoding Encoding { get; }
+  public RandomSource RandomSource { get; }
+  
+  public RandomPermutationCreator(PermutationEncoding encoding, RandomSource randomSource) {
+    Encoding = encoding;
     RandomSource = randomSource;
   }
-  public int Length { get; }
-  public RandomSource RandomSource { get; }
-
+  
   public override Permutation Create() {
     var rng = RandomSource.CreateRandomNumberGenerator();
-    int[] elements = Enumerable.Range(0, Length).ToArray();
+    int[] elements = Enumerable.Range(0, Encoding.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
       int j = rng.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
@@ -140,41 +149,51 @@ public class RandomPermutationCreator : CreatorBase<Permutation> {
     return new Permutation(elements);
   }
 
-  public record Parameters(int Length, RandomSource RandomSource) : CreatorParameters;
-  
-  public class Template : CreatorTemplateBase<RandomPermutationCreator, Permutation, Parameters> {
-    public override RandomPermutationCreator Parameterize(Parameters parameters) {
-      return new RandomPermutationCreator(parameters.Length, parameters.RandomSource);
-    }
-  }
+  // public record Parameters(int Length, RandomSource RandomSource) : CreatorParameters;
+  //
+  // public class Template : CreatorTemplateBase<RandomPermutationCreator, Permutation, Parameters> {
+  //   public override RandomPermutationCreator Parameterize(Parameters parameters) {
+  //     return new RandomPermutationCreator(new PermutationEncoding(parameters.Length), parameters.RandomSource);
+  //   }
+  // }
 }
 
 
-public class OrderCrossover : CrossoverBase<Permutation> {
+public class OrderCrossover : CrossoverBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
+  public PermutationEncoding Encoding { get; }
+  public OrderCrossover(PermutationEncoding encoding) {
+    Encoding = encoding;
+  }
+  
   public override Permutation Crossover(Permutation parent1, Permutation parent2) {
     return Permutation.OrderCrossover(parent1, parent2);
   }
 
-  public record Parameters() : CrossoverParameters;
-  
-  public class Template : CrossoverTemplateBase<OrderCrossover, Permutation, Parameters> {
-    public override OrderCrossover Parameterize(Parameters parameters) {
-      return new OrderCrossover();
-    }
-  }
+  // public record Parameters() : CrossoverParameters;
+  //
+  // public class Template : CrossoverTemplateBase<OrderCrossover, Permutation, Parameters> {
+  //   public override OrderCrossover Parameterize(Parameters parameters) {
+  //     return new OrderCrossover(new PermutationEncoding());
+  //   }
+  // }
 }
 
 
-public class SwapMutator : MutatorBase<Permutation> {
+public class SwapMutator : MutatorBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
+  public PermutationEncoding Encoding { get; }
+  public SwapMutator(PermutationEncoding encoding) {
+    Encoding = encoding;
+
+  }
   public override Permutation Mutate(Permutation solution) {
     return Permutation.SwapRandomElements(solution);
   }
 
-  public record Parameters() : MutationParameters;
-  
-  public class Template : MutatorTemplateBase<SwapMutator, Permutation, Parameters> {
-    public override SwapMutator Parameterize(Parameters parameters) {
-      return new SwapMutator();
-    }
-  }
+  // public record Parameters() : MutationParameters;
+  //
+  // public class Template : MutatorTemplateBase<SwapMutator, Permutation, Parameters> {
+  //   public override SwapMutator Parameterize(Parameters parameters) {
+  //     return new SwapMutator();
+  //   }
+  // }
 }

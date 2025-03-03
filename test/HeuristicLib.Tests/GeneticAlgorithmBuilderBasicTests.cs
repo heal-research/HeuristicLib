@@ -10,10 +10,11 @@ public class GeneticAlgorithmBuilderBasicTests {
   [Fact]
   public Task GeneticAlgorithmBuilder_ShouldBuildAlgorithm() {
     var randomSource = RandomSource.CreateDefault(42);
-    var builder = new GeneticAlgorithmBuilder<RealVector>()
+    var encoding = new RealVectorEncoding(10, -5, +5);
+    var builder = new GeneticAlgorithmBuilder<RealVectorEncoding, RealVector>()
       .WithPopulationSize(200)
-      .WithCrossover(new SinglePointCrossover(randomSource))
-      .WithMutation(new GaussianMutator(0.1, 0.1, randomSource))
+      .WithCrossover(new SinglePointCrossover(encoding, randomSource))
+      .WithMutation(new GaussianMutator(encoding, 0.1, 0.1, randomSource))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
       .WithRandomSource(RandomSource.CreateDefault())

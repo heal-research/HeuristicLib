@@ -4,18 +4,24 @@ using Operators;
 
 
 
-public interface IEncoding {}
+public interface IEncoding { }
 
-public interface IEncoding<TGenotype> : IEncoding {
+public interface IEncoding<TGenotype> : IEncoding, IEquatable<IEncoding<TGenotype>> {
   bool IsValidGenotype(TGenotype genotype);
   bool AreCompatible(params IEnumerable<TGenotype> genotypes);
+  
+  // bool IsValidOperator(IEncodingOperator<TGenotype> @operator);
+  // bool AreCompatible(params IEnumerable<IEncodingOperator<TGenotype>> operators);
 }
+
+
 
 public abstract class EncodingBase<TGenotype> : IEncoding<TGenotype> {
   
   protected EncodingBase() { }
-  
 
+  public abstract bool Equals(IEncoding<TGenotype>? other);
+  
   public abstract bool IsValidGenotype(TGenotype genotype);
   public virtual bool AreCompatible(params IEnumerable<TGenotype> genotypes) {
     return genotypes.All(IsValidGenotype);

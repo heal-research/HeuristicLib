@@ -4,15 +4,15 @@ using Algorithms;
 using Algorithms.GeneticAlgorithm;
 using Encodings;
 using Operators;
-using Problems;
 
 public class GeneticAlgorithmTests {
   [Fact]
   public Task GeneticAlgorithm_ShouldRunWithoutBuilder() {
     var randomSource = new SeededRandomSource(42);
-    var creator = new UniformDistributedCreator(10, -5, 5, randomSource);
-    var crossover = new SinglePointCrossover(randomSource);
-    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
+    var encoding = new RealVectorEncoding(10, -5, +5);
+    var creator = new UniformDistributedCreator(encoding, randomSource);
+    var crossover = new SinglePointCrossover(encoding, randomSource);
+    var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector<RealVector, ObjectiveValue>(randomSource);
     var replacement = new PlusSelectionReplacer<RealVector>();
@@ -30,9 +30,10 @@ public class GeneticAlgorithmTests {
   [Fact]
   public async Task GeneticAlgorithm_ShouldPauseAndContinue() {
     var randomSource = new SeededRandomSource(42);
-    var creator = new UniformDistributedCreator(10, -5, 5, randomSource);
-    var crossover = new SinglePointCrossover(randomSource);
-    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
+    var encoding = new RealVectorEncoding(10, -5, +5);
+    var creator = new UniformDistributedCreator(encoding, randomSource);
+    var crossover = new SinglePointCrossover(encoding, randomSource);
+    var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
     var evaluator = new RealVectorMockEvaluator();
     var selector = new ProportionalSelector<RealVector>(randomSource);
     var replacement = new PlusSelectionReplacer<RealVector>();
@@ -40,7 +41,7 @@ public class GeneticAlgorithmTests {
     var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
 
     var ga = new GeneticAlgorithm<RealVector>(
-    200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, randomSource, selector, replacement
+      200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, randomSource, selector, replacement
     );
 
     var task = Task.Run(() => ga.Run());
@@ -54,7 +55,7 @@ public class GeneticAlgorithmTests {
     // Continue running the GA
     var newTerminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(pausedState.CurrentGeneration + 50, state => state.CurrentGeneration);
     var continuedGA = new GeneticAlgorithm<RealVector>(
-    200, creator, crossover, mutator, 0.05, newTerminationCriterion, evaluator, randomSource, selector, replacement
+      200, creator, crossover, mutator, 0.05, newTerminationCriterion, evaluator, randomSource, selector, replacement
     );
 
     var finalState = continuedGA.Run(pausedState);
@@ -73,9 +74,12 @@ public class GeneticAlgorithmTests {
 
   public async Task GeneticAlgorithm_WithMultiChomosomeGenotype() {
     var randomSource = new SeededRandomSource(42);
-    var creator = new MultiGenotypeCreator(new UniformDistributedCreator(10, -5, 5, randomSource), new RandomPermutationCreator(5, randomSource));
-    var crossover = new MultiGenotypeCrossover(new SinglePointCrossover(randomSource), new OrderCrossover());
-    var mutator = new MultiGenotypeMutator(new GaussianMutator(0.1, 0.1, randomSource), new SwapMutator());
+    var realVectorEncoding = new RealVectorEncoding(10, -5, +5);
+    var permutationEncoding = new PermutationEncoding(5);
+    
+    var creator = new MultiGenotypeCreator(new UniformDistributedCreator(realVectorEncoding, randomSource), new RandomPermutationCreator(permutationEncoding, randomSource));
+    var crossover = new MultiGenotypeCrossover(new SinglePointCrossover(realVectorEncoding, randomSource), new OrderCrossover(permutationEncoding));
+    var mutator = new MultiGenotypeMutator(new GaussianMutator(realVectorEncoding, 0.1, 0.1, randomSource), new SwapMutator(permutationEncoding));
     var evaluator = new MultiGenotypeEvaluator();
     var selector = new RandomSelector<MultiGenotype, ObjectiveValue>(randomSource);
     var replacement = new PlusSelectionReplacer<MultiGenotype>();
@@ -113,9 +117,11 @@ public class GeneticAlgorithmTests {
 
   public async Task GeneticAlgorithm_WithMultiChomosomeGenotypeWithRecordOperators() {
     var randomSource = new SeededRandomSource(42);
-    var creator = new MultiGenotypeCreator(new UniformDistributedCreator(10, -5, 5, randomSource), new RandomPermutationCreator(5, randomSource));
-    var crossover = new RecordCrossover<MultiGenotype, RealVector, Permutation>(new SinglePointCrossover(randomSource), new OrderCrossover());
-    var mutator = new MultiGenotypeMutator(new GaussianMutator(0.1, 0.1, randomSource), new SwapMutator());
+    var realVectorEncoding = new RealVectorEncoding(10, -5, +5);
+    var permutationEncoding = new PermutationEncoding(5);
+    var creator = new MultiGenotypeCreator(new UniformDistributedCreator(realVectorEncoding, randomSource), new RandomPermutationCreator(permutationEncoding, randomSource));
+    var crossover = new RecordCrossover<MultiGenotype, RealVector, Permutation>(new SinglePointCrossover(realVectorEncoding, randomSource), new OrderCrossover(permutationEncoding));
+    var mutator = new MultiGenotypeMutator(new GaussianMutator(realVectorEncoding, 0.1, 0.1, randomSource), new SwapMutator(permutationEncoding));
     var evaluator = new MultiGenotypeEvaluator();
     var selector = new RandomSelector<MultiGenotype, ObjectiveValue>(randomSource);
     var replacement = new PlusSelectionReplacer<MultiGenotype>();
