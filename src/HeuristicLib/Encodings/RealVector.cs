@@ -397,7 +397,7 @@ public class NormalDistributedCreator : CreatorBase<RealVector>, IEncodingOperat
 
 public class UniformDistributedCreator : CreatorBase<RealVector>, IEncodingOperator<RealVector, RealVectorEncoding> {
   public RealVectorEncoding Encoding { get; }
-  // public int Length { get; }
+  // TODO: make it null to indicate override from encoding
   // public RealVector Minimum { get; }
   // public RealVector Maximum { get; }
   public RandomSource RandomSource { get; }

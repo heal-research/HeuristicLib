@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Configuration;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 
@@ -41,6 +42,17 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
     public override ObjectiveValue Evaluate(Permutation solution) {
       return problem.Evaluate(solution);
     }
+  }
+  
+  public PermutationEncoding CreatePermutationEncoding() {
+    return new PermutationEncoding(numberOfCities);
+  }
+  
+  public GeneticAlgorithmOptions CreateGeneticAlgorithmConfig() {
+    return new GeneticAlgorithmOptions(
+      Crossover: new OrderCrossoverOptions(),
+      Mutator: new SwapMutatorOptions()
+    );
   }
 
   // public TspPermutationEncodingBundle CreatePermutationEncodingBundle()

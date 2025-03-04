@@ -9,8 +9,7 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmBuilderWithEncodingTests {
   
   [Fact]
-  public Task GeneticAlgorithm_ShouldSolveTSPWithBuilder()
-  {
+  public Task GeneticAlgorithm_ShouldSolveTSPWithBuilder() {
     // Define a small TSP instance (5 cities)
     var distances = new double[,] {
       { 0, 2, 9, 10, 6 },
@@ -21,28 +20,24 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     };
 
     var problem = new TravelingSalesmanProblem(distances);
-    //var encoding = problem.CreatePermutationEncodingBundle();
+
+    var encoding = problem.CreatePermutationEncoding();
+    var config = problem.CreateGeneticAlgorithmConfig();
     var evaluator = problem.CreateEvaluator();
     var randomState = RandomSource.CreateDefault(42);
 
     var terminationCriterion = new ThresholdTerminator<PopulationState<Permutation>>(100, state => state.CurrentGeneration);
     var selector = new TournamentSelector<Permutation>(3, randomState);
     var replacement = new ElitismReplacer<Permutation>(2);
-    //var creator = encoding.CreatorFactory(new CreatorParameters(5, random));
-    
-    var ga = new GeneticAlgorithm<Permutation>(
-    50, 
-    null!,
-    //encoding.Crossover,
-    null!,
-    new SwapMutator(null!),
-    0.1,
-    terminationCriterion,
-    evaluator,
-    randomState,
-    selector,
-    replacement
-    );
+
+    var builder = new GeneticAlgorithmBuilder<PermutationEncoding, Permutation>();
+      // .WithEncoding(encoding)
+      // .WithConfiguration(config)
+      // .WithTerminationCriterion(terminationCriterion)
+      // .WithSelector(selector);
+
+
+    var ga = builder.Build();
 
     var finalState = ga.Run();
     return Verify(finalState);

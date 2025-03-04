@@ -17,13 +17,13 @@ public abstract class ProblemBase<TPhenotype, TObjective> : IProblem<TPhenotype,
   public abstract TObjective Evaluate(TPhenotype solution);
 }
 
-
-public static class GeneticAlgorithmBuilderProblemExtension {
-  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithProblemDefinition<TEncoding, TGenotype>(this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, IProblem<TGenotype, ObjectiveValue> problem)
-    where TEncoding : IEncoding<TGenotype>
-  {
-    //builder.WithEncodingBundle(problem.GetDefaultEncoding())
-    builder.WithEvaluator(problem.CreateEvaluator());
-    return builder;
-  }
-}
+//
+// public static class GeneticAlgorithmBuilderProblemExtension {
+//   public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithProblemDefinition<TEncoding, TGenotype>(this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, IProblem<TGenotype, ObjectiveValue> problem)
+//     where TEncoding : IEncoding<TGenotype>
+//   {
+//     //builder.WithEncodingBundle(problem.GetDefaultEncoding())
+//     builder.WithEvaluator(problem.CreateEvaluator());
+//     return builder;
+//   }
+// }

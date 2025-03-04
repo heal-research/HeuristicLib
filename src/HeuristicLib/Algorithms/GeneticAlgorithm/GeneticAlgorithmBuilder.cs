@@ -1,165 +1,181 @@
 ﻿using FluentValidation;
-using FluentValidation.Results;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
+public record GeneticAlgorithmConfig<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype> {
+  public TEncoding? Encoding { get; init; }
+
+  public int? PopulationSize { get; init; }
+
+  public Func<TEncoding, RandomSource, ICreator<TGenotype>>? CreatorFactory { get; init; }
+  public Func<TEncoding, RandomSource, ICrossover<TGenotype>>? CrossoverFactory { get; init; }
+  public Func<TEncoding, RandomSource, IMutator<TGenotype>>? MutatorFactory { get; init; }
+  public double? MutationRate { get; init; }
+
+  public Func<TEncoding, IEvaluator<TGenotype, ObjectiveValue>>? EvaluatorFactory { get; init; }
+  public Func<RandomSource, ISelector<TGenotype, ObjectiveValue>>? SelectorFactory { get; init; }
+  
+  public Func<RandomSource, IReplacer<TGenotype>>? ReplacementFactory { get; init; }
+  
+  public RandomSource? RandomSource { get; init; }
+  
+  public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
+}
+
 public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEncoding<TGenotype> {
+  private readonly GeneticAlgorithmConfig<TGenotype, TEncoding> baseConfig = new();
+  private readonly List<IConfigSource<TGenotype, TEncoding>> sources = [];
   
-  private int? populationSize;
-  private ITerminator<PopulationState<TGenotype>>? terminationCriterion;
-
-  private TEncoding? encoding;
-  
-  //private CreatorParameters? creatorParameters;
-  //private Func<CreatorParameters, ICreator<TGenotype>> creatorFactory;
-  
-  private ICreator<TGenotype>? creator;
-  private ICrossover<TGenotype>? crossover;
-  private IMutator<TGenotype>? mutator;
-  private IEvaluator<TGenotype, ObjectiveValue>? evaluator;
-  private Action<TGenotype>? onLiveResult;
-  private double mutationRate;
-  private RandomSource? randomSource;
-  private ISelector<TGenotype, ObjectiveValue>? selector;
-  private IReplacer<TGenotype>? replacement;
-
-  public GeneticAlgorithmBuilder() {
-    populationSize = 100;
-    terminationCriterion = new ThresholdTerminator<PopulationState<TGenotype>>(50, state => state.CurrentGeneration);
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithPopulationSize(int populationSize) {
-    this.populationSize = populationSize;
+  public GeneticAlgorithmBuilder<TEncoding, TGenotype> AddSource(IConfigSource<TGenotype, TEncoding> source) {
+    sources.Add(source);
     return this;
   }
   
-  
-  // public GeneticAlgorithmBuilder<TGenotype> WithCreatorFactory(Func<CreatorParameters, ICreator<TGenotype>> creatorFactory) {
-  //   this.creatorFactory = creatorFactory;
-  //   return this;
-  // }
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithCreator(ICreator<TGenotype> creator) {
-    //creatorFactory = _ => creator;
-    this.creator = creator;
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithCrossover(ICrossover<TGenotype> crossover) {
-    this.crossover = crossover;
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithMutation(IMutator<TGenotype> mutator) {
-    this.mutator = mutator;
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithMutationRate(double mutationRate) {
-    this.mutationRate = mutationRate;
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithEvaluator(IEvaluator<TGenotype, ObjectiveValue> evaluator) {
-    this.evaluator = evaluator;
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithRandomSource(RandomSource randomSource) {
-    this.randomSource = randomSource;
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithSelector(ISelector<TGenotype, ObjectiveValue> selector) {
-    this.selector = selector;
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithReplacement(IReplacer<TGenotype> replacer) {
-    this.replacement = replacer;
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithPlusSelectionReplacement() {
-    replacement = new PlusSelectionReplacer<TGenotype>();
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> WithElitismReplacement(int elites) {
-    replacement = new ElitismReplacer<TGenotype>(elites);
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> TerminateOnMaxGenerations(int maxGenerations) {
-    // ToDo: add or replace criterion?
-    terminationCriterion = new ThresholdTerminator<PopulationState<TGenotype>>(maxGenerations, state => state.CurrentGeneration);
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> TerminateOnPauseToken(PauseToken pauseToken) {
-    // ToDo: add or replace criterion?
-    terminationCriterion = new PauseTokenTerminator<PopulationState<TGenotype>>(pauseToken);
-    return this;
-  }
-
-  public GeneticAlgorithmBuilder<TEncoding, TGenotype> OnLiveResult(Action<TGenotype> handler) {
-    onLiveResult = handler;
-    return this;
-  }
-  
- 
-
   public GeneticAlgorithm<TGenotype> Build() {
-    var result = Validate();
-    if (!result.IsValid) {
-      throw new ValidationException(result.Errors);
-    }
-    
-    //var creator = creatorFactory(creatorParameters!);
-    
-    var ga = new GeneticAlgorithm<TGenotype>(
-      populationSize!.Value,
-      creator!,
-      crossover!,
-      mutator!, mutationRate, terminationCriterion!,
-      evaluator!,
-      randomSource ?? RandomSource.CreateDefault(42),
-      selector!, replacement!
+    var config = ResolveConfig();
+
+    return new GeneticAlgorithm<TGenotype>(
+      config.PopulationSize,
+      config.Creator,
+      config.Crossover,
+      config.Mutator,
+      config.MutationRate,
+      config.Terminator,
+      config.Evaluator,
+      config.RandomSource,
+      config.Selector,
+      config.Replacer
     );
-    if (onLiveResult != null) {
-      ga.OnLiveResult += onLiveResult;
+  }
+
+  private ResolvedConfig ResolveConfig() {
+    var config = CollectConfig(baseConfig, sources);
+    
+    ValidateConfig(config);
+    
+    var resolvedConfig = new ResolvedConfig {
+      Encoding = config.Encoding,
+      PopulationSize = config.PopulationSize!.Value,
+      Creator = config.CreatorFactory!.Invoke(config.Encoding!, config.RandomSource!),
+      Crossover = config.CrossoverFactory!.Invoke(config.Encoding!, config.RandomSource!),
+      Mutator = config.MutatorFactory!.Invoke(config.Encoding!, config.RandomSource!),
+      MutationRate = config.MutationRate!.Value,
+      Evaluator = config.EvaluatorFactory!.Invoke(config.Encoding!),
+      Selector = config.SelectorFactory!.Invoke(config.RandomSource!),
+      Replacer = config.ReplacementFactory!.Invoke(config.RandomSource!),
+      RandomSource = config.RandomSource!,
+      Terminator = config.Terminator!
+    };
+
+    ValidateResolvedConfig(resolvedConfig);
+
+    return resolvedConfig;
+  }
+  
+  private static GeneticAlgorithmConfig<TGenotype, TEncoding> CollectConfig(GeneticAlgorithmConfig<TGenotype, TEncoding> baseConfig, IEnumerable<IConfigSource<TGenotype, TEncoding>> sources) {
+    var config = baseConfig;
+    foreach (var source in sources) {
+      config = source.Apply(config);
     }
-    return ga;
+    return config;
   }
   
-  private ValidationResult Validate() {
-    var validator = new GeneticAlgorithmBuilderValidator();
-    return validator.Validate(this);
+  private static void ValidateConfig(GeneticAlgorithmConfig<TGenotype, TEncoding> config) {
+    var validator = new ConfigValidator();
+    var validationResult = validator.Validate(config);
+    if (!validationResult.IsValid) {
+      throw new ValidationException(validationResult.Errors);
+    }
   }
   
-  public class GeneticAlgorithmBuilderValidator : AbstractValidator<GeneticAlgorithmBuilder<TEncoding, TGenotype>> {
-    public GeneticAlgorithmBuilderValidator() {
-      RuleFor(x => x.populationSize).NotNull().WithMessage("Population size must not be null.");
-      RuleFor(x => x.creator).NotNull().WithMessage("Creator must not be null.");
-      RuleFor(x => x.crossover).NotNull().WithMessage("Crossover must not be null.");
-      RuleFor(x => x.mutator).NotNull().WithMessage("Mutation must not be null.");
-      RuleFor(x => x.mutationRate).InclusiveBetween(0, 1).WithMessage("Mutation rate must be between 0 and 1.");
-      RuleFor(x => x.evaluator).NotNull().WithMessage("Evaluator must not be null.");
-      RuleFor(x => x.selector).NotNull().WithMessage("Selector must not be null.");
-      RuleFor(x => x.replacement).NotNull().WithMessage("Replacement must not be null.");
-      RuleFor(x => x.terminationCriterion).NotNull().WithMessage("Termination criterion must not be null.");
-      When(x => x.encoding is not null, () => {
-        When(x => x.creator is IEncodingOperator<TGenotype, TEncoding>, () => {
-          RuleFor(x => x.creator).Must((builder, creator) => builder.encoding!.IsValidOperator((IEncodingOperator<TGenotype, TEncoding>)creator!)).WithMessage("Creator must be compatible with encoding.");
+  private static void ValidateResolvedConfig(ResolvedConfig resolvedConfig) {
+    var validator = new ResolvedConfigValidator();
+    var validationResult = validator.Validate(resolvedConfig);
+    if (!validationResult.IsValid) {
+      throw new ValidationException(validationResult.Errors);
+    }
+  }
+  
+  private sealed class ResolvedConfig {
+    public TEncoding? Encoding { get; init; }
+    
+    public required int PopulationSize { get; init; }
+  
+    public required ICreator<TGenotype> Creator { get; init; }
+    public required ICrossover<TGenotype> Crossover { get; init; }
+    public required IMutator<TGenotype> Mutator { get; init; }
+    public required double MutationRate { get; init; }
+ 
+    public required IEvaluator<TGenotype, ObjectiveValue> Evaluator { get; init; }
+    public required ISelector<TGenotype, ObjectiveValue> Selector { get; init; }
+ 
+    public required IReplacer<TGenotype> Replacer { get; init; }
+  
+    public required RandomSource RandomSource { get; init; }
+ 
+    public required ITerminator<PopulationState<TGenotype>> Terminator { get; init; }
+  }
+  
+  private sealed class ConfigValidator : AbstractValidator<GeneticAlgorithmConfig<TGenotype, TEncoding>> {
+    public ConfigValidator() {
+      RuleFor(x => x.PopulationSize).NotNull().WithMessage("Population size must not be null.");
+      RuleFor(x => x.CreatorFactory).NotNull().WithMessage("Creator factory must not be null.");
+      RuleFor(x => x.CrossoverFactory).NotNull().WithMessage("Crossover factory must not be null.");
+      RuleFor(x => x.MutatorFactory).NotNull().WithMessage("Mutator factory must not be null.");
+      RuleFor(x => x.MutationRate).NotNull().WithMessage("Mutation rate must not be null.");
+      RuleFor(x => x.EvaluatorFactory).NotNull().WithMessage("Evaluator factory must not be null.");
+      RuleFor(x => x.SelectorFactory).NotNull().WithMessage("Selector factory must not be null.");
+      RuleFor(x => x.ReplacementFactory).NotNull().WithMessage("Replacement factory must not be null.");
+      RuleFor(x => x.RandomSource).NotNull().WithMessage("Random source must not be null.");
+      RuleFor(x => x.Terminator).NotNull().WithMessage("Termination criterion must not be null.");
+    }
+  }
+  
+  private sealed class ResolvedConfigValidator : AbstractValidator<ResolvedConfig> {
+    public ResolvedConfigValidator() {
+      RuleFor(x => x.PopulationSize).GreaterThan(0).WithMessage("Population size must be greater than 0.");
+      RuleFor(x => x.MutationRate).InclusiveBetween(0, 1).WithMessage("Mutation rate must be between 0 and 1.");
+      When(x => x.Encoding is not null, () => {
+        When(x => x.Creator is IEncodingOperator<TGenotype, TEncoding>, () => {
+          RuleFor(x => x.Creator).Must((builder, creator) => builder.Encoding!.IsValidOperator((IEncodingOperator<TGenotype, TEncoding>)creator!)).WithMessage("Creator must be compatible with encoding.");
         });
-        When(x => x.crossover is IEncodingOperator<TGenotype, TEncoding>, () => {
-          RuleFor(x => x.crossover).Must((builder, crossover) => builder.encoding!.IsValidOperator((IEncodingOperator<TGenotype, TEncoding>)crossover!)).WithMessage("Crossover must be compatible with encoding.");
+        When(x => x.Crossover is IEncodingOperator<TGenotype, TEncoding>, () => {
+          RuleFor(x => x.Crossover).Must((builder, crossover) => builder.Encoding!.IsValidOperator((IEncodingOperator<TGenotype, TEncoding>)crossover!)).WithMessage("Crossover must be compatible with encoding.");
         });
-        When(x => x.mutator is IEncodingOperator<TGenotype, TEncoding>, () => {
-          RuleFor(x => x.mutator).Must((builder, mutator) => builder.encoding!.IsValidOperator((IEncodingOperator<TGenotype, TEncoding>)mutator!)).WithMessage("Mutator must be compatible with encoding.");
+        When(x => x.Mutator is IEncodingOperator<TGenotype, TEncoding>, () => {
+          RuleFor(x => x.Mutator).Must((builder, mutator) => builder.Encoding!.IsValidOperator((IEncodingOperator<TGenotype, TEncoding>)mutator!)).WithMessage("Mutator must be compatible with encoding.");
         });
       });
     }
   }
 }
+
+public interface IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype> {
+  GeneticAlgorithmConfig<TGenotype, TEncoding> Apply(GeneticAlgorithmConfig<TGenotype, TEncoding> config);
+}
+
+public class ChainedConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding>  where TEncoding : IEncoding<TGenotype> {
+  public ChainedConfigSource(GeneticAlgorithmConfig<TGenotype, TEncoding> chainedConfig) {
+    ChainedConfig = chainedConfig;
+  }
+  public GeneticAlgorithmConfig<TGenotype, TEncoding> ChainedConfig { get; }
+
+  public GeneticAlgorithmConfig<TGenotype, TEncoding> Apply(GeneticAlgorithmConfig<TGenotype, TEncoding> config) {
+    return config with {
+      Encoding = ChainedConfig.Encoding ?? config.Encoding,
+      PopulationSize = ChainedConfig.PopulationSize ?? config.PopulationSize,
+      CreatorFactory = ChainedConfig.CreatorFactory ?? config.CreatorFactory,
+      CrossoverFactory = ChainedConfig.CrossoverFactory ?? config.CrossoverFactory,
+      MutatorFactory = ChainedConfig.MutatorFactory ?? config.MutatorFactory,
+      MutationRate = ChainedConfig.MutationRate ?? config.MutationRate,
+      EvaluatorFactory = ChainedConfig.EvaluatorFactory ?? config.EvaluatorFactory,
+      SelectorFactory = ChainedConfig.SelectorFactory ?? config.SelectorFactory,
+      ReplacementFactory = ChainedConfig.ReplacementFactory ?? config.ReplacementFactory,
+      RandomSource = ChainedConfig.RandomSource ?? config.RandomSource,
+      Terminator = ChainedConfig.Terminator ?? config.Terminator
+    };
+  }
+}
+
