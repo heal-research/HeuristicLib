@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+﻿using HEAL.HeuristicLib.Encodings;
+
+namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
 using Operators;
 
@@ -8,11 +10,12 @@ public record PopulationState<TSolution>(
   ObjectiveValue[] Objectives
 );
 
-public class GeneticAlgorithm<TGenotype>
-  : AlgorithmBase<PopulationState<TGenotype>> {
+public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenotype>> {
+  
   public GeneticAlgorithm(int populationSize,
     ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
-    ITerminator<PopulationState<TGenotype>> terminator, IEvaluator<TGenotype, ObjectiveValue> evaluator, RandomSource randomSourceState, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer)
+    ITerminator<PopulationState<TGenotype>> terminator, IEvaluator<TGenotype, ObjectiveValue> evaluator,
+    RandomSource randomSourceState, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer)
   {
     PopulationSize = populationSize;
     Terminator = terminator;

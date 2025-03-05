@@ -4,13 +4,10 @@ using System.Collections;
 using Algorithms;
 using Operators;
 
-//public record RealVectorEncodingDescriptor(int Length, RealVector Minimum, RealVector Maximum);
-
-public class RealVectorEncoding : EncodingBase<RealVector> {
+public record class RealVectorEncoding : EncodingBase<RealVector, RealVectorEncoding> {
   public int Length { get; }
   public RealVector Minimum { get; }
   public RealVector Maximum { get; }
-
 
   public RealVectorEncoding(int length, RealVector minimum, RealVector maximum) {
     if (!RealVector.AreCompatible(length, minimum, maximum)) throw new ArgumentException("Minimum and Maximum vector must be of length 1 or match the encoding length");
@@ -18,23 +15,23 @@ public class RealVectorEncoding : EncodingBase<RealVector> {
     Minimum = minimum;
     Maximum = maximum;
   }
-
-  public override bool Equals(IEncoding<RealVector>? other) {
-    if (other is null) return false;
-    if (ReferenceEquals(this, other)) return true;
-    if (other is RealVectorEncoding otherRealVectorEncoding) {
-      return Length == otherRealVectorEncoding.Length 
-             && Minimum == otherRealVectorEncoding.Minimum
-             && Maximum == otherRealVectorEncoding.Maximum;
-    }
-    return false;
-  }
   
   public override bool IsValidGenotype(RealVector genotype) {
     return genotype.Count == Length
            && (genotype >= Minimum).All()
            && (genotype <= Maximum).All();
   }
+
+  // public override bool Equals(IEncoding<RealVector>? other) {
+  //   if (other is null) return false;
+  //   if (ReferenceEquals(this, other)) return true;
+  //   if (other is RealVectorEncoding otherRealVectorEncoding) {
+  //     return Length == otherRealVectorEncoding.Length 
+  //            && Minimum == otherRealVectorEncoding.Minimum
+  //            && Maximum == otherRealVectorEncoding.Maximum;
+  //   }
+  //   return false;
+  // }
 }
 
 public class AlphaBetaBlendCrossover : CrossoverBase<RealVector>, IEncodingOperator<RealVector, RealVectorEncoding> {
@@ -320,14 +317,6 @@ public class GaussianMutator : MutatorBase<RealVector>, IEncodingOperator<RealVe
     }
     return new RealVector(newElements);
   }
-  
-  // public record Parameter(double MutationRate, double MutationStrength, RandomSource RandomSource) : MutationParameters;
-  //
-  // public class Template : MutatorTemplateBase<GaussianMutator, RealVector, Parameter> {
-  //   public override GaussianMutator Parameterize(Parameter parameters) {
-  //     return new GaussianMutator(parameters.MutationRate, parameters.MutationStrength, parameters.RandomSource);
-  //   }
-  // }
 }
 
 
@@ -351,31 +340,19 @@ public class SinglePointCrossover : CrossoverBase<RealVector>, IEncodingOperator
     }
     return new RealVector(offspringValues);
   }
-  
-  // public record Parameter(RandomSource RandomSource) : CrossoverParameters;
-  //
-  // public class Template : CrossoverTemplateBase<SinglePointCrossover, RealVector, Parameter> {
-  //   public override SinglePointCrossover Parameterize(Parameter parameters) {
-  //     return new SinglePointCrossover(parameters.RandomSource);
-  //   }
-  // }
 }
 
 public class NormalDistributedCreator : CreatorBase<RealVector>, IEncodingOperator<RealVector, RealVectorEncoding> {
   public RealVectorEncoding Encoding { get; }
   public RealVector Means { get; }
   public RealVector Sigmas { get; }
-  // public RealVector Minimum { get; }
-  // public RealVector Maximum { get; }
   public RandomSource RandomSource { get; }
 
   public NormalDistributedCreator(RealVectorEncoding encoding, RealVector means, RealVector sigmas, RandomSource randomSource) {
     if (!RealVector.AreCompatible(encoding.Length, means, sigmas, encoding.Minimum, encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
-    //Length = length;
+    Encoding = encoding;
     Means = means;
     Sigmas = sigmas;
-    //Minimum = minimum;
-    //Maximum = maximum;
     RandomSource = randomSource;
   }
 
@@ -385,37 +362,27 @@ public class NormalDistributedCreator : CreatorBase<RealVector>, IEncodingOperat
     value = RealVector.Clamp(value, Encoding.Minimum, Encoding.Maximum);
     return value;
   }
-  
-  // public record Parameter(int Length, RealVector Means, RealVector Sigmas, RealVector Minimum, RealVector Maximum, RandomSource RandomSource) : CreatorParameters;
-  //
-  // public class Template : CreatorTemplateBase<NormalDistributedCreator, RealVector, Parameter> {
-  //   public override NormalDistributedCreator Parameterize(Parameter parameters) {
-  //     return new NormalDistributedCreator(parameters.Length, parameters.Means, parameters.Sigmas, parameters.Minimum, parameters.Maximum, parameters.RandomSource);
-  //   }
-  // }
 }
 
 public class UniformDistributedCreator : CreatorBase<RealVector>, IEncodingOperator<RealVector, RealVectorEncoding> {
   public RealVectorEncoding Encoding { get; }
-  // TODO: make it null to indicate override from encoding
-  // public RealVector Minimum { get; }
-  // public RealVector Maximum { get; }
+  public RealVector? Minimum { get; }
+  public RealVector? Maximum { get; }
   public RandomSource RandomSource { get; }
 
-  public UniformDistributedCreator(RealVectorEncoding encoding, RandomSource randomSource) {
+  public UniformDistributedCreator(RealVectorEncoding encoding, RealVector? minimum, RealVector? maximum, RandomSource randomSource) {
+    if (minimum is not null && (minimum < encoding.Minimum).Any()) throw new ArgumentException("Minimum values must be greater or equal to encoding minimum values");
+    if (maximum is not null && (maximum > encoding.Maximum).Any()) throw new ArgumentException("Maximum values must be less or equal to encoding maximum values");
+    if (!RealVector.AreCompatible(encoding.Length, minimum ?? encoding.Minimum, maximum ?? encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+    
     Encoding = encoding;
+    Minimum = minimum;
+    Maximum = maximum;
     RandomSource = randomSource;
   }
 
   public override RealVector Create() {
-    return RealVector.CreateUniform(Encoding.Minimum, Encoding.Minimum, RandomSource);
+    return RealVector.CreateUniform(Minimum ?? Encoding.Minimum, Maximum ?? Encoding.Minimum, RandomSource);
   }
-  
-  // public record Parameter(int Length, RealVector Minimum, RealVector Maximum, RandomSource RandomSource) : CreatorParameters;
-  //
-  // public class Template : CreatorTemplateBase<UniformDistributedCreator, RealVector, Parameter> {
-  //   public override UniformDistributedCreator Parameterize(Parameter parameters) {
-  //     return new UniformDistributedCreator(parameters.Length, parameters.Minimum, parameters.Maximum, parameters.RandomSource);
-  //   }
-  // }
 }
+

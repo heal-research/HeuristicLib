@@ -5,39 +5,16 @@ using HEAL.HeuristicLib.Operators;
 namespace HEAL.HeuristicLib.Encodings;
 
 
-public class PermutationEncoding : EncodingBase<Permutation>, IEncoding
-//, ICreatorProvider<Permutation>, ICrossoverProvider<Permutation> 
-{
-  public PermutationEncoding(int length) 
-    : base() {
+public sealed record class PermutationEncoding : EncodingBase<Permutation, PermutationEncoding> {
+  public int Length { get; }
+  public PermutationEncoding(int length) {
     Length = length;
   }
-  
-  public int Length { get; }
 
-  public override bool Equals(IEncoding<Permutation>? other) {
-    if (other is null) return false;
-    if (ReferenceEquals(this, other)) return true;
-    if (other is PermutationEncoding otherPermutationEncoding) {
-      return Length == otherPermutationEncoding.Length;
-    }
-    return false;
-  }
   public override bool IsValidGenotype(Permutation genotype) {
     return genotype.Count == Length;
   }
-
-  // public ICrossover<Permutation> GetCreator() {
-  //   throw new NotImplementedException();
-  // }
-  // public ICrossover<Permutation> GetCrossover() {
-  //   throw new NotImplementedException();
-  // }
 }
-
-
-
-
 
 public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   private readonly int[] elements;
@@ -148,19 +125,11 @@ public class RandomPermutationCreator : CreatorBase<Permutation>, IEncodingOpera
     }
     return new Permutation(elements);
   }
-
-  // public record Parameters(int Length, RandomSource RandomSource) : CreatorParameters;
-  //
-  // public class Template : CreatorTemplateBase<RandomPermutationCreator, Permutation, Parameters> {
-  //   public override RandomPermutationCreator Parameterize(Parameters parameters) {
-  //     return new RandomPermutationCreator(new PermutationEncoding(parameters.Length), parameters.RandomSource);
-  //   }
-  // }
 }
-
 
 public class OrderCrossover : CrossoverBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
   public PermutationEncoding Encoding { get; }
+  
   public OrderCrossover(PermutationEncoding encoding) {
     Encoding = encoding;
   }
@@ -168,32 +137,16 @@ public class OrderCrossover : CrossoverBase<Permutation>, IEncodingOperator<Perm
   public override Permutation Crossover(Permutation parent1, Permutation parent2) {
     return Permutation.OrderCrossover(parent1, parent2);
   }
-
-  // public record Parameters() : CrossoverParameters;
-  //
-  // public class Template : CrossoverTemplateBase<OrderCrossover, Permutation, Parameters> {
-  //   public override OrderCrossover Parameterize(Parameters parameters) {
-  //     return new OrderCrossover(new PermutationEncoding());
-  //   }
-  // }
 }
-
 
 public class SwapMutator : MutatorBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
   public PermutationEncoding Encoding { get; }
+  
   public SwapMutator(PermutationEncoding encoding) {
     Encoding = encoding;
-
   }
+  
   public override Permutation Mutate(Permutation solution) {
     return Permutation.SwapRandomElements(solution);
   }
-
-  // public record Parameters() : MutationParameters;
-  //
-  // public class Template : MutatorTemplateBase<SwapMutator, Permutation, Parameters> {
-  //   public override SwapMutator Parameterize(Parameters parameters) {
-  //     return new SwapMutator();
-  //   }
-  // }
 }

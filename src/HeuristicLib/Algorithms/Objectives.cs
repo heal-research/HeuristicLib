@@ -7,9 +7,7 @@ public enum ObjectiveDirection {
   Maximize
 }
 
-public readonly record struct ObjectiveValue(double Value, ObjectiveDirection Direction)
-  : IComparable<ObjectiveValue> 
-{
+public readonly record struct ObjectiveValue(double Value, ObjectiveDirection Direction) : IComparable<ObjectiveValue> {
   public static implicit operator ObjectiveValue((double Value, ObjectiveDirection Direction) objective) {
     return new ObjectiveValue(objective.Value, objective.Direction);
   }

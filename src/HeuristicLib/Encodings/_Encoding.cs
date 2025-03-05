@@ -1,74 +1,18 @@
-﻿namespace HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.Operators;
 
-using Operators;
-
-
+namespace HEAL.HeuristicLib.Encodings;
 
 public interface IEncoding { }
 
-public interface IEncoding<TGenotype> : IEncoding, IEquatable<IEncoding<TGenotype>> {
+public interface IEncoding<TGenotype, in TSelf> : IEncoding where TSelf : IEncoding<TGenotype, TSelf> {
   bool IsValidGenotype(TGenotype genotype);
-  bool AreCompatible(params IEnumerable<TGenotype> genotypes);
-  
-  // bool IsValidOperator(IEncodingOperator<TGenotype> @operator);
-  // bool AreCompatible(params IEnumerable<IEncodingOperator<TGenotype>> operators);
+  bool IsValidOperator(IEncodingOperator<TGenotype, TSelf> @operator);
 }
 
-
-
-public abstract class EncodingBase<TGenotype> : IEncoding<TGenotype> {
-  
+public abstract record class EncodingBase<TGenotype, TSelf> : IEncoding<TGenotype, TSelf> where TSelf : EncodingBase<TGenotype, TSelf> {
   protected EncodingBase() { }
-
-  public abstract bool Equals(IEncoding<TGenotype>? other);
-  
   public abstract bool IsValidGenotype(TGenotype genotype);
-  public virtual bool AreCompatible(params IEnumerable<TGenotype> genotypes) {
-    return genotypes.All(IsValidGenotype);
+  public virtual bool IsValidOperator(IEncodingOperator<TGenotype, TSelf> @operator) {
+    return @operator.Encoding.Equals(this);
   }
 }
-
-//
-// public interface IEncodingBasedOperator<out TOperator, in TEncoding> {
-//   static abstract TOperator FromEncoding(TEncoding encoding);
-// }
-//
-//
-//
-// public interface IConfigurationBundle<TGenotype> {
-//   
-// }
-//
-// public interface IEncodingBundle<TGenotype, TEncoding> : IConfigurationBundle<TGenotype> {
-//   TEncoding Encoding { get; }
-// }
-//
-// public interface ICreatorProvider<TGenotype, in TParams> {
-//   ICreator<TGenotype> Create(TParams parameter);
-// }
-//
-// public interface ICrossoverProvider<TGenotype>
-// {
-//   ICrossover<TGenotype> Crossover { get; }
-// }
-//
-// public interface IMutatorProvider<TGenotype>
-// {
-//   IMutator<TGenotype> Mutator { get; }
-// }
-
-// public static class GeneticAlgorithmBuilderEncodingExtension {
-//   public static GeneticAlgorithmBuilder<TSolution> WithEncodingBundle<TEncoding, TSolution>(this GeneticAlgorithmBuilder<TSolution> builder, IEncodingBundle<TSolution, TEncoding> encoding)
-//   {
-//     if (encoding is ICreatorProvider<TSolution> creatorProvider) {
-//       builder.WithCreatorFactory(creatorProvider.CreatorFactory);
-//     }
-//     if (encoding is ICrossoverProvider<TSolution> crossoverProvider) {
-//       builder.WithCrossover(crossoverProvider.Crossover);
-//     }
-//     if (encoding is IMutatorProvider<TSolution> mutatorProvider) {
-//       builder.WithMutation(mutatorProvider.Mutator);
-//     }
-//     return builder;
-//   }
-// }

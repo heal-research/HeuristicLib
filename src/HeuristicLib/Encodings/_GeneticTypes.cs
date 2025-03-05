@@ -1,2 +1,0 @@
-﻿namespace HEAL.HeuristicLib.Encodings;
-

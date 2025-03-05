@@ -24,7 +24,7 @@ public record GeneticAlgorithmOptions(
 public abstract record CreatorOptions();
 public record RandomPermutationCreatorOptions : CreatorOptions;
 public record UniformRealVectorCreatorOptions(double[]? Minimum, double[]? Maximum) : CreatorOptions;
-public record NormalRealVectorCreatorOptions(double[]? Mean, double[]? StandardDeviation, double[]? Minimum, double[]? Maximum) : CreatorOptions;
+public record NormalRealVectorCreatorOptions(double[]? Mean, double[]? StandardDeviation) : CreatorOptions;
 
 public abstract record CrossoverOptions();
 public record OrderCrossoverOptions : CrossoverOptions;
@@ -42,7 +42,7 @@ public record RouletteWheelSelectorOptions : SelectorOptions;
 public abstract record ReplacerOptions();
 public record ElitistReplacerOptions : ReplacerOptions;
 
-public class OptionsConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype> {
+public class OptionsConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype, TEncoding> {
   private readonly GeneticAlgorithmOptions options;
 
   public OptionsConfigSource(GeneticAlgorithmOptions options) {
@@ -66,8 +66,8 @@ public class OptionsConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype
         CreatorFactory = (encoding, randomSource) => {
           IOperator @operator = (options.Creator, encoding) switch {
             (RandomPermutationCreatorOptions randomPermutationCreator, PermutationEncoding permutationEncoding) => new RandomPermutationCreator(permutationEncoding, randomSource),
-            (UniformRealVectorCreatorOptions uniformRealVectorCreator, RealVectorEncoding realVectorEncoding) => new UniformDistributedCreator(realVectorEncoding, randomSource),
-            (NormalRealVectorCreatorOptions normalRealVectorCreator, RealVectorEncoding realVectorEncoding) => new NormalDistributedCreator(realVectorEncoding, new RealVector(normalRealVectorCreator.Mean), new RealVector(normalRealVectorCreator.StandardDeviation), randomSource),
+            (UniformRealVectorCreatorOptions uniformRealVectorCreator, RealVectorEncoding realVectorEncoding) => new UniformDistributedCreator(realVectorEncoding, uniformRealVectorCreator.Minimum != null ? new RealVector(uniformRealVectorCreator.Minimum) : null, uniformRealVectorCreator.Maximum != null ? new RealVector(uniformRealVectorCreator.Maximum) : null, randomSource),
+            (NormalRealVectorCreatorOptions normalRealVectorCreator, RealVectorEncoding realVectorEncoding) => new NormalDistributedCreator(realVectorEncoding, normalRealVectorCreator.Mean != null ? new RealVector(normalRealVectorCreator.Mean) : 0.0, normalRealVectorCreator.StandardDeviation != null ? new RealVector(normalRealVectorCreator.StandardDeviation) : 1.0, randomSource),
             _ => throw new NotImplementedException("Unknown creator configuration.")
           };
           if (@operator is not ICreator<TGenotype> creator) throw new InvalidOperationException("Creator must be a ICreator<TGenotype>.");

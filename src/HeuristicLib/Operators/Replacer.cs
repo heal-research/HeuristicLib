@@ -9,26 +9,10 @@ public interface IReplacer<TSolution> : IOperator {
     TSolution[] offspringPopulation, ObjectiveValue[] offspringQualities);
 }
 
-public interface IReplacerTemplate<out TReplacer, TSolution, in TParams>
-  : IOperatorTemplate<TReplacer, TParams>
-  where TReplacer : IReplacer<TSolution>
-  where TParams : ReplacerParameters {
-}
-
-public record ReplacerParameters { }
-
 public abstract class ReplacerBase<TSolution> : IReplacer<TSolution> {
   public abstract int GetOffspringCount(int populationSize);
   public abstract (TSolution[] newPopulation, ObjectiveValue[] newObjectives) Replace(TSolution[] previousPopulation, ObjectiveValue[] previousQualities, TSolution[] offspringPopulation, ObjectiveValue[] offspringQualities);
 }
-
-public abstract class ReplacerTemplateBase<TReplacer, TGenotype, TParams> 
-  : IReplacerTemplate<TReplacer, TGenotype, TParams>
-  where TReplacer : IReplacer<TGenotype> 
-  where TParams : ReplacerParameters {
-  public abstract TReplacer Parameterize(TParams parameters);
-}
-
 
 public class PlusSelectionReplacer<TSolution> : ReplacerBase<TSolution>
 {
@@ -53,14 +37,6 @@ public class PlusSelectionReplacer<TSolution> : ReplacerBase<TSolution>
     var newQualities = sortedIndices.Take(previousPopulation.Length()).Select(i => combinedQualities[i]).ToArray();
 
     return (newPopulation, newQualities);
-  }
-}
-
-public record PlusSelectionReplacerParameters() : ReplacerParameters;
-
-public class PlusSelectionReplacerTemplate<TSolution> : ReplacerTemplateBase<PlusSelectionReplacer<TSolution>, TSolution, PlusSelectionReplacerParameters> {
-  public override PlusSelectionReplacer<TSolution> Parameterize(PlusSelectionReplacerParameters parameters) {
-    return new PlusSelectionReplacer<TSolution>();
   }
 }
 
@@ -91,13 +67,4 @@ public class ElitismReplacer<TSolution> : ReplacerBase<TSolution> {
 
     return (newPopulation, newQualities);
   }
-  
-  public record Parameters(int Elites) : ReplacerParameters;
-
-  public class Template : ReplacerTemplateBase<ElitismReplacer<TSolution>, TSolution, Parameters> {
-    public override ElitismReplacer<TSolution> Parameterize(Parameters parameters) {
-      return new ElitismReplacer<TSolution>(parameters.Elites);
-    }
-  }
-
 }

@@ -8,24 +8,9 @@ public interface ISelector<TSolution, in TObjective> : IOperator {
   TSolution[] Select(TSolution[] population, TObjective[] objectives, int count);
 }
 
-public interface ISelectorTemplate<out TSelector, TSolution, TObjective, in TParams> 
-  : IOperatorTemplate<TSelector, TParams>
-  where TSelector : ISelector<TSolution, TObjective>
-  where TParams : SelectorParameters {
-}
-
-public record SelectorParameters();
-
 public abstract class SelectorBase<TSolution, TObjective> 
   : ISelector<TSolution, TObjective> {
   public abstract TSolution[] Select(TSolution[] population, TObjective[] objectives, int count);
-}
-
-public abstract class SelectorTemplateBase<TSelector, TSolution, TObjective, TParams> 
-  : ISelectorTemplate<TSelector, TSolution, TObjective, TParams>
-  where TSelector : ISelector<TSolution, TObjective>
-  where TParams : SelectorParameters {
-  public abstract TSelector Parameterize(TParams parameters);
 }
 
 public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveValue> {
@@ -52,18 +37,7 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveVal
     }
     return selected;
   }
-  
-  public record Parameters(RandomSource RandomSource) : SelectorParameters;
-
-  public class Template : SelectorTemplateBase<ProportionalSelector<TSolution>, TSolution, ObjectiveValue, Parameters> {
-    public override ProportionalSelector<TSolution> Parameterize(Parameters parameters) {
-      return new ProportionalSelector<TSolution>(parameters.RandomSource);
-    }
-  }
 }
-
-
-
 
 public class RandomSelector<TSolution, TObjective> : SelectorBase<TSolution, TObjective> {
   public RandomSelector(RandomSource randomSource) {
@@ -79,14 +53,6 @@ public class RandomSelector<TSolution, TObjective> : SelectorBase<TSolution, TOb
       selected[i] = population[index];
     }
     return selected;
-  }
-  
-  public record Parameters(RandomSource RandomSource) : SelectorParameters;
-
-  public class Template : SelectorTemplateBase<RandomSelector<TSolution, TObjective>, TSolution, TObjective, Parameters> {
-    public override RandomSelector<TSolution, TObjective> Parameterize(Parameters parameters) {
-      return new RandomSelector<TSolution, TObjective>(parameters.RandomSource);
-    }
   }
 }
 
@@ -116,14 +82,6 @@ public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveVa
       selected[i] = bestParticipant;
     }
     return selected;
-  }
-  
-  public record Parameters(int TournamentSize, RandomSource RandomSource) : SelectorParameters;
-
-  public class Template : SelectorTemplateBase<TournamentSelector<TSolution>, TSolution, ObjectiveValue, Parameters> {
-    public override TournamentSelector<TSolution> Parameterize(Parameters parameters) {
-      return new TournamentSelector<TSolution>(parameters.TournamentSize, parameters.RandomSource);
-    }
   }
 }
 

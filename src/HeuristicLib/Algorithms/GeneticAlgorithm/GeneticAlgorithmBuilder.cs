@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public record GeneticAlgorithmConfig<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype> {
+public record GeneticAlgorithmConfig<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype, TEncoding> {
   public TEncoding? Encoding { get; init; }
 
   public int? PopulationSize { get; init; }
@@ -24,7 +24,7 @@ public record GeneticAlgorithmConfig<TGenotype, TEncoding> where TEncoding : IEn
   public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
 }
 
-public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEncoding<TGenotype> {
+public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEncoding<TGenotype, TEncoding> {
   private readonly GeneticAlgorithmConfig<TGenotype, TEncoding> baseConfig = new();
   private readonly List<IConfigSource<TGenotype, TEncoding>> sources = [];
   
@@ -152,11 +152,11 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
   }
 }
 
-public interface IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype> {
+public interface IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype, TEncoding> {
   GeneticAlgorithmConfig<TGenotype, TEncoding> Apply(GeneticAlgorithmConfig<TGenotype, TEncoding> config);
 }
 
-public class ChainedConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding>  where TEncoding : IEncoding<TGenotype> {
+public class ChainedConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding>  where TEncoding : IEncoding<TGenotype, TEncoding> {
   public ChainedConfigSource(GeneticAlgorithmConfig<TGenotype, TEncoding> chainedConfig) {
     ChainedConfig = chainedConfig;
   }
