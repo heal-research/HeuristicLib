@@ -38,11 +38,13 @@ public class AlphaBetaBlendCrossover : CrossoverBase<RealVector>, IEncodingOpera
   public RealVectorEncoding Encoding { get; }
   public double Alpha { get; }
   public double Beta { get; }
-
-  public AlphaBetaBlendCrossover(RealVectorEncoding encoding, double alpha = 0.7, double beta = 0.3) {
+  
+  // <param name="alpha">Some Description (default: 0.7 if null)</param>
+  // <param name="beta">Some Description (default: 0.3 if null)</param>
+  public AlphaBetaBlendCrossover(RealVectorEncoding encoding, double? alpha = null, double? beta = null) {
     Encoding = encoding;
-    Alpha = alpha;
-    Beta = beta;
+    Alpha = alpha ?? 0.7;
+    Beta = beta ?? 0.3;
   }
 
   public override RealVector Crossover(RealVector parent1, RealVector parent2) {
@@ -348,6 +350,9 @@ public class NormalDistributedCreator : CreatorBase<RealVector>, IEncodingOperat
   public RealVector Sigmas { get; }
   public RandomSource RandomSource { get; }
 
+  public const double DefaultMeans = 0.0;
+  public const double DefaultSigmas = 1.0;
+
   public NormalDistributedCreator(RealVectorEncoding encoding, RealVector means, RealVector sigmas, RandomSource randomSource) {
     if (!RealVector.AreCompatible(encoding.Length, means, sigmas, encoding.Minimum, encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
     Encoding = encoding;
@@ -385,4 +390,3 @@ public class UniformDistributedCreator : CreatorBase<RealVector>, IEncodingOpera
     return RealVector.CreateUniform(Minimum ?? Encoding.Minimum, Maximum ?? Encoding.Minimum, RandomSource);
   }
 }
-

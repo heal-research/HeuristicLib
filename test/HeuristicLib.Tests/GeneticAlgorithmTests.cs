@@ -27,27 +27,6 @@ public class GeneticAlgorithmTests {
     return Verify(finalState);
   }
   
-  // [Fact]
-  // public Task GeneticAlgorithm_ShouldRunWithoutBuilderUsingSpecs() {
-  //   var randomSource = new SeededRandomSource(42);
-  //   var encoding = new RealVectorEncoding(10, -5, +5);
-  //   var creator = new NormalDistributedCreatorSpec() { Means = +1.5, Sigmas = 0.5 };
-  //   var crossover = new SinglePointCrossover(encoding, randomSource);
-  //   var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
-  //   var evaluator = new RealVectorMockEvaluator();
-  //   var selector = new RandomSelector<RealVector, ObjectiveValue>(randomSource);
-  //   var replacement = new PlusSelectionReplacer<RealVector>();
-  //   var terminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.CurrentGeneration);
-  //   
-  //   var ga = new GeneticAlgorithm<RealVector>(
-  //   200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, randomSource, selector, replacement
-  //   );
-  //
-  //   var finalState = ga.Run();
-  //
-  //   return Verify(finalState);
-  // }
-
   [Fact]
   public async Task GeneticAlgorithm_ShouldPauseAndContinue() {
     var randomSource = new SeededRandomSource(42);

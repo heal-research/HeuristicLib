@@ -10,64 +10,68 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace HEAL.HeuristicLib.Configuration;
 
-public record GeneticAlgorithmOptions(
+public record GeneticAlgorithmSpec(
   int? PopulationSize = null,
   int? MaximumGenerations = null,
-  CreatorOptions? Creator = null,
-  CrossoverOptions? Crossover = null,
-  MutatorOptions? Mutator = null,
+  CreatorSpec? Creator = null,
+  CrossoverSpec? Crossover = null,
+  MutatorSpec? Mutator = null,
   double? MutationRate = null,
-  SelectorOptions? Selector = null,
-  ReplacerOptions? Replacer = null
+  SelectorSpec? Selector = null,
+  ReplacerSpec? Replacer = null,
+  int? RandomSeed = null
 );
 
-public abstract record CreatorOptions();
-public record RandomPermutationCreatorOptions : CreatorOptions;
-public record UniformRealVectorCreatorOptions(double[]? Minimum, double[]? Maximum) : CreatorOptions;
-public record NormalRealVectorCreatorOptions(double[]? Mean, double[]? StandardDeviation) : CreatorOptions;
+public abstract record OperatorSpec();
 
-public abstract record CrossoverOptions();
-public record OrderCrossoverOptions : CrossoverOptions;
-public record SinglePointRealVectorCrossoverOptions : CrossoverOptions;
-public record AlphaBlendRealVectorCrossoverOptions(double? Alpha = 0.7, double? Beta = 0.3) : CrossoverOptions;
+public abstract record CreatorSpec() : OperatorSpec();
+public record RandomPermutationCreatorSpec : CreatorSpec;
+public record UniformRealVectorCreatorSpec(double[]? Minimum = null, double[]? Maximum = null) : CreatorSpec;
+public record NormalRealVectorCreatorSpec(double[]? Mean = null, double[]? StandardDeviation = null) : CreatorSpec;
 
-public abstract record MutatorOptions();
-public record SwapMutatorOptions : MutatorOptions;
-public record GaussianRealVectorMutatorOptions(double[]? Mean, double[]? StandardDeviation) : MutatorOptions;
+public abstract record CrossoverSpec() : OperatorSpec();
+public record OrderCrossoverSpec : CrossoverSpec;
+public record SinglePointRealVectorCrossoverSpec : CrossoverSpec;
+public record AlphaBlendRealVectorCrossoverSpec(double? Alpha = null, double? Beta = null) : CrossoverSpec;
 
-public abstract record SelectorOptions();
-public record TournamentSelectorOptions(int? TournamentSize = 3) : SelectorOptions;
-public record RouletteWheelSelectorOptions : SelectorOptions;
+public abstract record MutatorSpec(): OperatorSpec();
+public record SwapMutatorSpec : MutatorSpec;
+public record GaussianRealVectorMutatorSpec(double? Rate = null, double? Strength = null) : MutatorSpec;
 
-public abstract record ReplacerOptions();
-public record ElitistReplacerOptions : ReplacerOptions;
+public abstract record SelectorSpec(): OperatorSpec();
+public record TournamentSelectorSpec(int? TournamentSize = null) : SelectorSpec;
+public record RouletteWheelSelectorSpec : SelectorSpec;
 
-public class OptionsConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype, TEncoding> {
-  private readonly GeneticAlgorithmOptions options;
+public abstract record ReplacerSpec(): OperatorSpec();
+public record ElitistReplacerSpec : ReplacerSpec;
 
-  public OptionsConfigSource(GeneticAlgorithmOptions options) {
-    this.options = options;
+
+
+public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype, TEncoding> {
+  private readonly GeneticAlgorithmSpec gaSpec;
+
+  public SpecConfigSource(GeneticAlgorithmSpec gaSpec) {
+    this.gaSpec = gaSpec;
   }
-
 
   public GeneticAlgorithmConfig<TGenotype, TEncoding> Apply(GeneticAlgorithmConfig<TGenotype, TEncoding> config) {
     var newConfig = config;
 
-    if (options.PopulationSize.HasValue) {
-      newConfig = newConfig with { PopulationSize = options.PopulationSize.Value };
+    if (gaSpec.PopulationSize.HasValue) {
+      newConfig = newConfig with { PopulationSize = gaSpec.PopulationSize.Value };
     }
     
-    if (options.MutationRate.HasValue) {
-      newConfig = newConfig with { MutationRate = options.MutationRate.Value };
+    if (gaSpec.MutationRate.HasValue) {
+      newConfig = newConfig with { MutationRate = gaSpec.MutationRate.Value };
     }
 
-    if (options.Creator is not null) {
+    if (gaSpec.Creator is not null) {
       newConfig = newConfig with {
         CreatorFactory = (encoding, randomSource) => {
-          IOperator @operator = (options.Creator, encoding) switch {
-            (RandomPermutationCreatorOptions randomPermutationCreator, PermutationEncoding permutationEncoding) => new RandomPermutationCreator(permutationEncoding, randomSource),
-            (UniformRealVectorCreatorOptions uniformRealVectorCreator, RealVectorEncoding realVectorEncoding) => new UniformDistributedCreator(realVectorEncoding, uniformRealVectorCreator.Minimum != null ? new RealVector(uniformRealVectorCreator.Minimum) : null, uniformRealVectorCreator.Maximum != null ? new RealVector(uniformRealVectorCreator.Maximum) : null, randomSource),
-            (NormalRealVectorCreatorOptions normalRealVectorCreator, RealVectorEncoding realVectorEncoding) => new NormalDistributedCreator(realVectorEncoding, normalRealVectorCreator.Mean != null ? new RealVector(normalRealVectorCreator.Mean) : 0.0, normalRealVectorCreator.StandardDeviation != null ? new RealVector(normalRealVectorCreator.StandardDeviation) : 1.0, randomSource),
+          IOperator @operator = (gaSpec.Creator, encoding) switch {
+            (RandomPermutationCreatorSpec spec, PermutationEncoding enc) => new RandomPermutationCreator(enc, randomSource),
+            (UniformRealVectorCreatorSpec spec, RealVectorEncoding enc) => new UniformDistributedCreator(enc, spec.Minimum != null ? new RealVector(spec.Minimum) : null, spec.Maximum != null ? new RealVector(spec.Maximum) : null, randomSource),
+            (NormalRealVectorCreatorSpec spec, RealVectorEncoding enc) => new NormalDistributedCreator(enc, spec.Mean != null ? new RealVector(spec.Mean) : 0.0, spec.StandardDeviation != null ? new RealVector(spec.StandardDeviation) : 1.0, randomSource),
             _ => throw new NotImplementedException("Unknown creator configuration.")
           };
           if (@operator is not ICreator<TGenotype> creator) throw new InvalidOperationException("Creator must be a ICreator<TGenotype>.");
@@ -76,13 +80,13 @@ public class OptionsConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype
       };
     }
 
-    if (options.Crossover is not null) {
+    if (gaSpec.Crossover is not null) {
       newConfig = newConfig with {
         CrossoverFactory = (encoding, randomSource) => {
-          IOperator @operator = (options.Crossover, encoding) switch {
-            (OrderCrossoverOptions orderCrossover, PermutationEncoding permutationEncoding) => new OrderCrossover(permutationEncoding),
-            (SinglePointRealVectorCrossoverOptions singlePointRealVectorCrossover, RealVectorEncoding realVectorEncoding) => new SinglePointCrossover(realVectorEncoding, randomSource),
-            (AlphaBlendRealVectorCrossoverOptions alphaBlendRealVectorCrossoverOptions, RealVectorEncoding realVectorEncoding) => new AlphaBetaBlendCrossover(realVectorEncoding, alphaBlendRealVectorCrossoverOptions.Alpha.Value, alphaBlendRealVectorCrossoverOptions.Beta.Value),
+          IOperator @operator = (gaSpec.Crossover, encoding) switch {
+            (OrderCrossoverSpec spec, PermutationEncoding enc) => new OrderCrossover(enc),
+            (SinglePointRealVectorCrossoverSpec spec, RealVectorEncoding enc) => new SinglePointCrossover(enc, randomSource),
+            (AlphaBlendRealVectorCrossoverSpec spec, RealVectorEncoding enc) => new AlphaBetaBlendCrossover(enc, spec.Alpha, spec.Beta),
             _ => throw new NotImplementedException("Unknown crossover configuration.")
           };
           if (@operator is not ICrossover<TGenotype> crossover) throw new InvalidOperationException("Crossover must be a ICrossover<TGenotype>.");
@@ -91,12 +95,40 @@ public class OptionsConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype
       };
     }
 
-    if (options.MaximumGenerations.HasValue) {
-      newConfig = newConfig with { Terminator = new ThresholdTerminator<PopulationState<TGenotype>>(options.MaximumGenerations.Value, state => state.CurrentGeneration) };
+    if (gaSpec.Mutator is not null) {
+      newConfig = newConfig with {
+        MutatorFactory = (encoding, randomSource) => {
+          IOperator @operator = (gaSpec.Mutator, encoding) switch {
+            (SwapMutatorSpec spec, PermutationEncoding enc) => new SwapMutator(enc),
+            (GaussianRealVectorMutatorSpec spec, RealVectorEncoding enc) => new GaussianMutator(enc, spec.Strength ?? 1.0, spec.Rate ?? 1.0, randomSource),
+            _ => throw new NotImplementedException("Unknown mutator configuration.")
+          };
+          if (@operator is not IMutator<TGenotype> mutator) throw new InvalidOperationException("Mutator must be a IMutator<TGenotype>.");
+          return mutator;
+        }
+      };
     }
+
+    if (gaSpec.MaximumGenerations.HasValue) {
+      newConfig = newConfig with { Terminator = new ThresholdTerminator<PopulationState<TGenotype>>(gaSpec.MaximumGenerations.Value, state => state.CurrentGeneration) };
+    }
+
+    if (gaSpec.RandomSeed.HasValue) {
+      newConfig = newConfig with { RandomSource = new SeededRandomSource(gaSpec.RandomSeed.Value) };
+    }
+    
     return newConfig;
   }
 }
+
+public static class SpecsConfigSourceBuilderExtension {
+  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithSpecs<TEncoding, TGenotype>
+    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, GeneticAlgorithmSpec gaSpec) 
+    where TEncoding : IEncoding<TGenotype, TEncoding> {
+    return builder.AddSource(new SpecConfigSource<TGenotype, TEncoding>(gaSpec));
+  }
+}
+
 //
 // public static class GeneticAlgorithmBuilderWithConfigurationExtension {
 //   public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithConfiguration<TEncoding, TGenotype>(

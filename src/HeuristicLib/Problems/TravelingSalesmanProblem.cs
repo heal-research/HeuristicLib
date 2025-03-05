@@ -48,10 +48,10 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
     return new PermutationEncoding(numberOfCities);
   }
   
-  public GeneticAlgorithmOptions CreateGeneticAlgorithmConfig() {
-    return new GeneticAlgorithmOptions(
-      Crossover: new OrderCrossoverOptions(),
-      Mutator: new SwapMutatorOptions()
+  public GeneticAlgorithmSpec CreateGeneticAlgorithmConfig() {
+    return new GeneticAlgorithmSpec(
+      Crossover: new OrderCrossoverSpec(),
+      Mutator: new SwapMutatorSpec()
     );
   }
 

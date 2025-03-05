@@ -156,6 +156,30 @@ public interface IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding
   GeneticAlgorithmConfig<TGenotype, TEncoding> Apply(GeneticAlgorithmConfig<TGenotype, TEncoding> config);
 }
 
+public static class GeneticAlgorithmBuilderConfigExtensions {
+  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithConfig<TEncoding, TGenotype>
+    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, GeneticAlgorithmConfig<TGenotype, TEncoding> config)
+    where TEncoding : IEncoding<TGenotype, TEncoding> {
+    return builder.AddSource(new ChainedConfigSource<TGenotype, TEncoding>(config));
+  }
+  
+  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithEncoding<TEncoding, TGenotype>
+    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, TEncoding encoding)
+    where TEncoding : IEncoding<TGenotype, TEncoding> {
+    return builder.AddSource(new ChainedConfigSource<TGenotype, TEncoding>(new GeneticAlgorithmConfig<TGenotype, TEncoding>() {
+      Encoding = encoding
+    }));
+  }
+  
+  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithRandomSource<TEncoding, TGenotype>
+    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, RandomSource randomSource)
+    where TEncoding : IEncoding<TGenotype, TEncoding> {
+    return builder.AddSource(new ChainedConfigSource<TGenotype, TEncoding>(new GeneticAlgorithmConfig<TGenotype, TEncoding>() {
+      RandomSource = randomSource
+    }));
+  }
+}
+
 public class ChainedConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding>  where TEncoding : IEncoding<TGenotype, TEncoding> {
   public ChainedConfigSource(GeneticAlgorithmConfig<TGenotype, TEncoding> chainedConfig) {
     ChainedConfig = chainedConfig;
@@ -178,4 +202,3 @@ public class ChainedConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype
     };
   }
 }
-

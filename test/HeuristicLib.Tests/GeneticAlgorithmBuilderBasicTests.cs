@@ -9,11 +9,11 @@ namespace HEAL.HeuristicLib.Tests;
 
 public class GeneticAlgorithmBuilderBasicTests {
   [Fact]
-  public Task GeneticAlgorithmBuilder_ShouldBuildAlgorithm() {
+  public Task GeneticAlgorithmBuilder_WithConfigObject() {
     var randomSource = RandomSource.CreateDefault(42);
     var encoding = new RealVectorEncoding(10, -5, +5);
     var builder = new GeneticAlgorithmBuilder<RealVectorEncoding, RealVector>()
-      .AddSource(new ChainedConfigSource<RealVector, RealVectorEncoding>(new GeneticAlgorithmConfig<RealVector, RealVectorEncoding>() {
+      .WithConfig(new GeneticAlgorithmConfig<RealVector, RealVectorEncoding>() {
         Encoding = encoding,
         PopulationSize = 200,
         CreatorFactory = (encoding, randomSource) => new NormalDistributedCreator(encoding, 0, 0.5, randomSource),
@@ -25,8 +25,29 @@ public class GeneticAlgorithmBuilderBasicTests {
         SelectorFactory = (randomSource) => new ProportionalSelector<RealVector>(randomSource),
         ReplacementFactory = (randomSource) => new PlusSelectionReplacer<RealVector>(),
         Terminator = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.CurrentGeneration)
-      }));
+      });
 
+    var ga = builder.Build();
+
+    return Verify(ga);
+  }
+  
+  [Fact]
+  public Task GeneticAlgorithmBuilder_WithSpec() {
+    var randomSource = RandomSource.CreateDefault(42);
+    var encoding = new RealVectorEncoding(10, -5, +5);
+    var builder = new GeneticAlgorithmBuilder<RealVectorEncoding, RealVector>()
+      .WithSpecs(new GeneticAlgorithmSpec(
+        PopulationSize: 200,
+        Creator: new NormalRealVectorCreatorSpec(Mean: [0.0], StandardDeviation: [0]),
+        Crossover: new SinglePointRealVectorCrossoverSpec(),
+        Mutator: new GaussianRealVectorMutatorSpec(Rate: 0.1, Strength: 0.1),
+        MutationRate: 0.05,
+        Selector: new TournamentSelectorSpec(TournamentSize: 4)))
+      .WithEncoding(encoding)
+      .WithRandomSource(randomSource);
+      // others are missing
+       
     var ga = builder.Build();
 
     return Verify(ga);
