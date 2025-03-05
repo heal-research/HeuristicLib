@@ -55,7 +55,7 @@ public class RandomSelector<TSolution, TObjective> : SelectorBase<TSolution, TOb
   }
 }
 
-public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveValue> {
+public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveValue> where TSolution : class {
   public TournamentSelector(int tournamentSize, RandomSource randomSource) {
     TournamentSize = tournamentSize;
     RandomSource = randomSource;

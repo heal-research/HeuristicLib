@@ -64,7 +64,7 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
     if (gaSpec.MutationRate.HasValue) {
       newConfig = newConfig with { MutationRate = gaSpec.MutationRate.Value };
     }
-
+#pragma warning disable S1481
     if (gaSpec.Creator is not null) {
       newConfig = newConfig with {
         CreatorFactory = (encoding, randomSource) => {
@@ -116,7 +116,7 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
     if (gaSpec.RandomSeed.HasValue) {
       newConfig = newConfig with { RandomSource = new SeededRandomSource(gaSpec.RandomSeed.Value) };
     }
-    
+#pragma warning restore S1481
     return newConfig;
   }
 }

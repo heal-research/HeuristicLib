@@ -16,8 +16,10 @@ public interface IObjective : IComparable<IObjective> { }
 public record Phenotype<TGenotype, TObjective>(TGenotype Genotype, TObjective Objective) 
   where TGenotype : IGenotype where TObjective : IObjective;
 
-
+#pragma warning disable S1694, S3246
+// ReSharper disable once TypeParameterCanBeVariant
 public interface ICreator<TGenotype> where TGenotype : IGenotype { 
+#pragma warning restore S1694, S3246
   TGenotype Create();
 }
 

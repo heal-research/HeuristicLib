@@ -12,7 +12,9 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
   private readonly double[,] distances;
   private readonly int numberOfCities;
 
+#pragma warning disable S2368
   public TravelingSalesmanProblem(double[,] distances) {
+#pragma warning restore S2368
     this.distances = distances;
     numberOfCities = distances.GetLength(0);
   }

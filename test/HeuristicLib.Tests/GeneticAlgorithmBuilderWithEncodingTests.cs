@@ -44,7 +44,7 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     return Verify(finalState);
   }
 
-  private class MockEvaluator : IEvaluator<RealVector, ObjectiveValue> {
+  class MockEvaluator : IEvaluator<RealVector, ObjectiveValue> {
     public ObjectiveValue Evaluate(RealVector solution) {
       return (solution.Sum(), ObjectiveDirection.Minimize);
     }

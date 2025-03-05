@@ -32,13 +32,13 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, ObjectiveVa
   }
 
   public override IEvaluator<RealVector, ObjectiveValue> CreateEvaluator() {
-    return new RealVectorTestFunctionEvaluator(this);
+    return new Evaluator(this);
   }
 
-  private class RealVectorTestFunctionEvaluator : EvaluatorBase<RealVector, ObjectiveValue>  {
+  private sealed class Evaluator : EvaluatorBase<RealVector, ObjectiveValue>  {
     private readonly RealVectorTestFunctionProblem problem;
 
-    public RealVectorTestFunctionEvaluator(RealVectorTestFunctionProblem problem) {
+    public Evaluator(RealVectorTestFunctionProblem problem) {
       this.problem = problem;
     }
 

@@ -28,7 +28,7 @@ public record Phenotype<TGenotype, TObjective>(TGenotype Genotype, TObjective Ob
   where TGenotype : IGenotype where TObjective : IObjective;
 
 
-public interface ICreator<TGenotype> where TGenotype : IGenotype { 
+public interface ICreator<out TGenotype> where TGenotype : IGenotype { 
   TGenotype Create();
 }
 

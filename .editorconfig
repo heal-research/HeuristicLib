@@ -227,3 +227,9 @@ dotnet_naming_style.begins_with_i.required_prefix = I
 dotnet_naming_style.begins_with_i.required_suffix =
 dotnet_naming_style.begins_with_i.word_separator =
 dotnet_naming_style.begins_with_i.capitalization = pascal_case
+
+
+dotnet_diagnostic.S1694.severity = none # An abstract class should have both abstract and concrete methods
+dotnet_diagnostic.S2094.severity = none # Classes should not be empty
+dotnet_diagnostic.S125.severity = none # Sections of code should not be commented out
+
