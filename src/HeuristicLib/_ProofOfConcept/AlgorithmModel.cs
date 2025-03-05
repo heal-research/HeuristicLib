@@ -21,7 +21,8 @@ public abstract class AlgorithmModelBase
 public abstract record Parameter(string Name, string Description);
 
 public record Parameter<T>(string Name, string Description, T DefaultValue) : Parameter(Name, Description) {
-  public T Value { get; set; }
+  public T Value { get; set; } = DefaultValue;
+  public T DefaultValue { get; init; } = DefaultValue;
 };
 
 public partial class GeneticAlgorithmModel
@@ -58,6 +59,7 @@ public partial class GeneticAlgorithmModel {
 
 class AlgorithmModelExample
 {
+ #pragma warning disable S125
   // void Execute() {
   //   var pauseToken = new PauseToken();
   //

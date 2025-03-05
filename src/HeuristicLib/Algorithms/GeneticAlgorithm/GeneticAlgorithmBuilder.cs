@@ -178,6 +178,14 @@ public static class GeneticAlgorithmBuilderConfigExtensions {
       RandomSource = randomSource
     }));
   }
+  
+  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithEvaluator<TEncoding, TGenotype>
+    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, IEvaluator<TGenotype, ObjectiveValue> evaluator)
+    where TEncoding : IEncoding<TGenotype, TEncoding> {
+    return builder.AddSource(new ChainedConfigSource<TGenotype, TEncoding>(new GeneticAlgorithmConfig<TGenotype, TEncoding>() {
+      EvaluatorFactory = _ => evaluator
+    }));
+  }
 }
 
 public class ChainedConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding>  where TEncoding : IEncoding<TGenotype, TEncoding> {

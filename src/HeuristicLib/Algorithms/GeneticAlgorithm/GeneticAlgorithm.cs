@@ -95,7 +95,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     return population.Select(individual => Evaluator.Evaluate(individual)).ToArray();
   }
 
-  private TGenotype GetBestIndividual(TGenotype[] population, ObjectiveValue[] objectives) {
+  private static TGenotype GetBestIndividual(TGenotype[] population, ObjectiveValue[] objectives) {
     int bestIndex = objectives
       .Select((objective, index) => new { objective, index })
       .OrderBy(x => x.objective)

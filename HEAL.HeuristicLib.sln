@@ -18,8 +18,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{46DC3720-0
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Tests", "test\HeuristicLib.Tests\HeuristicLib.Tests.csproj", "{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.SourceGenerators", "HeuristicLib.SourceGenerators\HeuristicLib.SourceGenerators.csproj", "{E1290B86-E3FE-41CE-A39B-C8F3362E4225}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,15 +36,10 @@ Global
 		{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E1290B86-E3FE-41CE-A39B-C8F3362E4225}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E1290B86-E3FE-41CE-A39B-C8F3362E4225}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E1290B86-E3FE-41CE-A39B-C8F3362E4225}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E1290B86-E3FE-41CE-A39B-C8F3362E4225}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{FF784266-ED28-4A8C-8E54-45B3A55D4807} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
 		{EF0D8218-AD1B-4839-BF18-D63D6B4FAC8D} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
 		{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF} = {7D61D99E-D0EF-4AC1-8182-520A1990C4AC}
-		{E1290B86-E3FE-41CE-A39B-C8F3362E4225} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
 	EndGlobalSection
 EndGlobal

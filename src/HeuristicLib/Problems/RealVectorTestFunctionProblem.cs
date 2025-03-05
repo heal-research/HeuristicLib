@@ -1,4 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Configuration;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 
@@ -59,34 +61,26 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, ObjectiveVa
     return solution.Sum(x => x * x);
   }
 
-  // public TestFunctionRealVectorEncodingBundle CreateRealVectorEncodingBundle()
-  // {
-  //   var encoding = new RealVectorEncoding(10, min, max); // Assuming length 10 for example
-  //
-  //   return new TestFunctionRealVectorEncodingBundle(
-  //     encoding,
-  //     new UniformDistributedCreatorProvider(),
-  //     new AlphaBetaBlendCrossover(0.7, 0.3),
-  //     new GaussianMutation(0.1, 0.1, null!)
-  //   );
-  // }
+  public RealVectorEncoding CreateRealVectorEncodingEncoding() {
+    return new RealVectorEncoding(length: 2, min, max);
+  }
+  
+  public GeneticAlgorithmSpec CreateGeneticAlgorithmDefaultConfig() {
+    return new GeneticAlgorithmSpec(
+      Creator: functionType == FunctionType.Sphere ? new UniformRealVectorCreatorSpec() : new NormalRealVectorCreatorSpec([5], [0.5]),
+      Crossover: new AlphaBlendRealVectorCrossoverSpec(Alpha: 0.8, Beta: 0.2),
+      Mutator: new GaussianRealVectorMutatorSpec()
+    );
+  }
 }
-//
-// public class TestFunctionRealVectorEncodingBundle : IEncodingBundle<RealVector, RealVectorEncoding>, ICrossoverProvider<RealVector>, IMutatorProvider<RealVector>
-// {
-//   public RealVectorEncoding Encoding { get; }
-//   public ICreatorProvider<RealVector, CreatorParameters> CreatorProvider { get; }
-//   //public ICreator<RealVector> Creator { get; }
-//   public ICrossover<RealVector> Crossover { get; }
-//   public IMutator<RealVector> Mutator { get; }
-//
-//   //public TestFunctionRealVectorEncodingBundle(RealVectorEncoding encoding, ICreator<RealVector> creator, ICrossover<RealVector> crossover, IMutator<RealVector> mutator)
-//   public TestFunctionRealVectorEncodingBundle(RealVectorEncoding encoding, ICreatorProvider<RealVector, CreatorParameters> creatorProvider, ICrossover<RealVector> crossover, IMutator<RealVector> mutator)
-//   {
-//     Encoding = encoding;
-//     CreatorProvider = creatorProvider;
-//     Crossover = crossover;
-//     Mutator = mutator;
-//   }
-// }
-//
+
+public static class GeneticAlgorithmBuilderRealVectorTestFunctionExtensions {
+  public static GeneticAlgorithmBuilder<RealVectorEncoding, RealVector> WithProblemEncoding
+    (this GeneticAlgorithmBuilder<RealVectorEncoding, RealVector> builder, RealVectorTestFunctionProblem problem)
+  {
+    builder.WithEvaluator(problem.CreateEvaluator());
+    builder.WithEncoding(problem.CreateRealVectorEncodingEncoding());
+    builder.WithSpecs(problem.CreateGeneticAlgorithmDefaultConfig());
+    return builder;
+    }
+}

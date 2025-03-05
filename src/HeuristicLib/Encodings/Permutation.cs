@@ -16,7 +16,7 @@ public sealed record class PermutationEncoding : EncodingBase<Permutation, Permu
   }
 }
 
-public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
+public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   private readonly int[] elements;
 
   public Permutation(IEnumerable<int> elements) {

@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Configuration;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
@@ -7,8 +8,7 @@ namespace HEAL.HeuristicLib.Problems;
 
 //public record Tour(IReadOnlyList<int> Cities);
 
-public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
-{
+public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue> {
   private readonly double[,] distances;
   private readonly int numberOfCities;
 
@@ -29,13 +29,13 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
   }
 
   public override IEvaluator<Permutation, ObjectiveValue> CreateEvaluator() {
-    return new TSPEvaluator(this);
+    return new Evaluator(this);
   }
 
-  private class TSPEvaluator : EvaluatorBase<Permutation, ObjectiveValue> {
+  private sealed class Evaluator : EvaluatorBase<Permutation, ObjectiveValue> {
     private readonly TravelingSalesmanProblem problem;
 
-    public TSPEvaluator(TravelingSalesmanProblem problem) {
+    public Evaluator(TravelingSalesmanProblem problem) {
       this.problem = problem;
     }
 
@@ -48,34 +48,21 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
     return new PermutationEncoding(numberOfCities);
   }
   
-  public GeneticAlgorithmSpec CreateGeneticAlgorithmConfig() {
+  public GeneticAlgorithmSpec CreateGeneticAlgorithmDefaultConfig() {
     return new GeneticAlgorithmSpec(
-      Crossover: new OrderCrossoverSpec(),
+      Crossover: numberOfCities > 5 ? new OrderCrossoverSpec() : null,
       Mutator: new SwapMutatorSpec()
     );
   }
-
-  // public TspPermutationEncodingBundle CreatePermutationEncodingBundle()
-  // {
-  //   var encoding = new PermutationEncoding(numberOfCities);
-  //   
-  //   return new TspPermutationEncodingBundle(
-  //     encoding,
-  //     RandomPermutationCreator.FromEncoding(encoding),
-  //     new OrderCrossover()
-  //   );
-  // }
 }
-//
-// public class TspPermutationEncodingBundle : IEncodingBundle<Permutation, PermutationEncoding>, ICreatorProvider<Permutation>, ICrossoverProvider<Permutation> {
-//   public TspPermutationEncodingBundle(PermutationEncoding encoding, Func<CreatorParameters, ICreator<Permutation>> creatorFactory, ICrossover<Permutation> crossover) {
-//     Encoding = encoding;
-//     CreatorFactory = creatorFactory;
-//     Crossover = crossover;
-//   }
-//
-//   public PermutationEncoding Encoding { get; }
-//
-//   public Func<CreatorParameters, ICreator<Permutation>> CreatorFactory { get; }
-//   public ICrossover<Permutation> Crossover { get; }
-// }
+
+public static class GeneticAlgorithmBuilderTravelingSalesmanProblemExtensions {
+  public static GeneticAlgorithmBuilder<PermutationEncoding, Permutation> WithProblemEncoding
+    (this GeneticAlgorithmBuilder<PermutationEncoding, Permutation> builder, TravelingSalesmanProblem problem)
+  {
+    builder.WithEvaluator(problem.CreateEvaluator());
+    builder.WithEncoding(problem.CreatePermutationEncoding());
+    builder.WithSpecs(problem.CreateGeneticAlgorithmDefaultConfig());
+    return builder;
+  }
+}

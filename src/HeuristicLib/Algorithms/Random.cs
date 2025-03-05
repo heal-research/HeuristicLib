@@ -101,11 +101,34 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   }
 }
 
-// public class MersenneTwister : IRandomGenerator { }
-//
-// public class PermutedCongruentialGenerator : IRandomGenerator { }
-//
-// public class PhiloxGenerator : IRandomGenerator { }
+public class MersenneTwister : IRandomNumberGenerator {
+  public double Random() {
+    throw new NotImplementedException();
+  }
+  public int Integer(int low, int high, bool endpoint = false) {
+    throw new NotImplementedException();
+  }
+  public byte[] Bytes(int length) {
+    throw new NotImplementedException();
+  }
+  public IRandomNumberGenerator[] Spawn(int count) {
+    throw new NotImplementedException();
+  }
+}
+
+public class PermutedCongruentialGenerator : IRandomNumberGenerator {
+  public double Random() { throw new NotImplementedException(); }
+  public int Integer(int low, int high, bool endpoint = false) { throw new NotImplementedException(); }
+  public byte[] Bytes(int length) { throw new NotImplementedException(); }
+  public IRandomNumberGenerator[] Spawn(int count) { throw new NotImplementedException(); }
+}
+
+public class PhiloxGenerator : IRandomNumberGenerator {
+  public double Random() { throw new NotImplementedException(); }
+  public int Integer(int low, int high, bool endpoint = false) { throw new NotImplementedException(); }
+  public byte[] Bytes(int length) { throw new NotImplementedException(); }
+  public IRandomNumberGenerator[] Spawn(int count) { throw new NotImplementedException(); }
+}
 
 public interface IDistribution {
   

@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Operators;
 
-public interface ICreator<TGenotype> : IOperator {
+public interface ICreator<out TGenotype> : IOperator {
   TGenotype Create();
 }
 

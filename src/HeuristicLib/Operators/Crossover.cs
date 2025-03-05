@@ -11,7 +11,7 @@ public abstract class CrossoverBase<TGenotype> : ICrossover<TGenotype> {
 
 
 
-public interface IRecordGenotypeBase<TSelf, T1, T2> where TSelf : IRecordGenotypeBase<TSelf, T1, T2> {
+public interface IRecordGenotypeBase<out TSelf, T1, T2> where TSelf : IRecordGenotypeBase<TSelf, T1, T2> {
   static abstract TSelf Construct(T1 item1, T2 item2);
   void Deconstruct(out T1 item1, out T2 item2);
 }

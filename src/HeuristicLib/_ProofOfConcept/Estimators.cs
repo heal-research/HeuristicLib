@@ -64,7 +64,7 @@ public class LinearRegressionModel : IPredictor<double[], double> {
 
 
 public static class EstimatorsExample {
-  static void Execute() {
+  public static void Execute() {
     // Create with parameters in constructor
     var estimator = new LinearRegression(
       learningRate: 0.05,

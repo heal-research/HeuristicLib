@@ -22,7 +22,7 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     var problem = new TravelingSalesmanProblem(distances);
 
     var encoding = problem.CreatePermutationEncoding();
-    var config = problem.CreateGeneticAlgorithmConfig();
+    var config = problem.CreateGeneticAlgorithmDefaultConfig();
     var evaluator = problem.CreateEvaluator();
     var randomState = RandomSource.CreateDefault(42);
 
@@ -30,7 +30,8 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     var selector = new TournamentSelector<Permutation>(3, randomState);
     var replacement = new ElitismReplacer<Permutation>(2);
 
-    var builder = new GeneticAlgorithmBuilder<PermutationEncoding, Permutation>();
+    var builder = new GeneticAlgorithmBuilder<PermutationEncoding, Permutation>()
+      .WithProblemEncoding(problem);
       // .WithEncoding(encoding)
       // .WithConfiguration(config)
       // .WithTerminationCriterion(terminationCriterion)

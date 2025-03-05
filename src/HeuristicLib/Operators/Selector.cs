@@ -8,8 +8,7 @@ public interface ISelector<TSolution, in TObjective> : IOperator {
   TSolution[] Select(TSolution[] population, TObjective[] objectives, int count);
 }
 
-public abstract class SelectorBase<TSolution, TObjective> 
-  : ISelector<TSolution, TObjective> {
+public abstract class SelectorBase<TSolution, TObjective> : ISelector<TSolution, TObjective> {
   public abstract TSolution[] Select(TSolution[] population, TObjective[] objectives, int count);
 }
 

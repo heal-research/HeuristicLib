@@ -8,9 +8,6 @@ public class Permutation : IChromosome { }
 public class RealVector : IChromosome { }
 public class Tree : IChromosome { }
 
-
-
-//public record Genotype<TChromosome>(TChromosome Chromosome) : IGenotype;
 public record MultiGenotype(RealVector Parameters, Tree Tree) : IGenotype;
 
 public class MultiGenotypeCreator(ICreator<RealVector> realVectorCreator, ICreator<Tree> treeCreator) : ICreator<MultiGenotype> {
@@ -69,17 +66,19 @@ public class GeneticAlgorithm<TGenotype> where TGenotype : IGenotype {
 }
 
 
-public static class Test {
-  private class PermutationEvaluator : IEvaluator<Permutation, ObjectiveValue> { public Phenotype<Permutation, ObjectiveValue>[] Evaluate(Permutation[] genotype) { throw new NotImplementedException(); } }
-  private class MultiGenotypeEvaluator : IEvaluator<MultiGenotype, ObjectiveValue> { public Phenotype<MultiGenotype, ObjectiveValue>[] Evaluate(MultiGenotype[] genotype) { throw new NotImplementedException(); } }
-  private static void TestWithPermutation() {
-    var ga = new GeneticAlgorithm<Permutation>(10, new PermutationCreator(), new PermutationEvaluator(), new OrderCrossover());
-  }
-  private static void TestWithMultiGenotype() {
-    var ga = new GeneticAlgorithm<MultiGenotype>(
-    10, 
-    new MultiGenotypeCreator(new RealVectorCreator(), new TreeCreator()), 
-    new MultiGenotypeEvaluator(), 
-    new MultiGenotypeCrossover(new RealVectorCrossover(), new TreeCrossover()));
-  }
-}
+#pragma warning disable S125
+// public static class Test {
+//   private class PermutationEvaluator : IEvaluator<Permutation, ObjectiveValue> { public Phenotype<Permutation, ObjectiveValue>[] Evaluate(Permutation[] genotype) { throw new NotImplementedException(); } }
+//   private class MultiGenotypeEvaluator : IEvaluator<MultiGenotype, ObjectiveValue> { public Phenotype<MultiGenotype, ObjectiveValue>[] Evaluate(MultiGenotype[] genotype) { throw new NotImplementedException(); } }
+//   private static void TestWithPermutation() {
+//     var ga = new GeneticAlgorithm<Permutation>(10, new PermutationCreator(), new PermutationEvaluator(), new OrderCrossover());
+//   }
+//   private static void TestWithMultiGenotype() {
+//     var ga = new GeneticAlgorithm<MultiGenotype>(
+//     10, 
+//     new MultiGenotypeCreator(new RealVectorCreator(), new TreeCreator()), 
+//     new MultiGenotypeEvaluator(), 
+//     new MultiGenotypeCrossover(new RealVectorCrossover(), new TreeCrossover()));
+//   }
+// }
+#pragma warning restore S125
