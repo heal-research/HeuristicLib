@@ -1,4 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
@@ -28,6 +31,18 @@ public readonly record struct ObjectiveValue(double Value, ObjectiveDirection Di
   public static bool operator >=(ObjectiveValue left, ObjectiveValue right) => left.CompareTo(right) >= 0;
   
   public override string ToString() => $"{Value} ({Direction})";
+
+  public static ObjectiveValue GetBest(ObjectiveDirection direction) => direction switch {
+    ObjectiveDirection.Minimize => new ObjectiveValue(double.MinValue, ObjectiveDirection.Minimize),
+    ObjectiveDirection.Maximize => new ObjectiveValue(double.MaxValue, ObjectiveDirection.Maximize),
+    _ => throw new NotImplementedException()
+  };
+  public static ObjectiveValue GetWorst(ObjectiveDirection direction) => direction switch {
+    ObjectiveDirection.Minimize => new ObjectiveValue(double.MaxValue, ObjectiveDirection.Minimize),
+    ObjectiveDirection.Maximize => new ObjectiveValue(double.MinValue, ObjectiveDirection.Maximize),
+    _ => throw new NotImplementedException()
+  };
+  
 }
 
 public enum ParetoDominance {

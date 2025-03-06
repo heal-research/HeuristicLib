@@ -27,7 +27,32 @@ public class ExecutionStream<TState> : IEnumerable<TState> {
 
 public static class ExecutionStreamExtensions {
   public static (TGenotype, ObjectiveValue) GetBest<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
-    return stream.SelectMany(state => state.Population.Zip(state.Objectives, (genotype, objective) => (genotype, objective)))
+    return stream
+      .SelectMany(state => state.Population.Zip(state.Objectives, (genotype, objective) => (genotype, objective)))
       .MinBy(pair => pair.objective);
+  }
+  
+  public static IEnumerable<(ObjectiveValue best, ObjectiveValue average, ObjectiveValue worst)> GetObjectiveStatisticsStream<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
+    return stream.Select(state => {
+      if (state.Objectives.Length == 0) throw new InvalidOperationException("Population must not be empty.");
+      return (state.Objectives.Min(), new ObjectiveValue(state.Objectives.Average(o => o.Value), state.Objectives[0].Direction), state.Objectives.Max());
+    });
+  }
+  
+  public static IEnumerable<ObjectiveValue> GetBestObjectiveStream<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
+    var bestObjectives = stream.Select(state => state.Objectives.Min());
+    using var enumerator = bestObjectives.GetEnumerator();
+
+    if (!enumerator.MoveNext()) yield break;
+    var currentBest = enumerator.Current;
+    while (enumerator.MoveNext()) {
+      ObjectiveValue current = enumerator.Current;
+      if (current.IsBetterThan(currentBest)) {
+        currentBest = current;
+      }
+      yield return currentBest;
+    }
+    
+
   }
 }
