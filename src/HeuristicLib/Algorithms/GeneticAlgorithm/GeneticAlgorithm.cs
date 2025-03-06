@@ -51,7 +51,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     if (initialState is null) {
       var initialPopulation = InitializePopulation();
       var initialObjectives = EvaluatePopulation(initialPopulation);
-      yield return currentState = new PopulationState<TGenotype>(0, initialPopulation, initialObjectives);
+      yield return currentState = new PopulationState<TGenotype> { Generation = 0, Population = initialPopulation, Objectives = initialObjectives };
     } else {
       currentState = initialState;
     }

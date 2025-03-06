@@ -24,3 +24,10 @@ public class ExecutionStream<TState> : IEnumerable<TState> {
   public IEnumerator<TState> GetEnumerator() => internalStream.GetEnumerator();
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
+
+public static class ExecutionStreamExtensions {
+  public static (TGenotype, ObjectiveValue) GetBest<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
+    return stream.SelectMany(state => state.Population.Zip(state.Objectives, (genotype, objective) => (genotype, objective)))
+      .MinBy(pair => pair.objective);
+  }
+}

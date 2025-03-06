@@ -8,12 +8,9 @@ public enum EvolutionStrategyType {
   Plus
 }
 
-public record EvolutionStrategyPopulationState(
-  int Generation,
-  double MutationStrength,
-  RealVector[] Population,
-  ObjectiveValue[] Objectives
-) : PopulationState<RealVector>(Generation, Population, Objectives);
+public record EvolutionStrategyPopulationState : PopulationState<RealVector> {
+  public required double MutationStrength { get; init; }
+}
 
 public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState> {
   public EvolutionStrategy(
@@ -68,13 +65,13 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     if (initialState is null) {
       var initialPopulation = InitializePopulation();
       var initialObjectives = EvaluatePopulation(initialPopulation);
-      yield return currentState = new EvolutionStrategyPopulationState(0, InitialMutationStrength, initialPopulation, initialObjectives); 
+      yield return currentState = new EvolutionStrategyPopulationState { Generation = 0, MutationStrength = InitialMutationStrength, Population = initialPopulation, Objectives = initialObjectives }; 
     } else {
       currentState = initialState;
     }
     
     while (activeTerminator?.ShouldContinue(currentState) ?? true) {
-      var (offspringPopulation, successfulOffspring) = EvolvePopulation(currentState.Population, rng);
+      var (offspringPopulation, successfulOffspring) = EvolvePopulation(currentState.Population, currentState.MutationStrength, rng);
       var offspringObjectives = EvaluatePopulation(offspringPopulation);
 
       var (newPopulation, newObjectives) = Strategy switch {
@@ -102,12 +99,12 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     return population;
   }
 
-  private (RealVector[], int successfulOffspring) EvolvePopulation(RealVector[] population, IRandomNumberGenerator rng) {
+  private (RealVector[], int successfulOffspring) EvolvePopulation(RealVector[] population, double mutationStrength, IRandomNumberGenerator rng) {
     var offspringPopulation = new RealVector[Children];
     for (int i = 0; i < Children; i++) {
       var parent = population[rng.Integer(PopulationSize)];
       var offspring = Mutator is IAdaptableMutator<RealVector> adaptableMutator 
-        ? adaptableMutator.Mutate(parent, InitialMutationStrength) 
+        ? adaptableMutator.Mutate(parent, mutationStrength) 
         : Mutator.Mutate(parent);
       offspringPopulation[i] = offspring;
     }
