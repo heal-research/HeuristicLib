@@ -7,3 +7,7 @@ public interface IMutator<TSolution> : IOperator {
 public abstract class MutatorBase<TSolution> : IMutator<TSolution> {
   public abstract TSolution Mutate(TSolution parent);
 }
+
+public interface IAdaptableMutator<TSolution> : IMutator<TSolution> {
+  TSolution Mutate(TSolution parent, double mutationStrength);
+}

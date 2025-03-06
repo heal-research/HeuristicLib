@@ -1,20 +1,12 @@
-﻿using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-
-using Operators;
-
-public record PopulationState<TSolution>(
-  int CurrentGeneration,
-  TSolution[] Population,
-  ObjectiveValue[] Objectives
-);
 
 public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenotype>> {
   
   public GeneticAlgorithm(int populationSize,
     ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
-    ITerminator<PopulationState<TGenotype>> terminator, IEvaluator<TGenotype, ObjectiveValue> evaluator,
+    ITerminator<PopulationState<TGenotype>>? terminator, IEvaluator<TGenotype, ObjectiveValue> evaluator,
     RandomSource randomSourceState, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer)
   {
     PopulationSize = populationSize;
@@ -30,7 +22,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   }
   
   public int PopulationSize { get; }
-  public ITerminator<PopulationState<TGenotype>> Terminator { get; }
+  public ITerminator<PopulationState<TGenotype>>? Terminator { get; }
   public ICreator<TGenotype> Creator { get; }
   public ICrossover<TGenotype> Crossover { get; }
   public IMutator<TGenotype> Mutator { get; }
@@ -39,31 +31,39 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   public RandomSource RandomSource { get; }
   public ISelector<TGenotype, ObjectiveValue> Selector { get; }
   public IReplacer<TGenotype> Replacer { get; }
-  // WIP
-  public event Action<TGenotype>? OnLiveResult;
+  
+  public override PopulationState<TGenotype> Execute(PopulationState<TGenotype>? initialState = null, ITerminator<PopulationState<TGenotype>>? terminator = null) {
+    return CreateExecutionStream(initialState, terminator).Last();
+  }
 
-  public override PopulationState<TGenotype> Run(PopulationState<TGenotype>? state = null) {
+  public override ExecutionStream<PopulationState<TGenotype>> CreateExecutionStream(PopulationState<TGenotype>? initialState = null, ITerminator<PopulationState<TGenotype>>? terminator = null) {
+    if (Terminator is null && terminator is null) throw new InvalidOperationException("At least one terminator must be provided.");
+    return new ExecutionStream<PopulationState<TGenotype>>(InternalCreateExecutionStream(initialState, terminator));
+  }
+
+  private IEnumerable<PopulationState<TGenotype>> InternalCreateExecutionStream(PopulationState<TGenotype>? initialState, ITerminator<PopulationState<TGenotype>>? terminator) {
     var rng = RandomSource.CreateRandomNumberGenerator();
-    
-    var population = state?.Population ?? InitializePopulation();
-    var objectives = state?.Objectives ?? EvaluatePopulation(population);
-    var currentGeneration = state?.CurrentGeneration ?? 0;
-    var currentState = new PopulationState<TGenotype>(currentGeneration, population, objectives);
 
-    while (!Terminator.ShouldTerminate(currentState))
-    {
-      var offspringCount = Replacer.GetOffspringCount(PopulationSize);
-      var offspringPopulation = EvolvePopulation(population, offspringCount, rng);
+    var activeTerminator = terminator ?? Terminator;
+    int offspringCount = Replacer.GetOffspringCount(PopulationSize);
+
+    PopulationState<TGenotype> currentState;
+    if (initialState is null) {
+      var initialPopulation = InitializePopulation();
+      var initialObjectives = EvaluatePopulation(initialPopulation);
+      yield return currentState = new PopulationState<TGenotype>(0, initialPopulation, initialObjectives);
+    } else {
+      currentState = initialState;
+    }
+   
+    while (activeTerminator?.ShouldContinue(currentState) ?? true) {
+      var offspringPopulation = EvolvePopulation(currentState.Population, offspringCount, rng);
       var offspringQualities = EvaluatePopulation(offspringPopulation);
 
-      (population, objectives) = Replacer.Replace(population, objectives, offspringPopulation, offspringQualities);
-
-      var bestIndividual = GetBestIndividual(population, objectives);
-      OnLiveResult?.Invoke(bestIndividual);
-      currentState = currentState with { CurrentGeneration = ++currentGeneration, Population = population, Objectives = objectives };
+      var (newPopulation, newObjectives) = Replacer.Replace(currentState.Population, currentState.Objectives, offspringPopulation, offspringQualities);
+      
+      yield return currentState = currentState with { Generation = currentState.Generation + 1, Population = newPopulation, Objectives = newObjectives };
     }
-
-    return currentState;
   }
 
   private TGenotype[] InitializePopulation() {
@@ -94,12 +94,5 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   private ObjectiveValue[] EvaluatePopulation(TGenotype[] population) {
     return population.Select(individual => Evaluator.Evaluate(individual)).ToArray();
   }
-
-  private static TGenotype GetBestIndividual(TGenotype[] population, ObjectiveValue[] objectives) {
-    int bestIndex = objectives
-      .Select((objective, index) => new { objective, index })
-      .OrderBy(x => x.objective)
-      .First().index;
-    return population[bestIndex];
-  }
+  
 }

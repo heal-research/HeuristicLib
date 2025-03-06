@@ -2,6 +2,7 @@
 
 public interface ITerminator<in TState> {
   bool ShouldTerminate(TState state);
+  bool ShouldContinue(TState state) => !ShouldTerminate(state);
 }
 
 public class ThresholdTerminator<TState> : ITerminator<TState> {

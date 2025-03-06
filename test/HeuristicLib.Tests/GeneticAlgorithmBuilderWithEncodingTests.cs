@@ -26,7 +26,7 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     var evaluator = problem.CreateEvaluator();
     var randomState = RandomSource.CreateDefault(42);
 
-    var terminationCriterion = new ThresholdTerminator<PopulationState<Permutation>>(100, state => state.CurrentGeneration);
+    var terminationCriterion = new ThresholdTerminator<PopulationState<Permutation>>(100, state => state.Generation);
     var selector = new TournamentSelector<Permutation>(3, randomState);
     var replacement = new ElitismReplacer<Permutation>(2);
 
@@ -40,7 +40,7 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
 
     var ga = builder.Build();
 
-    var finalState = ga.Run();
+    var finalState = ga.Execute();
     return Verify(finalState);
   }
 

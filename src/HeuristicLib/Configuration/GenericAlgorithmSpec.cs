@@ -110,7 +110,7 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
     }
 
     if (gaSpec.MaximumGenerations.HasValue) {
-      newConfig = newConfig with { Terminator = new ThresholdTerminator<PopulationState<TGenotype>>(gaSpec.MaximumGenerations.Value, state => state.CurrentGeneration) };
+      newConfig = newConfig with { Terminator = new ThresholdTerminator<PopulationState<TGenotype>>(gaSpec.MaximumGenerations.Value, state => state.Generation) };
     }
 
     if (gaSpec.RandomSeed.HasValue) {

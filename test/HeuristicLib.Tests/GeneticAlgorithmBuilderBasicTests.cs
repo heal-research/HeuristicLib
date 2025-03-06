@@ -24,7 +24,7 @@ public class GeneticAlgorithmBuilderBasicTests {
         RandomSource = randomSource,
         SelectorFactory = (randomSource) => new ProportionalSelector<RealVector>(randomSource),
         ReplacementFactory = (randomSource) => new PlusSelectionReplacer<RealVector>(),
-        Terminator = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.CurrentGeneration)
+        Terminator = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.Generation)
       });
 
     var ga = builder.Build();
