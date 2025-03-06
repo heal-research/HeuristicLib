@@ -1,11 +1,21 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Algorithms;
 
-using Algorithms;
-using System.Linq;
+namespace HEAL.HeuristicLib.Operators;
 
+public interface ISelector<TPhenotype, in TObjective> : IOperator {
+  TPhenotype[] Select(TPhenotype[] population, TObjective[] objectives, int count);
+}
 
-public interface ISelector<TSolution, in TObjective> : IOperator {
-  TSolution[] Select(TSolution[] population, TObjective[] objectives, int count);
+public static class Selector {
+  public static ISelector<TPhenotype, TObjective> Create<TPhenotype, TObjective>(Func<TPhenotype[], TObjective[], int, TPhenotype[]> selector) => new Selector<TPhenotype, TObjective>(selector);
+}
+
+public sealed class Selector<TPhenotype, TObjective> : ISelector<TPhenotype, TObjective> {
+  private readonly Func<TPhenotype[], TObjective[], int, TPhenotype[]> selector;
+  internal Selector(Func<TPhenotype[], TObjective[], int, TPhenotype[]> selector) {
+    this.selector = selector;
+  }
+  public TPhenotype[] Select(TPhenotype[] population, TObjective[] objectives, int count) => selector(population, objectives, count);
 }
 
 public abstract class SelectorBase<TSolution, TObjective> : ISelector<TSolution, TObjective> {
@@ -83,5 +93,3 @@ public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveVa
     return selected;
   }
 }
-
-

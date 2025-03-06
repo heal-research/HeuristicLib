@@ -134,7 +134,7 @@ public class OrderCrossover : CrossoverBase<Permutation>, IEncodingOperator<Perm
     Encoding = encoding;
   }
   
-  public override Permutation Crossover(Permutation parent1, Permutation parent2) {
+  public override Permutation Cross(Permutation parent1, Permutation parent2) {
     return Permutation.OrderCrossover(parent1, parent2);
   }
 }

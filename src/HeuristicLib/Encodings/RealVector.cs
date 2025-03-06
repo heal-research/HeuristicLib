@@ -52,7 +52,7 @@ public class AlphaBetaBlendCrossover : CrossoverBase<RealVector>, IEncodingOpera
     Beta = beta ?? 0.3;
   }
 
-  public override RealVector Crossover(RealVector parent1, RealVector parent2) {
+  public override RealVector Cross(RealVector parent1, RealVector parent2) {
     return Alpha * parent1 + Beta * parent2;
   }
 }
@@ -349,7 +349,7 @@ public class SinglePointCrossover : CrossoverBase<RealVector>, IEncodingOperator
     this.RandomSource = randomSource;
   }
   
-  public override RealVector Crossover(RealVector parent1, RealVector parent2) {
+  public override RealVector Cross(RealVector parent1, RealVector parent2) {
     var rng = RandomSource.CreateRandomNumberGenerator();
     int crossoverPoint = rng.Integer(1, parent1.Count);
     double[] offspringValues = new double[parent1.Count];

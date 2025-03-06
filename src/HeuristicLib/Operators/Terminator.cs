@@ -5,6 +5,18 @@ public interface ITerminator<in TState> {
   bool ShouldContinue(TState state) => !ShouldTerminate(state);
 }
 
+public static class Terminator {
+  public static ITerminator<TState> Create<TState>(Func<TState, bool> shouldTerminatePredicate) => new Terminator<TState>(shouldTerminatePredicate);
+}
+
+public sealed class Terminator<TState> : ITerminator<TState> {
+  private readonly Func<TState, bool> shouldTerminatePredicate;
+  internal Terminator(Func<TState, bool> shouldTerminatePredicate) {
+    this.shouldTerminatePredicate = shouldTerminatePredicate;
+  }
+  public bool ShouldTerminate(TState state) => shouldTerminatePredicate(state);
+}
+
 public class ThresholdTerminator<TState> : ITerminator<TState> {
   public ThresholdTerminator(int threshold, Func<TState, int> accessor) {
     Threshold = threshold;

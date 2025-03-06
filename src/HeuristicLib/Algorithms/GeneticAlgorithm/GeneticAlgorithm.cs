@@ -90,7 +90,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     for (int i = 0; i < parents.Length; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
-      var offspring = Crossover.Crossover(parent1, parent2);
+      var offspring = Crossover.Cross(parent1, parent2);
       if (rng.Random() < MutationRate) {
         offspring = Mutator.Mutate(offspring);
       }

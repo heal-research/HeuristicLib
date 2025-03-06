@@ -105,8 +105,8 @@ public class GeneticAlgorithmTests {
     public ObjectiveValue Evaluate(MultiGenotype solution) { return (solution.RealVector.Sum() + solution.Permutation.Count, ObjectiveDirection.Minimize); }
   }
   private class MultiGenotypeCrossover(ICrossover<RealVector> realVectorCrossover, ICrossover<Permutation> permutationCrossover) : ICrossover<MultiGenotype> {
-    public MultiGenotype Crossover(MultiGenotype parent1, MultiGenotype parent2) {
-      return new MultiGenotype(realVectorCrossover.Crossover(parent1.RealVector, parent2.RealVector), permutationCrossover.Crossover(parent1.Permutation, parent2.Permutation));
+    public MultiGenotype Cross(MultiGenotype parent1, MultiGenotype parent2) {
+      return new MultiGenotype(realVectorCrossover.Cross(parent1.RealVector, parent2.RealVector), permutationCrossover.Cross(parent1.Permutation, parent2.Permutation));
     }
   }
   private class MultiGenotypeMutator(IMutator<RealVector> realVectorMutator, IMutator<Permutation> permutationMutator) : IMutator<MultiGenotype> {

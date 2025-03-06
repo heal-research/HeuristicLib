@@ -46,41 +46,26 @@ public class CyclicAlgorithmTests {
       firstAlgorithm: evolutionStrategy,
       secondAlgorithm: geneticAlgorithm,
       transformer: new EvolutionToGeneticStateTransformer(),
-      repetitionTransformer: new GeneticToEvolutionStateTransformer()
+      repetitionTransformer: StateTransformer.Create((PopulationState<RealVector> sourceState, EvolutionStrategyPopulationState previousTargetState) => new EvolutionStrategyPopulationState {
+        Generation = sourceState.Generation, Population = sourceState.Population, Objectives = sourceState.Objectives, MutationStrength = previousTargetState?.MutationStrength ?? 0.1// TODO: how to get mutation strength from the default of the ES?
+      })
     );
 
-    var finalState = cyclicAlgorithm.Execute(termination: new Terminator());
+    var finalState = cyclicAlgorithm.Execute(
+      termination: Terminator.Create((IState state) => state switch {
+        EvolutionStrategyPopulationState esState => esState.Generation >= 10,
+        PopulationState<RealVector> gaState => gaState.Generation >= 10,
+        _ => false
+      })
+    );
 
     return Verify(finalState);
   }
-  
+
   class EvolutionToGeneticStateTransformer : IStateTransformer<EvolutionStrategyPopulationState, PopulationState<RealVector>> {
     public PopulationState<RealVector> Transform(EvolutionStrategyPopulationState sourceState, PopulationState<RealVector>? previousTargetState = null) {
       return new PopulationState<RealVector> {
-        Generation = sourceState.Generation,
-        Population = sourceState.Population,
-        Objectives = sourceState.Objectives
-      };
-    }
-  }
-
-  class GeneticToEvolutionStateTransformer : IStateTransformer<PopulationState<RealVector>, EvolutionStrategyPopulationState> {
-    public EvolutionStrategyPopulationState Transform(PopulationState<RealVector> sourceState, EvolutionStrategyPopulationState? previousTargetState = null) {
-      return new EvolutionStrategyPopulationState {
-        Generation = sourceState.Generation,
-        Population = sourceState.Population,
-        Objectives = sourceState.Objectives,
-        MutationStrength = previousTargetState?.MutationStrength ?? 0.1 // TODO: how to get mutation strength from the default of the ES?
-      };
-    }
-  }
-  
-  class Terminator : ITerminator<IState> {
-    public bool ShouldTerminate(IState state) {
-      return state switch {
-        EvolutionStrategyPopulationState esState => esState.Generation >= 10,
-        PopulationState<RealVector> gaState => gaState.Generation >= 10,
-        _ => throw new ArgumentException("Unknown state type.")
+        Generation = sourceState.Generation, Population = sourceState.Population, Objectives = sourceState.Objectives
       };
     }
   }
