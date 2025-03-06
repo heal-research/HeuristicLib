@@ -22,6 +22,8 @@ public record GeneticAlgorithmConfig<TGenotype, TEncoding> where TEncoding : IEn
   public RandomSource? RandomSource { get; init; }
   
   public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
+  
+  public IInterceptor<PopulationState<TGenotype>>? Interceptor { get; init; }
 }
 
 public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEncoding<TGenotype, TEncoding> {
@@ -46,7 +48,8 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
       config.Evaluator,
       config.RandomSource,
       config.Selector,
-      config.Replacer
+      config.Replacer,
+      config.Interceptor
     );
   }
 
@@ -66,7 +69,8 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
       Selector = config.SelectorFactory!.Invoke(config.RandomSource!),
       Replacer = config.ReplacementFactory!.Invoke(config.RandomSource!),
       RandomSource = config.RandomSource!,
-      Terminator = config.Terminator!
+      Terminator = config.Terminator,
+      Interceptor = config.Interceptor
     };
 
     ValidateResolvedConfig(resolvedConfig);
@@ -115,7 +119,9 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
   
     public required RandomSource RandomSource { get; init; }
  
-    public required ITerminator<PopulationState<TGenotype>> Terminator { get; init; }
+    public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
+    
+    public IInterceptor<PopulationState<TGenotype>>? Interceptor { get; init; }
   }
   
   private sealed class ConfigValidator : AbstractValidator<GeneticAlgorithmConfig<TGenotype, TEncoding>> {
@@ -129,7 +135,7 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
       RuleFor(x => x.SelectorFactory).NotNull().WithMessage("Selector factory must not be null.");
       RuleFor(x => x.ReplacementFactory).NotNull().WithMessage("Replacement factory must not be null.");
       RuleFor(x => x.RandomSource).NotNull().WithMessage("Random source must not be null.");
-      RuleFor(x => x.Terminator).NotNull().WithMessage("Termination criterion must not be null.");
+      //RuleFor(x => x.Terminator).NotNull().WithMessage("Termination criterion must not be null.");
     }
   }
   
