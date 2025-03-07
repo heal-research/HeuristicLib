@@ -50,8 +50,9 @@ public class PlusSelectionReplacer<TSolution> : ReplacerBase<TSolution>
       .Select(x => x.index)
       .ToList();
 
+    // if algorithmPopulation differs from previousPopulation.Length, it is not detected
     var newPopulation = sortedIndices.Take(previousPopulation.Length).Select(i => combinedPopulation[i]).ToArray();
-    var newQualities = sortedIndices.Take(previousPopulation.Length()).Select(i => combinedQualities[i]).ToArray();
+    var newQualities = sortedIndices.Take(previousPopulation.Length).Select(i => combinedQualities[i]).ToArray();
 
     return (newPopulation, newQualities);
   }

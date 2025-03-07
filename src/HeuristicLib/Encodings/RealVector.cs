@@ -410,6 +410,6 @@ public class UniformDistributedCreator : CreatorBase<RealVector>, IEncodingOpera
   }
 
   public override RealVector Create() {
-    return RealVector.CreateUniform(Encoding.Length, Minimum ?? Encoding.Minimum, Maximum ?? Encoding.Minimum, RandomSource);
+    return RealVector.CreateUniform(Encoding.Length, Minimum ?? Encoding.Minimum, Maximum ?? Encoding.Maximum, RandomSource);
   }
 }

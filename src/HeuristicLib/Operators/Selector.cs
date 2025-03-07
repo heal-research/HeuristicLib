@@ -23,26 +23,56 @@ public abstract class SelectorBase<TSolution, TObjective> : ISelector<TSolution,
 }
 
 public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveValue> {
-  public ProportionalSelector(IRandomSource randomSource) {
-    RandomSource = randomSource;
-  }
   public IRandomSource RandomSource { get; }
+  public bool Windowing { get; }
 
+  public ProportionalSelector(IRandomSource randomSource, bool windowing = true) {
+    RandomSource = randomSource;
+    Windowing = windowing;
+  }
   public TSolution[] Select(TSolution[] population, ObjectiveValue[] objectives, int count) {
     var rng = RandomSource.CreateRandomNumberGenerator();
-    var selected = new TSolution[count];
-    for (int j = 0; j < count; j++) {
-      double totalQuality = objectives.Sum(o => o.Value);
-      double randomValue = rng.Random() * totalQuality;
-      double cumulativeQuality = 0.0;
 
-      for (int i = 0; i < population.Length(); i++) {
-        cumulativeQuality += objectives[i].Value;
-        if (cumulativeQuality >= randomValue) {
-          selected[j] = population[i];
-          break;
+    // prepare qualities
+    double minQuality = double.MaxValue, maxQuality = double.MinValue;
+    foreach (double val in objectives.Select(o => o.Value)) {
+      minQuality = Math.Min(minQuality, val);
+      maxQuality = Math.Max(maxQuality, val);
+    }
+    var direction = objectives.Select(o => o.Direction).Distinct().Single();
+
+    var qualities = objectives.Select(o => o.Value);
+    if (minQuality == maxQuality) {
+      qualities = qualities.Select(_ => 1.0);
+    } else {
+      if (Windowing) {
+        if (direction == ObjectiveDirection.Maximize) {
+          qualities = qualities.Select(q => q - minQuality);
+        } else {
+          qualities = qualities.Select(q => maxQuality - q);
+        }
+      } else {
+        if (minQuality < 0.0)
+          throw new InvalidOperationException("Proportional selection without windowing does not work with quality values < 0.");
+        if (direction == ObjectiveDirection.Minimize) {
+          double limit = Math.Min(maxQuality * 2, double.MaxValue);
+          qualities = qualities.Select(q => limit - q);
         }
       }
+    }
+
+    var list = qualities.ToList();
+    double qualitySum = list.Sum();
+    var selected = new TSolution[count];
+    for (int i = 0; i < count; i++) {
+      double selectedQuality = rng.Random() * qualitySum;
+      int index = 0;
+      double currentQuality = list[index];
+      while (currentQuality < selectedQuality) {
+        index++;
+        currentQuality += list[index];
+      }
+      selected[i] = population[index];
     }
     return selected;
   }
