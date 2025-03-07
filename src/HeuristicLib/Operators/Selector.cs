@@ -95,7 +95,7 @@ public class RandomSelector<TSolution, TObjective> : SelectorBase<TSolution, TOb
   }
 }
 
-public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveValue> where TSolution : class {
+public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveValue> {
   public TournamentSelector(int tournamentSize, IRandomSource randomSource) {
     TournamentSize = tournamentSize;
     RandomSource = randomSource;
@@ -109,7 +109,9 @@ public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveVa
     var selected = new TSolution[count];
     var populationIndexMap = population
       .Select((solution, index) => (solution, index))
+ #pragma warning disable CS8714
       .ToDictionary(x => x.solution, x => x.index);
+ #pragma warning restore CS8714
 
     for (int i = 0; i < count; i++) {
       var tournamentParticipants = new List<TSolution>();

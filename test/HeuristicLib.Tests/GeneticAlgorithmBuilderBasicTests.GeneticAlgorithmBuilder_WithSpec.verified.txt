@@ -1,0 +1,83 @@
+﻿{
+  PopulationSize: 500,
+  Terminator: null,
+  Creator: {
+    $type: NormalDistributedCreator,
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    Means: [
+      1.5
+    ],
+    Sigmas: [
+      1.0
+    ],
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
+  },
+  Crossover: {
+    $type: SinglePointCrossover,
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
+  },
+  Mutator: {
+    $type: GaussianMutator,
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    MutationRate: 0.1,
+    MutationStrength: 0.1,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
+  },
+  MutationRate: 0.05,
+  Evaluator: {
+    $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
+  },
+  RandomSource: {
+    $type: RandomSource,
+    Seed: 42
+  },
+  Selector: {
+    $type: TournamentSelector<RealVector>,
+    TournamentSize: 4,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
+  },
+  Replacer: {
+    $type: ElitismReplacer<RealVector>,
+    Elites: 2
+  },
+  Interceptor: {
+    $type: IdentityInterceptor<PopulationState<RealVector>>
+  }
+}

@@ -26,20 +26,20 @@ public sealed class Replacer<TGenotype> : IReplacer<TGenotype> {
 }
 
 
-public abstract class ReplacerBase<TSolution> : IReplacer<TSolution> {
+public abstract class ReplacerBase<TGenotype> : IReplacer<TGenotype> {
   public abstract int GetOffspringCount(int populationSize);
-  public abstract (TSolution[] newPopulation, ObjectiveValue[] newObjectives) Replace(TSolution[] previousPopulation, ObjectiveValue[] previousObjectives, TSolution[] offspringPopulation, ObjectiveValue[] offspringObjectives);
+  public abstract (TGenotype[] newPopulation, ObjectiveValue[] newObjectives) Replace(TGenotype[] previousPopulation, ObjectiveValue[] previousObjectives, TGenotype[] offspringPopulation, ObjectiveValue[] offspringObjectives);
 }
 
-public class PlusSelectionReplacer<TSolution> : ReplacerBase<TSolution>
+public class PlusSelectionReplacer<TGenotype> : ReplacerBase<TGenotype>
 {
   public override int GetOffspringCount(int populationSize) {
     return populationSize;
   }
 
-  public override (TSolution[] newPopulation, ObjectiveValue[] newObjectives) Replace(
-    TSolution[] previousPopulation, ObjectiveValue[] previousObjectives,
-    TSolution[] offspringPopulation, ObjectiveValue[] offspringObjectives)
+  public override (TGenotype[] newPopulation, ObjectiveValue[] newObjectives) Replace(
+    TGenotype[] previousPopulation, ObjectiveValue[] previousObjectives,
+    TGenotype[] offspringPopulation, ObjectiveValue[] offspringObjectives)
   {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
     var combinedQualities = previousObjectives.Concat(offspringObjectives).ToList();
@@ -58,7 +58,7 @@ public class PlusSelectionReplacer<TSolution> : ReplacerBase<TSolution>
   }
 }
 
-public class ElitismReplacer<TSolution> : ReplacerBase<TSolution> {
+public class ElitismReplacer<TGenotype> : ReplacerBase<TGenotype> {
   public ElitismReplacer(int elites) {
     this.Elites = elites;
   }
@@ -67,9 +67,9 @@ public class ElitismReplacer<TSolution> : ReplacerBase<TSolution> {
 
   public override int GetOffspringCount(int populationSize) => populationSize - Elites;
 
-  public override (TSolution[] newPopulation, ObjectiveValue[] newObjectives) Replace(
-    TSolution[] previousPopulation, ObjectiveValue[] previousObjectives,
-    TSolution[] offspringPopulation, ObjectiveValue[] offspringObjectives)
+  public override (TGenotype[] newPopulation, ObjectiveValue[] newObjectives) Replace(
+    TGenotype[] previousPopulation, ObjectiveValue[] previousObjectives,
+    TGenotype[] offspringPopulation, ObjectiveValue[] offspringObjectives)
   {
     var sortedPreviousIndices = previousObjectives
       .Select((quality, index) => new { quality, index })

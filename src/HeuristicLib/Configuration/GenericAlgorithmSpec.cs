@@ -39,11 +39,13 @@ public record SwapMutatorSpec : MutatorSpec;
 public record GaussianRealVectorMutatorSpec(double? Rate = null, double? Strength = null) : MutatorSpec;
 
 public abstract record SelectorSpec(): OperatorSpec();
+public record RandomSelectorSpec : SelectorSpec;
 public record TournamentSelectorSpec(int? TournamentSize = null) : SelectorSpec;
-public record RouletteWheelSelectorSpec : SelectorSpec;
+public record ProportionalSelectorSpec(bool Windowing = true) : SelectorSpec;
 
 public abstract record ReplacerSpec(): OperatorSpec();
-public record ElitistReplacerSpec : ReplacerSpec;
+public record ElitistReplacerSpec(int? Elites = null) : ReplacerSpec;
+public record PlusSelectionReplacerSpec : ReplacerSpec;
 
 
 
@@ -57,6 +59,8 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
   public GeneticAlgorithmConfig<TGenotype, TEncoding> Apply(GeneticAlgorithmConfig<TGenotype, TEncoding> config) {
     var newConfig = config;
 
+    #pragma warning disable S1481
+    
     if (gaSpec.PopulationSize.HasValue) {
       newConfig = newConfig with { PopulationSize = gaSpec.PopulationSize.Value };
     }
@@ -64,7 +68,7 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
     if (gaSpec.MutationRate.HasValue) {
       newConfig = newConfig with { MutationRate = gaSpec.MutationRate.Value };
     }
-#pragma warning disable S1481
+
     if (gaSpec.Creator is not null) {
       newConfig = newConfig with {
         CreatorFactory = (encoding, randomSource) => {
@@ -109,6 +113,35 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
       };
     }
 
+    if (gaSpec.Selector is not null) {
+      newConfig = newConfig with {
+        SelectorFactory = (randomSource) => {
+          IOperator @operator = (gaSpec.Selector) switch {
+            RandomSelectorSpec spec => new RandomSelector<TGenotype, ObjectiveValue>(randomSource),
+            TournamentSelectorSpec spec => new TournamentSelector<TGenotype>(spec.TournamentSize ?? 2, randomSource),
+            ProportionalSelectorSpec spec => new ProportionalSelector<TGenotype>(randomSource, spec.Windowing),
+            _ => throw new NotImplementedException("Unknown selector configuration.")
+          };
+          if (@operator is not ISelector<TGenotype, ObjectiveValue> selector) throw new InvalidOperationException("Selector must be a ISelector<TGenotype, ObjectiveValue>.");
+          return selector;
+        }
+      };
+    }
+
+    if (gaSpec.Replacer is not null) {
+      newConfig = newConfig with {
+        ReplacementFactory = (randomSource) => {
+          IOperator @operator = (gaSpec.Replacer) switch {
+            ElitistReplacerSpec spec => new ElitismReplacer<TGenotype>(spec.Elites ?? 1),
+            PlusSelectionReplacerSpec spec => new PlusSelectionReplacer<TGenotype>(),
+            _ => throw new NotImplementedException("Unknown replacer configuration.")
+          };
+          if (@operator is not IReplacer<TGenotype> replacer) throw new InvalidOperationException("Replacer must be a IReplacer<TGenotype>.");
+          return replacer;
+        }
+      };
+    }
+
     if (gaSpec.MaximumGenerations.HasValue) {
       newConfig = newConfig with { Terminator = new ThresholdTerminator<PopulationState<TGenotype>>(gaSpec.MaximumGenerations.Value, state => state.Generation) };
     }
@@ -116,7 +149,9 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
     if (gaSpec.RandomSeed.HasValue) {
       newConfig = newConfig with { RandomSource = new RandomSource(gaSpec.RandomSeed.Value) };
     }
+    
 #pragma warning restore S1481
+    
     return newConfig;
   }
 }

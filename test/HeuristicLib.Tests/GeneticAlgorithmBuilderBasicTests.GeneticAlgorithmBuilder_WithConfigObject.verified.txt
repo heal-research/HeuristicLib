@@ -1,0 +1,90 @@
+﻿{
+  PopulationSize: 200,
+  Terminator: {
+    $type: ThresholdTerminator<IGenerationalState>,
+    Threshold: 20,
+    Accessor: {
+      Type: Func<IGenerationalState, int>,
+      Target: Terminator.<>c,
+      Method: Int32 OnGeneration(HEAL.HeuristicLib.Algorithms.IGenerationalState)
+    }
+  },
+  Creator: {
+    $type: NormalDistributedCreator,
+    Encoding: {
+      Length: 3,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    Means: [
+      0.0
+    ],
+    Sigmas: [
+      0.5
+    ],
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
+  },
+  Crossover: {
+    $type: SinglePointCrossover,
+    Encoding: {
+      Length: 3,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
+  },
+  Mutator: {
+    $type: GaussianMutator,
+    Encoding: {
+      Length: 3,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    MutationRate: 0.1,
+    MutationStrength: 0.1,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
+  },
+  MutationRate: 0.05,
+  Evaluator: {
+    $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
+  },
+  RandomSource: {
+    $type: RandomSource,
+    Seed: 42
+  },
+  Selector: {
+    $type: ProportionalSelector<RealVector>,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    },
+    Windowing: true
+  },
+  Replacer: {
+    $type: PlusSelectionReplacer<RealVector>
+  },
+  Interceptor: {
+    $type: IdentityInterceptor<PopulationState<RealVector>>
+  }
+}
