@@ -51,10 +51,11 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
   }
   
   public GeneticAlgorithmSpec CreateGeneticAlgorithmDefaultConfig() {
-    return new GeneticAlgorithmSpec(
-      Crossover: numberOfCities > 5 ? new OrderCrossoverSpec() : null,
-      Mutator: new SwapMutatorSpec()
-    );
+    return new GeneticAlgorithmSpec {
+      Creator = new RandomPermutationCreatorSpec(),
+      Crossover = numberOfCities > 3 ? new OrderCrossoverSpec() : null,
+      Mutator = new SwapMutatorSpec(), MutationRate = 0.10
+    };
   }
 }
 
