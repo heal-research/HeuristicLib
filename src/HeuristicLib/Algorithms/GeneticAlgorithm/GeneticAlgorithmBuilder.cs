@@ -9,17 +9,17 @@ public record GeneticAlgorithmConfig<TGenotype, TEncoding> where TEncoding : IEn
 
   public int? PopulationSize { get; init; }
 
-  public Func<TEncoding, RandomSource, ICreator<TGenotype>>? CreatorFactory { get; init; }
-  public Func<TEncoding, RandomSource, ICrossover<TGenotype>>? CrossoverFactory { get; init; }
-  public Func<TEncoding, RandomSource, IMutator<TGenotype>>? MutatorFactory { get; init; }
+  public Func<TEncoding, IRandomSource, ICreator<TGenotype>>? CreatorFactory { get; init; }
+  public Func<TEncoding, IRandomSource, ICrossover<TGenotype>>? CrossoverFactory { get; init; }
+  public Func<TEncoding, IRandomSource, IMutator<TGenotype>>? MutatorFactory { get; init; }
   public double? MutationRate { get; init; }
 
   public Func<TEncoding, IEvaluator<TGenotype, ObjectiveValue>>? EvaluatorFactory { get; init; }
-  public Func<RandomSource, ISelector<TGenotype, ObjectiveValue>>? SelectorFactory { get; init; }
+  public Func<IRandomSource, ISelector<TGenotype, ObjectiveValue>>? SelectorFactory { get; init; }
   
-  public Func<RandomSource, IReplacer<TGenotype>>? ReplacementFactory { get; init; }
+  public Func<IRandomSource, IReplacer<TGenotype>>? ReplacementFactory { get; init; }
   
-  public RandomSource? RandomSource { get; init; }
+  public IRandomSource? RandomSource { get; init; }
   
   public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
   
@@ -47,7 +47,9 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
       config.Evaluator,
       config.Selector,
       config.Replacer,
-      config.RandomSource, config.Terminator, config.Interceptor);
+      config.RandomSource, 
+      config.Terminator,
+      config.Interceptor);
   }
 
   private ResolvedConfig ResolveConfig() {
@@ -114,7 +116,7 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
  
     public required IReplacer<TGenotype> Replacer { get; init; }
   
-    public required RandomSource RandomSource { get; init; }
+    public required IRandomSource RandomSource { get; init; }
  
     public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
     
@@ -175,7 +177,7 @@ public static class GeneticAlgorithmBuilderConfigExtensions {
   }
   
   public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithRandomSource<TEncoding, TGenotype>
-    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, RandomSource randomSource)
+    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, IRandomSource randomSource)
     where TEncoding : IEncoding<TGenotype, TEncoding> {
     return builder.AddSource(new ChainedConfigSource<TGenotype, TEncoding>(new GeneticAlgorithmConfig<TGenotype, TEncoding>() {
       RandomSource = randomSource

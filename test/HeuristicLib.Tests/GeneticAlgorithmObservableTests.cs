@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmObservableTests {
   [Fact]
   public Task GeneticAlgorithm_ShouldRunWithoutBuilder() {
-    var randomSource = new SeededRandomSource(42);
+    var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(10, -5, +5);
     var creator = new UniformDistributedCreator(encoding, minimum: null, maximum: 3.0, randomSource);
     var crossover = new SinglePointCrossover(encoding, randomSource);

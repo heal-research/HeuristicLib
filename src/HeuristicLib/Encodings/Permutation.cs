@@ -109,9 +109,9 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
 
 public class RandomPermutationCreator : CreatorBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
   public PermutationEncoding Encoding { get; }
-  public RandomSource RandomSource { get; }
+  public IRandomSource RandomSource { get; }
   
-  public RandomPermutationCreator(PermutationEncoding encoding, RandomSource randomSource) {
+  public RandomPermutationCreator(PermutationEncoding encoding, IRandomSource randomSource) {
     Encoding = encoding;
     RandomSource = randomSource;
   }

@@ -7,7 +7,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   public GeneticAlgorithm(int populationSize,
     ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
     IEvaluator<TGenotype, ObjectiveValue> evaluator, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer,
-    RandomSource randomSourceState, ITerminator<PopulationState<TGenotype>>? terminator = null, IInterceptor<PopulationState<TGenotype>>? interceptor = null)
+    IRandomSource randomSourceState, ITerminator<PopulationState<TGenotype>>? terminator = null, IInterceptor<PopulationState<TGenotype>>? interceptor = null)
   {
     PopulationSize = populationSize;
     Creator = creator;
@@ -29,7 +29,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   public IMutator<TGenotype> Mutator { get; }
   public double MutationRate { get; }
   public IEvaluator<TGenotype, ObjectiveValue> Evaluator { get; }
-  public RandomSource RandomSource { get; }
+  public IRandomSource RandomSource { get; }
   public ISelector<TGenotype, ObjectiveValue> Selector { get; }
   public IReplacer<TGenotype> Replacer { get; }
   public IInterceptor<PopulationState<TGenotype>> Interceptor { get; }

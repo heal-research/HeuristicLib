@@ -1,40 +1,36 @@
 ﻿namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract class RandomSource {
-  public abstract IRandomNumberGenerator CreateRandomNumberGenerator();
-  
-  public static RandomSource CreateDefault(int? seed = null) {
-    return seed switch {
-      int s => new SeededRandomSource(s),
-      null => new StatefulRandomSource(new Random().Next())
-    };
-  }
+public interface IRandomSource {
+  IRandomNumberGenerator CreateRandomNumberGenerator();
 }
 
-public class SeededRandomSource : RandomSource {
-  public SeededRandomSource(int seed) {
+public class RandomSource : IRandomSource {
+  private readonly Random random;
+  public int Seed { get; }
+  
+  public RandomSource(int seed) {
+    Seed = seed;
+    random = new Random(seed);
+  }
+  public RandomSource() : this(GetRandomSeed()) { }
+  
+  public IRandomNumberGenerator CreateRandomNumberGenerator() {
+    return new SystemRandomNumberGenerator(random);
+  }
+
+  private static int GetRandomSeed() => new Random().Next();
+}
+
+public class FixedRandomSource : IRandomSource {
+  public int Seed { get; }
+  public FixedRandomSource(int seed) {
     Seed = seed;
   }
-  public static implicit operator SeededRandomSource(int seed) => new SeededRandomSource(seed);
-  
-  public int Seed { get; }
 
-  public override IRandomNumberGenerator CreateRandomNumberGenerator() {
+  public IRandomNumberGenerator CreateRandomNumberGenerator() {
     return new SystemRandomNumberGenerator(new Random(Seed));
   }
 }
-
-public class StatefulRandomSource : RandomSource {
-  private readonly Random random;
-  public StatefulRandomSource(int seed) {
-    random = new Random(seed);
-  }
-  
-  public override IRandomNumberGenerator CreateRandomNumberGenerator() {
-    return new SystemRandomNumberGenerator(random);
-  }
-}
-
 
 public interface IRandomNumberGenerator {
   double Random();

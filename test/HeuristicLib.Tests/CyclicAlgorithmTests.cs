@@ -14,7 +14,7 @@ public class CyclicAlgorithmTests {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingEncoding();
     var evaluator = problem.CreateEvaluator();
-    var randomSource = new SeededRandomSource(42);
+    var randomSource = new RandomSource(42);
 
     var evolutionStrategy = new EvolutionStrategy(
       populationSize: 10,

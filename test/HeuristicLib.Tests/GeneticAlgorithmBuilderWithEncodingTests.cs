@@ -24,7 +24,7 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     var encoding = problem.CreatePermutationEncoding();
     var config = problem.CreateGeneticAlgorithmDefaultConfig();
     var evaluator = problem.CreateEvaluator();
-    var randomState = RandomSource.CreateDefault(42);
+    var randomState = new RandomSource(42);
 
     var terminationCriterion = new ThresholdTerminator<PopulationState<Permutation>>(100, state => state.Generation);
     var selector = new TournamentSelector<Permutation>(3, randomState);

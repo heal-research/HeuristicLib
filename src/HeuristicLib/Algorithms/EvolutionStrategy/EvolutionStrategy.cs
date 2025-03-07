@@ -23,7 +23,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     ICrossover<RealVector>? crossover, //int parentsPerChild,
     IEvaluator<RealVector, ObjectiveValue> evaluator,
     ITerminator<EvolutionStrategyPopulationState>? terminator,
-    RandomSource randomSource) {
+    IRandomSource randomSource) {
     PopulationSize = populationSize;
     Children = children;
     Strategy = strategy;
@@ -45,7 +45,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
   public ICrossover<RealVector>? Crossover { get; }
   public IEvaluator<RealVector, ObjectiveValue> Evaluator { get; }
   public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
-  public RandomSource RandomSource { get; }
+  public IRandomSource RandomSource { get; }
 
   public override EvolutionStrategyPopulationState Execute(EvolutionStrategyPopulationState? initialState = null, ITerminator<EvolutionStrategyPopulationState>? terminator = null) {
     if (Terminator is null && terminator is null) throw new InvalidOperationException("At least one terminator must be provided.");

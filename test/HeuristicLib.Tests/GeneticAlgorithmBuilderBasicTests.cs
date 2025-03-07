@@ -10,8 +10,8 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmBuilderBasicTests {
   [Fact]
   public Task GeneticAlgorithmBuilder_WithConfigObject() {
-    var randomSource = RandomSource.CreateDefault(42);
-    var encoding = new RealVectorEncoding(10, -5, +5);
+    var randomSource = new RandomSource(42);
+    var encoding = new RealVectorEncoding(3, -5, +5);
     var builder = new GeneticAlgorithmBuilder<RealVectorEncoding, RealVector>()
       .WithConfig(new GeneticAlgorithmConfig<RealVector, RealVectorEncoding>() {
         Encoding = encoding,
@@ -34,7 +34,7 @@ public class GeneticAlgorithmBuilderBasicTests {
   
   [Fact]
   public Task GeneticAlgorithmBuilder_WithSpec() {
-    var randomSource = RandomSource.CreateDefault(42);
+    var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(10, -5, +5);
     var builder = new GeneticAlgorithmBuilder<RealVectorEncoding, RealVector>()
       .WithSpecs(new GeneticAlgorithmSpec(

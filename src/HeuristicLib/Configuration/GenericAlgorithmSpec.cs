@@ -114,7 +114,7 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
     }
 
     if (gaSpec.RandomSeed.HasValue) {
-      newConfig = newConfig with { RandomSource = new SeededRandomSource(gaSpec.RandomSeed.Value) };
+      newConfig = newConfig with { RandomSource = new RandomSource(gaSpec.RandomSeed.Value) };
     }
 #pragma warning restore S1481
     return newConfig;

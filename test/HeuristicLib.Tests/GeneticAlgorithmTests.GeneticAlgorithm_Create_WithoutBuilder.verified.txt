@@ -15,7 +15,7 @@
       3.0
     ],
     RandomSource: {
-      $type: SeededRandomSource,
+      $type: FixedRandomSource,
       Seed: 42
     }
   },
@@ -31,7 +31,7 @@
       ]
     },
     RandomSource: {
-      $type: SeededRandomSource,
+      $type: FixedRandomSource,
       Seed: 42
     }
   },
@@ -49,7 +49,7 @@
     MutationRate: 0.1,
     MutationStrength: 0.1,
     RandomSource: {
-      $type: SeededRandomSource,
+      $type: FixedRandomSource,
       Seed: 42
     }
   },
@@ -58,13 +58,13 @@
     $type: GeneticAlgorithmTests.RealVectorMockEvaluator
   },
   RandomSource: {
-    $type: SeededRandomSource,
+    $type: FixedRandomSource,
     Seed: 42
   },
   Selector: {
     $type: RandomSelector<RealVector, ObjectiveValue>,
     RandomSource: {
-      $type: SeededRandomSource,
+      $type: FixedRandomSource,
       Seed: 42
     }
   },

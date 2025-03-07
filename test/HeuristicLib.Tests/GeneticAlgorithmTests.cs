@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmTests {
   [Fact]
   public Task GeneticAlgorithm_Create_WithoutBuilder() {
-    var randomSource = new SeededRandomSource(42);
+    var randomSource = new FixedRandomSource(42);
     var encoding = new RealVectorEncoding(10, -5, +5);
     var creator = new UniformDistributedCreator(encoding, minimum: null, maximum: 3.0, randomSource);
     var crossover = new SinglePointCrossover(encoding, randomSource);
@@ -28,8 +28,31 @@ public class GeneticAlgorithmTests {
   }
   
   [Fact]
-  public async Task GeneticAlgorithm_ShouldPauseAndContinue() {
-    var randomSource = new SeededRandomSource(42);
+  public Task GeneticAlgorithm_Execute() {
+    var randomSource = new RandomSource(42);
+    var encoding = new RealVectorEncoding(3, -5, +5);
+    var creator = new UniformDistributedCreator(encoding, minimum: null, maximum: 3.0, randomSource);
+    var crossover = new SinglePointCrossover(encoding, randomSource);
+    var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
+    var evaluator = new RealVectorMockEvaluator();
+    var selector = new RandomSelector<RealVector, ObjectiveValue>(randomSource);
+    var replacement = new ElitismReplacer<RealVector>(0);
+    
+    var ga = new GeneticAlgorithm<RealVector>(
+      populationSize: 5, 
+      creator, crossover, mutator, 0.5,
+      evaluator, selector, replacement,
+      randomSource, terminator: Terminator.OnGeneration(5)
+    );
+
+    var finalState = ga.Execute();
+    
+    return Verify(finalState);
+  }
+  
+  [Fact]
+  public async Task GeneticAlgorithm_ShouldPauseAndContinueTST() {
+    var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(10, -5, +5);
     var creator = new UniformDistributedCreator(encoding, minimum: null, maximum: null, randomSource);
     var crossover = new SinglePointCrossover(encoding, randomSource);
@@ -41,23 +64,66 @@ public class GeneticAlgorithmTests {
     var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
 
     var ga = new GeneticAlgorithm<RealVector>(
-      200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
+    200,
+    creator, crossover, mutator, 0.05, 
+    evaluator, selector, replacement, 
+    randomSource, terminationCriterion
+    );
 
     var task = Task.Run(() => ga.Execute());
 
-    await Task.Delay(1000);
+    await Task.Delay(100);
     pauseToken.RequestPause();
 
     var pausedState = await task;
-    Assert.True(pausedState.Generation > 0);
-
+    pausedState.Generation.ShouldBeGreaterThan(0);
+    
     // Continue running the GA
     var newTerminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(pausedState.Generation + 50, state => state.Generation);
-    var continuedGA = new GeneticAlgorithm<RealVector>(
+    var continueAlg = new GeneticAlgorithm<RealVector>(
+    200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, newTerminationCriterion);
+
+    var finalState = continueAlg.Execute(pausedState);
+    finalState.Generation.ShouldBeGreaterThan(pausedState.Generation);
+
+    await Verify(finalState);
+  }
+  
+  [Fact]
+  public async Task GeneticAlgorithm_ShouldPauseAndContinue() {
+    var randomSource = new RandomSource(42);
+    var encoding = new RealVectorEncoding(10, -5, +5);
+    var creator = new UniformDistributedCreator(encoding, minimum: null, maximum: null, randomSource);
+    var crossover = new SinglePointCrossover(encoding, randomSource);
+    var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
+    var evaluator = new RealVectorMockEvaluator();
+    var selector = new ProportionalSelector<RealVector>(randomSource);
+    var replacement = new PlusSelectionReplacer<RealVector>();
+    var pauseToken = new PauseToken();
+    var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
+
+    var ga = new GeneticAlgorithm<RealVector>(
+      200,
+      creator, crossover, mutator, 0.05, 
+      evaluator, selector, replacement, 
+      randomSource, terminationCriterion
+    );
+
+    var task = Task.Run(() => ga.Execute());
+
+    await Task.Delay(100);
+    pauseToken.RequestPause();
+
+    var pausedState = await task;
+    pausedState.Generation.ShouldBeGreaterThan(0);
+    
+    // Continue running the GA
+    var newTerminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(pausedState.Generation + 50, state => state.Generation);
+    var continueAlg = new GeneticAlgorithm<RealVector>(
       200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, newTerminationCriterion);
 
-    var finalState = continuedGA.Execute(pausedState);
-    Assert.True(finalState.Generation > pausedState.Generation);
+    var finalState = continueAlg.Execute(pausedState);
+    finalState.Generation.ShouldBeGreaterThan(pausedState.Generation);
 
     await Verify(finalState);
   }
@@ -71,7 +137,7 @@ public class GeneticAlgorithmTests {
 
 
   public async Task GeneticAlgorithm_WithMultiChomosomeGenotype() {
-    var randomSource = new SeededRandomSource(42);
+    var randomSource = new RandomSource(42);
     var realVectorEncoding = new RealVectorEncoding(10, -5, +5);
     var permutationEncoding = new PermutationEncoding(5);
     
@@ -113,7 +179,7 @@ public class GeneticAlgorithmTests {
   }
 
   public async Task GeneticAlgorithm_WithMultiChomosomeGenotypeWithRecordOperators() {
-    var randomSource = new SeededRandomSource(42);
+    var randomSource = new RandomSource(42);
     var realVectorEncoding = new RealVectorEncoding(10, -5, +5);
     var permutationEncoding = new PermutationEncoding(5);
     var creator = new MultiGenotypeCreator(new UniformDistributedCreator(realVectorEncoding, null, null, randomSource), new RandomPermutationCreator(permutationEncoding, randomSource));

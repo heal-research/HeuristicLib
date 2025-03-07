@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Algorithms;
+
+namespace HEAL.HeuristicLib.Operators;
 
 public interface ITerminator<in TState> {
   bool ShouldTerminate(TState state);
@@ -7,6 +9,7 @@ public interface ITerminator<in TState> {
 
 public static class Terminator {
   public static ITerminator<TState> Create<TState>(Func<TState, bool> shouldTerminatePredicate) => new Terminator<TState>(shouldTerminatePredicate);
+  public static ThresholdTerminator<IGenerationalState> OnGeneration(int maxGenerations) => new(maxGenerations, state => state.Generation);
 }
 
 public sealed class Terminator<TState> : ITerminator<TState> {
