@@ -51,6 +51,31 @@ public class GeneticAlgorithmTests {
   }
   
   [Fact]
+  public Task GeneticAlgorithm_ExecuteStream() {
+    var randomSource = new RandomSource(42);
+    var encoding = new RealVectorEncoding(3, -5, +5);
+    var creator = new UniformDistributedCreator(encoding, minimum: null, maximum: 3.0, randomSource);
+    var crossover = new SinglePointCrossover(encoding, randomSource);
+    var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
+    var evaluator = new RealVectorMockEvaluator();
+    var selector = new RandomSelector<RealVector, ObjectiveValue>(randomSource);
+    var replacement = new ElitismReplacer<RealVector>(0);
+    
+    var ga = new GeneticAlgorithm<RealVector>(
+      populationSize: 5, 
+      creator, crossover, mutator, 0.5,
+      evaluator, selector, replacement,
+      randomSource
+    );
+
+    var stream = ga.CreateExecutionStream();
+
+    var results = stream.Take(5).ToList();
+    
+    return Verify(results);
+  }
+  
+  [Fact]
   public async Task GeneticAlgorithm_ShouldPauseAndContinueTST() {
     var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(10, -5, +5);

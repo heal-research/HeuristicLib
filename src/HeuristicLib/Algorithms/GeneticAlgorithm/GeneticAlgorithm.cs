@@ -39,7 +39,6 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   }
 
   public override ExecutionStream<PopulationState<TGenotype>> CreateExecutionStream(PopulationState<TGenotype>? initialState = null, ITerminator<PopulationState<TGenotype>>? terminator = null) {
-    if (Terminator is null && terminator is null) throw new InvalidOperationException("At least one terminator must be provided.");
     return new ExecutionStream<PopulationState<TGenotype>>(InternalCreateExecutionStream(initialState, terminator));
   }
 
