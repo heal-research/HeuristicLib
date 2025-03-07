@@ -35,12 +35,9 @@ public class CyclicAlgorithmTests {
       crossover: new AlphaBetaBlendCrossover(encoding, 0.8, 0.2),
       mutator: new GaussianMutator(encoding, mutationRate: 10, mutationStrength: 1.5, randomSource),
       mutationRate: 0.1,
-      terminator: new ThresholdTerminator<PopulationState<RealVector>>(10, state => state.Generation),
       evaluator: evaluator,
-      randomSourceState: randomSource,
       selector: new TournamentSelector<RealVector>(2, randomSource),
-      replacer: new ElitismReplacer<RealVector>(1)
-    );
+      replacer: new ElitismReplacer<RealVector>(1), randomSourceState: randomSource, terminator: new ThresholdTerminator<PopulationState<RealVector>>(10, state => state.Generation));
 
     var cyclicAlgorithm = new CyclicAlgorithm<IState, EvolutionStrategyPopulationState, PopulationState<RealVector>>(
       firstAlgorithm: evolutionStrategy,

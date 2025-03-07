@@ -44,13 +44,10 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
       config.Crossover,
       config.Mutator,
       config.MutationRate,
-      config.Terminator,
       config.Evaluator,
-      config.RandomSource,
       config.Selector,
       config.Replacer,
-      config.Interceptor
-    );
+      config.RandomSource, config.Terminator, config.Interceptor);
   }
 
   private ResolvedConfig ResolveConfig() {

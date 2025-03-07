@@ -1,0 +1,77 @@
+﻿{
+  PopulationSize: 200,
+  Creator: {
+    $type: UniformDistributedCreator,
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    Maximum: [
+      3.0
+    ],
+    RandomSource: {
+      $type: SeededRandomSource,
+      Seed: 42
+    }
+  },
+  Crossover: {
+    $type: SinglePointCrossover,
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    RandomSource: {
+      $type: SeededRandomSource,
+      Seed: 42
+    }
+  },
+  Mutator: {
+    $type: GaussianMutator,
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    MutationRate: 0.1,
+    MutationStrength: 0.1,
+    RandomSource: {
+      $type: SeededRandomSource,
+      Seed: 42
+    }
+  },
+  MutationRate: 0.05,
+  Evaluator: {
+    $type: GeneticAlgorithmTests.RealVectorMockEvaluator
+  },
+  RandomSource: {
+    $type: SeededRandomSource,
+    Seed: 42
+  },
+  Selector: {
+    $type: RandomSelector<RealVector, ObjectiveValue>,
+    RandomSource: {
+      $type: SeededRandomSource,
+      Seed: 42
+    }
+  },
+  Replacer: {
+    $type: PlusSelectionReplacer<RealVector>
+  },
+  Interceptor: {
+    $type: IdentityInterceptor<PopulationState<RealVector>>
+  }
+}

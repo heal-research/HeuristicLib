@@ -233,3 +233,12 @@ dotnet_diagnostic.S1694.severity = none # An abstract class should have both abs
 dotnet_diagnostic.S2094.severity = none # Classes should not be empty
 dotnet_diagnostic.S125.severity = none # Sections of code should not be commented out
 
+# Verify settings
+[*.{received,verified}.{json,txt,xml}]
+charset = "utf-8-bom"
+end_of_line = lf
+indent_size = unset
+indent_style = unset
+insert_final_newline = false
+tab_width = unset
+trim_trailing_whitespace = false

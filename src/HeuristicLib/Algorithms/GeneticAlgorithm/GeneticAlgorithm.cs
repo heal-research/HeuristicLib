@@ -6,20 +6,19 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   
   public GeneticAlgorithm(int populationSize,
     ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
-    ITerminator<PopulationState<TGenotype>>? terminator, IEvaluator<TGenotype, ObjectiveValue> evaluator,
-    RandomSource randomSourceState, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer,
-    IInterceptor<PopulationState<TGenotype>>? interceptor = null)
+    IEvaluator<TGenotype, ObjectiveValue> evaluator, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer,
+    RandomSource randomSourceState, ITerminator<PopulationState<TGenotype>>? terminator = null, IInterceptor<PopulationState<TGenotype>>? interceptor = null)
   {
     PopulationSize = populationSize;
-    Terminator = terminator;
     Creator = creator;
     Crossover = crossover;
     Mutator = mutator;
     MutationRate = mutationRate;
     Evaluator = evaluator;
-    RandomSource = randomSourceState;
     Selector = selector;
     Replacer = replacer;
+    RandomSource = randomSourceState;
+    Terminator = terminator;
     Interceptor = interceptor ?? new IdentityInterceptor<PopulationState<TGenotype>>();
   }
   

@@ -1,13 +1,13 @@
-namespace HEAL.HeuristicLib.Tests;
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
 
-using Algorithms;
-using Algorithms.GeneticAlgorithm;
-using Encodings;
-using Operators;
+namespace HEAL.HeuristicLib.Tests;
 
 public class GeneticAlgorithmTests {
   [Fact]
-  public Task GeneticAlgorithm_ShouldRunWithoutBuilder() {
+  public Task GeneticAlgorithm_Create_WithoutBuilder() {
     var randomSource = new SeededRandomSource(42);
     var encoding = new RealVectorEncoding(10, -5, +5);
     var creator = new UniformDistributedCreator(encoding, minimum: null, maximum: 3.0, randomSource);
@@ -16,15 +16,15 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector<RealVector, ObjectiveValue>(randomSource);
     var replacement = new PlusSelectionReplacer<RealVector>();
-    var terminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(50, state => state.Generation);
     
     var ga = new GeneticAlgorithm<RealVector>(
-      200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, randomSource, selector, replacement
+      populationSize: 200, 
+      creator, crossover, mutator, 0.05,
+      evaluator, selector, replacement,
+      randomSource, terminator: null
     );
 
-    var finalState = ga.Execute();
-
-    return Verify(finalState);
+    return Verify(ga);
   }
   
   [Fact]
@@ -41,8 +41,7 @@ public class GeneticAlgorithmTests {
     var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
 
     var ga = new GeneticAlgorithm<RealVector>(
-      200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, randomSource, selector, replacement
-    );
+      200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
 
     var task = Task.Run(() => ga.Execute());
 
@@ -55,8 +54,7 @@ public class GeneticAlgorithmTests {
     // Continue running the GA
     var newTerminationCriterion = new ThresholdTerminator<PopulationState<RealVector>>(pausedState.Generation + 50, state => state.Generation);
     var continuedGA = new GeneticAlgorithm<RealVector>(
-      200, creator, crossover, mutator, 0.05, newTerminationCriterion, evaluator, randomSource, selector, replacement
-    );
+      200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, newTerminationCriterion);
 
     var finalState = continuedGA.Execute(pausedState);
     Assert.True(finalState.Generation > pausedState.Generation);
@@ -86,8 +84,7 @@ public class GeneticAlgorithmTests {
     var terminationCriterion = new ThresholdTerminator<PopulationState<MultiGenotype>>(50, state => state.Generation);
     
     var ga = new GeneticAlgorithm<MultiGenotype>(
-      200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, randomSource, selector, replacement
-    );
+      200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
 
     var finalState = ga.Execute();
 
@@ -128,8 +125,7 @@ public class GeneticAlgorithmTests {
     var terminationCriterion = new ThresholdTerminator<PopulationState<MultiGenotype>>(50, state => state.Generation);
     
     var ga = new GeneticAlgorithm<MultiGenotype>(
-      200, creator, crossover, mutator, 0.05, terminationCriterion, evaluator, randomSource, selector, replacement
-    );
+      200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
 
     var finalState = ga.Execute();
 
