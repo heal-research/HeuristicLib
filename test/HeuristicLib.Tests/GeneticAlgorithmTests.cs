@@ -141,22 +141,21 @@ public class GeneticAlgorithmTests {
     public ObjectiveValue Evaluate(Permutation solution) { return (solution[0], ObjectiveDirection.Maximize); }
   }
 
-
-  public async Task GeneticAlgorithm_WithMultiChomosomeGenotype() {
+  [Fact]
+  public async Task GeneticAlgorithm_WithMultiChromosomeGenotype() {
     var randomSource = new RandomSource(42);
-    var realVectorEncoding = new RealVectorEncoding(10, -5, +5);
-    var permutationEncoding = new PermutationEncoding(5);
+    var realVectorEncoding = new RealVectorEncoding(5, -5, +5);
+    var permutationEncoding = new PermutationEncoding(3);
     
     var creator = new MultiGenotypeCreator(new UniformDistributedCreator(realVectorEncoding, null, null, randomSource), new RandomPermutationCreator(permutationEncoding, randomSource));
-    var crossover = new MultiGenotypeCrossover(new SinglePointCrossover(realVectorEncoding, randomSource), new OrderCrossover(permutationEncoding));
-    var mutator = new MultiGenotypeMutator(new GaussianMutator(realVectorEncoding, 0.1, 0.1, randomSource), new SwapMutator(permutationEncoding));
+    var crossover = new MultiGenotypeCrossover(new SinglePointCrossover(realVectorEncoding, randomSource), new OrderCrossover(permutationEncoding, randomSource));
+    var mutator = new MultiGenotypeMutator(new GaussianMutator(realVectorEncoding, 0.1, 0.1, randomSource), new SwapMutator(permutationEncoding, randomSource));
     var evaluator = new MultiGenotypeEvaluator();
     var selector = new RandomSelector<MultiGenotype, ObjectiveValue>(randomSource);
-    var replacement = new PlusSelectionReplacer<MultiGenotype>();
-    var terminationCriterion = new ThresholdTerminator<PopulationState<MultiGenotype>>(50, state => state.Generation);
+    var replacement = new ElitismReplacer<MultiGenotype>(0);
+    var terminationCriterion = Terminator.OnGeneration(10);
     
-    var ga = new GeneticAlgorithm<MultiGenotype>(
-      200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
+    var ga = new GeneticAlgorithm<MultiGenotype>(5, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
 
     var finalState = ga.Execute();
 
@@ -184,24 +183,23 @@ public class GeneticAlgorithmTests {
     }
   }
 
-  public async Task GeneticAlgorithm_WithMultiChomosomeGenotypeWithRecordOperators() {
+  [Fact]
+  public async Task GeneticAlgorithm_WithMultiChromosomeGenotypeWithRecordOperators() {
     var randomSource = new RandomSource(42);
-    var realVectorEncoding = new RealVectorEncoding(10, -5, +5);
-    var permutationEncoding = new PermutationEncoding(5);
+    var realVectorEncoding = new RealVectorEncoding(2, -5, +5);
+    var permutationEncoding = new PermutationEncoding(3);
     var creator = new MultiGenotypeCreator(new UniformDistributedCreator(realVectorEncoding, null, null, randomSource), new RandomPermutationCreator(permutationEncoding, randomSource));
-    var crossover = new RecordCrossover<MultiGenotype, RealVector, Permutation>(new SinglePointCrossover(realVectorEncoding, randomSource), new OrderCrossover(permutationEncoding));
-    var mutator = new MultiGenotypeMutator(new GaussianMutator(realVectorEncoding, 0.1, 0.1, randomSource), new SwapMutator(permutationEncoding));
+    var crossover = new RecordCrossover<MultiGenotype, RealVector, Permutation>(new SinglePointCrossover(realVectorEncoding, randomSource), new OrderCrossover(permutationEncoding, randomSource));
+    var mutator = new MultiGenotypeMutator(new GaussianMutator(realVectorEncoding, 0.1, 0.1, randomSource), new SwapMutator(permutationEncoding, randomSource));
     var evaluator = new MultiGenotypeEvaluator();
     var selector = new RandomSelector<MultiGenotype, ObjectiveValue>(randomSource);
-    var replacement = new PlusSelectionReplacer<MultiGenotype>();
-    var terminationCriterion = new ThresholdTerminator<PopulationState<MultiGenotype>>(50, state => state.Generation);
+    var replacement = new ElitismReplacer<MultiGenotype>(0);
+    var terminationCriterion = Terminator.OnGeneration(10);
     
-    var ga = new GeneticAlgorithm<MultiGenotype>(
-      200, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
+    var ga = new GeneticAlgorithm<MultiGenotype>(5, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
 
     var finalState = ga.Execute();
 
     await Verify(finalState);
   }
-  
 }

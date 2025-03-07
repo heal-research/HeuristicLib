@@ -42,7 +42,7 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveVal
     var direction = objectives.Select(o => o.Direction).Distinct().Single();
 
     var qualities = objectives.Select(o => o.Value);
-    if (minQuality == maxQuality) {
+    if (Math.Abs(minQuality - maxQuality) < double.Epsilon) {
       qualities = qualities.Select(_ => 1.0);
     } else {
       if (Windowing) {

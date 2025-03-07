@@ -84,7 +84,7 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
       newConfig = newConfig with {
         CrossoverFactory = (encoding, randomSource) => {
           IOperator @operator = (gaSpec.Crossover, encoding) switch {
-            (OrderCrossoverSpec spec, PermutationEncoding enc) => new OrderCrossover(enc),
+            (OrderCrossoverSpec spec, PermutationEncoding enc) => new OrderCrossover(enc, randomSource),
             (SinglePointRealVectorCrossoverSpec spec, RealVectorEncoding enc) => new SinglePointCrossover(enc, randomSource),
             (AlphaBlendRealVectorCrossoverSpec spec, RealVectorEncoding enc) => new AlphaBetaBlendCrossover(enc, spec.Alpha, spec.Beta),
             _ => throw new NotImplementedException("Unknown crossover configuration.")
@@ -99,7 +99,7 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
       newConfig = newConfig with {
         MutatorFactory = (encoding, randomSource) => {
           IOperator @operator = (gaSpec.Mutator, encoding) switch {
-            (SwapMutatorSpec spec, PermutationEncoding enc) => new SwapMutator(enc),
+            (SwapMutatorSpec spec, PermutationEncoding enc) => new SwapMutator(enc, randomSource),
             (GaussianRealVectorMutatorSpec spec, RealVectorEncoding enc) => new GaussianMutator(enc, spec.Strength ?? 1.0, spec.Rate ?? 1.0, randomSource),
             _ => throw new NotImplementedException("Unknown mutator configuration.")
           };
