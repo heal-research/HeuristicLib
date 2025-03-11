@@ -96,23 +96,24 @@ public class RandomSelector<TSolution, TObjective> : SelectorBase<TSolution, TOb
 }
 
 public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveValue> {
+  // Custom comparator for tournament selection
+  public int TournamentSize { get; }
+  public IRandomSource RandomSource { get; }
+  
   public TournamentSelector(int tournamentSize, IRandomSource randomSource) {
     TournamentSize = tournamentSize;
     RandomSource = randomSource;
   }
-  
-  public int TournamentSize { get; }
-  public IRandomSource RandomSource { get; }
 
   public override TSolution[] Select(TSolution[] population, ObjectiveValue[] objectives, int count) {
     var rng = RandomSource.CreateRandomNumberGenerator();
     var selected = new TSolution[count];
+#pragma warning disable CS8714
     var populationIndexMap = population
       .Select((solution, index) => (solution, index))
- #pragma warning disable CS8714
       .ToDictionary(x => x.solution, x => x.index);
- #pragma warning restore CS8714
-
+#pragma warning restore CS8714
+ 
     for (int i = 0; i < count; i++) {
       var tournamentParticipants = new List<TSolution>();
       for (int j = 0; j < TournamentSize; j++) {

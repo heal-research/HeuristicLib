@@ -181,14 +181,17 @@ public class RealVector : IReadOnlyList<double> {
     var rng = randomSource.CreateRandomNumberGenerator();
     
     // Box-Muller transform to generate normal distributed random values
-    RealVector u1 = 1.0 - new RealVector(rng.Random(length));
-    RealVector u2 = 1.0 - new RealVector(rng.Random(length));
-    RealVector randStdNormal = Sqrt(u1 * 2) * Sin(2 * Math.PI * u2);
-    
-    // Apply mean and sigma for this dimension
-    RealVector value = mean + std * randStdNormal;
+    RealVector u1, u2;
+    do {
+      u1 = new RealVector(rng.Random(length));
+    } while ((u1 <= 0.0).Any());
+    u2 = new RealVector(rng.Random(length));
 
-    return value;
+    var mag = std * Sqrt(-2.0 * Log(u1));
+    //var z0 = mag * Cos(2.0 * Math.PI * u2) + mean;
+    var z1 = mag * Sin(2.0 * Math.PI * u2) + mean;
+    
+    return z1;
   }
 
   public static RealVector CreateUniform(int length, RealVector low, RealVector high, IRandomSource randomSource) {
@@ -202,6 +205,10 @@ public class RealVector : IReadOnlyList<double> {
 
   public static RealVector Sqrt(RealVector vector) {
     return new RealVector(vector.Select(Math.Sqrt));
+  }
+  
+  public static RealVector Log(RealVector vector) {
+    return new RealVector(vector.Select(v => Math.Log(v)));
   }
 
   public static RealVector Sin(RealVector vector) {

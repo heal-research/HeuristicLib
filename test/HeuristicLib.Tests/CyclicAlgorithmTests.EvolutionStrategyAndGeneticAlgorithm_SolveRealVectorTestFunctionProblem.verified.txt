@@ -1,0 +1,273 @@
+﻿{
+  generations: [
+    {
+      Generation: 0,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 1,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 2,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 3,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 4,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 5,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 6,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 1,
+      Type: PopulationState<RealVector>
+    },
+    {
+      Generation: 2,
+      Type: PopulationState<RealVector>
+    },
+    {
+      Generation: 3,
+      Type: PopulationState<RealVector>
+    },
+    {
+      Generation: 4,
+      Type: PopulationState<RealVector>
+    },
+    {
+      Generation: 1,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 2,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 3,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 4,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 5,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 6,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 1,
+      Type: PopulationState<RealVector>
+    },
+    {
+      Generation: 2,
+      Type: PopulationState<RealVector>
+    },
+    {
+      Generation: 3,
+      Type: PopulationState<RealVector>
+    },
+    {
+      Generation: 4,
+      Type: PopulationState<RealVector>
+    },
+    {
+      Generation: 1,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 2,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 3,
+      Type: EvolutionStrategyPopulationState
+    },
+    {
+      Generation: 4,
+      Type: EvolutionStrategyPopulationState
+    }
+  ],
+  lastState: {
+    $type: EvolutionStrategyPopulationState,
+    MutationStrength: 65.68408355712891,
+    Generation: 4,
+    Population: [
+      [
+        -0.4923868946439786,
+        0.6475057330781514
+      ],
+      [
+        -0.8321156263554337,
+        0.157892309596934
+      ],
+      [
+        -0.3798271974664569,
+        0.8004297632372503
+      ],
+      [
+        -0.4874302035814553,
+        0.6183568529050955
+      ],
+      [
+        -0.4080437264186795,
+        0.4722115667985232
+      ],
+      [
+        -1.067724630273497,
+        -0.005889389970997555
+      ],
+      [
+        -1.057600305913508,
+        -0.09671613259717785
+      ],
+      [
+        -0.33394225713750264,
+        0.3814861669696695
+      ],
+      [
+        -0.6332398248578868,
+        -0.0703001470415961
+      ],
+      [
+        -0.5924957098148539,
+        0.7596991606446803
+      ],
+      [
+        0.0850296860281256,
+        0.46617095083475474
+      ],
+      [
+        -0.1678317559011689,
+        0.5927303993221407
+      ],
+      [
+        -0.9741999956246725,
+        0.0907261436512708
+      ],
+      [
+        -0.7432850323406704,
+        0.0438544686838665
+      ],
+      [
+        -0.6534974114999887,
+        -0.33821770157019637
+      ],
+      [
+        -0.7618681265848335,
+        -0.053525361096043333
+      ],
+      [
+        -1.0424445674540013,
+        -0.04037334476313387
+      ],
+      [
+        -0.4958759077083934,
+        0.6283457198890032
+      ],
+      [
+        -0.5283689779571373,
+        0.8988348080417661
+      ],
+      [
+        -0.12487937131427948,
+        0.5514324913618665
+      ]
+    ],
+    Objectives: [
+      {
+        Value: 0.6617085283862147,
+        Direction: Minimize
+      },
+      {
+        Value: 0.7173463970547498,
+        Direction: Minimize
+      },
+      {
+        Value: 0.7849565058112635,
+        Direction: Minimize
+      },
+      {
+        Value: 0.6199534008981528,
+        Direction: Minimize
+      },
+      {
+        Value: 0.3894834464879583,
+        Direction: Minimize
+      },
+      {
+        Value: 1.1400705710069066,
+        Direction: Minimize
+      },
+      {
+        Value: 1.1278724173729004,
+        Direction: Minimize
+      },
+      {
+        Value: 0.25704912669130053,
+        Direction: Minimize
+      },
+      {
+        Value: 0.4059347864601171,
+        Direction: Minimize
+      },
+      {
+        Value: 0.9281939808332393,
+        Direction: Minimize
+      },
+      {
+        Value: 0.22454540290822092,
+        Direction: Minimize
+      },
+      {
+        Value: 0.3794968245694539,
+        Direction: Minimize
+      },
+      {
+        Value: 0.957296864616943,
+        Direction: Minimize
+      },
+      {
+        Value: 0.5543958537252158,
+        Direction: Minimize
+      },
+      {
+        Value: 0.541450080492612,
+        Direction: Minimize
+      },
+      {
+        Value: 0.5833080065863456,
+        Direction: Minimize
+      },
+      {
+        Value: 1.0883206831817227,
+        Direction: Minimize
+      },
+      {
+        Value: 0.6407112595484528,
+        Direction: Minimize
+      },
+      {
+        Value: 1.0870777890149483,
+        Direction: Minimize
+      },
+      {
+        Value: 0.3196726499094046,
+        Direction: Minimize
+      }
+    ]
+  }
+}

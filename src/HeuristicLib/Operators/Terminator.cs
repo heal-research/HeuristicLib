@@ -10,6 +10,9 @@ public interface ITerminator<in TState> {
 public static class Terminator {
   public static ITerminator<TState> Create<TState>(Func<TState, bool> shouldTerminatePredicate) => new Terminator<TState>(shouldTerminatePredicate);
   public static ThresholdTerminator<IGenerationalState> OnGeneration(int maxGenerations) => new(maxGenerations, state => state.Generation);
+  
+  public static ITerminator<object> OnExecutionTime(TimeSpan time) => throw new NotImplementedException();
+  public static ITerminator<object> OnExecutionTime(int milliseconds) => throw new NotImplementedException();
 }
 
 public sealed class Terminator<TState> : ITerminator<TState> {

@@ -4,7 +4,7 @@ using MoreLinq;
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 public abstract class MetaAlgorithm<TState> : AlgorithmBase<TState>
-  where TState : class {
+  where TState : class, IState {
   public IAlgorithm<TState>[] Algorithms { get; }
   protected MetaAlgorithm(IAlgorithm<TState>[] algorithms) {
     if (algorithms.Length == 0) throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
@@ -13,7 +13,7 @@ public abstract class MetaAlgorithm<TState> : AlgorithmBase<TState>
     
 }
 
-public class ConcatAlgorithm<TState> : MetaAlgorithm<TState> where TState : class {
+public class ConcatAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TState : class, IState {
   public ConcatAlgorithm(IAlgorithm<TState>[] algorithms) : base(algorithms) { }
 
   public override TState? Execute(TState? initialState = null, ITerminator<TState>? termination = null) {
@@ -23,6 +23,9 @@ public class ConcatAlgorithm<TState> : MetaAlgorithm<TState> where TState : clas
         break;
       }
       currentState = remainingAlg.Execute(currentState);
+      if (currentState is PopulationState<TGenotype> popState) {
+        currentState = popState with { Generation = 0 } as TState;
+      }
     }
     return currentState;
   }
@@ -40,12 +43,15 @@ public class ConcatAlgorithm<TState> : MetaAlgorithm<TState> where TState : clas
       var currentStream = algorithm.CreateExecutionStream(currentState);
       foreach (var state in currentStream) {
         yield return currentState = state;
-      } 
+      }
+      if (currentState is PopulationState<TGenotype> popState) {
+        currentState = popState with { Generation = 0 } as TState;
+      }
     }
   }
 }
 
-public class CyclicAlgorithm<TState> : MetaAlgorithm<TState> where TState : class {
+public class CyclicAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TState : class, IState {
   public CyclicAlgorithm(IAlgorithm<TState>[] algorithms) : base(algorithms) { }
   
   public override TState? Execute(TState? initialState = null, ITerminator<TState>? termination = null) {
@@ -57,6 +63,9 @@ public class CyclicAlgorithm<TState> : MetaAlgorithm<TState> where TState : clas
           return currentState;
         }
         currentState = algorithm.Execute(currentState);
+        if (currentState is PopulationState<TGenotype> popState) {
+          currentState = popState with { Generation = 0 } as TState;
+        }
         if (currentState is null) {
           // If an algorithm returns null we break the cyclic algorithm
           return null;
@@ -66,9 +75,9 @@ public class CyclicAlgorithm<TState> : MetaAlgorithm<TState> where TState : clas
   }
   
   public override ExecutionStream<TState> CreateExecutionStream(TState? initialState = null, ITerminator<TState>? termination = null) {
-    if (termination is null) throw new InvalidOperationException("Cyclic Algorithms require a termination to avoid infinite loops.");
+    //if (termination is null) throw new InvalidOperationException("Cyclic Algorithms require a termination to avoid infinite loops.");
     var stream = InternalCreateExecutionStream(initialState);
-    return new ExecutionStream<TState>(stream.TakeUntil(termination.ShouldTerminate));
+    return new ExecutionStream<TState>(stream.TakeWhile(s => termination?.ShouldTerminate(s) ?? true));
   }
   
   #pragma warning disable S2190
@@ -80,6 +89,9 @@ public class CyclicAlgorithm<TState> : MetaAlgorithm<TState> where TState : clas
         var currentStream = algorithm.CreateExecutionStream(currentState);
         foreach (var state in currentStream) {
           yield return currentState = state;
+        }
+        if (currentState is PopulationState<TGenotype> popState) {
+          currentState = popState with { Generation = 0 } as TState;
         }
       }
     }
@@ -180,11 +192,11 @@ public class CyclicAlgorithm<TState, TSourceState, TTargetState> : AlgorithmBase
   }
   
   public override ExecutionStream<TState> CreateExecutionStream(TState? initialState = null, ITerminator<TState>? termination = null) {
-    if (termination is null) throw new InvalidOperationException("Cyclic Algorithms require a termination to avoid infinite loops.");
+    //if (termination is null) throw new InvalidOperationException("Cyclic Algorithms require a termination to avoid infinite loops.");
     if (initialState is not null && initialState is not TSourceState) throw new ArgumentException("Initial state must be of type TSourceState.", nameof(initialState));
     
     var stream = InternalCreateExecutionStream(initialState as TSourceState);
-    return new ExecutionStream<TState>(stream.TakeUntil(state => termination.ShouldTerminate(state)));
+    return new ExecutionStream<TState>(stream.TakeWhile(state => termination?.ShouldContinue(state) ?? true));
   }
 
    #pragma warning disable S2190
