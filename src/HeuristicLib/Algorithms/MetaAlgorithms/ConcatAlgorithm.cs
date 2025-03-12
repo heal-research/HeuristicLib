@@ -10,10 +10,9 @@ public abstract class MetaAlgorithm<TState> : AlgorithmBase<TState>
     Algorithms = algorithms.ToList();
     if (Algorithms.Count == 0) throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
   }
-    
 }
 
-public class ConcatAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TState : class, IState<TState> {
+public class ConcatAlgorithm<TState> : MetaAlgorithm<TState> where TState : class, IGenerationalState {
   public ConcatAlgorithm(params IEnumerable<IAlgorithm<TState>> algorithms) : base(algorithms) { }
 
   public override TState? Execute(TState? initialState = null, ITerminator<TState>? termination = null) {
@@ -24,7 +23,7 @@ public class ConcatAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TS
       }
       currentState = remainingAlg.Execute(currentState);
       if (currentState is null) return null;
-      currentState = currentState.Reset();
+      currentState = currentState.Reset<TState>();
     }
     return currentState;
   }
@@ -44,12 +43,12 @@ public class ConcatAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TS
         yield return currentState = state;
       }
       if (currentState is null) yield break;
-      currentState = currentState.Reset();
+      currentState = currentState.Reset<TState>();
     }
   }
 }
 
-public class CyclicAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TState : class, IState<TState> {
+public class CyclicAlgorithm<TState> : MetaAlgorithm<TState> where TState : class, IGenerationalState {
   public CyclicAlgorithm(params IEnumerable<IAlgorithm<TState>> algorithms) : base(algorithms) { }
   
   public override TState? Execute(TState? initialState = null, ITerminator<TState>? termination = null) {
@@ -62,7 +61,7 @@ public class CyclicAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TS
         }
         currentState = algorithm.Execute(currentState);
         if (currentState is null) return null; // If an algorithm returns null we break the cyclic algorithm
-        currentState = currentState.Reset();
+        currentState = currentState.Reset<TState>();
       }
     }
   }
@@ -84,7 +83,7 @@ public class CyclicAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TS
           yield return currentState = state;
         }
         if (currentState is null) yield break;
-        currentState = currentState.Reset();
+        currentState = currentState.Reset<TState>();
       }
     }
   }

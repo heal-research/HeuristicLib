@@ -137,9 +137,6 @@ public class GeneticAlgorithmTests {
   private class RealVectorMockEvaluator : IEvaluator<RealVector, Fitness> {
     public Fitness Evaluate(RealVector solution) { return solution.Sum(); }
   }
-  private class PermutationMockEvaluator : IEvaluator<Permutation, Fitness> {
-    public Fitness Evaluate(Permutation solution) { return solution[0]; }
-  }
 
   [Fact]
   public async Task GeneticAlgorithm_WithMultiChromosomeGenotype() {

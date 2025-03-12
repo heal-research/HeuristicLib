@@ -2,16 +2,23 @@
 
 public interface IState {}
 
-public interface IState<out TSelf> : IState where TSelf : IState<TSelf> {
-  TSelf Next();
-  TSelf Reset();
-}
-
 public interface IGenerationalState : IState {
   int Generation { get; }
+  
+  IGenerationalState Next();
+  IGenerationalState Reset();
 }
 
-public record PopulationState<TGenotype, TFitness, TGoal> : IState<PopulationState<TGenotype, TFitness, TGoal>>, IGenerationalState {
+public static class StateExtensions {
+  public static TState Next<TState>(this TState state) where TState : IGenerationalState {
+    return (TState)state.Next();
+  }
+  public static TState Reset<TState>(this TState state) where TState : IGenerationalState {
+    return (TState)state.Reset();
+  }
+}
+
+public record PopulationState<TGenotype, TFitness, TGoal> : IGenerationalState {
   public int Generation { get; init; } = 0;
   //public int TotalGeneration { get; init; }
   
@@ -28,8 +35,9 @@ public record PopulationState<TGenotype, TFitness, TGoal> : IState<PopulationSta
   // public int NumberOfCrossovers { get; init; }
   //public int NumberOfMutations { get; init; }
 
-  public PopulationState<TGenotype, TFitness, TGoal> Next() => this with { Generation = Generation + 1 };
-  public PopulationState<TGenotype, TFitness, TGoal> Reset() => this with { Generation = 0 };
+  IGenerationalState IGenerationalState.Next() => this with { Generation = Generation + 1 };
+  IGenerationalState IGenerationalState.Reset() => this with { Generation = 0 };
+
 }
 
 public interface IStateTransformer<in TSourceState, TTargetState>

@@ -68,7 +68,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
       var evaluatedOffsprings = EvaluatePopulation(offsprings);
 
       var newPopulation = Replacer.Replace(currentState.Population, evaluatedOffsprings, Goal);
-      
+
       currentState = currentState.Next() with { Population = newPopulation }; // increment durations and other counts
       currentState = Interceptor.Transform(currentState);
 

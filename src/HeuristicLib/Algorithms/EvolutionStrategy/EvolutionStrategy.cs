@@ -90,7 +90,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
         _ => currentState.MutationStrength
       };
 
-      yield return currentState = (EvolutionStrategyPopulationState)currentState.Next() with { MutationStrength = newMutationStrength, Population = newPopulation };
+      yield return currentState = currentState.Next() with { MutationStrength = newMutationStrength, Population = newPopulation };
     }
   }
 

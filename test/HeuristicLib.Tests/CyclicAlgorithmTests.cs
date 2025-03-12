@@ -58,7 +58,7 @@ public class CyclicAlgorithmTests {
       terminator: Terminator.OnGeneration(4)
     );
 
-    var concatAlgorithm = new ConcatAlgorithm<PopulationState<RealVector, Fitness, Goal>, RealVector>(ga1, ga2, ga3);
+    var concatAlgorithm = new ConcatAlgorithm<PopulationState<RealVector, Fitness, Goal>>(ga1, ga2, ga3);
 
     var states = concatAlgorithm.CreateExecutionStream().ToList();
     var lastState = states[^1];
@@ -118,7 +118,7 @@ public class CyclicAlgorithmTests {
       terminator: Terminator.OnGeneration(4)
     );
 
-    var concatAlgorithm = new CyclicAlgorithm<PopulationState<RealVector, Fitness, Goal>, RealVector>(ga1, ga2, ga3);
+    var concatAlgorithm = new CyclicAlgorithm<PopulationState<RealVector, Fitness, Goal>>(ga1, ga2, ga3);
 
     var states = concatAlgorithm.CreateExecutionStream().Take(25).ToList();
     var lastState = states[^1];
@@ -167,7 +167,7 @@ public class CyclicAlgorithmTests {
       transformer: new EvolutionToGeneticStateTransformer(),
       repetitionTransformer: StateTransformer.Create((PopulationState<RealVector, Fitness, Goal> sourceState, EvolutionStrategyPopulationState? previousTargetState) => {
         previousTargetState ??= new EvolutionStrategyPopulationState() { Goal = Goal.Minimize, Population = sourceState.Population, MutationStrength = 0.1 };
-        return (EvolutionStrategyPopulationState)previousTargetState.Reset() with {
+        return previousTargetState.Reset() with {
           Population = sourceState.Population, MutationStrength = previousTargetState.MutationStrength
         };
       })
