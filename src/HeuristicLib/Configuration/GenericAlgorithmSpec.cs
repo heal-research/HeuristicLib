@@ -1,12 +1,7 @@
-﻿using System.Runtime.CompilerServices;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using HEAL.HeuristicLib.Algorithms;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace HEAL.HeuristicLib.Configuration;
 
@@ -117,12 +112,12 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
       newConfig = newConfig with {
         SelectorFactory = (randomSource) => {
           IOperator @operator = (gaSpec.Selector) switch {
-            RandomSelectorSpec spec => new RandomSelector<TGenotype, ObjectiveValue>(randomSource),
+            RandomSelectorSpec spec => new RandomSelector<TGenotype, Fitness, Goal>(randomSource),
             TournamentSelectorSpec spec => new TournamentSelector<TGenotype>(spec.TournamentSize ?? 2, randomSource),
             ProportionalSelectorSpec spec => new ProportionalSelector<TGenotype>(randomSource, spec.Windowing),
             _ => throw new NotImplementedException("Unknown selector configuration.")
           };
-          if (@operator is not ISelector<TGenotype, ObjectiveValue> selector) throw new InvalidOperationException("Selector must be a ISelector<TGenotype, ObjectiveValue>.");
+          if (@operator is not ISelector<TGenotype, Fitness, Goal> selector) throw new InvalidOperationException("Selector must be a ISelector<TGenotype, Fitness, Goal>.");
           return selector;
         }
       };
@@ -136,14 +131,14 @@ public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, T
             PlusSelectionReplacerSpec spec => new PlusSelectionReplacer<TGenotype>(),
             _ => throw new NotImplementedException("Unknown replacer configuration.")
           };
-          if (@operator is not IReplacer<TGenotype> replacer) throw new InvalidOperationException("Replacer must be a IReplacer<TGenotype>.");
+          if (@operator is not IReplacer<TGenotype, Fitness, Goal> replacer) throw new InvalidOperationException("Replacer must be a IReplacer<TGenotype, Fitness, Goal>.");
           return replacer;
         }
       };
     }
 
     if (gaSpec.MaximumGenerations.HasValue) {
-      newConfig = newConfig with { Terminator = new ThresholdTerminator<PopulationState<TGenotype>>(gaSpec.MaximumGenerations.Value, state => state.Generation) };
+      newConfig = newConfig with { Terminator = new ThresholdTerminator<PopulationState<TGenotype, Fitness, Goal>>(gaSpec.MaximumGenerations.Value, state => state.Generation) };
     }
 
     if (gaSpec.RandomSeed.HasValue) {

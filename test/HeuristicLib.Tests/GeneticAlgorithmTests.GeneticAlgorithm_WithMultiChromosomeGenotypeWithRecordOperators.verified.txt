@@ -1,82 +1,86 @@
 ﻿{
   Generation: 10,
+  Goal: Minimize,
   Population: [
     {
-      RealVector: [
-        -3.315657758300965,
-        -1.7976681267831789
-      ],
-      Permutation: [
-        0,
-        1,
-        2
-      ]
+      Genotype: {
+        RealVector: [
+          -3.315657758300965,
+          -1.7976681267831789
+        ],
+        Permutation: [
+          0,
+          1,
+          2
+        ]
+      },
+      Fitness: {
+        Value: -2.1133258850841443
+      }
     },
     {
-      RealVector: [
-        -3.315657758300965,
-        -1.7976681267831789
-      ],
-      Permutation: [
-        0,
-        1,
-        2
-      ]
+      Genotype: {
+        RealVector: [
+          -3.315657758300965,
+          -1.7976681267831789
+        ],
+        Permutation: [
+          0,
+          1,
+          2
+        ]
+      },
+      Fitness: {
+        Value: -2.1133258850841443
+      }
     },
     {
-      RealVector: [
-        -3.315657758300965,
-        -1.7976681267831789
-      ],
-      Permutation: [
-        0,
-        1,
-        2
-      ]
+      Genotype: {
+        RealVector: [
+          -3.315657758300965,
+          -1.7976681267831789
+        ],
+        Permutation: [
+          0,
+          1,
+          2
+        ]
+      },
+      Fitness: {
+        Value: -2.1133258850841443
+      }
     },
     {
-      RealVector: [
-        -3.315657758300965,
-        -1.7976681267831789
-      ],
-      Permutation: [
-        0,
-        1,
-        2
-      ]
+      Genotype: {
+        RealVector: [
+          -3.315657758300965,
+          -1.7976681267831789
+        ],
+        Permutation: [
+          0,
+          1,
+          2
+        ]
+      },
+      Fitness: {
+        Value: -2.1133258850841443
+      }
     },
     {
-      RealVector: [
-        -3.315657758300965,
-        -1.7976681267831789
-      ],
-      Permutation: [
-        0,
-        1,
-        2
-      ]
-    }
-  ],
-  Objectives: [
-    {
-      Value: -2.1133258850841443,
-      Direction: Minimize
-    },
-    {
-      Value: -2.1133258850841443,
-      Direction: Minimize
-    },
-    {
-      Value: -2.1133258850841443,
-      Direction: Minimize
-    },
-    {
-      Value: -2.1133258850841443,
-      Direction: Minimize
-    },
-    {
-      Value: -2.1133258850841443,
-      Direction: Minimize
+      Genotype: {
+        RealVector: [
+          -3.315657758300965,
+          -1.7976681267831789
+        ],
+        Permutation: [
+          0,
+          1,
+          2
+        ]
+      },
+      Fitness: {
+        Value: -2.1133258850841443
+      }
     }
   ]
 }

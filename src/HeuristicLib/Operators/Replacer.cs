@@ -2,87 +2,67 @@
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IReplacer<TGenotype> : IOperator {
-  (TGenotype[] newPopulation, ObjectiveValue[] newObjectives) Replace(
-    TGenotype[] previousPopulation, ObjectiveValue[] previousObjectives,
-    TGenotype[] offspringPopulation, ObjectiveValue[] offspringObjectives);
+public interface IReplacer<TGenotype, TFitness, in TGoal> : IOperator {
+  Phenotype<TGenotype, TFitness>[] Replace(Phenotype<TGenotype, TFitness>[] previousPopulation, Phenotype<TGenotype, TFitness>[] offspringPopulation, TGoal goal);
   int GetOffspringCount(int populationSize);
 }
 
 public static class Replacer {
-  public static IReplacer<TGenotype> Create<TGenotype>(Func<TGenotype[], ObjectiveValue[], TGenotype[], ObjectiveValue[], (TGenotype[], ObjectiveValue[])> replacer, Func<int, int> populationCount) => new Replacer<TGenotype>(replacer, populationCount);
+  public static IReplacer<TGenotype, TFitness, TGoal> Create<TGenotype, TFitness, TGoal>(Func<Phenotype<TGenotype, TFitness>[], Phenotype<TGenotype, TFitness>[], TGoal, Phenotype<TGenotype, TFitness>[]> replacer, Func<int, int> populationCount) => new Replacer<TGenotype, TFitness, TGoal>(replacer, populationCount);
 }
 
-public sealed class Replacer<TGenotype> : IReplacer<TGenotype> {
-  private readonly Func<TGenotype[], ObjectiveValue[], TGenotype[], ObjectiveValue[], (TGenotype[], ObjectiveValue[])> replacer;
+public sealed class Replacer<TGenotype, TFitness, TGoal> : IReplacer<TGenotype, TFitness, TGoal> {
+  private readonly Func<Phenotype<TGenotype, TFitness>[], Phenotype<TGenotype, TFitness>[], TGoal, Phenotype<TGenotype, TFitness>[]> replacer;
   private readonly Func<int, int> offspringCount;
   
-  internal Replacer(Func<TGenotype[], ObjectiveValue[], TGenotype[], ObjectiveValue[], (TGenotype[], ObjectiveValue[])> replacer, Func<int, int> offspringCount) {
+  internal Replacer(Func<Phenotype<TGenotype, TFitness>[], Phenotype<TGenotype, TFitness>[], TGoal, Phenotype<TGenotype, TFitness>[]> replacer, Func<int, int> offspringCount) {
     this.replacer = replacer;
     this.offspringCount = offspringCount;
   }
-  public (TGenotype[] newPopulation, ObjectiveValue[] newObjectives) Replace(TGenotype[] previousPopulation, ObjectiveValue[] previousObjectives, TGenotype[] offspringPopulation, ObjectiveValue[] offspringObjectives) => replacer(previousPopulation, previousObjectives, offspringPopulation, offspringObjectives);
+  public Phenotype<TGenotype, TFitness>[] Replace(Phenotype<TGenotype, TFitness>[] previousPopulation, Phenotype<TGenotype, TFitness>[] offspringPopulation, TGoal goal) => replacer(previousPopulation, offspringPopulation, goal);
   public int GetOffspringCount(int populationSize) => offspringCount(populationSize);
 }
 
 
-public abstract class ReplacerBase<TGenotype> : IReplacer<TGenotype> {
+public abstract class ReplacerBase<TGenotype, TFitness, TGoal> : IReplacer<TGenotype, TFitness, TGoal> {
   public abstract int GetOffspringCount(int populationSize);
-  public abstract (TGenotype[] newPopulation, ObjectiveValue[] newObjectives) Replace(TGenotype[] previousPopulation, ObjectiveValue[] previousObjectives, TGenotype[] offspringPopulation, ObjectiveValue[] offspringObjectives);
+  public abstract Phenotype<TGenotype, TFitness>[] Replace(Phenotype<TGenotype, TFitness>[] previousPopulation, Phenotype<TGenotype, TFitness>[] offspringPopulation, TGoal goal);
 }
 
-public class PlusSelectionReplacer<TGenotype> : ReplacerBase<TGenotype>
-{
+public class PlusSelectionReplacer<TGenotype> : ReplacerBase<TGenotype, Fitness, Goal> {
   public override int GetOffspringCount(int populationSize) {
     return populationSize;
   }
 
-  public override (TGenotype[] newPopulation, ObjectiveValue[] newObjectives) Replace(
-    TGenotype[] previousPopulation, ObjectiveValue[] previousObjectives,
-    TGenotype[] offspringPopulation, ObjectiveValue[] offspringObjectives)
-  {
+  public override Phenotype<TGenotype, Fitness>[] Replace(Phenotype<TGenotype, Fitness>[] previousPopulation, Phenotype<TGenotype, Fitness>[] offspringPopulation, Goal goal) {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
-    var combinedQualities = previousObjectives.Concat(offspringObjectives).ToList();
 
-    var sortedIndices = combinedQualities
-      .Select((objective, index) => new { objective, index })
-      .OrderBy(x => x.objective)
-      .Select(x => x.index)
-      .ToList();
-
-    // if algorithmPopulation differs from previousPopulation.Length, it is not detected
-    var newPopulation = sortedIndices.Take(previousPopulation.Length).Select(i => combinedPopulation[i]).ToArray();
-    var newQualities = sortedIndices.Take(previousPopulation.Length).Select(i => combinedQualities[i]).ToArray();
-
-    return (newPopulation, newQualities);
+    var comparer = Fitness.CreateSingleObjectiveComparer(goal);
+    return combinedPopulation
+      .OrderBy(p => p.Fitness, comparer)
+      .Take(previousPopulation.Length) // if algorithm population differs from previousPopulation.Length, it is not detected
+      .ToArray();
   }
 }
 
-public class ElitismReplacer<TGenotype> : ReplacerBase<TGenotype> {
+public class ElitismReplacer<TGenotype> : ReplacerBase<TGenotype, Fitness, Goal> {
+  public int Elites { get; }
+
   public ElitismReplacer(int elites) {
     this.Elites = elites;
   }
-  
-  public int Elites { get; }
 
   public override int GetOffspringCount(int populationSize) => populationSize - Elites;
 
-  public override (TGenotype[] newPopulation, ObjectiveValue[] newObjectives) Replace(
-    TGenotype[] previousPopulation, ObjectiveValue[] previousObjectives,
-    TGenotype[] offspringPopulation, ObjectiveValue[] offspringObjectives)
-  {
-    var sortedPreviousIndices = previousObjectives
-      .Select((quality, index) => new { quality, index })
-      .OrderBy(x => x.quality)
-      .Select(x => x.index)
-      .ToList();
-
-    var elitesPopulation = sortedPreviousIndices.Take(Elites).Select(i => previousPopulation[i]).ToList();
-    var elitesQualities = sortedPreviousIndices.Take(Elites).Select(i => previousObjectives[i]).ToList();
-
-    var newPopulation = elitesPopulation.Concat(offspringPopulation).ToArray();
-    var newQualities = elitesQualities.Concat(offspringObjectives).ToArray();
-
-    return (newPopulation, newQualities);
+  public override Phenotype<TGenotype, Fitness>[] Replace(Phenotype<TGenotype, Fitness>[] previousPopulation, Phenotype<TGenotype, Fitness>[] offspringPopulation, Goal goal) {
+    var comparer = Fitness.CreateSingleObjectiveComparer(goal);
+    
+    var elitesPopulation = previousPopulation
+      .OrderBy(p => p.Fitness, comparer)
+      .Take(Elites);
+    
+    return elitesPopulation
+      .Concat(offspringPopulation) // requires that offspring population size is correct
+      .ToArray();
   }
 }

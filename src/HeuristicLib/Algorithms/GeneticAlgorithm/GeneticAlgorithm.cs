@@ -2,12 +2,14 @@
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenotype>> {
+public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenotype, Fitness, Goal>> {
   
   public GeneticAlgorithm(int populationSize,
     ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
-    IEvaluator<TGenotype, ObjectiveValue> evaluator, ISelector<TGenotype, ObjectiveValue> selector, IReplacer<TGenotype> replacer,
-    IRandomSource randomSourceState, ITerminator<PopulationState<TGenotype>>? terminator = null, IInterceptor<PopulationState<TGenotype>>? interceptor = null)
+    IEvaluator<TGenotype, Fitness> evaluator, Goal goal,
+    ISelector<TGenotype, Fitness, Goal> selector, IReplacer<TGenotype, Fitness, Goal> replacer,
+    IRandomSource randomSourceState,
+    ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator = null, IInterceptor<PopulationState<TGenotype, Fitness, Goal>>? interceptor = null)
   {
     PopulationSize = populationSize;
     Creator = creator;
@@ -15,57 +17,59 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     Mutator = mutator;
     MutationRate = mutationRate;
     Evaluator = evaluator;
+    Goal = goal;
     Selector = selector;
     Replacer = replacer;
     RandomSource = randomSourceState;
     Terminator = terminator;
-    Interceptor = interceptor ?? new IdentityInterceptor<PopulationState<TGenotype>>();
+    Interceptor = interceptor ?? new IdentityInterceptor<PopulationState<TGenotype, Fitness, Goal>>();
   }
   
   public int PopulationSize { get; }
-  public ITerminator<PopulationState<TGenotype>>? Terminator { get; }
+  public ITerminator<PopulationState<TGenotype, Fitness, Goal>>? Terminator { get; }
   public ICreator<TGenotype> Creator { get; }
   public ICrossover<TGenotype> Crossover { get; }
   public IMutator<TGenotype> Mutator { get; }
   public double MutationRate { get; }
-  public IEvaluator<TGenotype, ObjectiveValue> Evaluator { get; }
+  public IEvaluator<TGenotype, Fitness> Evaluator { get; }
+  public Goal Goal { get; }
   public IRandomSource RandomSource { get; }
-  public ISelector<TGenotype, ObjectiveValue> Selector { get; }
-  public IReplacer<TGenotype> Replacer { get; }
-  public IInterceptor<PopulationState<TGenotype>> Interceptor { get; }
+  public ISelector<TGenotype, Fitness, Goal> Selector { get; }
+  public IReplacer<TGenotype, Fitness, Goal> Replacer { get; }
+  public IInterceptor<PopulationState<TGenotype, Fitness, Goal>> Interceptor { get; }
   
-  public override PopulationState<TGenotype> Execute(PopulationState<TGenotype>? initialState = null, ITerminator<PopulationState<TGenotype>>? terminator = null) {
+  public override PopulationState<TGenotype, Fitness, Goal> Execute(PopulationState<TGenotype, Fitness, Goal>? initialState = null, ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator = null) {
     return CreateExecutionStream(initialState, terminator).Last();
   }
 
-  public override ExecutionStream<PopulationState<TGenotype>> CreateExecutionStream(PopulationState<TGenotype>? initialState = null, ITerminator<PopulationState<TGenotype>>? terminator = null) {
-    return new ExecutionStream<PopulationState<TGenotype>>(InternalCreateExecutionStream(initialState, terminator));
+  public override ExecutionStream<PopulationState<TGenotype, Fitness, Goal>> CreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState = null, ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator = null) {
+    return new ExecutionStream<PopulationState<TGenotype, Fitness, Goal>>(InternalCreateExecutionStream(initialState, terminator));
   }
 
-  private IEnumerable<PopulationState<TGenotype>> InternalCreateExecutionStream(PopulationState<TGenotype>? initialState, ITerminator<PopulationState<TGenotype>>? terminator) {
+  private IEnumerable<PopulationState<TGenotype, Fitness, Goal>> InternalCreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState, ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator) {
     var rng = RandomSource.CreateRandomNumberGenerator();
 
     var activeTerminator = terminator ?? Terminator;
     int offspringCount = Replacer.GetOffspringCount(PopulationSize);
 
-    PopulationState<TGenotype> currentState;
+    PopulationState<TGenotype, Fitness, Goal> currentState;
     if (initialState is not null) {
       currentState = initialState;
     } else {
       var initialPopulation = InitializePopulation();
-      var initialObjectives = EvaluatePopulation(initialPopulation);
-      currentState = new PopulationState<TGenotype> { Generation = 0, Population = initialPopulation, Objectives = initialObjectives };
+      var evaluatedPopulation = EvaluatePopulation(initialPopulation);
+      currentState = new PopulationState<TGenotype, Fitness, Goal> { Population = evaluatedPopulation, Goal = Goal };
       currentState = Interceptor.Transform(currentState);
       yield return currentState;
     }
 
     while (activeTerminator?.ShouldContinue(currentState) ?? true) {
-      var offspringPopulation = EvolvePopulation(currentState.Population, offspringCount, rng);
-      var offspringQualities = EvaluatePopulation(offspringPopulation);
+      var offsprings = EvolvePopulation(currentState.Population, offspringCount, rng);
+      var evaluatedOffsprings = EvaluatePopulation(offsprings);
 
-      var (newPopulation, newObjectives) = Replacer.Replace(currentState.Population, currentState.Objectives, offspringPopulation, offspringQualities);
+      var newPopulation = Replacer.Replace(currentState.Population, evaluatedOffsprings, Goal);
       
-      currentState = currentState with { Generation = currentState.Generation + 1, Population = newPopulation, Objectives = newObjectives };
+      currentState = currentState.Next() with { Population = newPopulation }; // increment durations and other counts
       currentState = Interceptor.Transform(currentState);
 
       yield return currentState;
@@ -80,12 +84,11 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     return population;
   }
 
-  private TGenotype[] EvolvePopulation(TGenotype[] population, int offspringCount, IRandomNumberGenerator rng) {
+  private TGenotype[] EvolvePopulation(Phenotype<TGenotype, Fitness>[] population, int offspringCount, IRandomNumberGenerator rng) {
     var newPopulation = new TGenotype[offspringCount];
-    var objectives = EvaluatePopulation(population);
-    var parents = Selector.Select(population, objectives, offspringCount * 2);
+    var parents = Selector.Select(population, Goal, offspringCount * 2).Select(p => p.Genotype).ToList();
   
-    for (int i = 0; i < parents.Length; i += 2) {
+    for (int i = 0; i < parents.Count; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
       var offspring = Crossover.Cross(parent1, parent2);
@@ -97,8 +100,11 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     return newPopulation;
   }
 
-  private ObjectiveValue[] EvaluatePopulation(TGenotype[] population) {
-    return population.Select(individual => Evaluator.Evaluate(individual)).ToArray();
+  private Phenotype<TGenotype, Fitness>[] EvaluatePopulation(TGenotype[] population) {
+    return population.Select(genotype => {
+      var fitness = Evaluator.Evaluate(genotype);
+      return new Phenotype<TGenotype, Fitness>(genotype, fitness);
+    }).ToArray();
   }
   
 }

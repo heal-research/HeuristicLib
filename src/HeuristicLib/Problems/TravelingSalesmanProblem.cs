@@ -8,18 +8,18 @@ namespace HEAL.HeuristicLib.Problems;
 
 //public record Tour(IReadOnlyList<int> Cities);
 
-public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue> {
+public class TravelingSalesmanProblem : ProblemBase<Permutation, Fitness, Goal> {
   private readonly double[,] distances;
   private readonly int numberOfCities;
 
 #pragma warning disable S2368
-  public TravelingSalesmanProblem(double[,] distances) {
+  public TravelingSalesmanProblem(double[,] distances) : base(Goal.Minimize) {
 #pragma warning restore S2368
     this.distances = distances;
     numberOfCities = distances.GetLength(0);
   }
-
-  public override ObjectiveValue Evaluate(Permutation solution) {
+  
+  public override Fitness Evaluate(Permutation solution) {
     var tour = solution;
     double totalDistance = 0.0;
     for (int i = 0; i < tour.Count - 1; i++)
@@ -27,21 +27,21 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, ObjectiveValue>
       totalDistance += distances[tour[i], tour[i + 1]];
     }
     totalDistance += distances[tour[^1], tour[0]]; // Return to the starting city
-    return (totalDistance, ObjectiveDirection.Minimize);
+    return totalDistance;
   }
 
-  public override IEvaluator<Permutation, ObjectiveValue> CreateEvaluator() {
+  public override IEvaluator<Permutation, Fitness> CreateEvaluator() {
     return new Evaluator(this);
   }
 
-  private sealed class Evaluator : EvaluatorBase<Permutation, ObjectiveValue> {
+  private sealed class Evaluator : EvaluatorBase<Permutation, Fitness> {
     private readonly TravelingSalesmanProblem problem;
 
     public Evaluator(TravelingSalesmanProblem problem) {
       this.problem = problem;
     }
 
-    public override ObjectiveValue Evaluate(Permutation solution) {
+    public override Fitness Evaluate(Permutation solution) {
       return problem.Evaluate(solution);
     }
   }
@@ -64,6 +64,7 @@ public static class GeneticAlgorithmBuilderTravelingSalesmanProblemExtensions {
     (this GeneticAlgorithmBuilder<PermutationEncoding, Permutation> builder, TravelingSalesmanProblem problem)
   {
     builder.WithEvaluator(problem.CreateEvaluator());
+    builder.WithGoal(problem.Goal);
     builder.WithEncoding(problem.CreatePermutationEncoding());
     builder.WithSpecs(problem.CreateGeneticAlgorithmDefaultConfig());
     return builder;

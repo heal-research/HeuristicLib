@@ -14,16 +14,17 @@ public record GeneticAlgorithmConfig<TGenotype, TEncoding> where TEncoding : IEn
   public Func<TEncoding, IRandomSource, IMutator<TGenotype>>? MutatorFactory { get; init; }
   public double? MutationRate { get; init; }
 
-  public Func<TEncoding, IEvaluator<TGenotype, ObjectiveValue>>? EvaluatorFactory { get; init; }
-  public Func<IRandomSource, ISelector<TGenotype, ObjectiveValue>>? SelectorFactory { get; init; }
+  public Func<TEncoding, IEvaluator<TGenotype, Fitness>>? EvaluatorFactory { get; init; }
+  public Goal? Goal { get; init; }
+  public Func<IRandomSource, ISelector<TGenotype, Fitness, Goal>>? SelectorFactory { get; init; }
   
-  public Func<IRandomSource, IReplacer<TGenotype>>? ReplacementFactory { get; init; }
+  public Func<IRandomSource, IReplacer<TGenotype, Fitness, Goal>>? ReplacementFactory { get; init; }
   
   public IRandomSource? RandomSource { get; init; }
   
-  public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
+  public ITerminator<PopulationState<TGenotype, Fitness, Goal>>? Terminator { get; init; }
   
-  public IInterceptor<PopulationState<TGenotype>>? Interceptor { get; init; }
+  public IInterceptor<PopulationState<TGenotype, Fitness, Goal>>? Interceptor { get; init; }
 }
 
 public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEncoding<TGenotype, TEncoding> {
@@ -45,6 +46,7 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
       config.Mutator,
       config.MutationRate,
       config.Evaluator,
+      config.Goal,
       config.Selector,
       config.Replacer,
       config.RandomSource, 
@@ -65,6 +67,7 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
       Mutator = config.MutatorFactory!.Invoke(config.Encoding!, config.RandomSource!),
       MutationRate = config.MutationRate!.Value,
       Evaluator = config.EvaluatorFactory!.Invoke(config.Encoding!),
+      Goal = config.Goal!.Value,
       Selector = config.SelectorFactory!.Invoke(config.RandomSource!),
       Replacer = config.ReplacementFactory!.Invoke(config.RandomSource!),
       RandomSource = config.RandomSource!,
@@ -111,16 +114,17 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
     public required IMutator<TGenotype> Mutator { get; init; }
     public required double MutationRate { get; init; }
  
-    public required IEvaluator<TGenotype, ObjectiveValue> Evaluator { get; init; }
-    public required ISelector<TGenotype, ObjectiveValue> Selector { get; init; }
+    public required IEvaluator<TGenotype, Fitness> Evaluator { get; init; }
+    public required Goal Goal { get; init; }
+    public required ISelector<TGenotype, Fitness, Goal> Selector { get; init; }
  
-    public required IReplacer<TGenotype> Replacer { get; init; }
+    public required IReplacer<TGenotype, Fitness, Goal> Replacer { get; init; }
   
     public required IRandomSource RandomSource { get; init; }
  
-    public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
+    public ITerminator<PopulationState<TGenotype, Fitness, Goal>>? Terminator { get; init; }
     
-    public IInterceptor<PopulationState<TGenotype>>? Interceptor { get; init; }
+    public IInterceptor<PopulationState<TGenotype, Fitness, Goal>>? Interceptor { get; init; }
   }
   
   private sealed class ConfigValidator : AbstractValidator<GeneticAlgorithmConfig<TGenotype, TEncoding>> {
@@ -131,6 +135,7 @@ public class GeneticAlgorithmBuilder<TEncoding, TGenotype> where TEncoding : IEn
       RuleFor(x => x.MutatorFactory).NotNull().WithMessage("Mutator factory must not be null.");
       RuleFor(x => x.MutationRate).NotNull().WithMessage("Mutation rate must not be null.");
       RuleFor(x => x.EvaluatorFactory).NotNull().WithMessage("Evaluator factory must not be null.");
+      RuleFor(x => x.Goal).NotNull().WithMessage("Goal must not be null.");
       RuleFor(x => x.SelectorFactory).NotNull().WithMessage("Selector factory must not be null.");
       RuleFor(x => x.ReplacementFactory).NotNull().WithMessage("Replacement factory must not be null.");
       RuleFor(x => x.RandomSource).NotNull().WithMessage("Random source must not be null.");
@@ -185,12 +190,24 @@ public static class GeneticAlgorithmBuilderConfigExtensions {
   }
   
   public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithEvaluator<TEncoding, TGenotype>
-    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, IEvaluator<TGenotype, ObjectiveValue> evaluator)
+    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, IEvaluator<TGenotype, Fitness> evaluator)
     where TEncoding : IEncoding<TGenotype, TEncoding> {
     return builder.AddSource(new ChainedConfigSource<TGenotype, TEncoding>(new GeneticAlgorithmConfig<TGenotype, TEncoding>() {
       EvaluatorFactory = _ => evaluator
     }));
   }
+
+  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithGoal<TEncoding, TGenotype>
+    (this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, Goal goal)
+    where TEncoding : IEncoding<TGenotype, TEncoding> {
+    return builder.AddSource(new ChainedConfigSource<TGenotype, TEncoding>(new GeneticAlgorithmConfig<TGenotype, TEncoding>() {
+      Goal = goal
+    }));
+  }
+  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> Minimizing<TEncoding, TGenotype>(this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder) where TEncoding : IEncoding<TGenotype, TEncoding> => 
+    builder.WithGoal(Goal.Minimize);
+  public static GeneticAlgorithmBuilder<TEncoding, TGenotype> Maximizing<TEncoding, TGenotype>(this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder) where TEncoding : IEncoding<TGenotype, TEncoding> => 
+    builder.WithGoal(Goal.Maximize);
 }
 
 public class ChainedConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding>  where TEncoding : IEncoding<TGenotype, TEncoding> {
@@ -208,6 +225,7 @@ public class ChainedConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype
       MutatorFactory = ChainedConfig.MutatorFactory ?? config.MutatorFactory,
       MutationRate = ChainedConfig.MutationRate ?? config.MutationRate,
       EvaluatorFactory = ChainedConfig.EvaluatorFactory ?? config.EvaluatorFactory,
+      Goal = ChainedConfig.Goal ?? config.Goal,
       SelectorFactory = ChainedConfig.SelectorFactory ?? config.SelectorFactory,
       ReplacementFactory = ChainedConfig.ReplacementFactory ?? config.ReplacementFactory,
       RandomSource = ChainedConfig.RandomSource ?? config.RandomSource,

@@ -8,6 +8,7 @@ public static class VerifySettings {
   public static void Initialize() {
     VerifierSettings.AddExtraSettings(serializer => {
       serializer.TypeNameHandling = TypeNameHandling.Auto;
+      serializer.TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Full;
       serializer.DefaultValueHandling = DefaultValueHandling.Include;
     });
   }

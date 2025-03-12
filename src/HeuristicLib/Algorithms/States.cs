@@ -2,22 +2,35 @@
 
 public interface IState {}
 
-public interface IPopulationState<out TGenotype, out TObjective> : IState {
-  TGenotype[] Population { get; } 
-  TObjective[] Objectives { get; }
+public interface IState<out TSelf> : IState where TSelf : IState<TSelf> {
+  TSelf Next();
+  TSelf Reset();
 }
 
 public interface IGenerationalState : IState {
   int Generation { get; }
 }
 
-public record PopulationState<TGenotype> : IPopulationState<TGenotype, ObjectiveValue>, IGenerationalState {
-  public required int Generation { get; init; }
-  public required TGenotype[] Population { get; init; }
-  public required ObjectiveValue[] Objectives { get; init; }
+public record PopulationState<TGenotype, TFitness, TGoal> : IState<PopulationState<TGenotype, TFitness, TGoal>>, IGenerationalState {
+  public int Generation { get; init; } = 0;
+  //public int TotalGeneration { get; init; }
+  
+  public required TGoal Goal { get; init; }
+  public required Phenotype<TGenotype, TFitness>[] Population { get; init; }
+  
+  //public TimeSpan TotalDuration { get; init; }
+  //public TimeSpan EvaluationDuration { get; init; }
+  // others
+  
+  //public int NumberOfEvaluations { get; init; }
+  // public int NumberOfSelectedParents { get; init; }
+  // public int NumberOfChildren { get; init; }
+  // public int NumberOfCrossovers { get; init; }
+  //public int NumberOfMutations { get; init; }
+
+  public PopulationState<TGenotype, TFitness, TGoal> Next() => this with { Generation = Generation + 1 };
+  public PopulationState<TGenotype, TFitness, TGoal> Reset() => this with { Generation = 0 };
 }
-
-
 
 public interface IStateTransformer<in TSourceState, TTargetState>
   where TSourceState : class, IState where TTargetState : class, IState {

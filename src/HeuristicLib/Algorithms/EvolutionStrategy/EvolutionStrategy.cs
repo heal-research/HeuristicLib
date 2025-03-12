@@ -8,7 +8,7 @@ public enum EvolutionStrategyType {
   Plus
 }
 
-public record EvolutionStrategyPopulationState : PopulationState<RealVector> {
+public record EvolutionStrategyPopulationState : PopulationState<RealVector, Fitness, Goal> {
   public required double MutationStrength { get; init; }
 }
 
@@ -21,7 +21,8 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     IMutator<RealVector> mutator,
     double initialMutationStrength,
     ICrossover<RealVector>? crossover, //int parentsPerChild,
-    IEvaluator<RealVector, ObjectiveValue> evaluator,
+    IEvaluator<RealVector, Fitness> evaluator,
+    Goal goal,
     ITerminator<EvolutionStrategyPopulationState>? terminator,
     IRandomSource randomSource) {
     PopulationSize = populationSize;
@@ -32,6 +33,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     InitialMutationStrength = initialMutationStrength;
     Crossover = crossover;
     Evaluator = evaluator;
+    Goal = goal;
     Terminator = terminator;
     RandomSource = randomSource;
   }
@@ -43,7 +45,8 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
   public IMutator<RealVector> Mutator { get; }
   public double InitialMutationStrength { get; }
   public ICrossover<RealVector>? Crossover { get; }
-  public IEvaluator<RealVector, ObjectiveValue> Evaluator { get; }
+  public IEvaluator<RealVector, Fitness> Evaluator { get; }
+  public Goal Goal { get; }
   public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
   public IRandomSource RandomSource { get; }
 
@@ -64,19 +67,19 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     EvolutionStrategyPopulationState currentState;
     if (initialState is null) {
       var initialPopulation = InitializePopulation();
-      var initialObjectives = EvaluatePopulation(initialPopulation);
-      yield return currentState = new EvolutionStrategyPopulationState { Generation = 0, MutationStrength = InitialMutationStrength, Population = initialPopulation, Objectives = initialObjectives }; 
+      var evaluatedInitialPopulation = EvaluatePopulation(initialPopulation);
+      yield return currentState = new EvolutionStrategyPopulationState { Goal = Goal, MutationStrength = InitialMutationStrength, Population = evaluatedInitialPopulation }; 
     } else {
       currentState = initialState;
     }
     
     while (activeTerminator?.ShouldContinue(currentState) ?? true) {
       var (offspringPopulation, successfulOffspring) = EvolvePopulation(currentState.Population, currentState.MutationStrength, rng);
-      var offspringObjectives = EvaluatePopulation(offspringPopulation);
+      var evaluatedOffspring = EvaluatePopulation(offspringPopulation);
 
-      var (newPopulation, newObjectives) = Strategy switch {
-        EvolutionStrategyType.Comma => (offspringPopulation, offspringObjectives),
-        EvolutionStrategyType.Plus => CombinePopulations(currentState.Population, currentState.Objectives, offspringPopulation, offspringObjectives),
+      var newPopulation = Strategy switch {
+        EvolutionStrategyType.Comma => evaluatedOffspring,
+        EvolutionStrategyType.Plus => CombinePopulations(currentState.Population, evaluatedOffspring),
         _ => throw new NotImplementedException("Unknown strategy")
       };
       
@@ -87,7 +90,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
         _ => currentState.MutationStrength
       };
 
-      yield return currentState = currentState with { Generation = currentState.Generation + 1, MutationStrength = newMutationStrength, Population = newPopulation, Objectives = newObjectives };
+      yield return currentState = (EvolutionStrategyPopulationState)currentState.Next() with { MutationStrength = newMutationStrength, Population = newPopulation };
     }
   }
 
@@ -99,10 +102,10 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     return population;
   }
 
-  private (RealVector[], int successfulOffspring) EvolvePopulation(RealVector[] population, double mutationStrength, IRandomNumberGenerator rng) {
+  private (RealVector[], int successfulOffspring) EvolvePopulation(Phenotype<RealVector, Fitness>[] population, double mutationStrength, IRandomNumberGenerator rng) {
     var offspringPopulation = new RealVector[Children];
     for (int i = 0; i < Children; i++) {
-      var parent = population[rng.Integer(PopulationSize)];
+      var parent = population[rng.Integer(PopulationSize)].Genotype;
       var offspring = Mutator is IAdaptableMutator<RealVector> adaptableMutator 
         ? adaptableMutator.Mutate(parent, mutationStrength) 
         : Mutator.Mutate(parent);
@@ -113,22 +116,16 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     // would require to evaluate individuals immediately or to store the parent for later comparison after child evaluation
   }
 
-  private ObjectiveValue[] EvaluatePopulation(RealVector[] population) {
-    return population.Select(individual => Evaluator.Evaluate(individual)).ToArray();
+  private Phenotype<RealVector, Fitness>[] EvaluatePopulation(RealVector[] population) {
+    return population.Select(individual => {
+      var fitness = Evaluator.Evaluate(individual);
+      return new Phenotype<RealVector, Fitness>(individual, fitness);
+    }).ToArray();
   }
 
-  private (RealVector[], ObjectiveValue[]) CombinePopulations(RealVector[] parents, ObjectiveValue[] parentObjectives, RealVector[] offspring, ObjectiveValue[] offspringObjectives) {
-    var combinedPopulation = parents.Concat(offspring).ToArray();
-    var combinedObjectives = parentObjectives.Concat(offspringObjectives).ToArray();
-    var sortedIndices = combinedObjectives
-      .Select((objective, index) => new { objective, index })
-      .OrderBy(x => x.objective)
+  private Phenotype<RealVector, Fitness>[] CombinePopulations(Phenotype<RealVector, Fitness>[] parents, Phenotype<RealVector, Fitness>[] offspring) {
+    return parents.Concat(offspring)
       .Take(PopulationSize)
-      .Select(x => x.index)
       .ToArray();
-
-    var newPopulation = sortedIndices.Select(index => combinedPopulation[index]).ToArray();
-    var newObjectives = sortedIndices.Select(index => combinedObjectives[index]).ToArray();
-    return (newPopulation, newObjectives);
   }
 }

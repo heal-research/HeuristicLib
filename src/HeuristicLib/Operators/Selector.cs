@@ -2,27 +2,28 @@
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ISelector<TPhenotype, in TObjective> : IOperator {
-  TPhenotype[] Select(TPhenotype[] population, TObjective[] objectives, int count);
+public interface ISelector<TGenotype, TFitness, TGoal> : IOperator {
+  Phenotype<TGenotype, TFitness>[] Select(Phenotype<TGenotype, TFitness>[] population, TGoal goal, int count);
 }
 
 public static class Selector {
-  public static ISelector<TPhenotype, TObjective> Create<TPhenotype, TObjective>(Func<TPhenotype[], TObjective[], int, TPhenotype[]> selector) => new Selector<TPhenotype, TObjective>(selector);
+  public static ISelector<TGenotype, TFitness, TGoal> Create<TGenotype, TFitness, TGoal>(
+    Func<Phenotype<TGenotype, TFitness>[], TGoal, int, Phenotype<TGenotype, TFitness>[]> selector) => new Selector<TGenotype, TFitness, TGoal>(selector);
 }
 
-public sealed class Selector<TPhenotype, TObjective> : ISelector<TPhenotype, TObjective> {
-  private readonly Func<TPhenotype[], TObjective[], int, TPhenotype[]> selector;
-  internal Selector(Func<TPhenotype[], TObjective[], int, TPhenotype[]> selector) {
+public sealed class Selector<TGenotype, TFitness, TGoal> : ISelector<TGenotype, TFitness, TGoal> {
+  private readonly Func<Phenotype<TGenotype, TFitness>[], TGoal, int, Phenotype<TGenotype, TFitness>[]> selector;
+  internal Selector(Func<Phenotype<TGenotype, TFitness>[], TGoal, int, Phenotype<TGenotype, TFitness>[]> selector) {
     this.selector = selector;
   }
-  public TPhenotype[] Select(TPhenotype[] population, TObjective[] objectives, int count) => selector(population, objectives, count);
+  public Phenotype<TGenotype, TFitness>[] Select(Phenotype<TGenotype, TFitness>[] population, TGoal goal, int count) => selector(population, goal, count);
 }
 
-public abstract class SelectorBase<TSolution, TObjective> : ISelector<TSolution, TObjective> {
-  public abstract TSolution[] Select(TSolution[] population, TObjective[] objectives, int count);
+public abstract class SelectorBase<TGenotype, TFitness, TGoal> : ISelector<TGenotype, TFitness, TGoal> {
+  public abstract Phenotype<TGenotype, TFitness>[] Select(Phenotype<TGenotype, TFitness>[] population, TGoal goal, int count);
 }
 
-public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveValue> {
+public class ProportionalSelector<TGenotype> : ISelector<TGenotype, Fitness, Goal> {
   public IRandomSource RandomSource { get; }
   public bool Windowing { get; }
 
@@ -30,23 +31,22 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveVal
     RandomSource = randomSource;
     Windowing = windowing;
   }
-  public TSolution[] Select(TSolution[] population, ObjectiveValue[] objectives, int count) {
+  public Phenotype<TGenotype, Fitness>[] Select(Phenotype<TGenotype, Fitness>[] population, Goal goal, int count) {
     var rng = RandomSource.CreateRandomNumberGenerator();
 
     // prepare qualities
     double minQuality = double.MaxValue, maxQuality = double.MinValue;
-    foreach (double val in objectives.Select(o => o.Value)) {
+    foreach (double val in population.Select(p => p.Fitness.Value)) {
       minQuality = Math.Min(minQuality, val);
       maxQuality = Math.Max(maxQuality, val);
     }
-    var direction = objectives.Select(o => o.Direction).Distinct().Single();
-
-    var qualities = objectives.Select(o => o.Value);
+    
+    var qualities = population.Select(p => p.Fitness!.Value);
     if (Math.Abs(minQuality - maxQuality) < double.Epsilon) {
       qualities = qualities.Select(_ => 1.0);
     } else {
       if (Windowing) {
-        if (direction == ObjectiveDirection.Maximize) {
+        if (goal == Goal.Maximize) {
           qualities = qualities.Select(q => q - minQuality);
         } else {
           qualities = qualities.Select(q => maxQuality - q);
@@ -54,7 +54,7 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveVal
       } else {
         if (minQuality < 0.0)
           throw new InvalidOperationException("Proportional selection without windowing does not work with quality values < 0.");
-        if (direction == ObjectiveDirection.Minimize) {
+        if (goal == Goal.Minimize) {
           double limit = Math.Min(maxQuality * 2, double.MaxValue);
           qualities = qualities.Select(q => limit - q);
         }
@@ -63,7 +63,7 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveVal
 
     var list = qualities.ToList();
     double qualitySum = list.Sum();
-    var selected = new TSolution[count];
+    var selected = new Phenotype<TGenotype, Fitness>[count];
     for (int i = 0; i < count; i++) {
       double selectedQuality = rng.Random() * qualitySum;
       int index = 0;
@@ -78,15 +78,15 @@ public class ProportionalSelector<TSolution> : ISelector<TSolution, ObjectiveVal
   }
 }
 
-public class RandomSelector<TSolution, TObjective> : SelectorBase<TSolution, TObjective> {
+public class RandomSelector<TGenotype, TFitness, TGoal> : SelectorBase<TGenotype, TFitness, TGoal> {
   public RandomSelector(IRandomSource randomSource) {
     RandomSource = randomSource;
   }
   public IRandomSource RandomSource { get; }
 
-  public override TSolution[] Select(TSolution[] population, TObjective[] objectives, int count) {
+  public override Phenotype<TGenotype, TFitness>[] Select(Phenotype<TGenotype, TFitness>[] population, TGoal goal, int count) {
     var rng = RandomSource.CreateRandomNumberGenerator();
-    var selected = new TSolution[count];
+    var selected = new Phenotype<TGenotype, TFitness>[count];
     for (int i = 0; i < count; i++) {
       int index = rng.Integer(population.Length);
       selected[i] = population[index];
@@ -95,32 +95,29 @@ public class RandomSelector<TSolution, TObjective> : SelectorBase<TSolution, TOb
   }
 }
 
-public class TournamentSelector<TSolution> : SelectorBase<TSolution, ObjectiveValue> {
-  // Custom comparator for tournament selection
+public class TournamentSelector<TGenotype/*, TFitness, TGoal*/> : SelectorBase<TGenotype, Fitness, Goal> {
   public int TournamentSize { get; }
+  //public IComparer<TFitness> Comparer { get; }
   public IRandomSource RandomSource { get; }
   
-  public TournamentSelector(int tournamentSize, IRandomSource randomSource) {
+  public TournamentSelector(int tournamentSize/*, IComparer<TFitness> comparer*/, IRandomSource randomSource) {
     TournamentSize = tournamentSize;
+    //Comparer = comparer;
     RandomSource = randomSource;
   }
 
-  public override TSolution[] Select(TSolution[] population, ObjectiveValue[] objectives, int count) {
+  public override Phenotype<TGenotype, Fitness>[] Select(Phenotype<TGenotype, Fitness>[] population, Goal goal, int count) {
     var rng = RandomSource.CreateRandomNumberGenerator();
-    var selected = new TSolution[count];
-#pragma warning disable CS8714
-    var populationIndexMap = population
-      .Select((solution, index) => (solution, index))
-      .ToDictionary(x => x.solution, x => x.index);
-#pragma warning restore CS8714
+    var comparer = Fitness.CreateSingleObjectiveComparer(goal);
+    var selected = new Phenotype<TGenotype, Fitness>[count];
  
     for (int i = 0; i < count; i++) {
-      var tournamentParticipants = new List<TSolution>();
+      var tournamentParticipants = new List<Phenotype<TGenotype, Fitness>>();
       for (int j = 0; j < TournamentSize; j++) {
         int index = rng.Integer(population.Length);
         tournamentParticipants.Add(population[index]);
       }
-      var bestParticipant = tournamentParticipants.OrderBy(participant => objectives[populationIndexMap[participant]]).First();
+      var bestParticipant = tournamentParticipants.OrderBy(participant => participant.Fitness, comparer).First();
       selected[i] = bestParticipant;
     }
     return selected;

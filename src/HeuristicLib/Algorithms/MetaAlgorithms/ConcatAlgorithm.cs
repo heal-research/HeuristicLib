@@ -5,16 +5,16 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 public abstract class MetaAlgorithm<TState> : AlgorithmBase<TState>
   where TState : class, IState {
-  public IAlgorithm<TState>[] Algorithms { get; }
-  protected MetaAlgorithm(IAlgorithm<TState>[] algorithms) {
-    if (algorithms.Length == 0) throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
-    Algorithms = algorithms;
+  public IReadOnlyList<IAlgorithm<TState>> Algorithms { get; }
+  protected MetaAlgorithm(IEnumerable<IAlgorithm<TState>> algorithms) {
+    Algorithms = algorithms.ToList();
+    if (Algorithms.Count == 0) throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
   }
     
 }
 
-public class ConcatAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TState : class, IState {
-  public ConcatAlgorithm(IAlgorithm<TState>[] algorithms) : base(algorithms) { }
+public class ConcatAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TState : class, IState<TState> {
+  public ConcatAlgorithm(params IEnumerable<IAlgorithm<TState>> algorithms) : base(algorithms) { }
 
   public override TState? Execute(TState? initialState = null, ITerminator<TState>? termination = null) {
     TState? currentState = initialState;
@@ -23,9 +23,8 @@ public class ConcatAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TS
         break;
       }
       currentState = remainingAlg.Execute(currentState);
-      if (currentState is PopulationState<TGenotype> popState) {
-        currentState = popState with { Generation = 0 } as TState;
-      }
+      if (currentState is null) return null;
+      currentState = currentState.Reset();
     }
     return currentState;
   }
@@ -44,15 +43,14 @@ public class ConcatAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TS
       foreach (var state in currentStream) {
         yield return currentState = state;
       }
-      if (currentState is PopulationState<TGenotype> popState) {
-        currentState = popState with { Generation = 0 } as TState;
-      }
+      if (currentState is null) yield break;
+      currentState = currentState.Reset();
     }
   }
 }
 
-public class CyclicAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TState : class, IState {
-  public CyclicAlgorithm(IAlgorithm<TState>[] algorithms) : base(algorithms) { }
+public class CyclicAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TState : class, IState<TState> {
+  public CyclicAlgorithm(params IEnumerable<IAlgorithm<TState>> algorithms) : base(algorithms) { }
   
   public override TState? Execute(TState? initialState = null, ITerminator<TState>? termination = null) {
     if (termination is null) throw new InvalidOperationException("Cyclic Algorithms require a termination to avoid infinite loops.");
@@ -63,13 +61,8 @@ public class CyclicAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TS
           return currentState;
         }
         currentState = algorithm.Execute(currentState);
-        if (currentState is PopulationState<TGenotype> popState) {
-          currentState = popState with { Generation = 0 } as TState;
-        }
-        if (currentState is null) {
-          // If an algorithm returns null we break the cyclic algorithm
-          return null;
-        }
+        if (currentState is null) return null; // If an algorithm returns null we break the cyclic algorithm
+        currentState = currentState.Reset();
       }
     }
   }
@@ -90,9 +83,8 @@ public class CyclicAlgorithm<TState, TGenotype> : MetaAlgorithm<TState> where TS
         foreach (var state in currentStream) {
           yield return currentState = state;
         }
-        if (currentState is PopulationState<TGenotype> popState) {
-          currentState = popState with { Generation = 0 } as TState;
-        }
+        if (currentState is null) yield break;
+        currentState = currentState.Reset();
       }
     }
   }

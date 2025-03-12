@@ -69,6 +69,7 @@
   Evaluator: {
     $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
   },
+  Goal: Minimize,
   RandomSource: {
     $type: RandomSource,
     Seed: 42
@@ -85,6 +86,6 @@
     $type: PlusSelectionReplacer<RealVector>
   },
   Interceptor: {
-    $type: IdentityInterceptor<PopulationState<RealVector>>
+    $type: IdentityInterceptor<PopulationState<RealVector, Fitness, Goal>>
   }
 }

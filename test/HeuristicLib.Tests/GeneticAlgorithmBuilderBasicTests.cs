@@ -20,6 +20,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       MutatorFactory = (encoding, randomSource) => new GaussianMutator(encoding, 0.1, 0.1, randomSource),
       MutationRate = 0.05,
       EvaluatorFactory = (encoding) => new MockEvaluator(),
+      Goal = Goal.Minimize,
       RandomSource = randomSource,
       SelectorFactory = (randomSource) => new ProportionalSelector<RealVector>(randomSource),
       ReplacementFactory = (randomSource) => new PlusSelectionReplacer<RealVector>(),
@@ -51,6 +52,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       .WithSpecs(spec)
       .WithEncoding(encoding)
       .WithEvaluator(new MockEvaluator())
+      .Minimizing()
       .WithRandomSource(randomSource);
        
     var ga = builder.Build();
@@ -58,9 +60,9 @@ public class GeneticAlgorithmBuilderBasicTests {
     return Verify(ga);
   }
 
-  private class MockEvaluator : IEvaluator<RealVector, ObjectiveValue> {
-    public ObjectiveValue Evaluate(RealVector solution) {
-      return (solution.Sum(), ObjectiveDirection.Minimize);
+  private class MockEvaluator : IEvaluator<RealVector, Fitness> {
+    public Fitness Evaluate(RealVector solution) {
+      return solution.Sum();
     }
   }
 }

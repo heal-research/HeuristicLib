@@ -14,13 +14,13 @@ public class GeneticAlgorithmTests {
     var crossover = new SinglePointCrossover(encoding, randomSource);
     var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
     var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector<RealVector, ObjectiveValue>(randomSource);
+    var selector = new RandomSelector<RealVector, Fitness, Goal>(randomSource);
     var replacement = new PlusSelectionReplacer<RealVector>();
     
     var ga = new GeneticAlgorithm<RealVector>(
       populationSize: 200, 
       creator, crossover, mutator, 0.05,
-      evaluator, selector, replacement,
+      evaluator, Goal.Minimize, selector, replacement,
       randomSource, terminator: null
     );
 
@@ -35,13 +35,13 @@ public class GeneticAlgorithmTests {
     var crossover = new SinglePointCrossover(encoding, randomSource);
     var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
     var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector<RealVector, ObjectiveValue>(randomSource);
+    var selector = new RandomSelector<RealVector, Fitness, Goal>(randomSource);
     var replacement = new ElitismReplacer<RealVector>(0);
     
     var ga = new GeneticAlgorithm<RealVector>(
       populationSize: 5, 
       creator, crossover, mutator, 0.5,
-      evaluator, selector, replacement,
+      evaluator, Goal.Minimize, selector, replacement,
       randomSource, terminator: Terminator.OnGeneration(5)
     );
 
@@ -58,13 +58,13 @@ public class GeneticAlgorithmTests {
     var crossover = new SinglePointCrossover(encoding, randomSource);
     var mutator = new GaussianMutator(encoding, 0.1, 0.1, randomSource);
     var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector<RealVector, ObjectiveValue>(randomSource);
+    var selector = new RandomSelector<RealVector, Fitness, Goal>(randomSource);
     var replacement = new ElitismReplacer<RealVector>(0);
     
     var ga = new GeneticAlgorithm<RealVector>(
       populationSize: 5, 
       creator, crossover, mutator, 0.5,
-      evaluator, selector, replacement,
+      evaluator, Goal.Minimize, selector, replacement,
       randomSource
     );
 
@@ -86,12 +86,12 @@ public class GeneticAlgorithmTests {
     var selector = new ProportionalSelector<RealVector>(randomSource);
     var replacement = new PlusSelectionReplacer<RealVector>();
     var pauseToken = new PauseToken();
-    var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
+    var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector, Fitness, Goal>>(pauseToken);
 
     var firstAlg = new GeneticAlgorithm<RealVector>(
       5,
       creator, crossover, mutator, 0.05, 
-      evaluator, selector, replacement, 
+      evaluator, Goal.Minimize, selector, replacement, 
       randomSource, terminationCriterion
     );
     
@@ -122,23 +122,23 @@ public class GeneticAlgorithmTests {
     var replacement = new ElitismReplacer<RealVector>(0);
     var terminationCriterion = Terminator.OnGeneration(5);
 
-    var firstAlg = new GeneticAlgorithm<RealVector>(5, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
+    var firstAlg = new GeneticAlgorithm<RealVector>(5, creator, crossover, mutator, 0.05, evaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
 
     var firstResult = firstAlg.Execute();
 
     var newTerminationCriterion = Terminator.OnGeneration(12);
-    var secondAlg = new GeneticAlgorithm<RealVector>(8, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, newTerminationCriterion);
+    var secondAlg = new GeneticAlgorithm<RealVector>(8, creator, crossover, mutator, 0.05, evaluator, Goal.Minimize, selector, replacement, randomSource, newTerminationCriterion);
 
     var finalState = secondAlg.Execute(firstResult);
 
     await Verify(new { firstResult, finalState });
   }
   
-  private class RealVectorMockEvaluator : IEvaluator<RealVector, ObjectiveValue> {
-    public ObjectiveValue Evaluate(RealVector solution) { return (solution.Sum(), ObjectiveDirection.Minimize); }
+  private class RealVectorMockEvaluator : IEvaluator<RealVector, Fitness> {
+    public Fitness Evaluate(RealVector solution) { return solution.Sum(); }
   }
-  private class PermutationMockEvaluator : IEvaluator<Permutation, ObjectiveValue> {
-    public ObjectiveValue Evaluate(Permutation solution) { return (solution[0], ObjectiveDirection.Maximize); }
+  private class PermutationMockEvaluator : IEvaluator<Permutation, Fitness> {
+    public Fitness Evaluate(Permutation solution) { return solution[0]; }
   }
 
   [Fact]
@@ -151,11 +151,11 @@ public class GeneticAlgorithmTests {
     var crossover = new MultiGenotypeCrossover(new SinglePointCrossover(realVectorEncoding, randomSource), new OrderCrossover(permutationEncoding, randomSource));
     var mutator = new MultiGenotypeMutator(new GaussianMutator(realVectorEncoding, 0.1, 0.1, randomSource), new SwapMutator(permutationEncoding, randomSource));
     var evaluator = new MultiGenotypeEvaluator();
-    var selector = new RandomSelector<MultiGenotype, ObjectiveValue>(randomSource);
+    var selector = new RandomSelector<MultiGenotype, Fitness, Goal>(randomSource);
     var replacement = new ElitismReplacer<MultiGenotype>(0);
     var terminationCriterion = Terminator.OnGeneration(10);
     
-    var ga = new GeneticAlgorithm<MultiGenotype>(5, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
+    var ga = new GeneticAlgorithm<MultiGenotype>(5, creator, crossover, mutator, 0.05, evaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
 
     var finalState = ga.Execute();
 
@@ -169,8 +169,8 @@ public class GeneticAlgorithmTests {
   private class MultiGenotypeCreator(ICreator<RealVector> realVectorCreator, ICreator<Permutation> permutationCreator) : CreatorBase<MultiGenotype> {
     public override MultiGenotype Create() { return new MultiGenotype(realVectorCreator.Create(), permutationCreator.Create()); }
   }
-  private class MultiGenotypeEvaluator : IEvaluator<MultiGenotype, ObjectiveValue> {
-    public ObjectiveValue Evaluate(MultiGenotype solution) { return (solution.RealVector.Sum() + solution.Permutation.Count, ObjectiveDirection.Minimize); }
+  private class MultiGenotypeEvaluator : IEvaluator<MultiGenotype, Fitness> {
+    public Fitness Evaluate(MultiGenotype solution) { return solution.RealVector.Sum() + solution.Permutation.Count; }
   }
   private class MultiGenotypeCrossover(ICrossover<RealVector> realVectorCrossover, ICrossover<Permutation> permutationCrossover) : ICrossover<MultiGenotype> {
     public MultiGenotype Cross(MultiGenotype parent1, MultiGenotype parent2) {
@@ -192,11 +192,11 @@ public class GeneticAlgorithmTests {
     var crossover = new RecordCrossover<MultiGenotype, RealVector, Permutation>(new SinglePointCrossover(realVectorEncoding, randomSource), new OrderCrossover(permutationEncoding, randomSource));
     var mutator = new MultiGenotypeMutator(new GaussianMutator(realVectorEncoding, 0.1, 0.1, randomSource), new SwapMutator(permutationEncoding, randomSource));
     var evaluator = new MultiGenotypeEvaluator();
-    var selector = new RandomSelector<MultiGenotype, ObjectiveValue>(randomSource);
+    var selector = new RandomSelector<MultiGenotype, Fitness, Goal>(randomSource);
     var replacement = new ElitismReplacer<MultiGenotype>(0);
     var terminationCriterion = Terminator.OnGeneration(10);
     
-    var ga = new GeneticAlgorithm<MultiGenotype>(5, creator, crossover, mutator, 0.05, evaluator, selector, replacement, randomSource, terminationCriterion);
+    var ga = new GeneticAlgorithm<MultiGenotype>(5, creator, crossover, mutator, 0.05, evaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
 
     var finalState = ga.Execute();
 
