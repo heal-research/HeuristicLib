@@ -9,26 +9,22 @@ namespace HEAL.HeuristicLib.Tests;
 
 public class GeneticAlgorithmBuilderBasicTests {
   [Fact]
-  public Task GeneticAlgorithmBuilder_WithConfigObject() {
+  public Task GeneticAlgorithmBuilder_WithBuilder() {
     var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(3, -5, +5);
-    var config = new GeneticAlgorithmConfig<RealVector, RealVectorEncoding>() {
-      Encoding = encoding,
-      PopulationSize = 200,
-      CreatorFactory = (encoding, randomSource) => new NormalDistributedCreator(encoding, 0, 0.5, randomSource),
-      CrossoverFactory = (encoding, randomSource) => new SinglePointCrossover(encoding, randomSource),
-      MutatorFactory = (encoding, randomSource) => new GaussianMutator(encoding, 0.1, 0.1, randomSource),
-      MutationRate = 0.05,
-      EvaluatorFactory = (encoding) => new MockEvaluator(),
-      Goal = Goal.Minimize,
-      RandomSource = randomSource,
-      SelectorFactory = (randomSource) => new ProportionalSelector<RealVector>(randomSource),
-      ReplacementFactory = (randomSource) => new PlusSelectionReplacer<RealVector>(),
-      Terminator = Terminator.OnGeneration(20)
-    };
-    
-    var builder = new GeneticAlgorithmBuilder<RealVectorEncoding, RealVector>()
-      .WithConfig(config);
+    var builder = new GeneticAlgorithmBuilder<RealVector, RealVectorEncoding>()
+      .WithEncoding(encoding)
+      .WithPopulationSize(200)
+      .WithCreator((encoding, randomSource) => new NormalDistributedCreator(encoding, 0, 0.5, randomSource))
+      .WithCrossover((encoding, randomSource) => new SinglePointCrossover(encoding, randomSource))
+      .WithMutator((encoding, randomSource) => new GaussianMutator(encoding, 0.1, 0.1, randomSource))
+      .WithMutationRate(0.05)
+      .WithEvaluator(new MockEvaluator())
+      .WithGoal(Goal.Minimize)
+      .WithRandomSource(randomSource)
+      .WithSelector((randomSource) => new ProportionalSelector<RealVector>(randomSource))
+      .WithReplacer((randomSource) => new PlusSelectionReplacer<RealVector>())
+      .WithTerminator(Terminator.OnGeneration(20));
 
     var ga = builder.Build();
 
@@ -48,11 +44,11 @@ public class GeneticAlgorithmBuilderBasicTests {
       Selector: new TournamentSelectorSpec(TournamentSize: 4),
       Replacer: new ElitistReplacerSpec(2)
     );
-    var builder = new GeneticAlgorithmBuilder<RealVectorEncoding, RealVector>()
-      .WithSpecs(spec)
+    var builder = new GeneticAlgorithmBuilder<RealVector, RealVectorEncoding>()
+      .WithGeneticAlgorithmSpec(spec)
       .WithEncoding(encoding)
       .WithEvaluator(new MockEvaluator())
-      .Minimizing()
+      .WithGoal(Goal.Minimize)
       .WithRandomSource(randomSource);
        
     var ga = builder.Build();

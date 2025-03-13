@@ -22,7 +22,7 @@
     }
   },
   Mutator: {
-    $type: SwapMutator,
+    $type: InversionMutator,
     Encoding: {
       Length: 10
     },

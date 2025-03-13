@@ -151,3 +151,22 @@ public class SwapMutator : MutatorBase<Permutation>, IEncodingOperator<Permutati
     return Permutation.SwapRandomElements(solution, RandomSource.CreateRandomNumberGenerator());
   }
 }
+
+public class InversionMutator : MutatorBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
+  public PermutationEncoding Encoding { get; }
+  public IRandomSource RandomSource { get; }
+  
+  public InversionMutator(PermutationEncoding encoding, IRandomSource randomSource) {
+    Encoding = encoding;
+    RandomSource = randomSource;
+  }
+  
+  public override Permutation Mutate(Permutation solution) {
+    var rng = RandomSource.CreateRandomNumberGenerator();
+    int start = rng.Integer(solution.Count);
+    int end = rng.Integer(start, solution.Count);
+    int[] newElements = solution.ToArray();
+    Array.Reverse(newElements, start, end - start + 1);
+    return new Permutation(newElements);
+  }
+}

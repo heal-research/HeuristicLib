@@ -14,15 +14,15 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     var distances = new double[10, 10];
     var problem = new TravelingSalesmanProblem(distances);
     
-    var builder = new GeneticAlgorithmBuilder<PermutationEncoding, Permutation>()
-      .WithProblemEncoding(problem)
-      .WithSpecs(new GeneticAlgorithmSpec() {
+    var builder = new GeneticAlgorithmBuilder<Permutation, PermutationEncoding>()
+      .UsingProblem(problem)
+      .WithGeneticAlgorithmSpec(new GeneticAlgorithmSpec() {
         PopulationSize = 5, 
         Selector = new TournamentSelectorSpec(),
         Replacer = new ElitistReplacerSpec(1)
       })
       .WithRandomSource(new RandomSource(42));
-
+    
     var ga = builder.Build();
     
     return Verify(ga);

@@ -74,13 +74,13 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, Fitness, Go
   }
 }
 
-public static class GeneticAlgorithmBuilderRealVectorTestFunctionExtensions {
-  public static GeneticAlgorithmBuilder<RealVectorEncoding, RealVector> WithProblemEncoding
-    (this GeneticAlgorithmBuilder<RealVectorEncoding, RealVector> builder, RealVectorTestFunctionProblem problem)
-  {
-    builder.WithEvaluator(problem.CreateEvaluator());
-    builder.WithEncoding(problem.CreateRealVectorEncodingEncoding());
-    builder.WithSpecs(problem.CreateGeneticAlgorithmDefaultConfig());
-    return builder;
-    }
-}
+// public static class GeneticAlgorithmBuilderRealVectorTestFunctionExtensions {
+//   public static GeneticAlgorithmBuilder<RealVectorEncoding, RealVector> WithProblemEncoding
+//     (this GeneticAlgorithmBuilder<RealVectorEncoding, RealVector> builder, RealVectorTestFunctionProblem problem)
+//   {
+//     builder.WithEvaluator(problem.CreateEvaluator());
+//     builder.WithEncoding(problem.CreateRealVectorEncodingEncoding());
+//     builder.WithSpecs(problem.CreateGeneticAlgorithmDefaultConfig());
+//     return builder;
+//     }
+// }
