@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using System.Text;
+using FluentValidation;
 using FluentValidation.Results;
 using HEAL.HeuristicLib.Configuration;
 using HEAL.HeuristicLib.Encodings;
@@ -150,94 +151,109 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncoding>
       //RuleFor(x => x.Terminator).NotNull().WithMessage("Termination criterion must not be null.");
     }
   }
-
-  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithGeneticAlgorithmSpec(GeneticAlgorithmSpec gaSpec) {
-    #pragma warning disable S1481
-    
-    if (gaSpec.PopulationSize.HasValue) {
-      PopulationSize = gaSpec.PopulationSize.Value;
-    }
-    
-    if (gaSpec.MutationRate.HasValue) {
-      MutationRate = gaSpec.MutationRate.Value;
-    }
-
-    if (gaSpec.Creator is not null) {
-      CreatorFactory = (encoding, randomSource) => {
-        IOperator @operator = (gaSpec.Creator, encoding) switch {
-          (RandomPermutationCreatorSpec spec, PermutationEncoding enc) => new RandomPermutationCreator(enc, randomSource),
-          (UniformRealVectorCreatorSpec spec, RealVectorEncoding enc) => new UniformDistributedCreator(enc, spec.Minimum != null ? new RealVector(spec.Minimum) : null, spec.Maximum != null ? new RealVector(spec.Maximum) : null, randomSource),
-          (NormalRealVectorCreatorSpec spec, RealVectorEncoding enc) => new NormalDistributedCreator(enc, spec.Mean != null ? new RealVector(spec.Mean) : 0.0, spec.StandardDeviation != null ? new RealVector(spec.StandardDeviation) : 1.0, randomSource),
-          _ => throw new NotImplementedException("Unknown creator configuration.")
-        };
-        if (@operator is not ICreator<TGenotype> creator) throw new InvalidOperationException("Creator must be a ICreator<TGenotype>.");
-        return creator;
-      };
-    }
-
-    if (gaSpec.Crossover is not null) {
-      CrossoverFactory = (encoding, randomSource) => {
-        IOperator @operator = (gaSpec.Crossover, encoding) switch {
-          (OrderCrossoverSpec spec, PermutationEncoding enc) => new OrderCrossover(enc, randomSource),
-          (SinglePointRealVectorCrossoverSpec spec, RealVectorEncoding enc) => new SinglePointCrossover(enc, randomSource),
-          (AlphaBlendRealVectorCrossoverSpec spec, RealVectorEncoding enc) => new AlphaBetaBlendCrossover(enc, spec.Alpha, spec.Beta),
-          _ => throw new NotImplementedException("Unknown crossover configuration.")
-        };
-        if (@operator is not ICrossover<TGenotype> crossover) throw new InvalidOperationException("Crossover must be a ICrossover<TGenotype>.");
-        return crossover;
-      };
-    }
-
-    if (gaSpec.Mutator is not null) {
-      MutatorFactory = (encoding, randomSource) => {
-        IOperator @operator = (gaSpec.Mutator, encoding) switch {
-          (SwapMutatorSpec spec, PermutationEncoding enc) => new SwapMutator(enc, randomSource),
-          (GaussianRealVectorMutatorSpec spec, RealVectorEncoding enc) => new GaussianMutator(enc, spec.Strength ?? 1.0, spec.Rate ?? 1.0, randomSource),
-          (InversionMutatorSpec spec, PermutationEncoding enc) => new InversionMutator(enc, randomSource),
-          _ => throw new NotImplementedException("Unknown mutator configuration.")
-        };
-        if (@operator is not IMutator<TGenotype> mutator) throw new InvalidOperationException("Mutator must be a IMutator<TGenotype>.");
-        return mutator;
-      };
-    }
-
-    if (gaSpec.Selector is not null) {
-      SelectorFactory = (randomSource) => {
-        IOperator @operator = (gaSpec.Selector) switch {
-          RandomSelectorSpec spec => new RandomSelector<TGenotype, Fitness, Goal>(randomSource),
-          TournamentSelectorSpec spec => new TournamentSelector<TGenotype>(spec.TournamentSize ?? 2, randomSource),
-          ProportionalSelectorSpec spec => new ProportionalSelector<TGenotype>(randomSource, spec.Windowing),
-          _ => throw new NotImplementedException("Unknown selector configuration.")
-        };
-        if (@operator is not ISelector<TGenotype, Fitness, Goal> selector) throw new InvalidOperationException("Selector must be a ISelector<TGenotype, Fitness, Goal>.");
-        return selector;
-      };
-    }
-
-    if (gaSpec.Replacer is not null) {
-      ReplacementFactory = (randomSource) => {
-        IOperator @operator = (gaSpec.Replacer) switch {
-          ElitistReplacerSpec spec => new ElitismReplacer<TGenotype>(spec.Elites ?? 1),
-          PlusSelectionReplacerSpec spec => new PlusSelectionReplacer<TGenotype>(),
-          _ => throw new NotImplementedException("Unknown replacer configuration.")
-        };
-        if (@operator is not IReplacer<TGenotype, Fitness, Goal> replacer) throw new InvalidOperationException("Replacer must be a IReplacer<TGenotype, Fitness, Goal>.");
-        return replacer;
-      };
-    }
-
-    if (gaSpec.MaximumGenerations.HasValue) {
-      Terminator = Operators.Terminator.OnGeneration(gaSpec.MaximumGenerations.Value);
-    }
-
-    if (gaSpec.RandomSeed.HasValue) {
-      RandomSource = new RandomSource(gaSpec.RandomSeed.Value);
-    }
-    
-#pragma warning restore S1481
-
+  
+  
+  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithGeneticAlgorithmSpec(GeneticAlgorithmSpec<TGenotype, TEncoding> gaSpec) {
+    if (gaSpec.PopulationSize.HasValue) PopulationSize = gaSpec.PopulationSize.Value;
+    if (gaSpec.MutationRate.HasValue) MutationRate = gaSpec.MutationRate.Value;
+    if (gaSpec.Creator is not null) CreatorFactory = (encoding, randomSource) => gaSpec.Creator.Create(encoding, randomSource);
+    if (gaSpec.Crossover is not null) CrossoverFactory = (encoding, randomSource) => gaSpec.Crossover.Create(encoding, randomSource);
+    if (gaSpec.Mutator is not null) MutatorFactory = (encoding, randomSource) => gaSpec.Mutator.Create(encoding, randomSource);
+    if (gaSpec.Selector is not null) SelectorFactory = (randomSource) => gaSpec.Selector.Create(randomSource);
+    if (gaSpec.Replacer is not null) ReplacementFactory = (randomSource) => gaSpec.Replacer.Create(randomSource);
+    if (gaSpec.MaximumGenerations.HasValue) Terminator = Operators.Terminator.OnGeneration(gaSpec.MaximumGenerations.Value);
+    if (gaSpec.RandomSeed.HasValue) RandomSource = new RandomSource(gaSpec.RandomSeed.Value);
     return this;
   }
+  
+//
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithGeneticAlgorithmSpec(GeneticAlgorithmSpec gaSpec) {
+//     #pragma warning disable S1481
+//     
+//     if (gaSpec.PopulationSize.HasValue) {
+//       PopulationSize = gaSpec.PopulationSize.Value;
+//     }
+//     
+//     if (gaSpec.MutationRate.HasValue) {
+//       MutationRate = gaSpec.MutationRate.Value;
+//     }
+//
+//     if (gaSpec.Creator is not null) {
+//       CreatorFactory = (encoding, randomSource) => {
+//         IOperator @operator = (gaSpec.Creator, encoding) switch {
+//           (RandomPermutationCreatorSpec spec, PermutationEncoding enc) => new RandomPermutationCreator(enc, randomSource),
+//           (UniformRealVectorCreatorSpec spec, RealVectorEncoding enc) => new UniformDistributedCreator(enc, spec.Minimum != null ? new RealVector(spec.Minimum) : null, spec.Maximum != null ? new RealVector(spec.Maximum) : null, randomSource),
+//           (NormalRealVectorCreatorSpec spec, RealVectorEncoding enc) => new NormalDistributedCreator(enc, spec.Mean != null ? new RealVector(spec.Mean) : 0.0, spec.StandardDeviation != null ? new RealVector(spec.StandardDeviation) : 1.0, randomSource),
+//           _ => throw new NotImplementedException("Unknown creator configuration.")
+//         };
+//         if (@operator is not ICreator<TGenotype> creator) throw new InvalidOperationException("Creator must be a ICreator<TGenotype>.");
+//         return creator;
+//       };
+//     }
+//
+//     if (gaSpec.Crossover is not null) {
+//       CrossoverFactory = (encoding, randomSource) => {
+//         IOperator @operator = (gaSpec.Crossover, encoding) switch {
+//           (OrderCrossoverSpec spec, PermutationEncoding enc) => new OrderCrossover(enc, randomSource),
+//           (SinglePointRealVectorCrossoverSpec spec, RealVectorEncoding enc) => new SinglePointCrossover(enc, randomSource),
+//           (AlphaBlendRealVectorCrossoverSpec spec, RealVectorEncoding enc) => new AlphaBetaBlendCrossover(enc, spec.Alpha, spec.Beta),
+//           _ => throw new NotImplementedException("Unknown crossover configuration.")
+//         };
+//         if (@operator is not ICrossover<TGenotype> crossover) throw new InvalidOperationException("Crossover must be a ICrossover<TGenotype>.");
+//         return crossover;
+//       };
+//     }
+//
+//     if (gaSpec.Mutator is not null) {
+//       MutatorFactory = (encoding, randomSource) => {
+//         IOperator @operator = (gaSpec.Mutator, encoding) switch {
+//           (SwapMutatorSpec spec, PermutationEncoding enc) => new SwapMutator(enc, randomSource),
+//           (GaussianRealVectorMutatorSpec spec, RealVectorEncoding enc) => new GaussianMutator(enc, spec.Strength ?? 1.0, spec.Rate ?? 1.0, randomSource),
+//           (InversionMutatorSpec spec, PermutationEncoding enc) => new InversionMutator(enc, randomSource),
+//           _ => throw new NotImplementedException("Unknown mutator configuration.")
+//         };
+//         if (@operator is not IMutator<TGenotype> mutator) throw new InvalidOperationException("Mutator must be a IMutator<TGenotype>.");
+//         return mutator;
+//       };
+//     }
+//
+//     if (gaSpec.Selector is not null) {
+//       SelectorFactory = (randomSource) => {
+//         IOperator @operator = (gaSpec.Selector) switch {
+//           RandomSelectorSpec spec => new RandomSelector<TGenotype, Fitness, Goal>(randomSource),
+//           TournamentSelectorSpec spec => new TournamentSelector<TGenotype>(spec.TournamentSize ?? 2, randomSource),
+//           ProportionalSelectorSpec spec => new ProportionalSelector<TGenotype>(randomSource, spec.Windowing),
+//           _ => throw new NotImplementedException("Unknown selector configuration.")
+//         };
+//         if (@operator is not ISelector<TGenotype, Fitness, Goal> selector) throw new InvalidOperationException("Selector must be a ISelector<TGenotype, Fitness, Goal>.");
+//         return selector;
+//       };
+//     }
+//
+//     if (gaSpec.Replacer is not null) {
+//       ReplacementFactory = (randomSource) => {
+//         IOperator @operator = (gaSpec.Replacer) switch {
+//           ElitistReplacerSpec spec => new ElitismReplacer<TGenotype>(spec.Elites ?? 1),
+//           PlusSelectionReplacerSpec spec => new PlusSelectionReplacer<TGenotype>(),
+//           _ => throw new NotImplementedException("Unknown replacer configuration.")
+//         };
+//         if (@operator is not IReplacer<TGenotype, Fitness, Goal> replacer) throw new InvalidOperationException("Replacer must be a IReplacer<TGenotype, Fitness, Goal>.");
+//         return replacer;
+//       };
+//     }
+//
+//     if (gaSpec.MaximumGenerations.HasValue) {
+//       Terminator = Operators.Terminator.OnGeneration(gaSpec.MaximumGenerations.Value);
+//     }
+//
+//     if (gaSpec.RandomSeed.HasValue) {
+//       RandomSource = new RandomSource(gaSpec.RandomSeed.Value);
+//     }
+//     
+// #pragma warning restore S1481
+//
+//     return this;
+//   }
   // public void Consume(TEncoding encoding) {
   //   this.WithEncoding(encoding);
   // }

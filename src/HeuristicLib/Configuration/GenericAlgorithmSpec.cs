@@ -5,17 +5,19 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Configuration;
 
-public record GeneticAlgorithmSpec(
+public record GeneticAlgorithmSpec<TGenotype, TEncoding>(
   int? PopulationSize = null,
   int? MaximumGenerations = null,
-  CreatorSpec? Creator = null,
-  CrossoverSpec? Crossover = null,
-  MutatorSpec? Mutator = null,
+  CreatorSpec<TGenotype, TEncoding>? Creator = null,
+  CrossoverSpec<TGenotype, TEncoding>? Crossover = null,
+  MutatorSpec<TGenotype, TEncoding>? Mutator = null,
   double? MutationRate = null,
-  SelectorSpec? Selector = null,
-  ReplacerSpec? Replacer = null,
+  SelectorSpec<TGenotype, Fitness, Goal>? Selector = null,
+  ReplacerSpec<TGenotype, Fitness, Goal>? Replacer = null,
   int? RandomSeed = null
-);
+) where TEncoding : IEncoding<TGenotype, TEncoding> {
+  
+}
 
 //
 // public class SpecConfigSource<TGenotype, TEncoding> : IConfigSource<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype, TEncoding> {

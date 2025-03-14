@@ -16,10 +16,10 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
     
     var builder = new GeneticAlgorithmBuilder<Permutation, PermutationEncoding>()
       .UsingProblem(problem)
-      .WithGeneticAlgorithmSpec(new GeneticAlgorithmSpec() {
+      .WithGeneticAlgorithmSpec(new GeneticAlgorithmSpec<Permutation, PermutationEncoding> {
         PopulationSize = 5, 
-        Selector = new TournamentSelectorSpec(),
-        Replacer = new ElitistReplacerSpec(1)
+        Selector = new TournamentSelectorSpec<Permutation>(),
+        Replacer = new ElitistReplacerSpec<Permutation>(1)
       })
       .WithRandomSource(new RandomSource(42));
     

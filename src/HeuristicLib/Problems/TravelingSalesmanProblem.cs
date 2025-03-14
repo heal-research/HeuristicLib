@@ -54,8 +54,8 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, Fitness, Goal>
     return new PermutationEncoding(numberOfCities);
   }
 
-  public GeneticAlgorithmSpec CreateGASpec() {
-    return new GeneticAlgorithmSpec {
+  public GeneticAlgorithmSpec<Permutation, PermutationEncoding> CreateGASpec() {
+    return new GeneticAlgorithmSpec<Permutation, PermutationEncoding> {
       Creator = new RandomPermutationCreatorSpec(), 
       Crossover = numberOfCities > 3 ? new OrderCrossoverSpec() : null, 
       Mutator = new InversionMutatorSpec(), 

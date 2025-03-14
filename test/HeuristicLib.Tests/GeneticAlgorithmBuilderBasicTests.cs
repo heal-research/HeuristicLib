@@ -35,14 +35,14 @@ public class GeneticAlgorithmBuilderBasicTests {
   public Task GeneticAlgorithmBuilder_WithSpec() {
     var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(10, -5, +5);
-    var spec = new GeneticAlgorithmSpec(
+    var spec = new GeneticAlgorithmSpec<RealVector, RealVectorEncoding>(
       PopulationSize: 500,
       Creator: new NormalRealVectorCreatorSpec(Mean: [1.5]),
       Crossover: new SinglePointRealVectorCrossoverSpec(),
       Mutator: new GaussianRealVectorMutatorSpec(Rate: 0.1, Strength: 0.1),
       MutationRate: 0.05,
-      Selector: new TournamentSelectorSpec(TournamentSize: 4),
-      Replacer: new ElitistReplacerSpec(2)
+      Selector: new TournamentSelectorSpec<RealVector>(TournamentSize: 4),
+      Replacer: new ElitistReplacerSpec<RealVector>(2)
     );
     var builder = new GeneticAlgorithmBuilder<RealVector, RealVectorEncoding>()
       .WithGeneticAlgorithmSpec(spec)
