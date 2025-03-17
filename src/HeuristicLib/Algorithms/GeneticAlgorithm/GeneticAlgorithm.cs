@@ -5,11 +5,6 @@ namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
 public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationState<TGenotype, Fitness, Goal>> 
   where TEncoding : IEncoding<TGenotype, TEncoding> {
-
-  public class Context : IRandomContext, IEncodingContext<TEncoding> {
-    public required IRandomNumberGenerator Random { get; init; }
-    public required TEncoding Encoding { get; init; }
-  }
   
   public GeneticAlgorithm(TEncoding encoding,
     int populationSize,
@@ -48,18 +43,18 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
   public IReplacer<TGenotype, Fitness, Goal> Replacer { get; }
   public IInterceptor<PopulationState<TGenotype, Fitness, Goal>> Interceptor { get; }
   
-  public override PopulationState<TGenotype, Fitness, Goal> Execute(PopulationState<TGenotype, Fitness, Goal>? initialState = null, ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator = null) {
-    return CreateExecutionStream(initialState, terminator).Last();
+  public override PopulationState<TGenotype, Fitness, Goal> Execute(PopulationState<TGenotype, Fitness, Goal>? initialState = null) {
+    if (Terminator is null) throw new InvalidOperationException("Execute requires a terminator to be set.");
+    return CreateExecutionStream(initialState).Last();
   }
 
-  public override ExecutionStream<PopulationState<TGenotype, Fitness, Goal>> CreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState = null, ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator = null) {
-    return new ExecutionStream<PopulationState<TGenotype, Fitness, Goal>>(InternalCreateExecutionStream(initialState, terminator));
+  public override ExecutionStream<PopulationState<TGenotype, Fitness, Goal>> CreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState = null) {
+    return new ExecutionStream<PopulationState<TGenotype, Fitness, Goal>>(InternalCreateExecutionStream(initialState));
   }
 
-  private IEnumerable<PopulationState<TGenotype, Fitness, Goal>> InternalCreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState, ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator) {
-    var context = new Context() { Random = RandomSource.CreateRandomNumberGenerator(), Encoding = Encoding };
+  private IEnumerable<PopulationState<TGenotype, Fitness, Goal>> InternalCreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState) {
+    var context = new AlgorithmContext<TEncoding>() { Random = RandomSource.CreateRandomNumberGenerator(), Encoding = Encoding };
     
-    var activeTerminator = terminator ?? Terminator;
     int offspringCount = Replacer.GetOffspringCount(PopulationSize);
 
     PopulationState<TGenotype, Fitness, Goal> currentState;
@@ -73,7 +68,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
       yield return currentState;
     }
 
-    while (activeTerminator?.ShouldContinue(currentState) ?? true) {
+    while (Terminator?.ShouldContinue(currentState) ?? true) {
       var offsprings = EvolvePopulation(currentState.Population, offspringCount, context);
       var evaluatedOffsprings = EvaluatePopulation(offsprings);
 
@@ -86,7 +81,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
     }
   }
 
-  private TGenotype[] InitializePopulation(Context context) {
+  private TGenotype[] InitializePopulation(AlgorithmContext<TEncoding> context) {
     var population = new TGenotype[PopulationSize];
     for (int i = 0; i < PopulationSize; i++) {
       population[i] = Creator.Create(context);
@@ -94,7 +89,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
     return population;
   }
 
-  private TGenotype[] EvolvePopulation(Phenotype<TGenotype, Fitness>[] population, int offspringCount, Context context) {
+  private TGenotype[] EvolvePopulation(Phenotype<TGenotype, Fitness>[] population, int offspringCount, AlgorithmContext<TEncoding> context) {
     var newPopulation = new TGenotype[offspringCount];
     var parents = Selector.Select(population, Goal, offspringCount * 2, context).Select(p => p.Genotype).ToList();
   

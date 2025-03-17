@@ -40,11 +40,6 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     RandomSource = randomSource;
   }
   
-  private class Context : IEncodingContext<RealVectorEncoding>, IRandomContext {
-    public required RealVectorEncoding Encoding { get; init; }
-    public required IRandomNumberGenerator Random { get; init; }
-  }
-  
   public RealVectorEncoding Encoding { get; }
   public int PopulationSize { get; }
   public int Children { get; }
@@ -58,20 +53,18 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
   public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
   public IRandomSource RandomSource { get; }
 
-  public override EvolutionStrategyPopulationState Execute(EvolutionStrategyPopulationState? initialState = null, ITerminator<EvolutionStrategyPopulationState>? terminator = null) {
-    if (Terminator is null && terminator is null) throw new InvalidOperationException("At least one terminator must be provided.");
-    return CreateExecutionStream(initialState, terminator).Last();
+  public override EvolutionStrategyPopulationState Execute(EvolutionStrategyPopulationState? initialState = null) {
+    if (Terminator is null) throw new InvalidOperationException("Execute requires a terminator to be set.");
+    return CreateExecutionStream(initialState).Last();
   }
 
-  public override ExecutionStream<EvolutionStrategyPopulationState> CreateExecutionStream(EvolutionStrategyPopulationState? initialState = null, ITerminator<EvolutionStrategyPopulationState>? termination = null) {
-    return new ExecutionStream<EvolutionStrategyPopulationState>(InternalCreateExecutionStream(initialState, termination));
+  public override ExecutionStream<EvolutionStrategyPopulationState> CreateExecutionStream(EvolutionStrategyPopulationState? initialState = null) {
+    return new ExecutionStream<EvolutionStrategyPopulationState>(InternalCreateExecutionStream(initialState));
   }
   
-  private IEnumerable<EvolutionStrategyPopulationState> InternalCreateExecutionStream(EvolutionStrategyPopulationState? initialState, ITerminator<EvolutionStrategyPopulationState>? terminator) {
-    var context = new Context { Encoding = Encoding, Random = RandomSource.CreateRandomNumberGenerator() };
+  private IEnumerable<EvolutionStrategyPopulationState> InternalCreateExecutionStream(EvolutionStrategyPopulationState? initialState) {
+    var context = new AlgorithmContext<RealVectorEncoding> { Encoding = Encoding, Random = RandomSource.CreateRandomNumberGenerator() };
     
-    var activeTerminator = terminator ?? Terminator;
-
     EvolutionStrategyPopulationState currentState;
     if (initialState is null) {
       var initialPopulation = InitializePopulation(context);
@@ -81,7 +74,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
       currentState = initialState;
     }
     
-    while (activeTerminator?.ShouldContinue(currentState) ?? true) {
+    while (Terminator?.ShouldContinue(currentState) ?? true) {
       var (offspringPopulation, successfulOffspring) = EvolvePopulation(currentState.Population, currentState.MutationStrength, context);
       var evaluatedOffspring = EvaluatePopulation(offspringPopulation);
 
@@ -102,7 +95,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     }
   }
 
-  private RealVector[] InitializePopulation(Context context) {
+  private RealVector[] InitializePopulation(AlgorithmContext<RealVectorEncoding> context) {
     var population = new RealVector[PopulationSize];
     for (int i = 0; i < PopulationSize; i++) {
       population[i] = Creator.Create(context);
@@ -110,7 +103,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     return population;
   }
 
-  private (RealVector[], int successfulOffspring) EvolvePopulation(Phenotype<RealVector, Fitness>[] population, double mutationStrength, Context context) {
+  private (RealVector[], int successfulOffspring) EvolvePopulation(Phenotype<RealVector, Fitness>[] population, double mutationStrength, AlgorithmContext<RealVectorEncoding> context) {
     var offspringPopulation = new RealVector[Children];
     for (int i = 0; i < Children; i++) {
       var parent = population[context.Random.Integer(PopulationSize)].Genotype;

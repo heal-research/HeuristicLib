@@ -21,6 +21,11 @@ public interface IRandomContext : IContext {
   IRandomNumberGenerator Random { get; }
 }
 
+public record AlgorithmContext<TEncoding> : IRandomContext, IEncodingContext<TEncoding> where TEncoding : IEncoding {
+  public required IRandomNumberGenerator Random { get; init; }
+  public required TEncoding Encoding { get; init; }
+}
+
 // public interface IEncodingOperator<TGenotype, out TEncoding> : IOperator where TEncoding : IEncoding<TGenotype, TEncoding> {
 //   TEncoding Encoding { get; }
 // }
