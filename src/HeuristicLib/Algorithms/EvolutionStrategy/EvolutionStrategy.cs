@@ -53,11 +53,6 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
   public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
   public IRandomSource RandomSource { get; }
 
-  public override EvolutionStrategyPopulationState Execute(EvolutionStrategyPopulationState? initialState = null) {
-    if (Terminator is null) throw new InvalidOperationException("Execute requires a terminator to be set.");
-    return CreateExecutionStream(initialState).Last();
-  }
-
   public override ExecutionStream<EvolutionStrategyPopulationState> CreateExecutionStream(EvolutionStrategyPopulationState? initialState = null) {
     return new ExecutionStream<EvolutionStrategyPopulationState>(InternalCreateExecutionStream(initialState));
   }

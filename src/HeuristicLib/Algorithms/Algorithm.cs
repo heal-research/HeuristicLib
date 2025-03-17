@@ -6,13 +6,16 @@ namespace HEAL.HeuristicLib.Algorithms;
 public interface IAlgorithm { }
 
 public interface IAlgorithm<TState> : IAlgorithm where TState : class, IState  {
-  TState? Execute(TState? initialState = null);
   ExecutionStream<TState> CreateExecutionStream(TState? initialState = null);
 }
 
+public static class AlgorithmExtensions {
+  public static TState? Execute<TState>(this IAlgorithm<TState> algorithm, TState? initialState = null, ITerminator<TState>? terminator = null) where TState : class, IState {
+    return algorithm.CreateExecutionStream(initialState).TakeWhile(state => terminator?.ShouldContinue(state) ?? true).LastOrDefault();
+  }
+}
+
 public abstract class AlgorithmBase<TState> : IAlgorithm<TState> where TState : class, IState {
-  public abstract TState? Execute(TState? initialState = null);
-  
   public abstract ExecutionStream<TState> CreateExecutionStream(TState? initialState = null);
 }
 

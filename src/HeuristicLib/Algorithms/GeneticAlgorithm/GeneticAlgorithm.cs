@@ -43,11 +43,6 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
   public IReplacer<TGenotype, Fitness, Goal> Replacer { get; }
   public IInterceptor<PopulationState<TGenotype, Fitness, Goal>> Interceptor { get; }
   
-  public override PopulationState<TGenotype, Fitness, Goal> Execute(PopulationState<TGenotype, Fitness, Goal>? initialState = null) {
-    if (Terminator is null) throw new InvalidOperationException("Execute requires a terminator to be set.");
-    return CreateExecutionStream(initialState).Last();
-  }
-
   public override ExecutionStream<PopulationState<TGenotype, Fitness, Goal>> CreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState = null) {
     return new ExecutionStream<PopulationState<TGenotype, Fitness, Goal>>(InternalCreateExecutionStream(initialState));
   }

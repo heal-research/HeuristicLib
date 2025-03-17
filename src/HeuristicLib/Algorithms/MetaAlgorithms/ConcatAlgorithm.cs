@@ -13,21 +13,7 @@ public abstract class MetaAlgorithm<TState> : AlgorithmBase<TState>where TState 
 
 public class ConcatAlgorithm<TState> : MetaAlgorithm<TState>where TState : class, IGenerationalState  {
   public ConcatAlgorithm(params IEnumerable<IAlgorithm<TState>> algorithms) : base(algorithms) { }
-
-  public override TState? Execute(TState? initialState = null) {
-    TState? currentState = initialState;
-    foreach (var remainingAlg in Algorithms) {
-      //if (termination is not null && currentState is not null && termination.ShouldTerminate(currentState)) {
-      if (currentState is null) {
-        break;
-      }
-      currentState = remainingAlg.Execute(currentState);
-      if (currentState is null) return null;
-      currentState = currentState.Reset<TState>();
-    }
-    return currentState;
-  }
-
+  
   public override ExecutionStream<TState> CreateExecutionStream(TState? initialState = null) {
     var stream = InternalCreateExecutionStream(initialState);
     // if (termination is not null) {
@@ -50,22 +36,6 @@ public class ConcatAlgorithm<TState> : MetaAlgorithm<TState>where TState : class
 
 public class CyclicAlgorithm<TState> : MetaAlgorithm<TState> where TState : class, IGenerationalState {
   public CyclicAlgorithm(params IEnumerable<IAlgorithm<TState>> algorithms) : base(algorithms) { }
-  
-  public override TState? Execute(TState? initialState = null) {
-    //if (termination is null) throw new InvalidOperationException("Cyclic Algorithms require a termination to avoid infinite loops.");
-    TState? currentState = initialState;
-    while (true) {
-      foreach (var algorithm in Algorithms) {
-        //if (currentState is not null && termination.ShouldTerminate(currentState)) {
-        if (currentState is not null) {
-          return currentState;
-        }
-        currentState = algorithm.Execute(currentState);
-        if (currentState is null) return null; // If an algorithm returns null we break the cyclic algorithm
-        currentState = currentState.Reset<TState>();
-      }
-    }
-  }
   
   public override ExecutionStream<TState> CreateExecutionStream(TState? initialState = null) {
     //if (termination is null) throw new InvalidOperationException("Cyclic Algorithms require a termination to avoid infinite loops.");
@@ -108,17 +78,6 @@ public class ConcatAlgorithm<TState, TSourceState, TTargetState> : AlgorithmBase
     Transformer = transformer;
   }
   
-  public override TTargetState? Execute(TState? initialState = null) {
-    if (initialState is not null && initialState is not TSourceState) throw new ArgumentException("Initial state must be of type TSourceState.", nameof(initialState));
-    
-    var sourceState = FirstAlgorithm.Execute(initialState as TSourceState);
-    if (sourceState is null) return null;
-    var initialTargetState = Transformer.Transform(sourceState);
-    // if (termination is not null && termination.ShouldTerminate(initialTargetState)) 
-    //   return initialTargetState;
-    var targetState = SecondAlgorithm.Execute(initialTargetState);
-    return targetState;
-  }
   public override ExecutionStream<TState> CreateExecutionStream(TState? initialState = null) {
     if (initialState is not null && initialState is not TSourceState) throw new ArgumentException("Initial state must be of type TSourceState.", nameof(initialState));
     var stream = InternalCreateExecutionStream(initialState as TSourceState);
@@ -157,31 +116,6 @@ public class CyclicAlgorithm<TState, TSourceState, TTargetState> : AlgorithmBase
     SecondAlgorithm = secondAlgorithm;
     Transformer = transformer;
     RepetitionTransformer = repetitionTransformer;
-  }
-
-  public override TState? Execute(TState? initialState = null) {
-    //if (termination is null) throw new InvalidOperationException("Cyclic Algorithms require a termination to avoid infinite loops.");
-    if (initialState is not null && initialState is not TSourceState) throw new ArgumentException("Initial state must be of type TSourceState.", nameof(initialState));
-
-    TSourceState? lastSourceState = initialState as TSourceState;
-    TTargetState? lastTargetState = null;
-
-    while (true) {
-      // if (lastSourceState is not null && termination.ShouldTerminate(lastSourceState))
-      //   return lastSourceState;
-      lastSourceState = FirstAlgorithm.Execute(lastSourceState);
-      if (lastSourceState is null) return null;
-      
-      lastTargetState = Transformer.Transform(lastSourceState, lastTargetState);
-
-      // if (termination.ShouldTerminate(lastTargetState))
-      //   return lastTargetState;
-      
-      lastTargetState = SecondAlgorithm.Execute(lastTargetState);
-      if (lastTargetState is null) return null;
-
-      lastSourceState = RepetitionTransformer.Transform(lastTargetState, lastSourceState);
-    }
   }
   
   public override ExecutionStream<TState> CreateExecutionStream(TState? initialState = null) {

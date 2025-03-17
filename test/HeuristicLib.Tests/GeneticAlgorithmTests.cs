@@ -111,6 +111,8 @@ public class GeneticAlgorithmTests {
     
     
     task.Status.ShouldBe(TaskStatus.RanToCompletion);
+    
+    finalState.ShouldNotBeNull();
     finalState.Generation.ShouldBeGreaterThan(0);
   }
   
