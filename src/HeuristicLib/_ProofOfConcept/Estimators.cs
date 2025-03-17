@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib._ProofOfConcept;
+﻿#if false
+
+namespace HEAL.HeuristicLib._ProofOfConcept;
 
 public interface IEstimator<out TModel, in TFeatures, in TTarget> 
   where TModel : IPredictor<TFeatures, TTarget> {
@@ -89,3 +91,5 @@ public static class EstimatorsExample {
     }
   }
 }
+
+#endif

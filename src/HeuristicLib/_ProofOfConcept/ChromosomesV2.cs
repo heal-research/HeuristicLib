@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib._ProofOfConcept.ChromosomesV2;
+﻿#if false
+
+namespace HEAL.HeuristicLib._ProofOfConcept.ChromosomesV2;
 
 public interface IGenotype {}
 
@@ -82,3 +84,5 @@ public class GeneticAlgorithm<TGenotype> where TGenotype : IGenotype {
 //   }
 // }
 #pragma warning restore S125
+
+#endif

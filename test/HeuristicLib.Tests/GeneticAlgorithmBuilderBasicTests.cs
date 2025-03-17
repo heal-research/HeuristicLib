@@ -15,14 +15,14 @@ public class GeneticAlgorithmBuilderBasicTests {
     var builder = new GeneticAlgorithmBuilder<RealVector, RealVectorEncoding>()
       .WithEncoding(encoding)
       .WithPopulationSize(200)
-      .WithCreator((encoding, randomSource) => new NormalDistributedCreator(encoding, 0, 0.5, randomSource))
-      .WithCrossover((encoding, randomSource) => new SinglePointCrossover(encoding, randomSource))
-      .WithMutator((encoding, randomSource) => new GaussianMutator(encoding, 0.1, 0.1, randomSource))
+      .WithCreator((encoding, randomSource) => new NormalDistributedCreator(0, 0.5))
+      .WithCrossover((encoding, randomSource) => new SinglePointCrossover())
+      .WithMutator((encoding, randomSource) => new GaussianMutator(0.1, 0.1))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
       .WithGoal(Goal.Minimize)
       .WithRandomSource(randomSource)
-      .WithSelector((randomSource) => new ProportionalSelector<RealVector>(randomSource))
+      .WithSelector((randomSource) => new ProportionalSelector<RealVector>())
       .WithReplacer((randomSource) => new PlusSelectionReplacer<RealVector>())
       .WithTerminator(Terminator.OnGeneration(20));
 

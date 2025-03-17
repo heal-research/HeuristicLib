@@ -1,4 +1,6 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿#if false
+
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Operators;
 
@@ -80,3 +82,5 @@ class AlgorithmModelExample
   //   Console.WriteLine($"Paused at generation {finalState.CurrentGeneration}");
   // }
 }
+
+#endif

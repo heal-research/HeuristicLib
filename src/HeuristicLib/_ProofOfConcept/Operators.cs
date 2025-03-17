@@ -1,8 +1,9 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿#if false
+
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings;
 
 namespace HEAL.HeuristicLib._ProofOfConcept;
-
 
 // Estimator
 public interface IOperatorTemplate<out TOperator, in TParameters>
@@ -53,3 +54,4 @@ public class UniformOnePositionMutator : IMutator<RealVector> {
   }
 }
 
+#endif

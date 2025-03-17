@@ -66,7 +66,7 @@ namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
 
 public class GeneticAlgorithmBuilder<TGenotype, TEncoding>
-  : IBuilder<GeneticAlgorithm<TGenotype>>
+  : IBuilder<GeneticAlgorithm<TGenotype, TEncoding>>
     //, IConsumer<GeneticAlgorithmSpec>,
     //IConsumer<TEncoding>
   where TEncoding : IEncoding<TGenotype, TEncoding> 
@@ -75,9 +75,9 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncoding>
   // Genetic Algorithm Params
   public TEncoding? Encoding { get; private set; }
   public int? PopulationSize { get; private set; }
-  public Func<TEncoding, IRandomSource, ICreator<TGenotype>>? CreatorFactory { get; private set; }
-  public Func<TEncoding, IRandomSource, ICrossover<TGenotype>>? CrossoverFactory { get; private set; }
-  public Func<TEncoding, IRandomSource, IMutator<TGenotype>>? MutatorFactory { get; private set; }
+  public Func<TEncoding, IRandomSource, ICreator<TGenotype, TEncoding>>? CreatorFactory { get; private set; }
+  public Func<TEncoding, IRandomSource, ICrossover<TGenotype, TEncoding>>? CrossoverFactory { get; private set; }
+  public Func<TEncoding, IRandomSource, IMutator<TGenotype, TEncoding>>? MutatorFactory { get; private set; }
   public double? MutationRate { get; private set; }
   public Func<IRandomSource, ISelector<TGenotype, Fitness, Goal>>? SelectorFactory { get; private set; }
   public Func<IRandomSource, IReplacer<TGenotype, Fitness, Goal>>? ReplacementFactory { get; private set; }
@@ -93,14 +93,15 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncoding>
   public IInterceptor<PopulationState<TGenotype, Fitness, Goal>>? Interceptor { get; private set; }
 
 
-  public GeneticAlgorithm<TGenotype> Build() {
+  public GeneticAlgorithm<TGenotype, TEncoding> Build() {
     var parametersAreSetValidator = new AllParametersAreSetValidator();
     var parametersAreSetValidationResult = parametersAreSetValidator.Validate(this);
     if (!parametersAreSetValidationResult.IsValid) throw new ValidationException(parametersAreSetValidationResult.Errors);
     
     // ToDo: resolved params validation
     
-    return new GeneticAlgorithm<TGenotype>(
+    return new GeneticAlgorithm<TGenotype, TEncoding>(
+      Encoding!,
       PopulationSize!.Value,
       CreatorFactory!.Invoke(Encoding!, RandomSource!),
       CrossoverFactory!.Invoke(Encoding!, RandomSource!),
@@ -119,12 +120,12 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncoding>
   
   public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithEncoding(TEncoding? encoding) { Encoding = encoding; return this; }
   public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithPopulationSize(int? populationSize) { PopulationSize = populationSize; return this; }
-  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithCreator(Func<TEncoding, IRandomSource, ICreator<TGenotype>>? creatorFactory) { CreatorFactory = creatorFactory; return this; }
-  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithCreator(ICreator<TGenotype>? creator) { CreatorFactory = creator != null ? (_, _) => creator : null; return this; }
-  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithCrossover(Func<TEncoding, IRandomSource, ICrossover<TGenotype>>? crossoverFactory) { CrossoverFactory = crossoverFactory; return this; }
-  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithCrossover(ICrossover<TGenotype>? crossover) { CrossoverFactory = crossover != null ? (_, _) => crossover : null; return this; }
-  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithMutator(Func<TEncoding, IRandomSource, IMutator<TGenotype>>? mutatorFactory) { MutatorFactory = mutatorFactory; return this; }
-  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithMutator(IMutator<TGenotype>? mutator) { MutatorFactory = mutator != null ? (_, _) => mutator : null; return this; }
+  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithCreator(Func<TEncoding, IRandomSource, ICreator<TGenotype, TEncoding>>? creatorFactory) { CreatorFactory = creatorFactory; return this; }
+  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithCreator(ICreator<TGenotype, TEncoding>? creator) { CreatorFactory = creator != null ? (_, _) => creator : null; return this; }
+  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithCrossover(Func<TEncoding, IRandomSource, ICrossover<TGenotype, TEncoding>>? crossoverFactory) { CrossoverFactory = crossoverFactory; return this; }
+  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithCrossover(ICrossover<TGenotype, TEncoding>? crossover) { CrossoverFactory = crossover != null ? (_, _) => crossover : null; return this; }
+  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithMutator(Func<TEncoding, IRandomSource, IMutator<TGenotype, TEncoding>>? mutatorFactory) { MutatorFactory = mutatorFactory; return this; }
+  public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithMutator(IMutator<TGenotype, TEncoding>? mutator) { MutatorFactory = mutator != null ? (_, _) => mutator : null; return this; }
   public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithMutationRate(double? mutationRate) { MutationRate = mutationRate; return this; }
   public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithSelector(Func<IRandomSource, ISelector<TGenotype, Fitness, Goal>>? selectorFactory) { SelectorFactory = selectorFactory; return this; }
   public GeneticAlgorithmBuilder<TGenotype, TEncoding> WithSelector(ISelector<TGenotype, Fitness, Goal>? selector) { SelectorFactory = selector != null ? _ => selector : null; return this; }
@@ -138,6 +139,7 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncoding>
   
   private sealed class AllParametersAreSetValidator : AbstractValidator<GeneticAlgorithmBuilder<TGenotype, TEncoding>> {
     public AllParametersAreSetValidator() {
+      RuleFor(x => x.Encoding).NotNull().WithMessage("Encoding must not be null.");
       RuleFor(x => x.PopulationSize).NotNull().WithMessage("Population size must not be null.");
       RuleFor(x => x.CreatorFactory).NotNull().WithMessage("Creator factory must not be null.");
       RuleFor(x => x.CrossoverFactory).NotNull().WithMessage("Crossover factory must not be null.");

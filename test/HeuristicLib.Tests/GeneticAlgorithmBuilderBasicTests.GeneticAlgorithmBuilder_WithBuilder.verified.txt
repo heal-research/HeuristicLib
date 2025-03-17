@@ -1,4 +1,13 @@
 ﻿{
+  Encoding: {
+    Length: 3,
+    Minimum: [
+      -5.0
+    ],
+    Maximum: [
+      5.0
+    ]
+  },
   PopulationSize: 200,
   Terminator: {
     $type: ThresholdTerminator<IGenerationalState>,
@@ -11,59 +20,20 @@
   },
   Creator: {
     $type: NormalDistributedCreator,
-    Encoding: {
-      Length: 3,
-      Minimum: [
-        -5.0
-      ],
-      Maximum: [
-        5.0
-      ]
-    },
     Means: [
       0.0
     ],
     Sigmas: [
       0.5
-    ],
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
+    ]
   },
   Crossover: {
-    $type: SinglePointCrossover,
-    Encoding: {
-      Length: 3,
-      Minimum: [
-        -5.0
-      ],
-      Maximum: [
-        5.0
-      ]
-    },
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
+    $type: SinglePointCrossover
   },
   Mutator: {
     $type: GaussianMutator,
-    Encoding: {
-      Length: 3,
-      Minimum: [
-        -5.0
-      ],
-      Maximum: [
-        5.0
-      ]
-    },
     MutationRate: 0.1,
-    MutationStrength: 0.1,
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
+    MutationStrength: 0.1
   },
   MutationRate: 0.05,
   Evaluator: {
@@ -76,10 +46,6 @@
   },
   Selector: {
     $type: ProportionalSelector<RealVector>,
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    },
     Windowing: true
   },
   Replacer: {

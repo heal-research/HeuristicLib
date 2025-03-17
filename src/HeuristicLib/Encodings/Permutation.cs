@@ -7,6 +7,7 @@ namespace HEAL.HeuristicLib.Encodings;
 
 public sealed record class PermutationEncoding : EncodingBase<Permutation, PermutationEncoding> {
   public int Length { get; }
+  
   public PermutationEncoding(int length) {
     Length = length;
   }
@@ -104,69 +105,94 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   }
 }
 
-public class RandomPermutationCreator : CreatorBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
-  public PermutationEncoding Encoding { get; }
-  public IRandomSource RandomSource { get; }
+public class RandomPermutationCreator : CreatorBase<Permutation, PermutationEncoding> {
+  // where TContext : IEncodingContext<PermutationEncoding>, IRandomContext {
+  // public PermutationEncoding Encoding { get; }
+  // public IRandomSource RandomSource { get; }
+  //
+  // public RandomPermutationCreator(PermutationEncoding encoding, IRandomSource randomSource) {
+  //   Encoding = encoding;
+  //   RandomSource = randomSource;
+  // }
+
+  public RandomPermutationCreator() {}
   
-  public RandomPermutationCreator(PermutationEncoding encoding, IRandomSource randomSource) {
-    Encoding = encoding;
-    RandomSource = randomSource;
-  }
-  
-  public override Permutation Create() {
-    var rng = RandomSource.CreateRandomNumberGenerator();
-    int[] elements = Enumerable.Range(0, Encoding.Length).ToArray();
+  public override Permutation Create<TContext>(TContext context) {
+    var rng = context.Random;
+    var encoding = context.Encoding;
+    int[] elements = Enumerable.Range(0, encoding.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
       int j = rng.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
     }
     return new Permutation(elements);
   }
+  
+  // public override Permutation Create() {
+  //   var rng = RandomSource.CreateRandomNumberGenerator();
+  //   int[] elements = Enumerable.Range(0, Encoding.Length).ToArray();
+  //   for (int i = elements.Length - 1; i > 0; i--) {
+  //     int j = rng.Integer(i + 1);
+  //     (elements[i], elements[j]) = (elements[j], elements[i]);
+  //   }
+  //   return new Permutation(elements);
+  // }
 }
 
-public class OrderCrossover : CrossoverBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
-  public PermutationEncoding Encoding { get; }
-  public IRandomSource RandomSource { get; }
+public class OrderCrossover : CrossoverBase<Permutation, PermutationEncoding> {
+  // public PermutationEncoding Encoding { get; }
+  // public IRandomSource RandomSource { get; }
+  //
+  // public OrderCrossover(PermutationEncoding encoding, IRandomSource randomSource) {
+  //   Encoding = encoding;
+  //   RandomSource = randomSource;
+  // }
   
-  public OrderCrossover(PermutationEncoding encoding, IRandomSource randomSource) {
-    Encoding = encoding;
-    RandomSource = randomSource;
-  }
-  
-  public override Permutation Cross(Permutation parent1, Permutation parent2) {
-    return Permutation.OrderCrossover(parent1, parent2, RandomSource.CreateRandomNumberGenerator());
-  }
-}
-
-public class SwapMutator : MutatorBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
-  public PermutationEncoding Encoding { get; }
-  public IRandomSource RandomSource { get; }
-  
-  public SwapMutator(PermutationEncoding encoding, IRandomSource randomSource) {
-    Encoding = encoding;
-    RandomSource = randomSource;
-  }
-  
-  public override Permutation Mutate(Permutation solution) {
-    return Permutation.SwapRandomElements(solution, RandomSource.CreateRandomNumberGenerator());
+  public override Permutation Cross<TContext>(Permutation parent1, Permutation parent2, TContext context) {
+    return Permutation.OrderCrossover(parent1, parent2, context.Random);
   }
 }
 
-public class InversionMutator : MutatorBase<Permutation>, IEncodingOperator<Permutation, PermutationEncoding> {
-  public PermutationEncoding Encoding { get; }
-  public IRandomSource RandomSource { get; }
+public class SwapMutator : MutatorBase<Permutation, PermutationEncoding> {
+  // public PermutationEncoding Encoding { get; }
+  // public IRandomSource RandomSource { get; }
+  //
+  // public SwapMutator(PermutationEncoding encoding, IRandomSource randomSource) {
+  //   Encoding = encoding;
+  //   RandomSource = randomSource;
+  // }
   
-  public InversionMutator(PermutationEncoding encoding, IRandomSource randomSource) {
-    Encoding = encoding;
-    RandomSource = randomSource;
+  public override Permutation Mutate<TContext>(Permutation solution, TContext context) {
+    return Permutation.SwapRandomElements(solution, context.Random);
   }
+}
+
+public class InversionMutator : MutatorBase<Permutation, PermutationEncoding> {
+  // public PermutationEncoding Encoding { get; }
+  // public IRandomSource RandomSource { get; }
   
-  public override Permutation Mutate(Permutation solution) {
-    var rng = RandomSource.CreateRandomNumberGenerator();
-    int start = rng.Integer(solution.Count);
-    int end = rng.Integer(start, solution.Count);
-    int[] newElements = solution.ToArray();
+  // public InversionMutator(PermutationEncoding encoding, IRandomSource randomSource) {
+  //   Encoding = encoding;
+  //   RandomSource = randomSource;
+  // }
+
+  public InversionMutator() {}
+  
+  public override Permutation Mutate<TContext>(Permutation parent, TContext context) {
+    var rng = context.Random;
+    int start = rng.Integer(parent.Count);
+    int end = rng.Integer(start, parent.Count);
+    int[] newElements = parent.ToArray();
     Array.Reverse(newElements, start, end - start + 1);
     return new Permutation(newElements);
   }
+  
+  // public override Permutation Mutate(Permutation solution) {
+  //   var rng = RandomSource.CreateRandomNumberGenerator();
+  //   int start = rng.Integer(solution.Count);
+  //   int end = rng.Integer(start, solution.Count);
+  //   int[] newElements = solution.ToArray();
+  //   Array.Reverse(newElements, start, end - start + 1);
+  //   return new Permutation(newElements);
+  // }
 }

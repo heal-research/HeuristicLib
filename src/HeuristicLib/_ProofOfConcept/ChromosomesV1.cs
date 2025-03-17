@@ -1,5 +1,6 @@
-﻿namespace HEAL.HeuristicLib._ProofOfConcept.ChromosomesV1;
+﻿#if false
 
+namespace HEAL.HeuristicLib._ProofOfConcept.ChromosomesV1;
 
 public interface IChromosome { }
 public class Permutation : IChromosome { }
@@ -52,5 +53,4 @@ public class OrderCrossover : ICrossover<Permutation> {
   public Permutation Crossover(Permutation parent1, Permutation parent2) { throw new NotImplementedException(); }
 }
 
-
-
+#endif

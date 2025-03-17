@@ -1,35 +1,17 @@
 ﻿{
+  Encoding: {
+    Length: 10
+  },
   PopulationSize: 5,
   Terminator: null,
   Creator: {
-    $type: RandomPermutationCreator,
-    Encoding: {
-      Length: 10
-    },
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
+    $type: RandomPermutationCreator
   },
   Crossover: {
-    $type: OrderCrossover,
-    Encoding: {
-      Length: 10
-    },
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
+    $type: OrderCrossover
   },
   Mutator: {
-    $type: InversionMutator,
-    Encoding: {
-      Length: 10
-    },
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
+    $type: InversionMutator
   },
   MutationRate: 0.1,
   Evaluator: {
@@ -42,11 +24,7 @@
   },
   Selector: {
     $type: TournamentSelector<Permutation>,
-    TournamentSize: 2,
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
+    TournamentSize: 2
   },
   Replacer: {
     $type: ElitismReplacer<Permutation>,

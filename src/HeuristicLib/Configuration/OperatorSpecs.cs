@@ -8,51 +8,51 @@ public abstract record OperatorSpec {
 }
 
 public abstract record CreatorSpec<TGenotype, TEncoding> : OperatorSpec where TEncoding : IEncoding<TGenotype, TEncoding> {
-  public abstract ICreator<TGenotype> Create(TEncoding encoding, IRandomSource randomSource);
+  public abstract ICreator<TGenotype, TEncoding> Create(TEncoding encoding, IRandomSource randomSource);
 }
 
 public record RandomPermutationCreatorSpec : CreatorSpec<Permutation, PermutationEncoding> {
-  public override ICreator<Permutation> Create(PermutationEncoding encoding, IRandomSource randomSource) => new RandomPermutationCreator(encoding, randomSource);
+  public override RandomPermutationCreator Create(PermutationEncoding encoding, IRandomSource randomSource) => new RandomPermutationCreator();
 }
 
 public record UniformRealVectorCreatorSpec(double[]? Minimum = null, double[]? Maximum = null) : CreatorSpec<RealVector, RealVectorEncoding> {
-  public override ICreator<RealVector> Create(RealVectorEncoding encoding, IRandomSource randomSource) => new UniformDistributedCreator(encoding, Minimum != null ? new RealVector(Minimum) : null, Maximum != null ? new RealVector(Maximum) : null, randomSource);
+  public override UniformDistributedCreator Create(RealVectorEncoding encoding, IRandomSource randomSource) => new UniformDistributedCreator(Minimum != null ? new RealVector(Minimum) : null, Maximum != null ? new RealVector(Maximum) : null);
 }
 
 public record NormalRealVectorCreatorSpec(double[]? Mean = null, double[]? StandardDeviation = null) : CreatorSpec<RealVector, RealVectorEncoding> {
-  public override ICreator<RealVector> Create(RealVectorEncoding encoding, IRandomSource randomSource) => new NormalDistributedCreator(encoding, Mean != null ? new RealVector(Mean) : 0.0, StandardDeviation != null ? new RealVector(StandardDeviation) : 1.0, randomSource);
+  public override NormalDistributedCreator Create(RealVectorEncoding encoding, IRandomSource randomSource) => new NormalDistributedCreator(Mean != null ? new RealVector(Mean) : 0.0, StandardDeviation != null ? new RealVector(StandardDeviation) : 1.0);
 }
 
 public abstract record CrossoverSpec<TGenotype, TEncoding> : OperatorSpec where TEncoding : IEncoding<TGenotype, TEncoding> {
-  public abstract ICrossover<TGenotype> Create(TEncoding encoding, IRandomSource randomSource);
+  public abstract ICrossover<TGenotype, TEncoding> Create(TEncoding encoding, IRandomSource randomSource);
 }
 
 public record OrderCrossoverSpec : CrossoverSpec<Permutation, PermutationEncoding> {
-  public override ICrossover<Permutation> Create(PermutationEncoding encoding, IRandomSource randomSource) => new OrderCrossover(encoding, randomSource);
+  public override OrderCrossover Create(PermutationEncoding encoding, IRandomSource randomSource) => new OrderCrossover();
 }
 
 public record SinglePointRealVectorCrossoverSpec : CrossoverSpec<RealVector, RealVectorEncoding> {
-  public override ICrossover<RealVector> Create(RealVectorEncoding encoding, IRandomSource randomSource) => new SinglePointCrossover(encoding, randomSource);
+  public override SinglePointCrossover Create(RealVectorEncoding encoding, IRandomSource randomSource) => new SinglePointCrossover();
 }
 
 public record AlphaBlendRealVectorCrossoverSpec(double? Alpha = null, double? Beta = null) : CrossoverSpec<RealVector, RealVectorEncoding> {
-  public override ICrossover<RealVector> Create(RealVectorEncoding encoding, IRandomSource randomSource) => new AlphaBetaBlendCrossover(encoding, Alpha, Beta);
+  public override AlphaBetaBlendCrossover Create(RealVectorEncoding encoding, IRandomSource randomSource) => new AlphaBetaBlendCrossover(Alpha, Beta);
 }
 
-public abstract record MutatorSpec<TGenotype, TEncoding> : OperatorSpec {
-  public abstract IMutator<TGenotype> Create(TEncoding encoding, IRandomSource randomSource);
+public abstract record MutatorSpec<TGenotype, TEncoding> : OperatorSpec where TEncoding : IEncoding<TGenotype, TEncoding>  {
+  public abstract IMutator<TGenotype, TEncoding> Create(TEncoding encoding, IRandomSource randomSource);
 }
 
 public record SwapMutatorSpec : MutatorSpec<Permutation, PermutationEncoding> {
-  public override IMutator<Permutation> Create(PermutationEncoding encoding, IRandomSource randomSource) => new SwapMutator(encoding, randomSource);
+  public override SwapMutator Create(PermutationEncoding encoding, IRandomSource randomSource) => new SwapMutator();
 }
 
 public record GaussianRealVectorMutatorSpec(double? Rate = null, double? Strength = null) : MutatorSpec<RealVector, RealVectorEncoding> {
-  public override IMutator<RealVector> Create(RealVectorEncoding encoding, IRandomSource randomSource) => new GaussianMutator(encoding, Rate ?? 0.1, Strength ?? 0.1, randomSource);
+  public override GaussianMutator Create(RealVectorEncoding encoding, IRandomSource randomSource) => new GaussianMutator(Rate ?? 0.1, Strength ?? 0.1);
 }
 
 public record InversionMutatorSpec : MutatorSpec<Permutation, PermutationEncoding> {
-  public override IMutator<Permutation> Create(PermutationEncoding encoding, IRandomSource randomSource) => new InversionMutator(encoding, randomSource);
+  public override InversionMutator Create(PermutationEncoding encoding, IRandomSource randomSource) => new InversionMutator();
 }
 
 public abstract record SelectorSpec<TGenotype, TFitness, TGoal> : OperatorSpec {
@@ -60,15 +60,15 @@ public abstract record SelectorSpec<TGenotype, TFitness, TGoal> : OperatorSpec {
 }
 
 public record RandomSelectorSpec<TGenotype, TFitness, TGoal> : SelectorSpec<TGenotype, TFitness, TGoal> {
-  public override ISelector<TGenotype, TFitness, TGoal> Create(IRandomSource randomSource) => new RandomSelector<TGenotype, TFitness, TGoal>(randomSource);
+  public override RandomSelector<TGenotype, TFitness, TGoal> Create(IRandomSource randomSource) => new RandomSelector<TGenotype, TFitness, TGoal>();
 }
 
 public record TournamentSelectorSpec<TGenotype>(int? TournamentSize = null) : SelectorSpec<TGenotype, Fitness, Goal> {
-  public override ISelector<TGenotype, Fitness, Goal> Create(IRandomSource randomSource) => new TournamentSelector<TGenotype>(TournamentSize ?? 2, randomSource);
+  public override TournamentSelector<TGenotype> Create(IRandomSource randomSource) => new TournamentSelector<TGenotype>(TournamentSize ?? 2);
 }
 
 public record ProportionalSelectorSpec<TGenotype>(bool Windowing = true) : SelectorSpec<TGenotype, Fitness, Goal> {
-  public override ISelector<TGenotype, Fitness, Goal> Create(IRandomSource randomSource) => new ProportionalSelector<TGenotype>(randomSource, Windowing);
+  public override ProportionalSelector<TGenotype> Create(IRandomSource randomSource) => new ProportionalSelector<TGenotype>(Windowing);
 }
 
 public abstract record ReplacerSpec<TGenotype, TFitness, TGoal> : OperatorSpec {
