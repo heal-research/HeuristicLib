@@ -1,6 +1,6 @@
 ﻿{
   Encoding: {
-    Length: 10
+    Length: 16
   },
   PopulationSize: 5,
   Terminator: null,
@@ -15,7 +15,7 @@
   },
   MutationRate: 0.1,
   Evaluator: {
-    $type: TravelingSalesmanProblem.Evaluator
+    $type: Evaluator<Permutation, Fitness>
   },
   Goal: Minimize,
   RandomSource: {

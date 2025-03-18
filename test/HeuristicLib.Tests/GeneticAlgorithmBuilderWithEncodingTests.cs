@@ -11,8 +11,7 @@ public class GeneticAlgorithmBuilderWithEncodingTests {
   
   [Fact]
   public Task GeneticAlgorithm_ShouldSolveTSPWithBuilder() {
-    var distances = new double[10, 10];
-    var problem = new TravelingSalesmanProblem(distances);
+    var problem = TravelingSalesmanProblem.CreateDefault();
     
     var builder = new GeneticAlgorithmBuilder<Permutation, PermutationEncoding>()
       .UsingProblem(problem)
