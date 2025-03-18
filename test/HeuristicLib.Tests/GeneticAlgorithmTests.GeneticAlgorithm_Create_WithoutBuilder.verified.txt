@@ -1,13 +1,4 @@
 ﻿{
-  Encoding: {
-    Length: 10,
-    Minimum: [
-      -5.0
-    ],
-    Maximum: [
-      5.0
-    ]
-  },
   PopulationSize: 200,
   Terminator: null,
   Creator: {
@@ -15,15 +6,36 @@
     Minimum: null,
     Maximum: [
       3.0
-    ]
+    ],
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    RandomSource: {
+      $type: FixedRandomSource,
+      Seed: 42
+    }
   },
   Crossover: {
-    $type: SinglePointCrossover
+    $type: SinglePointCrossover,
+    RandomSource: {
+      $type: FixedRandomSource,
+      Seed: 42
+    }
   },
   Mutator: {
     $type: GaussianMutator,
     MutationRate: 0.1,
-    MutationStrength: 0.1
+    MutationStrength: 0.1,
+    RandomSource: {
+      $type: FixedRandomSource,
+      Seed: 42
+    }
   },
   MutationRate: 0.05,
   Evaluator: {
@@ -35,7 +47,11 @@
     Seed: 42
   },
   Selector: {
-    $type: RandomSelector<RealVector, Fitness, Goal>
+    $type: RandomSelector<RealVector, Fitness, Goal>,
+    RandomSource: {
+      $type: FixedRandomSource,
+      Seed: 42
+    }
   },
   Replacer: {
     $type: PlusSelectionReplacer<RealVector>

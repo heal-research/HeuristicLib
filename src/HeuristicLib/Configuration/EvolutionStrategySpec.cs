@@ -1,6 +1,4 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
-using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
 namespace HEAL.HeuristicLib.Configuration;
 
@@ -8,12 +6,11 @@ public record EvolutionStrategySpec(
     int? PopulationSize = null,
     int? Children = null,
     EvolutionStrategyType? Strategy = null,
-    CreatorSpec<RealVector, RealVectorEncoding>? Creator = null,
-    CrossoverSpec<RealVector, RealVectorEncoding>? Crossover = null,
-    MutatorSpec<RealVector, RealVectorEncoding>? Mutator = null,
+    CreatorSpec? Creator = null,
+    CrossoverSpec? Crossover = null,
+    MutatorSpec? Mutator = null,
     double? InitialMutationStrength = null,
-    SelectorSpec<RealVector, Fitness, Goal>? Selector = null,
+    SelectorSpec? Selector = null,
     int? RandomSeed = null,
     int? MaximumGenerations = null
 ); 
-

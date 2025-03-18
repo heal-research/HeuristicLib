@@ -14,16 +14,16 @@ public class GeneticAlgorithmBuilderBasicTests {
     var encoding = new RealVectorEncoding(3, -5, +5);
     var builder = new GeneticAlgorithmBuilder<RealVector, RealVectorEncoding>()
       .WithEncoding(encoding)
+      .WithRandomSource(randomSource)
       .WithPopulationSize(200)
-      .WithCreator((encoding, randomSource) => new NormalDistributedCreator(0, 0.5))
-      .WithCrossover((encoding, randomSource) => new SinglePointCrossover())
-      .WithMutator((encoding, randomSource) => new GaussianMutator(0.1, 0.1))
+      .WithCreator(new NormalDistributedCreator.Factory(0, 0.5))
+      .WithCrossover(new SinglePointCrossover.Factory())
+      .WithMutator(new GaussianMutator.Factory(0.1, 0.1))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
       .WithGoal(Goal.Minimize)
-      .WithRandomSource(randomSource)
-      .WithSelector((randomSource) => new ProportionalSelector<RealVector>())
-      .WithReplacer((randomSource) => new PlusSelectionReplacer<RealVector>())
+      .WithSelector(new ProportionalSelector<RealVector>.Factory())
+      .WithReplacer(new PlusSelectionReplacer<RealVector>.Factory())
       .WithTerminator(Terminator.OnGeneration(20));
 
     var ga = builder.Build();
@@ -35,14 +35,14 @@ public class GeneticAlgorithmBuilderBasicTests {
   public Task GeneticAlgorithmBuilder_WithSpec() {
     var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(10, -5, +5);
-    var spec = new GeneticAlgorithmSpec<RealVector, RealVectorEncoding>(
+    var spec = new GeneticAlgorithmSpec(
       PopulationSize: 500,
       Creator: new NormalRealVectorCreatorSpec(Mean: [1.5]),
       Crossover: new SinglePointRealVectorCrossoverSpec(),
       Mutator: new GaussianRealVectorMutatorSpec(Rate: 0.1, Strength: 0.1),
       MutationRate: 0.05,
-      Selector: new TournamentSelectorSpec<RealVector>(TournamentSize: 4),
-      Replacer: new ElitistReplacerSpec<RealVector>(2)
+      Selector: new TournamentSelectorSpec(TournamentSize: 4),
+      Replacer: new ElitistReplacerSpec(2)
     );
     var builder = new GeneticAlgorithmBuilder<RealVector, RealVectorEncoding>()
       .WithGeneticAlgorithmSpec(spec)

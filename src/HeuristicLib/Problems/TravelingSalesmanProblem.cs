@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Configuration;
 using HEAL.HeuristicLib.Encodings;
@@ -48,8 +47,8 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, Fitness, Goal> 
     return new PermutationEncoding(ProblemData.NumberOfCities);
   }
 
-  public GeneticAlgorithmSpec<Permutation, PermutationEncoding> CreateGASpec() {
-    return new GeneticAlgorithmSpec<Permutation, PermutationEncoding> {
+  public GeneticAlgorithmSpec CreateGASpec() {
+    return new GeneticAlgorithmSpec {
       Creator = new RandomPermutationCreatorSpec(), 
       Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossoverSpec() : null, 
       Mutator = new InversionMutatorSpec(), 
@@ -116,6 +115,7 @@ public class TravelingSalesmanDistanceMatrixProblemData : TravelingSalesmanProbl
     return result;
   }
   
+  #pragma warning disable S2368
   public TravelingSalesmanDistanceMatrixProblemData(double[,] distances, TravelingSalesmanProblemInstanceInformation? instanceInformation = null)
     : base(distances.GetLength(0), instanceInformation)
   {
@@ -123,6 +123,7 @@ public class TravelingSalesmanDistanceMatrixProblemData : TravelingSalesmanProbl
     if (distances.GetLength(0) < 1) throw new ArgumentException("The distance matrix must have at least one city.");
     this.distances = (double[,])distances.Clone(); // clone distances to prevent modification
   }
+  #pragma warning restore S2368
 
   public override double GetDistance(int fromCity, int toCity) {
     return distances[fromCity, toCity];
@@ -141,7 +142,8 @@ public class TravelingSalesmanCoordinatesData : TravelingSalesmanProblemData {
     Coordinates = coordinates.ToArray(); // clone coordinates to prevent modification
     DistanceMetric = metric;
   }
-  
+
+  #pragma warning disable S2368
   public TravelingSalesmanCoordinatesData(double[,] coordinates, DistanceMetric metric = DistanceMetric.Euclidean, TravelingSalesmanProblemInstanceInformation? instanceInformation = null)
     : base(coordinates.GetLength(0), instanceInformation)
   {
@@ -155,7 +157,7 @@ public class TravelingSalesmanCoordinatesData : TravelingSalesmanProblemData {
     Coordinates = data;
     DistanceMetric = metric;
   }
-  
+  #pragma warning restore S2368
 
   public override double GetDistance(int fromCity, int toCity) {
     (double x1, double y1) = Coordinates[fromCity];

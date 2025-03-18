@@ -1,31 +1,25 @@
-﻿using HEAL.HeuristicLib.Encodings;
+﻿namespace HEAL.HeuristicLib.Operators;
 
-namespace HEAL.HeuristicLib.Operators;
-
-public interface ICrossover<TGenotype, in TEncoding> : IOperator
-  where TEncoding : IEncoding<TGenotype, TEncoding>
-{
-  TGenotype Cross<TContext>(TGenotype parent1, TGenotype parent2, TContext context) where TContext : IEncodingContext<TEncoding>, IRandomContext ;
+public interface ICrossover<TGenotype> : IOperator {
+  TGenotype Cross(TGenotype parent1, TGenotype parent2);
 }
-//
-// public static class Crossover {
-//   public static ICrossover<TGenotype> Create<TGenotype>(Func<TGenotype, TGenotype, TGenotype> crossover) => new Crossover<TGenotype>(crossover);
-// }
-//
-// public sealed class Crossover<TGenotype> : ICrossover<TGenotype> {
-//   private readonly Func<TGenotype, TGenotype, TGenotype> crossover;
-//   internal Crossover(Func<TGenotype, TGenotype, TGenotype> crossover) {
-//     this.crossover = crossover;
-//   }
-//   public TGenotype Cross(TGenotype parent1, TGenotype parent2) => crossover(parent1, parent2);
-// }
 
-
-public abstract class CrossoverBase<TGenotype, TEncoding> : ICrossover<TGenotype, TEncoding>
-  where TEncoding : IEncoding<TGenotype, TEncoding> {
-  public abstract TGenotype Cross<TContext>(TGenotype parent1, TGenotype parent2, TContext context) where TContext : IEncodingContext<TEncoding>, IRandomContext;
+public static class Crossover {
+  public static ICrossover<TGenotype> Create<TGenotype>(Func<TGenotype, TGenotype, TGenotype> crossover) => new Crossover<TGenotype>(crossover);
 }
-//
+
+public sealed class Crossover<TGenotype> : ICrossover<TGenotype> {
+  private readonly Func<TGenotype, TGenotype, TGenotype> crossover;
+  internal Crossover(Func<TGenotype, TGenotype, TGenotype> crossover) {
+    this.crossover = crossover;
+  }
+  public TGenotype Cross(TGenotype parent1, TGenotype parent2) => crossover(parent1, parent2);
+}
+
+public abstract class CrossoverBase<TGenotype> : ICrossover<TGenotype> {
+  public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2); 
+}
+
 // public interface IRecordEncoding<TRecordGenotype, TEncoding1, TEncoding2> : IEncoding<TRecordGenotype, IRecordEncoding<TRecordGenotype, TEncoding1, TEncoding2>> {
 //   TEncoding1 Encoding1 { get; }
 //   TEncoding2 Encoding2 { get; }

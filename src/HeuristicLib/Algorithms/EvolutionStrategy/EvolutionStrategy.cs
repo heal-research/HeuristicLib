@@ -14,19 +14,17 @@ public record EvolutionStrategyPopulationState : PopulationState<RealVector, Fit
 
 public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState> {
   public EvolutionStrategy(
-    RealVectorEncoding encoding,
     int populationSize,
     int children,
     EvolutionStrategyType strategy,
-    ICreator<RealVector, RealVectorEncoding> creator,
-    IMutator<RealVector, RealVectorEncoding> mutator,
+    ICreator<RealVector> creator,
+    IMutator<RealVector> mutator,
     double initialMutationStrength,
-    ICrossover<RealVector, RealVectorEncoding>? crossover, //int parentsPerChild,
+    ICrossover<RealVector>? crossover, //int parentsPerChild,
     IEvaluator<RealVector, Fitness> evaluator,
     Goal goal,
     ITerminator<EvolutionStrategyPopulationState>? terminator,
     IRandomSource randomSource) {
-    Encoding = encoding;
     PopulationSize = populationSize;
     Children = children;
     Strategy = strategy;
@@ -40,14 +38,13 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     RandomSource = randomSource;
   }
   
-  public RealVectorEncoding Encoding { get; }
   public int PopulationSize { get; }
   public int Children { get; }
   public EvolutionStrategyType Strategy { get; }
-  public ICreator<RealVector, RealVectorEncoding> Creator { get; }
-  public IMutator<RealVector, RealVectorEncoding> Mutator { get; }
+  public ICreator<RealVector> Creator { get; }
+  public IMutator<RealVector> Mutator { get; }
   public double InitialMutationStrength { get; }
-  public ICrossover<RealVector, RealVectorEncoding>? Crossover { get; }
+  public ICrossover<RealVector>? Crossover { get; }
   public IEvaluator<RealVector, Fitness> Evaluator { get; }
   public Goal Goal { get; }
   public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
@@ -58,11 +55,11 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
   }
   
   private IEnumerable<EvolutionStrategyPopulationState> InternalCreateExecutionStream(EvolutionStrategyPopulationState? initialState) {
-    var context = new AlgorithmContext<RealVectorEncoding> { Encoding = Encoding, Random = RandomSource.CreateRandomNumberGenerator() };
+    var random = RandomSource.CreateRandomNumberGenerator();
     
     EvolutionStrategyPopulationState currentState;
     if (initialState is null) {
-      var initialPopulation = InitializePopulation(context);
+      var initialPopulation = InitializePopulation();
       var evaluatedInitialPopulation = EvaluatePopulation(initialPopulation);
       yield return currentState = new EvolutionStrategyPopulationState { Goal = Goal, MutationStrength = InitialMutationStrength, Population = evaluatedInitialPopulation }; 
     } else {
@@ -70,7 +67,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     }
     
     while (Terminator?.ShouldContinue(currentState) ?? true) {
-      var (offspringPopulation, successfulOffspring) = EvolvePopulation(currentState.Population, currentState.MutationStrength, context);
+      var (offspringPopulation, successfulOffspring) = EvolvePopulation(currentState.Population, currentState.MutationStrength, random);
       var evaluatedOffspring = EvaluatePopulation(offspringPopulation);
 
       var newPopulation = Strategy switch {
@@ -90,25 +87,25 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     }
   }
 
-  private RealVector[] InitializePopulation(AlgorithmContext<RealVectorEncoding> context) {
+  private RealVector[] InitializePopulation() {
     var population = new RealVector[PopulationSize];
     for (int i = 0; i < PopulationSize; i++) {
-      population[i] = Creator.Create(context);
+      population[i] = Creator.Create();
     }
     return population;
   }
 
-  private (RealVector[], int successfulOffspring) EvolvePopulation(Phenotype<RealVector, Fitness>[] population, double mutationStrength, AlgorithmContext<RealVectorEncoding> context) {
+  private (RealVector[], int successfulOffspring) EvolvePopulation(Phenotype<RealVector, Fitness>[] population, double mutationStrength, IRandomNumberGenerator random) {
     var offspringPopulation = new RealVector[Children];
     for (int i = 0; i < Children; i++) {
-      var parent = population[context.Random.Integer(PopulationSize)].Genotype;
+      var parent = population[random.Integer(PopulationSize)].Genotype;
       // var offspring = Mutator is IAdaptableMutator<RealVector> adaptableMutator 
       //   ? adaptableMutator.Mutate(parent, mutationStrength) 
       //   : Mutator.Mutate(parent);
-      var offspring = Mutator.Mutate(parent, context);
+      var offspring = Mutator.Mutate(parent);
       offspringPopulation[i] = offspring;
     }
-    return (offspringPopulation, context.Random.Integer(Children, Children * 10));
+    return (offspringPopulation, random.Integer(Children, Children * 10));
     // actually calculate success rate
     // would require to evaluate individuals immediately or to store the parent for later comparison after child evaluation
   }

@@ -4,7 +4,6 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Encodings;
 
-
 public sealed record class PermutationEncoding : EncodingBase<Permutation, PermutationEncoding> {
   public int Length { get; }
   
@@ -105,22 +104,18 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   }
 }
 
-public class RandomPermutationCreator : CreatorBase<Permutation, PermutationEncoding> {
-  // where TContext : IEncodingContext<PermutationEncoding>, IRandomContext {
-  // public PermutationEncoding Encoding { get; }
-  // public IRandomSource RandomSource { get; }
-  //
-  // public RandomPermutationCreator(PermutationEncoding encoding, IRandomSource randomSource) {
-  //   Encoding = encoding;
-  //   RandomSource = randomSource;
-  // }
-
-  public RandomPermutationCreator() {}
+public class RandomPermutationCreator : CreatorBase<Permutation> {
+  public PermutationEncoding Encoding { get; }
+  public IRandomSource RandomSource { get; }
   
-  public override Permutation Create<TContext>(TContext context) {
-    var rng = context.Random;
-    var encoding = context.Encoding;
-    int[] elements = Enumerable.Range(0, encoding.Length).ToArray();
+  public RandomPermutationCreator(PermutationEncoding encoding, IRandomSource randomSource) {
+    Encoding = encoding;
+    RandomSource = randomSource;
+  }
+  
+  public override Permutation Create() {
+    var rng = RandomSource.CreateRandomNumberGenerator();
+    int[] elements = Enumerable.Range(0, Encoding.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
       int j = rng.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
@@ -128,20 +123,32 @@ public class RandomPermutationCreator : CreatorBase<Permutation, PermutationEnco
     return new Permutation(elements);
   }
   
-  // public override Permutation Create() {
-  //   var rng = RandomSource.CreateRandomNumberGenerator();
-  //   int[] elements = Enumerable.Range(0, Encoding.Length).ToArray();
-  //   for (int i = elements.Length - 1; i > 0; i--) {
-  //     int j = rng.Integer(i + 1);
-  //     (elements[i], elements[j]) = (elements[j], elements[i]);
-  //   }
-  //   return new Permutation(elements);
-  // }
+  public class Factory : IOperatorFactory<RandomPermutationCreator>, IEncodingDependentOperatorFactory<PermutationEncoding>, IStochasticOperatorFactory {
+    private PermutationEncoding? encoding;
+    private IRandomSource? randomSource;
+  
+    public void SetEncoding(PermutationEncoding encoding) => this.encoding = encoding;
+    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
+
+    public RandomPermutationCreator Create() {
+      if (encoding is null) throw new InvalidOperationException("Encoding must be set.");
+      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
+      return new RandomPermutationCreator(encoding, randomSource);
+    }
+  }
 }
 
-public class OrderCrossover : CrossoverBase<Permutation, PermutationEncoding> {
-  public override Permutation Cross<TContext>(Permutation parent1, Permutation parent2, TContext context) {
-    return Permutation.OrderCrossover(parent1, parent2, context.Random);
+
+public class OrderCrossover : CrossoverBase<Permutation> {
+  public IRandomSource RandomSource { get; }
+
+  public OrderCrossover(IRandomSource randomSource) {
+    RandomSource = randomSource;
+  }
+  
+  public override Permutation Cross(Permutation parent1, Permutation parent2) {
+    var rng = RandomSource.CreateRandomNumberGenerator();
+    return Permutation.OrderCrossover(parent1, parent2, rng);
   }
 
   public record BreakPoints(int First, int Second) {
@@ -170,35 +177,58 @@ public class OrderCrossover : CrossoverBase<Permutation, PermutationEncoding> {
     }
   }
   
-}
-
-public class SwapMutator : MutatorBase<Permutation, PermutationEncoding> {
-  // public PermutationEncoding Encoding { get; }
-  // public IRandomSource RandomSource { get; }
-  //
-  // public SwapMutator(PermutationEncoding encoding, IRandomSource randomSource) {
-  //   Encoding = encoding;
-  //   RandomSource = randomSource;
-  // }
-  
-  public override Permutation Mutate<TContext>(Permutation solution, TContext context) {
-    return Permutation.SwapRandomElements(solution, context.Random);
+  public class Factory : IOperatorFactory<OrderCrossover>, IStochasticOperatorFactory {
+    private IRandomSource? randomSource;
+    
+    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
+    
+    public OrderCrossover Create() {
+      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
+      return new OrderCrossover(randomSource);
+    }
   }
 }
 
-public class InversionMutator : MutatorBase<Permutation, PermutationEncoding> {
-  // public PermutationEncoding Encoding { get; }
-  // public IRandomSource RandomSource { get; }
+public class SwapMutator : MutatorBase<Permutation> {
+  public PermutationEncoding Encoding { get; }
+  public IRandomSource RandomSource { get; }
   
-  // public InversionMutator(PermutationEncoding encoding, IRandomSource randomSource) {
-  //   Encoding = encoding;
-  //   RandomSource = randomSource;
-  // }
+  public SwapMutator(PermutationEncoding encoding, IRandomSource randomSource) {
+    Encoding = encoding;
+    RandomSource = randomSource;
+  }
+  
+  public override Permutation Mutate(Permutation solution) {
+    var rng = RandomSource.CreateRandomNumberGenerator();
+    return Permutation.SwapRandomElements(solution, rng);
+  }
+  
+  public class Factory : IOperatorFactory<SwapMutator>, IEncodingDependentOperatorFactory<PermutationEncoding>, IStochasticOperatorFactory {
+    private PermutationEncoding? encoding;
+    private IRandomSource? randomSource;
+    
+    public void SetEncoding(PermutationEncoding encoding) => this.encoding = encoding;
+    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
+    
+    public SwapMutator Create() {
+      if (encoding is null) throw new InvalidOperationException("Encoding must be set.");
+      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
+      return new SwapMutator(encoding, randomSource);
+    }
+  }
+}
 
-  public InversionMutator() {}
+public class InversionMutator : MutatorBase<Permutation> {
+  public PermutationEncoding Encoding { get; }
+  public IRandomSource RandomSource { get; }
   
-  public override Permutation Mutate<TContext>(Permutation parent, TContext context) {
-    var rng = context.Random;
+  public InversionMutator(PermutationEncoding encoding, IRandomSource randomSource) {
+    Encoding = encoding;
+    RandomSource = randomSource;
+  }
+  
+  public override Permutation Mutate(Permutation parent) {
+    var rng = RandomSource.CreateRandomNumberGenerator();
     int start = rng.Integer(parent.Count);
     int end = rng.Integer(start, parent.Count);
     int[] newElements = parent.ToArray();
@@ -206,12 +236,17 @@ public class InversionMutator : MutatorBase<Permutation, PermutationEncoding> {
     return new Permutation(newElements);
   }
   
-  // public override Permutation Mutate(Permutation solution) {
-  //   var rng = RandomSource.CreateRandomNumberGenerator();
-  //   int start = rng.Integer(solution.Count);
-  //   int end = rng.Integer(start, solution.Count);
-  //   int[] newElements = solution.ToArray();
-  //   Array.Reverse(newElements, start, end - start + 1);
-  //   return new Permutation(newElements);
-  // }
+  public class Factory : IOperatorFactory<InversionMutator>, IEncodingDependentOperatorFactory<PermutationEncoding>, IStochasticOperatorFactory {
+    private PermutationEncoding? encoding;
+    private IRandomSource? randomSource;
+    
+    public void SetEncoding(PermutationEncoding encoding) => this.encoding = encoding;
+    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
+    
+    public InversionMutator Create() {
+      if (encoding is null) throw new InvalidOperationException("Encoding must be set.");
+      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
+      return new InversionMutator(encoding, randomSource);
+    }
+  }
 }

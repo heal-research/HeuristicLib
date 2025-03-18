@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Configuration;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
@@ -65,10 +64,10 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, Fitness, Go
     return new RealVectorEncoding(length: 2, min, max);
   }
   
-  public GeneticAlgorithmSpec<RealVector, RealVectorEncoding> CreateGeneticAlgorithmDefaultConfig() {
-    return new GeneticAlgorithmSpec<RealVector, RealVectorEncoding>(
+  public GeneticAlgorithmSpec CreateGeneticAlgorithmDefaultConfig() {
+    return new GeneticAlgorithmSpec(
       Creator: functionType == FunctionType.Sphere ? new UniformRealVectorCreatorSpec() : new NormalRealVectorCreatorSpec([5], [0.5]),
-      Crossover: new AlphaBlendRealVectorCrossoverSpec(Alpha: 0.8, Beta: 0.2),
+      Crossover: new AlphaBetaBlendRealVectorCrossoverSpec(Alpha: 0.8, Beta: 0.2),
       Mutator: new GaussianRealVectorMutatorSpec()
     );
   }

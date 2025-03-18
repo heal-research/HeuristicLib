@@ -43,6 +43,12 @@ public class PlusSelectionReplacer<TGenotype> : ReplacerBase<TGenotype, Fitness,
       .Take(previousPopulation.Length) // if algorithm population differs from previousPopulation.Length, it is not detected
       .ToArray();
   }
+
+  public class Factory : IOperatorFactory<IReplacer<TGenotype, Fitness, Goal>> {
+    public IReplacer<TGenotype, Fitness, Goal> Create() {
+      return new PlusSelectionReplacer<TGenotype>();
+    }
+  }
 }
 
 public class ElitismReplacer<TGenotype> : ReplacerBase<TGenotype, Fitness, Goal> {
@@ -64,5 +70,17 @@ public class ElitismReplacer<TGenotype> : ReplacerBase<TGenotype, Fitness, Goal>
     return elitesPopulation
       .Concat(offspringPopulation) // requires that offspring population size is correct
       .ToArray();
+  }
+
+  public class Factory : IOperatorFactory<IReplacer<TGenotype, Fitness, Goal>> {
+    private readonly int elites;
+    
+    public Factory(int? elites = null) {
+      this.elites = elites ?? 1;
+    }
+    
+    public IReplacer<TGenotype, Fitness, Goal> Create() {
+      return new ElitismReplacer<TGenotype>(elites);
+    }
   }
 }

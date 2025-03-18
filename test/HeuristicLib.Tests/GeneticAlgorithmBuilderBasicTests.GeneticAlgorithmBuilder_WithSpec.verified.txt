@@ -1,13 +1,4 @@
 ﻿{
-  Encoding: {
-    Length: 10,
-    Minimum: [
-      -5.0
-    ],
-    Maximum: [
-      5.0
-    ]
-  },
   PopulationSize: 500,
   Terminator: null,
   Creator: {
@@ -17,15 +8,36 @@
     ],
     Sigmas: [
       1.0
-    ]
+    ],
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
   },
   Crossover: {
-    $type: SinglePointCrossover
+    $type: SinglePointCrossover,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
   },
   Mutator: {
     $type: GaussianMutator,
     MutationRate: 0.1,
-    MutationStrength: 0.1
+    MutationStrength: 0.1,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
   },
   MutationRate: 0.05,
   Evaluator: {
@@ -38,7 +50,11 @@
   },
   Selector: {
     $type: TournamentSelector<RealVector>,
-    TournamentSize: 4
+    TournamentSize: 4,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    }
   },
   Replacer: {
     $type: ElitismReplacer<RealVector>,

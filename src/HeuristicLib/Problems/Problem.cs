@@ -2,7 +2,9 @@
 
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IProblem<in TGenotype, out TFitness, out TGoal> {
+public interface IProblem { }
+
+public interface IProblem<in TGenotype, out TFitness, out TGoal> : IProblem {
   TGoal Goal { get; } 
   TFitness Evaluate(TGenotype solution);
 }
@@ -16,14 +18,3 @@ public abstract class ProblemBase<TGenotype, TFitness, TGoal> : IProblem<TGenoty
     Goal = goal;
   }
 }
-
-//
-// public static class GeneticAlgorithmBuilderProblemExtension {
-//   public static GeneticAlgorithmBuilder<TEncoding, TGenotype> WithProblemDefinition<TEncoding, TGenotype>(this GeneticAlgorithmBuilder<TEncoding, TGenotype> builder, IProblem<TGenotype, ObjectiveValue> problem)
-//     where TEncoding : IEncoding<TGenotype>
-//   {
-//     //builder.WithEncodingBundle(problem.GetDefaultEncoding())
-//     builder.WithEvaluator(problem.CreateEvaluator());
-//     return builder;
-//   }
-// }

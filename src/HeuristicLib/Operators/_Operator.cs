@@ -1,38 +1,42 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators;
 
 public interface IOperator { }
 
+public interface IOperatorFactory { }
 
-// public abstract class OperatorBase<TGenotype> : IOperator<TGenotype> {
-//   protected OperatorBase() { }
-// }
-
-
-public interface IContext {}
-
-public interface IEncodingContext<out TEncoding> : IContext where TEncoding : IEncoding {
-  TEncoding Encoding { get; }
+public interface IOperatorFactory<out TOperator> : IOperatorFactory where TOperator : IOperator {
+  TOperator Create();
 }
 
-public interface IRandomContext : IContext {
-  IRandomNumberGenerator Random { get; }
+public class OperatorFactory<TOperator> : IOperatorFactory<TOperator> where TOperator : IOperator {
+  private readonly Func<TOperator> factory;
+  public OperatorFactory(Func<TOperator> factory) { this.factory = factory; }
+  public TOperator Create() => factory();
 }
 
-public record AlgorithmContext<TEncoding> : IRandomContext, IEncodingContext<TEncoding> where TEncoding : IEncoding {
-  public required IRandomNumberGenerator Random { get; init; }
-  public required TEncoding Encoding { get; init; }
+public static class OperatorFactory {
+  public static IOperatorFactory<TOperator> Create<TOperator>(Func<TOperator> factory) where TOperator : IOperator {
+    return new OperatorFactory<TOperator>(factory);
+  }
+  public static IOperatorFactory<TOperator> Create<TOperator>(TOperator @operator) where TOperator : IOperator {
+    return Create(() => @operator);
+  }
 }
 
-// public interface IEncodingOperator<TGenotype, out TEncoding> : IOperator where TEncoding : IEncoding<TGenotype, TEncoding> {
-//   TEncoding Encoding { get; }
-// }
-//
-// public abstract class EncodingOperator<TGenotype, TEncoding> : Operator, IEncodingOperator<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype, TEncoding> {
-//   public TEncoding Encoding { get; }
-//   protected EncodingOperator(TEncoding encoding) {
-//     Encoding = encoding;
-//   }
-// }
+
+public interface IStochasticOperatorFactory : IOperatorFactory {
+  void SetRandom(IRandomSource randomSource);
+}
+
+public interface IEncodingDependentOperatorFactory<in TEncoding> : IOperatorFactory where TEncoding : IEncoding {
+  void SetEncoding(TEncoding encoding);
+}
+
+public interface IProblemDependentOperatorFactory<in TProblem> : IOperatorFactory where TProblem : IProblem {
+  void SetProblem(TProblem problem);
+}
+

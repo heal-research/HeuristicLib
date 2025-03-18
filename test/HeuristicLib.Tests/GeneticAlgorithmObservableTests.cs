@@ -13,15 +13,15 @@ public class GeneticAlgorithmObservableTests {
   public Task GeneticAlgorithm_ObservableFromExecutionStream() {
     var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(2, -5, +5);
-    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
+    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0, encoding, randomSource);
+    var crossover = new SinglePointCrossover(randomSource);
+    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
     var evaluator = Evaluator.Create((RealVector vector) => new Fitness(vector.Sum()));
-    var selector = new RandomSelector<RealVector, Fitness, Goal>();
+    var selector = new RandomSelector<RealVector, Fitness, Goal>(randomSource);
     var replacement = new ElitismReplacer<RealVector>(0);
     var terminationCriterion = Terminator.OnGeneration(3);
     
-    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(encoding, 2, creator, crossover, mutator, 0.5, evaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
+    var ga = new GeneticAlgorithm<RealVector>(2, creator, crossover, mutator, 0.5, evaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
 
     var stream = ga.CreateExecutionStream();
 

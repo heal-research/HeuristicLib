@@ -3,18 +3,16 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationState<TGenotype, Fitness, Goal>> 
-  where TEncoding : IEncoding<TGenotype, TEncoding> {
+public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenotype, Fitness, Goal>> {
   
-  public GeneticAlgorithm(TEncoding encoding,
+  public GeneticAlgorithm(
     int populationSize,
-    ICreator<TGenotype, TEncoding> creator, ICrossover<TGenotype, TEncoding> crossover, IMutator<TGenotype, TEncoding> mutator, double mutationRate,
+    ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
     IEvaluator<TGenotype, Fitness> evaluator, Goal goal,
     ISelector<TGenotype, Fitness, Goal> selector, IReplacer<TGenotype, Fitness, Goal> replacer,
     IRandomSource randomSourceState,
     ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator = null, IInterceptor<PopulationState<TGenotype, Fitness, Goal>>? interceptor = null)
   {
-    Encoding = encoding;
     PopulationSize = populationSize;
     Creator = creator;
     Crossover = crossover;
@@ -29,12 +27,11 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
     Interceptor = interceptor ?? new IdentityInterceptor<PopulationState<TGenotype, Fitness, Goal>>();
   }
   
-  public TEncoding Encoding { get; }
   public int PopulationSize { get; }
   public ITerminator<PopulationState<TGenotype, Fitness, Goal>>? Terminator { get; }
-  public ICreator<TGenotype, TEncoding> Creator { get; }
-  public ICrossover<TGenotype, TEncoding> Crossover { get; }
-  public IMutator<TGenotype, TEncoding> Mutator { get; }
+  public ICreator<TGenotype> Creator { get; }
+  public ICrossover<TGenotype> Crossover { get; }
+  public IMutator<TGenotype> Mutator { get; }
   public double MutationRate { get; }
   public IEvaluator<TGenotype, Fitness> Evaluator { get; }
   public Goal Goal { get; }
@@ -48,7 +45,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
   }
 
   private IEnumerable<PopulationState<TGenotype, Fitness, Goal>> InternalCreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState) {
-    var context = new AlgorithmContext<TEncoding>() { Random = RandomSource.CreateRandomNumberGenerator(), Encoding = Encoding };
+    var random = RandomSource.CreateRandomNumberGenerator();
     
     int offspringCount = Replacer.GetOffspringCount(PopulationSize);
 
@@ -56,7 +53,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
     if (initialState is not null) {
       currentState = initialState;
     } else {
-      var initialPopulation = InitializePopulation(context);
+      var initialPopulation = InitializePopulation();
       var evaluatedPopulation = EvaluatePopulation(initialPopulation);
       currentState = new PopulationState<TGenotype, Fitness, Goal> { Population = evaluatedPopulation, Goal = Goal };
       currentState = Interceptor.Transform(currentState);
@@ -64,7 +61,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
     }
 
     while (Terminator?.ShouldContinue(currentState) ?? true) {
-      var offsprings = EvolvePopulation(currentState.Population, offspringCount, context);
+      var offsprings = EvolvePopulation(currentState.Population, offspringCount, random);
       var evaluatedOffsprings = EvaluatePopulation(offsprings);
 
       var newPopulation = Replacer.Replace(currentState.Population, evaluatedOffsprings, Goal);
@@ -76,24 +73,24 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
     }
   }
 
-  private TGenotype[] InitializePopulation(AlgorithmContext<TEncoding> context) {
+  private TGenotype[] InitializePopulation() {
     var population = new TGenotype[PopulationSize];
     for (int i = 0; i < PopulationSize; i++) {
-      population[i] = Creator.Create(context);
+      population[i] = Creator.Create();
     }
     return population;
   }
 
-  private TGenotype[] EvolvePopulation(Phenotype<TGenotype, Fitness>[] population, int offspringCount, AlgorithmContext<TEncoding> context) {
+  private TGenotype[] EvolvePopulation(Phenotype<TGenotype, Fitness>[] population, int offspringCount, IRandomNumberGenerator random) {
     var newPopulation = new TGenotype[offspringCount];
-    var parents = Selector.Select(population, Goal, offspringCount * 2, context).Select(p => p.Genotype).ToList();
+    var parents = Selector.Select(population, Goal, offspringCount * 2).Select(p => p.Genotype).ToList();
   
     for (int i = 0; i < parents.Count; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
-      var offspring = Crossover.Cross(parent1, parent2, context);
-      if (context.Random.Random() < MutationRate) {
-        offspring = Mutator.Mutate(offspring, context);
+      var offspring = Crossover.Cross(parent1, parent2);
+      if (random.Random() < MutationRate) {
+        offspring = Mutator.Mutate(offspring);
       }
       newPopulation[i / 2] = offspring;
     }
@@ -106,5 +103,4 @@ public class GeneticAlgorithm<TGenotype, TEncoding> : AlgorithmBase<PopulationSt
       return new Phenotype<TGenotype, Fitness>(genotype, fitness);
     }).ToArray();
   }
-  
 }
