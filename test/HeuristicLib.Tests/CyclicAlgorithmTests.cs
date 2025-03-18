@@ -49,7 +49,7 @@ public class CyclicAlgorithmTests {
     var ga3 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
       encoding,
       populationSize: 3,
-      creator: new UniformDistributedCreator( null, null),
+      creator: new UniformDistributedCreator(null, null),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5),
       mutationRate: 0.8,
