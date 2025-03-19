@@ -1,21 +1,18 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Configuration;
 using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
 
-public class TravelingSalesmanProblem : ProblemBase<Permutation, Fitness, Goal> {
+public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation, Fitness, Goal> {
   public ITravelingSalesmanProblemData ProblemData { get; }
 
-  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(Goal.Minimize) {
+  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(new Mapper(), Goal.Minimize) {
     ProblemData = problemData;
   }
 
-  public override Fitness Evaluate(Permutation solution) {
-    var tour = solution;
+  public override Fitness Evaluate(Tour solution) {
+    var tour = solution.Cities;
     double totalDistance = 0.0;
     for (int i = 0; i < tour.Count - 1; i++) {
       totalDistance += ProblemData.GetDistance(tour[i], tour[i + 1]);
@@ -24,13 +21,13 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, Fitness, Goal> 
     return totalDistance;
   }
 
-  public bool IsValidSolution(Permutation solution) {
-    return solution.Count == ProblemData.NumberOfCities;
-  }
+  // public bool IsValidSolution(Permutation solution) {
+  //   return solution.Count == ProblemData.NumberOfCities;
+  // }
 
-  public override IEvaluator<Permutation, Fitness> CreateEvaluator() {
-    return Evaluator.Create<Permutation, Fitness>(Evaluate);
-  }
+  // public override IEvaluator<Permutation, Fitness> CreateEvaluator() {
+  //   return Evaluator.Create<Permutation, Fitness>(Evaluate);
+  // }
 
   public static TravelingSalesmanProblem CreateDefault() {
     var problemData = new TravelingSalesmanCoordinatesData(DefaultProblemData);
@@ -44,36 +41,47 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, Fitness, Goal> 
   };
   
   public PermutationEncoding CreatePermutationEncoding() {
-    return new PermutationEncoding(ProblemData.NumberOfCities);
-  }
-
-  public GeneticAlgorithmSpec CreateGASpec() {
-    return new GeneticAlgorithmSpec {
-      Creator = new RandomPermutationCreatorSpec(), 
-      Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossoverSpec() : null, 
-      Mutator = new InversionMutatorSpec(), 
-      MutationRate = 0.10
+    var parameter =  new PermutationEncodingParameter(ProblemData.NumberOfCities);
+    return new PermutationEncoding(parameter) {
+      Creator = new RandomPermutationCreator(parameter, null!),
+      Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossover(null!) : new PartiallyMatchedCrossover(null!),
+      Mutator = new InversionMutator(parameter, null!)
+      // ToDo: mutation rate default
     };
   }
-}
 
-public static class GeneticAlgorithmBuilderTravelingSalesmanProblemExtensions {
-  public static GeneticAlgorithmBuilder<Permutation, PermutationEncoding> UsingProblem(this GeneticAlgorithmBuilder<Permutation, PermutationEncoding> builder, TravelingSalesmanProblem problem) {
-    builder.WithEvaluator(problem.CreateEvaluator());
-    builder.WithGoal(problem.Goal);
-    builder.WithEncoding(problem.CreatePermutationEncoding());
-    builder.WithGeneticAlgorithmSpec(problem.CreateGASpec());
-    return builder;
+  // public GeneticAlgorithmSpec CreateGASpec() {
+  //   return new GeneticAlgorithmSpec {
+  //     Creator = new RandomPermutationCreatorSpec(), 
+  //     Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossoverSpec() : null, 
+  //     Mutator = new InversionMutatorSpec(), 
+  //     MutationRate = 0.10
+  //   };
+  // }
+  
+  private class Mapper : IGenotypeMapper<Permutation, Tour> {
+    public Permutation Encode(Tour solution) => new(solution.Cities);
+    public Tour Decode(Permutation genotype) => new(genotype);
   }
 }
 
-
-// public class Tour {
-//   public IReadOnlyList<int> Cities { get; }
-//   public Tour(IEnumerable<int> cities) {
-//     Cities = cities.ToList();
+// public static class GeneticAlgorithmBuilderTravelingSalesmanProblemExtensions {
+//   public static GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> UsingProblem(this GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> builder, TravelingSalesmanProblem problem) {
+//     builder.WithEvaluator(problem.CreateEvaluator());
+//     builder.WithGoal(problem.Goal);
+//     builder.WithEncoding(problem.CreatePermutationEncoding());
+//     builder.WithGeneticAlgorithmSpec(problem.CreateGASpec());
+//     return builder;
 //   }
 // }
+
+
+public class Tour {
+  public IReadOnlyList<int> Cities { get; }
+  public Tour(IEnumerable<int> cities) {
+    Cities = cities.ToList();
+  }
+}
 
 public interface ITravelingSalesmanProblemData {
   int NumberOfCities { get; }

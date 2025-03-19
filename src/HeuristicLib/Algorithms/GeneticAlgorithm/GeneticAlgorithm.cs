@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
@@ -54,7 +53,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
       currentState = initialState;
     } else {
       var initialPopulation = InitializePopulation();
-      var evaluatedPopulation = EvaluatePopulation(initialPopulation);
+      var evaluatedPopulation = Evaluator.Evaluate(initialPopulation);
       currentState = new PopulationState<TGenotype, Fitness, Goal> { Population = evaluatedPopulation, Goal = Goal };
       currentState = Interceptor.Transform(currentState);
       yield return currentState;
@@ -62,7 +61,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
 
     while (Terminator?.ShouldContinue(currentState) ?? true) {
       var offsprings = EvolvePopulation(currentState.Population, offspringCount, random);
-      var evaluatedOffsprings = EvaluatePopulation(offsprings);
+      var evaluatedOffsprings = Evaluator.Evaluate(offsprings);
 
       var newPopulation = Replacer.Replace(currentState.Population, evaluatedOffsprings, Goal);
 
@@ -95,12 +94,5 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
       newPopulation[i / 2] = offspring;
     }
     return newPopulation;
-  }
-
-  private Phenotype<TGenotype, Fitness>[] EvaluatePopulation(TGenotype[] population) {
-    return population.Select(genotype => {
-      var fitness = Evaluator.Evaluate(genotype);
-      return new Phenotype<TGenotype, Fitness>(genotype, fitness);
-    }).ToArray();
   }
 }

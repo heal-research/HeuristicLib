@@ -13,14 +13,14 @@ public class CyclicAlgorithmTests {
   public Task ConcatAlgorithm_WithGA() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingEncoding();
-    var evaluator = problem.CreateEvaluator();
+    var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var ga1 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
       creator: new UniformDistributedCreator(null, null, encoding, randomSource),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
@@ -34,7 +34,7 @@ public class CyclicAlgorithmTests {
       populationSize: 2,
       creator: new UniformDistributedCreator(null, null, encoding, randomSource),
       crossover: new AlphaBetaBlendCrossover(0.5, 0.5),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
@@ -48,7 +48,7 @@ public class CyclicAlgorithmTests {
       populationSize: 3,
       creator: new UniformDistributedCreator(null, null, encoding, randomSource),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
       mutationRate: 0.8,
       evaluator: evaluator,
       Goal.Minimize,
@@ -73,14 +73,14 @@ public class CyclicAlgorithmTests {
   public Task CyclicAlgorithm_WithGA() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingEncoding();
-    var evaluator = problem.CreateEvaluator();
+    var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var ga1 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
       creator: new UniformDistributedCreator(null, null, encoding, randomSource),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
@@ -94,7 +94,7 @@ public class CyclicAlgorithmTests {
       populationSize: 2,
       creator: new UniformDistributedCreator(null, null, encoding, randomSource),
       crossover: new AlphaBetaBlendCrossover(0.5, 0.5),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
@@ -108,7 +108,7 @@ public class CyclicAlgorithmTests {
       populationSize: 3,
       creator: new UniformDistributedCreator(null, null, encoding, randomSource),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
       mutationRate: 0.8,
       evaluator: evaluator,
       Goal.Minimize,
@@ -132,7 +132,7 @@ public class CyclicAlgorithmTests {
   public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingEncoding();
-    var evaluator = problem.CreateEvaluator();
+    var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var evolutionStrategy = new EvolutionStrategy(
@@ -140,7 +140,7 @@ public class CyclicAlgorithmTests {
       children: 20,
       strategy: EvolutionStrategyType.Comma,
       creator: new NormalDistributedCreator(0.0, 1.0, encoding, randomSource),
-      mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, randomSource),
+      mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, encoding, randomSource),
       initialMutationStrength: 0.1,
       crossover: null,
       evaluator: evaluator,
@@ -153,7 +153,7 @@ public class CyclicAlgorithmTests {
       populationSize: 10,
       creator: new UniformDistributedCreator(null, null, encoding, randomSource),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,

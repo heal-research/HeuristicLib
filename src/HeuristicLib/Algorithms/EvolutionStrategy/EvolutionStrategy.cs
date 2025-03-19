@@ -60,7 +60,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     EvolutionStrategyPopulationState currentState;
     if (initialState is null) {
       var initialPopulation = InitializePopulation();
-      var evaluatedInitialPopulation = EvaluatePopulation(initialPopulation);
+      var evaluatedInitialPopulation = Evaluator.Evaluate(initialPopulation);
       yield return currentState = new EvolutionStrategyPopulationState { Goal = Goal, MutationStrength = InitialMutationStrength, Population = evaluatedInitialPopulation }; 
     } else {
       currentState = initialState;
@@ -68,7 +68,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     
     while (Terminator?.ShouldContinue(currentState) ?? true) {
       var (offspringPopulation, successfulOffspring) = EvolvePopulation(currentState.Population, currentState.MutationStrength, random);
-      var evaluatedOffspring = EvaluatePopulation(offspringPopulation);
+      var evaluatedOffspring = Evaluator.Evaluate(offspringPopulation);
 
       var newPopulation = Strategy switch {
         EvolutionStrategyType.Comma => evaluatedOffspring,
@@ -109,14 +109,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     // actually calculate success rate
     // would require to evaluate individuals immediately or to store the parent for later comparison after child evaluation
   }
-
-  private Phenotype<RealVector, Fitness>[] EvaluatePopulation(RealVector[] population) {
-    return population.Select(individual => {
-      var fitness = Evaluator.Evaluate(individual);
-      return new Phenotype<RealVector, Fitness>(individual, fitness);
-    }).ToArray();
-  }
-
+  
   private Phenotype<RealVector, Fitness>[] CombinePopulations(Phenotype<RealVector, Fitness>[] parents, Phenotype<RealVector, Fitness>[] offspring) {
     return parents.Concat(offspring)
       .Take(PopulationSize)

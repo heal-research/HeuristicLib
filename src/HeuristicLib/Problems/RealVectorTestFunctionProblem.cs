@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class RealVectorTestFunctionProblem : ProblemBase<RealVector, Fitness, Goal> {
+public class RealVectorTestFunctionProblem : ProblemBase<RealVector, RealVector, Fitness, Goal> {
   public enum FunctionType {
     Rastrigin,
     Sphere
@@ -15,7 +15,9 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, Fitness, Go
   private readonly double min;
   private readonly double max;
 
-  public RealVectorTestFunctionProblem(FunctionType functionType, double min, double max) : base(Goal.Minimize) {
+  public RealVectorTestFunctionProblem(FunctionType functionType, double min, double max) 
+    : base(GenotypeMapper.Identity<RealVector>(), Goal.Minimize) 
+  {
     this.functionType = functionType;
     this.min = min;
     this.max = max;
@@ -30,21 +32,21 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, Fitness, Go
     return fitness;
   }
 
-  public override IEvaluator<RealVector, Fitness> CreateEvaluator() {
-    return new Evaluator(this);
-  }
+  // public override IEvaluator<RealVector, Fitness> CreateEvaluator() {
+  //   return new Evaluator(this);
+  // }
 
-  private sealed class Evaluator : EvaluatorBase<RealVector, Fitness>  {
-    private readonly RealVectorTestFunctionProblem problem;
-
-    public Evaluator(RealVectorTestFunctionProblem problem) {
-      this.problem = problem;
-    }
-
-    public override Fitness Evaluate(RealVector solution) {
-      return problem.Evaluate(solution);
-    }
-  }
+  // private sealed class Evaluator : EvaluatorBase<RealVector, Fitness>  {
+  //   private readonly RealVectorTestFunctionProblem problem;
+  //
+  //   public Evaluator(RealVectorTestFunctionProblem problem) {
+  //     this.problem = problem;
+  //   }
+  //
+  //   public override Fitness Evaluate(RealVector solution) {
+  //     return problem.Evaluate(solution);
+  //   }
+  // }
 
   private static double EvaluateRastrigin(RealVector solution) {
     int n = solution.Count;
@@ -60,17 +62,17 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, Fitness, Go
     return solution.Sum(x => x * x);
   }
 
-  public RealVectorEncoding CreateRealVectorEncodingEncoding() {
-    return new RealVectorEncoding(length: 2, min, max);
+  public RealVectorEncodingParameter CreateRealVectorEncodingEncoding() {
+    return new RealVectorEncodingParameter(length: 2, min, max);
   }
   
-  public GeneticAlgorithmSpec CreateGeneticAlgorithmDefaultConfig() {
-    return new GeneticAlgorithmSpec(
-      Creator: functionType == FunctionType.Sphere ? new UniformRealVectorCreatorSpec() : new NormalRealVectorCreatorSpec([5], [0.5]),
-      Crossover: new AlphaBetaBlendRealVectorCrossoverSpec(Alpha: 0.8, Beta: 0.2),
-      Mutator: new GaussianRealVectorMutatorSpec()
-    );
-  }
+  // public GeneticAlgorithmSpec CreateGeneticAlgorithmDefaultConfig() {
+  //   return new GeneticAlgorithmSpec(
+  //     Creator: functionType == FunctionType.Sphere ? new UniformRealVectorCreatorSpec() : new NormalRealVectorCreatorSpec([5], [0.5]),
+  //     Crossover: new AlphaBetaBlendRealVectorCrossoverSpec(Alpha: 0.8, Beta: 0.2),
+  //     Mutator: new GaussianRealVectorMutatorSpec()
+  //   );
+  // }
 }
 
 // public static class GeneticAlgorithmBuilderRealVectorTestFunctionExtensions {

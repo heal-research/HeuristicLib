@@ -7,7 +7,7 @@
     Maximum: [
       3.0
     ],
-    Encoding: {
+    EncodingParameter: {
       Length: 10,
       Minimum: [
         -5.0
@@ -32,6 +32,15 @@
     $type: GaussianMutator,
     MutationRate: 0.1,
     MutationStrength: 0.1,
+    Encoding: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
     RandomSource: {
       $type: FixedRandomSource,
       Seed: 42

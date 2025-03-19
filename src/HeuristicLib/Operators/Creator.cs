@@ -19,4 +19,3 @@ public sealed class Creator<TGenotype> : ICreator<TGenotype> {
 public abstract class CreatorBase<TGenotype> : ICreator<TGenotype> {
   public abstract TGenotype Create();
 }
-

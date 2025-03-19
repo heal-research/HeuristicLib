@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
 namespace HEAL.HeuristicLib.Encodings;
 
@@ -6,12 +7,12 @@ using System.Collections;
 using Algorithms;
 using Operators;
 
-public record class RealVectorEncoding : EncodingBase<RealVector, RealVectorEncoding> {
+public record class RealVectorEncodingParameter : EncodingParameterBase<RealVector> {
   public int Length { get; }
   public RealVector Minimum { get; }
   public RealVector Maximum { get; }
 
-  public RealVectorEncoding(int length, RealVector minimum, RealVector maximum) {
+  public RealVectorEncodingParameter(int length, RealVector minimum, RealVector maximum) {
     if (!RealVector.AreCompatible(length, minimum, maximum)) throw new ArgumentException("Minimum and Maximum vector must be of length 1 or match the encoding length");
     Length = length;
     Minimum = minimum;
@@ -56,11 +57,18 @@ public class AlphaBetaBlendCrossover : CrossoverBase<RealVector> {
     return Alpha * parent1 + Beta * parent2;
   }
 
-  public class Factory : IOperatorFactory<AlphaBetaBlendCrossover> {
-    private readonly double? alpha, beta;
-    public Factory(double? alpha, double? beta) { this.beta = beta; this.alpha = alpha; }
-
-    public AlphaBetaBlendCrossover Create() => new AlphaBetaBlendCrossover(alpha, beta);
+  public class Factory : IEncodingParameterDependentOperatorFactory<AlphaBetaBlendCrossover, RealVectorEncodingParameter> {
+    private readonly double? alpha;
+    private readonly double? beta;
+    
+    public Factory(double? alpha, double? beta) {
+      this.alpha = alpha;
+      this.beta = beta;
+    }
+    
+    public AlphaBetaBlendCrossover Create(RealVectorEncodingParameter parameter, IRandomSource randomSource) {
+      return new AlphaBetaBlendCrossover(alpha, beta); 
+    }
   }
 }
 
@@ -332,15 +340,15 @@ public class RealVector : IReadOnlyList<double> {
 }
 
 public class GaussianMutator : MutatorBase<RealVector> {
-  //public RealVectorEncoding Encoding { get; }
   public double MutationRate { get; }
   public double MutationStrength { get; }
+  public RealVectorEncodingParameter Encoding { get; }
   public IRandomSource RandomSource { get; }
 
-  public GaussianMutator(/*RealVectorEncoding encoding, */double mutationRate, double mutationStrength, IRandomSource randomSource) {
-    //this.Encoding = encoding;
+  public GaussianMutator(double mutationRate, double mutationStrength, RealVectorEncodingParameter encoding, IRandomSource randomSource) {
     MutationRate = mutationRate;
     MutationStrength = mutationStrength;
+    Encoding = encoding;
     RandomSource = randomSource;
   }
 
@@ -352,24 +360,21 @@ public class GaussianMutator : MutatorBase<RealVector> {
         newElements[i] += MutationStrength * (rng.Random() - 0.5);
       }
     }
-    return new RealVector(newElements);
+    return RealVector.Clamp(new RealVector(newElements), Encoding.Minimum, Encoding.Maximum);
   }
 
-  public class Factory : IOperatorFactory<GaussianMutator>, IStochasticOperatorFactory {
+  public class Factory : IEncodingParameterDependentOperatorFactory<GaussianMutator, RealVectorEncodingParameter> {
     private readonly double? rate;
     private readonly double? strength;
-    private IRandomSource? randomSource;
+    
     
     public Factory(double? rate = null, double? strength = null) {
       this.rate = rate;
       this.strength = strength;
     }
     
-    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
-    
-    public GaussianMutator Create() {
-      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
-      return new GaussianMutator(rate ?? 1.0, strength ?? 1.0, randomSource);
+    public GaussianMutator Create(RealVectorEncodingParameter encodingParameter, IRandomSource randomSource) {
+      return new GaussianMutator(rate ?? 1.0, strength ?? 1.0, encodingParameter, randomSource);
     }
   }
 }
@@ -396,13 +401,8 @@ public class SinglePointCrossover : CrossoverBase<RealVector> {
     return new RealVector(offspringValues);
   }
 
-  public class Factory : IOperatorFactory<SinglePointCrossover>, IStochasticOperatorFactory {
-    private IRandomSource? randomSource;
-    
-    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
-    
-    public SinglePointCrossover Create() {
-      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
+  public class Factory : IEncodingParameterDependentOperatorFactory<SinglePointCrossover, RealVectorEncodingParameter> {
+    public SinglePointCrossover Create(RealVectorEncodingParameter encodingParameter, IRandomSource randomSource) {
       return new SinglePointCrossover(randomSource);
     }
   }
@@ -411,48 +411,39 @@ public class SinglePointCrossover : CrossoverBase<RealVector> {
 public class NormalDistributedCreator : CreatorBase<RealVector> {
   public RealVector Means { get; }
   public RealVector Sigmas { get; }
-  public RealVectorEncoding Encoding { get; }
+  public RealVectorEncodingParameter EncodingParameter { get; }
   public IRandomSource RandomSource { get; }
 
   //public const double DefaultMeans = 0.0;
   //public const double DefaultSigmas = 1.0;
 
-  public NormalDistributedCreator(RealVector means, RealVector sigmas, RealVectorEncoding encoding, IRandomSource randomSource) {
-    if (!RealVector.AreCompatible(encoding.Length, means, sigmas, encoding.Minimum, encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+  public NormalDistributedCreator(RealVector means, RealVector sigmas, RealVectorEncodingParameter encodingParameter, IRandomSource randomSource) {
+    if (!RealVector.AreCompatible(encodingParameter.Length, means, sigmas, encodingParameter.Minimum, encodingParameter.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
     Means = means;
     Sigmas = sigmas;
-    Encoding = encoding;
+    EncodingParameter = encodingParameter;
     RandomSource = randomSource;
   }
 
   public override RealVector Create() {
     var rng = RandomSource.CreateRandomNumberGenerator();
-    RealVector value = RealVector.CreateNormal(Encoding.Length, Means, Sigmas, rng);
+    RealVector value = RealVector.CreateNormal(EncodingParameter.Length, Means, Sigmas, rng);
     // Clamp value to min/max bounds
-    value = RealVector.Clamp(value, Encoding.Minimum, Encoding.Maximum);
+    value = RealVector.Clamp(value, EncodingParameter.Minimum, EncodingParameter.Maximum);
     return value;
   }
 
-  public class Factory : IOperatorFactory<NormalDistributedCreator>, IEncodingDependentOperatorFactory<RealVectorEncoding>, IStochasticOperatorFactory {
+  public class Factory : IEncodingParameterDependentOperatorFactory<NormalDistributedCreator, RealVectorEncodingParameter> {
     private readonly RealVector? means;
     private readonly RealVector? standardDeviations;
-    private RealVectorEncoding? encoding;
-    private IRandomSource? randomSource;
     
-    public Factory(RealVector? mean = null, RealVector? standardDeviation = null) {
-      this.means = mean;
-      this.standardDeviations = standardDeviation;
+    public Factory(RealVector? means = null, RealVector? standardDeviations = null) {
+      this.means = means;
+      this.standardDeviations = standardDeviations;
     }
     
-    public void SetEncoding(RealVectorEncoding encoding) => this.encoding = encoding;
-    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
-    
-    public NormalDistributedCreator Create() {
-      if (encoding is null) throw new InvalidOperationException("Encoding must be set.");
-      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
-      return new NormalDistributedCreator(means ?? 0.0, 
-        standardDeviations ?? 1.0, 
-        encoding, randomSource);
+    public NormalDistributedCreator Create(RealVectorEncodingParameter encodingParameter, IRandomSource randomSource) {
+      return new NormalDistributedCreator(means ?? 0.0, standardDeviations ?? 1.0, encodingParameter, randomSource);
     }
   }
 }
@@ -460,28 +451,26 @@ public class NormalDistributedCreator : CreatorBase<RealVector> {
 public class UniformDistributedCreator : CreatorBase<RealVector> {
   public RealVector? Minimum { get; }
   public RealVector? Maximum { get; }
-  public RealVectorEncoding Encoding { get; }
+  public RealVectorEncodingParameter EncodingParameter { get; }
   public IRandomSource RandomSource { get; }
 
-  public UniformDistributedCreator(RealVector? minimum, RealVector? maximum, RealVectorEncoding encoding, IRandomSource randomSource) {
-    if (minimum is not null && (minimum < encoding.Minimum).Any()) throw new ArgumentException("Minimum values must be greater or equal to encoding minimum values");
-    if (maximum is not null && (maximum > encoding.Maximum).Any()) throw new ArgumentException("Maximum values must be less or equal to encoding maximum values");
-    if (!RealVector.AreCompatible(encoding.Length, minimum ?? encoding.Minimum, maximum ?? encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+  public UniformDistributedCreator(RealVector? minimum, RealVector? maximum, RealVectorEncodingParameter encodingParameter, IRandomSource randomSource) {
+    if (minimum is not null && (minimum < encodingParameter.Minimum).Any()) throw new ArgumentException("Minimum values must be greater or equal to encoding minimum values");
+    if (maximum is not null && (maximum > encodingParameter.Maximum).Any()) throw new ArgumentException("Maximum values must be less or equal to encoding maximum values");
+    if (!RealVector.AreCompatible(encodingParameter.Length, minimum ?? encodingParameter.Minimum, maximum ?? encodingParameter.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
     
     Minimum = minimum;
     Maximum = maximum;
-    Encoding = encoding;
+    EncodingParameter = encodingParameter;
     RandomSource = randomSource;
   }
 
   public override RealVector Create() {
     var rng = RandomSource.CreateRandomNumberGenerator();
-    return RealVector.CreateUniform(Encoding.Length, Minimum ?? Encoding.Minimum, Maximum ?? Encoding.Maximum, rng);
+    return RealVector.CreateUniform(EncodingParameter.Length, Minimum ?? EncodingParameter.Minimum, Maximum ?? EncodingParameter.Maximum, rng);
   }
 
-  public class Factory : IOperatorFactory<UniformDistributedCreator>, IEncodingDependentOperatorFactory<RealVectorEncoding>, IStochasticOperatorFactory {
-    private RealVectorEncoding? encoding;
-    private IRandomSource? randomSource;
+  public class Factory : IEncodingParameterDependentOperatorFactory<UniformDistributedCreator, RealVectorEncodingParameter> {
     private readonly RealVector? minimum;
     private readonly RealVector? maximum;
     
@@ -490,13 +479,8 @@ public class UniformDistributedCreator : CreatorBase<RealVector> {
       this.maximum = maximum != null ? new RealVector(maximum) : null;
     }
     
-    public void SetEncoding(RealVectorEncoding encoding) => this.encoding = encoding;
-    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
-    
-    public UniformDistributedCreator Create() {
-      if (encoding is null) throw new InvalidOperationException("Encoding must be set.");
-      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
-      return new UniformDistributedCreator(minimum, maximum, encoding, randomSource);
+    public UniformDistributedCreator Create(RealVectorEncodingParameter encodingParameter, IRandomSource randomSource) {
+    return new UniformDistributedCreator(minimum, maximum, encodingParameter, randomSource);
     }
   }
 }

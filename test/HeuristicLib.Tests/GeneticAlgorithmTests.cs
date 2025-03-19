@@ -9,10 +9,10 @@ public class GeneticAlgorithmTests {
   [Fact]
   public Task GeneticAlgorithm_Create_WithoutBuilder() {
     var randomSource = new FixedRandomSource(42);
-    var encoding = new RealVectorEncoding(10, -5, +5);
+    var encoding = new RealVectorEncodingParameter(10, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0, encoding, randomSource);
     var crossover = new SinglePointCrossover(randomSource);
-    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
+    var mutator = new GaussianMutator(0.1, 0.1, encoding, randomSource);
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector<RealVector, Fitness, Goal>(randomSource);
     var replacement = new PlusSelectionReplacer<RealVector>();
@@ -30,10 +30,10 @@ public class GeneticAlgorithmTests {
   [Fact]
   public Task GeneticAlgorithm_Execute() {
     var randomSource = new RandomSource(42);
-    var encoding = new RealVectorEncoding(3, -5, +5);
+    var encoding = new RealVectorEncodingParameter(3, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0, encoding, randomSource);
     var crossover = new SinglePointCrossover(randomSource);
-    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
+    var mutator = new GaussianMutator(0.1, 0.1, encoding, randomSource);
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector<RealVector, Fitness, Goal>(randomSource);
     var replacement = new ElitismReplacer<RealVector>(0);
@@ -53,10 +53,10 @@ public class GeneticAlgorithmTests {
   [Fact]
   public Task GeneticAlgorithm_ExecuteStream() {
     var randomSource = new RandomSource(42);
-    var encoding = new RealVectorEncoding(3, -5, +5);
+    var encoding = new RealVectorEncodingParameter(3, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0, encoding, randomSource);
     var crossover = new SinglePointCrossover(randomSource);
-    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
+    var mutator = new GaussianMutator(0.1, 0.1, encoding, randomSource);
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector<RealVector, Fitness, Goal>(randomSource);
     var replacement = new ElitismReplacer<RealVector>(0);
@@ -78,10 +78,10 @@ public class GeneticAlgorithmTests {
   [Fact]
   public async Task GeneticAlgorithm_TerminateWithPauseToken() {
     var randomSource = new RandomSource(42);
-    var encoding = new RealVectorEncoding(5, -5, +5);
+    var encoding = new RealVectorEncodingParameter(5, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: null, encoding, randomSource);
     var crossover = new SinglePointCrossover(randomSource);
-    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
+    var mutator = new GaussianMutator(0.1, 0.1, encoding, randomSource);
     var evaluator = new RealVectorMockEvaluator();
     var selector = new ProportionalSelector<RealVector>(randomSource);
     var replacement = new PlusSelectionReplacer<RealVector>();
@@ -115,10 +115,10 @@ public class GeneticAlgorithmTests {
   [Fact]
   public async Task GeneticAlgorithm_ExecuteAndContinueWithOtherAlg() {
     var randomSource = new RandomSource(42);
-    var encoding = new RealVectorEncoding(3, -5, +5);
+    var encoding = new RealVectorEncodingParameter(3, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: null, encoding, randomSource);
     var crossover = new SinglePointCrossover(randomSource);
-    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
+    var mutator = new GaussianMutator(0.1, 0.1, encoding, randomSource);
     var evaluator = new RealVectorMockEvaluator();
     var selector = new ProportionalSelector<RealVector>(randomSource);
     var replacement = new ElitismReplacer<RealVector>(0);
@@ -136,8 +136,8 @@ public class GeneticAlgorithmTests {
     await Verify(new { firstResult, finalState });
   }
   
-  private class RealVectorMockEvaluator : IEvaluator<RealVector, Fitness> {
-    public Fitness Evaluate(RealVector solution) { return solution.Sum(); }
+  private class RealVectorMockEvaluator : FitnessFunctionEvaluatorBase<RealVector, Fitness> {
+    public override Fitness Evaluate(RealVector individual) => individual.Sum();
   }
 //
 //   [Fact]

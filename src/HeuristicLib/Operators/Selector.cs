@@ -77,21 +77,21 @@ public class ProportionalSelector<TGenotype> : SelectorBase<TGenotype, Fitness, 
     return selected;
   }
 
-  public class Factory : IOperatorFactory<ISelector<TGenotype, Fitness, Goal>>, IStochasticOperatorFactory {
-    private readonly bool windowing;
-    private IRandomSource? randomSource;
-    
-    public Factory(bool windowing = true) {
-      this.windowing = windowing;
-    }
-    
-    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
-    
-    public ISelector<TGenotype, Fitness, Goal> Create() {
-      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
-      return new ProportionalSelector<TGenotype>(randomSource, windowing);
-    }
-  }
+  // public class Factory : IOperatorFactory<ISelector<TGenotype, Fitness, Goal>>, IStochasticOperatorFactory {
+  //   private readonly bool windowing;
+  //   private IRandomSource? randomSource;
+  //   
+  //   public Factory(bool windowing = true) {
+  //     this.windowing = windowing;
+  //   }
+  //   
+  //   public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
+  //   
+  //   public ISelector<TGenotype, Fitness, Goal> Create() {
+  //     if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
+  //     return new ProportionalSelector<TGenotype>(randomSource, windowing);
+  //   }
+  // }
 }
 
 public class RandomSelector<TGenotype, TFitness, TGoal> : SelectorBase<TGenotype, TFitness, TGoal> {
@@ -111,16 +111,16 @@ public class RandomSelector<TGenotype, TFitness, TGoal> : SelectorBase<TGenotype
     return selected;
   }
 
-  public class Factory : IOperatorFactory<ISelector<TGenotype, Fitness, Goal>>, IStochasticOperatorFactory {
-    private IRandomSource? randomSource;
-    
-    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
-    
-    public ISelector<TGenotype, Fitness, Goal> Create() {
-      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
-      return new RandomSelector<TGenotype, Fitness, Goal>(randomSource);
-    }
-  }
+  // public class Factory : IOperatorFactory<ISelector<TGenotype, Fitness, Goal>>, IStochasticOperatorFactory {
+  //   private IRandomSource? randomSource;
+  //   
+  //   public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
+  //   
+  //   public ISelector<TGenotype, Fitness, Goal> Create() {
+  //     if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
+  //     return new RandomSelector<TGenotype, Fitness, Goal>(randomSource);
+  //   }
+  // }
 }
 
 public class TournamentSelector<TGenotype> : SelectorBase<TGenotype, Fitness, Goal> {
@@ -152,19 +152,19 @@ public class TournamentSelector<TGenotype> : SelectorBase<TGenotype, Fitness, Go
     return selected;
   }
 
-  public class Factory : IOperatorFactory<ISelector<TGenotype, Fitness, Goal>>, IStochasticOperatorFactory {
-    private readonly int tournamentSize;
-    private IRandomSource? randomSource;
-    
-    public Factory(int? tournamentSize = null) {
-      this.tournamentSize = tournamentSize ?? 2;
-    }
-    
-    public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
-    
-    public ISelector<TGenotype, Fitness, Goal> Create() {
-      if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
-      return new TournamentSelector<TGenotype>(tournamentSize, randomSource);
-    }
-  }
+  // public class Factory : IOperatorFactory<ISelector<TGenotype, Fitness, Goal>>, IStochasticOperatorFactory {
+  //   private readonly int tournamentSize;
+  //   private IRandomSource? randomSource;
+  //   
+  //   public Factory(int? tournamentSize = null) {
+  //     this.tournamentSize = tournamentSize ?? 2;
+  //   }
+  //   
+  //   public void SetRandom(IRandomSource randomSource) => this.randomSource = randomSource;
+  //   
+  //   public ISelector<TGenotype, Fitness, Goal> Create() {
+  //     if (randomSource is null) throw new InvalidOperationException("Random source must be set.");
+  //     return new TournamentSelector<TGenotype>(tournamentSize, randomSource);
+  //   }
+  // }
 }

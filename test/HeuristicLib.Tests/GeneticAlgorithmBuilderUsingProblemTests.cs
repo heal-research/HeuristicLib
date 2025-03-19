@@ -1,6 +1,4 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Configuration;
+﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Problems;
 
@@ -9,20 +7,23 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmBuilderUsingProblemTests {
   
   [Fact]
-  public Task GeneticAlgorithm_ShouldSolveTSPWithBuilder() {
+  public Task GeneticAlgorithmBuilder_UsingProblem() {
     var problem = TravelingSalesmanProblem.CreateDefault();
+
+    var builder = new GeneticAlgorithmBuilder<Permutation>()
+      .UsingProblem(problem);
     
-    var builder = new GeneticAlgorithmBuilder<Permutation, PermutationEncoding>()
-      .UsingProblem(problem)
-      .WithGeneticAlgorithmSpec(new GeneticAlgorithmSpec {
-        PopulationSize = 5, 
-        Selector = new TournamentSelectorSpec(),
-        Replacer = new ElitistReplacerSpec(1)
-      })
-      .WithRandomSource(new RandomSource(42));
+    return Verify(builder);
+  }
+  
+  [Fact]
+  public Task GeneticAlgorithmBuilder_UsingEncoding() {
+    var problem = TravelingSalesmanProblem.CreateDefault();
+    var encoding = problem.CreatePermutationEncoding();
     
-    var ga = builder.Build();
+    var builder = new GeneticAlgorithmBuilder<Permutation>()
+      .UsingEncoding(encoding);
     
-    return Verify(ga);
+    return Verify(builder);
   }
 }

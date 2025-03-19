@@ -12,11 +12,11 @@ public class GeneticAlgorithmObservableTests {
   [Fact]
   public Task GeneticAlgorithm_ObservableFromExecutionStream() {
     var randomSource = new RandomSource(42);
-    var encoding = new RealVectorEncoding(2, -5, +5);
+    var encoding = new RealVectorEncodingParameter(2, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0, encoding, randomSource);
     var crossover = new SinglePointCrossover(randomSource);
-    var mutator = new GaussianMutator(0.1, 0.1, randomSource);
-    var evaluator = Evaluator.Create((RealVector vector) => new Fitness(vector.Sum()));
+    var mutator = new GaussianMutator(0.1, 0.1, encoding, randomSource);
+    var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(vector => vector.Sum());
     var selector = new RandomSelector<RealVector, Fitness, Goal>(randomSource);
     var replacement = new ElitismReplacer<RealVector>(0);
     var terminationCriterion = Terminator.OnGeneration(3);

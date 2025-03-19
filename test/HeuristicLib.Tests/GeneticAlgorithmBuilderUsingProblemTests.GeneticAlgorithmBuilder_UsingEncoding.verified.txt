@@ -1,0 +1,31 @@
+﻿{
+  Parameter: {
+    PopulationSize: null,
+    Creator: {
+      $type: RandomPermutationCreator,
+      EncodingParameter: {
+        Length: 16
+      },
+      RandomSource: null
+    },
+    Crossover: {
+      $type: OrderCrossover,
+      RandomSource: null
+    },
+    Mutator: {
+      $type: InversionMutator,
+      EncodingParameter: {
+        Length: 16
+      },
+      RandomSource: null
+    },
+    MutationRate: null,
+    Selector: null,
+    Replacer: null,
+    Evaluator: null,
+    Goal: null,
+    RandomSource: null,
+    Terminator: null,
+    Interceptor: null
+  }
+}
