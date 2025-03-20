@@ -18,42 +18,42 @@ public class CyclicAlgorithmTests {
 
     var ga1 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
-      creator: new UniformDistributedCreator(null, null, encoding, randomSource),
+      creator: new UniformDistributedCreator(null, null, encoding),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new TournamentSelector<RealVector>(2, randomSource),
-      replacer: new ElitismReplacer<RealVector>(1), 
+      selector: new TournamentSelector(2),
+      replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
       terminator: Terminator.OnGeneration(3)
     );
     
     var ga2 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
-      creator: new UniformDistributedCreator(null, null, encoding, randomSource),
+      creator: new UniformDistributedCreator(null, null, encoding),
       crossover: new AlphaBetaBlendCrossover(0.5, 0.5),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new RandomSelector<RealVector, Fitness, Goal>(randomSource),
-      replacer: new ElitismReplacer<RealVector>(1), 
+      selector: new RandomSelector<Fitness, Goal>(),
+      replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
       terminator: Terminator.OnGeneration(3)
     );
     
     var ga3 = new GeneticAlgorithm<RealVector>(
       populationSize: 3,
-      creator: new UniformDistributedCreator(null, null, encoding, randomSource),
+      creator: new UniformDistributedCreator(null, null, encoding),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.8,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new TournamentSelector<RealVector>(2, randomSource),
-      replacer: new ElitismReplacer<RealVector>(1), 
+      selector: new TournamentSelector(2),
+      replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
       terminator: Terminator.OnGeneration(4)
     );
@@ -78,42 +78,42 @@ public class CyclicAlgorithmTests {
 
     var ga1 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
-      creator: new UniformDistributedCreator(null, null, encoding, randomSource),
+      creator: new UniformDistributedCreator(null, null, encoding),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new TournamentSelector<RealVector>(2, randomSource),
-      replacer: new ElitismReplacer<RealVector>(1), 
+      selector: new TournamentSelector(2),
+      replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
       terminator: Terminator.OnGeneration(3)
     );
 
     var ga2 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
-      creator: new UniformDistributedCreator(null, null, encoding, randomSource),
+      creator: new UniformDistributedCreator(null, null, encoding),
       crossover: new AlphaBetaBlendCrossover(0.5, 0.5),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new RandomSelector<RealVector, Fitness, Goal>(randomSource),
-      replacer: new ElitismReplacer<RealVector>(1), 
+      selector: new RandomSelector<Fitness, Goal>(),
+      replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
       terminator: Terminator.OnGeneration(3)
     );
     
     var ga3 = new GeneticAlgorithm<RealVector>(
       populationSize: 3,
-      creator: new UniformDistributedCreator(null, null, encoding, randomSource),
+      creator: new UniformDistributedCreator(null, null, encoding),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.8,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new TournamentSelector<RealVector>(2, randomSource),
-      replacer: new ElitismReplacer<RealVector>(1), 
+      selector: new TournamentSelector(2),
+      replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
       terminator: Terminator.OnGeneration(4)
     );
@@ -139,8 +139,8 @@ public class CyclicAlgorithmTests {
       populationSize: 10,
       children: 20,
       strategy: EvolutionStrategyType.Comma,
-      creator: new NormalDistributedCreator(0.0, 1.0, encoding, randomSource),
-      mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, encoding, randomSource),
+      creator: new NormalDistributedCreator(0.0, 1.0, encoding),
+      mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, encoding),
       initialMutationStrength: 0.1,
       crossover: null,
       evaluator: evaluator,
@@ -151,14 +151,14 @@ public class CyclicAlgorithmTests {
 
     var geneticAlgorithm = new GeneticAlgorithm<RealVector>(
       populationSize: 10,
-      creator: new UniformDistributedCreator(null, null, encoding, randomSource),
+      creator: new UniformDistributedCreator(null, null, encoding),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource),
+      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new TournamentSelector<RealVector>(2, randomSource),
-      replacer: new ElitismReplacer<RealVector>(1), 
+      selector: new TournamentSelector(2),
+      replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource, 
       terminator: Terminator.OnGeneration(4));
 

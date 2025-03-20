@@ -8,7 +8,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     int populationSize,
     ICreator<TGenotype> creator, ICrossover<TGenotype> crossover, IMutator<TGenotype> mutator, double mutationRate,
     IEvaluator<TGenotype, Fitness> evaluator, Goal goal,
-    ISelector<TGenotype, Fitness, Goal> selector, IReplacer<TGenotype, Fitness, Goal> replacer,
+    ISelector<Fitness, Goal> selector, IReplacer<Fitness, Goal> replacer,
     IRandomSource randomSourceState,
     ITerminator<PopulationState<TGenotype, Fitness, Goal>>? terminator = null, IInterceptor<PopulationState<TGenotype, Fitness, Goal>>? interceptor = null)
   {
@@ -35,8 +35,8 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
   public IEvaluator<TGenotype, Fitness> Evaluator { get; }
   public Goal Goal { get; }
   public IRandomSource RandomSource { get; }
-  public ISelector<TGenotype, Fitness, Goal> Selector { get; }
-  public IReplacer<TGenotype, Fitness, Goal> Replacer { get; }
+  public ISelector<Fitness, Goal> Selector { get; }
+  public IReplacer<Fitness, Goal> Replacer { get; }
   public IInterceptor<PopulationState<TGenotype, Fitness, Goal>> Interceptor { get; }
   
   public override ExecutionStream<PopulationState<TGenotype, Fitness, Goal>> CreateExecutionStream(PopulationState<TGenotype, Fitness, Goal>? initialState = null) {
@@ -52,7 +52,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     if (initialState is not null) {
       currentState = initialState;
     } else {
-      var initialPopulation = InitializePopulation();
+      var initialPopulation = InitializePopulation(random);
       var evaluatedPopulation = Evaluator.Evaluate(initialPopulation);
       currentState = new PopulationState<TGenotype, Fitness, Goal> { Population = evaluatedPopulation, Goal = Goal };
       currentState = Interceptor.Transform(currentState);
@@ -63,7 +63,7 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
       var offsprings = EvolvePopulation(currentState.Population, offspringCount, random);
       var evaluatedOffsprings = Evaluator.Evaluate(offsprings);
 
-      var newPopulation = Replacer.Replace(currentState.Population, evaluatedOffsprings, Goal);
+      var newPopulation = Replacer.Replace(currentState.Population, evaluatedOffsprings, Goal, random);
 
       currentState = currentState.Next() with { Population = newPopulation }; // increment durations and other counts
       currentState = Interceptor.Transform(currentState);
@@ -72,24 +72,24 @@ public class GeneticAlgorithm<TGenotype> : AlgorithmBase<PopulationState<TGenoty
     }
   }
 
-  private TGenotype[] InitializePopulation() {
+  private TGenotype[] InitializePopulation(IRandomNumberGenerator random) {
     var population = new TGenotype[PopulationSize];
     for (int i = 0; i < PopulationSize; i++) {
-      population[i] = Creator.Create();
+      population[i] = Creator.Create(random);
     }
     return population;
   }
 
   private TGenotype[] EvolvePopulation(Phenotype<TGenotype, Fitness>[] population, int offspringCount, IRandomNumberGenerator random) {
     var newPopulation = new TGenotype[offspringCount];
-    var parents = Selector.Select(population, Goal, offspringCount * 2).Select(p => p.Genotype).ToList();
+    var parents = Selector.Select(population, Goal, offspringCount * 2, random).Select(p => p.Genotype).ToList();
   
     for (int i = 0; i < parents.Count; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
-      var offspring = Crossover.Cross(parent1, parent2);
+      var offspring = Crossover.Cross(parent1, parent2, random);
       if (random.Random() < MutationRate) {
-        offspring = Mutator.Mutate(offspring);
+        offspring = Mutator.Mutate(offspring, random);
       }
       newPopulation[i / 2] = offspring;
     }

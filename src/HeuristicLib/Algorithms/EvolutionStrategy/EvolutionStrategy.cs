@@ -59,7 +59,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     
     EvolutionStrategyPopulationState currentState;
     if (initialState is null) {
-      var initialPopulation = InitializePopulation();
+      var initialPopulation = InitializePopulation(random);
       var evaluatedInitialPopulation = Evaluator.Evaluate(initialPopulation);
       yield return currentState = new EvolutionStrategyPopulationState { Goal = Goal, MutationStrength = InitialMutationStrength, Population = evaluatedInitialPopulation }; 
     } else {
@@ -87,10 +87,10 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     }
   }
 
-  private RealVector[] InitializePopulation() {
+  private RealVector[] InitializePopulation(IRandomNumberGenerator random) {
     var population = new RealVector[PopulationSize];
     for (int i = 0; i < PopulationSize; i++) {
-      population[i] = Creator.Create();
+      population[i] = Creator.Create(random);
     }
     return population;
   }
@@ -102,7 +102,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
       // var offspring = Mutator is IAdaptableMutator<RealVector> adaptableMutator 
       //   ? adaptableMutator.Mutate(parent, mutationStrength) 
       //   : Mutator.Mutate(parent);
-      var offspring = Mutator.Mutate(parent);
+      var offspring = Mutator.Mutate(parent, random);
       offspringPopulation[i] = offspring;
     }
     return (offspringPopulation, random.Integer(Children, Children * 10));

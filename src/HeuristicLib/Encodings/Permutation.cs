@@ -1,8 +1,6 @@
 ﻿using System.Collections;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Encodings;
 
@@ -120,41 +118,25 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
 
 public class RandomPermutationCreator : CreatorBase<Permutation> {
   public PermutationEncodingParameter EncodingParameter { get; }
-  public IRandomSource RandomSource { get; }
   
-  public RandomPermutationCreator(PermutationEncodingParameter encodingParameter, IRandomSource randomSource) {
+  public RandomPermutationCreator(PermutationEncodingParameter encodingParameter) {
     EncodingParameter = encodingParameter;
-    RandomSource = randomSource;
   }
   
-  public override Permutation Create() {
-    var rng = RandomSource.CreateRandomNumberGenerator();
+  public override Permutation Create(IRandomNumberGenerator random) {
     int[] elements = Enumerable.Range(0, EncodingParameter.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
-      int j = rng.Integer(i + 1);
+      int j = random.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
     }
     return new Permutation(elements);
-  }
-  
-  public class Factory : IEncodingParameterDependentOperatorFactory<RandomPermutationCreator, PermutationEncodingParameter> {
-    public RandomPermutationCreator Create(PermutationEncodingParameter encodingParameter, IRandomSource randomSource) {
-      return new RandomPermutationCreator(encodingParameter, randomSource);
-    }
   }
 }
 
 
 public class OrderCrossover : CrossoverBase<Permutation> {
-  public IRandomSource RandomSource { get; }
-
-  public OrderCrossover(IRandomSource randomSource) {
-    RandomSource = randomSource;
-  }
-  
-  public override Permutation Cross(Permutation parent1, Permutation parent2) {
-    var rng = RandomSource.CreateRandomNumberGenerator();
-    return Permutation.OrderCrossover(parent1, parent2, rng);
+  public override Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random) {
+    return Permutation.OrderCrossover(parent1, parent2, random);
   }
 
   public record BreakPoints(int First, int Second) {
@@ -182,76 +164,33 @@ public class OrderCrossover : CrossoverBase<Permutation> {
       }
     }
   }
-  
-  public class Factory : IEncodingParameterDependentOperatorFactory<OrderCrossover, PermutationEncodingParameter> {
-    public OrderCrossover Create(PermutationEncodingParameter parameter, IRandomSource randomSource) {
-      return new OrderCrossover(randomSource);
-    }
-  }
 }
 
 public class PartiallyMatchedCrossover : CrossoverBase<Permutation> {
-  public IRandomSource RandomSource { get; }
-
-  public PartiallyMatchedCrossover(IRandomSource randomSource) {
-    RandomSource = randomSource;
-  }
-  
-  public override Permutation Cross(Permutation parent1, Permutation parent2) {
-    var rng = RandomSource.CreateRandomNumberGenerator();
-    return Permutation.OrderCrossover(parent1, parent2, rng); // implement PMX
-  }
-  
-  public class Factory : IEncodingParameterDependentOperatorFactory<PartiallyMatchedCrossover, PermutationEncodingParameter> {
-    public PartiallyMatchedCrossover Create(PermutationEncodingParameter parameter, IRandomSource randomSource) {
-      return new PartiallyMatchedCrossover(randomSource);
-    }
+  public override Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random) {
+    return Permutation.OrderCrossover(parent1, parent2, random); // implement PMX
   }
 }
 
 
 public class SwapMutator : MutatorBase<Permutation> {
   public PermutationEncodingParameter EncodingParameter { get; }
-  public IRandomSource RandomSource { get; }
   
-  public SwapMutator(PermutationEncodingParameter encodingParameter, IRandomSource randomSource) {
+  public SwapMutator(PermutationEncodingParameter encodingParameter) {
     EncodingParameter = encodingParameter;
-    RandomSource = randomSource;
   }
   
-  public override Permutation Mutate(Permutation solution) {
-    var rng = RandomSource.CreateRandomNumberGenerator();
-    return Permutation.SwapRandomElements(solution, rng);
-  }
-  
-  public class Factory : IEncodingParameterDependentOperatorFactory<SwapMutator, PermutationEncodingParameter> {
-    public SwapMutator Create(PermutationEncodingParameter encodingParameter, IRandomSource randomSource) {
-      return new SwapMutator(encodingParameter, randomSource);
-    }
+  public override Permutation Mutate(Permutation solution, IRandomNumberGenerator random) {
+    return Permutation.SwapRandomElements(solution, random);
   }
 }
 
 public class InversionMutator : MutatorBase<Permutation> {
-  public PermutationEncodingParameter EncodingParameter { get; }
-  public IRandomSource RandomSource { get; }
-  
-  public InversionMutator(PermutationEncodingParameter encodingParameter, IRandomSource randomSource) {
-    EncodingParameter = encodingParameter;
-    RandomSource = randomSource;
-  }
-  
-  public override Permutation Mutate(Permutation parent) {
-    var rng = RandomSource.CreateRandomNumberGenerator();
-    int start = rng.Integer(parent.Count);
-    int end = rng.Integer(start, parent.Count);
+  public override Permutation Mutate(Permutation parent, IRandomNumberGenerator random) {
+    int start = random.Integer(parent.Count);
+    int end = random.Integer(start, parent.Count);
     int[] newElements = parent.ToArray();
     Array.Reverse(newElements, start, end - start + 1);
     return new Permutation(newElements);
-  }
-
-  public class Factory : IEncodingParameterDependentOperatorFactory<InversionMutator, PermutationEncodingParameter> {
-    public InversionMutator Create(PermutationEncodingParameter parameters, IRandomSource randomSource) {
-      return new InversionMutator(parameters, randomSource);
-    }
   }
 }

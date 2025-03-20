@@ -15,18 +15,10 @@
       Maximum: [
         5.0
       ]
-    },
-    RandomSource: {
-      $type: FixedRandomSource,
-      Seed: 42
     }
   },
   Crossover: {
-    $type: SinglePointCrossover,
-    RandomSource: {
-      $type: FixedRandomSource,
-      Seed: 42
-    }
+    $type: SinglePointCrossover
   },
   Mutator: {
     $type: GaussianMutator,
@@ -40,10 +32,6 @@
       Maximum: [
         5.0
       ]
-    },
-    RandomSource: {
-      $type: FixedRandomSource,
-      Seed: 42
     }
   },
   MutationRate: 0.05,
@@ -56,14 +44,10 @@
     Seed: 42
   },
   Selector: {
-    $type: RandomSelector<RealVector, Fitness, Goal>,
-    RandomSource: {
-      $type: FixedRandomSource,
-      Seed: 42
-    }
+    $type: RandomSelector<Fitness, Goal>
   },
   Replacer: {
-    $type: PlusSelectionReplacer<RealVector>
+    $type: PlusSelectionReplacer
   },
   Interceptor: {
     $type: IdentityInterceptor<PopulationState<RealVector, Fitness, Goal>>

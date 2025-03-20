@@ -1,4 +1,7 @@
-﻿namespace HEAL.HeuristicLib.Configuration;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
+
+namespace HEAL.HeuristicLib.Configuration;
 
 public abstract record OperatorSpec;
 
@@ -25,3 +28,61 @@ public record ProportionalSelectorSpec(bool Windowing = true) : SelectorSpec;
 public abstract record ReplacerSpec : OperatorSpec;
 public record ElitistReplacerSpec(int? Elites = null) : ReplacerSpec;
 public record PlusSelectionReplacerSpec : ReplacerSpec;
+
+
+public static class OperatorFactoryMapping {
+  
+  public static ICreator<TGenotype> CreateCreator<TGenotype, TEncodingParameter>(this CreatorSpec creatorSpec, TEncodingParameter encodingParameter) where TEncodingParameter : IEncodingParameter {
+    IOperator @operator = (encodingParameter, creatorSpec) switch {
+      (PermutationEncodingParameter enc, RandomPermutationCreatorSpec spec) => new RandomPermutationCreator(enc),
+      (RealVectorEncodingParameter enc, UniformRealVectorCreatorSpec spec) => new UniformDistributedCreator(spec.Minimum, spec.Maximum, enc),
+      (RealVectorEncodingParameter enc, NormalRealVectorCreatorSpec spec) => new NormalDistributedCreator(spec.Mean ?? [0.0], spec.StandardDeviation ?? [1.0], enc),
+      _ => throw new ArgumentException($"Unknown creator spec {creatorSpec} for genotype {typeof(TGenotype)}")
+    };
+    if (@operator is ICreator<TGenotype> creator) return creator;
+    throw new InvalidOperationException($"{creatorSpec} is not compatible with Genotype {typeof(TGenotype)}");
+  }
+  
+  public static ICrossover<TGenotype> CreateCrossover<TGenotype, TEncodingParameter>(this CrossoverSpec crossoverSpec, TEncodingParameter encodingParameter) where TEncodingParameter : IEncodingParameter {
+    IOperator @operator = (encodingParameter, crossoverSpec) switch {
+      (PermutationEncodingParameter enc, OrderCrossoverSpec spec) => new OrderCrossover(),
+      (RealVectorEncodingParameter enc, SinglePointRealVectorCrossoverSpec spec) => new SinglePointCrossover(),
+      (RealVectorEncodingParameter enc, AlphaBetaBlendRealVectorCrossoverSpec spec) => new AlphaBetaBlendCrossover(spec.Alpha, spec.Beta),
+      _ => throw new ArgumentException($"Unknown crossover spec {crossoverSpec} for genotype {typeof(TGenotype)}")
+    };
+    if (@operator is ICrossover<TGenotype> crossover) return crossover;
+    throw new InvalidOperationException($"{crossoverSpec} is not compatible with Genotype {typeof(TGenotype)}");
+  }
+
+  public static IMutator<TGenotype> CreateMutator<TGenotype, TEncodingParameter>(this MutatorSpec mutatorSpec, TEncodingParameter encodingParameter) where TEncodingParameter : IEncodingParameter {
+    IOperator @operator = (encodingParameter, mutatorSpec) switch {
+      (PermutationEncodingParameter enc, SwapMutatorSpec spec) => new SwapMutator(enc),
+      (RealVectorEncodingParameter enc, GaussianRealVectorMutatorSpec spec) => new GaussianMutator(spec.Rate ?? 0.1, spec.Strength ?? 0.1, enc),
+      (PermutationEncodingParameter enc, InversionMutatorSpec spec) => new InversionMutator(),
+      _ => throw new ArgumentException($"Unknown mutator spec {mutatorSpec} for genotype {typeof(TGenotype)}")
+    };
+    if (@operator is IMutator<TGenotype> mutator) return mutator;
+    throw new InvalidOperationException($"{mutatorSpec} is not compatible with Genotype {typeof(TGenotype)}");
+  }
+
+  public static ISelector<TFitness, TGoal> CreateSelector<TFitness, TGoal>(this SelectorSpec selectorSpec) {
+    IOperator @operator = selectorSpec switch {
+      RandomSelectorSpec => new RandomSelector<TFitness, TGoal>(),
+      TournamentSelectorSpec spec => new TournamentSelector(spec.TournamentSize ?? 2),
+      ProportionalSelectorSpec spec => new ProportionalSelector(spec.Windowing),
+      _ => throw new ArgumentException($"Unknown selector spec: {selectorSpec}")
+    };
+    if (@operator is ISelector<TFitness, TGoal> selector) return selector;
+    throw new InvalidOperationException($"{selectorSpec} is not compatible with Fitness {typeof(TFitness)}, Goal {typeof(TGoal)}");
+  }
+
+  public static IReplacer<TFitness, TGoal> CreateReplacer<TFitness, TGoal>(this ReplacerSpec replacerSpec) {
+    IOperator @operator = replacerSpec switch {
+      ElitistReplacerSpec spec => new ElitismReplacer(spec.Elites ?? 1),
+      PlusSelectionReplacerSpec => new PlusSelectionReplacer(),
+      _ => throw new ArgumentException($"Unknown replacer spec: {replacerSpec}")
+    };
+    if (@operator is IReplacer<TFitness, TGoal> replacer) return replacer;
+    throw new InvalidOperationException($"{replacerSpec} is not compatible with Fitness {typeof(TFitness)}, Goal {typeof(TGoal)}");
+  }
+}

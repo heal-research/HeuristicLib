@@ -43,9 +43,9 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation, Fitness, 
   public PermutationEncoding CreatePermutationEncoding() {
     var parameter =  new PermutationEncodingParameter(ProblemData.NumberOfCities);
     return new PermutationEncoding(parameter) {
-      Creator = new RandomPermutationCreator(parameter, null!),
-      Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossover(null!) : new PartiallyMatchedCrossover(null!),
-      Mutator = new InversionMutator(parameter, null!)
+      Creator = new RandomPermutationCreator(parameter),
+      Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossover() : new PartiallyMatchedCrossover(),
+      Mutator = new InversionMutator()
       // ToDo: mutation rate default
     };
   }
@@ -59,7 +59,7 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation, Fitness, 
   //   };
   // }
   
-  private class Mapper : IGenotypeMapper<Permutation, Tour> {
+  private new sealed class Mapper : IGenotypeMapper<Permutation, Tour> {
     public Permutation Encode(Tour solution) => new(solution.Cities);
     public Tour Decode(Permutation genotype) => new(genotype);
   }

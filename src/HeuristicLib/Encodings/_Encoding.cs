@@ -52,9 +52,7 @@ public interface IMutatorProvider<TGenotype> : IEncoding<TGenotype> {
 }
 
 public static class GeneticAlgorithmBuilderUsingEncodingExtensions {
-  public static IGeneticAlgorithmBuilder<TGenotype> UsingEncoding<TGenotype, TEncoding>(this IGeneticAlgorithmBuilder<TGenotype> builder, TEncoding encoding)
-    where TEncoding : IEncoding<TGenotype> {
-
+  public static IGeneticAlgorithmBuilder<TGenotype> UsingEncoding<TGenotype, TEncoding>(this IGeneticAlgorithmBuilder<TGenotype> builder, TEncoding encoding) where TEncoding : IEncoding<TGenotype> {
     if (encoding is ICreatorProvider<TGenotype> creatorProvider)
       builder.WithCreator(creatorProvider.Creator);
     if (encoding is ICrossoverProvider<TGenotype> crossoverProvider)

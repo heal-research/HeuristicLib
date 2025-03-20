@@ -9,6 +9,23 @@
     Sigmas: [
       1.0
     ],
+    EncodingParameter: {
+      Length: 10,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    }
+  },
+  Crossover: {
+    $type: SinglePointCrossover
+  },
+  Mutator: {
+    $type: GaussianMutator,
+    MutationRate: 0.1,
+    MutationStrength: 0.1,
     Encoding: {
       Length: 10,
       Minimum: [
@@ -17,26 +34,6 @@
       Maximum: [
         5.0
       ]
-    },
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
-  },
-  Crossover: {
-    $type: SinglePointCrossover,
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
-  },
-  Mutator: {
-    $type: GaussianMutator,
-    MutationRate: 0.1,
-    MutationStrength: 0.1,
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
     }
   },
   MutationRate: 0.05,
@@ -49,15 +46,11 @@
     Seed: 42
   },
   Selector: {
-    $type: TournamentSelector<RealVector>,
-    TournamentSize: 4,
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    }
+    $type: TournamentSelector,
+    TournamentSize: 4
   },
   Replacer: {
-    $type: ElitismReplacer<RealVector>,
+    $type: ElitismReplacer,
     Elites: 2
   },
   Interceptor: {

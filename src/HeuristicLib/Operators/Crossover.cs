@@ -1,23 +1,25 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Algorithms;
+
+namespace HEAL.HeuristicLib.Operators;
 
 public interface ICrossover<TGenotype> : IOperator {
-  TGenotype Cross(TGenotype parent1, TGenotype parent2);
+  TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random);
 }
 
 public static class Crossover {
-  public static ICrossover<TGenotype> Create<TGenotype>(Func<TGenotype, TGenotype, TGenotype> crossover) => new Crossover<TGenotype>(crossover);
+  public static ICrossover<TGenotype> Create<TGenotype>(Func<TGenotype, TGenotype, IRandomNumberGenerator, TGenotype> crossover) => new Crossover<TGenotype>(crossover);
 }
 
 public sealed class Crossover<TGenotype> : ICrossover<TGenotype> {
-  private readonly Func<TGenotype, TGenotype, TGenotype> crossover;
-  internal Crossover(Func<TGenotype, TGenotype, TGenotype> crossover) {
+  private readonly Func<TGenotype, TGenotype, IRandomNumberGenerator, TGenotype> crossover;
+  internal Crossover(Func<TGenotype, TGenotype, IRandomNumberGenerator, TGenotype> crossover) {
     this.crossover = crossover;
   }
-  public TGenotype Cross(TGenotype parent1, TGenotype parent2) => crossover(parent1, parent2);
+  public TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random) => crossover(parent1, parent2, random);
 }
 
 public abstract class CrossoverBase<TGenotype> : ICrossover<TGenotype> {
-  public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2); 
+  public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random); 
 }
 
 // public interface IRecordEncoding<TRecordGenotype, TEncoding1, TEncoding2> : IEncoding<TRecordGenotype, IRecordEncoding<TRecordGenotype, TEncoding1, TEncoding2>> {

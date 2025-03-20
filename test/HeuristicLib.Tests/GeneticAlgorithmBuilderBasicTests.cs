@@ -14,19 +14,44 @@ public class GeneticAlgorithmBuilderBasicTests {
     var builder = new GeneticAlgorithmBuilder<RealVector>()
       .WithRandomSource(randomSource)
       .WithPopulationSize(200)
-      .WithCreator(new NormalDistributedCreator(0, 0.5, encoding, randomSource))
-      .WithCrossover(new SinglePointCrossover(randomSource))
-      .WithMutator(new GaussianMutator(0.1, 0.1, encoding, randomSource))
+      .WithCreator(new NormalDistributedCreator(0, 0.5, encoding))
+      .WithCrossover(new SinglePointCrossover())
+      .WithMutator(new GaussianMutator(0.1, 0.1, encoding))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
       .WithGoal(Goal.Minimize)
-      .WithSelector(new ProportionalSelector<RealVector>(randomSource))
-      .WithReplacer(new PlusSelectionReplacer<RealVector>())
-      .WithTerminator(Terminator.OnGeneration(20));
+      .WithSelector(new ProportionalSelector())
+      .WithReplacer(new PlusSelectionReplacer())
+      .WithTerminator<GeneticAlgorithmBuilder<RealVector>, RealVector>(Terminator.OnGeneration(20));
 
     var ga = builder.Build();
 
     return Verify(ga);
+  }
+  
+  [Fact]
+  public Task GeneticAlgorithmBuilder_WithBuilderTypeChanging() {
+    var randomSource = new RandomSource(42);
+    var encoding = new RealVectorEncodingParameter(3, -5, +5);
+    IUntypedGeneticAlgorithmBuilder untypedBuilder = new UntypedGeneticAlgorithmBuilder()
+      .WithRandomSource(randomSource)
+      .WithPopulationSize(200)
+      .WithMutationRate(0.05);
+     
+    var typedBuilder = untypedBuilder
+      .UsingGenotype<RealVector>()
+      .WithCreator(new NormalDistributedCreator(0, 0.5, encoding))
+      .WithCrossover(new SinglePointCrossover())
+      .WithMutator(new GaussianMutator(0.1, 0.1, encoding))
+      .WithEvaluator(new MockEvaluator())
+      .WithGoal(Goal.Minimize)
+      .WithSelector(new ProportionalSelector())
+      .WithReplacer(new PlusSelectionReplacer())
+      .WithTerminator<IGeneticAlgorithmBuilder<RealVector>, RealVector>(Terminator.OnGeneration(20));
+
+    var ga = typedBuilder.Build();
+
+    return Verify(new { Algorithm = ga, TypedBuilder = typedBuilder, UntypedBuilder = untypedBuilder });
   }
   
   [Fact]
@@ -37,45 +62,43 @@ public class GeneticAlgorithmBuilderBasicTests {
       .WithRandomSource(randomSource)
       .WithPopulationSize(200)
       .UsingEncodingParameters(encoding)
-        .WithCreatorFactory(new NormalDistributedCreator.Factory(0, 0.5))
-        .WithCrossoverFactory(new SinglePointCrossover.Factory())
-        .WithMutatorFactory(new GaussianMutator.Factory(0.1, 0.1))
+      .WithCreator<IEncodingParameterizedGeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter>, RealVector, RealVectorEncodingParameter>(enc => new NormalDistributedCreator(0, 0.5, enc))
+      .WithCrossover<IEncodingParameterizedGeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter>, RealVector, RealVectorEncodingParameter>(enc => new SinglePointCrossover())
+      .WithMutator<IEncodingParameterizedGeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter>, RealVector, RealVectorEncodingParameter>(enc => new GaussianMutator(0.1, 0.1, enc))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
       .WithGoal(Goal.Minimize)
-      .WithSelector(new ProportionalSelector<RealVector>(randomSource))
-      .WithReplacer(new PlusSelectionReplacer<RealVector>())
-      .WithTerminator(Terminator.OnGeneration(20));
+      .WithSelector(new ProportionalSelector())
+      .WithReplacer(new PlusSelectionReplacer())
+      .WithTerminator<IEncodingParameterizedGeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter>, RealVector>(Terminator.OnGeneration(20));
 
     var ga = builder.Build();
 
     return Verify(ga);
   }
   
-  // [Fact]
-  // public Task GeneticAlgorithmBuilder_WithSpec() {
-  //   var randomSource = new RandomSource(42);
-  //   var encoding = new RealVectorEncodingParameter(10, -5, +5);
-  //   var spec = new GeneticAlgorithmSpec(
-  //     PopulationSize: 500,
-  //     Creator: new NormalRealVectorCreatorSpec(Mean: [1.5]),
-  //     Crossover: new SinglePointRealVectorCrossoverSpec(),
-  //     Mutator: new GaussianRealVectorMutatorSpec(Rate: 0.1, Strength: 0.1),
-  //     MutationRate: 0.05,
-  //     Selector: new TournamentSelectorSpec(TournamentSize: 4),
-  //     Replacer: new ElitistReplacerSpec(2)
-  //   );
-  //   var builder = new GeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter>()
-  //     .WithGeneticAlgorithmSpec(spec)
-  //     .WithEncoding(encoding)
-  //     .WithEvaluator(new MockEvaluator())
-  //     .WithGoal(Goal.Minimize)
-  //     .WithRandomSource(randomSource);
-  //      
-  //   var ga = builder.Build();
-  //
-  //   return Verify(ga);
-  // }
+  [Fact]
+  public Task GeneticAlgorithmBuilder_WithSpec() {
+    var randomSource = new RandomSource(42);
+    var encoding = new RealVectorEncodingParameter(10, -5, +5);
+    var spec = new GeneticAlgorithmSpec(
+      PopulationSize: 500,
+      Creator: new NormalRealVectorCreatorSpec(Mean: [1.5]),
+      Crossover: new SinglePointRealVectorCrossoverSpec(),
+      Mutator: new GaussianRealVectorMutatorSpec(Rate: 0.1, Strength: 0.1),
+      MutationRate: 0.05,
+      Selector: new TournamentSelectorSpec(TournamentSize: 4),
+      Replacer: new ElitistReplacerSpec(2)
+    );
+    var builder = new GeneticAlgorithmBuilder<RealVector>()
+      .WithRandomSource(randomSource).WithEvaluator(new MockEvaluator()).WithGoal(Goal.Minimize)
+      .UsingEncodingParameters(encoding)
+      .WithSpecs<IEncodingParameterizedGeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter>, RealVector, RealVectorEncodingParameter>(spec);
+
+    var ga = builder.Build();
+    
+    return Verify(ga);
+  }
 
   private class MockEvaluator : FitnessFunctionEvaluatorBase<RealVector, Fitness> {
     public override Fitness Evaluate(RealVector solution) {
