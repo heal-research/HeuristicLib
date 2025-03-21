@@ -1,6 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Encodings;
 

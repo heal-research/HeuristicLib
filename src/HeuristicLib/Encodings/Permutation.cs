@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Encodings;
@@ -192,5 +193,13 @@ public class InversionMutator : MutatorBase<Permutation> {
     int[] newElements = parent.ToArray();
     Array.Reverse(newElements, start, end - start + 1);
     return new Permutation(newElements);
+  }
+}
+
+
+public static class GeneticAlgorithmBuilderPermutationEncodingExtensions {
+  // For type inference
+  public static GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> UsingEncoding(this GeneticAlgorithmBuilder<Permutation> builder, PermutationEncoding encoding) {
+    return builder.UsingEncoding<Permutation, PermutationEncodingParameter, PermutationEncoding>(encoding);
   }
 }

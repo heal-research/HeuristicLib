@@ -62,8 +62,17 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, RealVector,
     return solution.Sum(x => x * x);
   }
 
-  public RealVectorEncodingParameter CreateRealVectorEncodingEncoding() {
+  public RealVectorEncodingParameter CreateRealVectorEncodingParameter() {
     return new RealVectorEncodingParameter(length: 2, min, max);
+  }
+  public RealVectorEncoding CreateRealVectorEncoding() {
+    var parameter = CreateRealVectorEncodingParameter();
+
+    return new RealVectorEncoding(parameter) {
+      Creator = new UniformDistributedCreator(minimum: null, maximum: null, encodingParameter: parameter), 
+      Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
+      Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1, parameter)
+    };
   }
   
   // public GeneticAlgorithmSpec CreateGeneticAlgorithmDefaultConfig() {

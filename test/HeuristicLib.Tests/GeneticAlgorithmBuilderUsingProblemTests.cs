@@ -22,7 +22,7 @@ public class GeneticAlgorithmBuilderUsingProblemTests {
     var encoding = problem.CreatePermutationEncoding();
 
     var builder = new GeneticAlgorithmBuilder<Permutation>()
-      .UsingEncoding<Permutation, PermutationEncodingParameter, PermutationEncoding>(encoding); // Type inference cannot work out the PermutationEncodingParameter
+      .UsingEncoding(encoding);
     
     return Verify(builder);
   }

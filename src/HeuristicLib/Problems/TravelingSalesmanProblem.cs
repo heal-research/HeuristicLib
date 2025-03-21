@@ -40,8 +40,11 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation, Fitness, 
     { 400, 100 }, { 400, 200 }, { 400, 300 }, { 400, 400 }
   };
   
+  public PermutationEncodingParameter CreatePermutationEncodingParameters() {
+    return new PermutationEncodingParameter(ProblemData.NumberOfCities);
+  }
   public PermutationEncoding CreatePermutationEncoding() {
-    var parameter =  new PermutationEncodingParameter(ProblemData.NumberOfCities);
+    var parameter = CreatePermutationEncodingParameters();
     return new PermutationEncoding(parameter) {
       Creator = new RandomPermutationCreator(parameter),
       Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossover() : new PartiallyMatchedCrossover(),

@@ -12,7 +12,7 @@ public class CyclicAlgorithmTests {
   [Fact]
   public Task ConcatAlgorithm_WithGA() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
-    var encoding = problem.CreateRealVectorEncodingEncoding();
+    var encoding = problem.CreateRealVectorEncodingParameter();
     var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
@@ -72,7 +72,7 @@ public class CyclicAlgorithmTests {
   [Fact]
   public Task CyclicAlgorithm_WithGA() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
-    var encoding = problem.CreateRealVectorEncodingEncoding();
+    var encoding = problem.CreateRealVectorEncodingParameter();
     var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
@@ -131,7 +131,7 @@ public class CyclicAlgorithmTests {
   [Fact]
   public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
-    var encoding = problem.CreateRealVectorEncodingEncoding();
+    var encoding = problem.CreateRealVectorEncodingParameter();
     var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 

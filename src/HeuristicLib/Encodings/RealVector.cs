@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Encodings;
@@ -34,6 +35,18 @@ public record class RealVectorEncodingParameter : EncodingParameterBase<RealVect
   //   return false;
   // }
   // #pragma warning restore S125
+}
+
+public class RealVectorEncoding
+  : Encoding<RealVector, RealVectorEncodingParameter>,
+    ICreatorProvider<RealVector>, ICrossoverProvider<RealVector>, IMutatorProvider<RealVector> {
+  
+  public required ICreator<RealVector> Creator { get; init; }
+  public required ICrossover<RealVector> Crossover { get; init; }
+  public required IMutator<RealVector> Mutator { get; init; }
+  
+  public RealVectorEncoding(RealVectorEncodingParameter parameter) 
+    : base(parameter) { }
 }
 
 public class AlphaBetaBlendCrossover : CrossoverBase<RealVector> {
@@ -401,5 +414,11 @@ public class UniformDistributedCreator : CreatorBase<RealVector> {
   public override RealVector Create(IRandomNumberGenerator random) {
     return RealVector.CreateUniform(EncodingParameter.Length, Minimum ?? EncodingParameter.Minimum, Maximum ?? EncodingParameter.Maximum, random);
   }
+}
 
+public static class GeneticAlgorithmBuilderRealVectorEncodingExtensions {
+  // For type inference
+  public static GeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter> UsingEncoding(this GeneticAlgorithmBuilder<RealVector> builder, RealVectorEncoding encoding) {
+    return builder.UsingEncoding<RealVector, RealVectorEncodingParameter, RealVectorEncoding>(encoding);
+  }
 }
