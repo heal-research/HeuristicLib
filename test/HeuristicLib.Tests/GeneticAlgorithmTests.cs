@@ -14,7 +14,7 @@ public class GeneticAlgorithmTests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1, encoding);
     var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector<Fitness, Goal>();
+    var selector = new RandomSelector();
     var replacement = new PlusSelectionReplacer();
     
     var ga = new GeneticAlgorithm<RealVector>(
@@ -35,7 +35,7 @@ public class GeneticAlgorithmTests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1, encoding);
     var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector<Fitness, Goal>();
+    var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
     
     var ga = new GeneticAlgorithm<RealVector>(
@@ -58,7 +58,7 @@ public class GeneticAlgorithmTests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1, encoding);
     var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector<Fitness, Goal>();
+    var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
     
     var ga = new GeneticAlgorithm<RealVector>(
@@ -86,7 +86,7 @@ public class GeneticAlgorithmTests {
     var selector = new ProportionalSelector();
     var replacement = new PlusSelectionReplacer();
     var pauseToken = new PauseToken();
-    var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector, Fitness, Goal>>(pauseToken);
+    var terminationCriterion = new PauseTokenTerminator<PopulationState<RealVector>>(pauseToken);
 
     var firstAlg = new GeneticAlgorithm<RealVector>(
       5,
@@ -136,7 +136,7 @@ public class GeneticAlgorithmTests {
     await Verify(new { firstResult, finalState });
   }
   
-  private class RealVectorMockEvaluator : FitnessFunctionEvaluatorBase<RealVector, Fitness> {
+  private class RealVectorMockEvaluator : SingleObjectiveFitnessFunctionEvaluatorBase<RealVector> {
     public override Fitness Evaluate(RealVector individual) => individual.Sum();
   }
 //

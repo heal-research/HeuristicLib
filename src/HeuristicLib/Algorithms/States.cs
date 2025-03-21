@@ -18,12 +18,12 @@ public static class StateExtensions {
   }
 }
 
-public record PopulationState<TGenotype, TFitness, TGoal> : IGenerationalState {
+public record PopulationState<TGenotype> : IGenerationalState {
   public int Generation { get; init; } = 0;
   //public int TotalGeneration { get; init; }
   
-  public required TGoal Goal { get; init; }
-  public required Phenotype<TGenotype, TFitness>[] Population { get; init; }
+  public required Goal Goal { get; init; }
+  public required Phenotype<TGenotype, Fitness>[] Population { get; init; }
   
   //public TimeSpan TotalDuration { get; init; }
   //public TimeSpan EvaluationDuration { get; init; }

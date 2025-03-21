@@ -11,6 +11,8 @@ public interface IProblem<TSolution, TGenotype, out TFitness, out TGoal> : IProb
   TGoal Goal { get; } 
   IGenotypeMapper<TGenotype, TSolution> Mapper { get; }
 }
+public interface ISingleObjectiveProblem<TSolution, TGenotype> : IProblem<TSolution, TGenotype, Fitness, Goal>;
+public interface IMultiObjectiveProblem<TSolution, TGenotype> : IProblem<TSolution, TGenotype, FitnessVector, GoalVector>;
 
 public interface IGenotypeMapper<TGenotype, TSolution> {
   TSolution Decode(TGenotype genotype);
@@ -41,6 +43,12 @@ public abstract class ProblemBase<TSolution, TGenotype, TFitness, TGoal> : IProb
     Mapper = mapper;
     Goal = goal;
   }
+}
+public abstract class SingleObjectiveProblemBase<TSolution, TGenotype> : ProblemBase<TSolution, TGenotype, Fitness, Goal>, ISingleObjectiveProblem<TSolution, TGenotype> {
+  protected SingleObjectiveProblemBase(IGenotypeMapper<TGenotype, TSolution> mapper, Goal goal) : base(mapper, goal) { }
+}
+public abstract class MultiObjectiveProblemBase<TSolution, TGenotype> : ProblemBase<TSolution, TGenotype, FitnessVector, GoalVector>, IMultiObjectiveProblem<TSolution, TGenotype> {
+  protected MultiObjectiveProblemBase(IGenotypeMapper<TGenotype, TSolution> mapper, GoalVector goal) : base(mapper, goal) { }
 }
 
 public static class GeneticAlgorithmBuilderUsingProblemExtensions {

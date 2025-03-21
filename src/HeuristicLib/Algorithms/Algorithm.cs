@@ -29,7 +29,7 @@ public class ExecutionStream<TState> : IEnumerable<TState> {
 }
 
 public static class ExecutionStreamExtensions {
-  public static Phenotype<TGenotype, Fitness>? GetBest<TGenotype>(this ExecutionStream<PopulationState<TGenotype, Fitness, Goal>> stream) {
+  public static Phenotype<TGenotype, Fitness>? GetBest<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
     var goal = stream.Select(state => state.Goal).Single();
     var comparer = Fitness.CreateSingleObjectiveComparer(goal);
     
@@ -40,13 +40,13 @@ public static class ExecutionStreamExtensions {
     return bestPhenotype is null ? null
       : new Phenotype<TGenotype, Fitness>(bestPhenotype.Genotype, bestPhenotype.Fitness);
   }
-  public static Phenotype<TGenotype, TFitness>? GetBest<TGenotype, TFitness, TGoal>(this ExecutionStream<PopulationState<TGenotype, TFitness, TGoal>> stream, IComparer<TFitness> comparer) {
+  public static Phenotype<TGenotype, Fitness>? GetBest<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream, IComparer<Fitness> comparer) {
     return stream
       .SelectMany(state => state.Population)
       .MinBy(individual => individual.Fitness, comparer);
   }
 
-  public static IEnumerable<(Fitness best, Fitness average, Fitness worst)> GetSingleObjectiveStatisticsStream<TGenotype>(this ExecutionStream<PopulationState<TGenotype, Fitness, Goal>> stream) {
+  public static IEnumerable<(Fitness best, Fitness average, Fitness worst)> GetSingleObjectiveStatisticsStream<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
     return stream.Select(state => {
       if (state.Population.Length == 0) throw new InvalidOperationException("Population must not be empty.");
       var comparer = Fitness.CreateSingleObjectiveComparer(state.Goal);

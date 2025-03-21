@@ -44,12 +44,12 @@
     Seed: 42
   },
   Selector: {
-    $type: RandomSelector<Fitness, Goal>
+    $type: RandomSelector
   },
   Replacer: {
     $type: PlusSelectionReplacer
   },
   Interceptor: {
-    $type: IdentityInterceptor<PopulationState<RealVector, Fitness, Goal>>
+    $type: IdentityInterceptor<PopulationState<RealVector>>
   }
 }

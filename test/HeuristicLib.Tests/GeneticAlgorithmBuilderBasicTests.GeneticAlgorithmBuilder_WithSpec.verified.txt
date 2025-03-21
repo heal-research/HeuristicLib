@@ -54,6 +54,6 @@
     Elites: 2
   },
   Interceptor: {
-    $type: IdentityInterceptor<PopulationState<RealVector, Fitness, Goal>>
+    $type: IdentityInterceptor<PopulationState<RealVector>>
   }
 }

@@ -3,9 +3,13 @@ using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
 namespace HEAL.HeuristicLib.Operators;
 
+
 public interface ISelector<TFitness, in TGoal> : IOperator {
   Phenotype<TGenotype, TFitness>[] Select<TGenotype>(Phenotype<TGenotype, TFitness>[] population, TGoal goal, int count, IRandomNumberGenerator random);
 }
+
+public interface ISingleObjectiveSelector : ISelector<Fitness, Goal>;
+public interface IMultiObjectiveSelector : ISelector<FitnessVector, GoalVector>;
 
 // public static class Selector {
 //   public static ISelector<TFitness, TGoal> Create<TGenotype, TFitness, TGoal>(
@@ -23,8 +27,10 @@ public interface ISelector<TFitness, in TGoal> : IOperator {
 public abstract class SelectorBase<TFitness, TGoal> : ISelector<TFitness, TGoal> {
   public abstract Phenotype<TGenotype, TFitness>[] Select<TGenotype>(Phenotype<TGenotype, TFitness>[] population, TGoal goal, int count, IRandomNumberGenerator random);
 }
+public abstract class SingleObjectiveSelectorBase : SelectorBase<Fitness, Goal>, ISingleObjectiveSelector;
+public abstract class MultiObjectiveSelectorBase : SelectorBase<FitnessVector, GoalVector>, IMultiObjectiveSelector;
 
-public class ProportionalSelector : SelectorBase<Fitness, Goal> {
+public class ProportionalSelector : SingleObjectiveSelectorBase {
   public bool Windowing { get; }
 
   public ProportionalSelector(bool windowing = true) {
@@ -75,8 +81,8 @@ public class ProportionalSelector : SelectorBase<Fitness, Goal> {
   }
 }
 
-public class RandomSelector<TFitness, TGoal> : SelectorBase<TFitness, TGoal> {
-  public override Phenotype<TGenotype, TFitness>[] Select<TGenotype>(Phenotype<TGenotype, TFitness>[] population, TGoal goal, int count, IRandomNumberGenerator random) {
+public class RandomSelector : ISingleObjectiveSelector, IMultiObjectiveSelector {
+  public Phenotype<TGenotype, TFitness>[] Select<TGenotype, TFitness, TGoal>(Phenotype<TGenotype, TFitness>[] population, TGoal goal, int count, IRandomNumberGenerator random) {
     var selected = new Phenotype<TGenotype, TFitness>[count];
     for (int i = 0; i < count; i++) {
       int index = random.Integer(population.Length);
@@ -84,9 +90,15 @@ public class RandomSelector<TFitness, TGoal> : SelectorBase<TFitness, TGoal> {
     }
     return selected;
   }
+  public Phenotype<TGenotype, Fitness>[] Select<TGenotype>(Phenotype<TGenotype, Fitness>[] population, Goal goal, int count, IRandomNumberGenerator random) {
+    return Select<TGenotype, Fitness, Goal>(population, goal, count, random);
+  }
+  public Phenotype<TGenotype, FitnessVector>[] Select<TGenotype>(Phenotype<TGenotype, FitnessVector>[] population, GoalVector goal, int count, IRandomNumberGenerator random) {
+    return Select<TGenotype, FitnessVector, GoalVector>(population, goal, count, random);
+  }
 }
 
-public class TournamentSelector : SelectorBase<Fitness, Goal> {
+public class TournamentSelector : SingleObjectiveSelectorBase {
   public int TournamentSize { get; }
   //public IComparer<TFitness> Comparer { get; }
   

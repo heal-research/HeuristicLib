@@ -4,7 +4,7 @@
     Crossover: null,
     Mutator: null,
     Evaluator: {
-      $type: FitnessFunctionEvaluator<Permutation, Fitness>
+      $type: SingleObjectiveFitnessFunctionEvaluator<Permutation>
     },
     Terminator: null,
     Interceptor: null,

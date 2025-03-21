@@ -65,24 +65,26 @@ public static class OperatorFactoryMapping {
     throw new InvalidOperationException($"{mutatorSpec} is not compatible with Genotype {typeof(TGenotype)}");
   }
 
-  public static ISelector<TFitness, TGoal> CreateSelector<TFitness, TGoal>(this SelectorSpec selectorSpec) {
+  public static ISingleObjectiveSelector CreateSelector(this SelectorSpec selectorSpec) {
     IOperator @operator = selectorSpec switch {
-      RandomSelectorSpec => new RandomSelector<TFitness, TGoal>(),
+      RandomSelectorSpec => new RandomSelector(),
       TournamentSelectorSpec spec => new TournamentSelector(spec.TournamentSize ?? 2),
       ProportionalSelectorSpec spec => new ProportionalSelector(spec.Windowing),
       _ => throw new ArgumentException($"Unknown selector spec: {selectorSpec}")
     };
-    if (@operator is ISelector<TFitness, TGoal> selector) return selector;
-    throw new InvalidOperationException($"{selectorSpec} is not compatible with Fitness {typeof(TFitness)}, Goal {typeof(TGoal)}");
+    if (@operator is ISingleObjectiveSelector selector) return selector;
+    throw new InvalidOperationException($"{selectorSpec} is not compatible with {typeof(ISingleObjectiveSelector)}");
+    //throw new InvalidOperationException($"{selectorSpec} is not compatible with Fitness {typeof(TFitness)}, Goal {typeof(TGoal)}");
   }
 
-  public static IReplacer<TFitness, TGoal> CreateReplacer<TFitness, TGoal>(this ReplacerSpec replacerSpec) {
+  public static ISingleObjectiveReplacer CreateReplacer(this ReplacerSpec replacerSpec) {
     IOperator @operator = replacerSpec switch {
       ElitistReplacerSpec spec => new ElitismReplacer(spec.Elites ?? 1),
       PlusSelectionReplacerSpec => new PlusSelectionReplacer(),
       _ => throw new ArgumentException($"Unknown replacer spec: {replacerSpec}")
     };
-    if (@operator is IReplacer<TFitness, TGoal> replacer) return replacer;
-    throw new InvalidOperationException($"{replacerSpec} is not compatible with Fitness {typeof(TFitness)}, Goal {typeof(TGoal)}");
+    if (@operator is ISingleObjectiveReplacer replacer) return replacer;
+    throw new InvalidOperationException($"{replacerSpec} is not compatible with {typeof(ISingleObjectiveReplacer)}");
+    //throw new InvalidOperationException($"{replacerSpec} is not compatible with Fitness {typeof(TFitness)}, Goal {typeof(TGoal)}");
   }
 }

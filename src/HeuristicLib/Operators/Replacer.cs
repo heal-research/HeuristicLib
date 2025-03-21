@@ -6,6 +6,8 @@ public interface IReplacer<TFitness, in TGoal> : IOperator {
   Phenotype<TGenotype, TFitness>[] Replace<TGenotype>(Phenotype<TGenotype, TFitness>[] previousPopulation, Phenotype<TGenotype, TFitness>[] offspringPopulation, TGoal goal, IRandomNumberGenerator random);
   int GetOffspringCount(int populationSize);
 }
+public interface ISingleObjectiveReplacer : IReplacer<Fitness, Goal>;
+public interface IMultiObjectiveReplacer : IReplacer<FitnessVector, GoalVector>;
 
 // public static class Replacer {
 //   public static IReplacer<TFitness, TGoal> Create<TGenotype, TFitness, TGoal>(
@@ -31,15 +33,16 @@ public abstract class ReplacerBase<TFitness, TGoal> : IReplacer<TFitness, TGoal>
   public abstract int GetOffspringCount(int populationSize);
   public abstract Phenotype<TGenotype, TFitness>[] Replace<TGenotype>(Phenotype<TGenotype, TFitness>[] previousPopulation, Phenotype<TGenotype, TFitness>[] offspringPopulation, TGoal goal, IRandomNumberGenerator random);
 }
+public abstract class SingleObjectiveReplacerBase : ReplacerBase<Fitness, Goal>, ISingleObjectiveReplacer;
+public abstract class MultiObjectiveReplacerBase : ReplacerBase<FitnessVector, GoalVector>, IMultiObjectiveReplacer;
 
-public class PlusSelectionReplacer : ReplacerBase<Fitness, Goal> {
+public class PlusSelectionReplacer : SingleObjectiveReplacerBase {
   public override int GetOffspringCount(int populationSize) {
     return populationSize;
   }
 
   public override Phenotype<TGenotype, Fitness>[] Replace<TGenotype>(Phenotype<TGenotype, Fitness>[] previousPopulation, Phenotype<TGenotype, Fitness>[] offspringPopulation, Goal goal, IRandomNumberGenerator random) {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
-
     var comparer = Fitness.CreateSingleObjectiveComparer(goal);
     return combinedPopulation
       .OrderBy(p => p.Fitness, comparer)
@@ -48,7 +51,7 @@ public class PlusSelectionReplacer : ReplacerBase<Fitness, Goal> {
   }
 }
 
-public class ElitismReplacer : ReplacerBase<Fitness, Goal> {
+public class ElitismReplacer : SingleObjectiveReplacerBase {
   public int Elites { get; }
 
   public ElitismReplacer(int elites) {

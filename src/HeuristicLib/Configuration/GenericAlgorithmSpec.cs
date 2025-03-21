@@ -26,8 +26,8 @@ public static class GeneticAlgorithmBuilderWithSpecsExtensions {
     if (gaSpec.Crossover is not null) builder.WithCrossover(enc => gaSpec.Crossover.CreateCrossover<TGenotype, TEncodingParameter>(enc));
     if (gaSpec.Mutator is not null) builder.WithMutator(enc => gaSpec.Mutator.CreateMutator<TGenotype, TEncodingParameter>(enc));
     if (gaSpec.MutationRate.HasValue) builder.WithMutationRate(gaSpec.MutationRate.Value);
-    if (gaSpec.Selector is not null) builder.WithSelector(gaSpec.Selector.CreateSelector<Fitness, Goal>());
-    if (gaSpec.Replacer is not null) builder.WithReplacer(gaSpec.Replacer.CreateReplacer<Fitness, Goal>());
+    if (gaSpec.Selector is not null) builder.WithSelector(gaSpec.Selector.CreateSelector());
+    if (gaSpec.Replacer is not null) builder.WithReplacer(gaSpec.Replacer.CreateReplacer());
     if (gaSpec.MaximumGenerations.HasValue) builder.WithTerminator(Terminator.OnGeneration(gaSpec.MaximumGenerations.Value));
     if (gaSpec.RandomSeed.HasValue) builder.WithRandomSource(new RandomSource(gaSpec.RandomSeed.Value));
 

@@ -8,7 +8,7 @@ public enum EvolutionStrategyType {
   Plus
 }
 
-public record EvolutionStrategyPopulationState : PopulationState<RealVector, Fitness, Goal> {
+public record EvolutionStrategyPopulationState : PopulationState<RealVector> {
   public required double MutationStrength { get; init; }
 }
 

@@ -100,7 +100,7 @@ public class GeneticAlgorithmBuilderBasicTests {
     return Verify(ga);
   }
 
-  private class MockEvaluator : FitnessFunctionEvaluatorBase<RealVector, Fitness> {
+  private class MockEvaluator : SingleObjectiveFitnessFunctionEvaluatorBase<RealVector> {
     public override Fitness Evaluate(RealVector solution) {
       return solution.Sum();
     }

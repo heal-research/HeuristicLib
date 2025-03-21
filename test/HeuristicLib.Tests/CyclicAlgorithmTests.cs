@@ -13,7 +13,7 @@ public class CyclicAlgorithmTests {
   public Task ConcatAlgorithm_WithGA() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingParameter();
-    var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
+    var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var ga1 = new GeneticAlgorithm<RealVector>(
@@ -38,7 +38,7 @@ public class CyclicAlgorithmTests {
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new RandomSelector<Fitness, Goal>(),
+      selector: new RandomSelector(),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
       terminator: Terminator.OnGeneration(3)
@@ -58,7 +58,7 @@ public class CyclicAlgorithmTests {
       terminator: Terminator.OnGeneration(4)
     );
 
-    var concatAlgorithm = new ConcatAlgorithm<PopulationState<RealVector, Fitness, Goal>>(ga1, ga2, ga3);
+    var concatAlgorithm = new ConcatAlgorithm<PopulationState<RealVector>>(ga1, ga2, ga3);
 
     var states = concatAlgorithm.CreateExecutionStream().ToList();
     var lastState = states[^1];
@@ -73,7 +73,7 @@ public class CyclicAlgorithmTests {
   public Task CyclicAlgorithm_WithGA() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingParameter();
-    var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
+    var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var ga1 = new GeneticAlgorithm<RealVector>(
@@ -98,7 +98,7 @@ public class CyclicAlgorithmTests {
       mutationRate: 0.1,
       evaluator: evaluator,
       Goal.Minimize,
-      selector: new RandomSelector<Fitness, Goal>(),
+      selector: new RandomSelector(),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
       terminator: Terminator.OnGeneration(3)
@@ -118,7 +118,7 @@ public class CyclicAlgorithmTests {
       terminator: Terminator.OnGeneration(4)
     );
 
-    var concatAlgorithm = new CyclicAlgorithm<PopulationState<RealVector, Fitness, Goal>>(ga1, ga2, ga3);
+    var concatAlgorithm = new CyclicAlgorithm<PopulationState<RealVector>>(ga1, ga2, ga3);
 
     var states = concatAlgorithm.CreateExecutionStream().Take(25).ToList();
     var lastState = states[^1];
@@ -132,7 +132,7 @@ public class CyclicAlgorithmTests {
   public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingParameter();
-    var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(problem.Evaluate);
+    var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var evolutionStrategy = new EvolutionStrategy(
@@ -162,11 +162,11 @@ public class CyclicAlgorithmTests {
       randomSourceState: randomSource, 
       terminator: Terminator.OnGeneration(4));
 
-    var cyclicAlgorithm = new CyclicAlgorithm<IState, EvolutionStrategyPopulationState, PopulationState<RealVector, Fitness, Goal>>(
+    var cyclicAlgorithm = new CyclicAlgorithm<IState, EvolutionStrategyPopulationState, PopulationState<RealVector>>(
       firstAlgorithm: evolutionStrategy,
       secondAlgorithm: geneticAlgorithm,
       transformer: new EvolutionToGeneticStateTransformer(),
-      repetitionTransformer: StateTransformer.Create((PopulationState<RealVector, Fitness, Goal> sourceState, EvolutionStrategyPopulationState? previousTargetState) => {
+      repetitionTransformer: StateTransformer.Create((PopulationState<RealVector> sourceState, EvolutionStrategyPopulationState? previousTargetState) => {
         previousTargetState ??= new EvolutionStrategyPopulationState() { Goal = Goal.Minimize, Population = sourceState.Population, MutationStrength = 0.1 };
         return previousTargetState.Reset() with {
           Population = sourceState.Population, MutationStrength = previousTargetState.MutationStrength
@@ -178,7 +178,7 @@ public class CyclicAlgorithmTests {
     var lastState = states[^1];
     var generations = states.Select(s => new { Generation = s switch {
         EvolutionStrategyPopulationState esState => esState.Generation,
-        PopulationState<RealVector, Fitness, Goal> gaState =>  gaState.Generation,
+        PopulationState<RealVector> gaState =>  gaState.Generation,
         _ => throw new NotImplementedException()
         }, Type = s.GetType() })
       .ToList();
@@ -186,9 +186,9 @@ public class CyclicAlgorithmTests {
     return Verify(new { generations, lastState });
   }
 
-  private class EvolutionToGeneticStateTransformer : IStateTransformer<EvolutionStrategyPopulationState, PopulationState<RealVector, Fitness, Goal>> {
-    public PopulationState<RealVector, Fitness, Goal> Transform(EvolutionStrategyPopulationState sourceState, PopulationState<RealVector, Fitness, Goal>? previousTargetState = null) {
-      previousTargetState ??= new PopulationState<RealVector, Fitness, Goal>() { Goal = Goal.Minimize, Population = sourceState.Population };
+  private class EvolutionToGeneticStateTransformer : IStateTransformer<EvolutionStrategyPopulationState, PopulationState<RealVector>> {
+    public PopulationState<RealVector> Transform(EvolutionStrategyPopulationState sourceState, PopulationState<RealVector>? previousTargetState = null) {
+      previousTargetState ??= new PopulationState<RealVector>() { Goal = Goal.Minimize, Population = sourceState.Population };
       return previousTargetState.Reset() with {
         Population = sourceState.Population
       };

@@ -61,6 +61,6 @@
     $type: PlusSelectionReplacer
   },
   Interceptor: {
-    $type: IdentityInterceptor<PopulationState<RealVector, Fitness, Goal>>
+    $type: IdentityInterceptor<PopulationState<RealVector>>
   }
 }

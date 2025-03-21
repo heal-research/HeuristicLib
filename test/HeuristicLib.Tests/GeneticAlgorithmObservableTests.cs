@@ -16,8 +16,8 @@ public class GeneticAlgorithmObservableTests {
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0, encoding);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1, encoding);
-    var evaluator = Evaluator.UsingFitnessFunction<RealVector, Fitness>(vector => vector.Sum());
-    var selector = new RandomSelector<Fitness, Goal>();
+    var evaluator = Evaluator.UsingFitnessFunction<RealVector>(vector => vector.Sum());
+    var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
     var terminationCriterion = Terminator.OnGeneration(3);
     
@@ -25,8 +25,8 @@ public class GeneticAlgorithmObservableTests {
 
     var stream = ga.CreateExecutionStream();
 
-    var subject = new Subject<PopulationState<RealVector, Fitness, Goal>>();
-    var observableResult = new List<PopulationState<RealVector, Fitness, Goal>>();
+    var subject = new Subject<PopulationState<RealVector>>();
+    var observableResult = new List<PopulationState<RealVector>>();
     subject
       .SubscribeOn(Scheduler.CurrentThread)
       .Subscribe(state => observableResult.Add(state));
