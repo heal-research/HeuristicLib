@@ -1,31 +1,31 @@
 ﻿{
-  Parameter: {
-    PopulationSize: null,
+  State: {
+    EncodingParameter: {
+      Length: 16
+    },
+    CreatorFactory: null,
+    CrossoverFactory: null,
+    MutatorFactory: null,
     Creator: {
       $type: RandomPermutationCreator,
       EncodingParameter: {
         Length: 16
-      },
-      RandomSource: null
+      }
     },
     Crossover: {
-      $type: OrderCrossover,
-      RandomSource: null
+      $type: OrderCrossover
     },
     Mutator: {
-      $type: InversionMutator,
-      EncodingParameter: {
-        Length: 16
-      },
-      RandomSource: null
+      $type: InversionMutator
     },
+    Evaluator: null,
+    Terminator: null,
+    Interceptor: null,
+    PopulationSize: null,
     MutationRate: null,
     Selector: null,
     Replacer: null,
-    Evaluator: null,
     Goal: null,
-    RandomSource: null,
-    Terminator: null,
-    Interceptor: null
+    RandomSource: null
   }
 }

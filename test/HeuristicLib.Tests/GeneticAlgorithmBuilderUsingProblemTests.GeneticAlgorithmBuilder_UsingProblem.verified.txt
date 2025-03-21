@@ -1,18 +1,18 @@
 ﻿{
-  Parameter: {
-    PopulationSize: null,
+  State: {
     Creator: null,
     Crossover: null,
     Mutator: null,
-    MutationRate: null,
-    Selector: null,
-    Replacer: null,
     Evaluator: {
       $type: FitnessFunctionEvaluator<Permutation, Fitness>
     },
-    Goal: null,
-    RandomSource: null,
     Terminator: null,
-    Interceptor: null
+    Interceptor: null,
+    PopulationSize: null,
+    MutationRate: null,
+    Selector: null,
+    Replacer: null,
+    Goal: null,
+    RandomSource: null
   }
 }

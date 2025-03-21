@@ -11,7 +11,7 @@ public class GeneticAlgorithmBuilderUsingProblemTests {
     var problem = TravelingSalesmanProblem.CreateDefault();
 
     var builder = new GeneticAlgorithmBuilder<Permutation>()
-      .UsingProblem(problem);
+      .WithFitnessFunctionFromProblem(problem);
     
     return Verify(builder);
   }
@@ -20,9 +20,9 @@ public class GeneticAlgorithmBuilderUsingProblemTests {
   public Task GeneticAlgorithmBuilder_UsingEncoding() {
     var problem = TravelingSalesmanProblem.CreateDefault();
     var encoding = problem.CreatePermutationEncoding();
-    
+
     var builder = new GeneticAlgorithmBuilder<Permutation>()
-      .UsingEncoding(encoding);
+      .UsingEncoding<Permutation, PermutationEncodingParameter, PermutationEncoding>(encoding); // Type inference cannot work out the PermutationEncodingParameter
     
     return Verify(builder);
   }

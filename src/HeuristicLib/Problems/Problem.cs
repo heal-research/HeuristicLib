@@ -32,7 +32,6 @@ public static class GenotypeMapper {
   public static IGenotypeMapper<T, T> Identity<T>() => new GenotypeMapper<T, T>(x => x, x => x);
 }
 
-
 public abstract class ProblemBase<TSolution, TGenotype, TFitness, TGoal> : IProblem<TSolution, TGenotype, TFitness, TGoal> {
   public abstract TFitness Evaluate(TSolution solution);
   public IGenotypeMapper<TGenotype, TSolution> Mapper { get; }
@@ -45,20 +44,20 @@ public abstract class ProblemBase<TSolution, TGenotype, TFitness, TGoal> : IProb
 }
 
 public static class GeneticAlgorithmBuilderUsingProblemExtensions {
-  public static IGeneticAlgorithmBuilder<TGenotype> UsingProblem<TGenotype, TSolution>(this IGeneticAlgorithmBuilder<TGenotype> builder,
-    IProblem<TSolution, TGenotype, Fitness, Goal> problem) 
+  public static TBuilder WithFitnessFunctionFromProblem<TBuilder,TGenotype, TSolution>(this TBuilder builder, IProblem<TSolution, TGenotype, Fitness, Goal> problem)
+    where TBuilder : IGeneticAlgorithmBuilder<TGenotype, TBuilder>
   {
-    return builder.UsingFitnessFunction(problem.Evaluate, problem.Mapper);
+    return builder.WithFitnessFunction(problem.Evaluate, problem.Mapper);
   }
   
-  public static IGeneticAlgorithmBuilder<TGenotype> UsingFitnessFunction<TGenotype, TSolution>(this IGeneticAlgorithmBuilder<TGenotype> builder,
-    Func<TSolution, Fitness> fitnessFunction, IGenotypeMapper<TGenotype, TSolution> mapper) 
+  public static TBuilder WithFitnessFunction<TBuilder, TGenotype, TSolution>(this TBuilder builder, Func<TSolution, Fitness> fitnessFunction, IGenotypeMapper<TGenotype, TSolution> mapper)
+    where TBuilder : IGeneticAlgorithmBuilder<TGenotype, TBuilder>
   {
-    return builder.FromFitnessFunction(solution => fitnessFunction(mapper.Decode(solution)));
+    return builder.WithFitnessFunction<TBuilder, TGenotype>(solution => fitnessFunction(mapper.Decode(solution)));
   }
   
-  public static IGeneticAlgorithmBuilder<TGenotype> FromFitnessFunction<TGenotype>(this IGeneticAlgorithmBuilder<TGenotype> builder,
-    Func<TGenotype, Fitness> fitnessFunction)
+  public static TBuilder WithFitnessFunction<TBuilder, TGenotype>(this TBuilder builder, Func<TGenotype, Fitness> fitnessFunction)
+    where TBuilder : IGeneticAlgorithmBuilder<TGenotype, TBuilder>
   {
     var evaluator = Evaluator.UsingFitnessFunction(fitnessFunction);
     return builder.WithEvaluator(evaluator);

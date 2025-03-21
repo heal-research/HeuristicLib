@@ -11,10 +11,11 @@ public interface IEncoding { }
 public interface IEncoding<TGenotype> { }
 
 
-public interface IEncoding<TGenotype, out TParameters> : IEncoding<TGenotype> where TParameters : IEncodingParameter<TGenotype> {
-  TParameters Parameter { get; }
+public interface IEncoding<TGenotype, out TEncodingParameter> : IEncoding<TGenotype> 
+  where TEncodingParameter : IEncodingParameter<TGenotype> 
+{
+  TEncodingParameter Parameter { get; }
 }
-
 
 public interface IEncodingParameter<in TGenotype> : IEncodingParameter {
   bool IsValidGenotype(TGenotype genotype);
@@ -29,12 +30,12 @@ public abstract record class EncodingParameterBase<TGenotype> : IEncodingParamet
   // }
 }
 
-public abstract class Encoding<TGenotype, TParameters> : IEncoding<TGenotype, TParameters>
-  where TParameters : IEncodingParameter<TGenotype>
+public abstract class Encoding<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter>
+  where TEncodingParameter : IEncodingParameter<TGenotype>
 {
-  public TParameters Parameter { get; }
+  public TEncodingParameter Parameter { get; }
 
-  protected Encoding(TParameters parameter) {
+  protected Encoding(TEncodingParameter parameter) {
     Parameter = parameter;
   }
 }
@@ -51,15 +52,23 @@ public interface IMutatorProvider<TGenotype> : IEncoding<TGenotype> {
   IMutator<TGenotype> Mutator { get; }
 }
 
-public static class GeneticAlgorithmBuilderUsingEncodingExtensions {
-  public static IGeneticAlgorithmBuilder<TGenotype> UsingEncoding<TGenotype, TEncoding>(this IGeneticAlgorithmBuilder<TGenotype> builder, TEncoding encoding) where TEncoding : IEncoding<TGenotype> {
-    if (encoding is ICreatorProvider<TGenotype> creatorProvider)
-      builder.WithCreator(creatorProvider.Creator);
-    if (encoding is ICrossoverProvider<TGenotype> crossoverProvider)
-      builder.WithCrossover(crossoverProvider.Crossover);
-    if (encoding is IMutatorProvider<TGenotype> mutatorProvider)
-      builder.WithMutator(mutatorProvider.Mutator);
+public static class GeneticAlgorithmBuilderEncodingExtensions {
+  public static GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> UsingEncoding<TGenotype, TEncodingParameter, TEncoding>(
+    this GeneticAlgorithmBuilder<TGenotype> builder,
+    TEncoding encoding
+  )
+    where TEncoding : IEncoding<TGenotype, TEncodingParameter>
+    where TEncodingParameter : IEncodingParameter<TGenotype> 
+  {
+    var parameterizedBuilder = builder.UsingEncodingParameters(encoding.Parameter);
     
-    return builder;
+    if (encoding is ICreatorProvider<TGenotype> creatorProvider)
+      parameterizedBuilder.WithCreator(creatorProvider.Creator);
+    if (encoding is ICrossoverProvider<TGenotype> crossoverProvider)
+      parameterizedBuilder.WithCrossover(crossoverProvider.Crossover);
+    if (encoding is IMutatorProvider<TGenotype> mutatorProvider)
+      parameterizedBuilder.WithMutator(mutatorProvider.Mutator);
+    
+    return parameterizedBuilder;
   }
 }
