@@ -43,6 +43,10 @@ public abstract class ProblemBase<TSolution, TGenotype> : IProblem<TSolution, TG
   }
 }
 
+public abstract class ProblemBase<TGenotype> : ProblemBase<TGenotype, TGenotype> {
+  protected ProblemBase(Objective objective) : base(GenotypeMapper.Identity<TGenotype>(), objective) {}
+}
+
 public static class GeneticAlgorithmBuilderUsingProblemExtensions {
   public static TBuilder WithFitnessFunctionFromProblem<TBuilder,TGenotype, TSolution>(this TBuilder builder, IProblem<TSolution, TGenotype> problem)
     where TBuilder : IGeneticAlgorithmBuilder<TGenotype, TBuilder> {

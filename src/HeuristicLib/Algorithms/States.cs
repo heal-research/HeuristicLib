@@ -45,8 +45,8 @@ public record PopulationState<TGenotype> : IGenerationalState {
 
   private readonly Lazy<Phenotype<TGenotype>?> lazyBest;
   private readonly Lazy<Phenotype<TGenotype>?> lazyWorst;
-  public Phenotype<TGenotype>? Best => lazyBest.Value;
-  public Phenotype<TGenotype>? Worst => lazyWorst.Value;
+  public Phenotype<TGenotype>? GetBest() => lazyBest.Value;
+  public Phenotype<TGenotype>? GetWorst() => lazyWorst.Value;
 }
 
 public interface IStateTransformer<in TSourceState, TTargetState>

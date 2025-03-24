@@ -22,6 +22,8 @@ public static class SingleObjective {
 }
 
 public static class MultiObjective {
+  public static Objective Create(ObjectiveDirection[] directions) => new Objective(directions, new NoTotalOrderComparer());
+  
   public static Objective WeightedSum(ObjectiveDirection[] directions, double[]? weights) => new(directions, new WeightedSumComparer(directions, weights));
   public static Objective Lexicographic(ObjectiveDirection[] directions, int[]? order) => new(directions, new LexicographicComparer(directions, order));
   
@@ -30,14 +32,17 @@ public static class MultiObjective {
 }
 
 public static class FitnessTotalOrderComparer {
-  public static IComparer<Fitness> CreateSingleObjectiveComparer(ObjectiveDirection objectiveDirection) {
+  public static SingleObjectiveComparer CreateSingleObjectiveComparer(ObjectiveDirection objectiveDirection) {
     return new SingleObjectiveComparer(objectiveDirection);
   }
-  public static IComparer<Fitness> CreateWeightedSumComparer(ObjectiveDirection[] objectives, double[]? weights = null) {
+  public static WeightedSumComparer CreateWeightedSumComparer(ObjectiveDirection[] objectives, double[]? weights = null) {
     return new WeightedSumComparer(objectives, weights);
   }
-  public static IComparer<Fitness> CreateLexicographicComparer(ObjectiveDirection[] objectives, int[]? order = null) {
+  public static LexicographicComparer CreateLexicographicComparer(ObjectiveDirection[] objectives, int[]? order = null) {
     return new LexicographicComparer(objectives, order);
+  }
+  public static NoTotalOrderComparer CreateNoTotalOrderComparer(ObjectiveDirection[] objectives) {
+    return new NoTotalOrderComparer();
   }
 }
 
@@ -122,6 +127,10 @@ public class LexicographicComparer : IComparer<Fitness> {
   }
 }
 
+public class NoTotalOrderComparer : IComparer<Fitness> {
+  public int Compare(Fitness? x, Fitness? y) => throw new InvalidOperationException("No total order defined");
+}
+
 
 
 public sealed class Objective /*: IReadOnlyList<ObjectiveDirection>, IEquatable<Objective>*/ {
@@ -139,9 +148,9 @@ public sealed class Objective /*: IReadOnlyList<ObjectiveDirection>, IEquatable<
   //public bool IsSingleObjective => Directions.Length == 1;
   //public ObjectiveDirection? SingleObjectiveDirection => Directions.SingleOrDefault();
   
-  public static implicit operator Objective(ObjectiveDirection objectiveDirection) {
-    return new Objective([objectiveDirection], new SingleObjectiveComparer(objectiveDirection));
-  }
+  // public static implicit operator Objective(ObjectiveDirection objectiveDirection) {
+  //   return new Objective([objectiveDirection], new SingleObjectiveComparer(objectiveDirection));
+  // }
   
   // public IEnumerator<ObjectiveDirection> GetEnumerator() => ((IEnumerable<ObjectiveDirection>)directions).GetEnumerator();
   // IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();

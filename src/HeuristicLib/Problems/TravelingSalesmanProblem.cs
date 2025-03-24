@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Problems;
 public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
   public ITravelingSalesmanProblemData ProblemData { get; }
 
-  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(new Mapper(), ObjectiveDirection.Minimize) {
+  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(new Mapper(), SingleObjective.Minimize) {
     ProblemData = problemData;
   }
 

@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class RealVectorTestFunctionProblem : ProblemBase<RealVector, RealVector> {
+public class RealVectorTestFunctionProblem : ProblemBase<RealVector> {
   public enum FunctionType {
     Rastrigin,
     Sphere
@@ -16,7 +16,7 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector, RealVector>
   private readonly double max;
 
   public RealVectorTestFunctionProblem(FunctionType functionType, double min, double max) 
-    : base(GenotypeMapper.Identity<RealVector>(), SingleObjective.Minimize) 
+    : base(SingleObjective.Minimize) 
   {
     this.functionType = functionType;
     this.min = min;
