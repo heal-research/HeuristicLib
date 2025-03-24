@@ -25,7 +25,7 @@
     MutationRate: null,
     Selector: null,
     Replacer: null,
-    Goal: null,
+    Objective: null,
     RandomSource: null
   }
 }

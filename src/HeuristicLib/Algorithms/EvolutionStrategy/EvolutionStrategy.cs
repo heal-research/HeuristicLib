@@ -21,8 +21,8 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     IMutator<RealVector> mutator,
     double initialMutationStrength,
     ICrossover<RealVector>? crossover, //int parentsPerChild,
-    IEvaluator<RealVector, Fitness> evaluator,
-    Goal goal,
+    IEvaluator<RealVector> evaluator,
+    Objective objective,
     ITerminator<EvolutionStrategyPopulationState>? terminator,
     IRandomSource randomSource) {
     PopulationSize = populationSize;
@@ -33,7 +33,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     InitialMutationStrength = initialMutationStrength;
     Crossover = crossover;
     Evaluator = evaluator;
-    Goal = goal;
+    Objective = objective;
     Terminator = terminator;
     RandomSource = randomSource;
   }
@@ -45,8 +45,8 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
   public IMutator<RealVector> Mutator { get; }
   public double InitialMutationStrength { get; }
   public ICrossover<RealVector>? Crossover { get; }
-  public IEvaluator<RealVector, Fitness> Evaluator { get; }
-  public Goal Goal { get; }
+  public IEvaluator<RealVector> Evaluator { get; }
+  public Objective Objective { get; }
   public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
   public IRandomSource RandomSource { get; }
 
@@ -61,7 +61,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     if (initialState is null) {
       var initialPopulation = InitializePopulation(random);
       var evaluatedInitialPopulation = Evaluator.Evaluate(initialPopulation);
-      yield return currentState = new EvolutionStrategyPopulationState { Goal = Goal, MutationStrength = InitialMutationStrength, Population = evaluatedInitialPopulation }; 
+      yield return currentState = new EvolutionStrategyPopulationState { Objective = Objective, MutationStrength = InitialMutationStrength, Population = evaluatedInitialPopulation }; 
     } else {
       currentState = initialState;
     }
@@ -95,7 +95,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     return population;
   }
 
-  private (RealVector[], int successfulOffspring) EvolvePopulation(Phenotype<RealVector, Fitness>[] population, double mutationStrength, IRandomNumberGenerator random) {
+  private (RealVector[], int successfulOffspring) EvolvePopulation(Phenotype<RealVector>[] population, double mutationStrength, IRandomNumberGenerator random) {
     var offspringPopulation = new RealVector[Children];
     for (int i = 0; i < Children; i++) {
       var parent = population[random.Integer(PopulationSize)].Genotype;
@@ -110,7 +110,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     // would require to evaluate individuals immediately or to store the parent for later comparison after child evaluation
   }
   
-  private Phenotype<RealVector, Fitness>[] CombinePopulations(Phenotype<RealVector, Fitness>[] parents, Phenotype<RealVector, Fitness>[] offspring) {
+  private Phenotype<RealVector>[] CombinePopulations(Phenotype<RealVector>[] parents, Phenotype<RealVector>[] offspring) {
     return parents.Concat(offspring)
       .Take(PopulationSize)
       .ToArray();

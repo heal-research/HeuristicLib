@@ -28,25 +28,32 @@
   ],
   lastState: {
     Generation: 1,
-    Goal: Minimize,
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
     Population: [
       {
         Genotype: [
           0.937125866353105,
           -1.10706185338882
         ],
-        Fitness: {
-          Value: 2.1037908366167466
-        }
+        Fitness: [
+          2.1037908366167466
+        ]
       },
       {
         Genotype: [
           1.3937026537522634,
           -0.6899148240401209
         ],
-        Fitness: {
-          Value: 2.4183895515064124
-        }
+        Fitness: [
+          2.4183895515064124
+        ]
       }
     ]
   }

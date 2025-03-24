@@ -4,10 +4,10 @@ using HEAL.HeuristicLib.Encodings;
 namespace HEAL.HeuristicLib.Problems;
 
 
-public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation, Fitness, Goal> {
+public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
   public ITravelingSalesmanProblemData ProblemData { get; }
 
-  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(new Mapper(), Goal.Minimize) {
+  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(new Mapper(), ObjectiveDirection.Minimize) {
     ProblemData = problemData;
   }
 

@@ -40,7 +40,14 @@
   Evaluator: {
     $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
   },
-  Goal: Minimize,
+  Objective: {
+    Directions: [
+      Minimize
+    ],
+    TotalOrderComparer: {
+      $type: SingleObjectiveComparer
+    }
+  },
   RandomSource: {
     $type: RandomSource,
     Seed: 42

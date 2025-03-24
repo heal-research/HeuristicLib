@@ -35,6 +35,8 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   public Permutation(IEnumerable<int> elements) {
     this.elements = elements.ToArray();
   }
+  
+  public static implicit operator Permutation(int[] elements) => new(elements);
 
   public int this[int index] => elements[index];
 
@@ -86,6 +88,10 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
     return new Permutation(newElements);
   }
 
+  public static Permutation Range(int count) {
+    return new Permutation(Enumerable.Range(0, count));
+  }
+  
   public int Count => elements.Length;
 
   public bool Contains(int value) => elements.Contains(value);

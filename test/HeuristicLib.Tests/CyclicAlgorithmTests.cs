@@ -23,7 +23,7 @@ public class CyclicAlgorithmTests {
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
-      Goal.Minimize,
+      SingleObjective.Minimize,
       selector: new TournamentSelector(2),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
@@ -37,7 +37,7 @@ public class CyclicAlgorithmTests {
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
-      Goal.Minimize,
+      SingleObjective.Minimize,
       selector: new RandomSelector(),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
@@ -51,7 +51,7 @@ public class CyclicAlgorithmTests {
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.8,
       evaluator: evaluator,
-      Goal.Minimize,
+      SingleObjective.Minimize,
       selector: new TournamentSelector(2),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
@@ -83,7 +83,7 @@ public class CyclicAlgorithmTests {
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
-      Goal.Minimize,
+      SingleObjective.Minimize,
       selector: new TournamentSelector(2),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
@@ -97,7 +97,7 @@ public class CyclicAlgorithmTests {
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
-      Goal.Minimize,
+      SingleObjective.Minimize,
       selector: new RandomSelector(),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
@@ -111,7 +111,7 @@ public class CyclicAlgorithmTests {
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.8,
       evaluator: evaluator,
-      Goal.Minimize,
+      SingleObjective.Minimize,
       selector: new TournamentSelector(2),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource,
@@ -144,7 +144,7 @@ public class CyclicAlgorithmTests {
       initialMutationStrength: 0.1,
       crossover: null,
       evaluator: evaluator,
-      Goal.Minimize,
+      SingleObjective.Minimize,
       terminator: Terminator.OnGeneration(6),
       randomSource: randomSource
     );
@@ -156,7 +156,7 @@ public class CyclicAlgorithmTests {
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
       mutationRate: 0.1,
       evaluator: evaluator,
-      Goal.Minimize,
+      SingleObjective.Minimize,
       selector: new TournamentSelector(2),
       replacer: new ElitismReplacer(1), 
       randomSourceState: randomSource, 
@@ -167,7 +167,7 @@ public class CyclicAlgorithmTests {
       secondAlgorithm: geneticAlgorithm,
       transformer: new EvolutionToGeneticStateTransformer(),
       repetitionTransformer: StateTransformer.Create((PopulationState<RealVector> sourceState, EvolutionStrategyPopulationState? previousTargetState) => {
-        previousTargetState ??= new EvolutionStrategyPopulationState() { Goal = Goal.Minimize, Population = sourceState.Population, MutationStrength = 0.1 };
+        previousTargetState ??= new EvolutionStrategyPopulationState() { Objective = SingleObjective.Minimize, Population = sourceState.Population, MutationStrength = 0.1 };
         return previousTargetState.Reset() with {
           Population = sourceState.Population, MutationStrength = previousTargetState.MutationStrength
         };
@@ -188,7 +188,7 @@ public class CyclicAlgorithmTests {
 
   private class EvolutionToGeneticStateTransformer : IStateTransformer<EvolutionStrategyPopulationState, PopulationState<RealVector>> {
     public PopulationState<RealVector> Transform(EvolutionStrategyPopulationState sourceState, PopulationState<RealVector>? previousTargetState = null) {
-      previousTargetState ??= new PopulationState<RealVector>() { Goal = Goal.Minimize, Population = sourceState.Population };
+      previousTargetState ??= new PopulationState<RealVector>() { Objective = SingleObjective.Minimize, Population = sourceState.Population };
       return previousTargetState.Reset() with {
         Population = sourceState.Population
       };

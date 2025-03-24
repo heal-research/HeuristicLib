@@ -4,7 +4,7 @@
     Crossover: null,
     Mutator: null,
     Evaluator: {
-      $type: SingleObjectiveFitnessFunctionEvaluator<Permutation>
+      $type: FitnessFunctionEvaluator<Permutation>
     },
     Terminator: null,
     Interceptor: null,
@@ -12,7 +12,14 @@
     MutationRate: null,
     Selector: null,
     Replacer: null,
-    Goal: null,
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
     RandomSource: null
   }
 }

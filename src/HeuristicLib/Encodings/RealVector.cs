@@ -81,7 +81,9 @@ public class RealVector : IReadOnlyList<double> {
   }
 
   public static implicit operator RealVector(double value) => new RealVector(value);
-  public static implicit operator RealVector?(double[]? values) => values is not null ? new RealVector(values) : null;
+  
+  public static implicit operator RealVector(double[] values) => new RealVector(values);
+  //public static implicit operator RealVector?(double[]? values) => values is not null ? new RealVector(values) : null;
 
   public double this[int index] => elements[index];
 
@@ -319,6 +321,10 @@ public class RealVector : IReadOnlyList<double> {
   
   public static bool operator ==(RealVector a, RealVector b) => a.Equals(b);
   public static bool operator !=(RealVector a, RealVector b) => !a.Equals(b);
+
+  public static RealVector Repeat(double value, int count) {
+    return new RealVector(Enumerable.Repeat(value, count));
+  }
   
   public override bool Equals(object? obj) {
     if (obj is RealVector other)

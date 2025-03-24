@@ -21,7 +21,7 @@ public class GeneticAlgorithmObservableTests {
     var replacement = new ElitismReplacer(0);
     var terminationCriterion = Terminator.OnGeneration(3);
     
-    var ga = new GeneticAlgorithm<RealVector>(2, creator, crossover, mutator, 0.5, evaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
+    var ga = new GeneticAlgorithm<RealVector>(2, creator, crossover, mutator, 0.5, evaluator, SingleObjective.Minimize, selector, replacement, randomSource, terminationCriterion);
 
     var stream = ga.CreateExecutionStream();
 

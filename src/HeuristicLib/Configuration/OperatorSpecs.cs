@@ -65,26 +65,24 @@ public static class OperatorFactoryMapping {
     throw new InvalidOperationException($"{mutatorSpec} is not compatible with Genotype {typeof(TGenotype)}");
   }
 
-  public static ISingleObjectiveSelector CreateSelector(this SelectorSpec selectorSpec) {
+  public static ISelector CreateSelector(this SelectorSpec selectorSpec) {
     IOperator @operator = selectorSpec switch {
       RandomSelectorSpec => new RandomSelector(),
       TournamentSelectorSpec spec => new TournamentSelector(spec.TournamentSize ?? 2),
       ProportionalSelectorSpec spec => new ProportionalSelector(spec.Windowing),
       _ => throw new ArgumentException($"Unknown selector spec: {selectorSpec}")
     };
-    if (@operator is ISingleObjectiveSelector selector) return selector;
-    throw new InvalidOperationException($"{selectorSpec} is not compatible with {typeof(ISingleObjectiveSelector)}");
-    //throw new InvalidOperationException($"{selectorSpec} is not compatible with Fitness {typeof(TFitness)}, Goal {typeof(TGoal)}");
+    if (@operator is ISelector selector) return selector;
+    throw new InvalidOperationException($"{selectorSpec} is not compatible with {typeof(ISelector)}");
   }
 
-  public static ISingleObjectiveReplacer CreateReplacer(this ReplacerSpec replacerSpec) {
+  public static IReplacer CreateReplacer(this ReplacerSpec replacerSpec) {
     IOperator @operator = replacerSpec switch {
       ElitistReplacerSpec spec => new ElitismReplacer(spec.Elites ?? 1),
       PlusSelectionReplacerSpec => new PlusSelectionReplacer(),
       _ => throw new ArgumentException($"Unknown replacer spec: {replacerSpec}")
     };
-    if (@operator is ISingleObjectiveReplacer replacer) return replacer;
-    throw new InvalidOperationException($"{replacerSpec} is not compatible with {typeof(ISingleObjectiveReplacer)}");
-    //throw new InvalidOperationException($"{replacerSpec} is not compatible with Fitness {typeof(TFitness)}, Goal {typeof(TGoal)}");
+    if (@operator is IReplacer replacer) return replacer;
+    throw new InvalidOperationException($"{replacerSpec} is not compatible with {typeof(IReplacer)}");
   }
 }

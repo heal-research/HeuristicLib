@@ -22,8 +22,8 @@ public record PopulationState<TGenotype> : IGenerationalState {
   public int Generation { get; init; } = 0;
   //public int TotalGeneration { get; init; }
   
-  public required Goal Goal { get; init; }
-  public required Phenotype<TGenotype, Fitness>[] Population { get; init; }
+  public required Objective Objective { get; init; }
+  public required Phenotype<TGenotype>[] Population { get; init; }
   
   //public TimeSpan TotalDuration { get; init; }
   //public TimeSpan EvaluationDuration { get; init; }
@@ -38,6 +38,15 @@ public record PopulationState<TGenotype> : IGenerationalState {
   IGenerationalState IGenerationalState.Next() => this with { Generation = Generation + 1 };
   IGenerationalState IGenerationalState.Reset() => this with { Generation = 0 };
 
+  public PopulationState() {
+    lazyBest = new Lazy<Phenotype<TGenotype>?>(() => Population!.MinBy(x => x.Fitness, Objective!.TotalOrderComparer));
+    lazyWorst = new Lazy<Phenotype<TGenotype>?>(() => Population!.MaxBy(x => x.Fitness, Objective!.TotalOrderComparer));
+  }
+
+  private readonly Lazy<Phenotype<TGenotype>?> lazyBest;
+  private readonly Lazy<Phenotype<TGenotype>?> lazyWorst;
+  public Phenotype<TGenotype>? Best => lazyBest.Value;
+  public Phenotype<TGenotype>? Worst => lazyWorst.Value;
 }
 
 public interface IStateTransformer<in TSourceState, TTargetState>

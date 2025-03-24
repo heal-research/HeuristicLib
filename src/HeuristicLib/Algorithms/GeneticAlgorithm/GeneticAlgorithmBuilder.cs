@@ -7,9 +7,9 @@ namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 public record GeneticAlgorithmBuilderState {
   public int? PopulationSize { get; init; }
   public double? MutationRate { get; init; }
-  public ISingleObjectiveSelector Selector { get; init; }
-  public ISingleObjectiveReplacer? Replacer { get; init; }
-  public Goal? Goal { get; init; }
+  public ISelector? Selector { get; init; }
+  public IReplacer? Replacer { get; init; }
+  public Objective? Objective { get; init; }
   public IRandomSource? RandomSource { get; init; }
 
   public GeneticAlgorithmBuilderState() { }
@@ -18,7 +18,7 @@ public record GeneticAlgorithmBuilderState {
     MutationRate = original.MutationRate;
     Selector = original.Selector;
     Replacer = original.Replacer;
-    Goal = original.Goal;
+    Objective = original.Objective;
     RandomSource = original.RandomSource;
   }
 }
@@ -26,7 +26,7 @@ public record GeneticAlgorithmBuilderState<TGenotype> : GeneticAlgorithmBuilderS
   public ICreator<TGenotype>? Creator { get; init; }
   public ICrossover<TGenotype>? Crossover { get; init; }
   public IMutator<TGenotype>? Mutator { get; init; }
-  public ISingleObjectiveEvaluator<TGenotype>? Evaluator { get; init; }
+  public IEvaluator<TGenotype>? Evaluator { get; init; }
   public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
   public IInterceptor<PopulationState<TGenotype>>? Interceptor { get; init; }
 
@@ -61,9 +61,9 @@ public record GeneticAlgorithmBuilderState<TGenotype, TEncodingParameter> : Gene
 public interface IGeneticAlgorithmBuilder<out TSelf> where TSelf : IGeneticAlgorithmBuilder<TSelf> {
   TSelf WithPopulationSize(int populationSize);
   TSelf WithMutationRate(double mutationRate);
-  TSelf WithSelector(ISingleObjectiveSelector selector);
-  TSelf WithReplacer(ISingleObjectiveReplacer replacer);
-  TSelf WithGoal(Goal goal);
+  TSelf WithSelector(ISelector selector);
+  TSelf WithReplacer(IReplacer replacer);
+  TSelf WithObjective(Objective objective);
   TSelf WithRandomSource(IRandomSource randomSource);
 }
 
@@ -71,7 +71,7 @@ public interface IGeneticAlgorithmBuilder<TGenotype, out TSelf> : IGeneticAlgori
   TSelf WithCreator(ICreator<TGenotype> creator);
   TSelf WithCrossover(ICrossover<TGenotype> crossover);
   TSelf WithMutator(IMutator<TGenotype> mutator);
-  TSelf WithEvaluator(ISingleObjectiveEvaluator<TGenotype> evaluator);
+  TSelf WithEvaluator(IEvaluator<TGenotype> evaluator);
   TSelf WithTerminator(ITerminator<PopulationState<TGenotype>> terminator);
   TSelf WithInterceptor(IInterceptor<PopulationState<TGenotype>> interceptor);
 }
@@ -101,16 +101,16 @@ public class GeneticAlgorithmBuilder : IGeneticAlgorithmBuilder<GeneticAlgorithm
     State = State with { MutationRate = mutationRate };
     return this;
   }
-  public GeneticAlgorithmBuilder WithSelector(ISingleObjectiveSelector selector) {
+  public GeneticAlgorithmBuilder WithSelector(ISelector selector) {
     State = State with { Selector = selector };
     return this;
   }
-  public GeneticAlgorithmBuilder WithReplacer(ISingleObjectiveReplacer replacer) {
+  public GeneticAlgorithmBuilder WithReplacer(IReplacer replacer) {
     State = State with { Replacer = replacer };
     return this;
   }
-  public GeneticAlgorithmBuilder WithGoal(Goal goal) {
-    State = State with { Goal = goal };
+  public GeneticAlgorithmBuilder WithObjective(Objective objective) {
+    State = State with { Objective = objective };
     return this;
   }
   public GeneticAlgorithmBuilder WithRandomSource(IRandomSource randomSource) {
@@ -146,7 +146,7 @@ public class GeneticAlgorithmBuilder<TGenotype> : IGeneticAlgorithmBuilder<TGeno
       State.Mutator!,
       State.MutationRate!.Value,
       State.Evaluator!,
-      State.Goal!.Value,
+      State.Objective!,
       State.Selector!,
       State.Replacer!,
       State.RandomSource!,
@@ -175,19 +175,19 @@ public class GeneticAlgorithmBuilder<TGenotype> : IGeneticAlgorithmBuilder<TGeno
     State = State with { MutationRate = mutationRate };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithEvaluator(ISingleObjectiveEvaluator<TGenotype> evaluator) {
+  public GeneticAlgorithmBuilder<TGenotype> WithEvaluator(IEvaluator<TGenotype> evaluator) {
     State = State with { Evaluator = evaluator };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithGoal(Goal goal) {
-    State = State with { Goal = goal };
+  public GeneticAlgorithmBuilder<TGenotype> WithObjective(Objective objective) {
+    State = State with { Objective = objective };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithSelector(ISingleObjectiveSelector selector) {
+  public GeneticAlgorithmBuilder<TGenotype> WithSelector(ISelector selector) {
     State = State with { Selector = selector };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithReplacer(ISingleObjectiveReplacer replacer) {
+  public GeneticAlgorithmBuilder<TGenotype> WithReplacer(IReplacer replacer) {
     State = State with { Replacer = replacer };
     return this;
   }
@@ -213,7 +213,7 @@ internal sealed class GeneticAlgorithmBuilderStateValidator<TGenotype> : Abstrac
     RuleFor(x => x.Mutator).NotNull().WithMessage("Mutator must not be null.");
     RuleFor(x => x.MutationRate).NotNull().WithMessage("Mutation rate must not be null.");
     RuleFor(x => x.Evaluator).NotNull().WithMessage("Evaluator must not be null.");
-    RuleFor(x => x.Goal).NotNull().WithMessage("Goal must not be null.");
+    RuleFor(x => x.Objective).NotNull().WithMessage("Objective must not be null.");
     RuleFor(x => x.Selector).NotNull().WithMessage("Selector must not be null.");
     RuleFor(x => x.Replacer).NotNull().WithMessage("Replacer must not be null.");
     RuleFor(x => x.RandomSource).NotNull().WithMessage("Random source must not be null.");
@@ -254,7 +254,7 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> :
       State.Mutator!,
       State.MutationRate!.Value,
       State.Evaluator!,
-      State.Goal!.Value,
+      State.Objective!,
       State.Selector!,
       State.Replacer!,
       State.RandomSource!,
@@ -300,19 +300,19 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> :
     State = State with { MutationRate = mutationRate };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithEvaluator(ISingleObjectiveEvaluator<TGenotype> evaluator) {
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithEvaluator(IEvaluator<TGenotype> evaluator) {
     State = State with { Evaluator = evaluator };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithGoal(Goal goal) {
-    State = State with { Goal = goal };
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithObjective(Objective objective) {
+    State = State with { Objective = objective };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithSelector(ISingleObjectiveSelector selector) {
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithSelector(ISelector selector) {
     State = State with { Selector = selector };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithReplacer(ISingleObjectiveReplacer replacer) {
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithReplacer(IReplacer replacer) {
     State = State with { Replacer = replacer };
     return this;
   }

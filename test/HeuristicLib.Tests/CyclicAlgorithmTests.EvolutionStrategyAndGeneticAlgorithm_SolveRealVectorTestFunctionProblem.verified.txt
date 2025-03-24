@@ -30,19 +30,19 @@
     },
     {
       Generation: 1,
-      Type: PopulationState<RealVector, Fitness, Goal>
+      Type: PopulationState<RealVector>
     },
     {
       Generation: 2,
-      Type: PopulationState<RealVector, Fitness, Goal>
+      Type: PopulationState<RealVector>
     },
     {
       Generation: 3,
-      Type: PopulationState<RealVector, Fitness, Goal>
+      Type: PopulationState<RealVector>
     },
     {
       Generation: 4,
-      Type: PopulationState<RealVector, Fitness, Goal>
+      Type: PopulationState<RealVector>
     },
     {
       Generation: 1,
@@ -70,19 +70,19 @@
     },
     {
       Generation: 1,
-      Type: PopulationState<RealVector, Fitness, Goal>
+      Type: PopulationState<RealVector>
     },
     {
       Generation: 2,
-      Type: PopulationState<RealVector, Fitness, Goal>
+      Type: PopulationState<RealVector>
     },
     {
       Generation: 3,
-      Type: PopulationState<RealVector, Fitness, Goal>
+      Type: PopulationState<RealVector>
     },
     {
       Generation: 4,
-      Type: PopulationState<RealVector, Fitness, Goal>
+      Type: PopulationState<RealVector>
     },
     {
       Generation: 1,
@@ -105,187 +105,194 @@
     $type: EvolutionStrategyPopulationState,
     MutationStrength: 65.68408355712891,
     Generation: 4,
-    Goal: Minimize,
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
     Population: [
       {
         Genotype: [
           -0.4923868946439786,
           0.6475057330781514
         ],
-        Fitness: {
-          Value: 0.6617085283862147
-        }
+        Fitness: [
+          0.6617085283862147
+        ]
       },
       {
         Genotype: [
           -0.8321156263554337,
           0.157892309596934
         ],
-        Fitness: {
-          Value: 0.7173463970547498
-        }
+        Fitness: [
+          0.7173463970547498
+        ]
       },
       {
         Genotype: [
           -0.3798271974664569,
           0.8004297632372503
         ],
-        Fitness: {
-          Value: 0.7849565058112635
-        }
+        Fitness: [
+          0.7849565058112635
+        ]
       },
       {
         Genotype: [
           -0.4874302035814553,
           0.6183568529050955
         ],
-        Fitness: {
-          Value: 0.6199534008981528
-        }
+        Fitness: [
+          0.6199534008981528
+        ]
       },
       {
         Genotype: [
           -0.4080437264186795,
           0.4722115667985232
         ],
-        Fitness: {
-          Value: 0.3894834464879583
-        }
+        Fitness: [
+          0.3894834464879583
+        ]
       },
       {
         Genotype: [
           -1.067724630273497,
           -0.005889389970997555
         ],
-        Fitness: {
-          Value: 1.1400705710069066
-        }
+        Fitness: [
+          1.1400705710069066
+        ]
       },
       {
         Genotype: [
           -1.057600305913508,
           -0.09671613259717785
         ],
-        Fitness: {
-          Value: 1.1278724173729004
-        }
+        Fitness: [
+          1.1278724173729004
+        ]
       },
       {
         Genotype: [
           -0.33394225713750264,
           0.3814861669696695
         ],
-        Fitness: {
-          Value: 0.25704912669130053
-        }
+        Fitness: [
+          0.25704912669130053
+        ]
       },
       {
         Genotype: [
           -0.6332398248578868,
           -0.0703001470415961
         ],
-        Fitness: {
-          Value: 0.4059347864601171
-        }
+        Fitness: [
+          0.4059347864601171
+        ]
       },
       {
         Genotype: [
           -0.5924957098148539,
           0.7596991606446803
         ],
-        Fitness: {
-          Value: 0.9281939808332393
-        }
+        Fitness: [
+          0.9281939808332393
+        ]
       },
       {
         Genotype: [
           0.0850296860281256,
           0.46617095083475474
         ],
-        Fitness: {
-          Value: 0.22454540290822092
-        }
+        Fitness: [
+          0.22454540290822092
+        ]
       },
       {
         Genotype: [
           -0.1678317559011689,
           0.5927303993221407
         ],
-        Fitness: {
-          Value: 0.3794968245694539
-        }
+        Fitness: [
+          0.3794968245694539
+        ]
       },
       {
         Genotype: [
           -0.9741999956246725,
           0.0907261436512708
         ],
-        Fitness: {
-          Value: 0.957296864616943
-        }
+        Fitness: [
+          0.957296864616943
+        ]
       },
       {
         Genotype: [
           -0.7432850323406704,
           0.0438544686838665
         ],
-        Fitness: {
-          Value: 0.5543958537252158
-        }
+        Fitness: [
+          0.5543958537252158
+        ]
       },
       {
         Genotype: [
           -0.6534974114999887,
           -0.33821770157019637
         ],
-        Fitness: {
-          Value: 0.541450080492612
-        }
+        Fitness: [
+          0.541450080492612
+        ]
       },
       {
         Genotype: [
           -0.7618681265848335,
           -0.053525361096043333
         ],
-        Fitness: {
-          Value: 0.5833080065863456
-        }
+        Fitness: [
+          0.5833080065863456
+        ]
       },
       {
         Genotype: [
           -1.0424445674540013,
           -0.04037334476313387
         ],
-        Fitness: {
-          Value: 1.0883206831817227
-        }
+        Fitness: [
+          1.0883206831817227
+        ]
       },
       {
         Genotype: [
           -0.4958759077083934,
           0.6283457198890032
         ],
-        Fitness: {
-          Value: 0.6407112595484528
-        }
+        Fitness: [
+          0.6407112595484528
+        ]
       },
       {
         Genotype: [
           -0.5283689779571373,
           0.8988348080417661
         ],
-        Fitness: {
-          Value: 1.0870777890149483
-        }
+        Fitness: [
+          1.0870777890149483
+        ]
       },
       {
         Genotype: [
           -0.12487937131427948,
           0.5514324913618665
         ],
-        Fitness: {
-          Value: 0.3196726499094046
-        }
+        Fitness: [
+          0.3196726499094046
+        ]
       }
     ]
   }

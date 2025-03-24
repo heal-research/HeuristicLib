@@ -29,29 +29,41 @@ public class ExecutionStream<TState> : IEnumerable<TState> {
 }
 
 public static class ExecutionStreamExtensions {
-  public static Phenotype<TGenotype, Fitness>? GetBest<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
-    var goal = stream.Select(state => state.Goal).Single();
-    var comparer = Fitness.CreateSingleObjectiveComparer(goal);
-    
-    var bestPhenotype = stream
-      .SelectMany(state => state.Population)
-      .MinBy(individual => individual.Fitness, comparer);
-
-    return bestPhenotype is null ? null
-      : new Phenotype<TGenotype, Fitness>(bestPhenotype.Genotype, bestPhenotype.Fitness);
-  }
-  public static Phenotype<TGenotype, Fitness>? GetBest<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream, IComparer<Fitness> comparer) {
+  public static Phenotype<TGenotype>? GetBest<TGenotype>(this IEnumerable<PopulationState<TGenotype>> stream, IComparer<Fitness> comparer) {
     return stream
       .SelectMany(state => state.Population)
       .MinBy(individual => individual.Fitness, comparer);
   }
+  public static Phenotype<TGenotype>? GetBestSingleObjective<TGenotype>(this IEnumerable<PopulationState<TGenotype>> stream) {
+    var states = stream.ToList();
+    var objective = states.Select(state => state.Objective).First().WithSingleObjective();
+    return states.GetBest(objective.TotalOrderComparer);
+  }
 
-  public static IEnumerable<(Fitness best, Fitness average, Fitness worst)> GetSingleObjectiveStatisticsStream<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
+
+  public static IEnumerable<(Fitness best, Fitness median, Fitness worst)> GetObjectiveStatistics<TGenotype>(this IEnumerable<PopulationState<TGenotype>> stream, IComparer<Fitness> comparer) {
     return stream.Select(state => {
       if (state.Population.Length == 0) throw new InvalidOperationException("Population must not be empty.");
-      var comparer = Fitness.CreateSingleObjectiveComparer(state.Goal);
-      var fitnessValues = state.Population.Select(p => p.Fitness).ToArray();
-      return (fitnessValues.MinBy(x => x, comparer), new Fitness(fitnessValues.Select(x => x.Value).Average()), fitnessValues.MaxBy(x => x, comparer));
+      var fitnessValues = state.Population.Select(p => p.Fitness);
+      var orderedFitness = fitnessValues.OrderBy(x => x, comparer).ToArray();
+      Fitness best = orderedFitness[0];
+      Fitness worst = orderedFitness[^1];
+      // ToDo: average only works for single objective
+      Fitness median = orderedFitness[orderedFitness.Length / 2];
+      return (best, median, worst);
+    });
+  }
+  public static IEnumerable<(SingleFitness best, SingleFitness mean, SingleFitness worst)> GetSingleObjectiveStatisticsStream<TGenotype>(this ExecutionStream<PopulationState<TGenotype>> stream) {
+    return stream.Select(state => {
+      if (state.Population.Length == 0) throw new InvalidOperationException("Population must not be empty.");
+      var objective = state.Objective.WithSingleObjective();
+      var comparer = objective.TotalOrderComparer;
+      var fitnessValues = state.Population.Select(p => p.Fitness);
+      var orderedFitness = fitnessValues.OrderBy(x => x, comparer).ToArray();
+      Fitness best = orderedFitness[0];
+      Fitness worst = orderedFitness[^1];
+      double mean = orderedFitness.Select(x => x.SingleFitness!.Value.Value).Average();
+      return (best.SingleFitness!.Value, new SingleFitness(mean), worst.SingleFitness!.Value);
     });
   }
 }

@@ -2,12 +2,10 @@
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IReplacer<TFitness, in TGoal> : IOperator {
-  Phenotype<TGenotype, TFitness>[] Replace<TGenotype>(Phenotype<TGenotype, TFitness>[] previousPopulation, Phenotype<TGenotype, TFitness>[] offspringPopulation, TGoal goal, IRandomNumberGenerator random);
+public interface IReplacer : IOperator {
+  Phenotype<TGenotype>[] Replace<TGenotype>(Phenotype<TGenotype>[] previousPopulation, Phenotype<TGenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random);
   int GetOffspringCount(int populationSize);
 }
-public interface ISingleObjectiveReplacer : IReplacer<Fitness, Goal>;
-public interface IMultiObjectiveReplacer : IReplacer<FitnessVector, GoalVector>;
 
 // public static class Replacer {
 //   public static IReplacer<TFitness, TGoal> Create<TGenotype, TFitness, TGoal>(
@@ -29,29 +27,26 @@ public interface IMultiObjectiveReplacer : IReplacer<FitnessVector, GoalVector>;
 // }
 
 
-public abstract class ReplacerBase<TFitness, TGoal> : IReplacer<TFitness, TGoal> {
+public abstract class ReplacerBase : IReplacer {
   public abstract int GetOffspringCount(int populationSize);
-  public abstract Phenotype<TGenotype, TFitness>[] Replace<TGenotype>(Phenotype<TGenotype, TFitness>[] previousPopulation, Phenotype<TGenotype, TFitness>[] offspringPopulation, TGoal goal, IRandomNumberGenerator random);
+  public abstract Phenotype<TGenotype>[] Replace<TGenotype>(Phenotype<TGenotype>[] previousPopulation, Phenotype<TGenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random);
 }
-public abstract class SingleObjectiveReplacerBase : ReplacerBase<Fitness, Goal>, ISingleObjectiveReplacer;
-public abstract class MultiObjectiveReplacerBase : ReplacerBase<FitnessVector, GoalVector>, IMultiObjectiveReplacer;
 
-public class PlusSelectionReplacer : SingleObjectiveReplacerBase {
+public class PlusSelectionReplacer : ReplacerBase {
   public override int GetOffspringCount(int populationSize) {
     return populationSize;
   }
 
-  public override Phenotype<TGenotype, Fitness>[] Replace<TGenotype>(Phenotype<TGenotype, Fitness>[] previousPopulation, Phenotype<TGenotype, Fitness>[] offspringPopulation, Goal goal, IRandomNumberGenerator random) {
+  public override Phenotype<TGenotype>[] Replace<TGenotype>(Phenotype<TGenotype>[] previousPopulation, Phenotype<TGenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
-    var comparer = Fitness.CreateSingleObjectiveComparer(goal);
     return combinedPopulation
-      .OrderBy(p => p.Fitness, comparer)
+      .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
       .Take(previousPopulation.Length) // if algorithm population differs from previousPopulation.Length, it is not detected
       .ToArray();
   }
 }
 
-public class ElitismReplacer : SingleObjectiveReplacerBase {
+public class ElitismReplacer : ReplacerBase {
   public int Elites { get; }
 
   public ElitismReplacer(int elites) {
@@ -60,11 +55,9 @@ public class ElitismReplacer : SingleObjectiveReplacerBase {
 
   public override int GetOffspringCount(int populationSize) => populationSize - Elites;
 
-  public override Phenotype<TGenotype, Fitness>[] Replace<TGenotype>(Phenotype<TGenotype, Fitness>[] previousPopulation, Phenotype<TGenotype, Fitness>[] offspringPopulation, Goal goal, IRandomNumberGenerator random) {
-    var comparer = Fitness.CreateSingleObjectiveComparer(goal);
-    
+  public override Phenotype<TGenotype>[] Replace<TGenotype>(Phenotype<TGenotype>[] previousPopulation, Phenotype<TGenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var elitesPopulation = previousPopulation
-      .OrderBy(p => p.Fitness, comparer)
+      .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
       .Take(Elites);
     
     return elitesPopulation

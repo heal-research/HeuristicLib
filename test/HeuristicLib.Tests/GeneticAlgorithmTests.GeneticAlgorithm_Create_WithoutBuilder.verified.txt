@@ -38,7 +38,14 @@
   Evaluator: {
     $type: GeneticAlgorithmTests.RealVectorMockEvaluator
   },
-  Goal: Minimize,
+  Objective: {
+    Directions: [
+      Minimize
+    ],
+    TotalOrderComparer: {
+      $type: SingleObjectiveComparer
+    }
+  },
   RandomSource: {
     $type: FixedRandomSource,
     Seed: 42

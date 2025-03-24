@@ -19,7 +19,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       .WithMutator(new GaussianMutator(0.1, 0.1, encoding))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
-      .WithGoal(Goal.Minimize)
+      .WithObjective(SingleObjective.Minimize)
       .WithSelector(new ProportionalSelector())
       .WithReplacer(new PlusSelectionReplacer())
       .WithTerminator(Terminator.OnGeneration(20));
@@ -44,7 +44,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       .WithCrossover(new SinglePointCrossover())
       .WithMutator(new GaussianMutator(0.1, 0.1, encoding))
       .WithEvaluator(new MockEvaluator())
-      .WithGoal(Goal.Minimize)
+      .WithObjective(SingleObjective.Minimize)
       .WithSelector(new ProportionalSelector())
       .WithReplacer(new PlusSelectionReplacer())
       .WithTerminator(Terminator.OnGeneration(20));
@@ -67,7 +67,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       .WithMutator(enc => new GaussianMutator(0.1, 0.1, enc))
       .WithMutationRate(0.05)
       .WithEvaluator(new MockEvaluator())
-      .WithGoal(Goal.Minimize)
+      .WithObjective(SingleObjective.Minimize)
       .WithSelector(new ProportionalSelector())
       .WithReplacer(new PlusSelectionReplacer())
       .WithTerminator(Terminator.OnGeneration(20));
@@ -91,7 +91,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       Replacer: new ElitistReplacerSpec(2)
     );
     var builder = new GeneticAlgorithmBuilder<RealVector>()
-      .WithRandomSource(randomSource).WithEvaluator(new MockEvaluator()).WithGoal(Goal.Minimize)
+      .WithRandomSource(randomSource).WithEvaluator(new MockEvaluator()).WithObjective(SingleObjective.Minimize)
       .UsingEncodingParameters(encoding)
       .WithSpecs(spec);
 
@@ -100,7 +100,7 @@ public class GeneticAlgorithmBuilderBasicTests {
     return Verify(ga);
   }
 
-  private class MockEvaluator : SingleObjectiveFitnessFunctionEvaluatorBase<RealVector> {
+  private class MockEvaluator : FitnessFunctionEvaluatorBase<RealVector> {
     public override Fitness Evaluate(RealVector solution) {
       return solution.Sum();
     }

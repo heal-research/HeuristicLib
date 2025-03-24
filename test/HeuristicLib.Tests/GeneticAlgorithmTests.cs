@@ -20,7 +20,7 @@ public class GeneticAlgorithmTests {
     var ga = new GeneticAlgorithm<RealVector>(
       populationSize: 200, 
       creator, crossover, mutator, 0.05,
-      evaluator, Goal.Minimize, selector, replacement,
+      evaluator, SingleObjective.Minimize, selector, replacement,
       randomSource, terminator: null
     );
 
@@ -41,7 +41,7 @@ public class GeneticAlgorithmTests {
     var ga = new GeneticAlgorithm<RealVector>(
       populationSize: 5, 
       creator, crossover, mutator, 0.5,
-      evaluator, Goal.Minimize, selector, replacement,
+      evaluator, SingleObjective.Minimize, selector, replacement,
       randomSource, terminator: Terminator.OnGeneration(5)
     );
 
@@ -64,7 +64,7 @@ public class GeneticAlgorithmTests {
     var ga = new GeneticAlgorithm<RealVector>(
       populationSize: 5, 
       creator, crossover, mutator, 0.5,
-      evaluator, Goal.Minimize, selector, replacement,
+      evaluator, SingleObjective.Minimize, selector, replacement,
       randomSource
     );
 
@@ -91,7 +91,7 @@ public class GeneticAlgorithmTests {
     var firstAlg = new GeneticAlgorithm<RealVector>(
       5,
       creator, crossover, mutator, 0.05, 
-      evaluator, Goal.Minimize, selector, replacement, 
+      evaluator, SingleObjective.Minimize, selector, replacement, 
       randomSource, terminationCriterion
     );
     
@@ -124,19 +124,19 @@ public class GeneticAlgorithmTests {
     var replacement = new ElitismReplacer(0);
     var terminationCriterion = Terminator.OnGeneration(5);
 
-    var firstAlg = new GeneticAlgorithm<RealVector>(5, creator, crossover, mutator, 0.05, evaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
+    var firstAlg = new GeneticAlgorithm<RealVector>(5, creator, crossover, mutator, 0.05, evaluator, SingleObjective.Minimize, selector, replacement, randomSource, terminationCriterion);
 
     var firstResult = firstAlg.Execute();
 
     var newTerminationCriterion = Terminator.OnGeneration(12);
-    var secondAlg = new GeneticAlgorithm<RealVector>(8, creator, crossover, mutator, 0.05, evaluator, Goal.Minimize, selector, replacement, randomSource, newTerminationCriterion);
+    var secondAlg = new GeneticAlgorithm<RealVector>(8, creator, crossover, mutator, 0.05, evaluator, SingleObjective.Minimize, selector, replacement, randomSource, newTerminationCriterion);
 
     var finalState = secondAlg.Execute(firstResult);
 
     await Verify(new { firstResult, finalState });
   }
   
-  private class RealVectorMockEvaluator : SingleObjectiveFitnessFunctionEvaluatorBase<RealVector> {
+  private class RealVectorMockEvaluator : FitnessFunctionEvaluatorBase<RealVector> {
     public override Fitness Evaluate(RealVector individual) => individual.Sum();
   }
 //
