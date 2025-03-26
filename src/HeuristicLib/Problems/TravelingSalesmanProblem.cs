@@ -1,5 +1,7 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
+using RandomPermutationCreator=HEAL.HeuristicLib.Operators.RandomPermutationCreator;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -46,7 +48,7 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
   public PermutationEncoding CreatePermutationEncoding() {
     var parameter = CreatePermutationEncodingParameters();
     return new PermutationEncoding(parameter) {
-      Creator = new RandomPermutationCreator(parameter),
+      Creator = new RandomPermutationCreator(),
       Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossover() : new PartiallyMatchedCrossover(),
       Mutator = new InversionMutator()
       // ToDo: mutation rate default

@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Encodings;
@@ -39,16 +40,16 @@ public abstract class Encoding<TGenotype, TEncodingParameter> : IEncoding<TGenot
   }
 }
 
-public interface ICreatorProvider<TGenotype> : IEncoding<TGenotype> {
-  ICreator<TGenotype> Creator { get; }
+public interface ICreatorProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
+  IExecutableEncodingOperatorFactory<ICreatorOperator<TGenotype>, TEncodingParameter> Creator { get; }
 }
 
-public interface ICrossoverProvider<TGenotype> : IEncoding<TGenotype> {
-  ICrossover<TGenotype> Crossover { get; }
+public interface ICrossoverProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
+  IExecutableEncodingOperatorFactory<ICrossoverOperator<TGenotype>, TEncodingParameter> Crossover { get; }
 }
 
-public interface IMutatorProvider<TGenotype> : IEncoding<TGenotype> {
-  IMutator<TGenotype> Mutator { get; }
+public interface IMutatorProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
+  IExecutableEncodingOperatorFactory<IMutatorOperator<TGenotype>, TEncodingParameter> Mutator { get; }
 }
 
 public static class GeneticAlgorithmBuilderEncodingExtensions {
@@ -61,11 +62,11 @@ public static class GeneticAlgorithmBuilderEncodingExtensions {
   {
     var parameterizedBuilder = builder.UsingEncodingParameters(encoding.Parameter);
     
-    if (encoding is ICreatorProvider<TGenotype> creatorProvider)
+    if (encoding is ICreatorProvider<TGenotype, TEncodingParameter> creatorProvider)
       parameterizedBuilder.WithCreator(creatorProvider.Creator);
-    if (encoding is ICrossoverProvider<TGenotype> crossoverProvider)
+    if (encoding is ICrossoverProvider<TGenotype, TEncodingParameter> crossoverProvider)
       parameterizedBuilder.WithCrossover(crossoverProvider.Crossover);
-    if (encoding is IMutatorProvider<TGenotype> mutatorProvider)
+    if (encoding is IMutatorProvider<TGenotype, TEncodingParameter> mutatorProvider)
       parameterizedBuilder.WithMutator(mutatorProvider.Mutator);
     
     return parameterizedBuilder;

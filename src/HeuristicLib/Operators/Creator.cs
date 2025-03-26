@@ -1,23 +1,21 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿namespace HEAL.HeuristicLib.Operators;
 
-namespace HEAL.HeuristicLib.Operators;
-
-public interface ICreator<out TGenotype> : IOperator {
-  TGenotype Create(IRandomNumberGenerator random);
+public interface ICreatorOperator<out TGenotype> : IExecutableOperator {
+  TGenotype Create();
 }
 
-public static class Creator {
-  public static ICreator<TGenotype> Create<TGenotype>(Func<IRandomNumberGenerator, TGenotype> creator) => new Creator<TGenotype>(creator);
+public static class CreatorOperator {
+  public static CreatorOperator<TGenotype> Create<TGenotype>(Func<TGenotype> creator) => new CreatorOperator<TGenotype>(creator);
 }
 
-public sealed class Creator<TGenotype> : ICreator<TGenotype> {
-  private readonly Func<IRandomNumberGenerator, TGenotype> creator;
-  internal Creator(Func<IRandomNumberGenerator, TGenotype> creator) {
+public sealed class CreatorOperator<TGenotype> : ICreatorOperator<TGenotype> {
+  private readonly Func<TGenotype> creator;
+  internal CreatorOperator(Func<TGenotype> creator) {
     this.creator = creator;
   }
-  public TGenotype Create(IRandomNumberGenerator random) => creator(random);
+  public TGenotype Create() => creator();
 }
 
-public abstract class CreatorBase<TGenotype> : ICreator<TGenotype> {
-  public abstract TGenotype Create(IRandomNumberGenerator random);
+public abstract class CreatorOperatorBase<TGenotype> : ICreatorOperator<TGenotype> {
+  public abstract TGenotype Create();
 }

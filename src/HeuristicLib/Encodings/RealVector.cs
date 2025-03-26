@@ -8,12 +8,14 @@ public record class RealVectorEncodingParameter : EncodingParameterBase<RealVect
   public int Length { get; }
   public RealVector Minimum { get; }
   public RealVector Maximum { get; }
+  //public IRepairer<RealVector> OutOfBoundsRepairer { get; }
 
-  public RealVectorEncodingParameter(int length, RealVector minimum, RealVector maximum) {
+  public RealVectorEncodingParameter(int length, RealVector minimum, RealVector maximum/*, OutOfBoundsStrategy outOfBoundsRepairer = OutOfBoundsStrategy.Clamp*/) {
     if (!RealVector.AreCompatible(length, minimum, maximum)) throw new ArgumentException("Minimum and Maximum vector must be of length 1 or match the encoding length");
     Length = length;
     Minimum = minimum;
     Maximum = maximum;
+  //  OutOfBounds = outOfBounds;
   }
   
   public override bool IsValidGenotype(RealVector genotype) {
@@ -37,36 +39,42 @@ public record class RealVectorEncodingParameter : EncodingParameterBase<RealVect
   // #pragma warning restore S125
 }
 
+// public enum OutOfBoundsStrategy {
+//   Clamp,
+//   Reflect,
+//   Randomize,
+//   Exception
+// }
+//
+// public interface IRepairer<TGenotype> {
+//   TGenotype Repair(TGenotype genotype);
+// }
+
+// public abstract class RealVectorRepairer : IRepairer<RealVector> {
+//   public static ClampRepairer Clamp(RealVectorEncodingParameter parameter) => new ClampRepairer(parameter);
+//   
+//   protected RealVectorEncodingParameter Parameter { get; }
+//   protected RealVectorRepairer(RealVectorEncodingParameter parameter) {
+//     Parameter = parameter;
+//   }
+//   public abstract RealVector Repair(RealVector genotype);
+// }
+// public class ClampRepairer : RealVectorRepairer {
+//   public ClampRepairer(RealVectorEncodingParameter parameter) : base(parameter) { }
+//   public override RealVector Repair(RealVector genotype) => RealVector.Clamp(genotype, Parameter.Minimum, Parameter.Maximum);
+// }
+
 public class RealVectorEncoding
   : Encoding<RealVector, RealVectorEncodingParameter>,
-    ICreatorProvider<RealVector>, ICrossoverProvider<RealVector>, IMutatorProvider<RealVector> {
+    ICreatorProvider<RealVector, RealVectorEncodingParameter>, ICrossoverProvider<RealVector, RealVectorEncodingParameter>, IMutatorProvider<RealVector, RealVectorEncodingParameter> {
   
-  public required ICreator<RealVector> Creator { get; init; }
-  public required ICrossover<RealVector> Crossover { get; init; }
-  public required IMutator<RealVector> Mutator { get; init; }
+  public required IExecutableEncodingOperatorFactory<ICreatorOperator<RealVector>, RealVectorEncodingParameter> Creator { get; init; }
+  public required IExecutableEncodingOperatorFactory<ICrossoverOperator<RealVector>, RealVectorEncodingParameter> Crossover { get; init; }
+  public required IExecutableEncodingOperatorFactory<IMutatorOperator<RealVector>, RealVectorEncodingParameter> Mutator { get; init; }
   
   public RealVectorEncoding(RealVectorEncodingParameter parameter) 
     : base(parameter) { }
 }
-
-public class AlphaBetaBlendCrossover : CrossoverBase<RealVector> {
-  //public RealVectorEncoding Encoding { get; }
-  public double Alpha { get; }
-  public double Beta { get; }
-  
-  // <param name="alpha">Some Description (default: 0.7 if null)</param>
-  // <param name="beta">Some Description (default: 0.3 if null)</param>
-  public AlphaBetaBlendCrossover(/*RealVectorEncoding encoding,*/ double? alpha = null, double? beta = null) {
-    //Encoding = encoding;
-    Alpha = alpha ?? 0.7;
-    Beta = beta ?? 0.3;
-  }
-
-  public override RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random) {
-    return Alpha * parent1 + Beta * parent2;
-  }
-}
-
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
 public class RealVector : IReadOnlyList<double> {
@@ -341,22 +349,43 @@ public class RealVector : IReadOnlyList<double> {
   }
 }
 
-public class GaussianMutator : MutatorBase<RealVector> {
+
+public class AlphaBetaBlendCrossoverOperator : CrossoverOperatorBase<RealVector> {
+  //public RealVectorEncoding Encoding { get; }
+  public double Alpha { get; }
+  public double Beta { get; }
+  
+  // <param name="alpha">Some Description (default: 0.7 if null)</param>
+  // <param name="beta">Some Description (default: 0.3 if null)</param>
+  public AlphaBetaBlendCrossoverOperator(double? alpha = null, double? beta = null) {
+    //Encoding = encoding;
+    Alpha = alpha ?? 0.7;
+    Beta = beta ?? 0.3;
+  }
+
+  public override RealVector Cross(RealVector parent1, RealVector parent2) {
+    return Alpha * parent1 + Beta * parent2;
+  }
+}
+
+public class GaussianMutatorOperator : MutatorOperatorBase<RealVector> {
   public double MutationRate { get; }
   public double MutationStrength { get; }
   public RealVectorEncodingParameter Encoding { get; }
-
-  public GaussianMutator(double mutationRate, double mutationStrength, RealVectorEncodingParameter encoding) {
+  public IRandomNumberGenerator Random { get; }
+  
+  public GaussianMutatorOperator(double mutationRate, double mutationStrength, RealVectorEncodingParameter encoding, IRandomNumberGenerator random) {
     MutationRate = mutationRate;
     MutationStrength = mutationStrength;
     Encoding = encoding;
+    Random = random;
   }
-
-  public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random) {
+  
+  public override RealVector Mutate(RealVector solution) {
     double[] newElements = solution.ToArray();
     for (int i = 0; i < newElements.Length; i++) {
-      if (random.Random() < MutationRate) {
-        newElements[i] += MutationStrength * (random.Random() - 0.5);
+      if (Random.Random() < MutationRate) {
+        newElements[i] += MutationStrength * (Random.Random() - 0.5);
       }
     }
     return RealVector.Clamp(new RealVector(newElements), Encoding.Minimum, Encoding.Maximum);
@@ -364,10 +393,15 @@ public class GaussianMutator : MutatorBase<RealVector> {
 }
 
 
-public class SinglePointCrossover : CrossoverBase<RealVector> {
+public class SinglePointCrossoverOperator : CrossoverOperatorBase<RealVector> {
+  public IRandomNumberGenerator Random { get; }
   
-  public override RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random) {
-    int crossoverPoint = random.Integer(1, parent1.Count);
+  public SinglePointCrossoverOperator(IRandomNumberGenerator random) {
+    Random = random;
+  }
+  
+  public override RealVector Cross(RealVector parent1, RealVector parent2) {
+    int crossoverPoint = Random.Integer(1, parent1.Count);
     double[] offspringValues = new double[parent1.Count];
     for (int i = 0; i < crossoverPoint; i++) {
       offspringValues[i] = parent1[i];
@@ -379,35 +413,38 @@ public class SinglePointCrossover : CrossoverBase<RealVector> {
   }
 }
 
-public class NormalDistributedCreator : CreatorBase<RealVector> {
+public class NormalDistributedCreatorOperator : CreatorOperatorBase<RealVector> {
   public RealVector Means { get; }
   public RealVector Sigmas { get; }
   public RealVectorEncodingParameter EncodingParameter { get; }
+  public IRandomNumberGenerator Random { get; }
 
   //public const double DefaultMeans = 0.0;
   //public const double DefaultSigmas = 1.0;
 
-  public NormalDistributedCreator(RealVector means, RealVector sigmas, RealVectorEncodingParameter encodingParameter) {
+  public NormalDistributedCreatorOperator(RealVector means, RealVector sigmas, RealVectorEncodingParameter encodingParameter, IRandomNumberGenerator random) {
     if (!RealVector.AreCompatible(encodingParameter.Length, means, sigmas, encodingParameter.Minimum, encodingParameter.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
     Means = means;
     Sigmas = sigmas;
     EncodingParameter = encodingParameter;
+    Random = random;
   }
 
-  public override RealVector Create(IRandomNumberGenerator random) {
-    RealVector value = RealVector.CreateNormal(EncodingParameter.Length, Means, Sigmas, random);
+  public override RealVector Create() {
+    RealVector value = RealVector.CreateNormal(EncodingParameter.Length, Means, Sigmas, Random);
     // Clamp value to min/max bounds
     value = RealVector.Clamp(value, EncodingParameter.Minimum, EncodingParameter.Maximum);
     return value;
   }
 }
 
-public class UniformDistributedCreator : CreatorBase<RealVector> {
+public class UniformDistributedCreatorOperator : CreatorOperatorBase<RealVector> {
   public RealVector? Minimum { get; }
   public RealVector? Maximum { get; }
   public RealVectorEncodingParameter EncodingParameter { get; }
+  public IRandomNumberGenerator Random { get; }
 
-  public UniformDistributedCreator(RealVector? minimum, RealVector? maximum, RealVectorEncodingParameter encodingParameter) {
+  public UniformDistributedCreatorOperator(RealVector? minimum, RealVector? maximum, RealVectorEncodingParameter encodingParameter, IRandomNumberGenerator random) {
     if (minimum is not null && (minimum < encodingParameter.Minimum).Any()) throw new ArgumentException("Minimum values must be greater or equal to encoding minimum values");
     if (maximum is not null && (maximum > encodingParameter.Maximum).Any()) throw new ArgumentException("Maximum values must be less or equal to encoding maximum values");
     if (!RealVector.AreCompatible(encodingParameter.Length, minimum ?? encodingParameter.Minimum, maximum ?? encodingParameter.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
@@ -415,10 +452,11 @@ public class UniformDistributedCreator : CreatorBase<RealVector> {
     Minimum = minimum;
     Maximum = maximum;
     EncodingParameter = encodingParameter;
+    Random = random;
   }
 
-  public override RealVector Create(IRandomNumberGenerator random) {
-    return RealVector.CreateUniform(EncodingParameter.Length, Minimum ?? EncodingParameter.Minimum, Maximum ?? EncodingParameter.Maximum, random);
+  public override RealVector Create() {
+    return RealVector.CreateUniform(EncodingParameter.Length, Minimum ?? EncodingParameter.Minimum, Maximum ?? EncodingParameter.Maximum, Random);
   }
 }
 

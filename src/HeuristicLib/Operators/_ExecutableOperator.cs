@@ -1,10 +1,6 @@
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Problems;
-
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IOperator { }
+public interface IExecutableOperator { }
 //
 // public interface IOperatorFactory { }
 //

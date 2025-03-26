@@ -7,8 +7,10 @@ namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 public record GeneticAlgorithmBuilderState {
   public int? PopulationSize { get; init; }
   public double? MutationRate { get; init; }
-  public ISelector? Selector { get; init; }
-  public IReplacer? Replacer { get; init; }
+  public ISelectorOperator? Selector { get; init; }
+  public IExecutableOperatorFactory<ISelectorOperator>? SelectorReference { get; init; }
+  public IReplacerOperator? Replacer { get; init; }
+  public IExecutableOperatorFactory<IReplacerOperator>? ReplacerReference { get; init; }
   public Objective? Objective { get; init; }
   public IRandomSource? RandomSource { get; init; }
 
@@ -17,70 +19,85 @@ public record GeneticAlgorithmBuilderState {
     PopulationSize = original.PopulationSize;
     MutationRate = original.MutationRate;
     Selector = original.Selector;
+    SelectorReference = original.SelectorReference;
     Replacer = original.Replacer;
+    ReplacerReference = original.ReplacerReference;
     Objective = original.Objective;
     RandomSource = original.RandomSource;
   }
 }
 public record GeneticAlgorithmBuilderState<TGenotype> : GeneticAlgorithmBuilderState {
-  public ICreator<TGenotype>? Creator { get; init; }
-  public ICrossover<TGenotype>? Crossover { get; init; }
-  public IMutator<TGenotype>? Mutator { get; init; }
-  public IEvaluator<TGenotype>? Evaluator { get; init; }
-  public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
+  public ICreatorOperator<TGenotype>? Creator { get; init; }
+  public IExecutableOperatorFactory<ICreatorOperator<TGenotype>>? CreatorReference { get; init; }
+  public ICrossoverOperator<TGenotype>? Crossover { get; init; }
+  public IExecutableOperatorFactory<ICrossoverOperator<TGenotype>>? CrossoverReference { get; init; }
+  public IMutatorOperator<TGenotype>? Mutator { get; init; }
+  public IExecutableOperatorFactory<IMutatorOperator<TGenotype>>? MutatorReference { get; init; }
+  public IEvaluatorOperator<TGenotype>? Evaluator { get; init; }
+  public ITerminatorOperator<PopulationState<TGenotype>>? Terminator { get; init; }
   public IInterceptor<PopulationState<TGenotype>>? Interceptor { get; init; }
 
   public GeneticAlgorithmBuilderState() {}
   public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState baseState) : base(baseState) {}
   public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState<TGenotype> original) : base(original) {
     Creator = original.Creator;
+    CreatorReference = original.CreatorReference;
     Crossover = original.Crossover;
+    CrossoverReference = original.CrossoverReference;
     Mutator = original.Mutator;
+    MutatorReference = original.MutatorReference;
     Evaluator = original.Evaluator;
     Terminator = original.Terminator;
     Interceptor = original.Interceptor;
   }
 }
 
-public record GeneticAlgorithmBuilderState<TGenotype, TEncodingParameter> : GeneticAlgorithmBuilderState<TGenotype> {
+public record GeneticAlgorithmBuilderState<TGenotype, TEncodingParameter> : GeneticAlgorithmBuilderState<TGenotype> 
+  where TEncodingParameter : IEncodingParameter<TGenotype> {
   public TEncodingParameter? EncodingParameter { get; init; }
-  public Func<TEncodingParameter, ICreator<TGenotype>>? CreatorFactory { get; init; }
-  public Func<TEncodingParameter, ICrossover<TGenotype>>? CrossoverFactory { get; init; }
-  public Func<TEncodingParameter, IMutator<TGenotype>>? MutatorFactory { get; init; }
+  public IExecutableEncodingOperatorFactory<ICreatorOperator<TGenotype>, TEncodingParameter>? CreatorEncodingReference { get; init; }
+  public IExecutableEncodingOperatorFactory<ICrossoverOperator<TGenotype>, TEncodingParameter>? CrossoverEncodingReference { get; init; }
+  public IExecutableEncodingOperatorFactory<IMutatorOperator<TGenotype>, TEncodingParameter>? MutatorEncodingReference { get; init; }
   
   public GeneticAlgorithmBuilderState() {}
   public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState<TGenotype> baseState) : base(baseState) {}
   public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState<TGenotype, TEncodingParameter> original) : base(original) {
     EncodingParameter = original.EncodingParameter;
-    CreatorFactory = original.CreatorFactory;
-    CrossoverFactory = original.CrossoverFactory;
-    MutatorFactory = original.MutatorFactory;
+    CreatorEncodingReference = original.CreatorEncodingReference;
+    CrossoverEncodingReference = original.CrossoverEncodingReference;
+    MutatorEncodingReference = original.MutatorEncodingReference;
   }
 }
 
 public interface IGeneticAlgorithmBuilder<out TSelf> where TSelf : IGeneticAlgorithmBuilder<TSelf> {
   TSelf WithPopulationSize(int populationSize);
   TSelf WithMutationRate(double mutationRate);
-  TSelf WithSelector(ISelector selector);
-  TSelf WithReplacer(IReplacer replacer);
+  TSelf WithSelector(ISelectorOperator selector);
+  TSelf WithSelector(IExecutableOperatorFactory<ISelectorOperator> selectorFactory);
+  TSelf WithReplacer(IReplacerOperator replacer);
+  TSelf WithReplacer(IExecutableOperatorFactory<IReplacerOperator> replacerFactory);
   TSelf WithObjective(Objective objective);
   TSelf WithRandomSource(IRandomSource randomSource);
 }
 
 public interface IGeneticAlgorithmBuilder<TGenotype, out TSelf> : IGeneticAlgorithmBuilder<TSelf>, IBuilder<GeneticAlgorithm<TGenotype>> where TSelf : IGeneticAlgorithmBuilder<TGenotype, TSelf> {
-  TSelf WithCreator(ICreator<TGenotype> creator);
-  TSelf WithCrossover(ICrossover<TGenotype> crossover);
-  TSelf WithMutator(IMutator<TGenotype> mutator);
-  TSelf WithEvaluator(IEvaluator<TGenotype> evaluator);
-  TSelf WithTerminator(ITerminator<PopulationState<TGenotype>> terminator);
+  TSelf WithCreator(ICreatorOperator<TGenotype> creator);
+  TSelf WithCreator(IExecutableOperatorFactory<ICreatorOperator<TGenotype>> creatorFactory);
+  TSelf WithCrossover(ICrossoverOperator<TGenotype> crossover);
+  TSelf WithCrossover(IExecutableOperatorFactory<ICrossoverOperator<TGenotype>> crossoverFactory);
+  TSelf WithMutator(IMutatorOperator<TGenotype> mutator);
+  TSelf WithMutator(IExecutableOperatorFactory<IMutatorOperator<TGenotype>> mutatorFactory);
+  TSelf WithEvaluator(IEvaluatorOperator<TGenotype> evaluator);
+  TSelf WithTerminator(ITerminatorOperator<PopulationState<TGenotype>> terminator);
   TSelf WithInterceptor(IInterceptor<PopulationState<TGenotype>> interceptor);
 }
 
-public interface IGeneticAlgorithmBuilder<TGenotype, TEncodingParameter, out TSelf> : IGeneticAlgorithmBuilder<TGenotype, TSelf> where TSelf : IGeneticAlgorithmBuilder<TGenotype, TEncodingParameter, TSelf> {
+public interface IGeneticAlgorithmBuilder<TGenotype, TEncodingParameter, out TSelf> : IGeneticAlgorithmBuilder<TGenotype, TSelf> 
+  where TSelf : IGeneticAlgorithmBuilder<TGenotype, TEncodingParameter, TSelf> where TEncodingParameter : IEncodingParameter<TGenotype> {
   TSelf WithEncodingParameter(TEncodingParameter encodingParameter);
-  TSelf WithCreator(Func<TEncodingParameter, ICreator<TGenotype>> creatorFactory);
-  TSelf WithCrossover(Func<TEncodingParameter, ICrossover<TGenotype>> crossoverFactory);
-  TSelf WithMutator(Func<TEncodingParameter, IMutator<TGenotype>> mutatorFactory);
+  TSelf WithCreator(IExecutableEncodingOperatorFactory<ICreatorOperator<TGenotype>, TEncodingParameter> creatorEncodingFactory);
+  TSelf WithCrossover(IExecutableEncodingOperatorFactory<ICrossoverOperator<TGenotype>, TEncodingParameter> crossoverEncodingFactory);
+  TSelf WithMutator(IExecutableEncodingOperatorFactory<IMutatorOperator<TGenotype>, TEncodingParameter> mutatorEncodingFactory);
 }
 
 public class GeneticAlgorithmBuilder : IGeneticAlgorithmBuilder<GeneticAlgorithmBuilder> {
@@ -101,12 +118,20 @@ public class GeneticAlgorithmBuilder : IGeneticAlgorithmBuilder<GeneticAlgorithm
     State = State with { MutationRate = mutationRate };
     return this;
   }
-  public GeneticAlgorithmBuilder WithSelector(ISelector selector) {
-    State = State with { Selector = selector };
+  public GeneticAlgorithmBuilder WithSelector(ISelectorOperator selector) {
+    State = State with { Selector = selector, SelectorReference = null };
     return this;
   }
-  public GeneticAlgorithmBuilder WithReplacer(IReplacer replacer) {
-    State = State with { Replacer = replacer };
+  public GeneticAlgorithmBuilder WithSelector(IExecutableOperatorFactory<ISelectorOperator> selectorFactory) {
+    State = State with { SelectorReference = selectorFactory, Selector = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder WithReplacer(IReplacerOperator replacer) {
+    State = State with { Replacer = replacer, ReplacerReference = null};
+    return this;
+  }
+  public GeneticAlgorithmBuilder WithReplacer(IExecutableOperatorFactory<IReplacerOperator> replacerFactory) {
+    State = State with { ReplacerReference = replacerFactory, Replacer = null };
     return this;
   }
   public GeneticAlgorithmBuilder WithObjective(Objective objective) {
@@ -134,24 +159,40 @@ public class GeneticAlgorithmBuilder<TGenotype> : IGeneticAlgorithmBuilder<TGeno
   }
   
   public GeneticAlgorithm<TGenotype> Build() {
+    var context = new OperatorCreationContext { RandomSource = State.RandomSource ?? throw new InvalidOperationException("Random Source is not set.") };
+    var resolvedState = new GeneticAlgorithmBuilderState<TGenotype> {
+      PopulationSize = State.PopulationSize,
+      Creator = State.Creator ?? State.CreatorReference?.Create(context),
+      Crossover = State.Crossover ?? State.CrossoverReference?.Create(context),
+      Mutator = State.Mutator ?? State.MutatorReference?.Create(context),
+      MutationRate = State.MutationRate,
+      Evaluator = State.Evaluator,
+      Objective = State.Objective,
+      Selector = State.Selector ?? State.SelectorReference?.Create(context),
+      Replacer = State.Replacer ?? State.ReplacerReference?.Create(context),
+      RandomSource = State.RandomSource,
+      Terminator = State.Terminator,
+      Interceptor = State.Interceptor
+    };
+    
     var parametersAreSetValidator = new GeneticAlgorithmBuilderStateValidator<TGenotype>();
-    var parametersAreSetValidationResult = parametersAreSetValidator.Validate(State);
+    var parametersAreSetValidationResult = parametersAreSetValidator.Validate(resolvedState);
 
     if (!parametersAreSetValidationResult.IsValid) throw new ValidationException(parametersAreSetValidationResult.Errors);
     
     return new GeneticAlgorithm<TGenotype>(
-      State.PopulationSize!.Value,
-      State.Creator!,
-      State.Crossover!,
-      State.Mutator!,
-      State.MutationRate!.Value,
-      State.Evaluator!,
-      State.Objective!,
-      State.Selector!,
-      State.Replacer!,
-      State.RandomSource!,
-      State.Terminator,
-      State.Interceptor
+      resolvedState.PopulationSize!.Value,
+      resolvedState.Creator!,
+      resolvedState.Crossover!,
+      resolvedState.Mutator!,
+      resolvedState.MutationRate!.Value,
+      resolvedState.Evaluator!,
+      resolvedState.Objective!,
+      resolvedState.Selector!,
+      resolvedState.Replacer!,
+      resolvedState.RandomSource!,
+      resolvedState.Terminator,
+      resolvedState.Interceptor
     );
   }
 
@@ -159,23 +200,35 @@ public class GeneticAlgorithmBuilder<TGenotype> : IGeneticAlgorithmBuilder<TGeno
     State = State with { PopulationSize = populationSize };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithCreator(ICreator<TGenotype> creator) {
-    State = State with { Creator = creator };
+  public GeneticAlgorithmBuilder<TGenotype> WithCreator(ICreatorOperator<TGenotype> creator) {
+    State = State with { Creator = creator, CreatorReference = null };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithCrossover(ICrossover<TGenotype> crossover) {
-    State = State with { Crossover = crossover };
+  public GeneticAlgorithmBuilder<TGenotype> WithCreator(IExecutableOperatorFactory<ICreatorOperator<TGenotype>> creatorFactory) {
+    State = State with { CreatorReference = creatorFactory, Creator = null };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithMutator(IMutator<TGenotype> mutator) {
-    State = State with { Mutator = mutator };
+  public GeneticAlgorithmBuilder<TGenotype> WithCrossover(ICrossoverOperator<TGenotype> crossover) {
+    State = State with { Crossover = crossover, CrossoverReference = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype> WithCrossover(IExecutableOperatorFactory<ICrossoverOperator<TGenotype>> crossoverFactory) {
+    State = State with { CrossoverReference = crossoverFactory, Crossover = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype> WithMutator(IMutatorOperator<TGenotype> mutator) {
+    State = State with { Mutator = mutator, MutatorReference = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype> WithMutator(IExecutableOperatorFactory<IMutatorOperator<TGenotype>> mutatorFactory) {
+    State = State with { MutatorReference = mutatorFactory, Mutator = null };
     return this;
   }
   public GeneticAlgorithmBuilder<TGenotype> WithMutationRate(double mutationRate) {
     State = State with { MutationRate = mutationRate };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithEvaluator(IEvaluator<TGenotype> evaluator) {
+  public GeneticAlgorithmBuilder<TGenotype> WithEvaluator(IEvaluatorOperator<TGenotype> evaluator) {
     State = State with { Evaluator = evaluator };
     return this;
   }
@@ -183,19 +236,27 @@ public class GeneticAlgorithmBuilder<TGenotype> : IGeneticAlgorithmBuilder<TGeno
     State = State with { Objective = objective };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithSelector(ISelector selector) {
-    State = State with { Selector = selector };
+  public GeneticAlgorithmBuilder<TGenotype> WithSelector(ISelectorOperator selector) {
+    State = State with { Selector = selector, SelectorReference = null };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithReplacer(IReplacer replacer) {
-    State = State with { Replacer = replacer };
+  public GeneticAlgorithmBuilder<TGenotype> WithSelector(IExecutableOperatorFactory<ISelectorOperator> selectorFactory) {
+    State = State with { SelectorReference = selectorFactory, Selector = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype> WithReplacer(IReplacerOperator replacer) {
+    State = State with { Replacer = replacer, ReplacerReference = null};
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype> WithReplacer(IExecutableOperatorFactory<IReplacerOperator> replacerFactory) {
+    State = State with { ReplacerReference = replacerFactory, Replacer = null };
     return this;
   }
   public GeneticAlgorithmBuilder<TGenotype> WithRandomSource(IRandomSource randomSource) {
     State = State with { RandomSource = randomSource };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype> WithTerminator(ITerminator<PopulationState<TGenotype>> terminator) {
+  public GeneticAlgorithmBuilder<TGenotype> WithTerminator(ITerminatorOperator<PopulationState<TGenotype>> terminator) {
     State = State with { Terminator = terminator };
     return this;
   }
@@ -236,30 +297,41 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> :
   }
 
   public GeneticAlgorithm<TGenotype> Build() {
-    if (State.EncodingParameter is not null) {
-      if (State.CreatorFactory is not null) State = State with { Creator = State.CreatorFactory(State.EncodingParameter) };
-      if (State.CrossoverFactory is not null) State = State with { Crossover = State.CrossoverFactory(State.EncodingParameter) };
-      if (State.MutatorFactory is not null) State = State with { Mutator = State.MutatorFactory(State.EncodingParameter) };
-    }
+    var context = new OperatorCreationContext { RandomSource = State.RandomSource ?? throw new InvalidOperationException("Random Source is not set.") };
+    var encodingContext = new EncodingOperatorCreationContext<TEncodingParameter> { RandomSource = context.RandomSource, EncodingParameter = State.EncodingParameter ?? throw new InvalidOperationException("Encoding Parameter is not set.") };
+    var resolvedState = new GeneticAlgorithmBuilderState<TGenotype> {
+      PopulationSize = State.PopulationSize,
+      Creator = State.Creator ?? State.CreatorReference?.Create(context) ?? State.CreatorEncodingReference?.Create(encodingContext),
+      Crossover = State.Crossover ?? State.CrossoverReference?.Create(context) ?? State.CrossoverEncodingReference?.Create(encodingContext),
+      Mutator = State.Mutator ?? State.MutatorReference?.Create(context) ?? State.MutatorEncodingReference?.Create(encodingContext),
+      MutationRate = State.MutationRate,
+      Evaluator = State.Evaluator,
+      Objective = State.Objective,
+      Selector = State.Selector ?? State.SelectorReference?.Create(context),
+      Replacer = State.Replacer ?? State.ReplacerReference?.Create(context),
+      RandomSource = State.RandomSource,
+      Terminator = State.Terminator,
+      Interceptor = State.Interceptor
+    };
     
     var parametersAreSetValidator = new GeneticAlgorithmBuilderStateValidator<TGenotype>();
-    var parametersAreSetValidationResult = parametersAreSetValidator.Validate(State);
+    var parametersAreSetValidationResult = parametersAreSetValidator.Validate(resolvedState);
 
     if (!parametersAreSetValidationResult.IsValid) throw new ValidationException(parametersAreSetValidationResult.Errors);
     
     return new GeneticAlgorithm<TGenotype>(
-      State.PopulationSize!.Value,
-      State.Creator!,
-      State.Crossover!,
-      State.Mutator!,
-      State.MutationRate!.Value,
-      State.Evaluator!,
-      State.Objective!,
-      State.Selector!,
-      State.Replacer!,
-      State.RandomSource!,
-      State.Terminator,
-      State.Interceptor
+    resolvedState.PopulationSize!.Value,
+    resolvedState.Creator!,
+    resolvedState.Crossover!,
+    resolvedState.Mutator!,
+    resolvedState.MutationRate!.Value,
+    resolvedState.Evaluator!,
+    resolvedState.Objective!,
+    resolvedState.Selector!,
+    resolvedState.Replacer!,
+    resolvedState.RandomSource!,
+    resolvedState.Terminator,
+    resolvedState.Interceptor
     );
   }
   
@@ -267,40 +339,51 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> :
     State = State with { EncodingParameter = encodingParameter };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCreator(Func<TEncodingParameter, ICreator<TGenotype>> creatorFactory) {
-    State = State with { CreatorFactory = creatorFactory };
-    return this;
-  }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCrossover(Func<TEncodingParameter, ICrossover<TGenotype>> crossoverFactory) {
-    State = State with { CrossoverFactory = crossoverFactory };
-    return this;
-  }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithMutator(Func<TEncodingParameter, IMutator<TGenotype>> mutatorFactory) {
-    State = State with { MutatorFactory = mutatorFactory };
-    return this;
-  }
-  
   public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithPopulationSize(int populationSize) {
     State = State with { PopulationSize = populationSize };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCreator(ICreator<TGenotype> creator) {
-    State = State with { Creator = creator };
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCreator(ICreatorOperator<TGenotype> creator) {
+    State = State with { Creator = creator, CreatorReference = null, CreatorEncodingReference = null};
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCrossover(ICrossover<TGenotype> crossover) {
-    State = State with { Crossover = crossover };
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCreator(IExecutableOperatorFactory<ICreatorOperator<TGenotype>> creatorFactory) {
+    State = State with { CreatorReference = creatorFactory, Creator = null, CreatorEncodingReference = null };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithMutator(IMutator<TGenotype> mutator) {
-    State = State with { Mutator = mutator };
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCreator(IExecutableEncodingOperatorFactory<ICreatorOperator<TGenotype>, TEncodingParameter> creatorEncodingFactory) {
+    State = State with { CreatorEncodingReference = creatorEncodingFactory, Creator = null, CreatorReference = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCrossover(ICrossoverOperator<TGenotype> crossover) {
+    State = State with { Crossover = crossover, CrossoverReference = null, CreatorEncodingReference = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCrossover(IExecutableOperatorFactory<ICrossoverOperator<TGenotype>> crossoverFactory) {
+    State = State with { CrossoverReference = crossoverFactory, Crossover = null, CrossoverEncodingReference = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithCrossover(IExecutableEncodingOperatorFactory<ICrossoverOperator<TGenotype>, TEncodingParameter> crossoverEncodingFactory) {
+    State = State with { CrossoverEncodingReference = crossoverEncodingFactory };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithMutator(IMutatorOperator<TGenotype> mutator) {
+    State = State with { Mutator = mutator, MutatorReference = null, MutatorEncodingReference = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithMutator(IExecutableOperatorFactory<IMutatorOperator<TGenotype>> mutatorFactory) {
+    State = State with { MutatorReference = mutatorFactory, Mutator = null, MutatorEncodingReference = null};
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithMutator(IExecutableEncodingOperatorFactory<IMutatorOperator<TGenotype>, TEncodingParameter> mutatorEncodingFactory) {
+    State = State with { MutatorEncodingReference = mutatorEncodingFactory, Mutator = null, MutatorReference = null };
     return this;
   }
   public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithMutationRate(double mutationRate) {
     State = State with { MutationRate = mutationRate };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithEvaluator(IEvaluator<TGenotype> evaluator) {
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithEvaluator(IEvaluatorOperator<TGenotype> evaluator) {
     State = State with { Evaluator = evaluator };
     return this;
   }
@@ -308,19 +391,27 @@ public class GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> :
     State = State with { Objective = objective };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithSelector(ISelector selector) {
-    State = State with { Selector = selector };
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithSelector(ISelectorOperator selector) {
+    State = State with { Selector = selector, SelectorReference = null };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithReplacer(IReplacer replacer) {
-    State = State with { Replacer = replacer };
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithSelector(IExecutableOperatorFactory<ISelectorOperator> selectorFactory) {
+    State = State with { SelectorReference = selectorFactory, Selector = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithReplacer(IReplacerOperator replacer) {
+    State = State with { Replacer = replacer, ReplacerReference = null };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithReplacer(IExecutableOperatorFactory<IReplacerOperator> replacerFactory) {
+    State = State with { ReplacerReference = replacerFactory, Replacer = null };
     return this;
   }
   public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithRandomSource(IRandomSource randomSource) {
     State = State with { RandomSource = randomSource };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithTerminator(ITerminator<PopulationState<TGenotype>> terminator) {
+  public GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> WithTerminator(ITerminatorOperator<PopulationState<TGenotype>> terminator) {
     State = State with { Terminator = terminator };
     return this;
   }

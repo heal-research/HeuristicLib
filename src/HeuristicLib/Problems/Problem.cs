@@ -62,7 +62,7 @@ public static class GeneticAlgorithmBuilderUsingProblemExtensions {
   
   public static TBuilder WithFitnessFunction<TBuilder, TGenotype>(this TBuilder builder, Func<TGenotype, Fitness> fitnessFunction)
     where TBuilder : IGeneticAlgorithmBuilder<TGenotype, TBuilder> {
-    var evaluator = Evaluator.UsingFitnessFunction(fitnessFunction);
+    var evaluator = EvaluatorOperator.UsingFitnessFunction(fitnessFunction);
     return builder.WithEvaluator(evaluator);
   }
 }

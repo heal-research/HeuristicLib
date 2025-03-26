@@ -10,7 +10,7 @@ public interface IAlgorithm<TState> : IAlgorithm where TState : class, IState  {
 }
 
 public static class AlgorithmExtensions {
-  public static TState? Execute<TState>(this IAlgorithm<TState> algorithm, TState? initialState = null, ITerminator<TState>? terminator = null) where TState : class, IState {
+  public static TState? Execute<TState>(this IAlgorithm<TState> algorithm, TState? initialState = null, ITerminatorOperator<TState>? terminator = null) where TState : class, IState {
     return algorithm.CreateExecutionStream(initialState).TakeWhile(state => terminator?.ShouldContinue(state) ?? true).LastOrDefault();
   }
 }

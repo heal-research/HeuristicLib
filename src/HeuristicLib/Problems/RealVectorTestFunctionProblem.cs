@@ -69,9 +69,9 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector> {
     var parameter = CreateRealVectorEncodingParameter();
 
     return new RealVectorEncoding(parameter) {
-      Creator = new UniformDistributedCreator(minimum: null, maximum: null, encodingParameter: parameter), 
-      Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
-      Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1, parameter)
+      Creator = new UniformRealVectorCreator(Minimum: null, Maximum: null), 
+      Crossover = new AlphaBetaBlendRealVectorCrossover(Alpha: 0.7, Beta: 0.3),
+      Mutator = new GaussianRealVectorMutator(Rate: 0.1, Strength: 0.1)
     };
   }
   

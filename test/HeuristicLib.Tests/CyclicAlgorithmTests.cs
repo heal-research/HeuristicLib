@@ -13,49 +13,49 @@ public class CyclicAlgorithmTests {
   public Task ConcatAlgorithm_WithGA() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingParameter();
-    var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+    var evaluator = EvaluatorOperator.UsingFitnessFunction<RealVector>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var ga1 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
-      creator: new UniformDistributedCreator(null, null, encoding),
-      crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
+      creator: new UniformDistributedCreatorOperator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+      crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
+      mutator: new GaussianMutatorOperator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
       mutationRate: 0.1,
       evaluator: evaluator,
       SingleObjective.Minimize,
-      selector: new TournamentSelector(2),
-      replacer: new ElitismReplacer(1), 
+      selector: new TournamentSelectorOperator(2, randomSource.CreateRandomNumberGenerator()),
+      replacer: new ElitismReplacerOperator(1), 
       randomSourceState: randomSource,
-      terminator: Terminator.OnGeneration(3)
+      terminator: TerminatorOperator.OnGeneration(3)
     );
     
     var ga2 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
-      creator: new UniformDistributedCreator(null, null, encoding),
-      crossover: new AlphaBetaBlendCrossover(0.5, 0.5),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
+      creator: new UniformDistributedCreatorOperator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+      crossover: new AlphaBetaBlendCrossoverOperator(0.5, 0.5),
+      mutator: new GaussianMutatorOperator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
       mutationRate: 0.1,
       evaluator: evaluator,
       SingleObjective.Minimize,
-      selector: new RandomSelector(),
-      replacer: new ElitismReplacer(1), 
+      selector: new RandomSelectorOperator(randomSource.CreateRandomNumberGenerator()),
+      replacer: new ElitismReplacerOperator(1), 
       randomSourceState: randomSource,
-      terminator: Terminator.OnGeneration(3)
+      terminator: TerminatorOperator.OnGeneration(3)
     );
     
     var ga3 = new GeneticAlgorithm<RealVector>(
       populationSize: 3,
-      creator: new UniformDistributedCreator(null, null, encoding),
-      crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
+      creator: new UniformDistributedCreatorOperator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+      crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
+      mutator: new GaussianMutatorOperator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
       mutationRate: 0.8,
       evaluator: evaluator,
       SingleObjective.Minimize,
-      selector: new TournamentSelector(2),
-      replacer: new ElitismReplacer(1), 
+      selector: new TournamentSelectorOperator(2, randomSource.CreateRandomNumberGenerator()),
+      replacer: new ElitismReplacerOperator(1), 
       randomSourceState: randomSource,
-      terminator: Terminator.OnGeneration(4)
+      terminator: TerminatorOperator.OnGeneration(4)
     );
 
     var concatAlgorithm = new ConcatAlgorithm<PopulationState<RealVector>>(ga1, ga2, ga3);
@@ -73,49 +73,49 @@ public class CyclicAlgorithmTests {
   public Task CyclicAlgorithm_WithGA() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingParameter();
-    var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+    var evaluator = EvaluatorOperator.UsingFitnessFunction<RealVector>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var ga1 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
-      creator: new UniformDistributedCreator(null, null, encoding),
-      crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
+      creator: new UniformDistributedCreatorOperator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+      crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
+      mutator: new GaussianMutatorOperator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
       mutationRate: 0.1,
       evaluator: evaluator,
       SingleObjective.Minimize,
-      selector: new TournamentSelector(2),
-      replacer: new ElitismReplacer(1), 
+      selector: new TournamentSelectorOperator(2, randomSource.CreateRandomNumberGenerator()),
+      replacer: new ElitismReplacerOperator(1), 
       randomSourceState: randomSource,
-      terminator: Terminator.OnGeneration(3)
+      terminator: TerminatorOperator.OnGeneration(3)
     );
 
     var ga2 = new GeneticAlgorithm<RealVector>(
       populationSize: 2,
-      creator: new UniformDistributedCreator(null, null, encoding),
-      crossover: new AlphaBetaBlendCrossover(0.5, 0.5),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
+      creator: new UniformDistributedCreatorOperator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+      crossover: new AlphaBetaBlendCrossoverOperator(0.5, 0.5),
+      mutator: new GaussianMutatorOperator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
       mutationRate: 0.1,
       evaluator: evaluator,
       SingleObjective.Minimize,
-      selector: new RandomSelector(),
-      replacer: new ElitismReplacer(1), 
+      selector: new RandomSelectorOperator(randomSource.CreateRandomNumberGenerator()),
+      replacer: new ElitismReplacerOperator(1), 
       randomSourceState: randomSource,
-      terminator: Terminator.OnGeneration(3)
+      terminator: TerminatorOperator.OnGeneration(3)
     );
     
     var ga3 = new GeneticAlgorithm<RealVector>(
       populationSize: 3,
-      creator: new UniformDistributedCreator(null, null, encoding),
-      crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
+      creator: new UniformDistributedCreatorOperator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+      crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
+      mutator: new GaussianMutatorOperator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
       mutationRate: 0.8,
       evaluator: evaluator,
       SingleObjective.Minimize,
-      selector: new TournamentSelector(2),
-      replacer: new ElitismReplacer(1), 
+      selector: new TournamentSelectorOperator(2, randomSource.CreateRandomNumberGenerator()),
+      replacer: new ElitismReplacerOperator(1), 
       randomSourceState: randomSource,
-      terminator: Terminator.OnGeneration(4)
+      terminator: TerminatorOperator.OnGeneration(4)
     );
 
     var concatAlgorithm = new CyclicAlgorithm<PopulationState<RealVector>>(ga1, ga2, ga3);
@@ -132,35 +132,35 @@ public class CyclicAlgorithmTests {
   public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
     var encoding = problem.CreateRealVectorEncodingParameter();
-    var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+    var evaluator = EvaluatorOperator.UsingFitnessFunction<RealVector>(problem.Evaluate);
     var randomSource = new RandomSource(42);
 
     var evolutionStrategy = new EvolutionStrategy(
       populationSize: 10,
       children: 20,
       strategy: EvolutionStrategyType.Comma,
-      creator: new NormalDistributedCreator(0.0, 1.0, encoding),
-      mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, encoding),
+      creator: new NormalDistributedCreatorOperator(0.0, 1.0, encoding, randomSource.CreateRandomNumberGenerator()),
+      mutator: new GaussianMutatorOperator(mutationRate: 1.0, mutationStrength: 0.5, encoding, randomSource.CreateRandomNumberGenerator()),
       initialMutationStrength: 0.1,
       crossover: null,
       evaluator: evaluator,
       SingleObjective.Minimize,
-      terminator: Terminator.OnGeneration(6),
+      terminator: TerminatorOperator.OnGeneration(6),
       randomSource: randomSource
     );
 
     var geneticAlgorithm = new GeneticAlgorithm<RealVector>(
       populationSize: 10,
-      creator: new UniformDistributedCreator(null, null, encoding),
-      crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
-      mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding),
+      creator: new UniformDistributedCreatorOperator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+      crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
+      mutator: new GaussianMutatorOperator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
       mutationRate: 0.1,
       evaluator: evaluator,
       SingleObjective.Minimize,
-      selector: new TournamentSelector(2),
-      replacer: new ElitismReplacer(1), 
+      selector: new TournamentSelectorOperator(2, randomSource.CreateRandomNumberGenerator()),
+      replacer: new ElitismReplacerOperator(1), 
       randomSourceState: randomSource, 
-      terminator: Terminator.OnGeneration(4));
+      terminator: TerminatorOperator.OnGeneration(4));
 
     var cyclicAlgorithm = new CyclicAlgorithm<IState, EvolutionStrategyPopulationState, PopulationState<RealVector>>(
       firstAlgorithm: evolutionStrategy,

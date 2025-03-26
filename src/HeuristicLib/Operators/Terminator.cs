@@ -2,36 +2,34 @@
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ITerminator<in TState> {
+public interface ITerminatorOperator<in TState> : IExecutableOperator {
   bool ShouldTerminate(TState state);
   bool ShouldContinue(TState state) => !ShouldTerminate(state);
 }
 
-public static class Terminator {
-  public static ITerminator<TState> Create<TState>(Func<TState, bool> shouldTerminatePredicate) => new Terminator<TState>(shouldTerminatePredicate);
-  public static ITerminator<IGenerationalState> OnGeneration(int maxGenerations) => new ThresholdTerminator<IGenerationalState>(maxGenerations, state => state.Generation);
+public static class TerminatorOperator {
+  public static TerminatorOperator<TState> Create<TState>(Func<TState, bool> shouldTerminatePredicate) => new TerminatorOperator<TState>(shouldTerminatePredicate);
+  public static ThresholdTerminatorOperator<IGenerationalState> OnGeneration(int maxGenerations) => new ThresholdTerminatorOperator<IGenerationalState>(maxGenerations, state => state.Generation);
   
-  public static ITerminator<object> OnExecutionTime(TimeSpan time) => throw new NotImplementedException();
-  public static ITerminator<object> OnExecutionTime(int milliseconds) => throw new NotImplementedException();
+  public static ITerminatorOperator<object> OnExecutionTime(TimeSpan time) => throw new NotImplementedException();
+  public static ITerminatorOperator<object> OnExecutionTime(int milliseconds) => throw new NotImplementedException();
 }
 
-public sealed class Terminator<TState> : ITerminator<TState> {
-  private readonly Func<TState, bool> shouldTerminatePredicate;
-  internal Terminator(Func<TState, bool> shouldTerminatePredicate) {
-    this.shouldTerminatePredicate = shouldTerminatePredicate;
+public sealed class TerminatorOperator<TState> : ITerminatorOperator<TState> {
+  private readonly Func<TState, bool> predicate;
+  internal TerminatorOperator(Func<TState, bool> predicate) {
+    this.predicate = predicate;
   }
-  public bool ShouldTerminate(TState state) => shouldTerminatePredicate(state);
+  public bool ShouldTerminate(TState state) => predicate(state);
 }
 
-public class ThresholdTerminator<TState> : ITerminator<TState> {
-  public ThresholdTerminator(int threshold, Func<TState, int> accessor) {
+public class ThresholdTerminatorOperator<TState> : ITerminatorOperator<TState> {
+  public int Threshold { get; }
+  public Func<TState, int> Accessor { get; }
+  public ThresholdTerminatorOperator(int threshold, Func<TState, int> accessor) {
     Threshold = threshold;
     Accessor = accessor;
   }
-
-  public int Threshold { get; }
-  public Func<TState, int> Accessor { get; }
-
   public bool ShouldTerminate(TState state) {
     return Accessor(state) >= Threshold;
   }
@@ -42,9 +40,9 @@ public class PauseToken {
   public void RequestPause() => IsPaused = true;
 }
 
-public class PauseTokenTerminator<TState> : ITerminator<TState>
+public class PauseTokenTerminatorOperator<TState> : ITerminatorOperator<TState>
 {
-  public PauseTokenTerminator(PauseToken pauseToken) {
+  public PauseTokenTerminatorOperator(PauseToken pauseToken) {
     Token = pauseToken;
   }
 
@@ -53,15 +51,22 @@ public class PauseTokenTerminator<TState> : ITerminator<TState>
   public bool ShouldTerminate(TState state) => Token.IsPaused;
 }
 
-public class AnyTerminator<TState> : ITerminator<TState>
-{
-  public AnyTerminator(IReadOnlyList<ITerminator<TState>> criteria) {
-    this.Criteria = criteria;
+public class AnyTerminatorOperator<TState> : ITerminatorOperator<TState> {
+  public IReadOnlyList<ITerminatorOperator<TState>> Terminators { get; }
+  public AnyTerminatorOperator(IReadOnlyList<ITerminatorOperator<TState>> terminators) {
+    Terminators = terminators;
   }
-
-  public IReadOnlyList<ITerminator<TState>> Criteria { get; }
-
   public bool ShouldTerminate(TState state) {
-    return Criteria.Any(criterion => criterion.ShouldTerminate(state));
+    return Terminators.Any(criterion => criterion.ShouldTerminate(state));
+  }
+}
+
+public class AllTerminatorOperator<TState> : ITerminatorOperator<TState> {
+  public IReadOnlyList<ITerminatorOperator<TState>> Terminators { get; }
+  public AllTerminatorOperator(IReadOnlyList<ITerminatorOperator<TState>> terminators) {
+    Terminators = terminators;
+  }
+  public bool ShouldTerminate(TState state) {
+    return Terminators.All(criterion => criterion.ShouldTerminate(state));
   }
 }

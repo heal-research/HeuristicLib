@@ -17,13 +17,13 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     int populationSize,
     int children,
     EvolutionStrategyType strategy,
-    ICreator<RealVector> creator,
-    IMutator<RealVector> mutator,
+    ICreatorOperator<RealVector> creator,
+    IMutatorOperator<RealVector> mutator,
     double initialMutationStrength,
-    ICrossover<RealVector>? crossover, //int parentsPerChild,
-    IEvaluator<RealVector> evaluator,
+    ICrossoverOperator<RealVector>? crossover, //int parentsPerChild,
+    IEvaluatorOperator<RealVector> evaluator,
     Objective objective,
-    ITerminator<EvolutionStrategyPopulationState>? terminator,
+    ITerminatorOperator<EvolutionStrategyPopulationState>? terminator,
     IRandomSource randomSource) {
     PopulationSize = populationSize;
     Children = children;
@@ -41,13 +41,13 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
   public int PopulationSize { get; }
   public int Children { get; }
   public EvolutionStrategyType Strategy { get; }
-  public ICreator<RealVector> Creator { get; }
-  public IMutator<RealVector> Mutator { get; }
+  public ICreatorOperator<RealVector> Creator { get; }
+  public IMutatorOperator<RealVector> Mutator { get; }
   public double InitialMutationStrength { get; }
-  public ICrossover<RealVector>? Crossover { get; }
-  public IEvaluator<RealVector> Evaluator { get; }
+  public ICrossoverOperator<RealVector>? Crossover { get; }
+  public IEvaluatorOperator<RealVector> Evaluator { get; }
   public Objective Objective { get; }
-  public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
+  public ITerminatorOperator<EvolutionStrategyPopulationState>? Terminator { get; }
   public IRandomSource RandomSource { get; }
 
   public override ExecutionStream<EvolutionStrategyPopulationState> CreateExecutionStream(EvolutionStrategyPopulationState? initialState = null) {
@@ -59,7 +59,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     
     EvolutionStrategyPopulationState currentState;
     if (initialState is null) {
-      var initialPopulation = InitializePopulation(random);
+      var initialPopulation = InitializePopulation();
       var evaluatedInitialPopulation = Evaluator.Evaluate(initialPopulation);
       yield return currentState = new EvolutionStrategyPopulationState { Objective = Objective, MutationStrength = InitialMutationStrength, Population = evaluatedInitialPopulation }; 
     } else {
@@ -87,10 +87,10 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
     }
   }
 
-  private RealVector[] InitializePopulation(IRandomNumberGenerator random) {
+  private RealVector[] InitializePopulation() {
     var population = new RealVector[PopulationSize];
     for (int i = 0; i < PopulationSize; i++) {
-      population[i] = Creator.Create(random);
+      population[i] = Creator.Create();
     }
     return population;
   }
@@ -102,7 +102,7 @@ public class EvolutionStrategy : AlgorithmBase<EvolutionStrategyPopulationState>
       // var offspring = Mutator is IAdaptableMutator<RealVector> adaptableMutator 
       //   ? adaptableMutator.Mutate(parent, mutationStrength) 
       //   : Mutator.Mutate(parent);
-      var offspring = Mutator.Mutate(parent, random);
+      var offspring = Mutator.Mutate(parent);
       offspringPopulation[i] = offspring;
     }
     return (offspringPopulation, random.Integer(Children, Children * 10));

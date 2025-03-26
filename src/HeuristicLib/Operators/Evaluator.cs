@@ -2,19 +2,19 @@
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IEvaluator<TGenotype> : IOperator {
+public interface IEvaluatorOperator<TGenotype> : IExecutableOperator {
   Phenotype<TGenotype>[] Evaluate(TGenotype[] population);
 }
 
-public abstract class EvaluatorBase<TGenotype> : IEvaluator<TGenotype> {
+public abstract class EvaluatorOperatorBase<TGenotype> : IEvaluatorOperator<TGenotype> {
  public abstract Phenotype<TGenotype>[] Evaluate(TGenotype[] population);
 }
 
-public static class Evaluator {
-  public static IEvaluator<TGenotype> UsingFitnessFunction<TGenotype>(Func<TGenotype, Fitness> evaluator) => new FitnessFunctionEvaluator<TGenotype>(evaluator);
+public static class EvaluatorOperator {
+  public static FitnessFunctionEvaluatorOperator<TGenotype> UsingFitnessFunction<TGenotype>(Func<TGenotype, Fitness> evaluator) => new FitnessFunctionEvaluatorOperator<TGenotype>(evaluator);
 }
 
-public abstract class FitnessFunctionEvaluatorBase<TGenotype> : EvaluatorBase<TGenotype> {
+public abstract class FitnessFunctionEvaluatorOperatorBase<TGenotype> : EvaluatorOperatorBase<TGenotype> {
   // Define the "runner" (sequential, parallel, ...)
   public abstract Fitness Evaluate(TGenotype individual);
   public override Phenotype<TGenotype>[] Evaluate(TGenotype[] population) {
@@ -24,9 +24,9 @@ public abstract class FitnessFunctionEvaluatorBase<TGenotype> : EvaluatorBase<TG
   }
 }
 
-public class FitnessFunctionEvaluator<TGenotype> : FitnessFunctionEvaluatorBase<TGenotype> {
+public class FitnessFunctionEvaluatorOperator<TGenotype> : FitnessFunctionEvaluatorOperatorBase<TGenotype> {
   private readonly Func<TGenotype, Fitness> fitnessFunction;
-  public FitnessFunctionEvaluator(Func<TGenotype, Fitness> fitnessFunction) {
+  public FitnessFunctionEvaluatorOperator(Func<TGenotype, Fitness> fitnessFunction) {
     this.fitnessFunction = fitnessFunction;
   }
   public override Fitness Evaluate(TGenotype individual) => fitnessFunction(individual);
