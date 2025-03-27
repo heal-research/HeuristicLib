@@ -1,23 +1,37 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IMutatorOperator<TGenotype> : IExecutableOperator {
-  TGenotype Mutate(TGenotype parent);
+public interface IMutator<TGenotype, in TEncodingParameter>
+  : IOperator
+  where TEncodingParameter : IEncodingParameter<TGenotype>
+{
+  TGenotype Mutate(TGenotype parent, TEncodingParameter encoding, IRandomNumberGenerator random);
 }
 
-public static class MutatorOperator {
-  public static MutatorOperator<TGenotype> Create<TGenotype>(Func<TGenotype, TGenotype> mutator) => new MutatorOperator<TGenotype>(mutator);
+public static class Mutator {
+  public static CustomMutator<TGenotype, TEncodingParameter> Create<TGenotype, TEncodingParameter>(Func<TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> mutator) 
+    where TEncodingParameter : IEncodingParameter<TGenotype>
+  {
+    return new CustomMutator<TGenotype, TEncodingParameter>(mutator);
+  }
 }
 
-public sealed class MutatorOperator<TGenotype> : IMutatorOperator<TGenotype> {
-  private readonly Func<TGenotype, TGenotype> mutator;
-  internal MutatorOperator(Func<TGenotype, TGenotype> mutator) {
+public sealed class CustomMutator<TGenotype, TEncodingParameter> 
+  : IMutator<TGenotype, TEncodingParameter>
+  where TEncodingParameter : IEncodingParameter<TGenotype>
+{
+  private readonly Func<TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> mutator;
+  internal CustomMutator(Func<TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> mutator) {
     this.mutator = mutator;
   }
-  public TGenotype Mutate(TGenotype parent) => mutator(parent);
+  public TGenotype Mutate(TGenotype parent, TEncodingParameter encoding, IRandomNumberGenerator random) => mutator(parent, encoding, random);
 }
 
-public abstract class MutatorOperatorBase<TGenotype> : IMutatorOperator<TGenotype> {
-  public abstract TGenotype Mutate(TGenotype parent);
+public abstract class MutatorBase<TGenotype, TEncodingParameter>
+  : IMutator<TGenotype, TEncodingParameter>
+  where TEncodingParameter : IEncodingParameter<TGenotype>
+{
+  public abstract TGenotype Mutate(TGenotype parent, TEncodingParameter encoding, IRandomNumberGenerator random);
 }

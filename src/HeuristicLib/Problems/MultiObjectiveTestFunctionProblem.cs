@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
 
 namespace HEAL.HeuristicLib.Problems;

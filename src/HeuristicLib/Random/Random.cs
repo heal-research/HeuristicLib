@@ -1,16 +1,16 @@
-﻿namespace HEAL.HeuristicLib.Algorithms;
+﻿namespace HEAL.HeuristicLib.Random;
 
 public interface IRandomSource {
   IRandomNumberGenerator CreateRandomNumberGenerator();
 }
 
 public class RandomSource : IRandomSource {
-  private readonly Random random;
+  private readonly System.Random random;
   public int Seed { get; }
   
   public RandomSource(int seed) {
     Seed = seed;
-    random = new Random(seed);
+    random = new System.Random(seed);
   }
   public RandomSource() : this(GetRandomSeed()) { }
   
@@ -18,7 +18,7 @@ public class RandomSource : IRandomSource {
     return new SystemRandomNumberGenerator(random);
   }
 
-  private static int GetRandomSeed() => new Random().Next();
+  private static int GetRandomSeed() => new System.Random().Next();
 }
 
 public class FixedRandomSource : IRandomSource {
@@ -28,7 +28,7 @@ public class FixedRandomSource : IRandomSource {
   }
 
   public IRandomNumberGenerator CreateRandomNumberGenerator() {
-    return new SystemRandomNumberGenerator(new Random(Seed));
+    return new SystemRandomNumberGenerator(new System.Random(Seed));
   }
 }
 
@@ -67,8 +67,8 @@ public static class RandomGeneratorExtensions {
 }
 
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
-  private readonly Random random;
-  public SystemRandomNumberGenerator(Random random) {
+  private readonly System.Random random;
+  public SystemRandomNumberGenerator(System.Random random) {
     this.random = random;
   }
   
@@ -92,7 +92,7 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   public IRandomNumberGenerator[] Spawn(int count) {
     return this
       .Integers(count, int.MaxValue)
-      .Select(seed => new SystemRandomNumberGenerator(new Random(seed)))
+      .Select(seed => new SystemRandomNumberGenerator(new System.Random(seed)))
       .ToArray<IRandomNumberGenerator>();
   }
 }

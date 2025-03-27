@@ -10,8 +10,8 @@ public class GeneticAlgorithmBuilderUsingProblemTests {
   public Task GeneticAlgorithmBuilder_UsingProblem() {
     var problem = TravelingSalesmanProblem.CreateDefault();
 
-    var builder = new GeneticAlgorithmBuilder<Permutation>()
-      .WithFitnessFunctionFromProblem(problem);
+    var builder = new GeneticAlgorithmBuilder<Permutation, Tour, PermutationEncodingParameter>()
+      .WithFitnessFunctionFromProblem<GeneticAlgorithmBuilder<Permutation, Tour, PermutationEncodingParameter>, Permutation, Tour, PermutationEncodingParameter>(problem);
     
     return Verify(builder);
   }
@@ -21,8 +21,8 @@ public class GeneticAlgorithmBuilderUsingProblemTests {
     var problem = TravelingSalesmanProblem.CreateDefault();
     var encoding = problem.CreatePermutationEncoding();
 
-    var builder = new GeneticAlgorithmBuilder<Permutation>()
-      .UsingEncoding(encoding);
+    var builder = new GeneticAlgorithmBuilder()
+      .UsingEncoding<Permutation, Tour, PermutationEncodingParameter, PermutationEncoding<Tour>>(encoding);
     
     return Verify(builder);
   }

@@ -1,6 +1,14 @@
 ﻿{
+  EncodingParameter: {
+    Length: 10,
+    Minimum: [
+      -5.0
+    ],
+    Maximum: [
+      5.0
+    ]
+  },
   PopulationSize: 500,
-  Terminator: null,
   Creator: {
     $type: NormalDistributedCreator,
     Means: [
@@ -8,16 +16,7 @@
     ],
     Sigmas: [
       1.0
-    ],
-    EncodingParameter: {
-      Length: 10,
-      Minimum: [
-        -5.0
-      ],
-      Maximum: [
-        5.0
-      ]
-    }
+    ]
   },
   Crossover: {
     $type: SinglePointCrossover
@@ -25,20 +24,14 @@
   Mutator: {
     $type: GaussianMutator,
     MutationRate: 0.1,
-    MutationStrength: 0.1,
-    Encoding: {
-      Length: 10,
-      Minimum: [
-        -5.0
-      ],
-      Maximum: [
-        5.0
-      ]
-    }
+    MutationStrength: 0.1
   },
   MutationRate: 0.05,
   Evaluator: {
-    $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
+    $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator,
+    Decoder: {
+      $type: GenotypeMapper<RealVector, RealVector>
+    }
   },
   Objective: {
     Directions: [
@@ -47,10 +40,6 @@
     TotalOrderComparer: {
       $type: SingleObjectiveComparer
     }
-  },
-  RandomSource: {
-    $type: RandomSource,
-    Seed: 42
   },
   Selector: {
     $type: TournamentSelector,
@@ -61,6 +50,6 @@
     Elites: 2
   },
   Interceptor: {
-    $type: IdentityInterceptor<PopulationState<RealVector>>
+    $type: IdentityInterceptor<EvolutionResult<RealVector, RealVector>>
   }
 }

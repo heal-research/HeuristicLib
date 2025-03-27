@@ -1,12 +1,15 @@
 ﻿{
   State: {
+    EncodingParameter: null,
     Creator: null,
     Crossover: null,
     Mutator: null,
     Evaluator: {
-      $type: FitnessFunctionEvaluator<Permutation>
+      $type: FitnessFunctionEvaluator<Permutation, Tour>,
+      Decoder: {
+        $type: TravelingSalesmanProblem.Mapper
+      }
     },
-    Terminator: null,
     Interceptor: null,
     PopulationSize: null,
     MutationRate: null,
@@ -19,7 +22,6 @@
       TotalOrderComparer: {
         $type: SingleObjectiveComparer
       }
-    },
-    RandomSource: null
+    }
   }
 }

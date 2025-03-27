@@ -1,7 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Configuration;
+﻿using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -31,23 +29,7 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector> {
     };
     return fitness;
   }
-
-  // public override IEvaluator<RealVector, Fitness> CreateEvaluator() {
-  //   return new Evaluator(this);
-  // }
-
-  // private sealed class Evaluator : EvaluatorBase<RealVector, Fitness>  {
-  //   private readonly RealVectorTestFunctionProblem problem;
-  //
-  //   public Evaluator(RealVectorTestFunctionProblem problem) {
-  //     this.problem = problem;
-  //   }
-  //
-  //   public override Fitness Evaluate(RealVector solution) {
-  //     return problem.Evaluate(solution);
-  //   }
-  // }
-
+  
   private static double EvaluateRastrigin(RealVector solution) {
     int n = solution.Count;
     double A = 10;
@@ -65,13 +47,13 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector> {
   public RealVectorEncodingParameter CreateRealVectorEncodingParameter() {
     return new RealVectorEncodingParameter(length: 2, min, max);
   }
-  public RealVectorEncoding CreateRealVectorEncoding() {
+  public RealVectorEncoding<RealVector> CreateRealVectorEncoding() {
     var parameter = CreateRealVectorEncodingParameter();
 
     return new RealVectorEncoding(parameter) {
-      Creator = new UniformRealVectorCreator(Minimum: null, Maximum: null), 
-      Crossover = new AlphaBetaBlendRealVectorCrossover(Alpha: 0.7, Beta: 0.3),
-      Mutator = new GaussianRealVectorMutator(Rate: 0.1, Strength: 0.1)
+      Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
+      Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
+      Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)
     };
   }
   

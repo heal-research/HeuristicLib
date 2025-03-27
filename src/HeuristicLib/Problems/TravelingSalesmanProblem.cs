@@ -1,7 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
-using RandomPermutationCreator=HEAL.HeuristicLib.Operators.RandomPermutationCreator;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -22,15 +20,7 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
     totalDistance += ProblemData.GetDistance(tour[^1], tour[0]); // Return to the starting city
     return totalDistance;
   }
-
-  // public bool IsValidSolution(Permutation solution) {
-  //   return solution.Count == ProblemData.NumberOfCities;
-  // }
-
-  // public override IEvaluator<Permutation, Fitness> CreateEvaluator() {
-  //   return Evaluator.Create<Permutation, Fitness>(Evaluate);
-  // }
-
+  
   public static TravelingSalesmanProblem CreateDefault() {
     var problemData = new TravelingSalesmanCoordinatesData(DefaultProblemData);
     return new TravelingSalesmanProblem(problemData);
@@ -45,9 +35,9 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
   public PermutationEncodingParameter CreatePermutationEncodingParameters() {
     return new PermutationEncodingParameter(ProblemData.NumberOfCities);
   }
-  public PermutationEncoding CreatePermutationEncoding() {
+  public PermutationEncoding<Tour> CreatePermutationEncoding() {
     var parameter = CreatePermutationEncodingParameters();
-    return new PermutationEncoding(parameter) {
+    return new PermutationEncoding<Tour>(parameter, Decoder) {
       Creator = new RandomPermutationCreator(),
       Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossover() : new PartiallyMatchedCrossover(),
       Mutator = new InversionMutator()
@@ -64,7 +54,7 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
   //   };
   // }
   
-  private new sealed class Mapper : IGenotypeMapper<Permutation, Tour> {
+  private sealed class Mapper : IGenotypeMapper<Permutation, Tour> {
     public Permutation Encode(Tour solution) => new(solution.Cities);
     public Tour Decode(Permutation genotype) => new(genotype);
   }

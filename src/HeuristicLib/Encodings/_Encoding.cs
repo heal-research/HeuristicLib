@@ -1,21 +1,10 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Encodings;
 
 public interface IEncodingParameter { }
-
-public interface IEncoding { }
-
-public interface IEncoding<TGenotype> { }
-
-
-public interface IEncoding<TGenotype, out TEncodingParameter> : IEncoding<TGenotype> 
-  where TEncodingParameter : IEncodingParameter<TGenotype> 
-{
-  TEncodingParameter Parameter { get; }
-}
 
 public interface IEncodingParameter<in TGenotype> : IEncodingParameter {
   bool IsValidGenotype(TGenotype genotype);
@@ -30,37 +19,56 @@ public abstract record class EncodingParameterBase<TGenotype> : IEncodingParamet
   // }
 }
 
-public abstract class Encoding<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter>
+public interface IEncoding { }
+
+public interface IEncoding<TGenotype, out TEncodingParameter>
+  : IEncoding
+  where TEncodingParameter : IEncodingParameter<TGenotype>
+{
+  TEncodingParameter Parameter { get; }
+}
+
+public interface IEncoding<TGenotype, out TEncodingParameter, TPhenotype> : IEncoding<TGenotype, TEncodingParameter> 
+  where TEncodingParameter : IEncodingParameter<TGenotype> 
+{
+  IGenotypeMapper<TGenotype, TPhenotype> Decoder { get; }
+}
+
+public abstract class Encoding<TGenotype, TEncodingParameter, TPhenotype> 
+  : IEncoding<TGenotype, TEncodingParameter, TPhenotype>
   where TEncodingParameter : IEncodingParameter<TGenotype>
 {
   public TEncodingParameter Parameter { get; }
+  public IGenotypeMapper<TGenotype, TPhenotype> Decoder { get; }
 
-  protected Encoding(TEncodingParameter parameter) {
+  protected Encoding(TEncodingParameter parameter, IGenotypeMapper<TGenotype, TPhenotype> decoder) {
     Parameter = parameter;
+    Decoder = decoder;
   }
 }
 
 public interface ICreatorProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
-  IExecutableEncodingOperatorFactory<ICreatorOperator<TGenotype>, TEncodingParameter> Creator { get; }
+  ICreator<TGenotype, TEncodingParameter> Creator { get; }
 }
 
 public interface ICrossoverProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
-  IExecutableEncodingOperatorFactory<ICrossoverOperator<TGenotype>, TEncodingParameter> Crossover { get; }
+  ICrossover<TGenotype, TEncodingParameter> Crossover { get; }
 }
 
 public interface IMutatorProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
-  IExecutableEncodingOperatorFactory<IMutatorOperator<TGenotype>, TEncodingParameter> Mutator { get; }
+  IMutator<TGenotype, TEncodingParameter> Mutator { get; }
 }
 
+// ToDo: move to somewhere else since the Encoding should not depend on any algorithm
 public static class GeneticAlgorithmBuilderEncodingExtensions {
-  public static GeneticAlgorithmBuilder<TGenotype, TEncodingParameter> UsingEncoding<TGenotype, TEncodingParameter, TEncoding>(
-    this GeneticAlgorithmBuilder<TGenotype> builder,
+  public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> UsingEncoding<TGenotype, TPhenotype, TEncodingParameter, TEncoding>(
+    this GeneticAlgorithmBuilder builder,
     TEncoding encoding
   )
     where TEncoding : IEncoding<TGenotype, TEncodingParameter>
     where TEncodingParameter : IEncodingParameter<TGenotype> 
   {
-    var parameterizedBuilder = builder.UsingEncodingParameters(encoding.Parameter);
+    var parameterizedBuilder = builder.UsingEncodingParameters<TGenotype, TPhenotype, TEncodingParameter>(encoding.Parameter);
     
     if (encoding is ICreatorProvider<TGenotype, TEncodingParameter> creatorProvider)
       parameterizedBuilder.WithCreator(creatorProvider.Creator);

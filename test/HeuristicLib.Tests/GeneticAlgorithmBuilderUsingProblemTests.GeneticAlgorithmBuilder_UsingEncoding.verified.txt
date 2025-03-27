@@ -3,14 +3,8 @@
     EncodingParameter: {
       Length: 16
     },
-    CreatorFactory: null,
-    CrossoverFactory: null,
-    MutatorFactory: null,
     Creator: {
-      $type: RandomPermutationCreator,
-      EncodingParameter: {
-        Length: 16
-      }
+      $type: RandomPermutationCreator
     },
     Crossover: {
       $type: OrderCrossover
@@ -19,13 +13,11 @@
       $type: InversionMutator
     },
     Evaluator: null,
-    Terminator: null,
     Interceptor: null,
     PopulationSize: null,
     MutationRate: null,
     Selector: null,
     Replacer: null,
-    Objective: null,
-    RandomSource: null
+    Objective: null
   }
 }

@@ -1,15 +1,15 @@
 ﻿{
   Algorithm: {
-    PopulationSize: 200,
-    Terminator: {
-      $type: ThresholdTerminator<IGenerationalState>,
-      Threshold: 20,
-      Accessor: {
-        Type: Func<IGenerationalState, int>,
-        Target: Terminator.<>c,
-        Method: Int32 OnGeneration(HEAL.HeuristicLib.Algorithms.IGenerationalState)
-      }
+    EncodingParameter: {
+      Length: 3,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
     },
+    PopulationSize: 200,
     Creator: {
       $type: NormalDistributedCreator,
       Means: [
@@ -17,16 +17,7 @@
       ],
       Sigmas: [
         0.5
-      ],
-      EncodingParameter: {
-        Length: 3,
-        Minimum: [
-          -5.0
-        ],
-        Maximum: [
-          5.0
-        ]
-      }
+      ]
     },
     Crossover: {
       $type: SinglePointCrossover
@@ -34,20 +25,14 @@
     Mutator: {
       $type: GaussianMutator,
       MutationRate: 0.1,
-      MutationStrength: 0.1,
-      Encoding: {
-        Length: 3,
-        Minimum: [
-          -5.0
-        ],
-        Maximum: [
-          5.0
-        ]
-      }
+      MutationStrength: 0.1
     },
     MutationRate: 0.05,
     Evaluator: {
-      $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
+      $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator,
+      Decoder: {
+        $type: GenotypeMapper<RealVector, RealVector>
+      }
     },
     Objective: {
       Directions: [
@@ -57,10 +42,6 @@
         $type: SingleObjectiveComparer
       }
     },
-    RandomSource: {
-      $type: RandomSource,
-      Seed: 42
-    },
     Selector: {
       $type: ProportionalSelector,
       Windowing: true
@@ -69,11 +50,20 @@
       $type: PlusSelectionReplacer
     },
     Interceptor: {
-      $type: IdentityInterceptor<PopulationState<RealVector>>
+      $type: IdentityInterceptor<EvolutionResult<RealVector, RealVector>>
     }
   },
   TypedBuilder: {
     State: {
+      EncodingParameter: {
+        Length: 3,
+        Minimum: [
+          -5.0
+        ],
+        Maximum: [
+          5.0
+        ]
+      },
       Creator: {
         $type: NormalDistributedCreator,
         Means: [
@@ -81,16 +71,7 @@
         ],
         Sigmas: [
           0.5
-        ],
-        EncodingParameter: {
-          Length: 3,
-          Minimum: [
-            -5.0
-          ],
-          Maximum: [
-            5.0
-          ]
-        }
+        ]
       },
       Crossover: {
         $type: SinglePointCrossover
@@ -98,27 +79,12 @@
       Mutator: {
         $type: GaussianMutator,
         MutationRate: 0.1,
-        MutationStrength: 0.1,
-        Encoding: {
-          Length: 3,
-          Minimum: [
-            -5.0
-          ],
-          Maximum: [
-            5.0
-          ]
-        }
+        MutationStrength: 0.1
       },
       Evaluator: {
-        $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
-      },
-      Terminator: {
-        $type: ThresholdTerminator<IGenerationalState>,
-        Threshold: 20,
-        Accessor: {
-          Type: Func<IGenerationalState, int>,
-          Target: Terminator.<>c,
-          Method: Int32 OnGeneration(HEAL.HeuristicLib.Algorithms.IGenerationalState)
+        $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator,
+        Decoder: {
+          $type: GenotypeMapper<RealVector, RealVector>
         }
       },
       Interceptor: null,
@@ -138,10 +104,6 @@
         TotalOrderComparer: {
           $type: SingleObjectiveComparer
         }
-      },
-      RandomSource: {
-        $type: RandomSource,
-        Seed: 42
       }
     }
   },
@@ -151,11 +113,7 @@
       MutationRate: 0.05,
       Selector: null,
       Replacer: null,
-      Objective: null,
-      RandomSource: {
-        $type: RandomSource,
-        Seed: 42
-      }
+      Objective: null
     }
   }
 }

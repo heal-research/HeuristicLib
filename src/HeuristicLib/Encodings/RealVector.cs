@@ -1,6 +1,6 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings;
 
@@ -64,16 +64,22 @@ public record class RealVectorEncodingParameter : EncodingParameterBase<RealVect
 //   public override RealVector Repair(RealVector genotype) => RealVector.Clamp(genotype, Parameter.Minimum, Parameter.Maximum);
 // }
 
-public class RealVectorEncoding
-  : Encoding<RealVector, RealVectorEncodingParameter>,
+public class RealVectorEncoding<TPhenotype>
+  : Encoding<RealVector, RealVectorEncodingParameter, TPhenotype>,
     ICreatorProvider<RealVector, RealVectorEncodingParameter>, ICrossoverProvider<RealVector, RealVectorEncodingParameter>, IMutatorProvider<RealVector, RealVectorEncodingParameter> {
   
-  public required IExecutableEncodingOperatorFactory<ICreatorOperator<RealVector>, RealVectorEncodingParameter> Creator { get; init; }
-  public required IExecutableEncodingOperatorFactory<ICrossoverOperator<RealVector>, RealVectorEncodingParameter> Crossover { get; init; }
-  public required IExecutableEncodingOperatorFactory<IMutatorOperator<RealVector>, RealVectorEncodingParameter> Mutator { get; init; }
+  public required ICreator<RealVector, RealVectorEncodingParameter> Creator { get; init; }
+  public required ICrossover<RealVector, RealVectorEncodingParameter> Crossover { get; init; }
+  public required IMutator<RealVector, RealVectorEncodingParameter> Mutator { get; init; }
   
-  public RealVectorEncoding(RealVectorEncodingParameter parameter) 
-    : base(parameter) { }
+  public RealVectorEncoding(RealVectorEncodingParameter parameter, IGenotypeMapper<RealVector, TPhenotype> decoder) 
+    : base(parameter, decoder) { }
+}
+
+public class RealVectorEncoding : RealVectorEncoding<RealVector> { // Genotype = Phenotype
+  public RealVectorEncoding(RealVectorEncodingParameter parameter) : base(parameter, GenotypeMapper.Identity<RealVector>()) {
+    
+  }
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
@@ -350,58 +356,46 @@ public class RealVector : IReadOnlyList<double> {
 }
 
 
-public class AlphaBetaBlendCrossoverOperator : CrossoverOperatorBase<RealVector> {
-  //public RealVectorEncoding Encoding { get; }
+public class AlphaBetaBlendCrossover : CrossoverBase<RealVector, RealVectorEncodingParameter> {
   public double Alpha { get; }
   public double Beta { get; }
   
   // <param name="alpha">Some Description (default: 0.7 if null)</param>
   // <param name="beta">Some Description (default: 0.3 if null)</param>
-  public AlphaBetaBlendCrossoverOperator(double? alpha = null, double? beta = null) {
-    //Encoding = encoding;
+  public AlphaBetaBlendCrossover(double? alpha = null, double? beta = null) {
     Alpha = alpha ?? 0.7;
     Beta = beta ?? 0.3;
   }
 
-  public override RealVector Cross(RealVector parent1, RealVector parent2) {
+  public override RealVector Cross(RealVector parent1, RealVector parent2, RealVectorEncodingParameter encoding, IRandomNumberGenerator random) {
     return Alpha * parent1 + Beta * parent2;
   }
 }
 
-public class GaussianMutatorOperator : MutatorOperatorBase<RealVector> {
+public class GaussianMutator : MutatorBase<RealVector, RealVectorEncodingParameter> {
   public double MutationRate { get; }
   public double MutationStrength { get; }
-  public RealVectorEncodingParameter Encoding { get; }
-  public IRandomNumberGenerator Random { get; }
   
-  public GaussianMutatorOperator(double mutationRate, double mutationStrength, RealVectorEncodingParameter encoding, IRandomNumberGenerator random) {
+  public GaussianMutator(double mutationRate, double mutationStrength) {
     MutationRate = mutationRate;
     MutationStrength = mutationStrength;
-    Encoding = encoding;
-    Random = random;
   }
   
-  public override RealVector Mutate(RealVector solution) {
+  public override RealVector Mutate(RealVector solution, RealVectorEncodingParameter encoding, IRandomNumberGenerator random) {
     double[] newElements = solution.ToArray();
     for (int i = 0; i < newElements.Length; i++) {
-      if (Random.Random() < MutationRate) {
-        newElements[i] += MutationStrength * (Random.Random() - 0.5);
+      if (random.Random() < MutationRate) {
+        newElements[i] += MutationStrength * (random.Random() - 0.5);
       }
     }
-    return RealVector.Clamp(new RealVector(newElements), Encoding.Minimum, Encoding.Maximum);
+    return RealVector.Clamp(new RealVector(newElements), encoding.Minimum, encoding.Maximum);
   }
 }
 
 
-public class SinglePointCrossoverOperator : CrossoverOperatorBase<RealVector> {
-  public IRandomNumberGenerator Random { get; }
-  
-  public SinglePointCrossoverOperator(IRandomNumberGenerator random) {
-    Random = random;
-  }
-  
-  public override RealVector Cross(RealVector parent1, RealVector parent2) {
-    int crossoverPoint = Random.Integer(1, parent1.Count);
+public class SinglePointCrossover : CrossoverBase<RealVector, RealVectorEncodingParameter> {
+  public override RealVector Cross(RealVector parent1, RealVector parent2, RealVectorEncodingParameter encoding, IRandomNumberGenerator random) {
+    int crossoverPoint = random.Integer(1, parent1.Count);
     double[] offspringValues = new double[parent1.Count];
     for (int i = 0; i < crossoverPoint; i++) {
       offspringValues[i] = parent1[i];
@@ -409,60 +403,53 @@ public class SinglePointCrossoverOperator : CrossoverOperatorBase<RealVector> {
     for (int i = crossoverPoint; i < parent2.Count; i++) {
       offspringValues[i] = parent2[i];
     }
-    return new RealVector(offspringValues);
+    return RealVector.Clamp(new RealVector(offspringValues), encoding.Minimum, encoding.Maximum);
   }
 }
 
-public class NormalDistributedCreatorOperator : CreatorOperatorBase<RealVector> {
+public class NormalDistributedCreator : CreatorBase<RealVector, RealVectorEncodingParameter> {
   public RealVector Means { get; }
   public RealVector Sigmas { get; }
-  public RealVectorEncodingParameter EncodingParameter { get; }
-  public IRandomNumberGenerator Random { get; }
-
+  
   //public const double DefaultMeans = 0.0;
   //public const double DefaultSigmas = 1.0;
 
-  public NormalDistributedCreatorOperator(RealVector means, RealVector sigmas, RealVectorEncodingParameter encodingParameter, IRandomNumberGenerator random) {
-    if (!RealVector.AreCompatible(encodingParameter.Length, means, sigmas, encodingParameter.Minimum, encodingParameter.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+  public NormalDistributedCreator(RealVector means, RealVector sigmas) {
+    //if (!RealVector.AreCompatible(encodingParameter.Length, means, sigmas, encodingParameter.Minimum, encodingParameter.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
     Means = means;
     Sigmas = sigmas;
-    EncodingParameter = encodingParameter;
-    Random = random;
   }
 
-  public override RealVector Create() {
-    RealVector value = RealVector.CreateNormal(EncodingParameter.Length, Means, Sigmas, Random);
+  public override RealVector Create(RealVectorEncodingParameter encoding, IRandomNumberGenerator random) {
+    if (!RealVector.AreCompatible(encoding.Length, Means, Sigmas, encoding.Minimum, encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+    RealVector value = RealVector.CreateNormal(encoding.Length, Means, Sigmas, random);
     // Clamp value to min/max bounds
-    value = RealVector.Clamp(value, EncodingParameter.Minimum, EncodingParameter.Maximum);
+    value = RealVector.Clamp(value, encoding.Minimum, encoding.Maximum);
     return value;
   }
 }
 
-public class UniformDistributedCreatorOperator : CreatorOperatorBase<RealVector> {
+public class UniformDistributedCreator : CreatorBase<RealVector, RealVectorEncodingParameter> {
   public RealVector? Minimum { get; }
   public RealVector? Maximum { get; }
-  public RealVectorEncodingParameter EncodingParameter { get; }
-  public IRandomNumberGenerator Random { get; }
 
-  public UniformDistributedCreatorOperator(RealVector? minimum, RealVector? maximum, RealVectorEncodingParameter encodingParameter, IRandomNumberGenerator random) {
-    if (minimum is not null && (minimum < encodingParameter.Minimum).Any()) throw new ArgumentException("Minimum values must be greater or equal to encoding minimum values");
-    if (maximum is not null && (maximum > encodingParameter.Maximum).Any()) throw new ArgumentException("Maximum values must be less or equal to encoding maximum values");
-    if (!RealVector.AreCompatible(encodingParameter.Length, minimum ?? encodingParameter.Minimum, maximum ?? encodingParameter.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
-    
+  public UniformDistributedCreator(RealVector? minimum, RealVector? maximum) {
     Minimum = minimum;
     Maximum = maximum;
-    EncodingParameter = encodingParameter;
-    Random = random;
   }
 
-  public override RealVector Create() {
-    return RealVector.CreateUniform(EncodingParameter.Length, Minimum ?? EncodingParameter.Minimum, Maximum ?? EncodingParameter.Maximum, Random);
+  public override RealVector Create(RealVectorEncodingParameter encoding, IRandomNumberGenerator random) {
+    if (Minimum is not null && (Minimum < encoding.Minimum).Any()) throw new ArgumentException("Minimum values must be greater or equal to encoding minimum values");
+    if (Maximum is not null && (Maximum > encoding.Maximum).Any()) throw new ArgumentException("Maximum values must be less or equal to encoding maximum values");
+    if (!RealVector.AreCompatible(encoding.Length, Minimum ?? encoding.Minimum, Maximum ?? encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+    return RealVector.CreateUniform(encoding.Length, Minimum ?? encoding.Minimum, Maximum ?? encoding.Maximum, random);
   }
 }
 
-public static class GeneticAlgorithmBuilderRealVectorEncodingExtensions {
-  // For type inference
-  public static GeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter> UsingEncoding(this GeneticAlgorithmBuilder<RealVector> builder, RealVectorEncoding encoding) {
-    return builder.UsingEncoding<RealVector, RealVectorEncodingParameter, RealVectorEncoding>(encoding);
-  }
-}
+// // ToDo: move to different file
+// public static class GeneticAlgorithmBuilderRealVectorEncodingExtensions {
+//   // For type inference
+//   public static GeneticAlgorithmBuilder<RealVector, RealVectorEncodingParameter> UsingEncoding(this GeneticAlgorithmBuilder<RealVector> builder, RealVectorEncoding encoding) {
+//     return builder.UsingEncoding<RealVector, RealVectorEncodingParameter, RealVectorEncoding>(encoding);
+//   }
+// }

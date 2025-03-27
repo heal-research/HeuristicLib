@@ -1,5 +1,33 @@
 ﻿[
   {
+    Population: [
+      {
+        Genotype: [
+          0.3448517272923386,
+          -3.8727416130121526
+        ],
+        Phenotype: [
+          0.3448517272923386,
+          -3.8727416130121526
+        ],
+        Fitness: [
+          -3.527889885719814
+        ]
+      },
+      {
+        Genotype: [
+          -3.9958536843749943,
+          -0.8178857917980693
+        ],
+        Phenotype: [
+          -3.9958536843749943,
+          -0.8178857917980693
+        ],
+        Fitness: [
+          -4.813739476173064
+        ]
+      }
+    ],
     Generation: 0,
     Objective: {
       Directions: [
@@ -9,9 +37,22 @@
         $type: SingleObjectiveComparer
       }
     },
+    CreationCount: 2,
+    DecodingCount: 0,
+    EvaluationCount: 2,
+    SelectionCount: 0,
+    CrossoverCount: 0,
+    MutationCount: 0,
+    InterceptionCount: 0
+  },
+  {
     Population: [
       {
         Genotype: [
+          0.3448517272923386,
+          -3.8727416130121526
+        ],
+        Phenotype: [
           0.3448517272923386,
           -3.8727416130121526
         ],
@@ -24,13 +65,15 @@
           -3.9958536843749943,
           -0.8178857917980693
         ],
+        Phenotype: [
+          -3.9958536843749943,
+          -0.8178857917980693
+        ],
         Fitness: [
           -4.813739476173064
         ]
       }
-    ]
-  },
-  {
+    ],
     Generation: 1,
     Objective: {
       Directions: [
@@ -40,14 +83,27 @@
         $type: SingleObjectiveComparer
       }
     },
+    CreationCount: 0,
+    DecodingCount: 0,
+    EvaluationCount: 2,
+    SelectionCount: 4,
+    CrossoverCount: 2,
+    MutationCount: 2,
+    InterceptionCount: 0
+  },
+  {
     Population: [
       {
         Genotype: [
-          0.3448517272923386,
+          -3.9958536843749943,
+          -3.8727416130121526
+        ],
+        Phenotype: [
+          -3.9958536843749943,
           -3.8727416130121526
         ],
         Fitness: [
-          -3.527889885719814
+          -7.868595297387147
         ]
       },
       {
@@ -55,13 +111,15 @@
           -3.9958536843749943,
           -0.8178857917980693
         ],
+        Phenotype: [
+          -3.9958536843749943,
+          -0.8178857917980693
+        ],
         Fitness: [
           -4.813739476173064
         ]
       }
-    ]
-  },
-  {
+    ],
     Generation: 2,
     Objective: {
       Directions: [
@@ -71,28 +129,43 @@
         $type: SingleObjectiveComparer
       }
     },
+    CreationCount: 0,
+    DecodingCount: 0,
+    EvaluationCount: 2,
+    SelectionCount: 4,
+    CrossoverCount: 2,
+    MutationCount: 1,
+    InterceptionCount: 0
+  },
+  {
     Population: [
       {
         Genotype: [
-          0.3448517272923386,
-          -3.8727416130121526
+          -4.015033718089123,
+          -0.8178857917980693
+        ],
+        Phenotype: [
+          -4.015033718089123,
+          -0.8178857917980693
         ],
         Fitness: [
-          -3.527889885719814
+          -4.832919509887192
         ]
       },
       {
         Genotype: [
-          -3.9753384713667157,
-          -3.8727416130121526
+          -3.9958536843749943,
+          -0.8178857917980693
+        ],
+        Phenotype: [
+          -3.9958536843749943,
+          -0.8178857917980693
         ],
         Fitness: [
-          -7.848080084378868
+          -4.813739476173064
         ]
       }
-    ]
-  },
-  {
+    ],
     Generation: 3,
     Objective: {
       Directions: [
@@ -102,25 +175,12 @@
         $type: SingleObjectiveComparer
       }
     },
-    Population: [
-      {
-        Genotype: [
-          -3.9753384713667157,
-          -3.8727416130121526
-        ],
-        Fitness: [
-          -7.848080084378868
-        ]
-      },
-      {
-        Genotype: [
-          -3.9945185050808445,
-          -3.8727416130121526
-        ],
-        Fitness: [
-          -7.867260118092997
-        ]
-      }
-    ]
+    CreationCount: 0,
+    DecodingCount: 0,
+    EvaluationCount: 2,
+    SelectionCount: 4,
+    CrossoverCount: 2,
+    MutationCount: 1,
+    InterceptionCount: 0
   }
 ]

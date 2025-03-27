@@ -1,40 +1,40 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿using HEAL.HeuristicLib.Core;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IReplacerOperator : IExecutableOperator {
-  Phenotype<TGenotype>[] Replace<TGenotype>(Phenotype<TGenotype>[] previousPopulation, Phenotype<TGenotype>[] offspringPopulation, Objective objective);
+public interface IReplacer : IOperator {
+  Solution<TGenotype, TPhenotype>[] Replace<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] previousPopulation, Solution<TGenotype, TPhenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random);
   int GetOffspringCount(int populationSize);
 }
 
-public abstract class ReplacerOperatorBase : IReplacerOperator {
+public abstract class ReplacerBase : IReplacer {
+  public abstract Solution<TGenotype, TPhenotype>[] Replace<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] previousPopulation, Solution<TGenotype, TPhenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random);
   public abstract int GetOffspringCount(int populationSize);
-  public abstract Phenotype<TGenotype>[] Replace<TGenotype>(Phenotype<TGenotype>[] previousPopulation, Phenotype<TGenotype>[] offspringPopulation, Objective objective);
 }
 
-public class PlusSelectionReplacerOperator : ReplacerOperatorBase {
-  public override int GetOffspringCount(int populationSize) {
-    return populationSize;
-  }
-  public override Phenotype<TGenotype>[] Replace<TGenotype>(Phenotype<TGenotype>[] previousPopulation, Phenotype<TGenotype>[] offspringPopulation, Objective objective) {
+public class PlusSelectionReplacer : ReplacerBase {
+  public override Solution<TGenotype, TPhenotype>[] Replace<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] previousPopulation, Solution<TGenotype, TPhenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
     return combinedPopulation
       .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
       .Take(previousPopulation.Length) // if algorithm population differs from previousPopulation.Length, it is not detected
       .ToArray();
   }
+  
+  public override int GetOffspringCount(int populationSize) {
+    return populationSize;
+  }
 }
 
-public class ElitismReplacerOperator : ReplacerOperatorBase {
+public class ElitismReplacer : ReplacerBase {
   public int Elites { get; }
 
-  public ElitismReplacerOperator(int elites) {
+  public ElitismReplacer(int elites) {
     Elites = elites;
   }
 
-  public override int GetOffspringCount(int populationSize) => populationSize - Elites;
-
-  public override Phenotype<TGenotype>[] Replace<TGenotype>(Phenotype<TGenotype>[] previousPopulation, Phenotype<TGenotype>[] offspringPopulation, Objective objective) {
+  public override Solution<TGenotype, TPhenotype>[] Replace<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] previousPopulation, Solution<TGenotype, TPhenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var elitesPopulation = previousPopulation
       .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
       .Take(Elites);
@@ -43,4 +43,6 @@ public class ElitismReplacerOperator : ReplacerOperatorBase {
       .Concat(offspringPopulation) // requires that offspring population size is correct
       .ToArray();
   }
+  
+  public override int GetOffspringCount(int populationSize) => populationSize - Elites;
 }
