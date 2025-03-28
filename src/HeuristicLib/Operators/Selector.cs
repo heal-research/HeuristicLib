@@ -6,11 +6,11 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface ISelector : IOperator 
 {
-  Solution<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random);
+  Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random);
 }
 
 public abstract class SelectorBase : ISelector {
-  public abstract Solution<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random);
+  public abstract Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random);
 }
 
 public class ProportionalSelector : SelectorBase { // ToDo: Probability-based selection base class
@@ -20,7 +20,7 @@ public class ProportionalSelector : SelectorBase { // ToDo: Probability-based se
     Windowing = windowing;
   }
   
-  public override Solution<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
+  public override Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     // prepare qualities
     double minQuality = double.MaxValue, maxQuality = double.MinValue;
@@ -51,7 +51,7 @@ public class ProportionalSelector : SelectorBase { // ToDo: Probability-based se
 
     var list = qualities.ToList();
     double qualitySum = list.Sum();
-    var selected = new Solution<TGenotype, TPhenotype>[count];
+    var selected = new Individual<TGenotype, TPhenotype>[count];
     for (int i = 0; i < count; i++) {
       double selectedQuality = random.Random() * qualitySum;
       int index = 0;
@@ -67,8 +67,8 @@ public class ProportionalSelector : SelectorBase { // ToDo: Probability-based se
 }
 
 public class RandomSelector : SelectorBase {
-  public override Solution<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
-    var selected = new Solution<TGenotype, TPhenotype>[count];
+  public override Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
+    var selected = new Individual<TGenotype, TPhenotype>[count];
     for (int i = 0; i < count; i++) {
       int index = random.Integer(population.Length);
       selected[i] = population[index];
@@ -84,10 +84,10 @@ public class TournamentSelector : SelectorBase {
     TournamentSize = tournamentSize;
   }
 
-  public override Solution<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Solution<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
-    var selected = new Solution<TGenotype, TPhenotype>[count];
+  public override Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
+    var selected = new Individual<TGenotype, TPhenotype>[count];
     for (int i = 0; i < count; i++) {
-      var tournamentParticipants = new List<Solution<TGenotype, TPhenotype>>();
+      var tournamentParticipants = new List<Individual<TGenotype, TPhenotype>>();
       for (int j = 0; j < TournamentSize; j++) {
         int index = random.Integer(population.Length);
         tournamentParticipants.Add(population[index]);

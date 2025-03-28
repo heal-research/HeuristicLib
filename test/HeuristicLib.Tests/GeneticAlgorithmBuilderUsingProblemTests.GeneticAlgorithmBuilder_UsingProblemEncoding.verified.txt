@@ -1,0 +1,26 @@
+﻿{
+  State: {
+    EncodingParameter: {
+      Length: 16
+    },
+    Creator: {
+      $type: RandomPermutationCreator
+    },
+    Crossover: {
+      $type: OrderCrossover
+    },
+    Mutator: {
+      $type: InversionMutator
+    },
+    Decoder: {
+      $type: TravelingSalesmanProblem.TourEncoder
+    },
+    Evaluator: null,
+    Interceptor: null,
+    PopulationSize: null,
+    MutationRate: null,
+    Selector: null,
+    Replacer: null,
+    Objective: null
+  }
+}

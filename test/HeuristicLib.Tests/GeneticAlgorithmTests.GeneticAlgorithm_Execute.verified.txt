@@ -86,7 +86,7 @@
     }
   },
   CreationCount: 0,
-  DecodingCount: 0,
+  DecodingCount: 5,
   EvaluationCount: 5,
   SelectionCount: 10,
   CrossoverCount: 5,

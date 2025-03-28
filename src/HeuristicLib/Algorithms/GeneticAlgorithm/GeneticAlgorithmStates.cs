@@ -11,7 +11,7 @@ public record GenotypeStartPopulation<TGenotype> : StartPopulation {
 }
 
 public record PhenotypeStartPopulation<TGenotype, TPhenotype> : StartPopulation, IContinuationState {
-  public required Solution<TGenotype, TPhenotype>[] Population { get; init; }
+  public required Individual<TGenotype, TPhenotype>[] Population { get; init; }
 }
 
 public abstract record EvolutionResult : IResultState {
@@ -39,7 +39,7 @@ public abstract record EvolutionResult : IResultState {
 }
 
 public record EvolutionResult<TGenotype, TPhenotype> : EvolutionResult, IContinuableResultState<PhenotypeStartPopulation<TGenotype, TPhenotype>> {
-  public required Solution<TGenotype, TPhenotype>[] Population { get; init; }
+  public required Individual<TGenotype, TPhenotype>[] Population { get; init; }
   
   public PhenotypeStartPopulation<TGenotype, TPhenotype> GetNextContinuationState() => new() {
     Generation = Generation + 1,

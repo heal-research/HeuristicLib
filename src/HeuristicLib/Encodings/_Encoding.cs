@@ -1,6 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Encodings;
 
@@ -28,10 +27,10 @@ public interface IEncoding<TGenotype, out TEncodingParameter>
   TEncodingParameter Parameter { get; }
 }
 
-public interface IEncoding<TGenotype, out TEncodingParameter, TPhenotype> : IEncoding<TGenotype, TEncodingParameter> 
+public interface IEncoding<TGenotype, out TEncodingParameter, out TPhenotype> : IEncoding<TGenotype, TEncodingParameter> 
   where TEncodingParameter : IEncodingParameter<TGenotype> 
 {
-  IGenotypeMapper<TGenotype, TPhenotype> Decoder { get; }
+  IDecoder<TGenotype, TPhenotype> Decoder { get; }
 }
 
 public abstract class Encoding<TGenotype, TEncodingParameter, TPhenotype> 
@@ -39,9 +38,9 @@ public abstract class Encoding<TGenotype, TEncodingParameter, TPhenotype>
   where TEncodingParameter : IEncodingParameter<TGenotype>
 {
   public TEncodingParameter Parameter { get; }
-  public IGenotypeMapper<TGenotype, TPhenotype> Decoder { get; }
+  public IDecoder<TGenotype, TPhenotype> Decoder { get; }
 
-  protected Encoding(TEncodingParameter parameter, IGenotypeMapper<TGenotype, TPhenotype> decoder) {
+  protected Encoding(TEncodingParameter parameter, IDecoder<TGenotype, TPhenotype> decoder) {
     Parameter = parameter;
     Decoder = decoder;
   }
@@ -65,10 +64,11 @@ public static class GeneticAlgorithmBuilderEncodingExtensions {
     this GeneticAlgorithmBuilder builder,
     TEncoding encoding
   )
-    where TEncoding : IEncoding<TGenotype, TEncodingParameter>
+    where TEncoding : IEncoding<TGenotype, TEncodingParameter, TPhenotype>
     where TEncodingParameter : IEncodingParameter<TGenotype> 
   {
     var parameterizedBuilder = builder.UsingEncodingParameters<TGenotype, TPhenotype, TEncodingParameter>(encoding.Parameter);
+    parameterizedBuilder.WithDecoder(encoding.Decoder);
     
     if (encoding is ICreatorProvider<TGenotype, TEncodingParameter> creatorProvider)
       parameterizedBuilder.WithCreator(creatorProvider.Creator);

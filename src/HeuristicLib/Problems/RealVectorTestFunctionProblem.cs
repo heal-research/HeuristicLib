@@ -47,7 +47,7 @@ public class RealVectorTestFunctionProblem : ProblemBase<RealVector> {
   public RealVectorEncodingParameter CreateRealVectorEncodingParameter() {
     return new RealVectorEncodingParameter(length: 2, min, max);
   }
-  public RealVectorEncoding<RealVector> CreateRealVectorEncoding() {
+  public RealVectorEncoding CreateRealVectorEncoding() {
     var parameter = CreateRealVectorEncodingParameter();
 
     return new RealVectorEncoding(parameter) {

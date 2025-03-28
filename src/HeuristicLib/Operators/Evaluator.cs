@@ -5,45 +5,45 @@ namespace HEAL.HeuristicLib.Operators;
 
 // ToDo: class for individual "FitnessFunction"
 
-public interface IEvaluator<TGenotype, TPhenotype> : IOperator {
-  Solution<TGenotype, TPhenotype>[] Evaluate(TGenotype[] population);
+public interface IEvaluator<in TPhenotype> : IOperator {
+  Fitness[] Evaluate(TPhenotype[] population);
 }
 
-public abstract class EvaluatorBase<TGenotype, TPhenotype> : IEvaluator<TGenotype, TPhenotype> {
- public abstract Solution<TGenotype, TPhenotype>[] Evaluate(TGenotype[] population);
+public abstract class EvaluatorBase<TPhenotype> : IEvaluator<TPhenotype> {
+ public abstract Fitness[] Evaluate(TPhenotype[] population);
 }
 
 public static class Evaluator {
-  public static FitnessFunctionEvaluator<TGenotype, TPhenotype> UsingFitnessFunction<TGenotype, TPhenotype>(Func<TPhenotype, Fitness> evaluator, IGenotypeMapper<TGenotype, TPhenotype> decoder) {
-    return new FitnessFunctionEvaluator<TGenotype, TPhenotype>(evaluator, decoder);
+  public static CustomFitnessFunctionEvaluator<TPhenotype> FromFitnessFunction<TPhenotype>(Func<TPhenotype, Fitness> evaluator) {
+    return new CustomFitnessFunctionEvaluator<TPhenotype>(evaluator);
   }
-  public static FitnessFunctionEvaluator<TGenotype, TGenotype> UsingFitnessFunction<TGenotype>(Func<TGenotype, Fitness> evaluator) {
-    return new FitnessFunctionEvaluator<TGenotype, TGenotype>(evaluator, GenotypeMapper.Identity<TGenotype>());
+  public static ProblemFitnessFunctionEvaluator<TPhenotype> FromProblem<TPhenotype>(IProblem<TPhenotype> problem) {
+    return new ProblemFitnessFunctionEvaluator<TPhenotype>(problem);
   }
 }
 
-public abstract class FitnessFunctionEvaluatorBase<TGenotype, TPhenotype> : EvaluatorBase<TGenotype, TPhenotype> {
+public abstract class FitnessFunctionEvaluatorBase<TPhenotype> : EvaluatorBase<TPhenotype> {
   // Define the "runner" (sequential, parallel, ...)
-  public IGenotypeMapper<TGenotype, TPhenotype> Decoder { get; }
-  protected FitnessFunctionEvaluatorBase(IGenotypeMapper<TGenotype, TPhenotype> decoder) {
-    Decoder = decoder;
-  }
+  protected FitnessFunctionEvaluatorBase() {}
   public abstract Fitness Evaluate(TPhenotype phenotype);
-  public override Solution<TGenotype, TPhenotype>[] Evaluate(TGenotype[] population) {
-    return population
-      .Select(genotype => {
-        var phenotype = Decoder.Decode(genotype);
-        var fitness = Evaluate(phenotype);
-        return new Solution<TGenotype, TPhenotype>(genotype, phenotype, fitness);
-      })
-      .ToArray();
+  public override Fitness[] Evaluate(TPhenotype[] population) {
+    return population.Select(Evaluate).ToArray();
   }
 }
 
-public class FitnessFunctionEvaluator<TGenotype, TPhenotype> : FitnessFunctionEvaluatorBase<TGenotype, TPhenotype> {
+public class CustomFitnessFunctionEvaluator<TPhenotype> : FitnessFunctionEvaluatorBase<TPhenotype> {
   private readonly Func<TPhenotype, Fitness> fitnessFunction;
-  public FitnessFunctionEvaluator(Func<TPhenotype, Fitness> fitnessFunction, IGenotypeMapper<TGenotype, TPhenotype> decoder) : base(decoder) {
+  public CustomFitnessFunctionEvaluator(Func<TPhenotype, Fitness> fitnessFunction) {
     this.fitnessFunction = fitnessFunction;
   }
   public override Fitness Evaluate(TPhenotype phenotype) => fitnessFunction(phenotype);
+}
+
+public class ProblemFitnessFunctionEvaluator<TPhenotype> : FitnessFunctionEvaluatorBase<TPhenotype> {
+  private readonly IProblem<TPhenotype> problem;
+
+  public ProblemFitnessFunctionEvaluator(IProblem<TPhenotype> problem) {
+    this.problem = problem;
+  }
+  public override Fitness Evaluate(TPhenotype phenotype) => problem.Evaluate(phenotype);
 }

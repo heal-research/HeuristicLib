@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings;
@@ -72,14 +71,12 @@ public class RealVectorEncoding<TPhenotype>
   public required ICrossover<RealVector, RealVectorEncodingParameter> Crossover { get; init; }
   public required IMutator<RealVector, RealVectorEncodingParameter> Mutator { get; init; }
   
-  public RealVectorEncoding(RealVectorEncodingParameter parameter, IGenotypeMapper<RealVector, TPhenotype> decoder) 
+  public RealVectorEncoding(RealVectorEncodingParameter parameter, IDecoder<RealVector, TPhenotype> decoder) 
     : base(parameter, decoder) { }
 }
 
 public class RealVectorEncoding : RealVectorEncoding<RealVector> { // Genotype = Phenotype
-  public RealVectorEncoding(RealVectorEncodingParameter parameter) : base(parameter, GenotypeMapper.Identity<RealVector>()) {
-    
-  }
+  public RealVectorEncoding(RealVectorEncodingParameter parameter) : base(parameter, Operators.Decoder.Identity<RealVector>()) { }
 }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]

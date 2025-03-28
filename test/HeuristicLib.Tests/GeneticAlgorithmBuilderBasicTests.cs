@@ -21,6 +21,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       .WithCrossover(new SinglePointCrossover())
       .WithMutator(new GaussianMutator(0.1, 0.1))
       .WithMutationRate(0.05)
+      .WithDecoder(Decoder.Identity<RealVector>())
       .WithEvaluator(new MockEvaluator())
       .WithObjective(SingleObjective.Minimize)
       .WithSelector(new ProportionalSelector())
@@ -47,6 +48,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       .WithCreator(new NormalDistributedCreator(0, 0.5))
       .WithCrossover(new SinglePointCrossover())
       .WithMutator(new GaussianMutator(0.1, 0.1))
+      .WithDecoder(Decoder.Identity<RealVector>())
       .WithEvaluator(new MockEvaluator())
       .WithObjective(SingleObjective.Minimize)
       .WithSelector(new ProportionalSelector())
@@ -71,6 +73,7 @@ public class GeneticAlgorithmBuilderBasicTests {
       .WithCrossover(new SinglePointCrossover())
       .WithMutator(new GaussianMutator(0.1, 0.1))
       .WithMutationRate(0.05)
+      .WithDecoder(Decoder.Identity<RealVector>())
       .WithEvaluator(new MockEvaluator())
       .WithObjective(SingleObjective.Minimize)
       .WithSelector(new ProportionalSelector())
@@ -95,6 +98,7 @@ public class GeneticAlgorithmBuilderBasicTests {
     );
     var builder = new GeneticAlgorithmBuilder<RealVector, RealVector, RealVectorEncodingParameter>()
       //.WithRandomSource(new RandomSource(42))
+      .WithDecoder(Decoder.Identity<RealVector>())
       .WithEvaluator(new MockEvaluator()).WithObjective(SingleObjective.Minimize)
       .WithEncodingParameter(new RealVectorEncodingParameter(10, -5, +5))
       .WithConfiguration(spec);
@@ -104,9 +108,7 @@ public class GeneticAlgorithmBuilderBasicTests {
     return Verify(ga);
   }
 
-  private class MockEvaluator : FitnessFunctionEvaluatorBase<RealVector, RealVector> {
-    public MockEvaluator() : base(GenotypeMapper.Identity<RealVector>()) {
-    }
+  private class MockEvaluator : FitnessFunctionEvaluatorBase<RealVector> {
     public override Fitness Evaluate(RealVector phenotype) {
       return phenotype.Sum();
     }

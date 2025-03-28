@@ -38,7 +38,7 @@
       }
     },
     CreationCount: 2,
-    DecodingCount: 0,
+    DecodingCount: 2,
     EvaluationCount: 2,
     SelectionCount: 0,
     CrossoverCount: 0,
@@ -84,7 +84,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 2,
     EvaluationCount: 2,
     SelectionCount: 4,
     CrossoverCount: 2,
@@ -130,7 +130,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 2,
     EvaluationCount: 2,
     SelectionCount: 4,
     CrossoverCount: 2,
@@ -176,7 +176,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 2,
     EvaluationCount: 2,
     SelectionCount: 4,
     CrossoverCount: 2,

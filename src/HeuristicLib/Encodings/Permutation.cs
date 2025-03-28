@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings;
@@ -24,12 +23,12 @@ public class PermutationEncoding<TPhenotype>
   public required ICrossover<Permutation, PermutationEncodingParameter> Crossover { get; init; }
   public required IMutator<Permutation, PermutationEncodingParameter> Mutator { get; init; }
   
-  public PermutationEncoding(PermutationEncodingParameter parameter, IGenotypeMapper<Permutation, TPhenotype> decoder) 
+  public PermutationEncoding(PermutationEncodingParameter parameter, IDecoder<Permutation, TPhenotype> decoder) 
     : base(parameter, decoder) { }
 }
 
 public class PermutationEncoding : PermutationEncoding<Permutation> { // Genotype = Phenotype
-  public PermutationEncoding(PermutationEncodingParameter parameter) : base(parameter, GenotypeMapper.Identity<Permutation>()) { }
+  public PermutationEncoding(PermutationEncodingParameter parameter) : base(parameter, Operators.Decoder.Identity<Permutation>()) { }
 }
 
 public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {

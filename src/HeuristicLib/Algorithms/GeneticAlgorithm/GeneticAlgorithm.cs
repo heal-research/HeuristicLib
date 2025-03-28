@@ -20,7 +20,8 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
   public ICrossover<TGenotype, TEncodingParameter> Crossover { get; }
   public IMutator<TGenotype, TEncodingParameter> Mutator { get; }
   public double MutationRate { get; }
-  public IEvaluator<TGenotype, TPhenotype> Evaluator { get; }
+  public IDecoder<TGenotype, TPhenotype> Decoder { get; }
+  public IEvaluator<TPhenotype> Evaluator { get; }
   public Objective Objective { get; }
   //public IRandomSource RandomSource { get; }
   public ISelector Selector { get; }
@@ -34,7 +35,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     ICreator<TGenotype, TEncodingParameter> creator,
     ICrossover<TGenotype, TEncodingParameter> crossover, 
     IMutator<TGenotype, TEncodingParameter> mutator, double mutationRate,
-    IEvaluator<TGenotype, TPhenotype> evaluator, Objective objective,
+    IDecoder<TGenotype, TPhenotype> decoder, IEvaluator<TPhenotype> evaluator, Objective objective,
     ISelector selector, IReplacer replacer,
     //IRandomSource randomSourceState,
     //ITerminator<PopulationState<TGenotype>>? terminator = null,
@@ -46,6 +47,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     Crossover = crossover;
     Mutator = mutator;
     MutationRate = mutationRate;
+    Decoder = decoder;
     Evaluator = evaluator;
     Objective = objective;
     Selector = selector;
@@ -65,25 +67,32 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(EncodingParameter, random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
-    var population = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
+    var genotypePopulation = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
+    
+    var startDecoding = Stopwatch.GetTimestamp();
+    var phenotypePopulation = genotypePopulation.Select(genotype => Decoder.Decode(genotype)).ToArray();
+    var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluating = Stopwatch.GetTimestamp();
-    var evaluatedPopulation = Evaluator.Evaluate(population);
+    var fitnesses = Evaluator.Evaluate(phenotypePopulation);
     var endEvaluating = Stopwatch.GetTimestamp();
 
+    var population = Population.From(genotypePopulation, phenotypePopulation, fitnesses);
+    
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
     
     var result = new EvolutionResult<TGenotype, TPhenotype>() {
       Generation = startState?.Generation ?? 0,
       Objective = Objective,
-      Population = evaluatedPopulation,
+      Population = population,
       CreationCount = remainingCount,
-      EvaluationCount = evaluatedPopulation.Length,
+      DecodingCount = phenotypePopulation.Length,
+      EvaluationCount = fitnesses.Length,
       CreationDuration = Stopwatch.GetElapsedTime(startCreating, endCreating),
+      DecodingDuration = Stopwatch.GetElapsedTime(startDecoding, endDecoding),
       EvaluationDuration = Stopwatch.GetElapsedTime(startEvaluating, endEvaluating),
       TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor)
     };
-
     
     var interceptorStart = Stopwatch.GetTimestamp();
     var interceptedResult = Interceptor.Transform(result);
@@ -108,34 +117,40 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     var endSelection = Stopwatch.GetTimestamp();
 
      
-    var offspring = new TGenotype[offspringCount];
+    var genotypePopulation = new TGenotype[offspringCount];
     var startCrossover = Stopwatch.GetTimestamp();
     int crossoverCount = 0;
     for (int i = 0; i < parents.Count; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
       var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, EncodingParameter, random);
-      offspring[i / 2] = child;
+      genotypePopulation[i / 2] = child;
       crossoverCount++;
     }
     var endCrossover = Stopwatch.GetTimestamp();
     
     var startMutation = Stopwatch.GetTimestamp();
     int mutationCount = 0;
-    for (int i = 0; i < offspring.Length; i++) {
+    for (int i = 0; i < genotypePopulation.Length; i++) {
       if (random.Random() < MutationRate) {
-        offspring[i] = Mutator.Mutate(offspring[i], EncodingParameter, random);
+        genotypePopulation[i] = Mutator.Mutate(genotypePopulation[i], EncodingParameter, random);
         mutationCount++;
       }
     }
     var endMutation = Stopwatch.GetTimestamp();
     
+    var startDecoding = Stopwatch.GetTimestamp();
+    var phenotypePopulation = genotypePopulation.Select(genotype => Decoder.Decode(genotype)).ToArray();
+    var endDecoding = Stopwatch.GetTimestamp();
+    
     var startEvaluation = Stopwatch.GetTimestamp();
-    var evaluatedOffspring = Evaluator.Evaluate(offspring);
+    var fitnesses = Evaluator.Evaluate(phenotypePopulation);
     var endEvaluation = Stopwatch.GetTimestamp();
     
+    var population = Population.From(genotypePopulation, phenotypePopulation, fitnesses);
+    
     var startReplacement = Stopwatch.GetTimestamp();
-    var newPopulation = Replacer.Replace(oldPopulation, evaluatedOffspring, Objective, random);
+    var newPopulation = Replacer.Replace(oldPopulation, population, Objective, random);
     var endReplacement = Stopwatch.GetTimestamp();
     
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
@@ -147,10 +162,12 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
       SelectionCount = parents.Count,
       CrossoverCount = crossoverCount,
       MutationCount = mutationCount,
-      EvaluationCount = evaluatedOffspring.Length,
+      DecodingCount = phenotypePopulation.Length,
+      EvaluationCount = fitnesses.Length,
       SelectionDuration = Stopwatch.GetElapsedTime(startSelection, endSelection),
       CrossoverDuration = Stopwatch.GetElapsedTime(startCrossover, endCrossover),
       MutationDuration = Stopwatch.GetElapsedTime(startMutation, endMutation),
+      DecodingDuration = Stopwatch.GetElapsedTime(startDecoding, endDecoding),
       EvaluationDuration = Stopwatch.GetElapsedTime(startEvaluation, endEvaluation),
       ReplacementDuration = Stopwatch.GetElapsedTime(startReplacement, endReplacement),
       TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor)

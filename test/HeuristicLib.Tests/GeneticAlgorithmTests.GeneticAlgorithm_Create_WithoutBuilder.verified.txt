@@ -25,11 +25,11 @@
     MutationStrength: 0.1
   },
   MutationRate: 0.05,
+  Decoder: {
+    $type: IdentityDecoder<RealVector>
+  },
   Evaluator: {
-    $type: GeneticAlgorithmTests.RealVectorMockEvaluator,
-    Decoder: {
-      $type: GenotypeMapper<RealVector, RealVector>
-    }
+    $type: GeneticAlgorithmTests.RealVectorMockEvaluator
   },
   Objective: {
     Directions: [

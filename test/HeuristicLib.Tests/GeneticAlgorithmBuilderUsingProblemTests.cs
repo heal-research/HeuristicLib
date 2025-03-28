@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests;
@@ -7,17 +8,18 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmBuilderUsingProblemTests {
   
   [Fact]
-  public Task GeneticAlgorithmBuilder_UsingProblem() {
+  public Task GeneticAlgorithmBuilder_UsingProblemFitness() {
     var problem = TravelingSalesmanProblem.CreateDefault();
+    var evaluator = Evaluator.FromProblem(problem);
 
     var builder = new GeneticAlgorithmBuilder<Permutation, Tour, PermutationEncodingParameter>()
-      .WithFitnessFunctionFromProblem<GeneticAlgorithmBuilder<Permutation, Tour, PermutationEncodingParameter>, Permutation, Tour, PermutationEncodingParameter>(problem);
+        .WithEvaluator(evaluator);
     
     return Verify(builder);
   }
   
   [Fact]
-  public Task GeneticAlgorithmBuilder_UsingEncoding() {
+  public Task GeneticAlgorithmBuilder_UsingProblemEncoding() {
     var problem = TravelingSalesmanProblem.CreateDefault();
     var encoding = problem.CreatePermutationEncoding();
 
@@ -26,4 +28,16 @@ public class GeneticAlgorithmBuilderUsingProblemTests {
     
     return Verify(builder);
   }
+  
+    
+  // [Fact]
+  // public Task GeneticAlgorithmBuilder_UsingProblem() {
+  //   var problem = TravelingSalesmanProblem.CreateDefault();
+  //
+  //   var builder = new GeneticAlgorithmBuilder()
+  //       .SolvingProblem(problem)
+  //       .UsingPermutationEncoding();
+  //   
+  //   return Verify(builder);
+  // }
 }

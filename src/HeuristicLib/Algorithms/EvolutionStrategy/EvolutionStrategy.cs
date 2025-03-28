@@ -21,7 +21,7 @@ public record EsPhenotypeStartPopulation<TPhenotype> : PhenotypeStartPopulation<
 
 // ToDo: proper inheritance would require CRTP
 public record EsEvolutionResult<TPhenotype> : EvolutionResult, IContinuableResultState<EsPhenotypeStartPopulation<TPhenotype>> {
-  public required Solution<RealVector, TPhenotype>[] Population { get; init; }
+  public required Individual<RealVector, TPhenotype>[] Population { get; init; }
   public required double MutationStrength { get; init; }
   public EsPhenotypeStartPopulation<TPhenotype> GetNextContinuationState() => new() {
     Generation = Generation + 1,
@@ -41,7 +41,8 @@ public class EvolutionStrategy<TPhenotype>
   public IMutator<RealVector, RealVectorEncodingParameter> Mutator { get; }
   public double InitialMutationStrength { get; }
   public ICrossover<RealVector, RealVectorEncodingParameter>? Crossover { get; }
-  public IEvaluator<RealVector, TPhenotype> Evaluator { get; }
+  public IDecoder<RealVector, TPhenotype> Decoder { get; }
+  public IEvaluator<TPhenotype> Evaluator { get; }
   public Objective Objective { get; }
   //public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
   //public IRandomSource RandomSource { get; }
@@ -56,7 +57,8 @@ public class EvolutionStrategy<TPhenotype>
     IMutator<RealVector, RealVectorEncodingParameter> mutator,
     double initialMutationStrength,
     ICrossover<RealVector, RealVectorEncodingParameter>? crossover, //int parentsPerChild,
-    IEvaluator<RealVector, TPhenotype> evaluator,
+    IDecoder<RealVector, TPhenotype> decoder,
+    IEvaluator<TPhenotype> evaluator,
     Objective objective,
     IInterceptor<EsEvolutionResult<TPhenotype>>? interceptor = null
     //ITerminator<EvolutionStrategyPopulationState>? terminator,
@@ -87,11 +89,17 @@ public class EvolutionStrategy<TPhenotype>
     var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(EncodingParameter, random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
-    var population = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
+    var genotypePopulation = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
+    
+    var startDecoding = Stopwatch.GetTimestamp();
+    var phenotypePopulation = genotypePopulation.Select(genotype => Decoder.Decode(genotype)).ToArray();
+    var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluating = Stopwatch.GetTimestamp();
-    var evaluatedPopulation = Evaluator.Evaluate(population);
+    var fitnesses = Evaluator.Evaluate(phenotypePopulation);
     var endEvaluating = Stopwatch.GetTimestamp();
+
+    var population = Population.From(genotypePopulation, phenotypePopulation, fitnesses);
 
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
     
@@ -99,10 +107,12 @@ public class EvolutionStrategy<TPhenotype>
       Generation = startState?.Generation ?? 0,
       MutationStrength = InitialMutationStrength,
       Objective = Objective,
-      Population = evaluatedPopulation,
+      Population = population,
       CreationCount = remainingCount,
-      EvaluationCount = evaluatedPopulation.Length,
+      DecodingCount = phenotypePopulation.Length,
+      EvaluationCount = fitnesses.Length,
       CreationDuration = Stopwatch.GetElapsedTime(startCreating, endCreating),
+      DecodingDuration = Stopwatch.GetElapsedTime(startDecoding, endDecoding),
       EvaluationDuration = Stopwatch.GetElapsedTime(startEvaluating, endEvaluating),
       TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor)
     };
@@ -129,34 +139,40 @@ public class EvolutionStrategy<TPhenotype>
     var endSelection = Stopwatch.GetTimestamp();
 
      
-    var offspring = new RealVector[parents.Count];
+    var genotypePopulation = new RealVector[parents.Count];
     var startMutation = Stopwatch.GetTimestamp();
     for (int i = 0; i < parents.Count; i += 2) {
       var parent = parents[i];
       var child = Mutator.Mutate(parent.Genotype, EncodingParameter, random);
-      offspring[i / 2] = child;
+      genotypePopulation[i / 2] = child;
     }
     var endMutation = Stopwatch.GetTimestamp();
     
     // ToDo: optional crossover
     
+    var startDecoding = Stopwatch.GetTimestamp();
+    var phenotypePopulation = genotypePopulation.Select(genotype => Decoder.Decode(genotype)).ToArray();
+    var endDecoding = Stopwatch.GetTimestamp();
+    
     var startEvaluation = Stopwatch.GetTimestamp();
-    var evaluatedOffspring = Evaluator.Evaluate(offspring);
+    var fitnesses = Evaluator.Evaluate(phenotypePopulation);
     var endEvaluation = Stopwatch.GetTimestamp();
     
     // timing the adaption check
     int successfulOffspring = 0;
-    for (int i = 0; i < offspring.Length; i++) {
-      if (evaluatedOffspring[i].Fitness.CompareTo(parents[i].Fitness, Objective) == DominanceRelation.Dominates) {
+    for (int i = 0; i < fitnesses.Length; i++) {
+      if (fitnesses[i].CompareTo(parents[i].Fitness, Objective) == DominanceRelation.Dominates) {
         successfulOffspring++;
       }
     }
-    double successRate = (double)successfulOffspring / offspring.Length;
+    double successRate = (double)successfulOffspring / genotypePopulation.Length;
     double newMutationStrength = successRate switch {
       > 0.2 => continuationState.MutationStrength * 1.5,
       < 0.2 => continuationState.MutationStrength / 1.5,
       _ => continuationState.MutationStrength
     };
+    
+    var population = Population.From(genotypePopulation, phenotypePopulation, fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
     IReplacer replacer = Strategy switch {
@@ -164,7 +180,7 @@ public class EvolutionStrategy<TPhenotype>
       EvolutionStrategyType.Plus => new PlusSelectionReplacer(),
       _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
     };
-    var newPopulation = replacer.Replace(oldPopulation, evaluatedOffspring, Objective, random);
+    var newPopulation = replacer.Replace(oldPopulation, population, Objective, random);
     var endReplacement = Stopwatch.GetTimestamp();
     
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
@@ -175,10 +191,12 @@ public class EvolutionStrategy<TPhenotype>
       Objective = Objective,
       Population = newPopulation,
       SelectionCount = parents.Count,
-      MutationCount = offspring.Length,
-      EvaluationCount = evaluatedOffspring.Length,
+      MutationCount = genotypePopulation.Length,
+      DecodingCount = phenotypePopulation.Length,
+      EvaluationCount = fitnesses.Length,
       SelectionDuration = Stopwatch.GetElapsedTime(startSelection, endSelection),
       MutationDuration = Stopwatch.GetElapsedTime(startMutation, endMutation),
+      DecodingDuration = Stopwatch.GetElapsedTime(startDecoding, endDecoding),
       EvaluationDuration = Stopwatch.GetElapsedTime(startEvaluation, endEvaluation),
       ReplacementDuration = Stopwatch.GetElapsedTime(startReplacement, endReplacement),
       TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor)

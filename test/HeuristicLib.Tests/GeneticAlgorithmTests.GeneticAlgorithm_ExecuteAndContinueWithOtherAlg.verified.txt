@@ -87,7 +87,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 5,
     EvaluationCount: 5,
     SelectionCount: 10,
     CrossoverCount: 5,
@@ -227,7 +227,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 8,
     EvaluationCount: 8,
     SelectionCount: 16,
     CrossoverCount: 8,

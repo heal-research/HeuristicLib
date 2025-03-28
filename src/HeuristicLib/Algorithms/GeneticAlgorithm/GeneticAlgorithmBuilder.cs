@@ -29,8 +29,9 @@ public record GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParam
   public TEncodingParameter? EncodingParameter { get; init; }
   public ICreator<TGenotype,TEncodingParameter>? Creator { get; init; }
   public ICrossover<TGenotype,TEncodingParameter>? Crossover { get; init; }
-  public IMutator<TGenotype,TEncodingParameter>? Mutator { get; init; }
-  public IEvaluator<TGenotype, TPhenotype>? Evaluator { get; init; }
+  public IMutator<TGenotype, TEncodingParameter>? Mutator { get; init; }
+  public IDecoder<TGenotype, TPhenotype>? Decoder { get; init; }
+  public IEvaluator<TPhenotype>? Evaluator { get; init; }
   //public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
   public IInterceptor<EvolutionResult<TGenotype, TPhenotype>>? Interceptor { get; init; }
 
@@ -41,6 +42,7 @@ public record GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParam
     Creator = original.Creator;
     Crossover = original.Crossover;
     Mutator = original.Mutator;
+    Decoder = original.Decoder;
     Evaluator = original.Evaluator;
     //Terminator = original.Terminator;
     Interceptor = original.Interceptor;
@@ -66,7 +68,8 @@ public interface IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParame
   TSelf WithCreator(ICreator<TGenotype, TEncodingParameter> creator);
   TSelf WithCrossover(ICrossover<TGenotype, TEncodingParameter> crossover);
   TSelf WithMutator(IMutator<TGenotype, TEncodingParameter> mutator);
-  TSelf WithEvaluator(IEvaluator<TGenotype, TPhenotype> evaluator);
+  TSelf WithDecoder(IDecoder<TGenotype, TPhenotype> decoder);
+  TSelf WithEvaluator(IEvaluator<TPhenotype> evaluator);
   //TSelf WithTerminator(ITerminator<PopulationState<TGenotype>> terminator);
   TSelf WithInterceptor(IInterceptor<EvolutionResult<TGenotype, TPhenotype>> interceptor);
 }
@@ -128,6 +131,7 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
       Crossover = State.Crossover,
       Mutator = State.Mutator,
       MutationRate = State.MutationRate,
+      Decoder = State.Decoder,
       Evaluator = State.Evaluator,
       Objective = State.Objective,
       Selector = State.Selector,
@@ -149,6 +153,7 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
       resolvedState.Crossover!,
       resolvedState.Mutator!,
       resolvedState.MutationRate!.Value,
+      resolvedState.Decoder!,
       resolvedState.Evaluator!,
       resolvedState.Objective!,
       resolvedState.Selector!,
@@ -183,7 +188,11 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
     State = State with { MutationRate = mutationRate };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithEvaluator(IEvaluator<TGenotype, TPhenotype> evaluator) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithDecoder(IDecoder<TGenotype, TPhenotype> decoder) {
+    State = State with { Decoder = decoder };
+    return this;
+  }
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithEvaluator(IEvaluator<TPhenotype> evaluator) {
     State = State with { Evaluator = evaluator };
     return this;
   }
@@ -224,6 +233,7 @@ internal sealed class GeneticAlgorithmBuilderStateValidator<TGenotype, TPhenotyp
     RuleFor(x => x.Crossover).NotNull().WithMessage("Crossover must not be null.");
     RuleFor(x => x.Mutator).NotNull().WithMessage("Mutator must not be null.");
     RuleFor(x => x.MutationRate).NotNull().WithMessage("Mutation rate must not be null.");
+    RuleFor(x => x.Decoder).NotNull().WithMessage("Decoder must not be null.");
     RuleFor(x => x.Evaluator).NotNull().WithMessage("Evaluator must not be null.");
     RuleFor(x => x.Objective).NotNull().WithMessage("Objective must not be null.");
     RuleFor(x => x.Selector).NotNull().WithMessage("Selector must not be null.");

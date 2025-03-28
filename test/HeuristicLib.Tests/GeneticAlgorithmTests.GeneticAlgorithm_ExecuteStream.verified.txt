@@ -87,7 +87,7 @@
       }
     },
     CreationCount: 5,
-    DecodingCount: 0,
+    DecodingCount: 5,
     EvaluationCount: 5,
     SelectionCount: 0,
     CrossoverCount: 0,
@@ -182,7 +182,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 5,
     EvaluationCount: 5,
     SelectionCount: 10,
     CrossoverCount: 5,
@@ -277,7 +277,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 5,
     EvaluationCount: 5,
     SelectionCount: 10,
     CrossoverCount: 5,
@@ -372,7 +372,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 5,
     EvaluationCount: 5,
     SelectionCount: 10,
     CrossoverCount: 5,
@@ -467,7 +467,7 @@
       }
     },
     CreationCount: 0,
-    DecodingCount: 0,
+    DecodingCount: 5,
     EvaluationCount: 5,
     SelectionCount: 10,
     CrossoverCount: 5,

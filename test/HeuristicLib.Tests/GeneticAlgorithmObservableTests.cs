@@ -18,12 +18,13 @@ public class GeneticAlgorithmObservableTests {
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
-    var evaluator = Evaluator.UsingFitnessFunction<RealVector>(vector => vector.Sum());
+    var decoder = Decoder.Identity<RealVector>();
+    var evaluator = Evaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
     var terminationCriterion = Terminator.OnGeneration<EvolutionResult<RealVector, RealVector>>(3);
     
-    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncodingParameter>(encoding, 2, creator, crossover, mutator, 0.5, evaluator, SingleObjective.Minimize, selector, replacement/*, randomSource, terminationCriterion*/);
+    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncodingParameter>(encoding, 2, creator, crossover, mutator, 0.5, decoder, evaluator, SingleObjective.Minimize, selector, replacement/*, randomSource, terminationCriterion*/);
 
     var stream = ga.CreateResultStream(randomSource.CreateRandomNumberGenerator(), terminator: terminationCriterion);
 

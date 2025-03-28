@@ -1,13 +1,14 @@
 ﻿using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
 
-public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
+public class TravelingSalesmanProblem : ProblemBase<Tour> {
   public ITravelingSalesmanProblemData ProblemData { get; }
 
-  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(new Mapper(), SingleObjective.Minimize) {
+  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(SingleObjective.Minimize) {
     ProblemData = problemData;
   }
 
@@ -37,7 +38,7 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
   }
   public PermutationEncoding<Tour> CreatePermutationEncoding() {
     var parameter = CreatePermutationEncodingParameters();
-    return new PermutationEncoding<Tour>(parameter, Decoder) {
+    return new PermutationEncoding<Tour>(parameter, new TourEncoder()) {
       Creator = new RandomPermutationCreator(),
       Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossover() : new PartiallyMatchedCrossover(),
       Mutator = new InversionMutator()
@@ -54,9 +55,8 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation> {
   //   };
   // }
   
-  private sealed class Mapper : IGenotypeMapper<Permutation, Tour> {
-    public Permutation Encode(Tour solution) => new(solution.Cities);
-    public Tour Decode(Permutation genotype) => new(genotype);
+  private sealed class TourEncoder : IDecoder<Permutation, Tour> {
+    public Tour Decode(Permutation genotype) => new Tour(genotype);
   }
 }
 
