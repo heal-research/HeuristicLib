@@ -24,9 +24,9 @@ public class GeneticAlgorithmObservableTests {
     var replacement = new ElitismReplacer(0);
     var terminationCriterion = Terminator.OnGeneration<EvolutionResult<RealVector, RealVector>>(3);
     
-    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncodingParameter>(2, creator, crossover, mutator, 0.5, decoder, evaluator, SingleObjective.Minimize, selector, replacement/*, randomSource, terminationCriterion*/);
+    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncodingParameter> { EncodingParameter = encoding, PopulationSize = 2, Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.5, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement, RandomSource = randomSource/*, terminationCriterion*/ };
 
-    var stream = ga.CreateResultStream(randomSource.CreateRandomNumberGenerator(), encoding, terminator: terminationCriterion);
+    var stream = ga.CreateResultStream(terminator: terminationCriterion);
 
     var subject = new Subject<EvolutionResult<RealVector, RealVector>>();
     var observableResult = new List<EvolutionResult<RealVector, RealVector>>();

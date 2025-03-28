@@ -6,67 +6,68 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
-  : AlgorithmBase<
-      TGenotype,
-      TEncodingParameter,
+public record class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
+  : IContinuableAlgorithm<
       GenotypeStartPopulation<TGenotype>, 
       PhenotypeStartPopulation<TGenotype, TPhenotype>,
       EvolutionResult<TGenotype, TPhenotype>
   >
   where TEncodingParameter : IEncodingParameter<TGenotype>
 {
-  //public TEncodingParameter EncodingParameter { get; }
-  public int PopulationSize { get; }
-  public ICreator<TGenotype, TEncodingParameter> Creator { get; }
-  public ICrossover<TGenotype, TEncodingParameter> Crossover { get; }
-  public IMutator<TGenotype, TEncodingParameter> Mutator { get; }
-  public double MutationRate { get; }
-  public IDecoder<TGenotype, TPhenotype> Decoder { get; }
-  public IEvaluator<TPhenotype> Evaluator { get; }
-  public Objective Objective { get; }
-  //public IRandomSource RandomSource { get; }
-  public ISelector Selector { get; }
-  public IReplacer Replacer { get; }
+  public required TEncodingParameter EncodingParameter { get; init; }
+  public required int PopulationSize { get; init;  }
+  public required ICreator<TGenotype, TEncodingParameter> Creator { get; init; }
+  public required ICrossover<TGenotype, TEncodingParameter> Crossover { get; init; }
+  public required IMutator<TGenotype, TEncodingParameter> Mutator { get; init; }
+  public required double MutationRate { get; init; }
+  public required IDecoder<TGenotype, TPhenotype> Decoder { get; init; }
+  public required IEvaluator<TPhenotype> Evaluator { get; init; }
+  public required Objective Objective { get; init; }
+  public required IRandomSource RandomSource { get; init; }
+  public required ISelector Selector { get; init; }
+  public required IReplacer Replacer { get; init; }
   //public ITerminator<PopulationState<TGenotype>>? Terminator { get; }
-  public IInterceptor<EvolutionResult<TGenotype, TPhenotype>> Interceptor { get; }
+  public IInterceptor<EvolutionResult<TGenotype, TPhenotype>> Interceptor { get; init; } = Interceptors.Identity<EvolutionResult<TGenotype, TPhenotype>>();
+
+  // public GeneticAlgorithm() { }
+  // public GeneticAlgorithm(
+  //   TEncodingParameter encodingParameter,
+  //   int populationSize,
+  //   ICreator<TGenotype, TEncodingParameter> creator,
+  //   ICrossover<TGenotype, TEncodingParameter> crossover, 
+  //   IMutator<TGenotype, TEncodingParameter> mutator, double mutationRate,
+  //   IDecoder<TGenotype, TPhenotype> decoder, IEvaluator<TPhenotype> evaluator, Objective objective,
+  //   ISelector selector, IReplacer replacer,
+  //   IRandomSource randomSourceState,
+  //   //ITerminator<PopulationState<TGenotype>>? terminator = null,
+  //   IInterceptor<EvolutionResult<TGenotype, TPhenotype>>? interceptor = null)
+  // {
+  //   EncodingParameter = encodingParameter;
+  //   PopulationSize = populationSize;
+  //   Creator = creator;
+  //   Crossover = crossover;
+  //   Mutator = mutator;
+  //   MutationRate = mutationRate;
+  //   Decoder = decoder;
+  //   Evaluator = evaluator;
+  //   Objective = objective;
+  //   Selector = selector;
+  //   Replacer = replacer;
+  //   RandomSource = randomSourceState;
+  //   //Terminator = terminator;
+  //   Interceptor = interceptor ?? Interceptors.Identity<EvolutionResult<TGenotype, TPhenotype>>();
+  // }
   
-  public GeneticAlgorithm(
-    //TEncodingParameter encodingParameter,
-    int populationSize,
-    ICreator<TGenotype, TEncodingParameter> creator,
-    ICrossover<TGenotype, TEncodingParameter> crossover, 
-    IMutator<TGenotype, TEncodingParameter> mutator, double mutationRate,
-    IDecoder<TGenotype, TPhenotype> decoder, IEvaluator<TPhenotype> evaluator, Objective objective,
-    ISelector selector, IReplacer replacer,
-    //IRandomSource randomSourceState,
-    //ITerminator<PopulationState<TGenotype>>? terminator = null,
-    IInterceptor<EvolutionResult<TGenotype, TPhenotype>>? interceptor = null)
-  {
-    //EncodingParameter = encodingParameter;
-    PopulationSize = populationSize;
-    Creator = creator;
-    Crossover = crossover;
-    Mutator = mutator;
-    MutationRate = mutationRate;
-    Decoder = decoder;
-    Evaluator = evaluator;
-    Objective = objective;
-    Selector = selector;
-    Replacer = replacer;
-    //RandomSource = randomSourceState;
-    //Terminator = terminator;
-    Interceptor = interceptor ?? Interceptors.Identity<EvolutionResult<TGenotype, TPhenotype>>();
-  }
-  
-  public override EvolutionResult<TGenotype, TPhenotype> Execute(IRandomNumberGenerator random, TEncodingParameter encodingParameter, GenotypeStartPopulation<TGenotype>? startState = null) {
+  public virtual EvolutionResult<TGenotype, TPhenotype> Execute(GenotypeStartPopulation<TGenotype>? startState = null) {
     var start = Stopwatch.GetTimestamp();
+
+    var random = RandomSource.CreateRandomNumberGenerator();
     
     var givenPopulation = startState?.Population ?? [];
     int remainingCount = PopulationSize - givenPopulation.Length;
 
     var startCreating = Stopwatch.GetTimestamp();
-    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(encodingParameter, random)).ToArray();
+    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(EncodingParameter, random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     var genotypePopulation = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
@@ -107,8 +108,10 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     };
   }
   
-  public override EvolutionResult<TGenotype, TPhenotype> Execute(IRandomNumberGenerator random, TEncodingParameter encodingParameter, PhenotypeStartPopulation<TGenotype, TPhenotype> continuationState) {
+  public virtual EvolutionResult<TGenotype, TPhenotype> Execute(PhenotypeStartPopulation<TGenotype, TPhenotype> continuationState) {
     var start = Stopwatch.GetTimestamp();
+    
+    var random = RandomSource.CreateRandomNumberGenerator();
     
     int offspringCount = Replacer.GetOffspringCount(PopulationSize);
 
@@ -125,7 +128,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     for (int i = 0; i < parents.Count; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
-      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, encodingParameter, random);
+      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, EncodingParameter, random);
       genotypePopulation[i / 2] = child;
       crossoverCount++;
     }
@@ -135,7 +138,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     int mutationCount = 0;
     for (int i = 0; i < genotypePopulation.Length; i++) {
       if (random.Random() < MutationRate) {
-        genotypePopulation[i] = Mutator.Mutate(genotypePopulation[i], encodingParameter, random);
+        genotypePopulation[i] = Mutator.Mutate(genotypePopulation[i], EncodingParameter, random);
         mutationCount++;
       }
     }

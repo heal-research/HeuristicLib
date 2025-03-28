@@ -30,66 +30,65 @@ public record EsEvolutionResult<TPhenotype> : EvolutionResult, IContinuableResul
   };
 }
 
-public class EvolutionStrategy<TPhenotype> 
-  : AlgorithmBase<
-      RealVector, RealVectorEncodingParameter,
-      EsGenotypeStartPopulation, EsPhenotypeStartPopulation<TPhenotype>, EsEvolutionResult<TPhenotype>
-  > 
+public record class EvolutionStrategy<TPhenotype> 
+  : IContinuableAlgorithm<EsGenotypeStartPopulation, EsPhenotypeStartPopulation<TPhenotype>, EsEvolutionResult<TPhenotype>> 
 {
-  //public RealVectorEncodingParameter EncodingParameter { get; }
-  public int PopulationSize { get; }
-  public int Children { get; }
-  public EvolutionStrategyType Strategy { get; }
-  public ICreator<RealVector, RealVectorEncodingParameter> Creator { get; }
-  public IMutator<RealVector, RealVectorEncodingParameter> Mutator { get; }
-  public double InitialMutationStrength { get; }
-  public ICrossover<RealVector, RealVectorEncodingParameter>? Crossover { get; }
-  public IDecoder<RealVector, TPhenotype> Decoder { get; }
-  public IEvaluator<TPhenotype> Evaluator { get; }
-  public Objective Objective { get; }
+  public required RealVectorEncodingParameter EncodingParameter { get; init; }
+  public required int PopulationSize { get; init; }
+  //public required int Children { get; init; }
+  public required EvolutionStrategyType Strategy { get; init; }
+  public required ICreator<RealVector, RealVectorEncodingParameter> Creator { get; init; }
+  public required IMutator<RealVector, RealVectorEncodingParameter> Mutator { get; init; }
+  public required double InitialMutationStrength { get; init; }
+  //public required ICrossover<RealVector, RealVectorEncodingParameter>? Crossover { get; init; }
+  public required IDecoder<RealVector, TPhenotype> Decoder { get; init; }
+  public required IEvaluator<TPhenotype> Evaluator { get; init; }
+  public required Objective Objective { get; init; }
   //public ITerminator<EvolutionStrategyPopulationState>? Terminator { get; }
-  //public IRandomSource RandomSource { get; }
-  public IInterceptor<EsEvolutionResult<TPhenotype>> Interceptor { get; }
+  public required IRandomSource RandomSource { get; init; }
+  public IInterceptor<EsEvolutionResult<TPhenotype>> Interceptor { get; init; } = Interceptors.Identity<EsEvolutionResult<TPhenotype>>();
   
-  public EvolutionStrategy(
-    RealVectorEncodingParameter encodingParameter,
-    int populationSize,
-    int children,
-    EvolutionStrategyType strategy,
-    ICreator<RealVector, RealVectorEncodingParameter> creator,
-    IMutator<RealVector, RealVectorEncodingParameter> mutator,
-    double initialMutationStrength,
-    ICrossover<RealVector, RealVectorEncodingParameter>? crossover, //int parentsPerChild,
-    IDecoder<RealVector, TPhenotype> decoder,
-    IEvaluator<TPhenotype> evaluator,
-    Objective objective,
-    IInterceptor<EsEvolutionResult<TPhenotype>>? interceptor = null
-    //ITerminator<EvolutionStrategyPopulationState>? terminator,
-    //IRandomSource randomSource
-  ) {
-    //EncodingParameter = encodingParameter;
-    PopulationSize = populationSize;
-    Children = children;
-    Strategy = strategy;
-    Creator = creator;
-    Mutator = mutator;
-    InitialMutationStrength = initialMutationStrength;
-    Crossover = crossover;
-    Evaluator = evaluator;
-    Objective = objective;
-    //Terminator = terminator;
-    //RandomSource = randomSource;
-    Interceptor = interceptor ?? Interceptors.Identity<EsEvolutionResult<TPhenotype>>();
-  }
+  // public EvolutionStrategy(
+  //   RealVectorEncodingParameter encodingParameter,
+  //   int populationSize,
+  //   int children,
+  //   EvolutionStrategyType strategy,
+  //   ICreator<RealVector, RealVectorEncodingParameter> creator,
+  //   IMutator<RealVector, RealVectorEncodingParameter> mutator,
+  //   double initialMutationStrength,
+  //   ICrossover<RealVector, RealVectorEncodingParameter>? crossover, //int parentsPerChild,
+  //   IDecoder<RealVector, TPhenotype> decoder,
+  //   IEvaluator<TPhenotype> evaluator,
+  //   Objective objective,
+  //   IInterceptor<EsEvolutionResult<TPhenotype>>? interceptor = null
+  //   //ITerminator<EvolutionStrategyPopulationState>? terminator,
+  //   //IRandomSource randomSource
+  // ) {
+  //   //EncodingParameter = encodingParameter;
+  //   PopulationSize = populationSize;
+  //   Children = children;
+  //   Strategy = strategy;
+  //   Creator = creator;
+  //   Mutator = mutator;
+  //   InitialMutationStrength = initialMutationStrength;
+  //   Crossover = crossover;
+  //   Evaluator = evaluator;
+  //   Objective = objective;
+  //   //Terminator = terminator;
+  //   //RandomSource = randomSource;
+  //   Interceptor = interceptor ?? Interceptors.Identity<EsEvolutionResult<TPhenotype>>();
+  // }
   
-  public override EsEvolutionResult<TPhenotype> Execute(IRandomNumberGenerator random, RealVectorEncodingParameter encodingParameter, EsGenotypeStartPopulation? startState = default) {
+  public virtual EsEvolutionResult<TPhenotype> Execute(EsGenotypeStartPopulation? startState = null) {
     var start = Stopwatch.GetTimestamp();
+
+    var random = RandomSource.CreateRandomNumberGenerator();
     
     var givenPopulation = startState?.Population ?? [];
     int remainingCount = PopulationSize - givenPopulation.Length;
 
     var startCreating = Stopwatch.GetTimestamp();
-    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(encodingParameter, random)).ToArray();
+    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(EncodingParameter, random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     var genotypePopulation = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
@@ -131,8 +130,10 @@ public class EvolutionStrategy<TPhenotype>
       InterceptionDuration = Stopwatch.GetElapsedTime(interceptorStart, interceptorEnd)
     };
   }
-  public override EsEvolutionResult<TPhenotype> Execute(IRandomNumberGenerator random, RealVectorEncodingParameter encodingParameter, EsPhenotypeStartPopulation<TPhenotype> continuationState) {
+  public virtual EsEvolutionResult<TPhenotype> Execute(EsPhenotypeStartPopulation<TPhenotype> continuationState) {
     var start = Stopwatch.GetTimestamp();
+
+    var random = RandomSource.CreateRandomNumberGenerator();
     
     var oldPopulation = continuationState.Population;
     
@@ -146,7 +147,7 @@ public class EvolutionStrategy<TPhenotype>
     var startMutation = Stopwatch.GetTimestamp();
     for (int i = 0; i < parents.Count; i += 2) {
       var parent = parents[i];
-      var child = Mutator.Mutate(parent.Genotype, encodingParameter, random);
+      var child = Mutator.Mutate(parent.Genotype, EncodingParameter, random);
       genotypePopulation[i / 2] = child;
     }
     var endMutation = Stopwatch.GetTimestamp();

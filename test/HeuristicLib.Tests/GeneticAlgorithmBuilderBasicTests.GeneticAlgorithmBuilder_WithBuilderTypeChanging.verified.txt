@@ -1,5 +1,14 @@
 ﻿{
   Algorithm: {
+    EncodingParameter: {
+      Length: 3,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
     PopulationSize: 200,
     Creator: {
       $type: NormalDistributedCreator,
@@ -33,6 +42,10 @@
         $type: SingleObjectiveComparer
       }
     },
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    },
     Selector: {
       $type: ProportionalSelector,
       Windowing: true
@@ -46,6 +59,15 @@
   },
   TypedBuilder: {
     State: {
+      EncodingParameter: {
+        Length: 3,
+        Minimum: [
+          -5.0
+        ],
+        Maximum: [
+          5.0
+        ]
+      },
       Creator: {
         $type: NormalDistributedCreator,
         Means: [
@@ -86,6 +108,10 @@
         TotalOrderComparer: {
           $type: SingleObjectiveComparer
         }
+      },
+      RandomSource: {
+        $type: RandomSource,
+        Seed: 42
       }
     }
   },
@@ -95,7 +121,11 @@
       MutationRate: 0.05,
       Selector: null,
       Replacer: null,
-      Objective: null
+      Objective: null,
+      RandomSource: {
+        $type: RandomSource,
+        Seed: 42
+      }
     }
   }
 }

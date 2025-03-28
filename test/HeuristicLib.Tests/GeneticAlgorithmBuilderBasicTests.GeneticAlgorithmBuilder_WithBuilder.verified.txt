@@ -1,4 +1,13 @@
 ﻿{
+  EncodingParameter: {
+    Length: 3,
+    Minimum: [
+      -5.0
+    ],
+    Maximum: [
+      5.0
+    ]
+  },
   PopulationSize: 200,
   Creator: {
     $type: NormalDistributedCreator,
@@ -31,6 +40,10 @@
     TotalOrderComparer: {
       $type: SingleObjectiveComparer
     }
+  },
+  RandomSource: {
+    $type: RandomSource,
+    Seed: 42
   },
   Selector: {
     $type: ProportionalSelector,
