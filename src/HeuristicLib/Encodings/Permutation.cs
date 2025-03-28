@@ -16,20 +16,20 @@ public record class PermutationEncodingParameter : EncodingParameterBase<Permuta
 }
 
 public class PermutationEncoding<TPhenotype>
-  : Encoding<Permutation, PermutationEncodingParameter, TPhenotype>,
-    ICreatorProvider<Permutation, PermutationEncodingParameter>, ICrossoverProvider<Permutation, PermutationEncodingParameter>, IMutatorProvider<Permutation, PermutationEncodingParameter>
+  : Encoding<Permutation, TPhenotype>,
+    ICreatorProvidingEncoding<Permutation, PermutationEncodingParameter>, ICrossoverProvidingEncoding<Permutation, PermutationEncodingParameter>, IMutatorProvidingEncoding<Permutation, PermutationEncodingParameter>
 {
   public required ICreator<Permutation, PermutationEncodingParameter> Creator { get; init; }
   public required ICrossover<Permutation, PermutationEncodingParameter> Crossover { get; init; }
   public required IMutator<Permutation, PermutationEncodingParameter> Mutator { get; init; }
   
-  public PermutationEncoding(PermutationEncodingParameter parameter, IDecoder<Permutation, TPhenotype> decoder) 
-    : base(parameter, decoder) { }
+  public PermutationEncoding(IDecoder<Permutation, TPhenotype> decoder) 
+    : base(decoder) { }
 }
 
-public class PermutationEncoding : PermutationEncoding<Permutation> { // Genotype = Phenotype
-  public PermutationEncoding(PermutationEncodingParameter parameter) : base(parameter, Operators.Decoder.Identity<Permutation>()) { }
-}
+// public class PermutationEncoding : PermutationEncoding<Permutation> { // Genotype = Phenotype
+//   public PermutationEncoding(PermutationEncodingParameter parameter) : base(Operators.Decoder.Identity<Permutation>()) { }
+// }
 
 public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   private readonly int[] elements;

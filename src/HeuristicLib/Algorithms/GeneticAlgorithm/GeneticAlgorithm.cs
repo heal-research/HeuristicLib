@@ -8,13 +8,15 @@ namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
 public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
   : AlgorithmBase<
+      TGenotype,
+      TEncodingParameter,
       GenotypeStartPopulation<TGenotype>, 
       PhenotypeStartPopulation<TGenotype, TPhenotype>,
       EvolutionResult<TGenotype, TPhenotype>
   >
   where TEncodingParameter : IEncodingParameter<TGenotype>
 {
-  public TEncodingParameter EncodingParameter { get; }
+  //public TEncodingParameter EncodingParameter { get; }
   public int PopulationSize { get; }
   public ICreator<TGenotype, TEncodingParameter> Creator { get; }
   public ICrossover<TGenotype, TEncodingParameter> Crossover { get; }
@@ -30,7 +32,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
   public IInterceptor<EvolutionResult<TGenotype, TPhenotype>> Interceptor { get; }
   
   public GeneticAlgorithm(
-    TEncodingParameter encodingParameter,
+    //TEncodingParameter encodingParameter,
     int populationSize,
     ICreator<TGenotype, TEncodingParameter> creator,
     ICrossover<TGenotype, TEncodingParameter> crossover, 
@@ -41,7 +43,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     //ITerminator<PopulationState<TGenotype>>? terminator = null,
     IInterceptor<EvolutionResult<TGenotype, TPhenotype>>? interceptor = null)
   {
-    EncodingParameter = encodingParameter;
+    //EncodingParameter = encodingParameter;
     PopulationSize = populationSize;
     Creator = creator;
     Crossover = crossover;
@@ -57,14 +59,14 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     Interceptor = interceptor ?? Interceptors.Identity<EvolutionResult<TGenotype, TPhenotype>>();
   }
   
-  public override EvolutionResult<TGenotype, TPhenotype> Execute(IRandomNumberGenerator random, GenotypeStartPopulation<TGenotype>? startState = null) {
+  public override EvolutionResult<TGenotype, TPhenotype> Execute(IRandomNumberGenerator random, TEncodingParameter encodingParameter, GenotypeStartPopulation<TGenotype>? startState = null) {
     var start = Stopwatch.GetTimestamp();
     
     var givenPopulation = startState?.Population ?? [];
     int remainingCount = PopulationSize - givenPopulation.Length;
 
     var startCreating = Stopwatch.GetTimestamp();
-    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(EncodingParameter, random)).ToArray();
+    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(encodingParameter, random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     var genotypePopulation = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
@@ -105,7 +107,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     };
   }
   
-  public override EvolutionResult<TGenotype, TPhenotype> Execute(IRandomNumberGenerator random, PhenotypeStartPopulation<TGenotype, TPhenotype> continuationState) {
+  public override EvolutionResult<TGenotype, TPhenotype> Execute(IRandomNumberGenerator random, TEncodingParameter encodingParameter, PhenotypeStartPopulation<TGenotype, TPhenotype> continuationState) {
     var start = Stopwatch.GetTimestamp();
     
     int offspringCount = Replacer.GetOffspringCount(PopulationSize);
@@ -123,7 +125,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     for (int i = 0; i < parents.Count; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
-      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, EncodingParameter, random);
+      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, encodingParameter, random);
       genotypePopulation[i / 2] = child;
       crossoverCount++;
     }
@@ -133,7 +135,7 @@ public class GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>
     int mutationCount = 0;
     for (int i = 0; i < genotypePopulation.Length; i++) {
       if (random.Random() < MutationRate) {
-        genotypePopulation[i] = Mutator.Mutate(genotypePopulation[i], EncodingParameter, random);
+        genotypePopulation[i] = Mutator.Mutate(genotypePopulation[i], encodingParameter, random);
         mutationCount++;
       }
     }

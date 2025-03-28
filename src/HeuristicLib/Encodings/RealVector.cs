@@ -64,32 +64,32 @@ public record class RealVectorEncodingParameter : EncodingParameterBase<RealVect
 // }
 
 public class RealVectorEncoding<TPhenotype>
-  : Encoding<RealVector, RealVectorEncodingParameter, TPhenotype>,
-    ICreatorProvider<RealVector, RealVectorEncodingParameter>, ICrossoverProvider<RealVector, RealVectorEncodingParameter>, IMutatorProvider<RealVector, RealVectorEncodingParameter> {
+  : Encoding<RealVector, TPhenotype>,
+    ICreatorProvidingEncoding<RealVector, RealVectorEncodingParameter>, ICrossoverProvidingEncoding<RealVector, RealVectorEncodingParameter>, IMutatorProvidingEncoding<RealVector, RealVectorEncodingParameter> {
   
   public required ICreator<RealVector, RealVectorEncodingParameter> Creator { get; init; }
   public required ICrossover<RealVector, RealVectorEncodingParameter> Crossover { get; init; }
   public required IMutator<RealVector, RealVectorEncodingParameter> Mutator { get; init; }
   
-  public RealVectorEncoding(RealVectorEncodingParameter parameter, IDecoder<RealVector, TPhenotype> decoder) 
-    : base(parameter, decoder) { }
+  public RealVectorEncoding(IDecoder<RealVector, TPhenotype> decoder) 
+    : base(decoder) { }
 }
 
-public class RealVectorEncoding : RealVectorEncoding<RealVector> { // Genotype = Phenotype
-  public RealVectorEncoding(RealVectorEncodingParameter parameter) : base(parameter, Operators.Decoder.Identity<RealVector>()) { }
-}
+// public class RealVectorEncoding : RealVectorEncoding<RealVector> { // Genotype = Phenotype
+//   public RealVectorEncoding(RealVectorEncodingParameter parameter) : base(parameter, Operators.Decoder.Identity<RealVector>()) { }
+// }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
 public class RealVector : IReadOnlyList<double> {
   private readonly double[] elements;
 
-  public RealVector(IEnumerable<double> elements) {
+  public RealVector(params IEnumerable<double> elements) {
     this.elements = elements.ToArray();
   }
 
-  public RealVector(double value) {
-    elements = new[] { value };
-  }
+  // public RealVector(double value) {
+  //   elements = [value];
+  // }
 
   public static implicit operator RealVector(double value) => new RealVector(value);
   

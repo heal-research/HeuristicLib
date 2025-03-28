@@ -20,41 +20,30 @@ public abstract record class EncodingParameterBase<TGenotype> : IEncodingParamet
 
 public interface IEncoding { }
 
-public interface IEncoding<TGenotype, out TEncodingParameter>
-  : IEncoding
-  where TEncodingParameter : IEncodingParameter<TGenotype>
-{
-  TEncodingParameter Parameter { get; }
-}
+public interface IEncoding<in TGenotype> : IEncoding { }
 
-public interface IEncoding<TGenotype, out TEncodingParameter, out TPhenotype> : IEncoding<TGenotype, TEncodingParameter> 
-  where TEncodingParameter : IEncodingParameter<TGenotype> 
-{
+public interface IEncoding<in TGenotype, out TPhenotype> : IEncoding<TGenotype> {
   IDecoder<TGenotype, TPhenotype> Decoder { get; }
 }
 
-public abstract class Encoding<TGenotype, TEncodingParameter, TPhenotype> 
-  : IEncoding<TGenotype, TEncodingParameter, TPhenotype>
-  where TEncodingParameter : IEncodingParameter<TGenotype>
-{
-  public TEncodingParameter Parameter { get; }
+
+public abstract class Encoding<TGenotype, TPhenotype> : IEncoding<TGenotype, TPhenotype> {
   public IDecoder<TGenotype, TPhenotype> Decoder { get; }
 
-  protected Encoding(TEncodingParameter parameter, IDecoder<TGenotype, TPhenotype> decoder) {
-    Parameter = parameter;
+  protected Encoding(IDecoder<TGenotype, TPhenotype> decoder) {
     Decoder = decoder;
   }
 }
 
-public interface ICreatorProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
+public interface ICreatorProvidingEncoding<TGenotype, in TEncodingParameter> : IEncoding<TGenotype> where TEncodingParameter : IEncodingParameter<TGenotype> {
   ICreator<TGenotype, TEncodingParameter> Creator { get; }
 }
 
-public interface ICrossoverProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
+public interface ICrossoverProvidingEncoding<TGenotype, in TEncodingParameter> : IEncoding<TGenotype> where TEncodingParameter : IEncodingParameter<TGenotype> {
   ICrossover<TGenotype, TEncodingParameter> Crossover { get; }
 }
 
-public interface IMutatorProvider<TGenotype, TEncodingParameter> : IEncoding<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
+public interface IMutatorProvidingEncoding<TGenotype, in TEncodingParameter> : IEncoding<TGenotype> where TEncodingParameter : IEncodingParameter<TGenotype> {
   IMutator<TGenotype, TEncodingParameter> Mutator { get; }
 }
 
@@ -64,17 +53,18 @@ public static class GeneticAlgorithmBuilderEncodingExtensions {
     this GeneticAlgorithmBuilder builder,
     TEncoding encoding
   )
-    where TEncoding : IEncoding<TGenotype, TEncodingParameter, TPhenotype>
+    where TEncoding : IEncoding<TGenotype, TPhenotype>
     where TEncodingParameter : IEncodingParameter<TGenotype> 
   {
-    var parameterizedBuilder = builder.UsingEncodingParameters<TGenotype, TPhenotype, TEncodingParameter>(encoding.Parameter);
+    //var parameterizedBuilder = builder.UsingEncodingParameters<TGenotype, TPhenotype, TEncodingParameter>(encoding.Parameter);
+    var parameterizedBuilder = builder.UsingGenotype<TGenotype, TPhenotype, TEncodingParameter>();
     parameterizedBuilder.WithDecoder(encoding.Decoder);
     
-    if (encoding is ICreatorProvider<TGenotype, TEncodingParameter> creatorProvider)
+    if (encoding is ICreatorProvidingEncoding<TGenotype, TEncodingParameter> creatorProvider)
       parameterizedBuilder.WithCreator(creatorProvider.Creator);
-    if (encoding is ICrossoverProvider<TGenotype, TEncodingParameter> crossoverProvider)
+    if (encoding is ICrossoverProvidingEncoding<TGenotype, TEncodingParameter> crossoverProvider)
       parameterizedBuilder.WithCrossover(crossoverProvider.Crossover);
-    if (encoding is IMutatorProvider<TGenotype, TEncodingParameter> mutatorProvider)
+    if (encoding is IMutatorProvidingEncoding<TGenotype, TEncodingParameter> mutatorProvider)
       parameterizedBuilder.WithMutator(mutatorProvider.Mutator);
     
     return parameterizedBuilder;

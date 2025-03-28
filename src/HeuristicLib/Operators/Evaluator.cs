@@ -17,8 +17,8 @@ public static class Evaluator {
   public static CustomFitnessFunctionEvaluator<TPhenotype> FromFitnessFunction<TPhenotype>(Func<TPhenotype, Fitness> evaluator) {
     return new CustomFitnessFunctionEvaluator<TPhenotype>(evaluator);
   }
-  public static ProblemFitnessFunctionEvaluator<TPhenotype> FromProblem<TPhenotype>(IProblem<TPhenotype> problem) {
-    return new ProblemFitnessFunctionEvaluator<TPhenotype>(problem);
+  public static ProblemFitnessFunctionEvaluator<TPhenotype, TProblemInstance> FromProblem<TPhenotype, TProblemInstance>(IProblem<TPhenotype, TProblemInstance> problem, TProblemInstance instance) {
+    return new ProblemFitnessFunctionEvaluator<TPhenotype, TProblemInstance>(problem, instance);
   }
 }
 
@@ -39,11 +39,13 @@ public class CustomFitnessFunctionEvaluator<TPhenotype> : FitnessFunctionEvaluat
   public override Fitness Evaluate(TPhenotype phenotype) => fitnessFunction(phenotype);
 }
 
-public class ProblemFitnessFunctionEvaluator<TPhenotype> : FitnessFunctionEvaluatorBase<TPhenotype> {
-  private readonly IProblem<TPhenotype> problem;
+public class ProblemFitnessFunctionEvaluator<TPhenotype, TProblemInstance> : FitnessFunctionEvaluatorBase<TPhenotype> {
+  private readonly IProblem<TPhenotype, TProblemInstance> problem;
+  private readonly TProblemInstance instance;
 
-  public ProblemFitnessFunctionEvaluator(IProblem<TPhenotype> problem) {
+  public ProblemFitnessFunctionEvaluator(IProblem<TPhenotype, TProblemInstance> problem, TProblemInstance instance) {
     this.problem = problem;
+    this.instance = instance;
   }
-  public override Fitness Evaluate(TPhenotype phenotype) => problem.Evaluate(phenotype);
+  public override Fitness Evaluate(TPhenotype phenotype) => problem.Evaluate(phenotype, instance);
 }

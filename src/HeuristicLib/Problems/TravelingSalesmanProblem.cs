@@ -4,73 +4,6 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
-
-public class TravelingSalesmanProblem : ProblemBase<Tour> {
-  public ITravelingSalesmanProblemData ProblemData { get; }
-
-  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : base(SingleObjective.Minimize) {
-    ProblemData = problemData;
-  }
-
-  public override Fitness Evaluate(Tour solution) {
-    var tour = solution.Cities;
-    double totalDistance = 0.0;
-    for (int i = 0; i < tour.Count - 1; i++) {
-      totalDistance += ProblemData.GetDistance(tour[i], tour[i + 1]);
-    }
-    totalDistance += ProblemData.GetDistance(tour[^1], tour[0]); // Return to the starting city
-    return totalDistance;
-  }
-  
-  public static TravelingSalesmanProblem CreateDefault() {
-    var problemData = new TravelingSalesmanCoordinatesData(DefaultProblemData);
-    return new TravelingSalesmanProblem(problemData);
-  }
-  private static readonly double[,] DefaultProblemData = new double[,] {
-    { 100, 100 }, { 100, 200 }, { 100, 300 }, { 100, 400 },
-    { 200, 100 }, { 200, 200 }, { 200, 300 }, { 200, 400 },
-    { 300, 100 }, { 300, 200 }, { 300, 300 }, { 300, 400 },
-    { 400, 100 }, { 400, 200 }, { 400, 300 }, { 400, 400 }
-  };
-  
-  public PermutationEncodingParameter CreatePermutationEncodingParameters() {
-    return new PermutationEncodingParameter(ProblemData.NumberOfCities);
-  }
-  public PermutationEncoding<Tour> CreatePermutationEncoding() {
-    var parameter = CreatePermutationEncodingParameters();
-    return new PermutationEncoding<Tour>(parameter, new TourEncoder()) {
-      Creator = new RandomPermutationCreator(),
-      Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossover() : new PartiallyMatchedCrossover(),
-      Mutator = new InversionMutator()
-      // ToDo: mutation rate default
-    };
-  }
-
-  // public GeneticAlgorithmSpec CreateGASpec() {
-  //   return new GeneticAlgorithmSpec {
-  //     Creator = new RandomPermutationCreatorSpec(), 
-  //     Crossover = ProblemData.NumberOfCities > 3 ? new OrderCrossoverSpec() : null, 
-  //     Mutator = new InversionMutatorSpec(), 
-  //     MutationRate = 0.10
-  //   };
-  // }
-  
-  private sealed class TourEncoder : IDecoder<Permutation, Tour> {
-    public Tour Decode(Permutation genotype) => new Tour(genotype);
-  }
-}
-
-// public static class GeneticAlgorithmBuilderTravelingSalesmanProblemExtensions {
-//   public static GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> UsingProblem(this GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> builder, TravelingSalesmanProblem problem) {
-//     builder.WithEvaluator(problem.CreateEvaluator());
-//     builder.WithGoal(problem.Goal);
-//     builder.WithEncoding(problem.CreatePermutationEncoding());
-//     builder.WithGeneticAlgorithmSpec(problem.CreateGASpec());
-//     return builder;
-//   }
-// }
-
-
 public class Tour {
   public IReadOnlyList<int> Cities { get; }
   public Tour(IEnumerable<int> cities) {
@@ -78,12 +11,67 @@ public class Tour {
   }
 }
 
-public interface ITravelingSalesmanProblemData {
-  int NumberOfCities { get; }
-  double GetDistance(int fromCity, int toCity);
+public class TravelingSalesmanProblem : ProblemBase<Tour, TravelingSalesmanInstance>, IEncodableProblem<Tour, Permutation, PermutationEncoding<Tour>> {
+
+  //public override Objective Objective => SingleObjective.Minimize;
+
+  public override Fitness Evaluate(Tour solution, TravelingSalesmanInstance instance) {
+    var tour = solution.Cities;
+    double totalDistance = 0.0;
+    for (int i = 0; i < tour.Count - 1; i++) {
+      totalDistance += instance.GetDistance(tour[i], tour[i + 1]);
+    }
+    totalDistance += instance.GetDistance(tour[^1], tour[0]); // Return to the starting city
+    return totalDistance;
+  }
+  
+  public PermutationEncoding<Tour> GetEncoding() {
+    return new PermutationEncoding<Tour>(new TourDecoder()) {
+      Creator = new RandomPermutationCreator(),
+      Crossover = new OrderCrossover(),
+      Mutator = new InversionMutator()
+    };
+  }
+  
+  #region Default Instance
+  public static TravelingSalesmanInstance CreateDefaultInstance() {
+    var problemData = new TravelingSalesmanCoordinatesData(DefaultProblemData);
+    return new TravelingSalesmanInstance(problemData);
+  }
+  private static readonly double[,] DefaultProblemData = new double[,] {
+    { 100, 100 }, { 100, 200 }, { 100, 300 }, { 100, 400 },
+    { 200, 100 }, { 200, 200 }, { 200, 300 }, { 200, 400 },
+    { 300, 100 }, { 300, 200 }, { 300, 300 }, { 300, 400 },
+    { 400, 100 }, { 400, 200 }, { 400, 300 }, { 400, 400 }
+  };
+  #endregion
+  
+  private sealed class TourDecoder : IDecoder<Permutation, Tour> {
+    public Tour Decode(Permutation genotype) => new Tour(genotype);
+  }
 }
 
-public class TravelingSalesmanProblemInstanceInformation {
+public class TravelingSalesmanInstance : IBindableProblemInstance<PermutationEncodingParameter, Permutation> {
+  private readonly ITravelingSalesmanProblemData problemData;
+  
+  public int NumberOfCities => problemData.NumberOfCities;
+  public TravelingSalesmanInstanceInformation? InstanceInformation { get; }
+  
+  public TravelingSalesmanInstance(ITravelingSalesmanProblemData problemData, TravelingSalesmanInstanceInformation? instanceInformation = null) {
+    this.problemData = problemData;
+    InstanceInformation = instanceInformation;
+  }
+
+  public double GetDistance(int fromCity, int toCity) => problemData.GetDistance(fromCity, toCity);
+  
+  public Objective GetObjective() => SingleObjective.Minimize;
+  
+  public PermutationEncodingParameter GetEncodingParameter() {
+    return new PermutationEncodingParameter(length: NumberOfCities);
+  }
+}
+
+public class TravelingSalesmanInstanceInformation {
   public required string Name { get; init; }
   public string? Description { get; init; }
   public string? Publication { get; init; }
@@ -92,22 +80,30 @@ public class TravelingSalesmanProblemInstanceInformation {
 }
 
 
-public abstract class TravelingSalesmanProblemData : ITravelingSalesmanProblemData {
-  public int NumberOfCities { get; }
-  public abstract double GetDistance(int fromCity, int toCity);
-  
-  public TravelingSalesmanProblemInstanceInformation? InstanceInformation { get; }
-  
-  protected TravelingSalesmanProblemData(int numberOfCities, TravelingSalesmanProblemInstanceInformation? instanceInformation = null) {
-    NumberOfCities = numberOfCities;
-    InstanceInformation = instanceInformation;
-  }
+public interface ITravelingSalesmanProblemData {
+  int NumberOfCities { get; }
+  double GetDistance(int fromCity, int toCity);
 }
 
-public class TravelingSalesmanDistanceMatrixProblemData : TravelingSalesmanProblemData {
+public class TravelingSalesmanDistanceMatrixProblemData : ITravelingSalesmanProblemData {
   private readonly double[,] distances;
-  public IReadOnlyList<IReadOnlyList<double>> Distances => CopyToArray(distances);
-  private static IReadOnlyList<IReadOnlyList<double>> CopyToArray(double[,] array) {
+  
+  public int NumberOfCities => distances.GetLength(0);
+  public IReadOnlyList<IReadOnlyList<double>> Distances => Clone(distances);
+  
+  #pragma warning disable S2368
+  public TravelingSalesmanDistanceMatrixProblemData(double[,] distances) {
+    if (distances.GetLength(0) != distances.GetLength(1)) throw new ArgumentException("The distance matrix must be square.");
+    if (distances.GetLength(0) < 1) throw new ArgumentException("The distance matrix must have at least one city.");
+    this.distances = (double[,])distances.Clone(); // clone distances to prevent modification
+  }
+  #pragma warning restore S2368
+
+  public double GetDistance(int fromCity, int toCity) {
+    return distances[fromCity, toCity];
+  }
+  
+  private static IReadOnlyList<IReadOnlyList<double>> Clone(double[,] array) {
     double[][] result = new double[array.GetLength(0)][];
     for (int i = 0; i < array.GetLength(0); i++) {
       result[i] = new double[array.GetLength(1)];
@@ -117,29 +113,14 @@ public class TravelingSalesmanDistanceMatrixProblemData : TravelingSalesmanProbl
     }
     return result;
   }
-  
-  #pragma warning disable S2368
-  public TravelingSalesmanDistanceMatrixProblemData(double[,] distances, TravelingSalesmanProblemInstanceInformation? instanceInformation = null)
-    : base(distances.GetLength(0), instanceInformation)
-  {
-    if (distances.GetLength(0) != distances.GetLength(1)) throw new ArgumentException("The distance matrix must be square.");
-    if (distances.GetLength(0) < 1) throw new ArgumentException("The distance matrix must have at least one city.");
-    this.distances = (double[,])distances.Clone(); // clone distances to prevent modification
-  }
-  #pragma warning restore S2368
-
-  public override double GetDistance(int fromCity, int toCity) {
-    return distances[fromCity, toCity];
-  }
 }
 
-public class TravelingSalesmanCoordinatesData : TravelingSalesmanProblemData {
+public class TravelingSalesmanCoordinatesData : ITravelingSalesmanProblemData {
+  public int NumberOfCities => Coordinates.Count;
   public IReadOnlyList<(double X, double Y)> Coordinates { get; }
   public DistanceMetric DistanceMetric { get; }
 
-  public TravelingSalesmanCoordinatesData((double X, double Y)[] coordinates, DistanceMetric metric = DistanceMetric.Euclidean, TravelingSalesmanProblemInstanceInformation? instanceInformation = null)
-    : base(coordinates.Length, instanceInformation) 
-  {
+  public TravelingSalesmanCoordinatesData((double X, double Y)[] coordinates, DistanceMetric metric = DistanceMetric.Euclidean) {
     if (coordinates.Length < 1) throw new ArgumentException("The coordinates must have at least one city.");
     
     Coordinates = coordinates.ToArray(); // clone coordinates to prevent modification
@@ -147,9 +128,7 @@ public class TravelingSalesmanCoordinatesData : TravelingSalesmanProblemData {
   }
 
   #pragma warning disable S2368
-  public TravelingSalesmanCoordinatesData(double[,] coordinates, DistanceMetric metric = DistanceMetric.Euclidean, TravelingSalesmanProblemInstanceInformation? instanceInformation = null)
-    : base(coordinates.GetLength(0), instanceInformation)
-  {
+  public TravelingSalesmanCoordinatesData(double[,] coordinates, DistanceMetric metric = DistanceMetric.Euclidean) {
     if (coordinates.GetLength(1) != 2) throw new ArgumentException("The coordinates must have two columns.");
     if (coordinates.GetLength(0) < 1) throw new ArgumentException("The coordinates must have at least one city.");
     
@@ -162,7 +141,7 @@ public class TravelingSalesmanCoordinatesData : TravelingSalesmanProblemData {
   }
   #pragma warning restore S2368
 
-  public override double GetDistance(int fromCity, int toCity) {
+  public double GetDistance(int fromCity, int toCity) {
     (double x1, double y1) = Coordinates[fromCity];
     (double x2, double y2) = Coordinates[toCity];
 
@@ -182,3 +161,18 @@ public enum DistanceMetric {
   Manhattan,
   Chebyshev
 }
+
+
+// public static class GeneticAlgorithmBuilderTravelingSalesmanProblemExtensions {
+//   public static GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> UsingProblem(this GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> builder, TravelingSalesmanProblem problem) {
+//     builder.WithEvaluator(problem.CreateEvaluator());
+//     builder.WithGoal(problem.Goal);
+//     builder.WithEncoding(problem.CreatePermutationEncoding());
+//     builder.WithGeneticAlgorithmSpec(problem.CreateGASpec());
+//     return builder;
+//   }
+// }
+
+// public interface IProblemInstanceProvider<out TProblemInstance> {
+//   TProblemInstance Load();
+// }

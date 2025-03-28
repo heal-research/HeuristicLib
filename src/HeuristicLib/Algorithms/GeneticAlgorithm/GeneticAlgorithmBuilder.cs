@@ -26,7 +26,7 @@ public record GeneticAlgorithmBuilderState {
 public record GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter> : GeneticAlgorithmBuilderState
   where TEncodingParameter : IEncodingParameter<TGenotype>
 {
-  public TEncodingParameter? EncodingParameter { get; init; }
+  //public TEncodingParameter? EncodingParameter { get; init; }
   public ICreator<TGenotype,TEncodingParameter>? Creator { get; init; }
   public ICrossover<TGenotype,TEncodingParameter>? Crossover { get; init; }
   public IMutator<TGenotype, TEncodingParameter>? Mutator { get; init; }
@@ -38,7 +38,7 @@ public record GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParam
   public GeneticAlgorithmBuilderState() {}
   public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState baseState) : base(baseState) {}
   public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter> original) : base(original) {
-    EncodingParameter = original.EncodingParameter;
+    //EncodingParameter = original.EncodingParameter;
     Creator = original.Creator;
     Crossover = original.Crossover;
     Mutator = original.Mutator;
@@ -64,7 +64,7 @@ public interface IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParame
   where TSelf : IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter, TSelf>
   where TEncodingParameter : IEncodingParameter<TGenotype>
 {
-  TSelf WithEncodingParameter(TEncodingParameter encodingParameter);
+  //TSelf WithEncodingParameter(TEncodingParameter encodingParameter);
   TSelf WithCreator(ICreator<TGenotype, TEncodingParameter> creator);
   TSelf WithCrossover(ICrossover<TGenotype, TEncodingParameter> crossover);
   TSelf WithMutator(IMutator<TGenotype, TEncodingParameter> mutator);
@@ -125,7 +125,7 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
   
   public GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter> Build() {
     var resolvedState = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter> {
-      EncodingParameter = State.EncodingParameter,
+      //EncodingParameter = State.EncodingParameter,
       PopulationSize = State.PopulationSize,
       Creator = State.Creator,
       Crossover = State.Crossover,
@@ -147,7 +147,7 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
     if (!parametersAreSetValidationResult.IsValid) throw new ValidationException(parametersAreSetValidationResult.Errors);
     
     return new GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>(
-      resolvedState.EncodingParameter!,
+      //resolvedState.EncodingParameter!,
       resolvedState.PopulationSize!.Value,
       resolvedState.Creator!,
       resolvedState.Crossover!,
@@ -164,10 +164,10 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
     );
   }
 
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithEncodingParameter(TEncodingParameter encodingParameter) {
-    State = State with { EncodingParameter = encodingParameter };
-    return this;
-  }
+  // public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithEncodingParameter(TEncodingParameter encodingParameter) {
+  //   State = State with { EncodingParameter = encodingParameter };
+  //   return this;
+  // }
   public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithPopulationSize(int populationSize) {
     State = State with { PopulationSize = populationSize };
     return this;
@@ -227,7 +227,7 @@ internal sealed class GeneticAlgorithmBuilderStateValidator<TGenotype, TPhenotyp
   where TEncodingParameter : IEncodingParameter<TGenotype>
 {
   public GeneticAlgorithmBuilderStateValidator() {
-    RuleFor(x => x.EncodingParameter).NotNull().WithMessage("Encoding parameter must not be null.");
+    //RuleFor(x => x.EncodingParameter).NotNull().WithMessage("Encoding parameter must not be null.");
     RuleFor(x => x.PopulationSize).NotNull().WithMessage("Population size must not be null.");
     RuleFor(x => x.Creator).NotNull().WithMessage("Creator must not be null.");
     RuleFor(x => x.Crossover).NotNull().WithMessage("Crossover must not be null.");
@@ -253,10 +253,10 @@ public static class GeneticAlgorithmBuilderExtensions {
     this GeneticAlgorithmBuilder builder) where TEncodingParameter : IEncodingParameter<TGenotype> {
     return new GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>(builder);
   }
-  public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> UsingEncodingParameters<TGenotype, TPhenotype, TEncodingParameter>(
-    this GeneticAlgorithmBuilder builder, TEncodingParameter encodingParameter) where TEncodingParameter : IEncodingParameter<TGenotype> {
-    return builder
-      .UsingEncodingParameters<TGenotype,TPhenotype, TEncodingParameter>()
-      .WithEncodingParameter(encodingParameter);
-    }
+  // public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> UsingEncodingParameters<TGenotype, TPhenotype, TEncodingParameter>(
+  //   this GeneticAlgorithmBuilder builder, TEncodingParameter encodingParameter) where TEncodingParameter : IEncodingParameter<TGenotype> {
+  //   return builder
+  //     .UsingEncodingParameters<TGenotype,TPhenotype, TEncodingParameter>()
+  //     .WithEncodingParameter(encodingParameter);
+  //   }
 }

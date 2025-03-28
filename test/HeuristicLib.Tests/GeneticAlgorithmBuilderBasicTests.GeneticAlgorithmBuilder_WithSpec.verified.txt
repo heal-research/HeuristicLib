@@ -1,13 +1,4 @@
 ﻿{
-  EncodingParameter: {
-    Length: 10,
-    Minimum: [
-      -5.0
-    ],
-    Maximum: [
-      5.0
-    ]
-  },
   PopulationSize: 500,
   Creator: {
     $type: NormalDistributedCreator,

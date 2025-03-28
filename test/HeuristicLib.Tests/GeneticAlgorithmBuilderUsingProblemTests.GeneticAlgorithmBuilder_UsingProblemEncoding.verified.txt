@@ -1,8 +1,5 @@
 ﻿{
   State: {
-    EncodingParameter: {
-      Length: 16
-    },
     Creator: {
       $type: RandomPermutationCreator
     },
@@ -13,7 +10,7 @@
       $type: InversionMutator
     },
     Decoder: {
-      $type: TravelingSalesmanProblem.TourEncoder
+      $type: TravelingSalesmanProblem.TourDecoder
     },
     Evaluator: null,
     Interceptor: null,

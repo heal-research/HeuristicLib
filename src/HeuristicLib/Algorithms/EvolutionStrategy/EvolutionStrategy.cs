@@ -31,9 +31,12 @@ public record EsEvolutionResult<TPhenotype> : EvolutionResult, IContinuableResul
 }
 
 public class EvolutionStrategy<TPhenotype> 
-  : AlgorithmBase<EsGenotypeStartPopulation, EsPhenotypeStartPopulation<TPhenotype>, EsEvolutionResult<TPhenotype>> 
+  : AlgorithmBase<
+      RealVector, RealVectorEncodingParameter,
+      EsGenotypeStartPopulation, EsPhenotypeStartPopulation<TPhenotype>, EsEvolutionResult<TPhenotype>
+  > 
 {
-  public RealVectorEncodingParameter EncodingParameter { get; }
+  //public RealVectorEncodingParameter EncodingParameter { get; }
   public int PopulationSize { get; }
   public int Children { get; }
   public EvolutionStrategyType Strategy { get; }
@@ -64,7 +67,7 @@ public class EvolutionStrategy<TPhenotype>
     //ITerminator<EvolutionStrategyPopulationState>? terminator,
     //IRandomSource randomSource
   ) {
-    EncodingParameter = encodingParameter;
+    //EncodingParameter = encodingParameter;
     PopulationSize = populationSize;
     Children = children;
     Strategy = strategy;
@@ -79,14 +82,14 @@ public class EvolutionStrategy<TPhenotype>
     Interceptor = interceptor ?? Interceptors.Identity<EsEvolutionResult<TPhenotype>>();
   }
   
-  public override EsEvolutionResult<TPhenotype> Execute(IRandomNumberGenerator random, EsGenotypeStartPopulation? startState = default) {
+  public override EsEvolutionResult<TPhenotype> Execute(IRandomNumberGenerator random, RealVectorEncodingParameter encodingParameter, EsGenotypeStartPopulation? startState = default) {
     var start = Stopwatch.GetTimestamp();
     
     var givenPopulation = startState?.Population ?? [];
     int remainingCount = PopulationSize - givenPopulation.Length;
 
     var startCreating = Stopwatch.GetTimestamp();
-    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(EncodingParameter, random)).ToArray();
+    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(encodingParameter, random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     var genotypePopulation = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
@@ -128,7 +131,7 @@ public class EvolutionStrategy<TPhenotype>
       InterceptionDuration = Stopwatch.GetElapsedTime(interceptorStart, interceptorEnd)
     };
   }
-  public override EsEvolutionResult<TPhenotype> Execute(IRandomNumberGenerator random, EsPhenotypeStartPopulation<TPhenotype> continuationState) {
+  public override EsEvolutionResult<TPhenotype> Execute(IRandomNumberGenerator random, RealVectorEncodingParameter encodingParameter, EsPhenotypeStartPopulation<TPhenotype> continuationState) {
     var start = Stopwatch.GetTimestamp();
     
     var oldPopulation = continuationState.Population;
@@ -143,7 +146,7 @@ public class EvolutionStrategy<TPhenotype>
     var startMutation = Stopwatch.GetTimestamp();
     for (int i = 0; i < parents.Count; i += 2) {
       var parent = parents[i];
-      var child = Mutator.Mutate(parent.Genotype, EncodingParameter, random);
+      var child = Mutator.Mutate(parent.Genotype, encodingParameter, random);
       genotypePopulation[i / 2] = child;
     }
     var endMutation = Stopwatch.GetTimestamp();
