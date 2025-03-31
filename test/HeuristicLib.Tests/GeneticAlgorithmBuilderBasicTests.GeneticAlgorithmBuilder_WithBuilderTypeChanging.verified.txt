@@ -1,6 +1,6 @@
 ﻿{
   Algorithm: {
-    EncodingParameter: {
+    Encoding: {
       Length: 3,
       Minimum: [
         -5.0
@@ -59,7 +59,7 @@
   },
   TypedBuilder: {
     State: {
-      EncodingParameter: {
+      Encoding: {
         Length: 3,
         Minimum: [
           -5.0

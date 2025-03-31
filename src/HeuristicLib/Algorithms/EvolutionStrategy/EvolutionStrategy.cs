@@ -33,14 +33,14 @@ public record EsEvolutionResult<TPhenotype> : EvolutionResult, IContinuableResul
 public record class EvolutionStrategy<TPhenotype> 
   : IContinuableAlgorithm<EsGenotypeStartPopulation, EsPhenotypeStartPopulation<TPhenotype>, EsEvolutionResult<TPhenotype>> 
 {
-  public required RealVectorEncodingParameter EncodingParameter { get; init; }
+  public required RealVectorEncoding Encoding { get; init; }
   public required int PopulationSize { get; init; }
   //public required int Children { get; init; }
   public required EvolutionStrategyType Strategy { get; init; }
-  public required ICreator<RealVector, RealVectorEncodingParameter> Creator { get; init; }
-  public required IMutator<RealVector, RealVectorEncodingParameter> Mutator { get; init; }
+  public required ICreator<RealVector, RealVectorEncoding> Creator { get; init; }
+  public required IMutator<RealVector, RealVectorEncoding> Mutator { get; init; }
   public required double InitialMutationStrength { get; init; }
-  //public required ICrossover<RealVector, RealVectorEncodingParameter>? Crossover { get; init; }
+  //public required ICrossover<RealVector, RealVectorEncoding>? Crossover { get; init; }
   public required IDecoder<RealVector, TPhenotype> Decoder { get; init; }
   public required IEvaluator<TPhenotype> Evaluator { get; init; }
   public required Objective Objective { get; init; }
@@ -49,14 +49,14 @@ public record class EvolutionStrategy<TPhenotype>
   public IInterceptor<EsEvolutionResult<TPhenotype>> Interceptor { get; init; } = Interceptors.Identity<EsEvolutionResult<TPhenotype>>();
   
   // public EvolutionStrategy(
-  //   RealVectorEncodingParameter encodingParameter,
+  //   RealVectorEncoding encoding,
   //   int populationSize,
   //   int children,
   //   EvolutionStrategyType strategy,
-  //   ICreator<RealVector, RealVectorEncodingParameter> creator,
-  //   IMutator<RealVector, RealVectorEncodingParameter> mutator,
+  //   ICreator<RealVector, RealVectorEncoding> creator,
+  //   IMutator<RealVector, RealVectorEncoding> mutator,
   //   double initialMutationStrength,
-  //   ICrossover<RealVector, RealVectorEncodingParameter>? crossover, //int parentsPerChild,
+  //   ICrossover<RealVector, RealVectorEncoding>? crossover, //int parentsPerChild,
   //   IDecoder<RealVector, TPhenotype> decoder,
   //   IEvaluator<TPhenotype> evaluator,
   //   Objective objective,
@@ -64,7 +64,7 @@ public record class EvolutionStrategy<TPhenotype>
   //   //ITerminator<EvolutionStrategyPopulationState>? terminator,
   //   //IRandomSource randomSource
   // ) {
-  //   //EncodingParameter = encodingParameter;
+  //   //Encoding = encoding;
   //   PopulationSize = populationSize;
   //   Children = children;
   //   Strategy = strategy;
@@ -88,7 +88,7 @@ public record class EvolutionStrategy<TPhenotype>
     int remainingCount = PopulationSize - givenPopulation.Length;
 
     var startCreating = Stopwatch.GetTimestamp();
-    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(EncodingParameter, random)).ToArray();
+    var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(Encoding, random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     var genotypePopulation = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
@@ -98,7 +98,7 @@ public record class EvolutionStrategy<TPhenotype>
     var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluating = Stopwatch.GetTimestamp();
-    var fitnesses = Evaluator.Evaluate(phenotypePopulation);
+    var fitnesses = phenotypePopulation.Select(phenotype => Evaluator.Evaluate(phenotype)).ToArray();
     var endEvaluating = Stopwatch.GetTimestamp();
 
     var population = Population.From(genotypePopulation, phenotypePopulation, fitnesses);
@@ -147,7 +147,7 @@ public record class EvolutionStrategy<TPhenotype>
     var startMutation = Stopwatch.GetTimestamp();
     for (int i = 0; i < parents.Count; i += 2) {
       var parent = parents[i];
-      var child = Mutator.Mutate(parent.Genotype, EncodingParameter, random);
+      var child = Mutator.Mutate(parent.Genotype, Encoding, random);
       genotypePopulation[i / 2] = child;
     }
     var endMutation = Stopwatch.GetTimestamp();
@@ -159,7 +159,7 @@ public record class EvolutionStrategy<TPhenotype>
     var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluation = Stopwatch.GetTimestamp();
-    var fitnesses = Evaluator.Evaluate(phenotypePopulation);
+    var fitnesses = phenotypePopulation.Select(phenotype => Evaluator.Evaluate(phenotype)).ToArray();
     var endEvaluation = Stopwatch.GetTimestamp();
     
     // timing the adaption check

@@ -3,35 +3,35 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ICrossover<TGenotype, in TEncodingParameter>
+public interface ICrossover<TGenotype, in TEncoding>
   : IOperator
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
 {
-  TGenotype Cross(TGenotype parent1, TGenotype parent2, TEncodingParameter encoding, IRandomNumberGenerator random);
+  TGenotype Cross(TGenotype parent1, TGenotype parent2, TEncoding encoding, IRandomNumberGenerator random);
 }
 
 public static class Crossover {
-  public static CustomCrossover<TGenotype, TEncodingParameter> Create<TGenotype, TEncodingParameter>(Func<TGenotype, TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> crossover)
-    where TEncodingParameter : IEncodingParameter<TGenotype>
+  public static CustomCrossover<TGenotype, TEncoding> Create<TGenotype, TEncoding>(Func<TGenotype, TGenotype, TEncoding, IRandomNumberGenerator, TGenotype> crossover)
+    where TEncoding : IEncoding<TGenotype>
   {
-    return new CustomCrossover<TGenotype, TEncodingParameter>(crossover);
+    return new CustomCrossover<TGenotype, TEncoding>(crossover);
   }
 }
 
-public sealed class CustomCrossover<TGenotype, TEncodingParameter> 
-  : ICrossover<TGenotype, TEncodingParameter>
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+public sealed class CustomCrossover<TGenotype, TEncoding> 
+  : ICrossover<TGenotype, TEncoding>
+  where TEncoding : IEncoding<TGenotype>
 {
-  private readonly Func<TGenotype, TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> crossover;
-  internal CustomCrossover(Func<TGenotype, TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> crossover) {
+  private readonly Func<TGenotype, TGenotype, TEncoding, IRandomNumberGenerator, TGenotype> crossover;
+  internal CustomCrossover(Func<TGenotype, TGenotype, TEncoding, IRandomNumberGenerator, TGenotype> crossover) {
     this.crossover = crossover;
   }
-  public TGenotype Cross(TGenotype parent1, TGenotype parent2, TEncodingParameter encoding, IRandomNumberGenerator random) => crossover(parent1, parent2, encoding, random);
+  public TGenotype Cross(TGenotype parent1, TGenotype parent2, TEncoding encoding, IRandomNumberGenerator random) => crossover(parent1, parent2, encoding, random);
 }
 
-public abstract class CrossoverBase<TGenotype, TEncodingParameter> 
-  : ICrossover<TGenotype, TEncodingParameter>
-  where TEncodingParameter : IEncodingParameter<TGenotype> 
+public abstract class CrossoverBase<TGenotype, TEncoding> 
+  : ICrossover<TGenotype, TEncoding>
+  where TEncoding : IEncoding<TGenotype> 
 {
-  public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, TEncodingParameter encoding, IRandomNumberGenerator random); 
+  public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, TEncoding encoding, IRandomNumberGenerator random); 
 }

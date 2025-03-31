@@ -1,31 +1,34 @@
 ﻿using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class TestFunctionProblem : ProblemBase<RealVector, TestFunctionInstance>, IEncodableProblem<RealVector, RealVector, RealVectorEncoding<RealVector>> {
-  
-  //public override Objective Objective => SingleObjective.Minimize;
+public class TestFunctionProblem : ProblemBase<RealVector, RealVector, RealVectorEncoding> {
+  private readonly ITestFunction testFunction;
 
-  public override Fitness Evaluate(RealVector solution, TestFunctionInstance instance) {
-    return instance.Evaluate(solution);
+  public TestFunctionProblem(ITestFunction testFunction) : base(SingleObjective.Create(testFunction.Objective)) {
+    this.testFunction = testFunction;
   }
   
-  public RealVectorEncoding<RealVector> GetEncoding() {
-    return new RealVectorEncoding<RealVector>(Decoder.Identity<RealVector>()) {
-      Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
-      Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
-      Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)
-    };
+  public override Fitness Evaluate(RealVector solution) {
+    return testFunction.Evaluate(solution);
   }
+  
+  public override RealVectorEncoding GetEncoding() => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  
+  public override RealVector Decode(RealVector genotype) => genotype;
+    // return new RealVectorEncoding<RealVector>(Decoder.Identity<RealVector>()) {
+    //   Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
+    //   Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
+    //   Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)
+    // };
   
   //
-  // public RealVectorEncodingParameter CreateRealVectorEncodingParameter() {
-  //   return new RealVectorEncodingParameter(length: 2, min, max);
+  // public RealVectorEncoding CreateRealVectorEncoding() {
+  //   return new RealVectorEncoding(length: 2, min, max);
   // }
   // public RealVectorEncoding CreateRealVectorEncoding() {
-  //   var parameter = CreateRealVectorEncodingParameter();
+  //   var parameter = CreateRealVectorEncoding();
   //
   //   return new RealVectorEncoding(parameter) {
   //    
@@ -41,39 +44,12 @@ public class TestFunctionProblem : ProblemBase<RealVector, TestFunctionInstance>
   // }
 }
 
-public class TestFunctionInstance : IBindableProblemInstance<RealVectorEncodingParameter, RealVector> {
-  private readonly ITestFunction testFunction;
-  
-  public TestFunctionInstanceInformation? Information { get; init; }
-
-  public TestFunctionInstance(ITestFunction testFunction, TestFunctionInstanceInformation? information = null) {
-    this.testFunction = testFunction;
-    Information = information;
-  }
-
-  public double Evaluate(RealVector solution) {
-    return testFunction.Evaluate(solution);
-  }
-  
-  public Objective GetObjective() => SingleObjective.Minimize;
-
-  public RealVectorEncodingParameter GetEncodingParameter() {
-    return new RealVectorEncodingParameter(length: testFunction.Dimension, minimum: testFunction.Min, maximum: testFunction.Max);
-  }
-}
-
-public class TestFunctionInstanceInformation {
-  public required string Name { get; init; }
-  public string? Description { get; init; }
-  public string? Publication { get; init; }
-  public double? BestKnownQuality { get; init; }
-  public RealVector? BestKnownSolution { get; init; }
-}
 
 public interface ITestFunction {
   public int Dimension { get; }
   double Min { get; }
   double Max { get; }
+  public ObjectiveDirection Objective { get; }
   double Evaluate(RealVector solution);
 }
 
@@ -81,8 +57,11 @@ public class SphereFunction : ITestFunction {
   public int Dimension { get; }
   public double Min => -5.12;
   public double Max => 5.12;
+  public ObjectiveDirection Objective => ObjectiveDirection.Minimize;
 
-
+  public SphereFunction(int dimension) {
+    Dimension = dimension;
+  }
   
   public double Evaluate(RealVector solution) {
     return solution.Sum(x => x * x);
@@ -93,7 +72,9 @@ public class RastriginFunction : ITestFunction {
   public int Dimension { get; }
   public double Min => -5.12;
   public double Max => 5.12;
+  public ObjectiveDirection Objective => ObjectiveDirection.Minimize;
 
+  
   public RastriginFunction(int dimension) {
     Dimension = dimension;
   }

@@ -8,9 +8,9 @@ public record EvolutionStrategyConfiguration(
     int? PopulationSize = null,
     int? Children = null,
     EvolutionStrategyType? Strategy = null,
-    ICreator<RealVector, RealVectorEncodingParameter>? Creator = null,
-    ICrossover<RealVector, RealVectorEncodingParameter>? Crossover = null,
-    IMutator<RealVector, RealVectorEncodingParameter>? Mutator = null,
+    ICreator<RealVector, RealVectorEncoding>? Creator = null,
+    ICrossover<RealVector, RealVectorEncoding>? Crossover = null,
+    IMutator<RealVector, RealVectorEncoding>? Mutator = null,
     double? InitialMutationStrength = null,
     ISelector? Selector = null
     //int? RandomSeed = null,

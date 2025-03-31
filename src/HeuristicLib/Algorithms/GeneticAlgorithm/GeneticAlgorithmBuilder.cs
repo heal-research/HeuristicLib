@@ -24,29 +24,29 @@ public record GeneticAlgorithmBuilderState {
     RandomSource = original.RandomSource;
   }
 }
-public record GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter> : GeneticAlgorithmBuilderState
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+public record GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding> : GeneticAlgorithmBuilderState
+  where TEncoding : IEncoding<TGenotype>
 {
-  public TEncodingParameter? EncodingParameter { get; init; }
-  public ICreator<TGenotype,TEncodingParameter>? Creator { get; init; }
-  public ICrossover<TGenotype,TEncodingParameter>? Crossover { get; init; }
-  public IMutator<TGenotype, TEncodingParameter>? Mutator { get; init; }
+  public TEncoding? Encoding { get; init; }
+  public ICreator<TGenotype,TEncoding>? Creator { get; init; }
+  public ICrossover<TGenotype,TEncoding>? Crossover { get; init; }
+  public IMutator<TGenotype, TEncoding>? Mutator { get; init; }
   public IDecoder<TGenotype, TPhenotype>? Decoder { get; init; }
   public IEvaluator<TPhenotype>? Evaluator { get; init; }
-  //public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
   public IInterceptor<EvolutionResult<TGenotype, TPhenotype>>? Interceptor { get; init; }
+  //public ITerminator<PopulationState<TGenotype>>? Terminator { get; init; }
 
   public GeneticAlgorithmBuilderState() {}
   public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState baseState) : base(baseState) {}
-  public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter> original) : base(original) {
-    EncodingParameter = original.EncodingParameter;
+  public GeneticAlgorithmBuilderState(GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding> original) : base(original) {
+    Encoding = original.Encoding;
     Creator = original.Creator;
     Crossover = original.Crossover;
     Mutator = original.Mutator;
     Decoder = original.Decoder;
     Evaluator = original.Evaluator;
-    //Terminator = original.Terminator;
     Interceptor = original.Interceptor;
+    //Terminator = original.Terminator;
   }
 }
 
@@ -59,20 +59,20 @@ public interface IGeneticAlgorithmBuilder<out TSelf> where TSelf : IGeneticAlgor
   TSelf WithRandomSource(IRandomSource randomSource);
 }
 
-public interface IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter, out TSelf>
+public interface IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding, out TSelf>
   : IGeneticAlgorithmBuilder<TSelf>,
-    IBuilder<GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter>>
-  where TSelf : IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter, TSelf>
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+    IBuilder<GeneticAlgorithm<TGenotype, TPhenotype, TEncoding>>
+  where TSelf : IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding, TSelf>
+  where TEncoding : IEncoding<TGenotype>
 {
-  TSelf WithEncodingParameter(TEncodingParameter encodingParameter);
-  TSelf WithCreator(ICreator<TGenotype, TEncodingParameter> creator);
-  TSelf WithCrossover(ICrossover<TGenotype, TEncodingParameter> crossover);
-  TSelf WithMutator(IMutator<TGenotype, TEncodingParameter> mutator);
+  TSelf WithEncoding(TEncoding encoding);
+  TSelf WithCreator(ICreator<TGenotype, TEncoding> creator);
+  TSelf WithCrossover(ICrossover<TGenotype, TEncoding> crossover);
+  TSelf WithMutator(IMutator<TGenotype, TEncoding> mutator);
   TSelf WithDecoder(IDecoder<TGenotype, TPhenotype> decoder);
   TSelf WithEvaluator(IEvaluator<TPhenotype> evaluator);
-  //TSelf WithTerminator(ITerminator<PopulationState<TGenotype>> terminator);
   TSelf WithInterceptor(IInterceptor<EvolutionResult<TGenotype, TPhenotype>> interceptor);
+  //TSelf WithTerminator(ITerminator<PopulationState<TGenotype>> terminator);
 }
 
 public class GeneticAlgorithmBuilder : IGeneticAlgorithmBuilder<GeneticAlgorithmBuilder> {
@@ -81,8 +81,13 @@ public class GeneticAlgorithmBuilder : IGeneticAlgorithmBuilder<GeneticAlgorithm
   public GeneticAlgorithmBuilder() {
     State = new GeneticAlgorithmBuilderState();
   }
+  
   public GeneticAlgorithmBuilder(GeneticAlgorithmBuilder original) {
     State = new GeneticAlgorithmBuilderState(original.State);
+  }
+  
+  internal GeneticAlgorithmBuilder(GeneticAlgorithmBuilderState state) {
+    State = state;
   }
   
   public GeneticAlgorithmBuilder WithPopulationSize(int populationSize) {
@@ -109,28 +114,54 @@ public class GeneticAlgorithmBuilder : IGeneticAlgorithmBuilder<GeneticAlgorithm
     State = State with { RandomSource = randomSource };
     return this;
   }
+
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> FromAlgorithm<TGenotype, TPhenotype, TEncoding>(GeneticAlgorithm<TGenotype, TPhenotype, TEncoding> algorithm) 
+    where TEncoding : IEncoding<TGenotype>
+  {
+    var state = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding> {
+      Encoding = algorithm.Encoding,
+      PopulationSize = algorithm.PopulationSize,
+      Creator = algorithm.Creator,
+      Crossover = algorithm.Crossover,
+      Mutator = algorithm.Mutator,
+      MutationRate = algorithm.MutationRate,
+      Decoder = algorithm.Decoder,
+      Evaluator = algorithm.Evaluator,
+      Objective = algorithm.Objective,
+      Selector = algorithm.Selector,
+      Replacer = algorithm.Replacer,
+      RandomSource = algorithm.RandomSource
+    };
+
+    return new GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding>(state);
+  }
 }
 
-public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
-  : IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter, GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>>
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding>
+  : IGeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding, GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding>>
+  where TEncoding : IEncoding<TGenotype>
 {
-  public GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter> State { get; private set; }
+  public GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding> State { get; private set; }
   
   public GeneticAlgorithmBuilder() {
-    State = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter>();
+    State = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding>();
   }
+  
   public GeneticAlgorithmBuilder(GeneticAlgorithmBuilder baseBuilder) {
-    State = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter>(baseBuilder.State);
+    State = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding>(baseBuilder.State);
   }
   
-  public GeneticAlgorithmBuilder(GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> original) {
-    State = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter>(original.State);
+  public GeneticAlgorithmBuilder(GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> original) {
+    State = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding>(original.State);
   }
   
-  public GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter> Build() {
-    var resolvedState = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter> {
-      EncodingParameter = State.EncodingParameter,
+  internal GeneticAlgorithmBuilder(GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding> state) {
+    State = state;
+  }
+
+  public GeneticAlgorithm<TGenotype, TPhenotype, TEncoding> Build() {
+    var resolvedState = new GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding> {
+      Encoding = State.Encoding,
       PopulationSize = State.PopulationSize,
       Creator = State.Creator,
       Crossover = State.Crossover,
@@ -142,17 +173,16 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
       Selector = State.Selector,
       Replacer = State.Replacer,
       RandomSource = State.RandomSource,
-      //Terminator = State.Terminator,
       Interceptor = State.Interceptor
+      //Terminator = State.Terminator,
     };
-    
-    var parametersAreSetValidator = new GeneticAlgorithmBuilderStateValidator<TGenotype, TPhenotype, TEncodingParameter>();
+    var parametersAreSetValidator = new GeneticAlgorithmBuilderStateValidator<TGenotype, TPhenotype, TEncoding>();
     var parametersAreSetValidationResult = parametersAreSetValidator.Validate(resolvedState);
 
     if (!parametersAreSetValidationResult.IsValid) throw new ValidationException(parametersAreSetValidationResult.Errors);
     
-    var ga = new GeneticAlgorithm<TGenotype, TPhenotype, TEncodingParameter> {
-      EncodingParameter = resolvedState.EncodingParameter!,
+    var ga = new GeneticAlgorithm<TGenotype, TPhenotype, TEncoding> {
+      Encoding = resolvedState.Encoding!,
       PopulationSize = resolvedState.PopulationSize!.Value,
       Creator = resolvedState.Creator!,
       Crossover = resolvedState.Crossover!,
@@ -175,51 +205,51 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
     return ga;
   }
 
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithEncodingParameter(TEncodingParameter encodingParameter) {
-    State = State with { EncodingParameter = encodingParameter };
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithEncoding(TEncoding encoding) {
+    State = State with { Encoding = encoding };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithPopulationSize(int populationSize) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithPopulationSize(int populationSize) {
     State = State with { PopulationSize = populationSize };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithCreator(ICreator<TGenotype, TEncodingParameter> creator) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithCreator(ICreator<TGenotype, TEncoding> creator) {
     State = State with { Creator = creator };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithCrossover(ICrossover<TGenotype, TEncodingParameter> crossover) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithCrossover(ICrossover<TGenotype, TEncoding> crossover) {
     State = State with { Crossover = crossover };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithMutator(IMutator<TGenotype, TEncodingParameter> mutator) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithMutator(IMutator<TGenotype, TEncoding> mutator) {
     State = State with { Mutator = mutator };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithMutationRate(double mutationRate) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithMutationRate(double mutationRate) {
     State = State with { MutationRate = mutationRate };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithDecoder(IDecoder<TGenotype, TPhenotype> decoder) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithDecoder(IDecoder<TGenotype, TPhenotype> decoder) {
     State = State with { Decoder = decoder };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithEvaluator(IEvaluator<TPhenotype> evaluator) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithEvaluator(IEvaluator<TPhenotype> evaluator) {
     State = State with { Evaluator = evaluator };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithObjective(Objective objective) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithObjective(Objective objective) {
     State = State with { Objective = objective };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithSelector(ISelector selector) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithSelector(ISelector selector) {
     State = State with { Selector = selector };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithReplacer(IReplacer replacer) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithReplacer(IReplacer replacer) {
     State = State with { Replacer = replacer };
     return this;
   }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithRandomSource(IRandomSource randomSource) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithRandomSource(IRandomSource randomSource) {
     State = State with { RandomSource = randomSource };
     return this;
   }
@@ -227,18 +257,18 @@ public class GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>
   //   State = State with { Terminator = terminator };
   //   return this;
   // }
-  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithInterceptor(IInterceptor<EvolutionResult<TGenotype, TPhenotype>> interceptor) {
+  public GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithInterceptor(IInterceptor<EvolutionResult<TGenotype, TPhenotype>> interceptor) {
     State = State with { Interceptor = interceptor };
     return this;
   }
 }
 
-internal sealed class GeneticAlgorithmBuilderStateValidator<TGenotype, TPhenotype, TEncodingParameter> 
-  : AbstractValidator<GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncodingParameter>>
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+internal sealed class GeneticAlgorithmBuilderStateValidator<TGenotype, TPhenotype, TEncoding> 
+  : AbstractValidator<GeneticAlgorithmBuilderState<TGenotype, TPhenotype, TEncoding>>
+  where TEncoding : IEncoding<TGenotype>
 {
   public GeneticAlgorithmBuilderStateValidator() {
-    RuleFor(x => x.EncodingParameter).NotNull().WithMessage("Encoding parameter must not be null.");
+    RuleFor(x => x.Encoding).NotNull().WithMessage("Encoding parameter must not be null.");
     RuleFor(x => x.PopulationSize).NotNull().WithMessage("Population size must not be null.");
     RuleFor(x => x.Creator).NotNull().WithMessage("Creator must not be null.");
     RuleFor(x => x.Crossover).NotNull().WithMessage("Crossover must not be null.");
@@ -254,20 +284,41 @@ internal sealed class GeneticAlgorithmBuilderStateValidator<TGenotype, TPhenotyp
 }
 
 public static class GeneticAlgorithmBuilderExtensions {
-  public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> UsingGenotype<TGenotype, TPhenotype, TEncodingParameter>(this GeneticAlgorithmBuilder builder) 
-    where TEncodingParameter : IEncodingParameter<TGenotype>
+  
+  public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> UsingAlgorithm<TGenotype, TPhenotype, TEncoding>(
+    this GeneticAlgorithmBuilder builder,
+    GeneticAlgorithm<TGenotype, TPhenotype, TEncoding> algorithm
+  )
+    where TEncoding : IEncoding<TGenotype>
   {
-     return new GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>(builder);
+    return new GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding>(builder)
+      .WithPopulationSize(algorithm.PopulationSize)
+      .WithMutationRate(algorithm.MutationRate)
+      .WithSelector(algorithm.Selector)
+      .WithReplacer(algorithm.Replacer)
+      .WithObjective(algorithm.Objective)
+      .WithRandomSource(algorithm.RandomSource);
   }
   
-  public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> UsingEncodingParameters<TGenotype, TPhenotype, TEncodingParameter>(
-    this GeneticAlgorithmBuilder builder) where TEncodingParameter : IEncodingParameter<TGenotype> {
-    return new GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter>(builder);
+  public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> UsingEncodingType<TGenotype, TPhenotype, TEncoding>(this GeneticAlgorithmBuilder builder) 
+    where TEncoding : IEncoding<TGenotype>
+  {
+     return new GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding>(builder);
   }
-  // public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> UsingEncodingParameters<TGenotype, TPhenotype, TEncodingParameter>(
-  //   this GeneticAlgorithmBuilder builder, TEncodingParameter encodingParameter) where TEncodingParameter : IEncodingParameter<TGenotype> {
+  
+  // public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> UsingEncoding<TGenotype, TPhenotype, TEncoding>(
+  //   this GeneticAlgorithmBuilder builder, TEncoding encoding)
+  //   where TEncoding : IEncoding<TGenotype> 
+  // {
   //   return builder
-  //     .UsingEncodingParameters<TGenotype,TPhenotype, TEncodingParameter>()
-  //     .WithEncodingParameter(encodingParameter);
-  //   }
+  //     .UsingEncodingType<TGenotype, TPhenotype, TEncoding>()
+  //     .UsingEncoding(encoding);
+  // }
+  // public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> UsingEncoding<TGenotype, TPhenotype, TEncoding>(
+  //   this GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> builder, TEncoding encoding)
+  //   where TEncoding : IEncoding<TGenotype> 
+  // {
+  //   return builder
+  //     .WithEncoding(encoding);
+  // }
 }

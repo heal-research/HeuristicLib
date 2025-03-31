@@ -1,17 +1,19 @@
 ﻿{
   State: {
+    Encoding: null,
     Creator: null,
     Crossover: null,
     Mutator: null,
     Decoder: null,
     Evaluator: {
-      $type: ProblemFitnessFunctionEvaluator<Tour, TravelingSalesmanInstance>
+      $type: ProblemEvaluator<Tour>
     },
     Interceptor: null,
     PopulationSize: null,
     MutationRate: null,
     Selector: null,
     Replacer: null,
-    Objective: null
+    Objective: null,
+    RandomSource: null
   }
 }

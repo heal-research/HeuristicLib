@@ -1,5 +1,5 @@
 ﻿{
-  EncodingParameter: {
+  Encoding: {
     Length: 3,
     Minimum: [
       -5.0

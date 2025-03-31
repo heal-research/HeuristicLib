@@ -3,22 +3,22 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public record GeneticAlgorithmConfiguration<TGenotype, TEncodingParameter>(
+public record GeneticAlgorithmConfiguration<TGenotype, TEncoding>(
   int? PopulationSize = null,
   //int? MaximumGenerations = null,
-  ICreator<TGenotype, TEncodingParameter>? Creator = null,
-  ICrossover<TGenotype, TEncodingParameter>? Crossover = null,
-  IMutator<TGenotype, TEncodingParameter>? Mutator = null,
+  ICreator<TGenotype, TEncoding>? Creator = null,
+  ICrossover<TGenotype, TEncoding>? Crossover = null,
+  IMutator<TGenotype, TEncoding>? Mutator = null,
   double? MutationRate = null,
   ISelector? Selector = null,
   IReplacer? Replacer = null
   //int? RandomSeed = null
-) where TEncodingParameter : IEncodingParameter<TGenotype>;
+) where TEncoding : IEncoding<TGenotype>;
 
 public static class GeneticAlgorithmBuilderWithSpecsExtensions {
-  public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> WithConfiguration<TGenotype, TPhenotype, TEncodingParameter>(
-    this GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncodingParameter> builder, GeneticAlgorithmConfiguration<TGenotype, TEncodingParameter> gaRef)
-    where TEncodingParameter : IEncodingParameter<TGenotype> 
+  public static GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> WithConfiguration<TGenotype, TPhenotype, TEncoding>(
+    this GeneticAlgorithmBuilder<TGenotype, TPhenotype, TEncoding> builder, GeneticAlgorithmConfiguration<TGenotype, TEncoding> gaRef)
+    where TEncoding : IEncoding<TGenotype> 
   {
     if (gaRef.PopulationSize.HasValue) builder.WithPopulationSize(gaRef.PopulationSize.Value);
     if (gaRef.Creator is not null) builder.WithCreator(gaRef.Creator);

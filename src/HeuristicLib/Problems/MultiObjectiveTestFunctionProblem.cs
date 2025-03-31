@@ -1,58 +1,36 @@
 ﻿using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class MultiObjectiveTestFunctionProblem : ProblemBase<RealVector, MultiObjectiveTestFunctionInstance>, IEncodableProblem<RealVector, RealVector, RealVectorEncoding<RealVector>> {
-  
-  public override Fitness Evaluate(RealVector solution, MultiObjectiveTestFunctionInstance instance) {
-    return new Fitness(instance.Evaluate(solution));
-  }
-  
-  public RealVectorEncoding<RealVector> GetEncoding() {
-    return new RealVectorEncoding<RealVector>(Decoder.Identity<RealVector>()) {
-      Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
-      Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
-      Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)
-    };
-  }
-}
-
-
-public class MultiObjectiveTestFunctionInstance : IBindableProblemInstance<RealVectorEncodingParameter, RealVector> {
+public class MultiObjectiveTestFunctionProblem : ProblemBase<RealVector, RealVector, RealVectorEncoding> {
   private readonly IMultiObjectiveTestFunction testFunction;
-  
-  public MultiObjectiveTestFunctionInstanceInformation? Information { get; init; }
 
-  public MultiObjectiveTestFunctionInstance(IMultiObjectiveTestFunction testFunction, MultiObjectiveTestFunctionInstanceInformation? information = null) {
+  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : base(testFunction.Objective) {
     this.testFunction = testFunction;
-    Information = information;
-  }
-
-  public RealVector Evaluate(RealVector solution) {
-    return testFunction.Evaluate(solution);
   }
   
-  public Objective GetObjective() => MultiObjective.Create(Enumerable.Repeat(ObjectiveDirection.Minimize, testFunction.Dimension).ToArray());
-  
-  public RealVectorEncodingParameter GetEncodingParameter() {
-    return new RealVectorEncodingParameter(length: testFunction.Dimension, minimum: testFunction.Min, maximum: testFunction.Max);
+  public override Fitness Evaluate(RealVector solution) {
+    return new Fitness(testFunction.Evaluate(solution));
   }
+  
+  public override RealVectorEncoding GetEncoding() => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+
+  public override RealVector Decode(RealVector genotype) => genotype;
+  
+  // return new RealVectorEncoding<RealVector>(Decoder.Identity<RealVector>()) {
+  //   Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
+  //   Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
+  //   Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)
+  // };
 }
 
-public class MultiObjectiveTestFunctionInstanceInformation {
-  public required string Name { get; init; }
-  public string? Description { get; init; }
-  public string? Publication { get; init; }
-  public RealVector? BestKnownQuality { get; init; }
-  public RealVector? BestKnownSolution { get; init; }
-}
 
 public interface IMultiObjectiveTestFunction {
   public int Dimension { get; }
   double Min { get; }
   double Max { get; }
+  public Objective Objective { get; }
   RealVector Evaluate(RealVector solution);
 }
 
@@ -60,6 +38,7 @@ public class ZDT1 : IMultiObjectiveTestFunction {
   public int Dimension { get; }
   public double Min => 0;
   public double Max => 1;
+  public Objective Objective => MultiObjective.Create([ObjectiveDirection.Minimize, ObjectiveDirection.Minimize]);
   
   public ZDT1(int dimension) {
     Dimension = dimension;
@@ -79,6 +58,7 @@ public class ZDT2 : IMultiObjectiveTestFunction {
   public int Dimension { get; }
   public double Min => 0;
   public double Max => 1;
+  public Objective Objective => MultiObjective.Create([ObjectiveDirection.Minimize, ObjectiveDirection.Minimize]);
   
   public ZDT2(int dimension) {
     Dimension = dimension;

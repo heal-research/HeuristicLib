@@ -14,7 +14,7 @@ public class GeneticAlgorithmObservableTests {
   [Fact]
   public Task GeneticAlgorithm_ObservableFromExecutionStream() {
     var randomSource = new RandomSource(42);
-    var encoding = new RealVectorEncodingParameter(2, -5, +5);
+    var encoding = new RealVectorEncoding(2, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
@@ -24,7 +24,7 @@ public class GeneticAlgorithmObservableTests {
     var replacement = new ElitismReplacer(0);
     var terminationCriterion = Terminator.OnGeneration<EvolutionResult<RealVector, RealVector>>(3);
     
-    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncodingParameter> { EncodingParameter = encoding, PopulationSize = 2, Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.5, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement, RandomSource = randomSource/*, terminationCriterion*/ };
+    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncoding> { Encoding = encoding, PopulationSize = 2, Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.5, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement, RandomSource = randomSource/*, terminationCriterion*/ };
 
     var stream = ga.CreateResultStream(terminator: terminationCriterion);
 

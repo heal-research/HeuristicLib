@@ -1,23 +1,19 @@
 ﻿{
   State: {
-    Creator: {
-      $type: RandomPermutationCreator
+    Encoding: {
+      Length: 16
     },
-    Crossover: {
-      $type: OrderCrossover
-    },
-    Mutator: {
-      $type: InversionMutator
-    },
-    Decoder: {
-      $type: TravelingSalesmanProblem.TourDecoder
-    },
+    Creator: null,
+    Crossover: null,
+    Mutator: null,
+    Decoder: null,
     Evaluator: null,
     Interceptor: null,
     PopulationSize: null,
     MutationRate: null,
     Selector: null,
     Replacer: null,
-    Objective: null
+    Objective: null,
+    RandomSource: null
   }
 }

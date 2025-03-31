@@ -3,35 +3,35 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IMutator<TGenotype, in TEncodingParameter>
+public interface IMutator<TGenotype, in TEncoding>
   : IOperator
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
 {
-  TGenotype Mutate(TGenotype parent, TEncodingParameter encoding, IRandomNumberGenerator random);
+  TGenotype Mutate(TGenotype parent, TEncoding encoding, IRandomNumberGenerator random);
 }
 
 public static class Mutator {
-  public static CustomMutator<TGenotype, TEncodingParameter> Create<TGenotype, TEncodingParameter>(Func<TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> mutator) 
-    where TEncodingParameter : IEncodingParameter<TGenotype>
+  public static CustomMutator<TGenotype, TEncoding> Create<TGenotype, TEncoding>(Func<TGenotype, TEncoding, IRandomNumberGenerator, TGenotype> mutator) 
+    where TEncoding : IEncoding<TGenotype>
   {
-    return new CustomMutator<TGenotype, TEncodingParameter>(mutator);
+    return new CustomMutator<TGenotype, TEncoding>(mutator);
   }
 }
 
-public sealed class CustomMutator<TGenotype, TEncodingParameter> 
-  : IMutator<TGenotype, TEncodingParameter>
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+public sealed class CustomMutator<TGenotype, TEncoding> 
+  : IMutator<TGenotype, TEncoding>
+  where TEncoding : IEncoding<TGenotype>
 {
-  private readonly Func<TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> mutator;
-  internal CustomMutator(Func<TGenotype, TEncodingParameter, IRandomNumberGenerator, TGenotype> mutator) {
+  private readonly Func<TGenotype, TEncoding, IRandomNumberGenerator, TGenotype> mutator;
+  internal CustomMutator(Func<TGenotype, TEncoding, IRandomNumberGenerator, TGenotype> mutator) {
     this.mutator = mutator;
   }
-  public TGenotype Mutate(TGenotype parent, TEncodingParameter encoding, IRandomNumberGenerator random) => mutator(parent, encoding, random);
+  public TGenotype Mutate(TGenotype parent, TEncoding encoding, IRandomNumberGenerator random) => mutator(parent, encoding, random);
 }
 
-public abstract class MutatorBase<TGenotype, TEncodingParameter>
-  : IMutator<TGenotype, TEncodingParameter>
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+public abstract class MutatorBase<TGenotype, TEncoding>
+  : IMutator<TGenotype, TEncoding>
+  where TEncoding : IEncoding<TGenotype>
 {
-  public abstract TGenotype Mutate(TGenotype parent, TEncodingParameter encoding, IRandomNumberGenerator random);
+  public abstract TGenotype Mutate(TGenotype parent, TEncoding encoding, IRandomNumberGenerator random);
 }

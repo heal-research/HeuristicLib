@@ -12,10 +12,10 @@ public class GeneticAlgorithmBuilderBasicTests {
   [Fact]
   public Task GeneticAlgorithmBuilder_WithBuilder() {
     var randomSource = new RandomSource(42);
-    var encoding = new RealVectorEncodingParameter(3, -5, +5);
-    var builder = new GeneticAlgorithmBuilder<RealVector, RealVector, RealVectorEncodingParameter>()
+    var encoding = new RealVectorEncoding(3, -5, +5);
+    var builder = new GeneticAlgorithmBuilder<RealVector, RealVector, RealVectorEncoding>()
       .WithRandomSource(randomSource)
-      .WithEncodingParameter(encoding)
+      .WithEncoding(encoding)
       .WithPopulationSize(200)
       .WithCreator(new NormalDistributedCreator(0, 0.5))
       .WithCrossover(new SinglePointCrossover())
@@ -36,15 +36,15 @@ public class GeneticAlgorithmBuilderBasicTests {
   [Fact]
   public Task GeneticAlgorithmBuilder_WithBuilderTypeChanging() {
     var randomSource = new RandomSource(42);
-    var encoding = new RealVectorEncodingParameter(3, -5, +5);
+    var encoding = new RealVectorEncoding(3, -5, +5);
     GeneticAlgorithmBuilder untypedBuilder = new GeneticAlgorithmBuilder()
       .WithRandomSource(randomSource)
       .WithPopulationSize(200)
       .WithMutationRate(0.05);
 
     var typedBuilder = untypedBuilder
-      .UsingGenotype<RealVector, RealVector, RealVectorEncodingParameter>()
-      .WithEncodingParameter(encoding)
+      .UsingEncodingType<RealVector, RealVector, RealVectorEncoding>()
+      .WithEncoding(encoding)
       .WithCreator(new NormalDistributedCreator(0, 0.5))
       .WithCrossover(new SinglePointCrossover())
       .WithMutator(new GaussianMutator(0.1, 0.1))
@@ -61,14 +61,14 @@ public class GeneticAlgorithmBuilderBasicTests {
   }
   
   // [Fact]
-  // public Task GeneticAlgorithmBuilder_UsingEncodingParameter() {
+  // public Task GeneticAlgorithmBuilder_UsingEncoding) {
   //   var randomSource = new RandomSource(42);
-  //   var encoding = new RealVectorEncodingParameter(3, -5, +5);
-  //   var builder = new GeneticAlgorithmBuilder/*<RealVector, RealVector, RealVectorEncodingParameter>*/()
+  //   var encoding = new RealVectorEncoding(3, -5, +5);
+  //   var builder = new GeneticAlgorithmBuilder/*<RealVector, RealVector, RealVectorEncoding>*/()
   //     //.WithRandomSource(randomSource)
-  //     //.WithEncodingParameter(encoding)
+  //     //.WithEncoding(encoding)
   //     .WithPopulationSize(200)
-  //     .UsingEncodingParameters<RealVector, RealVector, RealVectorEncodingParameter>(encoding)
+  //     .UsingEncodings<RealVector, RealVector, RealVectorEncoding>(encoding)
   //     .WithCreator(new NormalDistributedCreator(0.0, 0.5))
   //     .WithCrossover(new SinglePointCrossover())
   //     .WithMutator(new GaussianMutator(0.1, 0.1))
@@ -87,7 +87,7 @@ public class GeneticAlgorithmBuilderBasicTests {
   
   [Fact]
   public Task GeneticAlgorithmBuilder_WithSpec() {
-    var spec = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncodingParameter>(
+    var spec = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding>(
       PopulationSize: 500,
       Creator: new NormalDistributedCreator(1.5, 1.0),
       Crossover: new SinglePointCrossover(),
@@ -96,11 +96,11 @@ public class GeneticAlgorithmBuilderBasicTests {
       Selector: new TournamentSelector(tournamentSize: 4),
       Replacer: new ElitismReplacer(2)
     );
-    var builder = new GeneticAlgorithmBuilder<RealVector, RealVector, RealVectorEncodingParameter>()
+    var builder = new GeneticAlgorithmBuilder<RealVector, RealVector, RealVectorEncoding>()
       .WithRandomSource(new RandomSource(42))
       .WithDecoder(Decoder.Identity<RealVector>())
       .WithEvaluator(new MockEvaluator()).WithObjective(SingleObjective.Minimize)
-      .WithEncodingParameter(new RealVectorEncodingParameter(10, -5, +5))
+      .WithEncoding(new RealVectorEncoding(10, -5, +5))
       .WithConfiguration(spec);
 
     var ga = builder.Build();
@@ -108,7 +108,7 @@ public class GeneticAlgorithmBuilderBasicTests {
     return Verify(ga);
   }
 
-  private class MockEvaluator : FitnessFunctionEvaluatorBase<RealVector> {
+  private class MockEvaluator : EvaluatorBase<RealVector> {
     public override Fitness Evaluate(RealVector phenotype) {
       return phenotype.Sum();
     }

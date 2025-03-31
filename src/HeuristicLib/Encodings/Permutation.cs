@@ -3,10 +3,10 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings;
 
-public record class PermutationEncodingParameter : EncodingParameterBase<Permutation> {
+public record class PermutationEncoding : EncodingBase<Permutation> {
   public int Length { get; }
   
-  public PermutationEncodingParameter(int length) {
+  public PermutationEncoding(int length) {
     Length = length;
   }
 
@@ -15,20 +15,20 @@ public record class PermutationEncodingParameter : EncodingParameterBase<Permuta
   }
 }
 
-public class PermutationEncoding<TPhenotype>
-  : Encoding<Permutation, TPhenotype>,
-    ICreatorProvidingEncoding<Permutation, PermutationEncodingParameter>, ICrossoverProvidingEncoding<Permutation, PermutationEncodingParameter>, IMutatorProvidingEncoding<Permutation, PermutationEncodingParameter>
-{
-  public required ICreator<Permutation, PermutationEncodingParameter> Creator { get; init; }
-  public required ICrossover<Permutation, PermutationEncodingParameter> Crossover { get; init; }
-  public required IMutator<Permutation, PermutationEncodingParameter> Mutator { get; init; }
-  
-  public PermutationEncoding(IDecoder<Permutation, TPhenotype> decoder) 
-    : base(decoder) { }
-}
+// public class PermutationEncoding<TPhenotype>
+//   : Encoding<Permutation, TPhenotype>,
+//     ICreatorProvidingEncoding<Permutation, PermutationEncoding>, ICrossoverProvidingEncoding<Permutation, PermutationEncoding>, IMutatorProvidingEncoding<Permutation, PermutationEncoding>
+// {
+//   public required ICreator<Permutation, PermutationEncoding> Creator { get; init; }
+//   public required ICrossover<Permutation, PermutationEncoding> Crossover { get; init; }
+//   public required IMutator<Permutation, PermutationEncoding> Mutator { get; init; }
+//   
+//   public PermutationEncoding(IDecoder<Permutation, TPhenotype> decoder) 
+//     : base(decoder) { }
+// }
 
 // public class PermutationEncoding : PermutationEncoding<Permutation> { // Genotype = Phenotype
-//   public PermutationEncoding(PermutationEncodingParameter parameter) : base(Operators.Decoder.Identity<Permutation>()) { }
+//   public PermutationEncoding(PermutationEncoding parameter) : base(Operators.Decoder.Identity<Permutation>()) { }
 // }
 
 public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
@@ -125,8 +125,8 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   }
 }
 
-public class RandomPermutationCreator : CreatorBase<Permutation, PermutationEncodingParameter> {
-  public override Permutation Create(PermutationEncodingParameter encoding, IRandomNumberGenerator random) {
+public class RandomPermutationCreator : CreatorBase<Permutation, PermutationEncoding> {
+  public override Permutation Create(PermutationEncoding encoding, IRandomNumberGenerator random) {
     int[] elements = Enumerable.Range(0, encoding.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
       int j = random.Integer(i + 1);
@@ -137,8 +137,8 @@ public class RandomPermutationCreator : CreatorBase<Permutation, PermutationEnco
 }
 
 
-public class OrderCrossover : CrossoverBase<Permutation, PermutationEncodingParameter> {
-  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationEncodingParameter encoding, IRandomNumberGenerator random) {
+public class OrderCrossover : CrossoverBase<Permutation, PermutationEncoding> {
+  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationEncoding encoding, IRandomNumberGenerator random) {
     return Permutation.OrderCrossover(parent1, parent2, random);
   }
 
@@ -169,21 +169,21 @@ public class OrderCrossover : CrossoverBase<Permutation, PermutationEncodingPara
   // }
 }
 
-public class PartiallyMatchedCrossover : CrossoverBase<Permutation, PermutationEncodingParameter> {
-  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationEncodingParameter encoding, IRandomNumberGenerator random) {
+public class PartiallyMatchedCrossover : CrossoverBase<Permutation, PermutationEncoding> {
+  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationEncoding encoding, IRandomNumberGenerator random) {
     return Permutation.OrderCrossover(parent1, parent2, random); // implement PMX
   }
 }
 
 
-public class SwapMutator : MutatorBase<Permutation, PermutationEncodingParameter> {
-  public override Permutation Mutate(Permutation solution, PermutationEncodingParameter encoding, IRandomNumberGenerator random) {
+public class SwapMutator : MutatorBase<Permutation, PermutationEncoding> {
+  public override Permutation Mutate(Permutation solution, PermutationEncoding encoding, IRandomNumberGenerator random) {
     return Permutation.SwapRandomElements(solution, random);
   }
 }
 
-public class InversionMutator : MutatorBase<Permutation, PermutationEncodingParameter> {
-  public override Permutation Mutate(Permutation parent, PermutationEncodingParameter encoding, IRandomNumberGenerator random) {
+public class InversionMutator : MutatorBase<Permutation, PermutationEncoding> {
+  public override Permutation Mutate(Permutation parent, PermutationEncoding encoding, IRandomNumberGenerator random) {
     int start = random.Integer(parent.Count);
     int end = random.Integer(start, parent.Count);
     int[] newElements = parent.ToArray();
@@ -195,7 +195,7 @@ public class InversionMutator : MutatorBase<Permutation, PermutationEncodingPara
 // // ToDo: move to different file
 // public static class GeneticAlgorithmBuilderPermutationEncodingExtensions {
 //   // For type inference
-//   public static GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> UsingEncoding<TPhenotype>(this GeneticAlgorithmBuilder<Permutation, TPhenotype> builder, PermutationEncoding<TPhenotype> encoding) {
-//     return builder.UsingEncoding<Permutation, PermutationEncodingParameter, PermutationEncoding>(encoding);
+//   public static GeneticAlgorithmBuilder<Permutation, PermutationEncoding> UsingEncoding<TPhenotype>(this GeneticAlgorithmBuilder<Permutation, TPhenotype> builder, PermutationEncoding<TPhenotype> encoding) {
+//     return builder.UsingEncoding<Permutation, PermutationEncoding, PermutationEncoding>(encoding);
 //   }
 // }

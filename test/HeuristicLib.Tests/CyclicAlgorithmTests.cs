@@ -14,7 +14,7 @@
 //   [Fact]
 //   public Task ConcatAlgorithm_WithGA() {
 //     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
-//     var encoding = problem.CreateRealVectorEncodingParameter();
+//     var encoding = problem.CreateRealVectorEncoding();
 //     var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
 //     var randomSource = new RandomSource(42);
 //
@@ -74,7 +74,7 @@
 //   [Fact]
 //   public Task CyclicAlgorithm_WithGA() {
 //     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
-//     var encoding = problem.CreateRealVectorEncodingParameter();
+//     var encoding = problem.CreateRealVectorEncoding();
 //     var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
 //     var randomSource = new RandomSource(42);
 //
@@ -133,7 +133,7 @@
 //   [Fact]
 //   public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
 //     var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
-//     var encoding = problem.CreateRealVectorEncodingParameter();
+//     var encoding = problem.CreateRealVectorEncoding();
 //     var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
 //     var randomSource = new RandomSource(42);
 //

@@ -3,31 +3,31 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ICreator<out TGenotype, in TEncodingParameter> 
+public interface ICreator<out TGenotype, in TEncoding> 
   : IOperator
-  where TEncodingParameter : IEncodingParameter<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
 {
-  TGenotype Create(TEncodingParameter encoding, IRandomNumberGenerator random);
+  TGenotype Create(TEncoding encoding, IRandomNumberGenerator random);
 }
 
 public static class Creator {
-  public static CustomCreator<TGenotype, TEncodingParameter> Create<TGenotype, TEncodingParameter>(Func<TEncodingParameter, IRandomNumberGenerator, TGenotype> creator) 
-    where TEncodingParameter : IEncodingParameter<TGenotype> 
+  public static CustomCreator<TGenotype, TEncoding> Create<TGenotype, TEncoding>(Func<TEncoding, IRandomNumberGenerator, TGenotype> creator) 
+    where TEncoding : IEncoding<TGenotype> 
   {
-    return new CustomCreator<TGenotype, TEncodingParameter>(creator);
+    return new CustomCreator<TGenotype, TEncoding>(creator);
   }
 }
 
-public sealed class CustomCreator<TGenotype, TEncodingParameter> 
-  : ICreator<TGenotype, TEncodingParameter> 
-  where TEncodingParameter : IEncodingParameter<TGenotype> {
-  private readonly Func<TEncodingParameter, IRandomNumberGenerator, TGenotype> creator;
-  internal CustomCreator(Func<TEncodingParameter, IRandomNumberGenerator, TGenotype> creator) {
+public sealed class CustomCreator<TGenotype, TEncoding> 
+  : ICreator<TGenotype, TEncoding> 
+  where TEncoding : IEncoding<TGenotype> {
+  private readonly Func<TEncoding, IRandomNumberGenerator, TGenotype> creator;
+  internal CustomCreator(Func<TEncoding, IRandomNumberGenerator, TGenotype> creator) {
     this.creator = creator;
   }
-  public TGenotype Create(TEncodingParameter encoding, IRandomNumberGenerator random) => creator(encoding, random);
+  public TGenotype Create(TEncoding encoding, IRandomNumberGenerator random) => creator(encoding, random);
 }
 
-public abstract class CreatorBase<TGenotype, TEncodingParameter> : ICreator<TGenotype, TEncodingParameter> where TEncodingParameter : IEncodingParameter<TGenotype> {
-  public abstract TGenotype Create(TEncodingParameter encoding, IRandomNumberGenerator random);
+public abstract class CreatorBase<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype> {
+  public abstract TGenotype Create(TEncoding encoding, IRandomNumberGenerator random);
 }

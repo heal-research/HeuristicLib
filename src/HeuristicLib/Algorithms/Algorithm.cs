@@ -1,6 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms;
 

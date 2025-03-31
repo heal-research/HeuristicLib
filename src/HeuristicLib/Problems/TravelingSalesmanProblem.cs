@@ -1,6 +1,5 @@
 ﻿using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -11,74 +10,48 @@ public class Tour {
   }
 }
 
-public class TravelingSalesmanProblem : ProblemBase<Tour, TravelingSalesmanInstance>, IEncodableProblem<Tour, Permutation, PermutationEncoding<Tour>> {
+public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation, PermutationEncoding> {
 
-  //public override Objective Objective => SingleObjective.Minimize;
+  private readonly ITravelingSalesmanProblemData problemData;
 
-  public override Fitness Evaluate(Tour solution, TravelingSalesmanInstance instance) {
+  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) 
+    : base(SingleObjective.Minimize) {
+    this.problemData = problemData;
+  }
+
+  public override Fitness Evaluate(Tour solution) {
     var tour = solution.Cities;
     double totalDistance = 0.0;
     for (int i = 0; i < tour.Count - 1; i++) {
-      totalDistance += instance.GetDistance(tour[i], tour[i + 1]);
+      totalDistance += problemData.GetDistance(tour[i], tour[i + 1]);
     }
-    totalDistance += instance.GetDistance(tour[^1], tour[0]); // Return to the starting city
+    totalDistance += problemData.GetDistance(tour[^1], tour[0]); // Return to the starting city
     return totalDistance;
   }
   
-  public PermutationEncoding<Tour> GetEncoding() {
-    return new PermutationEncoding<Tour>(new TourDecoder()) {
-      Creator = new RandomPermutationCreator(),
-      Crossover = new OrderCrossover(),
-      Mutator = new InversionMutator()
-    };
-  }
+  public override PermutationEncoding GetEncoding() => new PermutationEncoding(problemData.NumberOfCities);
+  
+  public override Tour Decode(Permutation genotype) => new Tour(genotype);
+  
+  // return new PermutationEncoding(problemData.NumberOfCities) {
+  //   // Creator = new RandomPermutationCreator(),
+  //   // Crossover = new OrderCrossover(),
+  //   // Mutator = new InversionMutator()
+  // };
   
   #region Default Instance
-  public static TravelingSalesmanInstance CreateDefaultInstance() {
-    var problemData = new TravelingSalesmanCoordinatesData(DefaultProblemData);
-    return new TravelingSalesmanInstance(problemData);
+  public static TravelingSalesmanProblem CreateDefault() {
+    var problemData = new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates);
+    return new TravelingSalesmanProblem(problemData);
   }
-  private static readonly double[,] DefaultProblemData = new double[,] {
+  private static readonly double[,] DefaultProblemCoordinates = new double[,] {
     { 100, 100 }, { 100, 200 }, { 100, 300 }, { 100, 400 },
     { 200, 100 }, { 200, 200 }, { 200, 300 }, { 200, 400 },
     { 300, 100 }, { 300, 200 }, { 300, 300 }, { 300, 400 },
     { 400, 100 }, { 400, 200 }, { 400, 300 }, { 400, 400 }
   };
   #endregion
-  
-  private sealed class TourDecoder : IDecoder<Permutation, Tour> {
-    public Tour Decode(Permutation genotype) => new Tour(genotype);
-  }
 }
-
-public class TravelingSalesmanInstance : IBindableProblemInstance<PermutationEncodingParameter, Permutation> {
-  private readonly ITravelingSalesmanProblemData problemData;
-  
-  public int NumberOfCities => problemData.NumberOfCities;
-  public TravelingSalesmanInstanceInformation? InstanceInformation { get; }
-  
-  public TravelingSalesmanInstance(ITravelingSalesmanProblemData problemData, TravelingSalesmanInstanceInformation? instanceInformation = null) {
-    this.problemData = problemData;
-    InstanceInformation = instanceInformation;
-  }
-
-  public double GetDistance(int fromCity, int toCity) => problemData.GetDistance(fromCity, toCity);
-  
-  public Objective GetObjective() => SingleObjective.Minimize;
-  
-  public PermutationEncodingParameter GetEncodingParameter() {
-    return new PermutationEncodingParameter(length: NumberOfCities);
-  }
-}
-
-public class TravelingSalesmanInstanceInformation {
-  public required string Name { get; init; }
-  public string? Description { get; init; }
-  public string? Publication { get; init; }
-  public double? BestKnownQuality { get; init; }
-  public Permutation? BestKnownSolution { get; init; }
-}
-
 
 public interface ITravelingSalesmanProblemData {
   int NumberOfCities { get; }
@@ -162,9 +135,8 @@ public enum DistanceMetric {
   Chebyshev
 }
 
-
 // public static class GeneticAlgorithmBuilderTravelingSalesmanProblemExtensions {
-//   public static GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> UsingProblem(this GeneticAlgorithmBuilder<Permutation, PermutationEncodingParameter> builder, TravelingSalesmanProblem problem) {
+//   public static GeneticAlgorithmBuilder<Permutation, PermutationEncoding> UsingProblem(this GeneticAlgorithmBuilder<Permutation, PermutationEncoding> builder, TravelingSalesmanProblem problem) {
 //     builder.WithEvaluator(problem.CreateEvaluator());
 //     builder.WithGoal(problem.Goal);
 //     builder.WithEncoding(problem.CreatePermutationEncoding());
