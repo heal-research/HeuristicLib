@@ -1,95 +1,45 @@
 ﻿{
-  Population: [
-    {
-      Genotype: [
-        0.3448517272923386,
-        -2.438134501426543,
-        -3.9958536843749943
-      ],
-      Phenotype: [
-        0.3448517272923386,
-        -2.438134501426543,
-        -3.9958536843749943
-      ],
-      Fitness: [
-        -6.0891364585091985
-      ]
+  TotalGenerations: 6,
+  OperatorMetrics: {
+    Creation: {
+      Count: 5
     },
-    {
-      Genotype: [
-        0.3448517272923386,
-        -2.438134501426543,
-        -3.5953763236503007
-      ],
-      Phenotype: [
-        0.3448517272923386,
-        -2.438134501426543,
-        -3.5953763236503007
-      ],
-      Fitness: [
-        -5.688659097784505
-      ]
+    Decoding: {
+      Count: 30
     },
-    {
-      Genotype: [
-        -0.7509524350291831,
-        -3.8429606803194436,
-        -3.9958536843749943
-      ],
-      Phenotype: [
-        -0.7509524350291831,
-        -3.8429606803194436,
-        -3.9958536843749943
-      ],
-      Fitness: [
-        -8.58976679972362
-      ]
+    Evaluation: {
+      Count: 30
     },
-    {
-      Genotype: [
-        -0.7356535335237412,
-        -2.438134501426543,
-        -3.9958536843749943
-      ],
-      Phenotype: [
-        -0.7356535335237412,
-        -2.438134501426543,
-        -3.9958536843749943
-      ],
-      Fitness: [
-        -7.169641719325279
-      ]
+    Selection: {
+      Count: 50
     },
-    {
-      Genotype: [
-        -0.785001999109519,
-        -2.438134501426543,
-        -3.9958536843749943
-      ],
-      Phenotype: [
-        -0.785001999109519,
-        -2.438134501426543,
-        -3.9958536843749943
-      ],
-      Fitness: [
-        -7.218990184911057
-      ]
-    }
-  ],
-  Generation: 5,
-  Objective: {
-    Directions: [
-      Minimize
-    ],
-    TotalOrderComparer: {
-      $type: SingleObjectiveComparer
+    Crossover: {
+      Count: 25
+    },
+    Mutation: {
+      Count: 10
+    },
+    Replacement: {
+      Count: 5
+    },
+    Interception: {
+      Count: 0
     }
   },
-  CreationCount: 0,
-  DecodingCount: 5,
-  EvaluationCount: 5,
-  SelectionCount: 10,
-  CrossoverCount: 5,
-  MutationCount: 3,
-  InterceptionCount: 0
+  BestSolution: {
+    $type: EvaluatedIndividual<RealVector, RealVector>,
+    Phenotype: [
+      0.3448517272923386,
+      -3.8727416130121526,
+      -3.9958536843749943
+    ],
+    Genotype: [
+      0.3448517272923386,
+      -3.8727416130121526,
+      -3.9958536843749943
+    ],
+    Fitness: [
+      -7.523743570094808
+    ]
+  }
 }

@@ -1,19 +1,20 @@
 ﻿{
-  State: {
-    Encoding: null,
-    Creator: null,
-    Crossover: null,
-    Mutator: null,
+  Configuration: {
     Decoder: null,
     Evaluator: {
       $type: ProblemEvaluator<Tour>
     },
     Interceptor: null,
+    Terminator: null,
+    Encoding: null,
+    Creator: null,
+    Crossover: null,
+    Mutator: null,
     PopulationSize: null,
     MutationRate: null,
+    Objective: null,
     Selector: null,
     Replacer: null,
-    Objective: null,
     RandomSource: null
   }
 }

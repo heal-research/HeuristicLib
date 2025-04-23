@@ -1,19 +1,16 @@
 ﻿using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests;
 
 public class GeneticAlgorithmObservableTests {
   [Fact]
   public Task GeneticAlgorithm_ObservableFromExecutionStream() {
-    var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(2, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
@@ -22,14 +19,20 @@ public class GeneticAlgorithmObservableTests {
     var evaluator = Evaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    var terminationCriterion = Terminator.OnGeneration<EvolutionResult<RealVector, RealVector>>(3);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(3);
+    var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> { Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize };
     
-    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncoding> { Encoding = encoding, PopulationSize = 2, Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.5, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement, RandomSource = randomSource/*, terminationCriterion*/ };
+    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+      //Encoding = encoding,
+      populationSize: 2, creator, crossover, mutator, 0.5,
+      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+      selector, replacement, randomSeed: 42, terminator
+    );
 
-    var stream = ga.CreateResultStream(terminator: terminationCriterion);
+    var stream = ga.ExecuteStreaming(problem);
 
-    var subject = new Subject<EvolutionResult<RealVector, RealVector>>();
-    var observableResult = new List<EvolutionResult<RealVector, RealVector>>();
+    var subject = new Subject<GeneticAlgorithmIterationResult<RealVector>>();
+    var observableResult = new List<GeneticAlgorithmIterationResult<RealVector>>();
     subject
       .SubscribeOn(Scheduler.CurrentThread)
       .Subscribe(state => observableResult.Add(state));

@@ -1,33 +1,6 @@
 ﻿[
   {
-    Population: [
-      {
-        Genotype: [
-          0.3448517272923386,
-          -3.8727416130121526
-        ],
-        Phenotype: [
-          0.3448517272923386,
-          -3.8727416130121526
-        ],
-        Fitness: [
-          -3.527889885719814
-        ]
-      },
-      {
-        Genotype: [
-          -3.9958536843749943,
-          -0.8178857917980693
-        ],
-        Phenotype: [
-          -3.9958536843749943,
-          -0.8178857917980693
-        ],
-        Fitness: [
-          -4.813739476173064
-        ]
-      }
-    ],
+    UsedGenerationRandomSeed: 42,
     Generation: 0,
     Objective: {
       Directions: [
@@ -37,43 +10,80 @@
         $type: SingleObjectiveComparer
       }
     },
-    CreationCount: 2,
-    DecodingCount: 2,
-    EvaluationCount: 2,
-    SelectionCount: 0,
-    CrossoverCount: 0,
-    MutationCount: 0,
-    InterceptionCount: 0
+    OperatorMetrics: {
+      Creation: {
+        Count: 2
+      },
+      Decoding: {
+        Count: 2
+      },
+      Evaluation: {
+        Count: 2
+      },
+      Selection: {
+        Count: 0
+      },
+      Crossover: {
+        Count: 0
+      },
+      Mutation: {
+        Count: 0
+      },
+      Replacement: {
+        Count: 0
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Population: {
+      $type: EvaluatedIndividual<RealVector, RealVector>[],
+      $values: [
+        {
+          Phenotype: [
+            0.3448517272923386,
+            -3.8727416130121526
+          ],
+          Genotype: [
+            0.3448517272923386,
+            -3.8727416130121526
+          ],
+          Fitness: [
+            -3.527889885719814
+          ]
+        },
+        {
+          Phenotype: [
+            -3.9958536843749943,
+            -0.8178857917980693
+          ],
+          Genotype: [
+            -3.9958536843749943,
+            -0.8178857917980693
+          ],
+          Fitness: [
+            -4.813739476173064
+          ]
+        }
+      ]
+    },
+    BestSolution: {
+      $type: EvaluatedIndividual<RealVector, RealVector>,
+      Phenotype: [
+        -3.9958536843749943,
+        -0.8178857917980693
+      ],
+      Genotype: [
+        -3.9958536843749943,
+        -0.8178857917980693
+      ],
+      Fitness: [
+        -4.813739476173064
+      ]
+    }
   },
   {
-    Population: [
-      {
-        Genotype: [
-          0.3448517272923386,
-          -3.8727416130121526
-        ],
-        Phenotype: [
-          0.3448517272923386,
-          -3.8727416130121526
-        ],
-        Fitness: [
-          -3.527889885719814
-        ]
-      },
-      {
-        Genotype: [
-          -3.9958536843749943,
-          -0.8178857917980693
-        ],
-        Phenotype: [
-          -3.9958536843749943,
-          -0.8178857917980693
-        ],
-        Fitness: [
-          -4.813739476173064
-        ]
-      }
-    ],
+    UsedGenerationRandomSeed: 304411441,
     Generation: 1,
     Objective: {
       Directions: [
@@ -83,43 +93,82 @@
         $type: SingleObjectiveComparer
       }
     },
-    CreationCount: 0,
-    DecodingCount: 2,
-    EvaluationCount: 2,
-    SelectionCount: 4,
-    CrossoverCount: 2,
-    MutationCount: 2,
-    InterceptionCount: 0
+    OperatorMetrics: {
+      Creation: {
+        Count: 0
+      },
+      Decoding: {
+        Count: 2
+      },
+      Evaluation: {
+        Count: 2
+      },
+      Selection: {
+        Count: 4
+      },
+      Crossover: {
+        Count: 2
+      },
+      Mutation: {
+        Count: 1
+      },
+      Replacement: {
+        Count: 1
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Population: {
+      $type: EvaluatedIndividual<RealVector>[],
+      $values: [
+        {
+          $type: EvaluatedIndividual<RealVector, RealVector>,
+          Phenotype: [
+            0.3448517272923386,
+            -3.8727416130121526
+          ],
+          Genotype: [
+            0.3448517272923386,
+            -3.8727416130121526
+          ],
+          Fitness: [
+            -3.527889885719814
+          ]
+        },
+        {
+          $type: EvaluatedIndividual<RealVector, RealVector>,
+          Phenotype: [
+            0.3225826200901453,
+            -0.8178857917980693
+          ],
+          Genotype: [
+            0.3225826200901453,
+            -0.8178857917980693
+          ],
+          Fitness: [
+            -0.495303171707924
+          ]
+        }
+      ]
+    },
+    BestSolution: {
+      $type: EvaluatedIndividual<RealVector, RealVector>,
+      Phenotype: [
+        0.3448517272923386,
+        -3.8727416130121526
+      ],
+      Genotype: [
+        0.3448517272923386,
+        -3.8727416130121526
+      ],
+      Fitness: [
+        -3.527889885719814
+      ]
+    }
   },
   {
-    Population: [
-      {
-        Genotype: [
-          -3.9958536843749943,
-          -3.8727416130121526
-        ],
-        Phenotype: [
-          -3.9958536843749943,
-          -3.8727416130121526
-        ],
-        Fitness: [
-          -7.868595297387147
-        ]
-      },
-      {
-        Genotype: [
-          -3.9958536843749943,
-          -0.8178857917980693
-        ],
-        Phenotype: [
-          -3.9958536843749943,
-          -0.8178857917980693
-        ],
-        Fitness: [
-          -4.813739476173064
-        ]
-      }
-    ],
+    UsedGenerationRandomSeed: 1649488450,
     Generation: 2,
     Objective: {
       Directions: [
@@ -129,43 +178,82 @@
         $type: SingleObjectiveComparer
       }
     },
-    CreationCount: 0,
-    DecodingCount: 2,
-    EvaluationCount: 2,
-    SelectionCount: 4,
-    CrossoverCount: 2,
-    MutationCount: 1,
-    InterceptionCount: 0
+    OperatorMetrics: {
+      Creation: {
+        Count: 0
+      },
+      Decoding: {
+        Count: 2
+      },
+      Evaluation: {
+        Count: 2
+      },
+      Selection: {
+        Count: 4
+      },
+      Crossover: {
+        Count: 2
+      },
+      Mutation: {
+        Count: 1
+      },
+      Replacement: {
+        Count: 1
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Population: {
+      $type: EvaluatedIndividual<RealVector>[],
+      $values: [
+        {
+          $type: EvaluatedIndividual<RealVector, RealVector>,
+          Phenotype: [
+            0.3448517272923386,
+            -0.8178857917980693
+          ],
+          Genotype: [
+            0.3448517272923386,
+            -0.8178857917980693
+          ],
+          Fitness: [
+            -0.4730340645057307
+          ]
+        },
+        {
+          $type: EvaluatedIndividual<RealVector, RealVector>,
+          Phenotype: [
+            0.3225826200901453,
+            -3.8727416130121526
+          ],
+          Genotype: [
+            0.3225826200901453,
+            -3.8727416130121526
+          ],
+          Fitness: [
+            -3.5501589929220074
+          ]
+        }
+      ]
+    },
+    BestSolution: {
+      $type: EvaluatedIndividual<RealVector, RealVector>,
+      Phenotype: [
+        0.3225826200901453,
+        -3.8727416130121526
+      ],
+      Genotype: [
+        0.3225826200901453,
+        -3.8727416130121526
+      ],
+      Fitness: [
+        -3.5501589929220074
+      ]
+    }
   },
   {
-    Population: [
-      {
-        Genotype: [
-          -4.015033718089123,
-          -0.8178857917980693
-        ],
-        Phenotype: [
-          -4.015033718089123,
-          -0.8178857917980693
-        ],
-        Fitness: [
-          -4.832919509887192
-        ]
-      },
-      {
-        Genotype: [
-          -3.9958536843749943,
-          -0.8178857917980693
-        ],
-        Phenotype: [
-          -3.9958536843749943,
-          -0.8178857917980693
-        ],
-        Fitness: [
-          -4.813739476173064
-        ]
-      }
-    ],
+    UsedGenerationRandomSeed: 1300401837,
     Generation: 3,
     Objective: {
       Directions: [
@@ -175,12 +263,78 @@
         $type: SingleObjectiveComparer
       }
     },
-    CreationCount: 0,
-    DecodingCount: 2,
-    EvaluationCount: 2,
-    SelectionCount: 4,
-    CrossoverCount: 2,
-    MutationCount: 1,
-    InterceptionCount: 0
+    OperatorMetrics: {
+      Creation: {
+        Count: 0
+      },
+      Decoding: {
+        Count: 2
+      },
+      Evaluation: {
+        Count: 2
+      },
+      Selection: {
+        Count: 4
+      },
+      Crossover: {
+        Count: 2
+      },
+      Mutation: {
+        Count: 1
+      },
+      Replacement: {
+        Count: 1
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Population: {
+      $type: EvaluatedIndividual<RealVector>[],
+      $values: [
+        {
+          $type: EvaluatedIndividual<RealVector, RealVector>,
+          Phenotype: [
+            0.3225826200901453,
+            -0.8178857917980693
+          ],
+          Genotype: [
+            0.3225826200901453,
+            -0.8178857917980693
+          ],
+          Fitness: [
+            -0.495303171707924
+          ]
+        },
+        {
+          $type: EvaluatedIndividual<RealVector, RealVector>,
+          Phenotype: [
+            0.3225826200901453,
+            -3.902643237566875
+          ],
+          Genotype: [
+            0.3225826200901453,
+            -3.902643237566875
+          ],
+          Fitness: [
+            -3.5800606174767298
+          ]
+        }
+      ]
+    },
+    BestSolution: {
+      $type: EvaluatedIndividual<RealVector, RealVector>,
+      Phenotype: [
+        0.3225826200901453,
+        -3.902643237566875
+      ],
+      Genotype: [
+        0.3225826200901453,
+        -3.902643237566875
+      ],
+      Fitness: [
+        -3.5800606174767298
+      ]
+    }
   }
 ]

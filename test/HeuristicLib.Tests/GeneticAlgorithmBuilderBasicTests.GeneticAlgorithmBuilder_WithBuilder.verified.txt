@@ -53,6 +53,9 @@
     $type: PlusSelectionReplacer
   },
   Interceptor: {
-    $type: IdentityInterceptor<EvolutionResult<RealVector, RealVector>>
+    $type: IdentityInterceptor<EvolutionResult<RealVector>>
+  },
+  Terminator: {
+    $type: CustomTerminator<EvolutionResult<RealVector>>
   }
 }

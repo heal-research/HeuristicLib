@@ -54,78 +54,132 @@
       $type: PlusSelectionReplacer
     },
     Interceptor: {
-      $type: IdentityInterceptor<EvolutionResult<RealVector, RealVector>>
+      $type: IdentityInterceptor<EvolutionResult<RealVector>>
+    },
+    Terminator: {
+      $type: CustomTerminator<EvolutionResult<RealVector>>
     }
   },
-  TypedBuilder: {
-    State: {
-      Encoding: {
-        Length: 3,
-        Minimum: [
-          -5.0
-        ],
-        Maximum: [
-          5.0
-        ]
-      },
-      Creator: {
-        $type: NormalDistributedCreator,
-        Means: [
-          0.0
-        ],
-        Sigmas: [
-          0.5
-        ]
-      },
-      Crossover: {
-        $type: SinglePointCrossover
-      },
-      Mutator: {
-        $type: GaussianMutator,
-        MutationRate: 0.1,
-        MutationStrength: 0.1
-      },
-      Decoder: {
-        $type: IdentityDecoder<RealVector>
-      },
-      Evaluator: {
-        $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
-      },
-      Interceptor: null,
-      PopulationSize: 200,
-      MutationRate: 0.05,
-      Selector: {
-        $type: ProportionalSelector,
-        Windowing: true
-      },
-      Replacer: {
-        $type: PlusSelectionReplacer
-      },
-      Objective: {
-        Directions: [
-          Minimize
-        ],
-        TotalOrderComparer: {
-          $type: SingleObjectiveComparer
-        }
-      },
-      RandomSource: {
-        $type: RandomSource,
-        Seed: 42
+  CombinedConfig: {
+    Encoding: {
+      Length: 3,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    PopulationSize: 200,
+    Creator: {
+      $type: NormalDistributedCreator,
+      Means: [
+        0.0
+      ],
+      Sigmas: [
+        0.5
+      ]
+    },
+    Crossover: {
+      $type: SinglePointCrossover
+    },
+    Mutator: {
+      $type: GaussianMutator,
+      MutationRate: 0.1,
+      MutationStrength: 0.1
+    },
+    MutationRate: 0.05,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
+    },
+    Decoder: {
+      $type: IdentityDecoder<RealVector>
+    },
+    Evaluator: {
+      $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
+    },
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
       }
-    }
+    },
+    Selector: {
+      $type: ProportionalSelector,
+      Windowing: true
+    },
+    Replacer: {
+      $type: PlusSelectionReplacer
+    },
+    Interceptor: null,
+    Terminator: null
   },
-  UntypedBuilder: {
-    State: {
-      PopulationSize: 200,
-      MutationRate: 0.05,
-      Selector: null,
-      Replacer: null,
-      Objective: null,
-      RandomSource: {
-        $type: RandomSource,
-        Seed: 42
+  TypedConfig: {
+    Encoding: {
+      Length: 3,
+      Minimum: [
+        -5.0
+      ],
+      Maximum: [
+        5.0
+      ]
+    },
+    PopulationSize: null,
+    Creator: {
+      $type: NormalDistributedCreator,
+      Means: [
+        0.0
+      ],
+      Sigmas: [
+        0.5
+      ]
+    },
+    Crossover: {
+      $type: SinglePointCrossover
+    },
+    Mutator: {
+      $type: GaussianMutator,
+      MutationRate: 0.1,
+      MutationStrength: 0.1
+    },
+    MutationRate: null,
+    RandomSource: null,
+    Decoder: {
+      $type: IdentityDecoder<RealVector>
+    },
+    Evaluator: {
+      $type: GeneticAlgorithmBuilderBasicTests.MockEvaluator
+    },
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
       }
+    },
+    Selector: {
+      $type: ProportionalSelector,
+      Windowing: true
+    },
+    Replacer: {
+      $type: PlusSelectionReplacer
+    },
+    Interceptor: null,
+    Terminator: null
+  },
+  UntypedConfig: {
+    PopulationSize: 200,
+    MutationRate: 0.05,
+    Objective: null,
+    Selector: null,
+    Replacer: null,
+    RandomSource: {
+      $type: RandomSource,
+      Seed: 42
     }
   }
 }

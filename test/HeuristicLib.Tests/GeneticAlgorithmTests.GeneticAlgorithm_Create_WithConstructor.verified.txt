@@ -1,0 +1,33 @@
+﻿{
+  PopulationSize: 200,
+  Creator: {
+    $type: UniformDistributedCreator,
+    Minimum: null,
+    Maximum: [
+      3.0
+    ]
+  },
+  Crossover: {
+    $type: SinglePointCrossover
+  },
+  Mutator: {
+    $type: GaussianMutator,
+    MutationRate: 0.1,
+    MutationStrength: 0.1
+  },
+  MutationRate: 0.05,
+  Selector: {
+    $type: RandomSelector
+  },
+  Replacer: {
+    $type: PlusSelectionReplacer
+  },
+  RandomSeed: 42,
+  Interceptor: {
+    $type: IdentityInterceptor<GeneticAlgorithmIterationResult<RealVector>>
+  },
+  Terminator: {
+    $type: MaximumGenerationTerminator<GeneticAlgorithmIterationResult<RealVector>>,
+    MaximumGeneration: 5
+  }
+}

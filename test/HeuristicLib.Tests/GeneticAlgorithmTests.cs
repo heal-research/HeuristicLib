@@ -1,6 +1,5 @@
-using HEAL.HeuristicLib.Algorithms;
+using FluentValidation;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -10,8 +9,7 @@ namespace HEAL.HeuristicLib.Tests;
 
 public class GeneticAlgorithmTests {
   [Fact]
-  public Task GeneticAlgorithm_Create_WithoutBuilder() {
-    var randomSource = new FixedRandomSource(42);
+  public Task GeneticAlgorithm_Create_WithConstructor() {
     var encoding = new RealVectorEncoding(10, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
@@ -20,21 +18,77 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
     var replacement = new PlusSelectionReplacer();
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
     
-    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncoding> {
-      Encoding = encoding,
-      PopulationSize = 200, 
-      Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
-      Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement,
-      RandomSource = randomSource//, terminator: null
-    };
+    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+      //Encoding = encoding,
+      populationSize: 200, 
+      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
+      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+      selector: selector, replacer: replacement,
+      randomSeed: 42,
+      terminator: terminator
+      //RandomSource = randomSource, Terminator = terminator
+    );
 
     return Verify(ga);
   }
   
   [Fact]
+  public Task GeneticAlgorithm_Create_FromConfig() {
+    var encoding = new RealVectorEncoding(10, -5, +5);
+    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
+    var crossover = new SinglePointCrossover();
+    var mutator = new GaussianMutator(0.1, 0.1);
+    var decoder = Decoder.Identity<RealVector>();
+    var evaluator = new RealVectorMockEvaluator();
+    var selector = new RandomSelector();
+    var replacement = new PlusSelectionReplacer();
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    
+    var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding> {
+      //Encoding = encoding,
+      PopulationSize = 200, 
+      Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
+      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+      Selector = selector, Replacer = replacement,
+      RandomSeed = 42,
+      //RandomSource = randomSource,
+      Terminator = terminator
+    };
+
+    var ga = GeneticAlgorithm.FromConfiguration(config);
+  
+    return Verify(ga);
+  }
+  
+  [Fact]
+  public void GeneticAlgorithm_CreateThrows_FromUnderspecifiedConfig() {
+    var encoding = new RealVectorEncoding(10, -5, +5);
+    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
+    var crossover = new SinglePointCrossover();
+    var mutator = new GaussianMutator(0.1, 0.1);
+    var decoder = Decoder.Identity<RealVector>();
+    var evaluator = new RealVectorMockEvaluator();
+    var selector = new RandomSelector();
+    var replacement = new PlusSelectionReplacer();
+    //var terminator = Terminator.OnGeneration<EvolutionResult<RealVector>>(5);
+    
+    var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding> {
+      //Encoding = encoding,
+      PopulationSize = 200, 
+      Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
+      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+      Selector = null, Replacer = null, // missing
+      RandomSeed = 42,
+      //RandomSource = randomSource, Terminator = terminator
+    };
+
+    Should.Throw<ValidationException>(() => GeneticAlgorithm.FromConfiguration(config));
+  }
+  
+  [Fact]
   public Task GeneticAlgorithm_Execute() {
-    var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(3, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
@@ -43,16 +97,21 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    
-    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncoding> {
-      Encoding = encoding,
-      PopulationSize = 5, 
-      Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.5,
-      Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement,
-      RandomSource = randomSource//, terminator: Terminator.OnGeneration(5)
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
+      Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
     };
+    
+    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+      //Encoding = encoding,
+      populationSize: 5, 
+      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
+      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, 
+      selector: selector, replacer: replacement,
+      randomSeed: 42, terminator: terminator
+    );
 
-    var finalState = ga.Execute(Terminator.OnGeneration<EvolutionResult<RealVector, RealVector>>(5));
+    var finalState = ga.Execute(problem);
     
     return Verify(finalState)
       .IgnoreMembersWithType<TimeSpan>();
@@ -60,7 +119,6 @@ public class GeneticAlgorithmTests {
   
   [Fact]
   public Task GeneticAlgorithm_ExecuteStream() {
-    var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(3, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
@@ -69,16 +127,21 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    
-    var ga = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncoding>{
-      Encoding = encoding,
-      PopulationSize = 5, 
-      Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.5,
-      Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement,
-      RandomSource = randomSource
+    var terminator = Terminator.NeverTerminate<GeneticAlgorithmIterationResult<RealVector>>();
+    var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
+      Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
     };
+    
+    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+      //Encoding = encoding,
+      populationSize: 5, 
+      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
+      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+      selector: selector, replacer: replacement,
+      randomSeed: 42, terminator: terminator
+    );
 
-    var stream = ga.CreateResultStream();
+    var stream = ga.ExecuteStreaming(problem);
 
     var results = stream.Take(5).ToList();
     
@@ -88,7 +151,6 @@ public class GeneticAlgorithmTests {
   
   [Fact]
   public async Task GeneticAlgorithm_TerminateWithPauseToken() {
-    var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(5, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: null);
     var crossover = new SinglePointCrossover();
@@ -98,17 +160,21 @@ public class GeneticAlgorithmTests {
     var selector = new ProportionalSelector();
     var replacement = new PlusSelectionReplacer();
     var pauseToken = new PauseToken();
-    var terminationCriterion = new PauseTokenTerminator<EvolutionResult<RealVector, RealVector>>(pauseToken);
-
-    var firstAlg = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncoding>{
-      Encoding = encoding,
-      PopulationSize = 5,
-      Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05, 
-      Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement, 
-      RandomSource = randomSource//, terminationCriterion
+    var terminator = new PauseTokenTerminator<GeneticAlgorithmIterationResult<RealVector>>(pauseToken);
+    var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
+      Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
     };
+
+    var firstAlg = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+      //Encoding = encoding,
+      populationSize: 5,
+      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05, 
+      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+      selector: selector, replacer: replacement, 
+      randomSeed: 42, terminator: terminator
+    );
     
-    var task = Task.Run(() => firstAlg.Execute(terminationCriterion));
+    var task = Task.Run(() => firstAlg.Execute(problem));
 
     await Task.Delay(200);
     
@@ -122,12 +188,11 @@ public class GeneticAlgorithmTests {
     task.Status.ShouldBe(TaskStatus.RanToCompletion);
     
     finalState.ShouldNotBeNull();
-    finalState.Generation.ShouldBeGreaterThan(0);
+    finalState.TotalGenerations.ShouldBeGreaterThan(0);
   }
   
   [Fact]
   public async Task GeneticAlgorithm_ExecuteAndContinueWithOtherAlg() {
-    var randomSource = new RandomSource(42);
     var encoding = new RealVectorEncoding(3, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: null);
     var crossover = new SinglePointCrossover();
@@ -136,17 +201,29 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new ProportionalSelector();
     var replacement = new ElitismReplacer(0);
-    var terminationCriterion = Terminator.OnGeneration<EvolutionResult<RealVector, RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
+      Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
+    };
+    
+    var firstAlg = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+      //Encoding = encoding,
+      populationSize: 5, 
+      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
+      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+      selector: selector, replacer: replacement, 
+      randomSeed: 42, terminator: terminator
+    );
 
-    var firstAlg = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncoding> { Encoding = encoding, PopulationSize = 5, Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement, RandomSource = randomSource/*, terminationCriterion*/ };
+    var firstResult = firstAlg.ExecuteStreaming(problem).Last();
 
-    var firstResult = firstAlg.Execute(terminationCriterion);
+    var newTerminationCriterion = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(12);
+    var continuationState = firstResult.GetNextState();
+    var secondAlg = (firstAlg.ToConfiguration() with {
+      PopulationSize = 8, Terminator = newTerminationCriterion
+    }).Build();
 
-    var newTerminationCriterion = Terminator.OnGeneration<EvolutionResult<RealVector, RealVector>>(12);
-    var continuationState = firstResult.GetNextContinuationState();
-    var secondAlg = new GeneticAlgorithm<RealVector, RealVector, RealVectorEncoding>{ Encoding = encoding, PopulationSize = 8, Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize, Selector = selector, Replacer = replacement, RandomSource = randomSource/*, newTerminationCriterion*/ };
-
-    var finalState = secondAlg.Execute(newTerminationCriterion, continuationState);
+    var finalState = secondAlg.Execute(problem, initialState: continuationState);
 
     await Verify(new { firstResult, finalState })
       .IgnoreMembersWithType<TimeSpan>();

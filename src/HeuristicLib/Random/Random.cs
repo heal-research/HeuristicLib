@@ -2,7 +2,32 @@
 
 public class SeedSequence {
   public static int GetSeed(int baseSeed, int index) {
-    return HashCode.Combine(baseSeed.GetHashCode(), index.GetHashCode());
+    return Math.Abs((int)Hash(baseSeed, index));
+  }
+  
+  private const uint FnvPrime = 16777619;
+  private const uint OffsetBasis = 2166136261;
+  private static uint Hash(params int[] values) {
+    uint hash = OffsetBasis;
+
+    foreach (int value in values) {
+      unchecked {
+        // Break each int into 4 bytes (little endian) and feed each byte
+        hash ^= (byte)(value & 0xFF);
+        hash *= FnvPrime;
+
+        hash ^= (byte)((value >> 8) & 0xFF);
+        hash *= FnvPrime;
+
+        hash ^= (byte)((value >> 16) & 0xFF);
+        hash *= FnvPrime;
+
+        hash ^= (byte)((value >> 24) & 0xFF);
+        hash *= FnvPrime;
+      }
+    }
+
+    return hash;
   }
   //
   // private readonly int baseSeed;

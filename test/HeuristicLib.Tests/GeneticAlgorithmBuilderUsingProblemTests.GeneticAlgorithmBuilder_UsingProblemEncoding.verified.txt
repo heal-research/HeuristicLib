@@ -1,19 +1,14 @@
 ﻿{
-  State: {
-    Encoding: {
-      Length: 16
-    },
-    Creator: null,
-    Crossover: null,
-    Mutator: null,
-    Decoder: null,
-    Evaluator: null,
-    Interceptor: null,
-    PopulationSize: null,
-    MutationRate: null,
-    Selector: null,
-    Replacer: null,
-    Objective: null,
-    RandomSource: null
-  }
+  Encoding: {
+    Length: 16
+  },
+  PopulationSize: null,
+  Creator: null,
+  Crossover: null,
+  Mutator: null,
+  MutationRate: null,
+  Objective: null,
+  Selector: null,
+  Replacer: null,
+  RandomSource: null
 }

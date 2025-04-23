@@ -50,6 +50,10 @@
     $type: PlusSelectionReplacer
   },
   Interceptor: {
-    $type: IdentityInterceptor<EvolutionResult<RealVector, RealVector>>
+    $type: IdentityInterceptor<EvolutionResult<RealVector>>
+  },
+  Terminator: {
+    $type: MaximumGenerationTerminator<EvolutionResult<RealVector>>,
+    MaximumGeneration: 5
   }
 }
