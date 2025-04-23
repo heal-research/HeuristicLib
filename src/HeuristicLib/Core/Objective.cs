@@ -2,7 +2,7 @@
 using System.Globalization;
 using HEAL.HeuristicLib.Encodings;
 
-namespace HEAL.HeuristicLib.Core;
+namespace HEAL.HeuristicLib;
 
 public enum ObjectiveDirection {
   Minimize,

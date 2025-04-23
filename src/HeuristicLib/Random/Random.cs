@@ -1,43 +1,57 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
-public interface IRandomSource {
-  IRandomNumberGenerator CreateRandomNumberGenerator();
+public class SeedSequence {
+  public static int GetSeed(int baseSeed, int index) {
+    return HashCode.Combine(baseSeed.GetHashCode(), index.GetHashCode());
+  }
+  //
+  // private readonly int baseSeed;
+  // public SeedSequence(int baseSeed) {
+  //   this.baseSeed = baseSeed;
+  // }
+  //
+  // public SeedSequence[] Spawn(int children) {
+  //   return Enumerable.Range(0, children).Select(
+  //     index => new SeedSequence(GetSeed(baseSeed, index))).ToArray();
+  // }
 }
 
-public class RandomSource : IRandomSource {
-  private readonly System.Random random;
-  public int Seed { get; }
-  
-  public RandomSource(int seed) {
-    Seed = seed;
-    random = new System.Random(seed);
-  }
-  public RandomSource() : this(GetRandomSeed()) { }
-  
-  public IRandomNumberGenerator CreateRandomNumberGenerator() {
-    return new SystemRandomNumberGenerator(random);
-  }
-
-  private static int GetRandomSeed() => new System.Random().Next();
-}
-
-public class FixedRandomSource : IRandomSource {
-  public int Seed { get; }
-  public FixedRandomSource(int seed) {
-    Seed = seed;
-  }
-
-  public IRandomNumberGenerator CreateRandomNumberGenerator() {
-    return new SystemRandomNumberGenerator(new System.Random(Seed));
-  }
-}
+// public interface IRandomSource {
+//   IRandomNumberGenerator CreateRandomNumberGenerator();
+// }
+//
+// public class RandomSource : IRandomSource {
+//   private readonly System.Random random;
+//   public int Seed { get; }
+//   
+//   public RandomSource(int seed) {
+//     Seed = seed;
+//     random = new System.Random(seed);
+//   }
+//   public RandomSource() : this(GetRandomSeed()) { }
+//   
+//   public IRandomNumberGenerator CreateRandomNumberGenerator() {
+//     return new SystemRandomNumberGenerator(random);
+//   }
+//
+//   private static int GetRandomSeed() => new System.Random().Next();
+// }
+//
+// public class FixedRandomSource : IRandomSource {
+//   public int Seed { get; }
+//   public FixedRandomSource(int seed) {
+//     Seed = seed;
+//   }
+//
+//   public IRandomNumberGenerator CreateRandomNumberGenerator() {
+//     return new SystemRandomNumberGenerator(new System.Random(Seed));
+//   }
+// }
 
 public interface IRandomNumberGenerator {
   double Random();
   int Integer(int low, int high, bool endpoint = false);
   byte[] Bytes(int length);
-  
-  IRandomNumberGenerator[] Spawn(int count);
 }
 
 public static class RandomGeneratorExtensions {
@@ -68,8 +82,8 @@ public static class RandomGeneratorExtensions {
 
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   private readonly System.Random random;
-  public SystemRandomNumberGenerator(System.Random random) {
-    this.random = random;
+  public SystemRandomNumberGenerator(int seed) {
+    random = new System.Random(seed);
   }
   
   public double Random() {
@@ -89,14 +103,9 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
     return bytes;
   }
   
-  public IRandomNumberGenerator[] Spawn(int count) {
-    return this
-      .Integers(count, int.MaxValue)
-      .Select(seed => new SystemRandomNumberGenerator(new System.Random(seed)))
-      .ToArray<IRandomNumberGenerator>();
-  }
 }
 
+// ToDo: and others
 public class MersenneTwister : IRandomNumberGenerator {
   public double Random() {
     throw new NotImplementedException();
@@ -107,24 +116,8 @@ public class MersenneTwister : IRandomNumberGenerator {
   public byte[] Bytes(int length) {
     throw new NotImplementedException();
   }
-  public IRandomNumberGenerator[] Spawn(int count) {
-    throw new NotImplementedException();
-  }
 }
 
-public class PermutedCongruentialGenerator : IRandomNumberGenerator {
-  public double Random() { throw new NotImplementedException(); }
-  public int Integer(int low, int high, bool endpoint = false) { throw new NotImplementedException(); }
-  public byte[] Bytes(int length) { throw new NotImplementedException(); }
-  public IRandomNumberGenerator[] Spawn(int count) { throw new NotImplementedException(); }
-}
-
-public class PhiloxGenerator : IRandomNumberGenerator {
-  public double Random() { throw new NotImplementedException(); }
-  public int Integer(int low, int high, bool endpoint = false) { throw new NotImplementedException(); }
-  public byte[] Bytes(int length) { throw new NotImplementedException(); }
-  public IRandomNumberGenerator[] Spawn(int count) { throw new NotImplementedException(); }
-}
 
 public interface IDistribution {
   

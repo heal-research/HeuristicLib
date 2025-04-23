@@ -1,12 +1,13 @@
-﻿using HEAL.HeuristicLib.Core;
-using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.Encodings;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class TestFunctionProblem : ProblemBase<RealVector, RealVector, RealVectorEncoding> {
+public class TestFunctionProblem : EncodedProblemBase<RealVector, RealVector, RealVectorEncoding> {
   private readonly ITestFunction testFunction;
 
-  public TestFunctionProblem(ITestFunction testFunction) : base(SingleObjective.Create(testFunction.Objective)) {
+  public TestFunctionProblem(ITestFunction testFunction) 
+    : base(SingleObjective.Create(testFunction.Objective), GetEncoding(testFunction)) 
+  {
     this.testFunction = testFunction;
   }
   
@@ -14,7 +15,7 @@ public class TestFunctionProblem : ProblemBase<RealVector, RealVector, RealVecto
     return testFunction.Evaluate(solution);
   }
   
-  public override RealVectorEncoding GetEncoding() => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  private static RealVectorEncoding GetEncoding(ITestFunction testFunction) => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
   
   public override RealVector Decode(RealVector genotype) => genotype;
     // return new RealVectorEncoding<RealVector>(Decoder.Identity<RealVector>()) {

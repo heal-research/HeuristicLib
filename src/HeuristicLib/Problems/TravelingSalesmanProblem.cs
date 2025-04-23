@@ -1,5 +1,5 @@
-﻿using HEAL.HeuristicLib.Core;
-using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -10,7 +10,7 @@ public class Tour {
   }
 }
 
-public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation, PermutationEncoding> {
+public class TravelingSalesmanProblem : ProblemBase<Tour> {
 
   private readonly ITravelingSalesmanProblemData problemData;
 
@@ -28,10 +28,20 @@ public class TravelingSalesmanProblem : ProblemBase<Tour, Permutation, Permutati
     totalDistance += problemData.GetDistance(tour[^1], tour[0]); // Return to the starting city
     return totalDistance;
   }
+
+  public IEncodedProblem<Tour, Permutation, PermutationEncoding> EncodeAsPermutation() {
+    return new EncodedProblem<Tour, Permutation, PermutationEncoding>() {
+      Encoding = new PermutationEncoding(problemData.NumberOfCities),
+      Decoder = new PermutationDecoder(),
+      Evaluator = Operators.Evaluator.FromFitnessFunction<Tour>(Evaluate),
+      Objective = Objective
+    };
+  }
+  //public override PermutationEncoding GetEncoding() => new PermutationEncoding(problemData.NumberOfCities);
   
-  public override PermutationEncoding GetEncoding() => new PermutationEncoding(problemData.NumberOfCities);
-  
-  public override Tour Decode(Permutation genotype) => new Tour(genotype);
+  private class PermutationDecoder : IDecoder<Permutation, Tour> {
+    public Tour Decode(Permutation genotype) => new Tour(genotype);
+  }
   
   // return new PermutationEncoding(problemData.NumberOfCities) {
   //   // Creator = new RandomPermutationCreator(),

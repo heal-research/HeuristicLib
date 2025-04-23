@@ -1,16 +1,15 @@
-﻿using HEAL.HeuristicLib.Core;
-using HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
 
 public interface ISelector : IOperator 
 {
-  Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random);
+  IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
 }
 
 public abstract class SelectorBase : ISelector {
-  public abstract Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random);
+  public abstract IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
 }
 
 public class ProportionalSelector : SelectorBase { // ToDo: Probability-based selection base class
@@ -20,7 +19,7 @@ public class ProportionalSelector : SelectorBase { // ToDo: Probability-based se
     Windowing = windowing;
   }
   
-  public override Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
+  public override IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     // prepare qualities
     double minQuality = double.MaxValue, maxQuality = double.MinValue;
@@ -51,7 +50,7 @@ public class ProportionalSelector : SelectorBase { // ToDo: Probability-based se
 
     var list = qualities.ToList();
     double qualitySum = list.Sum();
-    var selected = new Individual<TGenotype, TPhenotype>[count];
+    var selected = new EvaluatedIndividual<TGenotype/*, TPhenotype*/>[count];
     for (int i = 0; i < count; i++) {
       double selectedQuality = random.Random() * qualitySum;
       int index = 0;
@@ -67,10 +66,10 @@ public class ProportionalSelector : SelectorBase { // ToDo: Probability-based se
 }
 
 public class RandomSelector : SelectorBase {
-  public override Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
-    var selected = new Individual<TGenotype, TPhenotype>[count];
+  public override IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
+    var selected = new EvaluatedIndividual<TGenotype/*, TPhenotype*/>[count];
     for (int i = 0; i < count; i++) {
-      int index = random.Integer(population.Length);
+      int index = random.Integer(population.Count);
       selected[i] = population[index];
     }
     return selected;
@@ -84,12 +83,12 @@ public class TournamentSelector : SelectorBase {
     TournamentSize = tournamentSize;
   }
 
-  public override Individual<TGenotype, TPhenotype>[] Select<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] population, Objective objective, int count, IRandomNumberGenerator random) {
-    var selected = new Individual<TGenotype, TPhenotype>[count];
+  public override IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
+    var selected = new EvaluatedIndividual<TGenotype/*, TPhenotype*/>[count];
     for (int i = 0; i < count; i++) {
-      var tournamentParticipants = new List<Individual<TGenotype, TPhenotype>>();
+      var tournamentParticipants = new List<EvaluatedIndividual<TGenotype/*, TPhenotype*/>>();
       for (int j = 0; j < TournamentSize; j++) {
-        int index = random.Integer(population.Length);
+        int index = random.Integer(population.Count);
         tournamentParticipants.Add(population[index]);
       }
       var bestParticipant = tournamentParticipants.OrderBy(participant => participant.Fitness, objective.TotalOrderComparer).First();

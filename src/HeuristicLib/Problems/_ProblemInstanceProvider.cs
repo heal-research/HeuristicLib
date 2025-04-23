@@ -1,7 +1,4 @@
-﻿
-using HEAL.HeuristicLib.Core;
-
-namespace HEAL.HeuristicLib.Problems;
+﻿namespace HEAL.HeuristicLib.Problems;
 
 public interface IProblemInstanceProvider<TProblem>
   where TProblem : IProblem 

@@ -2,56 +2,58 @@
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ITerminator<in TState> 
+public interface ITerminator<in TIterationResult> 
   : IOperator
-  where TState : IResultState
 {
-  bool ShouldTerminate(TState state);
+  bool ShouldTerminate(TIterationResult iterationResult);
 }
 
 public static class TerminatorExtensions {
-  public static bool ShouldContinue<TState>(this ITerminator<TState> terminator, TState state) where TState : IResultState 
+  public static bool ShouldContinue<TIterationResult>(this ITerminator<TIterationResult> terminator, TIterationResult iterationResult) where TIterationResult : IIterationResult 
   {
-    return !terminator.ShouldTerminate(state);
+    return !terminator.ShouldTerminate(iterationResult);
   }
 }
 
 public static class Terminator {
-  public static CustomTerminator<TState> Create<TState>(Func<TState, bool> shouldTerminatePredicate) where TState : IResultState {
-    return new CustomTerminator<TState>(shouldTerminatePredicate);
+  public static CustomTerminator<TIterationResult> Create<TIterationResult>(Func<TIterationResult, bool> shouldTerminatePredicate) where TIterationResult : IIterationResult {
+    return new CustomTerminator<TIterationResult>(shouldTerminatePredicate);
   }
-  public static MaximumGenerationTerminator<TState> OnGeneration<TState>(int maxGenerations) where TState : IResultState {
-    return new MaximumGenerationTerminator<TState>(maxGenerations);
+  public static MaximumGenerationTerminator<TIterationResult> OnGeneration<TIterationResult>(int maxGenerations) where TIterationResult : IIterationResult {
+    return new MaximumGenerationTerminator<TIterationResult>(maxGenerations);
   }
-  public static MaximumExecutionTimeTerminator<TState> OnExecutionTime<TState>(TimeSpan maxTime) where TState : IResultState {
-    return new MaximumExecutionTimeTerminator<TState>(maxTime);
+  public static MaximumExecutionTimeTerminator<TIterationResult> OnExecutionTime<TIterationResult>(TimeSpan maxTime) where TIterationResult : IIterationResult {
+    return new MaximumExecutionTimeTerminator<TIterationResult>(maxTime);
+  }
+  public static NeverTerminator<TIterationResult> NeverTerminate<TIterationResult>() where TIterationResult : IIterationResult {
+    return new NeverTerminator<TIterationResult>();
   }
 }
 
-public sealed class CustomTerminator<TState> : ITerminator<TState> where TState : IResultState {
-  private readonly Func<TState, bool> predicate;
-  internal CustomTerminator(Func<TState, bool> predicate) {
+public sealed class CustomTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
+  private readonly Func<TIterationResult, bool> predicate;
+  internal CustomTerminator(Func<TIterationResult, bool> predicate) {
     this.predicate = predicate;
   }
-  public bool ShouldTerminate(TState state) => predicate(state);
+  public bool ShouldTerminate(TIterationResult iterationResult) => predicate(iterationResult);
 }
 
-public class MaximumGenerationTerminator<TState> : ITerminator<TState> where TState : IResultState {
+public class MaximumGenerationTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
   public int MaximumGeneration { get; }
   public MaximumGenerationTerminator(int maximumGeneration) {
     MaximumGeneration = maximumGeneration;
   }
-  public bool ShouldTerminate(TState state) {
-    return state.Generation >= MaximumGeneration;
+  public bool ShouldTerminate(TIterationResult iterationResult) {
+    return iterationResult.Iteration >= MaximumGeneration;
   }
 }
-public class MaximumExecutionTimeTerminator<TState> : ITerminator<TState> where TState : IResultState {
+public class MaximumExecutionTimeTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
   public TimeSpan MaximumExecutionTime { get; }
   public MaximumExecutionTimeTerminator(TimeSpan maximumExecutionTime) {
     MaximumExecutionTime = maximumExecutionTime;
   }
-  public bool ShouldTerminate(TState state) {
-    return state.TotalDuration >= MaximumExecutionTime;
+  public bool ShouldTerminate(TIterationResult iterationResult) {
+    return iterationResult.TotalDuration >= MaximumExecutionTime;
   }
 }
 
@@ -60,30 +62,34 @@ public class PauseToken {
   public void RequestPause() => IsPaused = true;
 }
 
-public class PauseTokenTerminator<TState> : ITerminator<TState> where TState : IResultState {
+public class PauseTokenTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
   public PauseToken Token { get; }
   public PauseTokenTerminator(PauseToken pauseToken) {
     Token = pauseToken;
   }
-  public bool ShouldTerminate(TState state) => Token.IsPaused;
+  public bool ShouldTerminate(TIterationResult iterationResult) => Token.IsPaused;
 }
 
-public class AnyTerminator<TState> : ITerminator<TState> where TState : IResultState {
-  public IReadOnlyList<ITerminator<TState>> Terminators { get; }
-  public AnyTerminator(IReadOnlyList<ITerminator<TState>> terminators) {
+public class NeverTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
+  public bool ShouldTerminate(TIterationResult iterationResult) => false;
+}
+
+public class AnyTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
+  public IReadOnlyList<ITerminator<TIterationResult>> Terminators { get; }
+  public AnyTerminator(IReadOnlyList<ITerminator<TIterationResult>> terminators) {
     Terminators = terminators;
   }
-  public bool ShouldTerminate(TState state) {
-    return Terminators.Any(criterion => criterion.ShouldTerminate(state));
+  public bool ShouldTerminate(TIterationResult iterationResult) {
+    return Terminators.Any(criterion => criterion.ShouldTerminate(iterationResult));
   }
 }
 
-public class AllTerminator<TState> : ITerminator<TState> where TState : IResultState {
-  public IReadOnlyList<ITerminator<TState>> Terminators { get; }
-  public AllTerminator(IReadOnlyList<ITerminator<TState>> terminators) {
+public class AllTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
+  public IReadOnlyList<ITerminator<TIterationResult>> Terminators { get; }
+  public AllTerminator(IReadOnlyList<ITerminator<TIterationResult>> terminators) {
     Terminators = terminators;
   }
-  public bool ShouldTerminate(TState state) {
-    return Terminators.All(criterion => criterion.ShouldTerminate(state));
+  public bool ShouldTerminate(TIterationResult iterationResult) {
+    return Terminators.All(criterion => criterion.ShouldTerminate(iterationResult));
   }
 }

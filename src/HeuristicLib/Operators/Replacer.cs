@@ -1,24 +1,23 @@
-﻿using HEAL.HeuristicLib.Core;
-using HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
 public interface IReplacer : IOperator {
-  Individual<TGenotype, TPhenotype>[] Replace<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] previousPopulation, Individual<TGenotype, TPhenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random);
+  IReadOnlyList<EvaluatedIndividual<TGenotype>> Replace<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> previousPopulation/*, TPhenotype*/, IReadOnlyList<EvaluatedIndividual<TGenotype>> offspringPopulation/*, TPhenotype*/, Objective objective, IRandomNumberGenerator random);
   int GetOffspringCount(int populationSize);
 }
 
 public abstract class ReplacerBase : IReplacer {
-  public abstract Individual<TGenotype, TPhenotype>[] Replace<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] previousPopulation, Individual<TGenotype, TPhenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random);
+  public abstract IReadOnlyList<EvaluatedIndividual<TGenotype>> Replace<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> previousPopulation/*, TPhenotype*/, IReadOnlyList<EvaluatedIndividual<TGenotype>> offspringPopulation/*, TPhenotype*/, Objective objective, IRandomNumberGenerator random);
   public abstract int GetOffspringCount(int populationSize);
 }
 
 public class PlusSelectionReplacer : ReplacerBase {
-  public override Individual<TGenotype, TPhenotype>[] Replace<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] previousPopulation, Individual<TGenotype, TPhenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random) {
+  public override IReadOnlyList<EvaluatedIndividual<TGenotype>> Replace<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> previousPopulation/*, TPhenotype*/, IReadOnlyList<EvaluatedIndividual<TGenotype>> offspringPopulation/*, TPhenotype*/, Objective objective, IRandomNumberGenerator random) {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
     return combinedPopulation
       .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
-      .Take(previousPopulation.Length) // if algorithm population differs from previousPopulation.Length, it is not detected
+      .Take(previousPopulation.Count) // if algorithm population differs from previousPopulation.Length, it is not detected
       .ToArray();
   }
   
@@ -34,7 +33,7 @@ public class ElitismReplacer : ReplacerBase {
     Elites = elites;
   }
 
-  public override Individual<TGenotype, TPhenotype>[] Replace<TGenotype, TPhenotype>(Individual<TGenotype, TPhenotype>[] previousPopulation, Individual<TGenotype, TPhenotype>[] offspringPopulation, Objective objective, IRandomNumberGenerator random) {
+  public override IReadOnlyList<EvaluatedIndividual<TGenotype>> Replace<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> previousPopulation/*, TPhenotype*/, IReadOnlyList<EvaluatedIndividual<TGenotype>> offspringPopulation/*, TPhenotype*/, Objective objective, IRandomNumberGenerator random) {
     var elitesPopulation = previousPopulation
       .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
       .Take(Elites);

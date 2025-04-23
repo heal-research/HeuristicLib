@@ -1,22 +1,38 @@
-﻿namespace HEAL.HeuristicLib.Core;
+﻿namespace HEAL.HeuristicLib;
 
-public record Individual<TGenotype, TPhenotype>(TGenotype Genotype, TPhenotype Phenotype, Fitness Fitness) {}
+public record EvaluatedIndividual<TGenotype>(TGenotype Genotype, Fitness Fitness);
+public record EvaluatedIndividual<TGenotype, TPhenotype>(TGenotype Genotype, TPhenotype Phenotype, Fitness Fitness) : EvaluatedIndividual<TGenotype>(Genotype, Fitness);
 
-public static class Individual {
-  public static Individual<TGenotype, TPhenotype> From<TGenotype, TPhenotype>(TGenotype genotype, TPhenotype phenotype, Fitness fitness) => new(genotype, phenotype, fitness);
+public static class EvaluatedIndividual {
+  public static EvaluatedIndividual<TGenotype> From<TGenotype>(TGenotype genotype, Fitness fitness) => new(genotype, fitness);
+  public static EvaluatedIndividual<TGenotype, TPhenotype> From<TGenotype, TPhenotype>(TGenotype genotype, TPhenotype phenotype, Fitness fitness) => new(genotype, phenotype, fitness);
 }
 
 public static class Population {
-  public static Individual<TGenotype, TPhenotype>[] From<TGenotype, TPhenotype>(IEnumerable<TGenotype> genotypes, IEnumerable<TPhenotype> phenotypes, IEnumerable<Fitness> fitnesses) {
+  public static IReadOnlyList<EvaluatedIndividual<TGenotype>> From<TGenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<Fitness> fitnesses) {
+    if (genotypes.Count != fitnesses.Count)
+      throw new ArgumentException("Genotypes and fitnesses must have the same length.");
+    
+    return Enumerable.Zip(genotypes, fitnesses)
+      .Select(x => EvaluatedIndividual.From(x.First, x.Second))
+      .ToArray();
+  }
+  public static IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>> From<TGenotype, TPhenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<TPhenotype> phenotypes, IReadOnlyList<Fitness> fitnesses) {
+    if (genotypes.Count != phenotypes.Count || genotypes.Count != fitnesses.Count)
+      throw new ArgumentException("Genotypes, phenotypes and fitnesses must have the same length.");
+    
     return Enumerable.Zip(genotypes, phenotypes, fitnesses)
-      .Select(x => Individual.From(x.First, x.Second, x.Third))
+      .Select(x => EvaluatedIndividual.From(x.First, x.Second, x.Third))
       .ToArray();
   }
 }
-
-public static class IndividualExtensions {
-  public static DominanceRelation CompareTo<TGenotype, TPhenotype>(this Individual<TGenotype, TPhenotype> individual, Individual<TGenotype, TPhenotype> other, Objective objective) {
-    return individual.Fitness.CompareTo(other.Fitness, objective);
-  }
-}
-
+//
+// public static class IndividualExtensions {
+//   public static DominanceRelation CompareTo<TGenotype>(this EvaluatedIndividual<TGenotype> individual, EvaluatedIndividual<TGenotype> other, Objective objective) {
+//     return individual.Fitness.CompareTo(other.Fitness, objective);
+//   }
+//   public static DominanceRelation CompareTo<TGenotype, TPhenotype>(this EvaluatedIndividual<TGenotype, TPhenotype> individual, EvaluatedIndividual<TGenotype, TPhenotype> other, Objective objective) {
+//     return individual.Fitness.CompareTo(other.Fitness, objective);
+//   }
+// }
+//
