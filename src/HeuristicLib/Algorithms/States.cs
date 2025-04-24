@@ -6,21 +6,37 @@ public interface IAlgorithmResult {
   TimeSpan TotalDuration { get; }
 }
 
+public interface ISingleObjectiveAlgorithmResult<TGenotype> : IAlgorithmResult {
+  EvaluatedIndividual<TGenotype>? BestSolution { get; }
+}
+
+public interface IMultiObjectiveAlgorithmResult<TGenotype> : IAlgorithmResult {
+  IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront { get; }
+}
+
 public interface IIterationResult {
   int UsedIterationRandomSeed { get; }
   int Iteration { get; }
   TimeSpan TotalDuration { get; }
 }
 
+public interface ISingleObjectiveIterationResult<TGenotype> : IIterationResult {
+  EvaluatedIndividual<TGenotype> BestSolution { get; }
+}
+
+public interface IMultiObjectiveIterationResult<TGenotype> : IIterationResult {
+  IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront { get; }
+}
+
 public interface IContinuableIterationResult<out TState> : IIterationResult {
   TState GetNextState(); // ToDo: better name since turning it next sounds like incrementing some count or something
 }
 
-public record OperatorMetric(int Count, TimeSpan Duration) {
-  public static OperatorMetric Aggregate(OperatorMetric a, OperatorMetric b) {
-    return new OperatorMetric(a.Count + b.Count, a.Duration + b.Duration);
+public readonly record struct OperatorMetric(int Count, TimeSpan Duration) {
+  public static OperatorMetric Aggregate(OperatorMetric left, OperatorMetric right) {
+    return new OperatorMetric(left.Count + right.Count, left.Duration + right.Duration);
   }
-  public static OperatorMetric operator +(OperatorMetric a, OperatorMetric b) => Aggregate(a, b);
+  public static OperatorMetric operator +(OperatorMetric left, OperatorMetric right) => Aggregate(left, right);
   
   public static OperatorMetric Zero => new(0, TimeSpan.Zero);
 }

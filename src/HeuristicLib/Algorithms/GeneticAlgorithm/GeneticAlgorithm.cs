@@ -64,7 +64,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
     var totalMetrics = new GeneticAlgorithmOperatorMetrics();
     
     foreach (var result in ExecuteStreaming(problem, initialState)) {
-      if (bestSolution is null || comparer.Compare(bestSolution.Fitness, result.BestSolution.Fitness) < 0) 
+      if (bestSolution is null || comparer.Compare(result.BestSolution.Fitness, bestSolution.Fitness) < 0) // ToDo: better "IsBetter" method.
         bestSolution = result.BestSolution;
       totalGenerations += 1;
       totalDuration += result.TotalDuration;

@@ -17,22 +17,22 @@ public record GeneticAlgorithmOperatorMetrics {
   public OperatorMetric Replacement { get; init; } = OperatorMetric.Zero;
   public OperatorMetric Interception { get; init; } = OperatorMetric.Zero;
   
-  public static GeneticAlgorithmOperatorMetrics Aggregate(GeneticAlgorithmOperatorMetrics a, GeneticAlgorithmOperatorMetrics b) {
+  public static GeneticAlgorithmOperatorMetrics Aggregate(GeneticAlgorithmOperatorMetrics left, GeneticAlgorithmOperatorMetrics right) {
     return new GeneticAlgorithmOperatorMetrics {
-      Creation = a.Creation + b.Creation,
-      Decoding = a.Decoding + b.Decoding,
-      Evaluation = a.Evaluation + b.Evaluation,
-      Selection = a.Selection + b.Selection,
-      Crossover = a.Crossover + b.Crossover,
-      Mutation = a.Mutation + b.Mutation,
-      Replacement = a.Replacement + b.Replacement,
-      Interception = a.Interception + b.Interception
+      Creation = left.Creation + right.Creation,
+      Decoding = left.Decoding + right.Decoding,
+      Evaluation = left.Evaluation + right.Evaluation,
+      Selection = left.Selection + right.Selection,
+      Crossover = left.Crossover + right.Crossover,
+      Mutation = left.Mutation + right.Mutation,
+      Replacement = left.Replacement + right.Replacement,
+      Interception = left.Interception + right.Interception
     };
   }
-  public static GeneticAlgorithmOperatorMetrics operator +(GeneticAlgorithmOperatorMetrics a, GeneticAlgorithmOperatorMetrics b) => Aggregate(a, b);
+  public static GeneticAlgorithmOperatorMetrics operator +(GeneticAlgorithmOperatorMetrics left, GeneticAlgorithmOperatorMetrics right) => Aggregate(left, right);
 }
 
-public record GeneticAlgorithmIterationResult<TGenotype> : IContinuableIterationResult<GeneticAlgorithmState<TGenotype>> {
+public record GeneticAlgorithmIterationResult<TGenotype> : ISingleObjectiveIterationResult<TGenotype>, IContinuableIterationResult<GeneticAlgorithmState<TGenotype>> {
   int IIterationResult.UsedIterationRandomSeed => UsedGenerationRandomSeed;
   public required int UsedGenerationRandomSeed { get; init; }
   
@@ -63,7 +63,7 @@ public record GeneticAlgorithmIterationResult<TGenotype> : IContinuableIteration
   };
 }
 
-public record GeneticAlgorithmResult<TGenotype> : IAlgorithmResult {
+public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype> {
   [Obsolete("Not necessary on result, since it can be obtained form the algorithm (parameters)")]
   public required int UsedRandomSeed { get; init; }
   public required TimeSpan TotalDuration { get; init; }
