@@ -28,19 +28,19 @@ public record EvolutionStrategyOperatorMetrics {
   public OperatorMetric Replacement { get; init; } = OperatorMetric.Zero;
   public OperatorMetric Interception { get; init; } = OperatorMetric.Zero;
   
-  public static EvolutionStrategyOperatorMetrics Aggregate(EvolutionStrategyOperatorMetrics a, EvolutionStrategyOperatorMetrics b) {
+  public static EvolutionStrategyOperatorMetrics Aggregate(EvolutionStrategyOperatorMetrics left, EvolutionStrategyOperatorMetrics right) {
     return new EvolutionStrategyOperatorMetrics {
-      Creation = a.Creation + b.Creation,
-      Decoding = a.Decoding + b.Decoding,
-      Evaluation = a.Evaluation + b.Evaluation,
-      Selection = a.Selection + b.Selection,
+      Creation = left.Creation + right.Creation,
+      Decoding = left.Decoding + right.Decoding,
+      Evaluation = left.Evaluation + right.Evaluation,
+      Selection = left.Selection + right.Selection,
       //Crossover = a.Crossover + b.Crossover,
-      Mutation = a.Mutation + b.Mutation,
-      Replacement = a.Replacement + b.Replacement,
-      Interception = a.Interception + b.Interception
+      Mutation = left.Mutation + right.Mutation,
+      Replacement = left.Replacement + right.Replacement,
+      Interception = left.Interception + right.Interception
     };
   }
-  public static EvolutionStrategyOperatorMetrics operator +(EvolutionStrategyOperatorMetrics a, EvolutionStrategyOperatorMetrics b) => Aggregate(a, b);
+  public static EvolutionStrategyOperatorMetrics operator +(EvolutionStrategyOperatorMetrics left, EvolutionStrategyOperatorMetrics right) => Aggregate(left, right);
 }
 
 
@@ -70,7 +70,7 @@ public record EvolutionStrategyIterationResult : IContinuableIterationResult<Evo
   private readonly Lazy<EvaluatedIndividual<RealVector>> bestSolution;
   public EvaluatedIndividual<RealVector> BestSolution => bestSolution.Value;
   
-  public EvolutionStrategyState GetNextState() => new() {
+  public EvolutionStrategyState GetState() => new() {
     UsedRandomSeed = UsedGenerationRandomSeed,
     Generation = Generation /*+ 1*/,
     MutationStrength = MutationStrength,
@@ -100,14 +100,14 @@ public class EvolutionStrategy
   public double InitialMutationStrength { get; }
   public ISelector Selector { get; }
   public int RandomSeed { get; }
-  public IInterceptor<EvolutionStrategyIterationResult> Interceptor { get; }
+  public IInterceptor<EvolutionStrategyIterationResult>? Interceptor { get; }
 
   public EvolutionStrategy(
     int populationSize,
     int children,
     EvolutionStrategyType strategy,
     ICreator<RealVector, RealVectorEncoding> creator,
-    ICrossover<RealVector, RealVectorEncoding> crossover,
+    //ICrossover<RealVector, RealVectorEncoding> crossover,
     IMutator<RealVector, RealVectorEncoding> mutator,
     double initialMutationStrength,
     ISelector selector,
@@ -124,19 +124,8 @@ public class EvolutionStrategy
     InitialMutationStrength = initialMutationStrength;
     Selector = selector;
     RandomSeed = randomSeed;
-    Interceptor = interceptor ?? Interceptors.Identity<EvolutionStrategyIterationResult>();
+    Interceptor = interceptor;
 }
-  
-  // public override EvaluatedIndividual<RealVector, TPhenotype> Solve<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState? initialState = null) {
-  //   var lastState = (EvolutionStrategyResult<TPhenotype>)Execute(problem, initialState);
-  //   return lastState.BestPhenotypeSolution;
-  // }
-  //
-  // public override IEnumerable<EvaluatedIndividual<RealVector, TPhenotype>> SolveStreaming<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState? initialState = null) {
-  //   foreach (var state in ExecuteStreaming(problem, initialState).Cast<EvolutionStrategyResult<TPhenotype>>()) {
-  //     yield return state.BestPhenotypeSolution;
-  //   }
-  // }
   
   public override EvolutionStrategyResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState? initialState = null) {
     EvaluatedIndividual<RealVector>? bestSolution = null;
@@ -168,15 +157,10 @@ public class EvolutionStrategy
 
     var random = new SystemRandomNumberGenerator(RandomSeed);
     
-    //var givenPopulation = startState?.Population ?? [];
-    //int remainingCount = PopulationSize - givenPopulation.Length;
-
     var startCreating = Stopwatch.GetTimestamp();
-    //var newPopulation = Enumerable.Range(0, remainingCount).Select(i => Creator.Create(problem.Encoding, random)).ToArray();
     var newPopulation = Enumerable.Range(0, PopulationSize).Select(i => Creator.Create(problem.Encoding, random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
-    //var genotypePopulation = givenPopulation.Concat(newPopulation).Take(PopulationSize).ToArray();
     var genotypePopulation = newPopulation;
     
     var startDecoding = Stopwatch.GetTimestamp();
@@ -187,7 +171,7 @@ public class EvolutionStrategy
     var fitnesses = phenotypePopulation.Select(phenotype => problem.Evaluator.Evaluate(phenotype)).ToArray();
     var endEvaluating = Stopwatch.GetTimestamp();
 
-    var population = Population.From(genotypePopulation, phenotypePopulation, fitnesses);
+    var population = Population.From(genotypePopulation, /*phenotypePopulation,*/ fitnesses);
 
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
     
@@ -204,6 +188,8 @@ public class EvolutionStrategy
         Evaluation = new(fitnesses.Length, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating)),
       }
     };
+    
+    if (Interceptor is null) return result;
     
     var interceptorStart = Stopwatch.GetTimestamp();
     var interceptedResult = Interceptor.Transform(result);
@@ -267,7 +253,7 @@ public class EvolutionStrategy
       _ => state.MutationStrength
     };
     
-    var population = Population.From(genotypePopulation, phenotypePopulation, fitnesses);
+    var population = Population.From(genotypePopulation, /*phenotypePopulation,*/ fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
     IReplacer replacer = Strategy switch {
@@ -296,6 +282,8 @@ public class EvolutionStrategy
       }
     };
     
+    if (Interceptor is null) return result;
+    
     var interceptorStart = Stopwatch.GetTimestamp();
     var interceptedResult = Interceptor.Transform(result);
     var interceptorEnd = Stopwatch.GetTimestamp();
@@ -310,71 +298,4 @@ public class EvolutionStrategy
       }
     };
   }
-  
-  
-  // public override ResultStream<EvolutionStrategyPopulationState> CreateExecutionStream(EvolutionStrategyPopulationState? initialState = null) {
-  //   return new ResultStream<EvolutionStrategyPopulationState>(InternalCreateExecutionStream(initialState));
-  // }
-  //
-  // private IEnumerable<EvolutionStrategyPopulationState> InternalCreateExecutionStream(EvolutionStrategyPopulationState? initialState) {
-  //   var random = RandomSource.CreateRandomNumberGenerator();
-  //   
-  //   EvolutionStrategyPopulationState currentState;
-  //   if (initialState is null) {
-  //     var initialPopulation = InitializePopulation();
-  //     var evaluatedInitialPopulation = Evaluator.Evaluate(initialPopulation);
-  //     yield return currentState = new EvolutionStrategyPopulationState { Objective = Objective, MutationStrength = InitialMutationStrength, Population = evaluatedInitialPopulation }; 
-  //   } else {
-  //     currentState = initialState;
-  //   }
-  //   
-  //   while (Terminator?.ShouldContinue(currentState) ?? true) {
-  //     var (offspringPopulation, successfulOffspring) = EvolvePopulation(currentState.Population, currentState.MutationStrength, random);
-  //     var evaluatedOffspring = Evaluator.Evaluate(offspringPopulation);
-  //
-  //     var newPopulation = Strategy switch {
-  //       EvolutionStrategyType.Comma => evaluatedOffspring,
-  //       EvolutionStrategyType.Plus => CombinePopulations(currentState.Population, evaluatedOffspring),
-  //       _ => throw new NotImplementedException("Unknown strategy")
-  //     };
-  //     
-  //     double successRate = (double)successfulOffspring / offspringPopulation.Length;
-  //     double newMutationStrength = successRate switch {
-  //       > 0.2 => currentState.MutationStrength * 1.5,
-  //       < 0.2 => currentState.MutationStrength / 1.5,
-  //       _ => currentState.MutationStrength
-  //     };
-  //
-  //     yield return currentState = currentState.Next() with { MutationStrength = newMutationStrength, Population = newPopulation };
-  //   }
-  // }
-  //
-  // private RealVector[] InitializePopulation() {
-  //   var population = new RealVector[PopulationSize];
-  //   for (int i = 0; i < PopulationSize; i++) {
-  //     population[i] = Creator.Create();
-  //   }
-  //   return population;
-  // }
-  //
-  // private (RealVector[], int successfulOffspring) EvolvePopulation(Solution<RealVector>[] population, double mutationStrength, IRandomNumberGenerator random) {
-  //   var offspringPopulation = new RealVector[Children];
-  //   for (int i = 0; i < Children; i++) {
-  //     var parent = population[random.Integer(PopulationSize)].Phenotype;
-  //     // var offspring = Mutator is IAdaptableMutator<RealVector> adaptableMutator 
-  //     //   ? adaptableMutator.Mutate(parent, mutationStrength) 
-  //     //   : Mutator.Mutate(parent);
-  //     var offspring = Mutator.Mutate(parent);
-  //     offspringPopulation[i] = offspring;
-  //   }
-  //   return (offspringPopulation, random.Integer(Children, Children * 10));
-  //   // actually calculate success rate
-  //   // would require to evaluate individuals immediately or to store the parent for later comparison after child evaluation
-  // }
-  //
-  // private Solution<RealVector>[] CombinePopulations(Solution<RealVector>[] parents, Solution<RealVector>[] offspring) {
-  //   return parents.Concat(offspring)
-  //     .Take(PopulationSize)
-  //     .ToArray();
-  // }
 }

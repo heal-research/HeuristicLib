@@ -37,13 +37,9 @@
       }
     },
     Population: {
-      $type: EvaluatedIndividual<RealVector, RealVector>[],
+      $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
-          Phenotype: [
-            0.3448517272923386,
-            -3.8727416130121526
-          ],
           Genotype: [
             0.3448517272923386,
             -3.8727416130121526
@@ -53,10 +49,6 @@
           ]
         },
         {
-          Phenotype: [
-            -3.9958536843749943,
-            -0.8178857917980693
-          ],
           Genotype: [
             -3.9958536843749943,
             -0.8178857917980693
@@ -68,11 +60,6 @@
       ]
     },
     BestSolution: {
-      $type: EvaluatedIndividual<RealVector, RealVector>,
-      Phenotype: [
-        -3.9958536843749943,
-        -0.8178857917980693
-      ],
       Genotype: [
         -3.9958536843749943,
         -0.8178857917980693
@@ -123,11 +110,6 @@
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
-          $type: EvaluatedIndividual<RealVector, RealVector>,
-          Phenotype: [
-            0.3448517272923386,
-            -3.8727416130121526
-          ],
           Genotype: [
             0.3448517272923386,
             -3.8727416130121526
@@ -137,11 +119,6 @@
           ]
         },
         {
-          $type: EvaluatedIndividual<RealVector, RealVector>,
-          Phenotype: [
-            0.3225826200901453,
-            -0.8178857917980693
-          ],
           Genotype: [
             0.3225826200901453,
             -0.8178857917980693
@@ -153,11 +130,6 @@
       ]
     },
     BestSolution: {
-      $type: EvaluatedIndividual<RealVector, RealVector>,
-      Phenotype: [
-        0.3448517272923386,
-        -3.8727416130121526
-      ],
       Genotype: [
         0.3448517272923386,
         -3.8727416130121526
@@ -208,11 +180,6 @@
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
-          $type: EvaluatedIndividual<RealVector, RealVector>,
-          Phenotype: [
-            0.3448517272923386,
-            -0.8178857917980693
-          ],
           Genotype: [
             0.3448517272923386,
             -0.8178857917980693
@@ -222,11 +189,6 @@
           ]
         },
         {
-          $type: EvaluatedIndividual<RealVector, RealVector>,
-          Phenotype: [
-            0.3225826200901453,
-            -3.8727416130121526
-          ],
           Genotype: [
             0.3225826200901453,
             -3.8727416130121526
@@ -238,11 +200,6 @@
       ]
     },
     BestSolution: {
-      $type: EvaluatedIndividual<RealVector, RealVector>,
-      Phenotype: [
-        0.3225826200901453,
-        -3.8727416130121526
-      ],
       Genotype: [
         0.3225826200901453,
         -3.8727416130121526
@@ -293,11 +250,6 @@
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
-          $type: EvaluatedIndividual<RealVector, RealVector>,
-          Phenotype: [
-            0.3225826200901453,
-            -0.8178857917980693
-          ],
           Genotype: [
             0.3225826200901453,
             -0.8178857917980693
@@ -307,11 +259,6 @@
           ]
         },
         {
-          $type: EvaluatedIndividual<RealVector, RealVector>,
-          Phenotype: [
-            0.3225826200901453,
-            -3.902643237566875
-          ],
           Genotype: [
             0.3225826200901453,
             -3.902643237566875
@@ -323,11 +270,6 @@
       ]
     },
     BestSolution: {
-      $type: EvaluatedIndividual<RealVector, RealVector>,
-      Phenotype: [
-        0.3225826200901453,
-        -3.902643237566875
-      ],
       Genotype: [
         0.3225826200901453,
         -3.902643237566875

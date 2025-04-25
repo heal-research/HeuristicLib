@@ -23,9 +23,7 @@
     $type: PlusSelectionReplacer
   },
   RandomSeed: 42,
-  Interceptor: {
-    $type: IdentityInterceptor<GeneticAlgorithmIterationResult<RealVector>>
-  },
+  Interceptor: null,
   Terminator: {
     $type: MaximumGenerationTerminator<GeneticAlgorithmIterationResult<RealVector>>,
     MaximumGeneration: 5

@@ -80,7 +80,7 @@ public record class RealVectorEncoding : EncodingBase<RealVector> {
 // }
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
-public class RealVector : IReadOnlyList<double> {
+public class RealVector : IReadOnlyList<double>, IEquatable<RealVector> {
   private readonly double[] elements;
 
   public RealVector(params IEnumerable<double> elements) {
@@ -181,7 +181,19 @@ public class RealVector : IReadOnlyList<double> {
 
   public bool Contains(double value) => elements.Contains(value);
 
+  public bool Equals(RealVector? other) {
+    if (other is null) return false;
+    return ReferenceEquals(this, other) || elements.SequenceEqual(other.elements);
+  }
   
+  public override int GetHashCode() {
+    var hash = new HashCode();
+    foreach (var element in elements) {
+      hash.Add(element);
+    }
+    return hash.ToHashCode();
+  }
+
   public static bool AreCompatible(RealVector a, RealVector b) {
     return a.Count == b.Count || a.Count == 1 || b.Count == 1;
   }
@@ -337,15 +349,12 @@ public class RealVector : IReadOnlyList<double> {
     return new RealVector(Enumerable.Repeat(value, count));
   }
   
-  public override bool Equals(object? obj) {
-    if (obj is RealVector other)
-      return elements.SequenceEqual(other.elements);
-    return false;
-  }
+  // public override bool Equals(object? obj) {
+  //   if (obj is RealVector other)
+  //     return elements.SequenceEqual(other.elements);
+  //   return false;
+  // }
   
-  public override int GetHashCode() {
-    return HashCode.Combine(elements);
-  }
   
   public override string ToString() {
     return $"[{string.Join(", ", elements)}]";
@@ -430,7 +439,7 @@ public class UniformDistributedCreator : CreatorBase<RealVector, RealVectorEncod
   public RealVector? Minimum { get; }
   public RealVector? Maximum { get; }
 
-  public UniformDistributedCreator(RealVector? minimum, RealVector? maximum) {
+  public UniformDistributedCreator(RealVector? minimum = null, RealVector? maximum = null) {
     Minimum = minimum;
     Maximum = maximum;
   }

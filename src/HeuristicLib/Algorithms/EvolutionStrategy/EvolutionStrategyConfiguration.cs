@@ -14,7 +14,6 @@ public record EvolutionStrategyConfiguration {
   public double? InitialMutationStrength { get; init; }
   public ISelector? Selector { get; init; }
   public int? RandomSeed { get; init; }
-  //int? MaximumGenerations = null
   public IInterceptor<EvolutionStrategyResult>? Interceptor { get; init; }
   public ITerminator<EvolutionStrategyResult>? Terminator { get; init; }
 } 

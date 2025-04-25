@@ -56,9 +56,9 @@ public record GeneticAlgorithmIterationResult<TGenotype> : ISingleObjectiveItera
   private readonly Lazy<EvaluatedIndividual<TGenotype>> bestSolution;
   public EvaluatedIndividual<TGenotype> BestSolution => bestSolution.Value;
   
-  public GeneticAlgorithmState<TGenotype> GetNextState() => new() {
+  public GeneticAlgorithmState<TGenotype> GetState() => new() {
     UsedRandomSeed = UsedGenerationRandomSeed,
-    Generation = Generation /*+ 1*/,
+    Generation = Generation,
     Population = Population
   };
 }

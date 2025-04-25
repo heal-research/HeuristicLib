@@ -75,8 +75,6 @@ public static class GeneticAlgorithmConfiguration {
   {
     return FromAlgorithm(algorithm);
   }
-  
-  
 }
 
 public static class GeneticAlgorithmBuildExtensions {
@@ -85,6 +83,24 @@ public static class GeneticAlgorithmBuildExtensions {
   {
     configuration.ThrowIfInvalid();
 
+    return Create(configuration);
+  }
+  
+  public static bool TryBuild<TGenotype, TEncoding>(this GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration, out  GeneticAlgorithm<TGenotype, TEncoding>? algorithm)
+    where TEncoding : IEncoding<TGenotype>
+  {
+    if (!configuration.IsValid()) {
+      algorithm = null;
+      return false;
+    }
+    
+    algorithm = Create(configuration);
+    return true;
+  }
+
+  private static GeneticAlgorithm<TGenotype, TEncoding> Create<TGenotype, TEncoding>(GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration)
+    where TEncoding : IEncoding<TGenotype> 
+  {
     return new GeneticAlgorithm<TGenotype, TEncoding>(
       configuration.PopulationSize!.Value,
       configuration.Creator!,
@@ -98,32 +114,6 @@ public static class GeneticAlgorithmBuildExtensions {
       configuration.Interceptor!
     );
   }
-  
-  public static bool TryBuild<TGenotype, TEncoding>(this GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration, out  GeneticAlgorithm<TGenotype, TEncoding>? algorithm)
-    where TEncoding : IEncoding<TGenotype>
-  {
-    var result = configuration.Validate();
-    if (!result.IsValid) {
-      algorithm = null;
-      return false;
-    }
-    algorithm = new GeneticAlgorithm<TGenotype, TEncoding>(
-      configuration.PopulationSize!.Value,
-      configuration.Creator!,
-      configuration.Crossover!,
-      configuration.Mutator!,
-      configuration.MutationRate!.Value,
-      configuration.Selector!,
-      configuration.Replacer!,
-      configuration.RandomSeed!.Value,
-      configuration.Terminator!,
-      configuration.Interceptor!
-    );
-    
-    return true;
-  }
-  
-  
 }
 
 public class GeneticAlgorithmConfigurationValidator<TGenotype, TEncoding> : AbstractValidator<GeneticAlgorithmConfiguration<TGenotype, TEncoding>>
@@ -139,7 +129,7 @@ public class GeneticAlgorithmConfigurationValidator<TGenotype, TEncoding> : Abst
     RuleFor(x => x.Replacer).NotNull().WithMessage("Replacer must not be null.");
     RuleFor(x => x.RandomSeed).NotNull().WithMessage("Random source must not be null.");
     //RuleFor(x => x.Interceptor).NotNull().WithMessage("Interceptor must not be null.");
-    RuleFor(x => x.Terminator).NotNull().WithMessage("Terminator must not be null.");
+    //RuleFor(x => x.Terminator).NotNull().WithMessage("Terminator must not be null.");
   }
 }
 

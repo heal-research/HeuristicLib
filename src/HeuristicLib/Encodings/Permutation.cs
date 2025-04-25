@@ -112,7 +112,11 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   }
 
   public override int GetHashCode() {
-    return elements.Aggregate(17, (current, item) => current * 23 + item.GetHashCode());
+    var hashCode = new HashCode();
+    foreach (var item in elements) {
+      hashCode.Add(item);
+    }
+    return hashCode.ToHashCode();
   }
 
   public static bool operator ==(Permutation? left, Permutation? right) {
