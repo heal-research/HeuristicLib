@@ -1,4 +1,5 @@
 using FluentValidation;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
@@ -202,7 +203,7 @@ public class GeneticAlgorithmTests {
     var firstResult = firstAlg.ExecuteStreaming(problem).Last();
 
     var newTerminationCriterion = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(12);
-    var continuationState = firstResult.GetState();
+    var continuationState = firstResult.GetContinuationState();
     var secondAlg = (firstAlg.ToConfiguration() with {
       PopulationSize = 8, Terminator = newTerminationCriterion
     }).Build();
@@ -212,6 +213,36 @@ public class GeneticAlgorithmTests {
     await Verify(new { firstResult, finalState })
       .IgnoreMembersWithType<TimeSpan>();
   }
+
+  [Fact]
+  public void GeneticAlgorithm_ExecutingWithInitialStateThatShouldImmediatelyTerminate_DoesNotIterate() {
+    var encoding = new RealVectorEncoding(3, -5, +5);
+    var creator = new UniformDistributedCreator();
+    var crossover = new SinglePointCrossover();
+    var mutator = new GaussianMutator(0.1, 0.1);
+    var decoder = Decoder.Identity<RealVector>();
+    var evaluator = new RealVectorMockEvaluator();
+    var selector = new ProportionalSelector();
+    var replacement = new ElitismReplacer(0);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    
+    var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
+      Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
+    };
+    var alg = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+      populationSize: 5, 
+      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
+      selector: selector, replacer: replacement, 
+      randomSeed: 42, terminator: terminator
+    );
+    var initialState = new GeneticAlgorithmState<RealVector> {
+      Generation = 100, Population = [], UsedRandomSeed = 100
+    };
+
+    var iterationResults = alg.ExecuteStreaming(problem, initialState).ToList();
+    iterationResults.ShouldBeEmpty();
+  }
+  
   
   private class RealVectorMockEvaluator : EvaluatorBase<RealVector> {
     public override Fitness Evaluate(RealVector phenotype) => phenotype.Sum();

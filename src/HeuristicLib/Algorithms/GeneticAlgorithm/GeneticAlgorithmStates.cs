@@ -56,11 +56,13 @@ public record GeneticAlgorithmIterationResult<TGenotype> : ISingleObjectiveItera
   private readonly Lazy<EvaluatedIndividual<TGenotype>> bestSolution;
   public EvaluatedIndividual<TGenotype> BestSolution => bestSolution.Value;
   
-  public GeneticAlgorithmState<TGenotype> GetState() => new() {
+  public GeneticAlgorithmState<TGenotype> GetContinuationState() => new() {
     UsedRandomSeed = UsedGenerationRandomSeed,
     Generation = Generation,
     Population = Population
   };
+
+  public GeneticAlgorithmState<TGenotype> GetRestartState() => GetContinuationState() with { Generation = 0 };
 }
 
 public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype> {

@@ -70,12 +70,14 @@ public record EvolutionStrategyIterationResult : IContinuableIterationResult<Evo
   private readonly Lazy<EvaluatedIndividual<RealVector>> bestSolution;
   public EvaluatedIndividual<RealVector> BestSolution => bestSolution.Value;
   
-  public EvolutionStrategyState GetState() => new() {
+  public EvolutionStrategyState GetContinuationState() => new() {
     UsedRandomSeed = UsedGenerationRandomSeed,
     Generation = Generation /*+ 1*/,
     MutationStrength = MutationStrength,
     Population = Population.Select(i => new EvaluatedIndividual<RealVector>(i.Genotype, i.Fitness)).ToArray()
   };
+  
+  public EvolutionStrategyState GetRestartState() => GetContinuationState() with { Generation = 0 };
 }
 
 public record EvolutionStrategyResult : IAlgorithmResult {

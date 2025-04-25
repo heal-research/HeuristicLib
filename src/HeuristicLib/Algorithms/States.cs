@@ -30,7 +30,8 @@ public interface IMultiObjectiveIterationResult<TGenotype> : IIterationResult {
 }
 
 public interface IContinuableIterationResult<out TState> : IIterationResult {
-  TState GetState();
+  TState GetContinuationState();
+  TState GetRestartState();
 }
 
 public readonly record struct OperatorMetric(int Count, TimeSpan Duration) {

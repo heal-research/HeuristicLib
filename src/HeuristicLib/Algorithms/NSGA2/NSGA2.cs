@@ -260,11 +260,13 @@ public record NSGA2IterationResult<TGenotype> : IMultiObjectiveIterationResult<T
   private readonly Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>> paretoFront;
   public IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront => paretoFront.Value;
   
-  public NSGA2State<TGenotype> GetState() => new() {
+  public NSGA2State<TGenotype> GetContinuationState() => new() {
     UsedRandomSeed = UsedGenerationRandomSeed,
     Generation = Generation,
     Population = Population
   };
+
+  public NSGA2State<TGenotype> GetRestartState() => GetContinuationState() with { Generation = 0 };
 }
 
 public record NSGA2Result<TGenotype> : IMultiObjectiveAlgorithmResult<TGenotype> {

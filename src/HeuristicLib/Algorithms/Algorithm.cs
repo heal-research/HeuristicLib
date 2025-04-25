@@ -109,7 +109,7 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TState, TIteratio
     yield return currentIterationResult;
 
     while (Terminator.ShouldContinue(currentIterationResult)) {
-      var currentState = currentIterationResult.GetState();
+      var currentState = currentIterationResult.GetContinuationState();
       currentIterationResult = ExecuteIteration(problem, currentState);
       yield return currentIterationResult;
     }
