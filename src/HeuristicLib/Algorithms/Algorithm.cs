@@ -60,7 +60,7 @@ public static class AlgorithmSolveExtensions {
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>
   {
     var result = algorithm.Execute(problem, initialState);
-    var bestSolution = result.BestSolution;
+    var bestSolution = result.CurrentBestSolution;
     
     if (bestSolution is null) return null;
     var phenotype = problem.Decoder.Decode(bestSolution.Genotype);
@@ -86,7 +86,7 @@ public static class AlgorithmSolveExtensions {
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype> 
   {
     var result = algorithm.Execute(problem, initialState);
-    var paretoFront = result.ParetoFront;
+    var paretoFront = result.CurrentParetoFront;
 
     return paretoFront
       .Select(individual => new EvaluatedIndividual<TGenotype, TPhenotype>(individual.Genotype, problem.Decoder.Decode(individual.Genotype), individual.Fitness))
@@ -95,89 +95,81 @@ public static class AlgorithmSolveExtensions {
 }
 
 
-public abstract record class StreamableAlgorithm<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
-  : Algorithm<TGenotype, TEncoding, TState, TAlgorithmResult, IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>>
+public abstract record class StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>
+  : Algorithm<TGenotype, TEncoding, TState, TAlgorithmResult, IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult>>
   where TEncoding : IEncoding<TGenotype>
   where TState : class
-  where TIterationResult : class, IContinuableIterationResult<TState>
-  where TAlgorithmResult : class, IAlgorithmResult
+  where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
   // where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
 {
-  public virtual IEnumerable<TIterationResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
+  public virtual IEnumerable<TAlgorithmResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
     var algorithmInstance = CreateInstance();
     return algorithmInstance.ExecuteStreaming(problem, initialState);
   }
 }
 
-public interface IStreamableAlgorithmInstance<out TGenotype, in TEncoding, in TState, out TIterationResult, out TAlgorithmResult>
+public interface IStreamableAlgorithmInstance<out TGenotype, in TEncoding, in TState, out TAlgorithmResult>
   : IAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult>
   where TEncoding : IEncoding<TGenotype>
   where TState : class
-  where TIterationResult : class, IContinuableIterationResult<TState>
-  where TAlgorithmResult : class, IAlgorithmResult
+  where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 {
-  IEnumerable<TIterationResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null);
+  IEnumerable<TAlgorithmResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null);
 }
 
-public abstract class StreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult, TAlgorithm>
-  : AlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult, TAlgorithm>, IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
+public abstract class StreamableAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult, TAlgorithm>
+  : AlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult, TAlgorithm>, IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult>
   where TEncoding : IEncoding<TGenotype>
   where TState : class
-  where TIterationResult : class, IContinuableIterationResult<TState>
-  where TAlgorithmResult : class, IAlgorithmResult
+  where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 {
   protected StreamableAlgorithmInstance(TAlgorithm parameters) : base(parameters) {}
-  public abstract IEnumerable<TIterationResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null);
+  public abstract IEnumerable<TAlgorithmResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null);
 }
 
 public static class AlgorithmSolveStreamingExtensions {
-  public static IEnumerable<EvaluatedIndividual<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TEncoding, TState, TIterationResult, TAlgorithmResult/*, TAlgorithmInstance*/>
-    (this StreamableAlgorithm<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult/*, TAlgorithmInstance*/> algorithm, IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null)
+  public static IEnumerable<EvaluatedIndividual<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TEncoding, TState, TAlgorithmResult>
+    (this StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null)
     where TEncoding : IEncoding<TGenotype>
     where TState : class
-    where TIterationResult : class, ISingleObjectiveIterationResult<TGenotype>, IContinuableIterationResult<TState>
-    where TAlgorithmResult : class, IAlgorithmResult
-    /*where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult> */
+    where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
   {
     var instance = algorithm.CreateInstance();
     return instance.SolveStreaming(problem, initialState);
   }
   
-  public static IEnumerable<EvaluatedIndividual<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
-    (this IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null)
+  public static IEnumerable<EvaluatedIndividual<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TEncoding, TState, TAlgorithmResult>
+    (this IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null)
     where TEncoding : IEncoding<TGenotype>
     where TState : class
-    where TIterationResult : class, ISingleObjectiveIterationResult<TGenotype>, IContinuableIterationResult<TState>
-    where TAlgorithmResult : class, IAlgorithmResult
+    where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
   {
     foreach (var iterationResult in algorithm.ExecuteStreaming(problem, initialState)) {
-      var bestSolution = iterationResult.BestSolution;
+      var bestSolution = iterationResult.CurrentBestSolution;
       yield return new EvaluatedIndividual<TGenotype, TPhenotype>(bestSolution.Genotype, problem.Decoder.Decode(bestSolution.Genotype), bestSolution.Fitness);
     }
   }
   
-  public static IEnumerable<IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TEncoding, TState, TIterationResult, TAlgorithmResult/*, TAlgorithmInstance*/>
-    (this StreamableAlgorithm<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult/*, TAlgorithmInstance*/> algorithm, IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null)
+  public static IEnumerable<IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TEncoding, TState, TAlgorithmResult>
+    (this StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null)
     where TEncoding : IEncoding<TGenotype>
     where TState : class
-    where TIterationResult : class, IMultiObjectiveIterationResult<TGenotype>, IContinuableIterationResult<TState>
-    where TAlgorithmResult : class, IAlgorithmResult
+    where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
     /*where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>*/
   {
     var instance = algorithm.CreateInstance();
     return instance.SolveParetoStreaming(problem, initialState);
   }
   
-  public static IEnumerable<IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
-    (this IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null)
+  public static IEnumerable<IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TEncoding, TState, TAlgorithmResult>
+    (this IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null)
     where TEncoding : IEncoding<TGenotype>
     where TState : class
-    where TIterationResult : class, IMultiObjectiveIterationResult<TGenotype>, IContinuableIterationResult<TState>
-    where TAlgorithmResult : class, IAlgorithmResult
+    where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
   {
     foreach (var iterationResult in algorithm.ExecuteStreaming(problem, initialState)) {
       yield return iterationResult
-        .ParetoFront
+        .CurrentParetoFront
         .Select(individual => new EvaluatedIndividual<TGenotype, TPhenotype>(individual.Genotype, problem.Decoder.Decode(individual.Genotype), individual.Fitness))
         .ToList();
     }
@@ -225,17 +217,15 @@ public static class AlgorithmSolveStreamingExtensions {
 //   
 // }
 
-public abstract record class IterativeAlgorithm<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult/*, TAlgorithmInstance*/>
-  : StreamableAlgorithm<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult/*, TAlgorithmInstance*/>
+public abstract record class IterativeAlgorithm<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
+  : StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>
   where TEncoding : IEncoding<TGenotype>
   where TState : class
-  where TIterationResult : class, IContinuableIterationResult<TState>
-  where TAlgorithmResult : class, IAlgorithmResult
-  // where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult> 
+  where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 {
-  public Terminator<TIterationResult> Terminator { get; }
+  public Terminator<TAlgorithmResult> Terminator { get; init; }
 
-  protected IterativeAlgorithm(Terminator<TIterationResult> terminator) {
+  protected IterativeAlgorithm(Terminator<TAlgorithmResult> terminator) {
     Terminator = terminator;
   }
 }
@@ -251,34 +241,41 @@ public abstract record class IterativeAlgorithm<TGenotype, TEncoding, TState, TI
 // }
 
 public abstract class IterativeAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult, TAlgorithm>
-  : StreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult, TAlgorithm>
+  : StreamableAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult, TAlgorithm>
   where TEncoding : IEncoding<TGenotype>
   where TState : class
-  where TIterationResult : class, IContinuableIterationResult<TState>
-  where TAlgorithmResult : class, IAlgorithmResult
+  where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
   where TAlgorithm : IterativeAlgorithm<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
-  /*where TAlgorithm : IterativeAlgorithm<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult, IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>>*/
 {
-  public ITerminatorInstance<TIterationResult> Terminator { get; set; }
+  public ITerminatorInstance<TAlgorithmResult> Terminator { get; set; }
 
   protected IterativeAlgorithmInstance(TAlgorithm parameters) : base(parameters) {
     Terminator = parameters.Terminator.CreateInstance();
   }
-  
-  public override IEnumerable<TIterationResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
+
+  public override TAlgorithmResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
+    return ExecuteStreaming(problem, initialState).Last();
+  }
+
+  public override IEnumerable<TAlgorithmResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
     var currentIterationResult = initialState is null
       ? ExecuteInitialization(problem) 
       : ExecuteIteration(problem, initialState);
-    yield return currentIterationResult;
-
-    while (Terminator.ShouldContinue(currentIterationResult)) {
-      var currentState = currentIterationResult.GetContinuationState();
+    TAlgorithmResult? currentAlgorithmResult = null;
+    currentAlgorithmResult = AggregateResult(currentIterationResult, currentAlgorithmResult);
+    yield return currentAlgorithmResult;
+    
+    while (Terminator.ShouldContinue(currentAlgorithmResult)) {
+      var currentState = currentAlgorithmResult.GetContinuationState();
       currentIterationResult = ExecuteIteration(problem, currentState);
-      yield return currentIterationResult;
+      currentAlgorithmResult = AggregateResult(currentIterationResult, currentAlgorithmResult);
+      yield return currentAlgorithmResult;
     }
   }
   
   protected abstract TIterationResult ExecuteInitialization<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem);
   
   protected abstract TIterationResult ExecuteIteration<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState state);
+  
+  protected abstract TAlgorithmResult AggregateResult(TIterationResult iterationResult, TAlgorithmResult? algorithmResult);
 }

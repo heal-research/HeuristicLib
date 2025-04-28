@@ -1,15 +1,8 @@
 ﻿[
   {
-    Generation: 0,
-    Objective: {
-      Directions: [
-        Minimize
-      ],
-      TotalOrderComparer: {
-        $type: SingleObjectiveComparer
-      }
-    },
-    OperatorMetrics: {
+    CurrentGeneration: 0,
+    TotalGenerations: 0,
+    CurrentOperatorMetrics: {
       Creation: {
         Count: 5
       },
@@ -35,7 +28,41 @@
         Count: 0
       }
     },
-    Population: {
+    TotalOperatorMetrics: {
+      Creation: {
+        Count: 5
+      },
+      Decoding: {
+        Count: 5
+      },
+      Evaluation: {
+        Count: 5
+      },
+      Selection: {
+        Count: 0
+      },
+      Crossover: {
+        Count: 0
+      },
+      Mutation: {
+        Count: 0
+      },
+      Replacement: {
+        Count: 0
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
+    CurrentPopulation: {
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
@@ -90,7 +117,7 @@
         }
       ]
     },
-    BestSolution: {
+    CurrentBestSolution: {
       Genotype: [
         0.3448517272923386,
         -3.8727416130121526,
@@ -102,16 +129,9 @@
     }
   },
   {
-    Generation: 1,
-    Objective: {
-      Directions: [
-        Minimize
-      ],
-      TotalOrderComparer: {
-        $type: SingleObjectiveComparer
-      }
-    },
-    OperatorMetrics: {
+    CurrentGeneration: 1,
+    TotalGenerations: 1,
+    CurrentOperatorMetrics: {
       Creation: {
         Count: 0
       },
@@ -137,7 +157,41 @@
         Count: 0
       }
     },
-    Population: {
+    TotalOperatorMetrics: {
+      Creation: {
+        Count: 5
+      },
+      Decoding: {
+        Count: 10
+      },
+      Evaluation: {
+        Count: 10
+      },
+      Selection: {
+        Count: 10
+      },
+      Crossover: {
+        Count: 5
+      },
+      Mutation: {
+        Count: 3
+      },
+      Replacement: {
+        Count: 1
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
+    CurrentPopulation: {
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
@@ -192,7 +246,7 @@
         }
       ]
     },
-    BestSolution: {
+    CurrentBestSolution: {
       Genotype: [
         -0.8178857917980693,
         -3.652526206640772,
@@ -204,16 +258,9 @@
     }
   },
   {
-    Generation: 2,
-    Objective: {
-      Directions: [
-        Minimize
-      ],
-      TotalOrderComparer: {
-        $type: SingleObjectiveComparer
-      }
-    },
-    OperatorMetrics: {
+    CurrentGeneration: 2,
+    TotalGenerations: 2,
+    CurrentOperatorMetrics: {
       Creation: {
         Count: 0
       },
@@ -239,7 +286,41 @@
         Count: 0
       }
     },
-    Population: {
+    TotalOperatorMetrics: {
+      Creation: {
+        Count: 5
+      },
+      Decoding: {
+        Count: 15
+      },
+      Evaluation: {
+        Count: 15
+      },
+      Selection: {
+        Count: 20
+      },
+      Crossover: {
+        Count: 10
+      },
+      Mutation: {
+        Count: 7
+      },
+      Replacement: {
+        Count: 2
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
+    CurrentPopulation: {
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
@@ -294,7 +375,7 @@
         }
       ]
     },
-    BestSolution: {
+    CurrentBestSolution: {
       Genotype: [
         -0.785001999109519,
         -3.7022188057900496,
@@ -306,16 +387,9 @@
     }
   },
   {
-    Generation: 3,
-    Objective: {
-      Directions: [
-        Minimize
-      ],
-      TotalOrderComparer: {
-        $type: SingleObjectiveComparer
-      }
-    },
-    OperatorMetrics: {
+    CurrentGeneration: 3,
+    TotalGenerations: 3,
+    CurrentOperatorMetrics: {
       Creation: {
         Count: 0
       },
@@ -341,7 +415,41 @@
         Count: 0
       }
     },
-    Population: {
+    TotalOperatorMetrics: {
+      Creation: {
+        Count: 5
+      },
+      Decoding: {
+        Count: 20
+      },
+      Evaluation: {
+        Count: 20
+      },
+      Selection: {
+        Count: 30
+      },
+      Crossover: {
+        Count: 15
+      },
+      Mutation: {
+        Count: 10
+      },
+      Replacement: {
+        Count: 3
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
+    CurrentPopulation: {
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
@@ -396,7 +504,7 @@
         }
       ]
     },
-    BestSolution: {
+    CurrentBestSolution: {
       Genotype: [
         0.3448517272923386,
         -3.652526206640772,
@@ -408,16 +516,9 @@
     }
   },
   {
-    Generation: 4,
-    Objective: {
-      Directions: [
-        Minimize
-      ],
-      TotalOrderComparer: {
-        $type: SingleObjectiveComparer
-      }
-    },
-    OperatorMetrics: {
+    CurrentGeneration: 4,
+    TotalGenerations: 4,
+    CurrentOperatorMetrics: {
       Creation: {
         Count: 0
       },
@@ -443,7 +544,41 @@
         Count: 0
       }
     },
-    Population: {
+    TotalOperatorMetrics: {
+      Creation: {
+        Count: 5
+      },
+      Decoding: {
+        Count: 25
+      },
+      Evaluation: {
+        Count: 25
+      },
+      Selection: {
+        Count: 40
+      },
+      Crossover: {
+        Count: 20
+      },
+      Mutation: {
+        Count: 13
+      },
+      Replacement: {
+        Count: 4
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
+    CurrentPopulation: {
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
@@ -498,7 +633,7 @@
         }
       ]
     },
-    BestSolution: {
+    CurrentBestSolution: {
       Genotype: [
         -0.7356535335237412,
         -3.652526206640772,

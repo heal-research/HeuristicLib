@@ -2,7 +2,6 @@
 using FluentValidation.Results;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
@@ -18,7 +17,7 @@ public record GeneticAlgorithmConfiguration<TGenotype, TEncoding>
   public Replacer? Replacer { get; init; }
   public int? RandomSeed { get; init; }
   public Interceptor<GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; init; }
-  public Terminator<GeneticAlgorithmIterationResult<TGenotype>>? Terminator { get; init; }
+  public Terminator<GeneticAlgorithmResult<TGenotype>>? Terminator { get; init; }
 }
 
 public static class GeneticAlgorithmConfiguration {

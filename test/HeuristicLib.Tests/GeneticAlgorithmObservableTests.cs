@@ -19,7 +19,7 @@ public class GeneticAlgorithmObservableTests {
     var evaluator = Evaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(3);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3);
     var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> { Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize };
     
     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
@@ -31,8 +31,8 @@ public class GeneticAlgorithmObservableTests {
 
     var stream = ga.ExecuteStreaming(problem);
 
-    var subject = new Subject<GeneticAlgorithmIterationResult<RealVector>>();
-    var observableResult = new List<GeneticAlgorithmIterationResult<RealVector>>();
+    var subject = new Subject<GeneticAlgorithmResult<RealVector>>();
+    var observableResult = new List<GeneticAlgorithmResult<RealVector>>();
     subject
       .SubscribeOn(Scheduler.CurrentThread)
       .Subscribe(state => observableResult.Add(state));

@@ -13,7 +13,7 @@ public class NSGA2Tests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<NSGA2IterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<NSGA2Result<RealVector>>(5);
 
     var nsga = new NSGA2<RealVector, RealVectorEncoding>(
       populationSize: 5, 

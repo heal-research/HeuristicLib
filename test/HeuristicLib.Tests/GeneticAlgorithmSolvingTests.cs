@@ -15,7 +15,7 @@ public class GeneticAlgorithmSolvingTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
 
     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
       populationSize: 5, 
@@ -38,7 +38,7 @@ public class GeneticAlgorithmSolvingTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
 
     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
       populationSize: 5, 
@@ -61,7 +61,7 @@ public class GeneticAlgorithmSolvingTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
 
     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
       populationSize: 5, 
@@ -72,10 +72,10 @@ public class GeneticAlgorithmSolvingTests {
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
 
     var result = ga.Solve(problem);
-    var streamingResults = ga.SolveStreaming(problem).ToList();
-    var bestStreamingResult = streamingResults.MinBy(x => x.Fitness, problem.Objective.TotalOrderComparer);
+    var streamingResult = ga.SolveStreaming(problem).Last();
+    //var bestStreamingResult = streamingResults.MinBy(x => x.Fitness, problem.Objective.TotalOrderComparer);
     
-    result.ShouldBe(bestStreamingResult);
+    result.ShouldBe(streamingResult);
   }
   
   // [Fact]

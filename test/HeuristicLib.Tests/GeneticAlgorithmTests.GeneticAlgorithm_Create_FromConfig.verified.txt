@@ -25,7 +25,7 @@
   RandomSeed: 42,
   Interceptor: null,
   Terminator: {
-    $type: MaximumGenerationTerminator<GeneticAlgorithmIterationResult<RealVector>>,
+    $type: OnMaximumGenerationTerminator<GeneticAlgorithmResult<RealVector>>,
     MaximumGeneration: 5
   }
 }

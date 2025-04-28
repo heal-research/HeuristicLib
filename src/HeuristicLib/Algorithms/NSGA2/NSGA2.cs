@@ -10,17 +10,17 @@ public record class NSGA2<TGenotype, TEncoding>
   : IterativeAlgorithm<TGenotype, TEncoding, NSGA2State<TGenotype>, NSGA2IterationResult<TGenotype>, NSGA2Result<TGenotype>>
   where TEncoding : IEncoding<TGenotype> 
 {
-  public int PopulationSize { get; }
-  public Creator<TGenotype, TEncoding> Creator { get; }
-  public Crossover<TGenotype, TEncoding> Crossover { get; }
-  public Mutator<TGenotype, TEncoding> Mutator { get; }
+  public int PopulationSize { get; init; }
+  public Creator<TGenotype, TEncoding> Creator { get; init; }
+  public Crossover<TGenotype, TEncoding> Crossover { get; init; }
+  public Mutator<TGenotype, TEncoding> Mutator { get; init; }
 
-  public double MutationRate { get; }
+  public double MutationRate { get; init; }
 
-  //public ISelector Selector { get; }
-  public Replacer Replacer { get; }
-  public int RandomSeed { get; }
-  public Interceptor<NSGA2IterationResult<TGenotype>>? Interceptor { get; }
+  //public ISelector Selector { get; init; }
+  public Replacer Replacer { get; init; }
+  public int RandomSeed { get; init; }
+  public Interceptor<NSGA2IterationResult<TGenotype>>? Interceptor { get; init; }
 
   public NSGA2(
     int populationSize,
@@ -29,7 +29,7 @@ public record class NSGA2<TGenotype, TEncoding>
     Mutator<TGenotype, TEncoding> mutator, double mutationRate,
     /*ISelector selector,*/ Replacer replacer,
     int randomSeed,
-    Terminator<NSGA2IterationResult<TGenotype>> terminator,
+    Terminator<NSGA2Result<TGenotype>> terminator,
     Interceptor<NSGA2IterationResult<TGenotype>>? interceptor = null
   ) : base(terminator) {
     PopulationSize = populationSize;
@@ -68,27 +68,27 @@ public class NSGA2Instance<TGenotype, TEncoding>
     Interceptor = parameters.Interceptor?.CreateInstance();
   }
 
-  public override NSGA2Result<TGenotype> Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, NSGA2State<TGenotype>? initialState = null) {
-    IReadOnlyList<EvaluatedIndividual<TGenotype>> paretoFront = [];
-    
-    int totalGenerations = 0;
-    TimeSpan totalDuration = TimeSpan.Zero;
-    var totalMetrics = new NSGA2OperatorMetrics();
-    
-    foreach (var result in ExecuteStreaming(problem, initialState)) {
-      paretoFront = Population.ExtractParetoFront(paretoFront.Concat(result.ParetoFront).ToList(), problem.Objective);
-      totalGenerations += 1;
-      totalDuration += result.TotalDuration;
-      totalMetrics += result.OperatorMetrics;
-    }
-    
-    return new NSGA2Result<TGenotype> {
-      TotalGenerations = totalGenerations,
-      TotalDuration = totalDuration,
-      OperatorMetrics = totalMetrics,
-      ParetoFront = paretoFront
-    };
-  }
+  // public override NSGA2Result<TGenotype> Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, NSGA2State<TGenotype>? initialState = null) {
+  //   IReadOnlyList<EvaluatedIndividual<TGenotype>> paretoFront = [];
+  //   
+  //   int totalGenerations = 0;
+  //   TimeSpan totalDuration = TimeSpan.Zero;
+  //   var totalMetrics = new NSGA2OperatorMetrics();
+  //   
+  //   foreach (var result in ExecuteStreaming(problem, initialState)) {
+  //     paretoFront = Population.ExtractParetoFront(paretoFront.Concat(result.ParetoFront).ToList(), problem.Objective);
+  //     totalGenerations += 1;
+  //     totalDuration += result.TotalDuration;
+  //     totalMetrics += result.OperatorMetrics;
+  //   }
+  //   
+  //   return new NSGA2Result<TGenotype> {
+  //     TotalGenerations = totalGenerations,
+  //     TotalDuration = totalDuration,
+  //     OperatorMetrics = totalMetrics,
+  //     CurrentParetoFront = paretoFront
+  //   };
+  // }
   
   protected override NSGA2IterationResult<TGenotype> ExecuteInitialization<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem) {
     var start = Stopwatch.GetTimestamp();
@@ -117,7 +117,7 @@ public class NSGA2Instance<TGenotype, TEncoding>
       Generation = 0,
       Objective = problem.Objective,
       Population = population,
-      TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
+      Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       OperatorMetrics = new NSGA2OperatorMetrics() {
         Creation = new OperatorMetric(genotypePopulation.Length, Stopwatch.GetElapsedTime(startCreating, endCreating)),
         Decoding = new OperatorMetric(phenotypePopulation.Length, Stopwatch.GetElapsedTime(startDecoding, endDecoding)),
@@ -135,7 +135,7 @@ public class NSGA2Instance<TGenotype, TEncoding>
 
     var end = Stopwatch.GetTimestamp();
     return interceptedResult with {
-      TotalDuration = Stopwatch.GetElapsedTime(start, end),
+      Duration = Stopwatch.GetElapsedTime(start, end),
       OperatorMetrics = interceptedResult.OperatorMetrics with {
         Interception = new OperatorMetric(1, Stopwatch.GetElapsedTime(interceptorStart, interceptorEnd))
       }
@@ -199,7 +199,7 @@ public class NSGA2Instance<TGenotype, TEncoding>
       Generation = state.Generation + 1,
       Objective = problem.Objective,
       Population = newPopulation,
-      TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
+      Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       OperatorMetrics = new NSGA2OperatorMetrics() {
         Selection = new OperatorMetric(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection)),
         Crossover = new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover)),
@@ -220,10 +220,22 @@ public class NSGA2Instance<TGenotype, TEncoding>
     var end = Stopwatch.GetTimestamp();
 
     return interceptedResult with {
-      TotalDuration = Stopwatch.GetElapsedTime(start, end),
+      Duration = Stopwatch.GetElapsedTime(start, end),
       OperatorMetrics = interceptedResult.OperatorMetrics with {
         Interception = new OperatorMetric(1, Stopwatch.GetElapsedTime(interceptorStart, interceptorEnd))
       }
+    };
+  }
+  protected override NSGA2Result<TGenotype> AggregateResult(NSGA2IterationResult<TGenotype> iterationResult, NSGA2Result<TGenotype>? algorithmResult) {
+    return new NSGA2Result<TGenotype>() {
+      CurrentGeneration = iterationResult.Generation,
+      TotalGenerations = iterationResult.Generation,
+      CurrentDuration = iterationResult.Duration,
+      TotalDuration = iterationResult.Duration + (algorithmResult?.TotalDuration ?? TimeSpan.Zero),
+      CurrentOperatorMetrics = iterationResult.OperatorMetrics,
+      TotalOperatorMetrics = iterationResult.OperatorMetrics + (algorithmResult?.TotalOperatorMetrics ?? new NSGA2OperatorMetrics()),
+      Objective = iterationResult.Objective,
+      CurrentPopulation = iterationResult.Population,
     };
   }
 }
@@ -259,37 +271,44 @@ public record NSGA2OperatorMetrics {
   public static NSGA2OperatorMetrics operator +(NSGA2OperatorMetrics left, NSGA2OperatorMetrics right) => Aggregate(left, right);
 }
 
-public record NSGA2IterationResult<TGenotype> : IMultiObjectiveIterationResult<TGenotype>, IContinuableIterationResult<NSGA2State<TGenotype>> {
-  int IIterationResult.Iteration => Generation;
+public record NSGA2IterationResult<TGenotype>  {
   public required int Generation { get; init; }
+  public required TimeSpan Duration { get; init; }
+  public required NSGA2OperatorMetrics OperatorMetrics { get; init; }
+  public required Objective Objective { get; init; }
+  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> Population { get; init; }
+}
+
+public record NSGA2Result<TGenotype> : IMultiObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<NSGA2State<TGenotype>> {
+  int IAlgorithmResult.CurrentIteration => CurrentGeneration;
+  int IAlgorithmResult.TotalIterations => TotalGenerations;
   
+  public required int CurrentGeneration { get; init; }
+  public required int TotalGenerations { get; init; }
+  
+  public required TimeSpan CurrentDuration { get; init; }
+  public required TimeSpan TotalDuration { get; init; }
+  
+  public required NSGA2OperatorMetrics CurrentOperatorMetrics { get; init; }
+  public required NSGA2OperatorMetrics TotalOperatorMetrics { get; init; }
+
   public required Objective Objective { get; init; }
   
-  public required TimeSpan TotalDuration { get; init; }
-  public required NSGA2OperatorMetrics OperatorMetrics { get; init; }
-
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> Population { get; init; }
+  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentPopulation { get; init; }
   
-  public NSGA2IterationResult() {
-    paretoFront = new Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>>(() => {
-      return global::HEAL.HeuristicLib.Population.ExtractParetoFront(Population, Objective);
+  public NSGA2Result() {
+    currentParetoFront = new Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>>(() => {
+      return Population.ExtractParetoFront(CurrentPopulation, Objective);
     });
   }
   
-  private readonly Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>> paretoFront;
-  public IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront => paretoFront.Value;
+  private readonly Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>> currentParetoFront;
+  public IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentParetoFront => currentParetoFront.Value;
   
   public NSGA2State<TGenotype> GetContinuationState() => new() {
-    Generation = Generation,
-    Population = Population
+    Generation = CurrentGeneration,
+    Population = CurrentPopulation
   };
 
   public NSGA2State<TGenotype> GetRestartState() => GetContinuationState() with { Generation = 0 };
-}
-
-public record NSGA2Result<TGenotype> : IMultiObjectiveAlgorithmResult<TGenotype> {
-  public required TimeSpan TotalDuration { get; init; }
-  public required int TotalGenerations { get; init; }
-  public required NSGA2OperatorMetrics OperatorMetrics { get; init; }
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront { get; init; }
 }

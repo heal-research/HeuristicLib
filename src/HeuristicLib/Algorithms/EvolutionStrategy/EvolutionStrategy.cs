@@ -6,14 +6,9 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
-public enum EvolutionStrategyType {
-  Comma,
-  Plus
-}
-
 public record EvolutionStrategyState {
   public required int Generation { get; init; }
-  public required EvaluatedIndividual<RealVector>[] Population { get; init; }
+  public required IReadOnlyList<EvaluatedIndividual<RealVector>> Population { get; init; }
   public required double MutationStrength { get; init; }
 }
 
@@ -42,60 +37,67 @@ public record EvolutionStrategyOperatorMetrics {
   public static EvolutionStrategyOperatorMetrics operator +(EvolutionStrategyOperatorMetrics left, EvolutionStrategyOperatorMetrics right) => Aggregate(left, right);
 }
 
-
-public record EvolutionStrategyIterationResult : IContinuableIterationResult<EvolutionStrategyState> {
-  int IIterationResult.Iteration => Generation;
+public record EvolutionStrategyIterationResult {
   public required int Generation { get; init; }
+  public required TimeSpan Duration { get; init; }
+  public required EvolutionStrategyOperatorMetrics OperatorMetrics { get; init; }
+  public required double MutationStrength { get; init; }
+  public required Objective Objective { get; init; }
+  public required IReadOnlyList<EvaluatedIndividual<RealVector>> Population { get; init; }
+}
+
+public record EvolutionStrategyResult : ISingleObjectiveAlgorithmResult<RealVector>, IContinuableAlgorithmResult<EvolutionStrategyState> {
+  int IAlgorithmResult.CurrentIteration => CurrentGeneration;
+  int IAlgorithmResult.TotalIterations => TotalGenerations;
   
+  public required int CurrentGeneration { get; init; }
+  public required int TotalGenerations { get; init; }
+  
+  public required TimeSpan CurrentDuration { get; init; }
+  public required TimeSpan TotalDuration { get; init; }
+  
+  public required double CurrentMutationStrength { get; init; }
+  
+  public required EvolutionStrategyOperatorMetrics CurrentOperatorMetrics { get; init; }
+  public required EvolutionStrategyOperatorMetrics TotalOperatorMetrics { get; init; }
+
   public required Objective Objective { get; init; }
   
-  public required double MutationStrength { get; init; }
+  public required IReadOnlyList<EvaluatedIndividual<RealVector>> CurrentPopulation { get; init; }
   
-  public required TimeSpan TotalDuration { get; init; }
-  public required EvolutionStrategyOperatorMetrics OperatorMetrics { get; init; }
-  
-  public required IReadOnlyList<EvaluatedIndividual<RealVector>> Population { get; init; }
-  
-  public EvolutionStrategyIterationResult() {
-    bestSolution = new Lazy<EvaluatedIndividual<RealVector>>(() => {
-      if (Population!.Count == 0) throw new InvalidOperationException("Population is empty");
-      return Population.MinBy(x => x.Fitness, Objective!.TotalOrderComparer)!;
+  public EvolutionStrategyResult() {
+    currentBestSolution = new Lazy<EvaluatedIndividual<RealVector>>(() => {
+      if (CurrentPopulation!.Count == 0) throw new InvalidOperationException("Population is empty");
+      return CurrentPopulation.MinBy(x => x.Fitness, Objective!.TotalOrderComparer)!;
     });
   }
   
-  private readonly Lazy<EvaluatedIndividual<RealVector>> bestSolution;
-  public EvaluatedIndividual<RealVector> BestSolution => bestSolution.Value;
+  private readonly Lazy<EvaluatedIndividual<RealVector>> currentBestSolution;
+  public EvaluatedIndividual<RealVector> CurrentBestSolution => currentBestSolution.Value;
   
   public EvolutionStrategyState GetContinuationState() => new() {
-    Generation = Generation /*+ 1*/,
-    MutationStrength = MutationStrength,
-    Population = Population.Select(i => new EvaluatedIndividual<RealVector>(i.Genotype, i.Fitness)).ToArray()
+    Generation = CurrentGeneration,
+    MutationStrength = CurrentMutationStrength,
+    Population = CurrentPopulation
   };
-  
-  public EvolutionStrategyState GetRestartState() => GetContinuationState() with { Generation = 0 };
-}
 
-public record EvolutionStrategyResult : IAlgorithmResult {
-  public required TimeSpan TotalDuration { get; init; }
-  public required int TotalGenerations { get; init; }
-  public required EvolutionStrategyOperatorMetrics OperatorMetrics { get; init; }
-  public required EvaluatedIndividual<RealVector>? BestSolution { get; init; }
+  public EvolutionStrategyState GetRestartState() => GetContinuationState() with { Generation = 0 };
 }
 
 public record class EvolutionStrategy
   : IterativeAlgorithm<RealVector, RealVectorEncoding, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult> {
-  public int PopulationSize { get; }
-  public int Children { get; }
-  public EvolutionStrategyType Strategy { get; }
+  public int PopulationSize { get; init;  }
+  public int Children { get; init;  }
+  public EvolutionStrategyType Strategy { get; init; }
 
-  public Creator<RealVector, RealVectorEncoding> Creator { get; }
+  public Creator<RealVector, RealVectorEncoding> Creator { get; init; }
 
   //public ICrossover<RealVector, RealVectorEncoding>? Crossover { get; }
   public Mutator<RealVector, RealVectorEncoding> Mutator { get; }
-  public double InitialMutationStrength { get; }
-  public Selector Selector { get; }
-  public int RandomSeed { get; }
-  public Interceptor<EvolutionStrategyIterationResult>? Interceptor { get; }
+  public double InitialMutationStrength { get; init;  }
+  public Selector Selector { get; init;  }
+  public int RandomSeed { get; init;  }
+  public Interceptor<EvolutionStrategyIterationResult>? Interceptor { get; init; }
 
   public EvolutionStrategy(
     int populationSize,
@@ -107,7 +109,7 @@ public record class EvolutionStrategy
     double initialMutationStrength,
     Selector selector,
     int randomSeed,
-    Terminator<EvolutionStrategyIterationResult> terminator,
+    Terminator<EvolutionStrategyResult> terminator,
     Interceptor<EvolutionStrategyIterationResult>? interceptor = null)
     : base(terminator) {
     PopulationSize = populationSize;
@@ -146,29 +148,29 @@ public class EvolutionStrategyInstance
     Interceptor = parameters.Interceptor?.CreateInstance();
   }
   
-  public override EvolutionStrategyResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState? initialState = null) {
-    EvaluatedIndividual<RealVector>? bestSolution = null;
-    var comparer = problem.Objective.TotalOrderComparer;
-    
-    int totalGenerations = 0;
-    TimeSpan totalDuration = TimeSpan.Zero;
-    var totalMetrics = new EvolutionStrategyOperatorMetrics();
-    
-    foreach (var result in ExecuteStreaming(problem, initialState)) {
-      if (bestSolution is null || comparer.Compare(bestSolution.Fitness, result.BestSolution.Fitness) < 0) 
-        bestSolution = result.BestSolution;
-      totalGenerations += 1;
-      totalDuration += result.TotalDuration;
-      totalMetrics += result.OperatorMetrics;
-    }
-    
-    return new EvolutionStrategyResult() {
-      TotalGenerations = totalGenerations,
-      TotalDuration = totalDuration,
-      OperatorMetrics = totalMetrics,
-      BestSolution = bestSolution
-    };
-  }
+  // public override EvolutionStrategyResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState? initialState = null) {
+  //   EvaluatedIndividual<RealVector>? bestSolution = null;
+  //   var comparer = problem.Objective.TotalOrderComparer;
+  //   
+  //   int totalGenerations = 0;
+  //   TimeSpan totalDuration = TimeSpan.Zero;
+  //   var totalMetrics = new EvolutionStrategyOperatorMetrics();
+  //   
+  //   foreach (var result in ExecuteStreaming(problem, initialState)) {
+  //     if (bestSolution is null || comparer.Compare(bestSolution.Fitness, result.BestSolution.Fitness) < 0) 
+  //       bestSolution = result.BestSolution;
+  //     totalGenerations += 1;
+  //     totalDuration += result.TotalDuration;
+  //     totalMetrics += result.OperatorMetrics;
+  //   }
+  //   
+  //   return new EvolutionStrategyResult() {
+  //     TotalGenerations = totalGenerations,
+  //     TotalDuration = totalDuration,
+  //     OperatorMetrics = totalMetrics,
+  //     BestSolution = bestSolution
+  //   };
+  // }
   
   protected override EvolutionStrategyIterationResult ExecuteInitialization<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem) {
     var start = Stopwatch.GetTimestamp();
@@ -195,10 +197,10 @@ public class EvolutionStrategyInstance
     
     var result = new EvolutionStrategyIterationResult() {
       Generation = 0,
+      Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       MutationStrength = Parameters.InitialMutationStrength,
       Objective = problem.Objective,
       Population = population,
-      TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       OperatorMetrics = new () {
         Creation = new(genotypePopulation.Length, Stopwatch.GetElapsedTime(startCreating, endCreating)),
         Decoding = new(phenotypePopulation.Length, Stopwatch.GetElapsedTime(startDecoding, endDecoding)),
@@ -217,7 +219,7 @@ public class EvolutionStrategyInstance
     var end = Stopwatch.GetTimestamp();
     
     return interceptedResult with {
-      TotalDuration = Stopwatch.GetElapsedTime(start, end),
+      Duration = Stopwatch.GetElapsedTime(start, end),
       OperatorMetrics = interceptedResult.OperatorMetrics with {
         Interception = new(1, Stopwatch.GetElapsedTime(interceptorStart, interceptorEnd))
       } 
@@ -285,10 +287,10 @@ public class EvolutionStrategyInstance
 
     var result = new EvolutionStrategyIterationResult() {
       Generation = state.Generation + 1,
+      Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       MutationStrength = newMutationStrength,
       Objective = problem.Objective,
       Population = newPopulation,
-      TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       OperatorMetrics = new() {
         Selection = new(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection)),
         Mutation = new(genotypePopulation.Length, Stopwatch.GetElapsedTime(startMutation, endMutation)),
@@ -308,10 +310,23 @@ public class EvolutionStrategyInstance
     var end = Stopwatch.GetTimestamp();
     
     return interceptedResult with {
-      TotalDuration = Stopwatch.GetElapsedTime(start, end),
+      Duration = Stopwatch.GetElapsedTime(start, end),
       OperatorMetrics = interceptedResult.OperatorMetrics with {
         Interception = new(1, Stopwatch.GetElapsedTime(interceptorStart, interceptorEnd))
       }
+    };
+  }
+  protected override EvolutionStrategyResult AggregateResult(EvolutionStrategyIterationResult iterationResult, EvolutionStrategyResult? algorithmResult) {
+    return new EvolutionStrategyResult() {
+      CurrentGeneration = iterationResult.Generation,
+      TotalGenerations = iterationResult.Generation,
+      CurrentDuration = iterationResult.Duration,
+      TotalDuration = iterationResult.Duration + (algorithmResult?.TotalDuration ?? TimeSpan.Zero),
+      CurrentMutationStrength = iterationResult.MutationStrength,
+      CurrentOperatorMetrics = iterationResult.OperatorMetrics,
+      TotalOperatorMetrics = iterationResult.OperatorMetrics + (algorithmResult?.TotalOperatorMetrics ?? new EvolutionStrategyOperatorMetrics()),
+      Objective = iterationResult.Objective,
+      CurrentPopulation = iterationResult.Population,
     };
   }
 }

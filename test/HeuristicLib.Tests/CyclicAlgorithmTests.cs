@@ -71,7 +71,7 @@ public class CyclicAlgorithmTests {
       selector: new TournamentSelector(2),
       replacer: new ElitismReplacer(1), 
       randomSeed: 42,
-      terminator: Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(3)
+      terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3)
     );
     
     var ga2 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
@@ -83,7 +83,7 @@ public class CyclicAlgorithmTests {
       selector: new RandomSelector(),
       replacer: new ElitismReplacer(1), 
       randomSeed: 42,
-      terminator: Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(3)
+      terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3)
     );
     
     var ga3 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
@@ -95,14 +95,14 @@ public class CyclicAlgorithmTests {
       selector: new TournamentSelector(2),
       replacer: new ElitismReplacer(1), 
       randomSeed: 42,
-      terminator: Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(4)
+      terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(4)
     );
 
-    var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorEncoding, GeneticAlgorithmState<RealVector>, GeneticAlgorithmIterationResult<RealVector>, GeneticAlgorithmResult<RealVector>>([ga1, ga2, ga3]);
+    var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorEncoding, GeneticAlgorithmState<RealVector>, GeneticAlgorithmResult<RealVector>>([ga1, ga2, ga3]);
 
     var states = concatAlgorithm.ExecuteStreaming(problem).ToList();
     var lastState = states[^1];
-    var generations = states.Select(x => x.Generation).ToList();
+    var generations = states.Select(x => x.CurrentGeneration).ToList();
     
     states.Count.ShouldBe(1+3 + 3 + 4);
     

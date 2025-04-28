@@ -10,15 +10,16 @@ public record class GeneticAlgorithm<TGenotype, TEncoding>
   : IterativeAlgorithm<TGenotype, TEncoding, GeneticAlgorithmState<TGenotype>, GeneticAlgorithmIterationResult<TGenotype>, GeneticAlgorithmResult<TGenotype>>
   where TEncoding : IEncoding<TGenotype> 
 {
-  public int PopulationSize { get; }
-  public Creator<TGenotype, TEncoding> Creator { get; }
-  public Crossover<TGenotype, TEncoding> Crossover { get; }
-  public Mutator<TGenotype, TEncoding> Mutator { get; }
-  public double MutationRate { get; }
-  public Selector Selector { get; }
-  public Replacer Replacer { get; }
-  public int RandomSeed { get; }
-  public Interceptor<GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; }
+  public int PopulationSize { get; init; }
+  public Creator<TGenotype, TEncoding> Creator { get; init; }
+  public Crossover<TGenotype, TEncoding> Crossover { get; init; }
+  public Mutator<TGenotype, TEncoding> Mutator { get; init; }
+  public double MutationRate { get; init; }
+  public Selector Selector { get; init; }
+  public Replacer Replacer { get; init; }
+  public int RandomSeed { get; init; }
+  // ToDo: Interceptor could also be defined on AlgorithmResult and handled at the IterativeAlgorithm level.
+  public Interceptor<GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; init; }
 
   public GeneticAlgorithm(
     int populationSize,
@@ -27,7 +28,7 @@ public record class GeneticAlgorithm<TGenotype, TEncoding>
     Mutator<TGenotype, TEncoding> mutator, double mutationRate,
     Selector selector, Replacer replacer,
     int randomSeed,
-    Terminator<GeneticAlgorithmIterationResult<TGenotype>> terminator,
+    Terminator<GeneticAlgorithmResult<TGenotype>> terminator,
     Interceptor<GeneticAlgorithmIterationResult<TGenotype>>? interceptor = null
   ) : base(terminator) {
     PopulationSize = populationSize;
@@ -72,29 +73,25 @@ public class GeneticAlgorithmInstance<TGenotype, TEncoding>
     Interceptor = parameters.Interceptor?.CreateInstance();
   }
 
-  public override GeneticAlgorithmResult<TGenotype> Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, GeneticAlgorithmState<TGenotype>? initialState = null) {
-    EvaluatedIndividual<TGenotype>? bestSolution = null;
-    var comparer = problem.Objective.TotalOrderComparer;
-    
-    int totalGenerations = 0;
-    TimeSpan totalDuration = TimeSpan.Zero;
-    var totalMetrics = new GeneticAlgorithmOperatorMetrics();
-    
-    foreach (var result in ExecuteStreaming(problem, initialState)) {
-      if (bestSolution is null || comparer.Compare(result.BestSolution.Fitness, bestSolution.Fitness) < 0) // ToDo: better "IsBetter" method.
-        bestSolution = result.BestSolution;
-      totalGenerations += 1;
-      totalDuration += result.TotalDuration;
-      totalMetrics += result.OperatorMetrics;
-    }
-    
-    return new GeneticAlgorithmResult<TGenotype> {
-      TotalGenerations = totalGenerations,
-      TotalDuration = totalDuration,
-      OperatorMetrics = totalMetrics,
-      BestSolution = bestSolution
-    };
-  }
+  // public override GeneticAlgorithmResult<TGenotype> Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, GeneticAlgorithmState<TGenotype>? initialState = null) {
+  //   EvaluatedIndividual<TGenotype>? bestSolution = null;
+  //   var comparer = problem.Objective.TotalOrderComparer;
+  //   
+  //   foreach (var result in ExecuteStreaming(problem, initialState)) {
+  //     if (bestSolution is null || comparer.Compare(result.CurrentBestSolution.Fitness, bestSolution.Fitness) < 0) // ToDo: better "IsBetter" method.
+  //       bestSolution = result.CurrentBestSolution;
+  //     totalGenerations += 1;
+  //     totalDuration += result.TotalDuration;
+  //     totalMetrics += result.OperatorMetrics;
+  //   }
+  //   
+  //   return new GeneticAlgorithmResult<TGenotype> {
+  //     TotalGenerations = totalGenerations,
+  //     TotalDuration = totalDuration,
+  //     OperatorMetrics = totalMetrics,
+  //     CurrentBestSolution = bestSolution
+  //   };
+  // }
   
   protected override GeneticAlgorithmIterationResult<TGenotype> ExecuteInitialization<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem) {
     var start = Stopwatch.GetTimestamp();
@@ -119,14 +116,14 @@ public class GeneticAlgorithmInstance<TGenotype, TEncoding>
     
     var result = new GeneticAlgorithmIterationResult<TGenotype>() {
       Generation = 0,
-      Objective = problem.Objective,
-      Population = population,
-      TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
+      Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       OperatorMetrics = new GeneticAlgorithmOperatorMetrics {
         Creation = new OperatorMetric(genotypePopulation.Length, Stopwatch.GetElapsedTime(startCreating, endCreating)),
         Decoding = new OperatorMetric(phenotypePopulation.Length, Stopwatch.GetElapsedTime(startDecoding, endDecoding)),
         Evaluation = new OperatorMetric(fitnesses.Length, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating)),
-      }
+      },
+      Population = population,
+      Objective = problem.Objective
     };
     
     if (Interceptor is null) return result;
@@ -139,7 +136,7 @@ public class GeneticAlgorithmInstance<TGenotype, TEncoding>
 
     var end = Stopwatch.GetTimestamp();
     return interceptedResult with {
-      TotalDuration = Stopwatch.GetElapsedTime(start, end),
+      Duration = Stopwatch.GetElapsedTime(start, end),
       OperatorMetrics = interceptedResult.OperatorMetrics with {
         Interception = new OperatorMetric(1, Stopwatch.GetElapsedTime(interceptorStart, interceptorEnd))
       }
@@ -200,9 +197,7 @@ public class GeneticAlgorithmInstance<TGenotype, TEncoding>
     
     var result = new GeneticAlgorithmIterationResult<TGenotype>() {
       Generation = state.Generation + 1,
-      Objective = problem.Objective,
-      Population = newPopulation,
-      TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
+      Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       OperatorMetrics = new GeneticAlgorithmOperatorMetrics() {
         Selection = new OperatorMetric(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection)),
         Crossover = new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover)),
@@ -210,7 +205,9 @@ public class GeneticAlgorithmInstance<TGenotype, TEncoding>
         Decoding = new OperatorMetric(phenotypePopulation.Length, Stopwatch.GetElapsedTime(startDecoding, endDecoding)),
         Evaluation = new OperatorMetric(fitnesses.Length, Stopwatch.GetElapsedTime(startEvaluation, endEvaluation)),
         Replacement = new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement))
-      }
+      },
+      Population = newPopulation,
+      Objective = problem.Objective
     };
     
     if (Interceptor is null) return result;
@@ -223,10 +220,24 @@ public class GeneticAlgorithmInstance<TGenotype, TEncoding>
     var end = Stopwatch.GetTimestamp();
 
     return interceptedResult with {
-      TotalDuration = Stopwatch.GetElapsedTime(start, end),
+      Duration = Stopwatch.GetElapsedTime(start, end),
       OperatorMetrics = interceptedResult.OperatorMetrics with {
         Interception = new OperatorMetric(1, Stopwatch.GetElapsedTime(interceptorStart, interceptorEnd))
       }
+    };
+  }
+
+  protected override GeneticAlgorithmResult<TGenotype> AggregateResult(GeneticAlgorithmIterationResult<TGenotype> iterationResult, GeneticAlgorithmResult<TGenotype>? algorithmResult) {
+    // ToDo: "Iteration" looks like a operator
+    return new GeneticAlgorithmResult<TGenotype>() {
+      CurrentGeneration = iterationResult.Generation,
+      TotalGenerations = iterationResult.Generation,
+      CurrentDuration = iterationResult.Duration,
+      TotalDuration = iterationResult.Duration + (algorithmResult?.TotalDuration ?? TimeSpan.Zero),
+      CurrentOperatorMetrics = iterationResult.OperatorMetrics,
+      TotalOperatorMetrics = iterationResult.OperatorMetrics + (algorithmResult?.TotalOperatorMetrics ?? new GeneticAlgorithmOperatorMetrics()),
+      Objective = iterationResult.Objective,
+      CurrentPopulation = iterationResult.Population,
     };
   }
 }

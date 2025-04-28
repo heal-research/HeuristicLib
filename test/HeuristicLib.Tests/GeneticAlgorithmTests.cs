@@ -19,7 +19,7 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
     var replacement = new PlusSelectionReplacer();
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
     
     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
       //Encoding = encoding,
@@ -42,7 +42,7 @@ public class GeneticAlgorithmTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var selector = new RandomSelector();
     var replacement = new PlusSelectionReplacer();
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
     
     var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding> {
       PopulationSize = 200, 
@@ -84,7 +84,7 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
     
     var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
       Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
@@ -113,7 +113,7 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.NeverTerminate<GeneticAlgorithmIterationResult<RealVector>>();
+    var terminator = Terminator.NeverTerminate<GeneticAlgorithmResult<RealVector>>();
     var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
       Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
     };
@@ -187,7 +187,7 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new ProportionalSelector();
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
     
     var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
       Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
@@ -202,11 +202,11 @@ public class GeneticAlgorithmTests {
 
     var firstResult = firstAlg.ExecuteStreaming(problem).Last();
 
-    var newTerminationCriterion = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(12);
+    var newTerminationCriterion = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(12);
     var continuationState = firstResult.GetContinuationState();
-    var secondAlg = (firstAlg.ToConfiguration() with {
+    var secondAlg = firstAlg with {
       PopulationSize = 8, Terminator = newTerminationCriterion
-    }).Build();
+    };
 
     var finalState = secondAlg.Execute(problem, initialState: continuationState);
 
@@ -224,7 +224,7 @@ public class GeneticAlgorithmTests {
     var evaluator = new RealVectorMockEvaluator();
     var selector = new ProportionalSelector();
     var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(5);
+    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
     
     var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
       Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize

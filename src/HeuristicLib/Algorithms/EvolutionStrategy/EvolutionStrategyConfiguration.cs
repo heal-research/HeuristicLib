@@ -1,8 +1,12 @@
-﻿using HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
-using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 
-namespace HEAL.HeuristicLib.Configuration;
+namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
+
+public enum EvolutionStrategyType {
+  Comma,
+  Plus
+}
 
 public record EvolutionStrategyConfiguration {
   public int? PopulationSize { get; init; }
@@ -15,5 +19,5 @@ public record EvolutionStrategyConfiguration {
   public Selector? Selector { get; init; }
   public int? RandomSeed { get; init; }
   public Interceptor<EvolutionStrategyIterationResult>? Interceptor { get; init; }
-  public Terminator<EvolutionStrategyIterationResult>? Terminator { get; init; }
+  public Terminator<EvolutionStrategyResult>? Terminator { get; init; }
 } 

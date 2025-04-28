@@ -1,15 +1,8 @@
 ﻿{
   firstResult: {
-    Generation: 5,
-    Objective: {
-      Directions: [
-        Minimize
-      ],
-      TotalOrderComparer: {
-        $type: SingleObjectiveComparer
-      }
-    },
-    OperatorMetrics: {
+    CurrentGeneration: 5,
+    TotalGenerations: 5,
+    CurrentOperatorMetrics: {
       Creation: {
         Count: 0
       },
@@ -35,7 +28,41 @@
         Count: 0
       }
     },
-    Population: {
+    TotalOperatorMetrics: {
+      Creation: {
+        Count: 5
+      },
+      Decoding: {
+        Count: 30
+      },
+      Evaluation: {
+        Count: 30
+      },
+      Selection: {
+        Count: 50
+      },
+      Crossover: {
+        Count: 25
+      },
+      Mutation: {
+        Count: 5
+      },
+      Replacement: {
+        Count: 5
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
+    CurrentPopulation: {
       $type: EvaluatedIndividual<RealVector>[],
       $values: [
         {
@@ -90,7 +117,7 @@
         }
       ]
     },
-    BestSolution: {
+    CurrentBestSolution: {
       Genotype: [
         0.22764276025241337,
         -3.5909270162651907,
@@ -102,8 +129,35 @@
     }
   },
   finalState: {
-    TotalGenerations: 7,
-    OperatorMetrics: {
+    CurrentGeneration: 12,
+    TotalGenerations: 12,
+    CurrentOperatorMetrics: {
+      Creation: {
+        Count: 0
+      },
+      Decoding: {
+        Count: 8
+      },
+      Evaluation: {
+        Count: 8
+      },
+      Selection: {
+        Count: 16
+      },
+      Crossover: {
+        Count: 8
+      },
+      Mutation: {
+        Count: 0
+      },
+      Replacement: {
+        Count: 1
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    TotalOperatorMetrics: {
       Creation: {
         Count: 0
       },
@@ -129,7 +183,100 @@
         Count: 0
       }
     },
-    BestSolution: {
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
+    CurrentPopulation: {
+      $type: EvaluatedIndividual<RealVector>[],
+      $values: [
+        {
+          Genotype: [
+            0.22764276025241337,
+            -3.6406196154144683,
+            -3.7294027933754976
+          ],
+          Fitness: [
+            -7.142379648537553
+          ]
+        },
+        {
+          Genotype: [
+            0.22764276025241337,
+            -3.6406196154144683,
+            -3.7294027933754976
+          ],
+          Fitness: [
+            -7.142379648537553
+          ]
+        },
+        {
+          Genotype: [
+            0.22764276025241337,
+            -3.6406196154144683,
+            -3.7294027933754976
+          ],
+          Fitness: [
+            -7.142379648537553
+          ]
+        },
+        {
+          Genotype: [
+            0.22764276025241337,
+            -3.6406196154144683,
+            -3.7294027933754976
+          ],
+          Fitness: [
+            -7.142379648537553
+          ]
+        },
+        {
+          Genotype: [
+            0.22764276025241337,
+            -3.6406196154144683,
+            -3.7294027933754976
+          ],
+          Fitness: [
+            -7.142379648537553
+          ]
+        },
+        {
+          Genotype: [
+            0.22764276025241337,
+            -3.6406196154144683,
+            -3.7294027933754976
+          ],
+          Fitness: [
+            -7.142379648537553
+          ]
+        },
+        {
+          Genotype: [
+            0.22764276025241337,
+            -3.6406196154144683,
+            -3.7294027933754976
+          ],
+          Fitness: [
+            -7.142379648537553
+          ]
+        },
+        {
+          Genotype: [
+            0.22764276025241337,
+            -3.6406196154144683,
+            -3.7294027933754976
+          ],
+          Fitness: [
+            -7.142379648537553
+          ]
+        }
+      ]
+    },
+    CurrentBestSolution: {
       Genotype: [
         0.22764276025241337,
         -3.6406196154144683,
