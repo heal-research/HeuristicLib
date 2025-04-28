@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Tests.Architecture;
 public class OperatorNamingTests {
   private static readonly ArchUnitNET.Domain. Architecture Architecture =
     new ArchLoader().LoadAssemblies(
-      typeof(IAlgorithm<,,,>).Assembly  
+      typeof(Algorithm<,,,,>).Assembly  
     ).Build();
   
   // [Fact]

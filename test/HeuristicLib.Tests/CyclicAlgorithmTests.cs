@@ -98,7 +98,7 @@ public class CyclicAlgorithmTests {
       terminator: Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(4)
     );
 
-    var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorEncoding, GeneticAlgorithmState<RealVector>, GeneticAlgorithmIterationResult<RealVector>>([ga1, ga2, ga3]);
+    var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorEncoding, GeneticAlgorithmState<RealVector>, GeneticAlgorithmIterationResult<RealVector>, GeneticAlgorithmResult<RealVector>>([ga1, ga2, ga3]);
 
     var states = concatAlgorithm.ExecuteStreaming(problem).ToList();
     var lastState = states[^1];

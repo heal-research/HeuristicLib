@@ -1,0 +1,93 @@
+﻿{
+  generations: [
+    0,
+    1,
+    2,
+    3,
+    1,
+    2,
+    3,
+    1,
+    2,
+    3,
+    4
+  ],
+  lastState: {
+    Generation: 4,
+    Objective: {
+      Directions: [
+        Minimize
+      ],
+      TotalOrderComparer: {
+        $type: SingleObjectiveComparer
+      }
+    },
+    OperatorMetrics: {
+      Creation: {
+        Count: 0
+      },
+      Decoding: {
+        Count: 2
+      },
+      Evaluation: {
+        Count: 2
+      },
+      Selection: {
+        Count: 4
+      },
+      Crossover: {
+        Count: 2
+      },
+      Mutation: {
+        Count: 2
+      },
+      Replacement: {
+        Count: 1
+      },
+      Interception: {
+        Count: 0
+      }
+    },
+    Population: {
+      $type: EvaluatedIndividual<RealVector>[],
+      $values: [
+        {
+          Genotype: [
+            -0.31628578756204123,
+            -2.5977762731061214
+          ],
+          Fitness: [
+            6.84847826452687
+          ]
+        },
+        {
+          Genotype: [
+            -0.709712056547269,
+            -3.650764647966607
+          ],
+          Fitness: [
+            13.831773718051299
+          ]
+        },
+        {
+          Genotype: [
+            0.3840106801921554,
+            -2.986934701931167
+          ],
+          Fitness: [
+            9.069243116102271
+          ]
+        }
+      ]
+    },
+    BestSolution: {
+      Genotype: [
+        -0.31628578756204123,
+        -2.5977762731061214
+      ],
+      Fitness: [
+        6.84847826452687
+      ]
+    }
+  }
+}

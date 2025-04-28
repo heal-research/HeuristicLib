@@ -12,7 +12,6 @@ public enum EvolutionStrategyType {
 }
 
 public record EvolutionStrategyState {
-  public required int UsedRandomSeed { get; init; }
   public required int Generation { get; init; }
   public required EvaluatedIndividual<RealVector>[] Population { get; init; }
   public required double MutationStrength { get; init; }
@@ -45,9 +44,6 @@ public record EvolutionStrategyOperatorMetrics {
 
 
 public record EvolutionStrategyIterationResult : IContinuableIterationResult<EvolutionStrategyState> {
-  int IIterationResult.UsedIterationRandomSeed => UsedGenerationRandomSeed;
-  public required int UsedGenerationRandomSeed { get; init; }
-  
   int IIterationResult.Iteration => Generation;
   public required int Generation { get; init; }
   
@@ -71,7 +67,6 @@ public record EvolutionStrategyIterationResult : IContinuableIterationResult<Evo
   public EvaluatedIndividual<RealVector> BestSolution => bestSolution.Value;
   
   public EvolutionStrategyState GetContinuationState() => new() {
-    UsedRandomSeed = UsedGenerationRandomSeed,
     Generation = Generation /*+ 1*/,
     MutationStrength = MutationStrength,
     Population = Population.Select(i => new EvaluatedIndividual<RealVector>(i.Genotype, i.Fitness)).ToArray()
@@ -81,42 +76,40 @@ public record EvolutionStrategyIterationResult : IContinuableIterationResult<Evo
 }
 
 public record EvolutionStrategyResult : IAlgorithmResult {
-  [Obsolete("Not necessary on result, since it can be obtained form the algorithm (parameters)")]
-  public required int UsedRandomSeed { get; init; }
   public required TimeSpan TotalDuration { get; init; }
   public required int TotalGenerations { get; init; }
   public required EvolutionStrategyOperatorMetrics OperatorMetrics { get; init; }
   public required EvaluatedIndividual<RealVector>? BestSolution { get; init; }
 }
 
-
-public class EvolutionStrategy
-  : IterativeAlgorithm<RealVector, RealVectorEncoding, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult>
-{
+public record class EvolutionStrategy
+  : IterativeAlgorithm<RealVector, RealVectorEncoding, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult> {
   public int PopulationSize { get; }
   public int Children { get; }
   public EvolutionStrategyType Strategy { get; }
-  public ICreator<RealVector, RealVectorEncoding> Creator { get; }
+
+  public Creator<RealVector, RealVectorEncoding> Creator { get; }
+
   //public ICrossover<RealVector, RealVectorEncoding>? Crossover { get; }
-  public IMutator<RealVector, RealVectorEncoding> Mutator { get; }
+  public Mutator<RealVector, RealVectorEncoding> Mutator { get; }
   public double InitialMutationStrength { get; }
-  public ISelector Selector { get; }
+  public Selector Selector { get; }
   public int RandomSeed { get; }
-  public IInterceptor<EvolutionStrategyIterationResult>? Interceptor { get; }
+  public Interceptor<EvolutionStrategyIterationResult>? Interceptor { get; }
 
   public EvolutionStrategy(
     int populationSize,
     int children,
     EvolutionStrategyType strategy,
-    ICreator<RealVector, RealVectorEncoding> creator,
+    Creator<RealVector, RealVectorEncoding> creator,
     //ICrossover<RealVector, RealVectorEncoding> crossover,
-    IMutator<RealVector, RealVectorEncoding> mutator,
+    Mutator<RealVector, RealVectorEncoding> mutator,
     double initialMutationStrength,
-    ISelector selector,
+    Selector selector,
     int randomSeed,
-    ITerminator<EvolutionStrategyIterationResult> terminator,
-    IInterceptor<EvolutionStrategyIterationResult>? interceptor = null) 
-  : base(terminator) {
+    Terminator<EvolutionStrategyIterationResult> terminator,
+    Interceptor<EvolutionStrategyIterationResult>? interceptor = null)
+    : base(terminator) {
     PopulationSize = populationSize;
     Children = children;
     Strategy = strategy;
@@ -127,7 +120,31 @@ public class EvolutionStrategy
     Selector = selector;
     RandomSeed = randomSeed;
     Interceptor = interceptor;
+  }
+
+  public override EvolutionStrategyInstance CreateInstance() {
+    return new EvolutionStrategyInstance(this);
+  }
 }
+
+public class EvolutionStrategyInstance
+  : IterativeAlgorithmInstance<RealVector, RealVectorEncoding, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult, EvolutionStrategy> 
+{
+  public IRandomNumberGenerator Random { get; }
+  public ICreatorInstance<RealVector, RealVectorEncoding> Creator { get; }
+  //public ICrossoverInstance<RealVector, RealVectorEncoding>? Crossover { get; }
+  public IMutatorInstance<RealVector, RealVectorEncoding> Mutator { get; }
+  public ISelectorInstance Selector { get; }
+  public IInterceptorInstance<EvolutionStrategyIterationResult>? Interceptor { get; }
+  
+  public EvolutionStrategyInstance(EvolutionStrategy parameters) : base(parameters) {
+    Random = new SystemRandomNumberGenerator(parameters.RandomSeed);
+    Creator = parameters.Creator.CreateInstance();
+    //Crossover = parameters.Crossover?.CreateInstance();
+    Mutator = parameters.Mutator.CreateInstance();
+    Selector = parameters.Selector.CreateInstance();
+    Interceptor = parameters.Interceptor?.CreateInstance();
+  }
   
   public override EvolutionStrategyResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState? initialState = null) {
     EvaluatedIndividual<RealVector>? bestSolution = null;
@@ -146,7 +163,6 @@ public class EvolutionStrategy
     }
     
     return new EvolutionStrategyResult() {
-      UsedRandomSeed = RandomSeed,
       TotalGenerations = totalGenerations,
       TotalDuration = totalDuration,
       OperatorMetrics = totalMetrics,
@@ -157,10 +173,10 @@ public class EvolutionStrategy
   protected override EvolutionStrategyIterationResult ExecuteInitialization<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem) {
     var start = Stopwatch.GetTimestamp();
 
-    var random = new SystemRandomNumberGenerator(RandomSeed);
+    //var random = new SystemRandomNumberGenerator(Algorithm.RandomSeed);
     
     var startCreating = Stopwatch.GetTimestamp();
-    var newPopulation = Enumerable.Range(0, PopulationSize).Select(i => Creator.Create(problem.Encoding, random)).ToArray();
+    var newPopulation = Enumerable.Range(0, Parameters.PopulationSize).Select(i => Creator.Create(problem.Encoding, Random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     var genotypePopulation = newPopulation;
@@ -178,9 +194,8 @@ public class EvolutionStrategy
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
     
     var result = new EvolutionStrategyIterationResult() {
-      UsedGenerationRandomSeed = RandomSeed,
       Generation = 0,
-      MutationStrength = InitialMutationStrength,
+      MutationStrength = Parameters.InitialMutationStrength,
       Objective = problem.Objective,
       Population = population,
       TotalDuration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
@@ -212,21 +227,21 @@ public class EvolutionStrategy
   protected override EvolutionStrategyIterationResult ExecuteIteration<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState state) {
     var start = Stopwatch.GetTimestamp();
 
-    int newRandomSeed = SeedSequence.GetSeed(RandomSeed, state.Generation);
-    var random = new SystemRandomNumberGenerator(newRandomSeed);
+    // int newRandomSeed = SeedSequence.GetSeed(Algorithm.RandomSeed, state.Generation);
+    // var random = new SystemRandomNumberGenerator(newRandomSeed);
     
     var oldPopulation = state.Population;
     
     var startSelection = Stopwatch.GetTimestamp();
-    var randomSelector = new RandomSelector();
-    var parents = randomSelector.Select(oldPopulation, problem.Objective, PopulationSize, random).ToList();
+    var randomSelector = new RandomSelector().CreateInstance(); // improve
+    var parents = randomSelector.Select(oldPopulation, problem.Objective, Parameters.PopulationSize, Random).ToList();
     var endSelection = Stopwatch.GetTimestamp();
      
     var genotypePopulation = new RealVector[parents.Count];
     var startMutation = Stopwatch.GetTimestamp();
     for (int i = 0; i < parents.Count; i += 2) {
       var parent = parents[i];
-      var child = Mutator.Mutate(parent.Genotype, problem.Encoding, random);
+      var child = Mutator.Mutate(parent.Genotype, problem.Encoding, Random);
       genotypePopulation[i / 2] = child;
     }
     var endMutation = Stopwatch.GetTimestamp();
@@ -258,18 +273,17 @@ public class EvolutionStrategy
     var population = Population.From(genotypePopulation, /*phenotypePopulation,*/ fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
-    IReplacer replacer = Strategy switch {
+    Replacer replacer = Parameters.Strategy switch {
       EvolutionStrategyType.Comma => new ElitismReplacer(0),
       EvolutionStrategyType.Plus => new PlusSelectionReplacer(),
-      _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
+      _ => throw new InvalidOperationException($"Unknown strategy {Parameters.Strategy}")
     };
-    var newPopulation = replacer.Replace(oldPopulation, population, problem.Objective, random);
+    var newPopulation = replacer.CreateInstance().Replace(oldPopulation, population, problem.Objective, Random);
     var endReplacement = Stopwatch.GetTimestamp();
     
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
 
     var result = new EvolutionStrategyIterationResult() {
-      UsedGenerationRandomSeed = newRandomSeed,
       Generation = state.Generation + 1,
       MutationStrength = newMutationStrength,
       Objective = problem.Objective,

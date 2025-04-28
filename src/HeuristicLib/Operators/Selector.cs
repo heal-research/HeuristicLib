@@ -3,22 +3,38 @@
 namespace HEAL.HeuristicLib.Operators;
 
 
-public interface ISelector : IOperator 
-{
+public abstract record class Selector : Operator<ISelectorInstance> {
+}
+
+
+public interface ISelectorInstance {
   IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
 }
 
-public abstract class SelectorBase : ISelector {
+public abstract class SelectorInstance<TSelector> : OperatorInstance<TSelector>, ISelectorInstance {
+  protected SelectorInstance(TSelector parameters) : base(parameters) { }
   public abstract IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
 }
+//
+// public abstract class SelectorBase : ISelector {
+//   public abstract IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
+// }
 
-public class ProportionalSelector : SelectorBase { // ToDo: Probability-based selection base class
+public record class ProportionalSelector : Selector { // ToDo: Probability-based selection base class
   public bool Windowing { get; }
 
   public ProportionalSelector(bool windowing = true) {
     Windowing = windowing;
   }
-  
+
+  public override ProportionalSelectorInstance CreateInstance() {
+    return new ProportionalSelectorInstance(this);
+  }
+}
+
+public class ProportionalSelectorInstance : SelectorInstance<ProportionalSelector> {
+  public ProportionalSelectorInstance(ProportionalSelector parameters) : base(parameters) {}
+
   public override IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     // prepare qualities
@@ -32,7 +48,7 @@ public class ProportionalSelector : SelectorBase { // ToDo: Probability-based se
     if (Math.Abs(minQuality - maxQuality) < double.Epsilon) {
       qualities = qualities.Select(_ => 1.0);
     } else {
-      if (Windowing) {
+      if (Parameters.Windowing) {
         if (singleObjective == ObjectiveDirection.Maximize) {
           qualities = qualities.Select(q => q - minQuality);
         } else {
@@ -65,7 +81,14 @@ public class ProportionalSelector : SelectorBase { // ToDo: Probability-based se
   }
 }
 
-public class RandomSelector : SelectorBase {
+public record class RandomSelector : Selector {
+  public override RandomSelectorInstance CreateInstance() {
+    return new RandomSelectorInstance(this);
+  }
+}
+
+public class RandomSelectorInstance : SelectorInstance<RandomSelector> {
+  public RandomSelectorInstance(RandomSelector parameters) : base(parameters) { }
   public override IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
     var selected = new EvaluatedIndividual<TGenotype/*, TPhenotype*/>[count];
     for (int i = 0; i < count; i++) {
@@ -76,18 +99,25 @@ public class RandomSelector : SelectorBase {
   }
 }
 
-public class TournamentSelector : SelectorBase {
+public record class TournamentSelector : Selector {
   public int TournamentSize { get; }
   
   public TournamentSelector(int tournamentSize) {
     TournamentSize = tournamentSize;
   }
+  
+  public override TournamentSelectorInstance CreateInstance() {
+    return new TournamentSelectorInstance(this);
+  }
+}
 
+public class TournamentSelectorInstance : SelectorInstance<TournamentSelector> {
+  public TournamentSelectorInstance(TournamentSelector parameters) : base(parameters) { }
   public override IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
     var selected = new EvaluatedIndividual<TGenotype/*, TPhenotype*/>[count];
     for (int i = 0; i < count; i++) {
       var tournamentParticipants = new List<EvaluatedIndividual<TGenotype/*, TPhenotype*/>>();
-      for (int j = 0; j < TournamentSize; j++) {
+      for (int j = 0; j < Parameters.TournamentSize; j++) {
         int index = random.Integer(population.Count);
         tournamentParticipants.Add(population[index]);
       }

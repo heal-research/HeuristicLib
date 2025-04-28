@@ -2,7 +2,6 @@
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
 public record GeneticAlgorithmState<TGenotype> {
-  public required int UsedRandomSeed { get; init; }
   public required int Generation { get; init; }
   public required IReadOnlyList<EvaluatedIndividual<TGenotype>> Population { get; init; }
 }
@@ -33,9 +32,7 @@ public record GeneticAlgorithmOperatorMetrics {
 }
 
 public record GeneticAlgorithmIterationResult<TGenotype> : ISingleObjectiveIterationResult<TGenotype>, IContinuableIterationResult<GeneticAlgorithmState<TGenotype>> {
-  int IIterationResult.UsedIterationRandomSeed => UsedGenerationRandomSeed;
-  public required int UsedGenerationRandomSeed { get; init; }
-  
+ 
   int IIterationResult.Iteration => Generation;
   public required int Generation { get; init; }
   
@@ -57,7 +54,6 @@ public record GeneticAlgorithmIterationResult<TGenotype> : ISingleObjectiveItera
   public EvaluatedIndividual<TGenotype> BestSolution => bestSolution.Value;
   
   public GeneticAlgorithmState<TGenotype> GetContinuationState() => new() {
-    UsedRandomSeed = UsedGenerationRandomSeed,
     Generation = Generation,
     Population = Population
   };
@@ -66,8 +62,6 @@ public record GeneticAlgorithmIterationResult<TGenotype> : ISingleObjectiveItera
 }
 
 public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype> {
-  [Obsolete("Not necessary on result, since it can be obtained form the algorithm (parameters)")]
-  public required int UsedRandomSeed { get; init; }
   public required TimeSpan TotalDuration { get; init; }
   public required int TotalGenerations { get; init; }
   public required GeneticAlgorithmOperatorMetrics OperatorMetrics { get; init; }

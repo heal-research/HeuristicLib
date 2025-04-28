@@ -2,8 +2,6 @@
 
 
 public interface IAlgorithmResult {
-  [Obsolete("Not necessary on result, since it can be obtained form the algorithm (parameters)")]
-  int UsedRandomSeed { get; }
   TimeSpan TotalDuration { get; }
 }
 
@@ -16,7 +14,6 @@ public interface IMultiObjectiveAlgorithmResult<TGenotype> : IAlgorithmResult {
 }
 
 public interface IIterationResult {
-  int UsedIterationRandomSeed { get; }
   int Iteration { get; }
   TimeSpan TotalDuration { get; }
 }

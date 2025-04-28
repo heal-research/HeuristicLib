@@ -10,15 +10,15 @@ public record GeneticAlgorithmConfiguration<TGenotype, TEncoding>
   where TEncoding : IEncoding<TGenotype>
 {
   public int? PopulationSize { get; init; }
-  public ICreator<TGenotype, TEncoding>? Creator { get; init; }
-  public ICrossover<TGenotype, TEncoding>? Crossover { get; init; }
-  public IMutator<TGenotype, TEncoding>? Mutator { get; init; }
+  public Creator<TGenotype, TEncoding>? Creator { get; init; }
+  public Crossover<TGenotype, TEncoding>? Crossover { get; init; }
+  public Mutator<TGenotype, TEncoding>? Mutator { get; init; }
   public double? MutationRate { get; init; }
-  public ISelector? Selector { get; init; }
-  public IReplacer? Replacer { get; init; }
+  public Selector? Selector { get; init; }
+  public Replacer? Replacer { get; init; }
   public int? RandomSeed { get; init; }
-  public IInterceptor<GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; init; }
-  public ITerminator<GeneticAlgorithmIterationResult<TGenotype>>? Terminator { get; init; }
+  public Interceptor<GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; init; }
+  public Terminator<GeneticAlgorithmIterationResult<TGenotype>>? Terminator { get; init; }
 }
 
 public static class GeneticAlgorithmConfiguration {

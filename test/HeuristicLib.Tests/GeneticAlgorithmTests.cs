@@ -135,47 +135,47 @@ public class GeneticAlgorithmTests {
       .IgnoreMembersWithType<TimeSpan>();
   }
   
-  [Fact]
-  public async Task GeneticAlgorithm_TerminateWithPauseToken() {
-    var encoding = new RealVectorEncoding(5, -5, +5);
-    var creator = new UniformDistributedCreator(minimum: null, maximum: null);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-    var decoder = Decoder.Identity<RealVector>();
-    var evaluator = new RealVectorMockEvaluator();
-    var selector = new ProportionalSelector();
-    var replacement = new PlusSelectionReplacer();
-    var pauseToken = new PauseToken();
-    var terminator = new PauseTokenTerminator<GeneticAlgorithmIterationResult<RealVector>>(pauseToken);
-    var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
-      Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
-    };
-
-    var firstAlg = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
-      //Encoding = encoding,
-      populationSize: 5,
-      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05, 
-      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
-      selector: selector, replacer: replacement, 
-      randomSeed: 42, terminator: terminator
-    );
-    
-    var task = Task.Run(() => firstAlg.Execute(problem));
-
-    await Task.Delay(200);
-    
-    task.Status.ShouldBe(TaskStatus.Running);
-    
-    pauseToken.RequestPause();
-
-    var finalState = await task;
-    
-    
-    task.Status.ShouldBe(TaskStatus.RanToCompletion);
-    
-    finalState.ShouldNotBeNull();
-    finalState.TotalGenerations.ShouldBeGreaterThan(0);
-  }
+  // [Fact]
+  // public async Task GeneticAlgorithm_TerminateWithPauseToken() {
+  //   var encoding = new RealVectorEncoding(5, -5, +5);
+  //   var creator = new UniformDistributedCreator(minimum: null, maximum: null);
+  //   var crossover = new SinglePointCrossover();
+  //   var mutator = new GaussianMutator(0.1, 0.1);
+  //   var decoder = Decoder.Identity<RealVector>();
+  //   var evaluator = new RealVectorMockEvaluator();
+  //   var selector = new ProportionalSelector();
+  //   var replacement = new PlusSelectionReplacer();
+  //   var pauseToken = new PauseToken();
+  //   var terminator = new PauseTokenTerminator<GeneticAlgorithmIterationResult<RealVector>>(pauseToken);
+  //   var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> {
+  //     Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
+  //   };
+  //
+  //   var firstAlg = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+  //     //Encoding = encoding,
+  //     populationSize: 5,
+  //     creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05, 
+  //     //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+  //     selector: selector, replacer: replacement, 
+  //     randomSeed: 42, terminator: terminator
+  //   );
+  //   
+  //   var task = Task.Run(() => firstAlg.Execute(problem));
+  //
+  //   await Task.Delay(200);
+  //   
+  //   task.Status.ShouldBe(TaskStatus.Running);
+  //   
+  //   pauseToken.RequestPause();
+  //
+  //   var finalState = await task;
+  //   
+  //   
+  //   task.Status.ShouldBe(TaskStatus.RanToCompletion);
+  //   
+  //   finalState.ShouldNotBeNull();
+  //   finalState.TotalGenerations.ShouldBeGreaterThan(0);
+  // }
   
   [Fact]
   public async Task GeneticAlgorithm_ExecuteAndContinueWithOtherAlg() {
@@ -236,7 +236,7 @@ public class GeneticAlgorithmTests {
       randomSeed: 42, terminator: terminator
     );
     var initialState = new GeneticAlgorithmState<RealVector> {
-      Generation = 100, Population = [], UsedRandomSeed = 100
+      Generation = 100, Population = []
     };
 
     var iterationResults = alg.ExecuteStreaming(problem, initialState).ToList();

@@ -6,29 +6,29 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public class GeneticAlgorithm<TGenotype, TEncoding>
+public record class GeneticAlgorithm<TGenotype, TEncoding>
   : IterativeAlgorithm<TGenotype, TEncoding, GeneticAlgorithmState<TGenotype>, GeneticAlgorithmIterationResult<TGenotype>, GeneticAlgorithmResult<TGenotype>>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : IEncoding<TGenotype> 
 {
   public int PopulationSize { get; }
-  public ICreator<TGenotype, TEncoding> Creator { get; }
-  public ICrossover<TGenotype, TEncoding> Crossover { get; }
-  public IMutator<TGenotype, TEncoding> Mutator { get; }
+  public Creator<TGenotype, TEncoding> Creator { get; }
+  public Crossover<TGenotype, TEncoding> Crossover { get; }
+  public Mutator<TGenotype, TEncoding> Mutator { get; }
   public double MutationRate { get; }
-  public ISelector Selector { get; }
-  public IReplacer Replacer { get; }
+  public Selector Selector { get; }
+  public Replacer Replacer { get; }
   public int RandomSeed { get; }
-  public IInterceptor<GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; }
-  
+  public Interceptor<GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; }
+
   public GeneticAlgorithm(
     int populationSize,
-    ICreator<TGenotype, TEncoding> creator,
-    ICrossover<TGenotype, TEncoding> crossover,
-    IMutator<TGenotype, TEncoding> mutator, double mutationRate,
-    ISelector selector, IReplacer replacer,
+    Creator<TGenotype, TEncoding> creator,
+    Crossover<TGenotype, TEncoding> crossover,
+    Mutator<TGenotype, TEncoding> mutator, double mutationRate,
+    Selector selector, Replacer replacer,
     int randomSeed,
-    ITerminator<GeneticAlgorithmIterationResult<TGenotype>> terminator,
-    IInterceptor<GeneticAlgorithmIterationResult<TGenotype>>? interceptor = null
+    Terminator<GeneticAlgorithmIterationResult<TGenotype>> terminator,
+    Interceptor<GeneticAlgorithmIterationResult<TGenotype>>? interceptor = null
   ) : base(terminator) {
     PopulationSize = populationSize;
     Creator = creator;
@@ -40,7 +40,38 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
     RandomSeed = randomSeed;
     Interceptor = interceptor;
   }
+
+  public override GeneticAlgorithmInstance<TGenotype, TEncoding> CreateInstance() {
+    return new GeneticAlgorithmInstance<TGenotype, TEncoding>(this);
+  }
+}
+
+// public interface IGeneticAlgorithmInstance<TGenotype, TEncoding> {
+//   
+// }
+
+public class GeneticAlgorithmInstance<TGenotype, TEncoding>
+  : IterativeAlgorithmInstance<TGenotype, TEncoding, GeneticAlgorithmState<TGenotype>, GeneticAlgorithmIterationResult<TGenotype>, GeneticAlgorithmResult<TGenotype>, GeneticAlgorithm<TGenotype, TEncoding>>
+  where TEncoding : IEncoding<TGenotype> 
+{
+  public IRandomNumberGenerator Random { get; }
+  public ICreatorInstance<TGenotype, TEncoding> Creator { get; }
+  public ICrossoverInstance<TGenotype, TEncoding> Crossover { get; }
+  public IMutatorInstance<TGenotype, TEncoding> Mutator { get; }
+  public ISelectorInstance Selector { get; }
+  public IReplacerInstance Replacer { get; }
+  public IInterceptorInstance<GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; }
   
+  public GeneticAlgorithmInstance(GeneticAlgorithm<TGenotype, TEncoding> parameters) : base(parameters) {
+    Random = new SystemRandomNumberGenerator(parameters.RandomSeed);
+    Creator = parameters.Creator.CreateInstance();
+    Crossover = parameters.Crossover.CreateInstance();
+    Mutator = parameters.Mutator.CreateInstance();
+    Selector = parameters.Selector.CreateInstance();
+    Replacer = parameters.Replacer.CreateInstance();
+    Interceptor = parameters.Interceptor?.CreateInstance();
+  }
+
   public override GeneticAlgorithmResult<TGenotype> Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, GeneticAlgorithmState<TGenotype>? initialState = null) {
     EvaluatedIndividual<TGenotype>? bestSolution = null;
     var comparer = problem.Objective.TotalOrderComparer;
@@ -58,7 +89,6 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
     }
     
     return new GeneticAlgorithmResult<TGenotype> {
-      UsedRandomSeed = RandomSeed,
       TotalGenerations = totalGenerations,
       TotalDuration = totalDuration,
       OperatorMetrics = totalMetrics,
@@ -69,10 +99,8 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
   protected override GeneticAlgorithmIterationResult<TGenotype> ExecuteInitialization<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem) {
     var start = Stopwatch.GetTimestamp();
 
-    var random = new SystemRandomNumberGenerator(RandomSeed);
-
     var startCreating = Stopwatch.GetTimestamp();
-    var newPopulation = Enumerable.Range(0, PopulationSize).Select(i => Creator.Create(problem.Encoding, random)).ToArray();
+    var newPopulation = Enumerable.Range(0, Parameters.PopulationSize).Select(i => Creator.Create(problem.Encoding, Random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     var genotypePopulation = newPopulation;
@@ -90,7 +118,6 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
     
     var result = new GeneticAlgorithmIterationResult<TGenotype>() {
-      UsedGenerationRandomSeed = RandomSeed,
       Generation = 0,
       Objective = problem.Objective,
       Population = population,
@@ -122,15 +149,15 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
   protected override GeneticAlgorithmIterationResult<TGenotype> ExecuteIteration<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, GeneticAlgorithmState<TGenotype> state) {
     var start = Stopwatch.GetTimestamp();
     
-    int newRandomSeed = SeedSequence.GetSeed(RandomSeed, state.Generation);
-    var random = new SystemRandomNumberGenerator(newRandomSeed);
+    // int newRandomSeed = SeedSequence.GetSeed(Algorithm.RandomSeed, state.Generation);
+    // var random = new SystemRandomNumberGenerator(newRandomSeed);
     
-    int offspringCount = Replacer.GetOffspringCount(PopulationSize);
+    int offspringCount = Replacer.GetOffspringCount(Parameters.PopulationSize);
 
     var oldPopulation = state.Population;
     
     var startSelection = Stopwatch.GetTimestamp();
-    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random).ToList();
+    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, Random).ToList();
     var endSelection = Stopwatch.GetTimestamp();
      
     var genotypePopulation = new TGenotype[offspringCount];
@@ -139,7 +166,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
     for (int i = 0; i < parents.Count; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
-      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, problem.Encoding, random);
+      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, problem.Encoding, Random);
       genotypePopulation[i / 2] = child;
       crossoverCount++;
     }
@@ -148,8 +175,8 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
     var startMutation = Stopwatch.GetTimestamp();
     int mutationCount = 0;
     for (int i = 0; i < genotypePopulation.Length; i++) {
-      if (random.Random() < MutationRate) {
-        genotypePopulation[i] = Mutator.Mutate(genotypePopulation[i], problem.Encoding, random);
+      if (Random.Random() < Parameters.MutationRate) {
+        genotypePopulation[i] = Mutator.Mutate(genotypePopulation[i], problem.Encoding, Random);
         mutationCount++;
       }
     }
@@ -166,13 +193,12 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
     var population = Population.From(genotypePopulation, /*phenotypePopulation,*/ fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
-    var newPopulation = Replacer.Replace(oldPopulation, population, problem.Objective, random);
+    var newPopulation = Replacer.Replace(oldPopulation, population, problem.Objective, Random);
     var endReplacement = Stopwatch.GetTimestamp();
     
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
     
     var result = new GeneticAlgorithmIterationResult<TGenotype>() {
-      UsedGenerationRandomSeed = newRandomSeed,
       Generation = state.Generation + 1,
       Objective = problem.Objective,
       Population = newPopulation,

@@ -1,6 +1,5 @@
 ﻿{
   firstResult: {
-    UsedGenerationRandomSeed: 1389752181,
     Generation: 5,
     Objective: {
       Directions: [
@@ -27,7 +26,7 @@
         Count: 5
       },
       Mutation: {
-        Count: 0
+        Count: 1
       },
       Replacement: {
         Count: 1
@@ -121,7 +120,7 @@
         Count: 56
       },
       Mutation: {
-        Count: 4
+        Count: 7
       },
       Replacement: {
         Count: 7
@@ -133,11 +132,11 @@
     BestSolution: {
       Genotype: [
         0.22764276025241337,
-        -3.6612898863671766,
-        -3.7448171054687434
+        -3.6406196154144683,
+        -3.7294027933754976
       ],
       Fitness: [
-        -7.178464231583506
+        -7.142379648537553
       ]
     }
   }
