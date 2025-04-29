@@ -6,9 +6,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 5
-      },
       Evaluation: {
         Count: 5
       },
@@ -31,9 +28,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 5
-      },
-      Decoding: {
-        Count: 30
       },
       Evaluation: {
         Count: 30
@@ -135,9 +129,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 8
-      },
       Evaluation: {
         Count: 8
       },
@@ -160,9 +151,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 0
-      },
-      Decoding: {
-        Count: 56
       },
       Evaluation: {
         Count: 56

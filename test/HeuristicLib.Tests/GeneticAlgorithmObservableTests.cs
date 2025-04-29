@@ -20,7 +20,8 @@ public class GeneticAlgorithmObservableTests {
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
     var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3);
-    var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> { Encoding = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize };
+    //var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> { SearchSpace = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize };
+    var problem = new RealVectorMockOptimizable();
     
     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
       //Encoding = encoding,
@@ -48,5 +49,11 @@ public class GeneticAlgorithmObservableTests {
 
     return Verify(result)
       .IgnoreMembersWithType<TimeSpan>();
+  }
+  
+  private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorEncoding> {
+    public Fitness Evaluate(RealVector genotype) => genotype.Sum();
+    public Objective Objective => SingleObjective.Minimize;
+    public RealVectorEncoding SearchSpace => new RealVectorEncoding(2, -5, +5);
   }
 }

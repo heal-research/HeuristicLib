@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings;
 
-public record class RealVectorEncoding : EncodingBase<RealVector> {
+public record class RealVectorEncoding : SearchSpace<RealVector> {
   public int Length { get; }
   public RealVector Minimum { get; }
   public RealVector Maximum { get; }
@@ -17,7 +17,7 @@ public record class RealVectorEncoding : EncodingBase<RealVector> {
   //  OutOfBounds = outOfBounds;
   }
   
-  public override bool IsValidGenotype(RealVector genotype) {
+  public override bool IsValid(RealVector genotype) {
     return genotype.Count == Length
            && (genotype >= Minimum).All()
            && (genotype <= Maximum).All();

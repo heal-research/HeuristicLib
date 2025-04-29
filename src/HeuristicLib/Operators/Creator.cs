@@ -3,44 +3,44 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public abstract record class Creator<TGenotype, TEncoding> : Operator<ICreatorInstance<TGenotype, TEncoding>>
-  where TEncoding : IEncoding<TGenotype>
+public abstract record class Creator<TGenotype, TSearchSpace> : Operator<ICreatorInstance<TGenotype, TSearchSpace>>
+  where TSearchSpace : ISearchSpace<TGenotype>
 {
 }
 
 
-public interface ICreatorInstance<TGenotype, in TEncoding>
-  where TEncoding : IEncoding<TGenotype>
+public interface ICreatorInstance<TGenotype, in TSearchSpace>
+  where TSearchSpace : ISearchSpace<TGenotype>
 {
-  TGenotype Create(TEncoding encoding, IRandomNumberGenerator random);
+  TGenotype Create(TSearchSpace searchSpace, IRandomNumberGenerator random);
 }
 
 
-public abstract class CreatorInstance<TGenotype, TEncoding, TCreator> : OperatorInstance<TCreator>, ICreatorInstance<TGenotype, TEncoding> 
-  where TEncoding : IEncoding<TGenotype>
+public abstract class CreatorInstance<TGenotype, TSearchSpace, TCreator> : OperatorInstance<TCreator>, ICreatorInstance<TGenotype, TSearchSpace> 
+  where TSearchSpace : ISearchSpace<TGenotype>
 {
   protected CreatorInstance(TCreator parameters) : base(parameters) { }
-  public abstract TGenotype Create(TEncoding encoding, IRandomNumberGenerator random);
+  public abstract TGenotype Create(TSearchSpace searchSpace, IRandomNumberGenerator random);
 }
 
 // public static class Creator {
-//   public static CustomCreator<TGenotype, TEncoding> Create<TGenotype, TEncoding>(Func<TEncoding, IRandomNumberGenerator, TGenotype> creator) 
-//     where TEncoding : IEncoding<TGenotype> 
+//   public static CustomCreator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator) 
+//     where TSearchSpace : IEncoding<TGenotype> 
 //   {
-//     return new CustomCreator<TGenotype, TEncoding>(creator);
+//     return new CustomCreator<TGenotype, TSearchSpace>(creator);
 //   }
 // }
 //
-// public sealed class CustomCreator<TGenotype, TEncoding> 
-//   : ICreator<TGenotype, TEncoding> 
-//   where TEncoding : IEncoding<TGenotype> {
-//   private readonly Func<TEncoding, IRandomNumberGenerator, TGenotype> creator;
-//   internal CustomCreator(Func<TEncoding, IRandomNumberGenerator, TGenotype> creator) {
+// public sealed class CustomCreator<TGenotype, TSearchSpace> 
+//   : ICreator<TGenotype, TSearchSpace> 
+//   where TSearchSpace : IEncoding<TGenotype> {
+//   private readonly Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator;
+//   internal CustomCreator(Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator) {
 //     this.creator = creator;
 //   }
-//   public TGenotype Create(TEncoding encoding, IRandomNumberGenerator random) => creator(encoding, random);
+//   public TGenotype Create(TSearchSpace encoding, IRandomNumberGenerator random) => creator(encoding, random);
 // }
 //
-// public abstract class CreatorBase<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding> where TEncoding : IEncoding<TGenotype> {
-//   public abstract TGenotype Create(TEncoding encoding, IRandomNumberGenerator random);
+// public abstract class CreatorBase<TGenotype, TSearchSpace> : ICreator<TGenotype, TSearchSpace> where TSearchSpace : IEncoding<TGenotype> {
+//   public abstract TGenotype Create(TSearchSpace encoding, IRandomNumberGenerator random);
 // }

@@ -6,7 +6,7 @@ public class MultiObjectiveTestFunctionProblem : EncodedProblemBase<RealVector, 
   private readonly IMultiObjectiveTestFunction testFunction;
 
   public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) 
-    : base(testFunction.Objective, GetEncoding(testFunction)) 
+    : base(testFunction.Objective, GeTSearchSpace(testFunction)) 
   {
     this.testFunction = testFunction;
   }
@@ -15,7 +15,7 @@ public class MultiObjectiveTestFunctionProblem : EncodedProblemBase<RealVector, 
     return new Fitness(testFunction.Evaluate(solution));
   }
   
-  public static RealVectorEncoding GetEncoding(IMultiObjectiveTestFunction testFunction) => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  public static RealVectorEncoding GeTSearchSpace(IMultiObjectiveTestFunction testFunction) => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
 
   public override RealVector Decode(RealVector genotype) => genotype;
   

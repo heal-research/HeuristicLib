@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿namespace HEAL.HeuristicLib.Problems;
 
 
 public interface IDecoder<in TGenotype, out TPhenotype> {

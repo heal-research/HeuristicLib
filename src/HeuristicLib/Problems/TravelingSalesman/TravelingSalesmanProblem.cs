@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -12,42 +11,23 @@ public class Tour {
 
 public class TravelingSalesmanProblem : ProblemBase<Tour> {
 
-  private readonly ITravelingSalesmanProblemData problemData;
+  public ITravelingSalesmanProblemData ProblemData { get; }
 
-  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) 
+  public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
     : base(SingleObjective.Minimize) {
-    this.problemData = problemData;
+    ProblemData = problemData;
   }
 
   public override Fitness Evaluate(Tour solution) {
     var tour = solution.Cities;
     double totalDistance = 0.0;
     for (int i = 0; i < tour.Count - 1; i++) {
-      totalDistance += problemData.GetDistance(tour[i], tour[i + 1]);
+      totalDistance += ProblemData.GetDistance(tour[i], tour[i + 1]);
     }
-    totalDistance += problemData.GetDistance(tour[^1], tour[0]); // Return to the starting city
+    totalDistance += ProblemData.GetDistance(tour[^1], tour[0]);// Return to the starting city
+
     return totalDistance;
   }
-
-  public IEncodedProblem<Tour, Permutation, PermutationEncoding> EncodeAsPermutation() {
-    return new EncodedProblem<Tour, Permutation, PermutationEncoding>() {
-      Encoding = new PermutationEncoding(problemData.NumberOfCities),
-      Decoder = new PermutationDecoder(),
-      Evaluator = Operators.Evaluator.FromFitnessFunction<Tour>(Evaluate),
-      Objective = Objective
-    };
-  }
-  //public override PermutationEncoding GetEncoding() => new PermutationEncoding(problemData.NumberOfCities);
-  
-  private class PermutationDecoder : IDecoder<Permutation, Tour> {
-    public Tour Decode(Permutation genotype) => new Tour(genotype);
-  }
-  
-  // return new PermutationEncoding(problemData.NumberOfCities) {
-  //   // Creator = new RandomPermutationCreator(),
-  //   // Crossover = new OrderCrossover(),
-  //   // Mutator = new InversionMutator()
-  // };
   
   #region Default Instance
   public static TravelingSalesmanProblem CreateDefault() {
@@ -62,6 +42,31 @@ public class TravelingSalesmanProblem : ProblemBase<Tour> {
   };
   #endregion
 }
+
+public static class TravelingSalesmanProblemPermutationEncoding {
+  public static EncodedProblem<Tour, Permutation, PermutationEncoding> EncodeAsPermutation(this TravelingSalesmanProblem problem) {
+    var searchSpace = new PermutationEncoding(problem.ProblemData.NumberOfCities);
+
+    return new EncodedProblem<Tour, Permutation, PermutationEncoding>(
+      problem,
+      searchSpace,
+      new PermutationDecoder()
+    );
+  }
+  
+  private class PermutationDecoder : IDecoder<Permutation, Tour> {
+    public Tour Decode(Permutation genotype) => new Tour(genotype);
+  }
+}
+
+//public override PermutationEncoding GeTSearchSpace() => new PermutationEncoding(problemData.NumberOfCities);
+  
+// return new PermutationEncoding(problemData.NumberOfCities) {
+//   // Creator = new RandomPermutationCreator(),
+//   // Crossover = new OrderCrossover(),
+//   // Mutator = new InversionMutator()
+// };
+
 
 public interface ITravelingSalesmanProblemData {
   int NumberOfCities { get; }

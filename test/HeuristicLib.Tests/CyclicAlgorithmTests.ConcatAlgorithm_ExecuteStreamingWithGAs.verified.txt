@@ -19,9 +19,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 2
-      },
       Evaluation: {
         Count: 2
       },
@@ -44,9 +41,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 0
-      },
-      Decoding: {
-        Count: 8
       },
       Evaluation: {
         Count: 8

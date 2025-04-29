@@ -6,9 +6,6 @@
       Creation: {
         Count: 5
       },
-      Decoding: {
-        Count: 5
-      },
       Evaluation: {
         Count: 5
       },
@@ -30,9 +27,6 @@
     },
     TotalOperatorMetrics: {
       Creation: {
-        Count: 5
-      },
-      Decoding: {
         Count: 5
       },
       Evaluation: {
@@ -135,9 +129,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 5
-      },
       Evaluation: {
         Count: 5
       },
@@ -160,9 +151,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 5
-      },
-      Decoding: {
-        Count: 10
       },
       Evaluation: {
         Count: 10
@@ -264,9 +252,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 5
-      },
       Evaluation: {
         Count: 5
       },
@@ -289,9 +274,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 5
-      },
-      Decoding: {
-        Count: 15
       },
       Evaluation: {
         Count: 15
@@ -393,9 +375,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 5
-      },
       Evaluation: {
         Count: 5
       },
@@ -418,9 +397,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 5
-      },
-      Decoding: {
-        Count: 20
       },
       Evaluation: {
         Count: 20
@@ -522,9 +498,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 5
-      },
       Evaluation: {
         Count: 5
       },
@@ -547,9 +520,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 5
-      },
-      Decoding: {
-        Count: 25
       },
       Evaluation: {
         Count: 25

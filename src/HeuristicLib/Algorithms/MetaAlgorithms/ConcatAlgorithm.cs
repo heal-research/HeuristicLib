@@ -4,70 +4,70 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-public abstract record class MetaAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>
-  : StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>
-  where TEncoding : IEncoding<TGenotype>
+public abstract record class MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  : StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  where TSearchSpace : ISearchSpace<TGenotype>
   where TState : class 
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
-  // where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
+  // where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
 {
-  public ImmutableList<StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>> Algorithms { get; }
+  public ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>> Algorithms { get; }
   
-  protected MetaAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>> algorithms) {
+  protected MetaAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>> algorithms) {
     if (algorithms.Count == 0) throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms)); 
     Algorithms = algorithms;
   }
   
-  //public abstract IEnumerable<TIterationResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null);
+  //public abstract IEnumerable<TIterationResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null);
 }
 
-public abstract class MetaAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult, TAlgorithm>
-  : StreamableAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult, TAlgorithm>
-  where TEncoding : IEncoding<TGenotype>
+public abstract class MetaAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithm>
+  : StreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithm>
+  where TSearchSpace : ISearchSpace<TGenotype>
   where TState : class
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
-  where TAlgorithm : MetaAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult> 
+  where TAlgorithm : MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> 
 {
-  public IEnumerable<IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult>> Algorithms { get; }
+  public IEnumerable<IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>> Algorithms { get; }
 
   protected MetaAlgorithmInstance(TAlgorithm parameters) : base(parameters) {
     Algorithms = parameters.Algorithms.Select(a => a.CreateInstance()).ToList();
   }
 }
 
-public record class ConcatAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>
-  : MetaAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>
-  where TEncoding : IEncoding<TGenotype>
+public record class ConcatAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  : MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  where TSearchSpace : ISearchSpace<TGenotype>
   where TState : class
   // where TIterationResult : class, IContinuableIterationResult<TState>
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
-  //where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TEncoding, TState, TIterationResult, TAlgorithmResult>
+  //where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
 {
-  public ConcatAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>> algorithms) : base(algorithms) { }
+  public ConcatAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>> algorithms) : base(algorithms) { }
 
-  public override ConcatAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult> CreateInstance() {
-    return new ConcatAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult>(this);
+  public override ConcatAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> CreateInstance() {
+    return new ConcatAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>(this);
   }
 }
 
-public class ConcatAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult>
-  : MetaAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult, ConcatAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>>
-  where TEncoding : IEncoding<TGenotype>
+public class ConcatAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  : MetaAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, ConcatAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>>
+  where TSearchSpace : ISearchSpace<TGenotype>
   where TState : class
   // where TIterationResult : class, IContinuableIterationResult<TState>
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
 {
-  public ConcatAlgorithmInstance(ConcatAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult> parameters) : base(parameters) { }
+  public ConcatAlgorithmInstance(ConcatAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> parameters) : base(parameters) { }
   
-  public override TAlgorithmResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
-    return ExecuteStreaming(problem, initialState).Last();
+  public override TAlgorithmResult Execute(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
+    return ExecuteStreaming(optimizable, initialState).Last();
   }
   
-  public override IEnumerable<TAlgorithmResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
+  public override IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
     TState? currentState = initialState;
     foreach (var algorithm in Algorithms) {
       TAlgorithmResult? lastIterationResult = null;
-      foreach (var iterationResult in algorithm.ExecuteStreaming(problem, currentState)) {
+      foreach (var iterationResult in algorithm.ExecuteStreaming(optimizable, currentState)) {
         yield return iterationResult;
         lastIterationResult = iterationResult;
       }
@@ -101,46 +101,46 @@ public class ConcatAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmRes
 
 }
 
-public record class CyclicAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>
-  : MetaAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>
-  where TEncoding : IEncoding<TGenotype>
+public record class CyclicAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  : MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  where TSearchSpace : ISearchSpace<TGenotype>
   where TState : class
   // where TIterationResult : class, IContinuableIterationResult<TState>
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 {
   public Terminator<TAlgorithmResult> Terminator { get; }
 
-  public CyclicAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>> algorithms, Terminator<TAlgorithmResult> terminator)
+  public CyclicAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>> algorithms, Terminator<TAlgorithmResult> terminator)
     : base(algorithms) {
     Terminator = terminator;
   }
-  public override CyclicAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult> CreateInstance() {
-    return new CyclicAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult>(this);
+  public override CyclicAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> CreateInstance() {
+    return new CyclicAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>(this);
   }
 }
 
-public class CyclicAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult>
-  : MetaAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmResult, CyclicAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult>>
-  where TEncoding : IEncoding<TGenotype>
+public class CyclicAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  : MetaAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, CyclicAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>>
+  where TSearchSpace : ISearchSpace<TGenotype>
   where TState : class
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
 {
   public ITerminatorInstance<TAlgorithmResult> Terminator { get; }
 
-  public CyclicAlgorithmInstance(CyclicAlgorithm<TGenotype, TEncoding, TState, TAlgorithmResult> parameters) : base(parameters) {
+  public CyclicAlgorithmInstance(CyclicAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> parameters) : base(parameters) {
     Terminator = parameters.Terminator.CreateInstance();
   }
 
-  public override TAlgorithmResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
-    return ExecuteStreaming(problem, initialState).Last();
+  public override TAlgorithmResult Execute(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
+    return ExecuteStreaming(optimizable, initialState).Last();
   }
   
-  public override IEnumerable<TAlgorithmResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, TState? initialState = null) {
+  public override IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
     TState? currentState = initialState;
     while (true) {
       foreach (var algorithm in Algorithms) {
         TAlgorithmResult? lastIterationResult = null;
-        foreach (var iterationResult in algorithm.ExecuteStreaming(problem, currentState)) {
+        foreach (var iterationResult in algorithm.ExecuteStreaming(optimizable, currentState)) {
           yield return iterationResult;
           lastIterationResult = iterationResult;
           if (Terminator.ShouldTerminate(iterationResult)) {
@@ -184,25 +184,25 @@ public class CyclicAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmRes
 //   TTargetState Transform(TSourceState sourceState, TTargetState? previousTargetState = null);
 // }
 //
-// public class ConcatAlgorithm<TGenotype, TEncoding, TSourceState, TTargetState, TSourceIterationResult, TTargetIterationResult> 
-//   : IStreamableAlgorithm<TGenotype, TEncoding, object, IContinuableIterationResult<object>>
-//   where TEncoding : IEncoding<TGenotype>
+// public class ConcatAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargetIterationResult> 
+//   : IStreamableAlgorithm<TGenotype, TSearchSpace, object, IContinuableIterationResult<object>>
+//   where TSearchSpace : IEncoding<TGenotype>
 //   where TSourceState : class
 //   where TTargetState : class
 //   where TSourceIterationResult : class, IContinuableIterationResult<TSourceState>
 //   where TTargetIterationResult : class, IContinuableIterationResult<TTargetState>
 // {
-//   public IStreamableAlgorithm<TGenotype, TEncoding, TSourceState, TSourceIterationResult> FirstAlgorithm { get; }
-//   public IStreamableAlgorithm<TGenotype, TEncoding, TTargetState, TTargetIterationResult> SecondAlgorithm { get; }
+//   public IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> FirstAlgorithm { get; }
+//   public IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargetIterationResult> SecondAlgorithm { get; }
 //   public IStateTransformer<TSourceState, TTargetState> Transformer { get; }
 //   
-//   public ConcatAlgorithm(IStreamableAlgorithm<TGenotype, TEncoding, TSourceState, TSourceIterationResult> firstAlgorithm, IStreamableAlgorithm<TGenotype, TEncoding, TTargetState, TTargetIterationResult> secondAlgorithm, IStateTransformer<TSourceState, TTargetState> transformer) {
+//   public ConcatAlgorithm(IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> firstAlgorithm, IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargetIterationResult> secondAlgorithm, IStateTransformer<TSourceState, TTargetState> transformer) {
 //     FirstAlgorithm = firstAlgorithm;
 //     SecondAlgorithm = secondAlgorithm;
 //     Transformer = transformer;
 //   }
 //
-//   public IEnumerable<IContinuableIterationResult<object>> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, object? initialState = null) {
+//   public IEnumerable<IContinuableIterationResult<object>> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, object? initialState = null) {
 //     if (initialState is not null && initialState is not TSourceState) throw new ArgumentException("Initial state must be of type TSourceState.", nameof(initialState));
 //
 //     TSourceIterationResult? lastSourceIterationResult = null;
@@ -244,22 +244,22 @@ public class CyclicAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmRes
 //   // }
 // }
 //
-// public class CyclicAlgorithm<TGenotype, TEncoding, TSourceState, TTargetState, TSourceIterationResult, TTargetIterationResult> 
-//   : IStreamableAlgorithm<TGenotype, TEncoding, object, IContinuableIterationResult<object>>
-//   where TEncoding : IEncoding<TGenotype>
+// public class CyclicAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargetIterationResult> 
+//   : IStreamableAlgorithm<TGenotype, TSearchSpace, object, IContinuableIterationResult<object>>
+//   where TSearchSpace : IEncoding<TGenotype>
 //   where TSourceState : class
 //   where TTargetState : class
 //   where TSourceIterationResult : class, IContinuableIterationResult<TSourceState>
 //   where TTargetIterationResult : class, IContinuableIterationResult<TTargetState>
 // {
-//   public IStreamableAlgorithm<TGenotype, TEncoding, TSourceState, TSourceIterationResult> FirstAlgorithm { get; }
-//   public IStreamableAlgorithm<TGenotype, TEncoding, TTargetState, TTargetIterationResult> SecondAlgorithm { get; }
+//   public IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> FirstAlgorithm { get; }
+//   public IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargetIterationResult> SecondAlgorithm { get; }
 //   public IStateTransformer<TSourceState, TTargetState> Transformer { get; }
 //   public IStateTransformer<TTargetState, TSourceState> RepetitionTransformer { get; }
 //   public ITerminator<IContinuableIterationResult<object>> Terminator { get; }
 //   
 //   public CyclicAlgorithm(
-//     IStreamableAlgorithm<TGenotype, TEncoding, TSourceState, TSourceIterationResult> firstAlgorithm, IStreamableAlgorithm<TGenotype, TEncoding, TTargetState, TTargetIterationResult> secondAlgorithm,
+//     IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> firstAlgorithm, IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargetIterationResult> secondAlgorithm,
 //     IStateTransformer<TSourceState, TTargetState> transformer, IStateTransformer<TTargetState, TSourceState> repetitionTransformer, 
 //     ITerminator<IContinuableIterationResult<object>> terminator) 
 //   {
@@ -270,7 +270,7 @@ public class CyclicAlgorithmInstance<TGenotype, TEncoding, TState, TAlgorithmRes
 //     Terminator = terminator;
 //   }
 //   
-//   public IEnumerable<IContinuableIterationResult<object>> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TEncoding> problem, object? initialState = null) {
+//   public IEnumerable<IContinuableIterationResult<object>> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, object? initialState = null) {
 //     if (initialState is not null && initialState is not TSourceState) throw new ArgumentException("Initial state must be of type TSourceState.", nameof(initialState));
 //
 //     TSourceState? sourceState = initialState as TSourceState;

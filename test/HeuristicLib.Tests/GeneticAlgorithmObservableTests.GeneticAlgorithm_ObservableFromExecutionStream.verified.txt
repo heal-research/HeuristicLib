@@ -6,9 +6,6 @@
       Creation: {
         Count: 2
       },
-      Decoding: {
-        Count: 2
-      },
       Evaluation: {
         Count: 2
       },
@@ -30,9 +27,6 @@
     },
     TotalOperatorMetrics: {
       Creation: {
-        Count: 2
-      },
-      Decoding: {
         Count: 2
       },
       Evaluation: {
@@ -102,9 +96,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 2
-      },
       Evaluation: {
         Count: 2
       },
@@ -127,9 +118,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 2
-      },
-      Decoding: {
-        Count: 4
       },
       Evaluation: {
         Count: 4
@@ -198,9 +186,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 2
-      },
       Evaluation: {
         Count: 2
       },
@@ -223,9 +208,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 2
-      },
-      Decoding: {
-        Count: 6
       },
       Evaluation: {
         Count: 6
@@ -294,9 +276,6 @@
       Creation: {
         Count: 0
       },
-      Decoding: {
-        Count: 2
-      },
       Evaluation: {
         Count: 2
       },
@@ -319,9 +298,6 @@
     TotalOperatorMetrics: {
       Creation: {
         Count: 2
-      },
-      Decoding: {
-        Count: 8
       },
       Evaluation: {
         Count: 8

@@ -3,14 +3,14 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings;
 
-public record class PermutationEncoding : EncodingBase<Permutation> {
+public record class PermutationEncoding : SearchSpace<Permutation> {
   public int Length { get; }
   
   public PermutationEncoding(int length) {
     Length = length;
   }
 
-  public override bool IsValidGenotype(Permutation genotype) {
+  public override bool IsValid(Permutation genotype) {
     return genotype.Count == Length;
   }
 }
@@ -135,8 +135,8 @@ public record class RandomPermutationCreator : Creator<Permutation, PermutationE
 
 public class RandomPermutationCreatorInstance : CreatorInstance<Permutation, PermutationEncoding, RandomPermutationCreator> {
   public RandomPermutationCreatorInstance(RandomPermutationCreator parameters) : base(parameters) {}
-  public override Permutation Create(PermutationEncoding encoding, IRandomNumberGenerator random) {
-    int[] elements = Enumerable.Range(0, encoding.Length).ToArray();
+  public override Permutation Create(PermutationEncoding searchSpace, IRandomNumberGenerator random) {
+    int[] elements = Enumerable.Range(0, searchSpace.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
       int j = random.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
@@ -152,7 +152,7 @@ public record class OrderCrossover : Crossover<Permutation, PermutationEncoding>
 
 public class OrderCrossoverInstance : CrossoverInstance<Permutation, PermutationEncoding, OrderCrossover> {
   public OrderCrossoverInstance(OrderCrossover parameters) : base(parameters) { }
-  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationEncoding encoding, IRandomNumberGenerator random) {
+  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationEncoding searchSpace, IRandomNumberGenerator random) {
     return Permutation.OrderCrossover(parent1, parent2, random);
   }
 
@@ -189,7 +189,7 @@ public record class PartiallyMatchedCrossover : Crossover<Permutation, Permutati
 
 public class PartiallyMatchedCrossoverInstance : CrossoverInstance<Permutation, PermutationEncoding, PartiallyMatchedCrossover> {
   public PartiallyMatchedCrossoverInstance(PartiallyMatchedCrossover parameters) : base(parameters) { }
-  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationEncoding encoding, IRandomNumberGenerator random) {
+  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationEncoding searchSpace, IRandomNumberGenerator random) {
     return Permutation.OrderCrossover(parent1, parent2, random); // implement PMX
   }
 }
@@ -201,7 +201,7 @@ public record class SwapMutator : Mutator<Permutation, PermutationEncoding> {
 
 public class SwapMutatorInstance : MutatorInstance<Permutation, PermutationEncoding, SwapMutator> {
   public SwapMutatorInstance(SwapMutator parameters) : base(parameters) {}
-  public override Permutation Mutate(Permutation solution, PermutationEncoding encoding, IRandomNumberGenerator random) {
+  public override Permutation Mutate(Permutation solution, PermutationEncoding searchSpace, IRandomNumberGenerator random) {
     return Permutation.SwapRandomElements(solution, random);
   }
 }
@@ -213,7 +213,7 @@ public record class InversionMutator : Mutator<Permutation, PermutationEncoding>
 
 public class InversionMutatorInstance : MutatorInstance<Permutation, PermutationEncoding, InversionMutator> {
   public InversionMutatorInstance(InversionMutator parameters) : base(parameters) { }
-  public override Permutation Mutate(Permutation parent, PermutationEncoding encoding, IRandomNumberGenerator random) {
+  public override Permutation Mutate(Permutation parent, PermutationEncoding searchSpace, IRandomNumberGenerator random) {
     int start = random.Integer(parent.Count);
     int end = random.Integer(start, parent.Count);
     int[] newElements = parent.ToArray();

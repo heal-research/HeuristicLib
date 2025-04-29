@@ -8,7 +8,7 @@ public record GeneticAlgorithmState<TGenotype> {
 
 public record GeneticAlgorithmOperatorMetrics {
   public OperatorMetric Creation { get; init; } = OperatorMetric.Zero;
-  public OperatorMetric Decoding { get; init; } = OperatorMetric.Zero;
+  // public OperatorMetric Decoding { get; init; } = OperatorMetric.Zero;
   public OperatorMetric Evaluation { get; init; } = OperatorMetric.Zero;
   public OperatorMetric Selection { get; init; } = OperatorMetric.Zero;
   public OperatorMetric Crossover { get; init; } = OperatorMetric.Zero;
@@ -19,7 +19,7 @@ public record GeneticAlgorithmOperatorMetrics {
   public static GeneticAlgorithmOperatorMetrics Aggregate(GeneticAlgorithmOperatorMetrics left, GeneticAlgorithmOperatorMetrics right) {
     return new GeneticAlgorithmOperatorMetrics {
       Creation = left.Creation + right.Creation,
-      Decoding = left.Decoding + right.Decoding,
+      // Decoding = left.Decoding + right.Decoding,
       Evaluation = left.Evaluation + right.Evaluation,
       Selection = left.Selection + right.Selection,
       Crossover = left.Crossover + right.Crossover,

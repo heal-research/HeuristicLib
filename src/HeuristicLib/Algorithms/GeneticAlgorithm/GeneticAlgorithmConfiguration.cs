@@ -5,13 +5,13 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public record GeneticAlgorithmConfiguration<TGenotype, TEncoding>
-  where TEncoding : IEncoding<TGenotype>
+public record GeneticAlgorithmConfiguration<TGenotype, TSearchSpace>
+  where TSearchSpace : ISearchSpace<TGenotype>
 {
   public int? PopulationSize { get; init; }
-  public Creator<TGenotype, TEncoding>? Creator { get; init; }
-  public Crossover<TGenotype, TEncoding>? Crossover { get; init; }
-  public Mutator<TGenotype, TEncoding>? Mutator { get; init; }
+  public Creator<TGenotype, TSearchSpace>? Creator { get; init; }
+  public Crossover<TGenotype, TSearchSpace>? Crossover { get; init; }
+  public Mutator<TGenotype, TSearchSpace>? Mutator { get; init; }
   public double? MutationRate { get; init; }
   public Selector? Selector { get; init; }
   public Replacer? Replacer { get; init; }
@@ -22,11 +22,11 @@ public record GeneticAlgorithmConfiguration<TGenotype, TEncoding>
 
 public static class GeneticAlgorithmConfiguration {
   
-  public static GeneticAlgorithmConfiguration<TGenotype, TEncoding> Merge<TGenotype, TEncoding>(
-    GeneticAlgorithmConfiguration<TGenotype, TEncoding> baseConfig, GeneticAlgorithmConfiguration<TGenotype, TEncoding> overridingConfig) 
-    where TEncoding : IEncoding<TGenotype> 
+  public static GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> Merge<TGenotype, TSearchSpace>(
+    GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> baseConfig, GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> overridingConfig) 
+    where TSearchSpace : ISearchSpace<TGenotype> 
   {
-    return new GeneticAlgorithmConfiguration<TGenotype, TEncoding> {
+    return new GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> {
       PopulationSize = overridingConfig.PopulationSize ?? baseConfig.PopulationSize,
       Creator = overridingConfig.Creator ?? baseConfig.Creator,
       Crossover = overridingConfig.Crossover ?? baseConfig.Crossover,
@@ -40,24 +40,24 @@ public static class GeneticAlgorithmConfiguration {
     };
   }
   
-  public static GeneticAlgorithmConfiguration<TGenotype, TEncoding> MergeWithOverridesFrom<TGenotype, TEncoding>(
-    this GeneticAlgorithmConfiguration<TGenotype, TEncoding> baseConfig, GeneticAlgorithmConfiguration<TGenotype, TEncoding> overridingConfig)
-    where TEncoding : IEncoding<TGenotype> 
+  public static GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> MergeWithOverridesFrom<TGenotype, TSearchSpace>(
+    this GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> baseConfig, GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> overridingConfig)
+    where TSearchSpace : ISearchSpace<TGenotype> 
   {
     return Merge(baseConfig, overridingConfig);
   }
   
-  public static GeneticAlgorithmConfiguration<TGenotype, TEncoding> MergeAsOverridesInto<TGenotype, TEncoding>(
-    this GeneticAlgorithmConfiguration<TGenotype, TEncoding> overridingConfig, GeneticAlgorithmConfiguration<TGenotype, TEncoding> baseConfig)
-    where TEncoding : IEncoding<TGenotype> 
+  public static GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> MergeAsOverridesInto<TGenotype, TSearchSpace>(
+    this GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> overridingConfig, GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> baseConfig)
+    where TSearchSpace : ISearchSpace<TGenotype> 
   {
     return Merge(baseConfig, overridingConfig);
   }
 
-  public static GeneticAlgorithmConfiguration<TGenotype, TEncoding> FromAlgorithm<TGenotype, TEncoding>(GeneticAlgorithm<TGenotype, TEncoding> algorithm) 
-    where TEncoding : IEncoding<TGenotype> 
+  public static GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> FromAlgorithm<TGenotype, TSearchSpace>(GeneticAlgorithm<TGenotype, TSearchSpace> algorithm) 
+    where TSearchSpace : ISearchSpace<TGenotype> 
   {
-    return new GeneticAlgorithmConfiguration<TGenotype, TEncoding> {
+    return new GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> {
       PopulationSize = algorithm.PopulationSize,
       Creator = algorithm.Creator,
       Crossover = algorithm.Crossover,
@@ -69,24 +69,24 @@ public static class GeneticAlgorithmConfiguration {
     };
   }
 
-  public static GeneticAlgorithmConfiguration<TGenotype, TEncoding> ToConfiguration<TGenotype, TEncoding>(this GeneticAlgorithm<TGenotype, TEncoding> algorithm)
-    where TEncoding : IEncoding<TGenotype>
+  public static GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> ToConfiguration<TGenotype, TSearchSpace>(this GeneticAlgorithm<TGenotype, TSearchSpace> algorithm)
+    where TSearchSpace : ISearchSpace<TGenotype>
   {
     return FromAlgorithm(algorithm);
   }
 }
 
 public static class GeneticAlgorithmBuildExtensions {
-  public static GeneticAlgorithm<TGenotype, TEncoding> Build<TGenotype, TEncoding>(this GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration)
-    where TEncoding : IEncoding<TGenotype>
+  public static GeneticAlgorithm<TGenotype, TSearchSpace> Build<TGenotype, TSearchSpace>(this GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> configuration)
+    where TSearchSpace : ISearchSpace<TGenotype>
   {
     configuration.ThrowIfInvalid();
 
     return Create(configuration);
   }
   
-  public static bool TryBuild<TGenotype, TEncoding>(this GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration, out  GeneticAlgorithm<TGenotype, TEncoding>? algorithm)
-    where TEncoding : IEncoding<TGenotype>
+  public static bool TryBuild<TGenotype, TSearchSpace>(this GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> configuration, out  GeneticAlgorithm<TGenotype, TSearchSpace>? algorithm)
+    where TSearchSpace : ISearchSpace<TGenotype>
   {
     if (!configuration.IsValid()) {
       algorithm = null;
@@ -97,10 +97,10 @@ public static class GeneticAlgorithmBuildExtensions {
     return true;
   }
 
-  private static GeneticAlgorithm<TGenotype, TEncoding> Create<TGenotype, TEncoding>(GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration)
-    where TEncoding : IEncoding<TGenotype> 
+  private static GeneticAlgorithm<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> configuration)
+    where TSearchSpace : ISearchSpace<TGenotype> 
   {
-    return new GeneticAlgorithm<TGenotype, TEncoding>(
+    return new GeneticAlgorithm<TGenotype, TSearchSpace>(
       configuration.PopulationSize!.Value,
       configuration.Creator!,
       configuration.Crossover!,
@@ -115,8 +115,8 @@ public static class GeneticAlgorithmBuildExtensions {
   }
 }
 
-public class GeneticAlgorithmConfigurationValidator<TGenotype, TEncoding> : AbstractValidator<GeneticAlgorithmConfiguration<TGenotype, TEncoding>>
-  where TEncoding : IEncoding<TGenotype>
+public class GeneticAlgorithmConfigurationValidator<TGenotype, TSearchSpace> : AbstractValidator<GeneticAlgorithmConfiguration<TGenotype, TSearchSpace>>
+  where TSearchSpace : ISearchSpace<TGenotype>
 {
   public GeneticAlgorithmConfigurationValidator() {
     RuleFor(x => x.PopulationSize).NotNull().WithMessage("Population size must not be null.");
@@ -133,17 +133,17 @@ public class GeneticAlgorithmConfigurationValidator<TGenotype, TEncoding> : Abst
 }
 
 public static class GeneticAlgorithmConfigurationValidationExtensions {
-  public static ValidationResult Validate<TGenotype, TEncoding>(this GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration) where TEncoding : IEncoding<TGenotype> {
-    var validator = new GeneticAlgorithmConfigurationValidator<TGenotype, TEncoding>();
+  public static ValidationResult Validate<TGenotype, TSearchSpace>(this GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> configuration) where TSearchSpace : ISearchSpace<TGenotype> {
+    var validator = new GeneticAlgorithmConfigurationValidator<TGenotype, TSearchSpace>();
     return validator.Validate(configuration); 
   }
   
-  public static bool IsValid<TGenotype, TEncoding>(this GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration) where TEncoding : IEncoding<TGenotype> {
+  public static bool IsValid<TGenotype, TSearchSpace>(this GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> configuration) where TSearchSpace : ISearchSpace<TGenotype> {
     var result = configuration.Validate();
     return result.IsValid;
   }
 
-  public static void ThrowIfInvalid<TGenotype, TEncoding>(this GeneticAlgorithmConfiguration<TGenotype, TEncoding> configuration) where TEncoding : IEncoding<TGenotype> {
+  public static void ThrowIfInvalid<TGenotype, TSearchSpace>(this GeneticAlgorithmConfiguration<TGenotype, TSearchSpace> configuration) where TSearchSpace : ISearchSpace<TGenotype> {
     var result = configuration.Validate();
     if (!result.IsValid) {
       throw new ValidationException(result.Errors);

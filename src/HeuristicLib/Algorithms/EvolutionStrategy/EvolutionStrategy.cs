@@ -14,7 +14,7 @@ public record EvolutionStrategyState {
 
 public record EvolutionStrategyOperatorMetrics {
   public OperatorMetric Creation { get; init; } = OperatorMetric.Zero;
-  public OperatorMetric Decoding { get; init; } = OperatorMetric.Zero;
+  // public OperatorMetric Decoding { get; init; } = OperatorMetric.Zero;
   public OperatorMetric Evaluation { get; init; } = OperatorMetric.Zero;
   public OperatorMetric Selection { get; init; } = OperatorMetric.Zero;
   //public OperatorMetric Crossover { get; init; } = OperatorMetric.Zero;
@@ -25,7 +25,7 @@ public record EvolutionStrategyOperatorMetrics {
   public static EvolutionStrategyOperatorMetrics Aggregate(EvolutionStrategyOperatorMetrics left, EvolutionStrategyOperatorMetrics right) {
     return new EvolutionStrategyOperatorMetrics {
       Creation = left.Creation + right.Creation,
-      Decoding = left.Decoding + right.Decoding,
+      // Decoding = left.Decoding + right.Decoding,
       Evaluation = left.Evaluation + right.Evaluation,
       Selection = left.Selection + right.Selection,
       //Crossover = a.Crossover + b.Crossover,
@@ -172,26 +172,26 @@ public class EvolutionStrategyInstance
   //   };
   // }
   
-  protected override EvolutionStrategyIterationResult ExecuteInitialization<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem) {
+  protected override EvolutionStrategyIterationResult ExecuteInitialization(IOptimizable<RealVector, RealVectorEncoding> optimizable) {
     var start = Stopwatch.GetTimestamp();
 
     //var random = new SystemRandomNumberGenerator(Algorithm.RandomSeed);
     
     var startCreating = Stopwatch.GetTimestamp();
-    var newPopulation = Enumerable.Range(0, Parameters.PopulationSize).Select(i => Creator.Create(problem.Encoding, Random)).ToArray();
+    var genotypes = Enumerable.Range(0, Parameters.PopulationSize).Select(i => Creator.Create(optimizable.SearchSpace, Random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
-    var genotypePopulation = newPopulation;
+    // var genotypePopulation = newPopulation;
     
-    var startDecoding = Stopwatch.GetTimestamp();
-    var phenotypePopulation = genotypePopulation.Select(genotype => problem.Decoder.Decode(genotype)).ToArray();
-    var endDecoding = Stopwatch.GetTimestamp();
+    // var startDecoding = Stopwatch.GetTimestamp();
+    // var phenotypePopulation = genotypePopulation.Select(genotype => optimizable.Decoder.Decode(genotype)).ToArray();
+    // var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluating = Stopwatch.GetTimestamp();
-    var fitnesses = phenotypePopulation.Select(phenotype => problem.Evaluator.Evaluate(phenotype)).ToArray();
+    var fitnesses = genotypes.Select(genotype => optimizable.Evaluate(genotype)).ToArray();
     var endEvaluating = Stopwatch.GetTimestamp();
 
-    var population = Population.From(genotypePopulation, /*phenotypePopulation,*/ fitnesses);
+    var population = Population.From(genotypes, /*phenotypePopulation,*/ fitnesses);
 
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
     
@@ -199,11 +199,11 @@ public class EvolutionStrategyInstance
       Generation = 0,
       Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       MutationStrength = Parameters.InitialMutationStrength,
-      Objective = problem.Objective,
+      Objective = optimizable.Objective,
       Population = population,
       OperatorMetrics = new () {
-        Creation = new(genotypePopulation.Length, Stopwatch.GetElapsedTime(startCreating, endCreating)),
-        Decoding = new(phenotypePopulation.Length, Stopwatch.GetElapsedTime(startDecoding, endDecoding)),
+        Creation = new(genotypes.Length, Stopwatch.GetElapsedTime(startCreating, endCreating)),
+        // Decoding = new(phenotypePopulation.Length, Stopwatch.GetElapsedTime(startDecoding, endDecoding)),
         Evaluation = new(fitnesses.Length, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating)),
       }
     };
@@ -226,7 +226,7 @@ public class EvolutionStrategyInstance
     };
   }
   
-  protected override EvolutionStrategyIterationResult ExecuteIteration<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState state) {
+  protected override EvolutionStrategyIterationResult ExecuteIteration(IOptimizable<RealVector, RealVectorEncoding> optimizable, EvolutionStrategyState state) {
     var start = Stopwatch.GetTimestamp();
 
     // int newRandomSeed = SeedSequence.GetSeed(Algorithm.RandomSeed, state.Generation);
@@ -236,43 +236,43 @@ public class EvolutionStrategyInstance
     
     var startSelection = Stopwatch.GetTimestamp();
     var randomSelector = new RandomSelector().CreateInstance(); // improve
-    var parents = randomSelector.Select(oldPopulation, problem.Objective, Parameters.PopulationSize, Random).ToList();
+    var parents = randomSelector.Select(oldPopulation, optimizable.Objective, Parameters.PopulationSize, Random).ToList();
     var endSelection = Stopwatch.GetTimestamp();
      
-    var genotypePopulation = new RealVector[parents.Count];
+    var genotypes = new RealVector[parents.Count];
     var startMutation = Stopwatch.GetTimestamp();
     for (int i = 0; i < parents.Count; i += 2) {
       var parent = parents[i];
-      var child = Mutator.Mutate(parent.Genotype, problem.Encoding, Random);
-      genotypePopulation[i / 2] = child;
+      var child = Mutator.Mutate(parent.Genotype, optimizable.SearchSpace, Random);
+      genotypes[i / 2] = child;
     }
     var endMutation = Stopwatch.GetTimestamp();
     
     // ToDo: optional crossover
     
-    var startDecoding = Stopwatch.GetTimestamp();
-    var phenotypePopulation = genotypePopulation.Select(genotype => problem.Decoder.Decode(genotype)).ToArray();
-    var endDecoding = Stopwatch.GetTimestamp();
+    // var startDecoding = Stopwatch.GetTimestamp();
+    // var phenotypePopulation = genotypePopulation.Select(genotype => optimizable.Decoder.Decode(genotype)).ToArray();
+    // var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluation = Stopwatch.GetTimestamp();
-    var fitnesses = phenotypePopulation.Select(phenotype => problem.Evaluator.Evaluate(phenotype)).ToArray();
+    var fitnesses = genotypes.Select(genotype => optimizable.Evaluate(genotype)).ToArray();
     var endEvaluation = Stopwatch.GetTimestamp();
     
     // timing the adaption check
     int successfulOffspring = 0;
     for (int i = 0; i < fitnesses.Length; i++) {
-      if (fitnesses[i].CompareTo(parents[i].Fitness, problem.Objective) == DominanceRelation.Dominates) {
+      if (fitnesses[i].CompareTo(parents[i].Fitness, optimizable.Objective) == DominanceRelation.Dominates) {
         successfulOffspring++;
       }
     }
-    double successRate = (double)successfulOffspring / genotypePopulation.Length;
+    double successRate = (double)successfulOffspring / genotypes.Length;
     double newMutationStrength = successRate switch {
       > 0.2 => state.MutationStrength * 1.5,
       < 0.2 => state.MutationStrength / 1.5,
       _ => state.MutationStrength
     };
     
-    var population = Population.From(genotypePopulation, /*phenotypePopulation,*/ fitnesses);
+    var population = Population.From(genotypes, /*phenotypePopulation,*/ fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
     Replacer replacer = Parameters.Strategy switch {
@@ -280,7 +280,7 @@ public class EvolutionStrategyInstance
       EvolutionStrategyType.Plus => new PlusSelectionReplacer(),
       _ => throw new InvalidOperationException($"Unknown strategy {Parameters.Strategy}")
     };
-    var newPopulation = replacer.CreateInstance().Replace(oldPopulation, population, problem.Objective, Random);
+    var newPopulation = replacer.CreateInstance().Replace(oldPopulation, population, optimizable.Objective, Random);
     var endReplacement = Stopwatch.GetTimestamp();
     
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
@@ -289,12 +289,12 @@ public class EvolutionStrategyInstance
       Generation = state.Generation + 1,
       Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       MutationStrength = newMutationStrength,
-      Objective = problem.Objective,
+      Objective = optimizable.Objective,
       Population = newPopulation,
       OperatorMetrics = new() {
         Selection = new(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection)),
-        Mutation = new(genotypePopulation.Length, Stopwatch.GetElapsedTime(startMutation, endMutation)),
-        Decoding = new(phenotypePopulation.Length, Stopwatch.GetElapsedTime(startDecoding, endDecoding)),
+        Mutation = new(genotypes.Length, Stopwatch.GetElapsedTime(startMutation, endMutation)),
+        // Decoding = new(phenotypePopulation.Length, Stopwatch.GetElapsedTime(startDecoding, endDecoding)),
         Evaluation = new (fitnesses.Length, Stopwatch.GetElapsedTime(startEvaluation, endEvaluation)),
         Replacement = new (1, Stopwatch.GetElapsedTime(startReplacement, endReplacement)),
       }

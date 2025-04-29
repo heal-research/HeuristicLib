@@ -6,7 +6,7 @@ public class TestFunctionProblem : EncodedProblemBase<RealVector, RealVector, Re
   private readonly ITestFunction testFunction;
 
   public TestFunctionProblem(ITestFunction testFunction) 
-    : base(SingleObjective.Create(testFunction.Objective), GetEncoding(testFunction)) 
+    : base(SingleObjective.Create(testFunction.Objective), GetSearchSpace(testFunction)) 
   {
     this.testFunction = testFunction;
   }
@@ -15,7 +15,7 @@ public class TestFunctionProblem : EncodedProblemBase<RealVector, RealVector, Re
     return testFunction.Evaluate(solution);
   }
   
-  private static RealVectorEncoding GetEncoding(ITestFunction testFunction) => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  private static RealVectorEncoding GetSearchSpace(ITestFunction testFunction) => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
   
   public override RealVector Decode(RealVector genotype) => genotype;
     // return new RealVectorEncoding<RealVector>(Decoder.Identity<RealVector>()) {
