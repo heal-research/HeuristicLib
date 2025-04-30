@@ -42,7 +42,7 @@ public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgori
 
 public static class AlgorithmSolveExtensions {
   public static EvaluatedIndividual<TGenotype, TPhenotype>? Solve<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
-    (this Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> algorithm, IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+    (this Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>
@@ -53,7 +53,7 @@ public static class AlgorithmSolveExtensions {
   }
   
   public static EvaluatedIndividual<TGenotype, TPhenotype>? Solve<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+    (this IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>
@@ -68,7 +68,7 @@ public static class AlgorithmSolveExtensions {
   }
 
   public static IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>> SolvePareto<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
-    (this Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> algorithm, IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+    (this Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype>
@@ -79,7 +79,7 @@ public static class AlgorithmSolveExtensions {
   }
   
   public static IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>> SolvePareto<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+    (this IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype> 
@@ -128,7 +128,7 @@ public abstract class StreamableAlgorithmInstance<TGenotype, TSearchSpace, TStat
 
 public static class AlgorithmSolveStreamingExtensions {
   public static IEnumerable<EvaluatedIndividual<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+    (this StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
@@ -138,7 +138,7 @@ public static class AlgorithmSolveStreamingExtensions {
   }
   
   public static IEnumerable<EvaluatedIndividual<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+    (this IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
@@ -150,7 +150,7 @@ public static class AlgorithmSolveStreamingExtensions {
   }
   
   public static IEnumerable<IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+    (this StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
@@ -161,7 +161,7 @@ public static class AlgorithmSolveStreamingExtensions {
   }
   
   public static IEnumerable<IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+    (this IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>

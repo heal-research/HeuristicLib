@@ -1,12 +1,12 @@
 ﻿
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IEncodedProblem<TSolution, in TGenotype, out TSearchSpace> : IProblem<TSolution>, IOptimizable<TGenotype, TSearchSpace>
+public interface IOptimizableProblem<TSolution, in TGenotype, out TSearchSpace> : IProblem<TSolution>, IOptimizable<TGenotype, TSearchSpace>
   where TSearchSpace : ISearchSpace<TGenotype> {
   TSolution Decode(TGenotype genotype);
 }
 
-public abstract class EncodedProblemBase<TSolution, TGenotype, TSearchSpace> : ProblemBase<TSolution>, IEncodedProblem<TSolution, TGenotype, TSearchSpace>
+public abstract class OptimizableProblemBase<TSolution, TGenotype, TSearchSpace> : ProblemBase<TSolution>, IOptimizableProblem<TSolution, TGenotype, TSearchSpace>
   where TSearchSpace : ISearchSpace<TGenotype>
 {
   public TSearchSpace SearchSpace { get; }
@@ -17,12 +17,13 @@ public abstract class EncodedProblemBase<TSolution, TGenotype, TSearchSpace> : P
     var phenotype = Decode(genotype);
     return Evaluate(phenotype);
   }
-  protected EncodedProblemBase(Objective objective, TSearchSpace searchSpace) : base(objective) {
+  
+  protected OptimizableProblemBase(Objective objective, TSearchSpace searchSpace) : base(objective) {
     SearchSpace = searchSpace;
   }
 }
 
-public class EncodedProblem<TSolution, TGenotype, TSearchSpace> : IEncodedProblem<TSolution, TGenotype, TSearchSpace>
+public class OptimizableProblem<TSolution, TGenotype, TSearchSpace> : IOptimizableProblem<TSolution, TGenotype, TSearchSpace>
   where TSearchSpace : ISearchSpace<TGenotype> 
 {
   public IProblem<TSolution> Problem { get; }
@@ -30,7 +31,7 @@ public class EncodedProblem<TSolution, TGenotype, TSearchSpace> : IEncodedProble
   public TSearchSpace SearchSpace { get; }
   public IDecoder<TGenotype, TSolution> Decoder { get; }
   
-  public EncodedProblem(IProblem<TSolution> problem, TSearchSpace searchSpace, IDecoder<TGenotype, TSolution> decoder) {
+  public OptimizableProblem(IProblem<TSolution> problem, TSearchSpace searchSpace, IDecoder<TGenotype, TSolution> decoder) {
     Problem = problem;
     SearchSpace = searchSpace;
     Decoder = decoder;

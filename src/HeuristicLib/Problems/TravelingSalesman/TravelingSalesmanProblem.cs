@@ -44,10 +44,10 @@ public class TravelingSalesmanProblem : ProblemBase<Tour> {
 }
 
 public static class TravelingSalesmanProblemEncodingExtensions {
-  public static EncodedProblem<Tour, Permutation, PermutationSearchSpace> EncodeAsPermutationSearchSpace(this TravelingSalesmanProblem problem) {
+  public static OptimizableProblem<Tour, Permutation, PermutationSearchSpace> EncodeAsPermutationSearchSpace(this TravelingSalesmanProblem problem) {
     var searchSpace = new PermutationSearchSpace(problem.ProblemData.NumberOfCities);
 
-    return new EncodedProblem<Tour, Permutation, PermutationSearchSpace>(
+    return new OptimizableProblem<Tour, Permutation, PermutationSearchSpace>(
       problem,
       searchSpace,
       new PermutationDecoder()

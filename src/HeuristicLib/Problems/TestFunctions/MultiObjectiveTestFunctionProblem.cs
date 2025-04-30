@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class MultiObjectiveTestFunctionProblem : EncodedProblemBase<RealVector, RealVector, RealVectorSearchSpace> {
+public class MultiObjectiveTestFunctionProblem : OptimizableProblemBase<RealVector, RealVector, RealVectorSearchSpace> {
   private readonly IMultiObjectiveTestFunction testFunction;
 
   public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) 

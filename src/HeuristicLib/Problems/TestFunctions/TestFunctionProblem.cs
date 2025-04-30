@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class TestFunctionProblem : EncodedProblemBase<RealVector, RealVector, RealVectorSearchSpace> {
+public class TestFunctionProblem : OptimizableProblemBase<RealVector, RealVector, RealVectorSearchSpace> {
   private readonly ITestFunction testFunction;
 
   public TestFunctionProblem(ITestFunction testFunction) 
