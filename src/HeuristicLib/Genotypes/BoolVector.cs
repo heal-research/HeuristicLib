@@ -1,6 +1,4 @@
-using System.Collections;
-
-namespace HEAL.HeuristicLib.Encodings;
+﻿namespace HEAL.HeuristicLib;
 
 public class BoolVector : IReadOnlyList<bool> {
   private readonly bool[] elements;
@@ -21,7 +19,7 @@ public class BoolVector : IReadOnlyList<bool> {
   
   public IEnumerator<bool> GetEnumerator() => ((IEnumerable<bool>)elements).GetEnumerator();
   
-  IEnumerator IEnumerable.GetEnumerator() => elements.GetEnumerator();
+  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => elements.GetEnumerator();
   
   public int Count => elements.Length;
   

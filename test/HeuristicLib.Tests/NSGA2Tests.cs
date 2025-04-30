@@ -1,6 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.NSGA2;
-using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 
@@ -15,7 +15,7 @@ public class NSGA2Tests {
     var replacement = new ElitismReplacer(0);
     var terminator = Terminator.OnGeneration<NSGA2Result<RealVector>>(5);
 
-    var nsga = new NSGA2<RealVector, RealVectorEncoding>(
+    var nsga = new NSGA2<RealVector, RealVectorSearchSpace>(
       populationSize: 5, 
       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
       replacer: replacement,

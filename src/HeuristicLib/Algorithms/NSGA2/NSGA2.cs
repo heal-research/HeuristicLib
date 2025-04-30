@@ -1,7 +1,5 @@
 ﻿using System.Diagnostics;
-using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.NSGA2;
@@ -227,6 +225,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     };
   }
   protected override NSGA2Result<TGenotype> AggregateResult(NSGA2IterationResult<TGenotype> iterationResult, NSGA2Result<TGenotype>? algorithmResult) {
+    var currentParetoFront = Population.ExtractParetoFront(iterationResult.Population, iterationResult.Objective);
     return new NSGA2Result<TGenotype>() {
       CurrentGeneration = iterationResult.Generation,
       TotalGenerations = iterationResult.Generation,
@@ -236,6 +235,8 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
       TotalOperatorMetrics = iterationResult.OperatorMetrics + (algorithmResult?.TotalOperatorMetrics ?? new NSGA2OperatorMetrics()),
       Objective = iterationResult.Objective,
       CurrentPopulation = iterationResult.Population,
+      CurrentParetoFront = currentParetoFront,
+      ParetoFront = algorithmResult is null ? currentParetoFront : Population.ExtractParetoFront(algorithmResult.ParetoFront.Concat(currentParetoFront), iterationResult.Objective)
     };
   }
 }
@@ -296,15 +297,17 @@ public record NSGA2Result<TGenotype> : IMultiObjectiveAlgorithmResult<TGenotype>
   
   public required IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentPopulation { get; init; }
   
-  public NSGA2Result() {
-    currentParetoFront = new Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>>(() => {
-      return Population.ExtractParetoFront(CurrentPopulation, Objective);
-    });
-  }
+  // public NSGA2Result() {
+  //   currentParetoFront = new Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>>(() => {
+  //     return Population.ExtractParetoFront(CurrentPopulation, Objective);
+  //   });
+  // }
   
-  private readonly Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>> currentParetoFront;
-  public IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentParetoFront => currentParetoFront.Value;
-  
+  // private readonly Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>> currentParetoFront;
+  // public IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentParetoFront => currentParetoFront.Value;
+  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentParetoFront { get; init; }
+  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront { get; init; }
+
   public NSGA2State<TGenotype> GetContinuationState() => new() {
     Generation = CurrentGeneration,
     Population = CurrentPopulation

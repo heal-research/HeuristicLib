@@ -1,6 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-
-namespace HEAL.HeuristicLib;
+﻿namespace HEAL.HeuristicLib;
 
 public enum ObjectiveDirection {
   Minimize,

@@ -1,8 +1,8 @@
-﻿using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class TestFunctionProblem : EncodedProblemBase<RealVector, RealVector, RealVectorEncoding> {
+public class TestFunctionProblem : EncodedProblemBase<RealVector, RealVector, RealVectorSearchSpace> {
   private readonly ITestFunction testFunction;
 
   public TestFunctionProblem(ITestFunction testFunction) 
@@ -15,23 +15,23 @@ public class TestFunctionProblem : EncodedProblemBase<RealVector, RealVector, Re
     return testFunction.Evaluate(solution);
   }
   
-  private static RealVectorEncoding GetSearchSpace(ITestFunction testFunction) => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  private static RealVectorSearchSpace GetSearchSpace(ITestFunction testFunction) => new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);
   
   public override RealVector Decode(RealVector genotype) => genotype;
-    // return new RealVectorEncoding<RealVector>(Decoder.Identity<RealVector>()) {
+    // return new RealVectorSearchSpace<RealVector>(Decoder.Identity<RealVector>()) {
     //   Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
     //   Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
     //   Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)
     // };
   
   //
-  // public RealVectorEncoding CreateRealVectorEncoding() {
-  //   return new RealVectorEncoding(length: 2, min, max);
+  // public RealVectorSearchSpace CreateRealVectorSearchSpace() {
+  //   return new RealVectorSearchSpace(length: 2, min, max);
   // }
-  // public RealVectorEncoding CreateRealVectorEncoding() {
-  //   var parameter = CreateRealVectorEncoding();
+  // public RealVectorSearchSpace CreateRealVectorSearchSpace() {
+  //   var parameter = CreateRealVectorSearchSpace();
   //
-  //   return new RealVectorEncoding(parameter) {
+  //   return new RealVectorSearchSpace(parameter) {
   //    
   //   };
   // }
@@ -92,11 +92,11 @@ public class RastriginFunction : ITestFunction {
 }
 
 // public static class GeneticAlgorithmBuilderRealVectorTestFunctionExtensions {
-//   public static GeneticAlgorithmBuilder<RealVectorEncoding, RealVector> WithProblemEncoding
-//     (this GeneticAlgorithmBuilder<RealVectorEncoding, RealVector> builder, RealVectorTestFunctionProblem problem)
+//   public static GeneticAlgorithmBuilder<RealVectorSearchSpace, RealVector> WithProblemSearchSpace
+//     (this GeneticAlgorithmBuilder<RealVectorSearchSpace, RealVector> builder, RealVectorTestFunctionProblem problem)
 //   {
 //     builder.WithEvaluator(problem.CreateEvaluator());
-//     builder.WithEncoding(problem.CreateRealVectorEncodingEncoding());
+//     builder.WithSearchSpace(problem.CreateRealVectorSearchSpaceSearchSpace());
 //     builder.WithSpecs(problem.CreateGeneticAlgorithmDefaultConfig());
 //     return builder;
 //     }

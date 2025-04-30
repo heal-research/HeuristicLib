@@ -2,7 +2,7 @@
 // using HEAL.HeuristicLib.Algorithms;
 // using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 // using HEAL.HeuristicLib.Core;
-// using HEAL.HeuristicLib.Encodings;
+// using HEAL.HeuristicLib.SearchSpaces;
 // using HEAL.HeuristicLib.Operators;
 // using HEAL.HeuristicLib.Problems;
 // using HEAL.HeuristicLib.Random;
@@ -14,11 +14,11 @@
 //   [Fact]
 //   public Task GeneticAlgorithmBuilder_WithBuilder() {
 //     var randomSource = new RandomSource(42);
-//     var encoding = new RealVectorEncoding(3, -5, +5);
-//     var builder = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding>() {
+//     var searchSpace = new RealVectorSearchSpace(3, -5, +5);
+//     var builder = new GeneticAlgorithmConfiguration<RealVector, RealVectorSearchSpace>() {
 //       //RandomSource = randomSource,
 //       RandomSeed = 42,
-//       //Encoding = encoding,
+//       //SearchSpace = searchSpace,
 //       PopulationSize = 200,
 //       Creator = new NormalDistributedCreator(0, 0.5),
 //       Crossover = new SinglePointCrossover(),
@@ -40,7 +40,7 @@
 //   // [Fact]
 //   // public Task GeneticAlgorithmBuilder_WithBuilderTypeChanging() {
 //   //   var randomSource = new RandomSource(42);
-//   //   var encoding = new RealVectorEncoding(3, -5, +5);
+//   //   var searchSpace = new RealVectorSearchSpace(3, -5, +5);
 //   //   GeneticAlgorithmConfiguration untypedConfig = new GeneticAlgorithmConfiguration() {
 //   //     RandomSource = randomSource,
 //   //     PopulationSize = 200,
@@ -48,8 +48,8 @@
 //   //   };
 //   //
 //   //
-//   //   GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorEncoding> typedConfig = new GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorEncoding>() {
-//   //     Encoding = encoding,
+//   //   GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorSearchSpace> typedConfig = new GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorSearchSpace>() {
+//   //     SearchSpace = searchSpace,
 //   //     Creator = new NormalDistributedCreator(0, 0.5),
 //   //     Crossover = new SinglePointCrossover(),
 //   //     Mutator = new GaussianMutator(0.1, 0.1),
@@ -59,7 +59,7 @@
 //   //     Selector = new ProportionalSelector(),
 //   //     Replacer = new PlusSelectionReplacer()
 //   //   };
-//   //   // GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorEncoding> typedConfig = ((GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorEncoding>)((GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding>)untypedConfig))
+//   //   // GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorSearchSpace> typedConfig = ((GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorSearchSpace>)((GeneticAlgorithmConfiguration<RealVector, RealVectorSearchSpace>)untypedConfig))
 //   //   //   .CombineWith(
 //   //   var combinedConfig = GeneticAlgorithmConfiguration.Combine(untypedConfig, typedConfig);
 //   //   //.WithTerminator(Terminator.OnGeneration(20));
@@ -70,14 +70,14 @@
 //   // }
 //   
 //   // [Fact]
-//   // public Task GeneticAlgorithmBuilder_UsingEncoding) {
+//   // public Task GeneticAlgorithmBuilder_UsingSearchSpace) {
 //   //   var randomSource = new RandomSource(42);
-//   //   var encoding = new RealVectorEncoding(3, -5, +5);
-//   //   var builder = new GeneticAlgorithmBuilder/*<RealVector, RealVector, RealVectorEncoding>*/()
+//   //   var searchSpace = new RealVectorSearchSpace(3, -5, +5);
+//   //   var builder = new GeneticAlgorithmBuilder/*<RealVector, RealVector, RealVectorSearchSpace>*/()
 //   //     //.WithRandomSource(randomSource)
-//   //     //.WithEncoding(encoding)
+//   //     //.WithSearchSpace(searchSpace)
 //   //     .WithPopulationSize(200)
-//   //     .UsingEncodings<RealVector, RealVector, RealVectorEncoding>(encoding)
+//   //     .UsingSearchSpaces<RealVector, RealVector, RealVectorSearchSpace>(searchSpace)
 //   //     .WithCreator(new NormalDistributedCreator(0.0, 0.5))
 //   //     .WithCrossover(new SinglePointCrossover())
 //   //     .WithMutator(new GaussianMutator(0.1, 0.1))
@@ -96,7 +96,7 @@
 //   
 //   // [Fact]
 //   // public Task GeneticAlgorithmBuilder_WithSpec() {
-//   //   var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding> {
+//   //   var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorSearchSpace> {
 //   //     PopulationSize = 500,
 //   //     Creator = new NormalDistributedCreator(1.5, 1.0),
 //   //     Crossover = new SinglePointCrossover(),
@@ -105,12 +105,12 @@
 //   //     Selector = new TournamentSelector(tournamentSize: 4),
 //   //     Replacer = new ElitismReplacer(2)
 //   //   };
-//   //   var additionalConfig = new GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorEncoding>() {
+//   //   var additionalConfig = new GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorSearchSpace>() {
 //   //     RandomSource = new RandomSource(42),
 //   //     Decoder = Decoder.Identity<RealVector>(),
 //   //     Evaluator = new MockEvaluator(),
 //   //     Objective = SingleObjective.Minimize,
-//   //     Encoding = new RealVectorEncoding(10, -5, +5)
+//   //     SearchSpace = new RealVectorSearchSpace(10, -5, +5)
 //   //   };
 //   //
 //   //   var combinedConfig = config + additionalConfig; 

@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -23,7 +22,7 @@ public abstract class CrossoverInstance<TGenotype, TSearchSpace, TCrossover> : O
 //
 // public static class Crossover {
 //   public static CustomCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(Func<TGenotype, TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> crossover)
-//     where TSearchSpace : IEncoding<TGenotype>
+//     where TSearchSpace : ISearchSpace<TGenotype>
 //   {
 //     return new CustomCrossover<TGenotype, TSearchSpace>(crossover);
 //   }
@@ -31,18 +30,18 @@ public abstract class CrossoverInstance<TGenotype, TSearchSpace, TCrossover> : O
 //
 // public sealed class CustomCrossover<TGenotype, TSearchSpace> 
 //   : ICrossover<TGenotype, TSearchSpace>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 // {
 //   private readonly Func<TGenotype, TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> crossover;
 //   internal CustomCrossover(Func<TGenotype, TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> crossover) {
 //     this.crossover = crossover;
 //   }
-//   public TGenotype Cross(TGenotype parent1, TGenotype parent2, TSearchSpace encoding, IRandomNumberGenerator random) => crossover(parent1, parent2, encoding, random);
+//   public TGenotype Cross(TGenotype parent1, TGenotype parent2, TSearchSpace searchSpace, IRandomNumberGenerator random) => crossover(parent1, parent2, searchSpace, random);
 // }
 //
 // public abstract class CrossoverBase<TGenotype, TSearchSpace> 
 //   : ICrossover<TGenotype, TSearchSpace>
-//   where TSearchSpace : IEncoding<TGenotype> 
+//   where TSearchSpace : ISearchSpace<TGenotype> 
 // {
-//   public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, TSearchSpace encoding, IRandomNumberGenerator random); 
+//   public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, TSearchSpace searchSpace, IRandomNumberGenerator random); 
 // }

@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -25,7 +24,7 @@ public abstract class CreatorInstance<TGenotype, TSearchSpace, TCreator> : Opera
 
 // public static class Creator {
 //   public static CustomCreator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator) 
-//     where TSearchSpace : IEncoding<TGenotype> 
+//     where TSearchSpace : ISearchSpace<TGenotype> 
 //   {
 //     return new CustomCreator<TGenotype, TSearchSpace>(creator);
 //   }
@@ -33,14 +32,14 @@ public abstract class CreatorInstance<TGenotype, TSearchSpace, TCreator> : Opera
 //
 // public sealed class CustomCreator<TGenotype, TSearchSpace> 
 //   : ICreator<TGenotype, TSearchSpace> 
-//   where TSearchSpace : IEncoding<TGenotype> {
+//   where TSearchSpace : ISearchSpace<TGenotype> {
 //   private readonly Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator;
 //   internal CustomCreator(Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator) {
 //     this.creator = creator;
 //   }
-//   public TGenotype Create(TSearchSpace encoding, IRandomNumberGenerator random) => creator(encoding, random);
+//   public TGenotype Create(TSearchSpace searchSpace, IRandomNumberGenerator random) => creator(searchSpace, random);
 // }
 //
-// public abstract class CreatorBase<TGenotype, TSearchSpace> : ICreator<TGenotype, TSearchSpace> where TSearchSpace : IEncoding<TGenotype> {
-//   public abstract TGenotype Create(TSearchSpace encoding, IRandomNumberGenerator random);
+// public abstract class CreatorBase<TGenotype, TSearchSpace> : ICreator<TGenotype, TSearchSpace> where TSearchSpace : ISearchSpace<TGenotype> {
+//   public abstract TGenotype Create(TSearchSpace searchSpace, IRandomNumberGenerator random);
 // }

@@ -227,6 +227,7 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace>
   }
 
   protected override GeneticAlgorithmResult<TGenotype> AggregateResult(GeneticAlgorithmIterationResult<TGenotype> iterationResult, GeneticAlgorithmResult<TGenotype>? algorithmResult) {
+    var currentBestSolution = iterationResult.Population.MinBy(x => x.Fitness, iterationResult.Objective.TotalOrderComparer);
     // ToDo: "Iteration" looks like a operator
     return new GeneticAlgorithmResult<TGenotype>() {
       CurrentGeneration = iterationResult.Generation,
@@ -237,7 +238,13 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace>
       TotalOperatorMetrics = iterationResult.OperatorMetrics + (algorithmResult?.TotalOperatorMetrics ?? new GeneticAlgorithmOperatorMetrics()),
       Objective = iterationResult.Objective,
       CurrentPopulation = iterationResult.Population,
-    };
+      CurrentBestSolution = currentBestSolution,
+      BestSolution = algorithmResult is null ? currentBestSolution : new[] { algorithmResult.BestSolution, currentBestSolution }.MinBy(x => x.Fitness, iterationResult.Objective.TotalOrderComparer)};
+  }
+
+  protected override bool IsValidState(GeneticAlgorithmState<TGenotype> state, IOptimizable<TGenotype, TSearchSpace> optimizable) {
+    return base.IsValidState(state, optimizable)
+      && state.Population.All(individual => optimizable.SearchSpace.Contains(individual.Genotype));
   }
 }
 

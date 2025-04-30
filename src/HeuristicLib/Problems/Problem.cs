@@ -40,8 +40,8 @@ public interface IProblem<in TSolution> : IProblem {
 //   //IDecoder<TGenotype, TSolution> Decoder { get; }
 // }
 
-// public interface IProblem<TSolution, TGenotype, out TSearchSpace> : IProblem<TSolution>, //IEncodingProvider<TGenotype, TSearchSpace>
-//  where TSearchSpace : IEncoding<TGenotype> {
+// public interface IProblem<TSolution, TGenotype, out TSearchSpace> : IProblem<TSolution>, //ISearchSpaceProvider<TGenotype, TSearchSpace>
+//  where TSearchSpace : ISearchSpace<TGenotype> {
 //   //TSolution Decode(TGenotype genotype);
 // }
 

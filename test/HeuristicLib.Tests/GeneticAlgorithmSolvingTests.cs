@@ -1,6 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 
@@ -17,7 +17,7 @@ public class GeneticAlgorithmSolvingTests {
     var replacement = new ElitismReplacer(0);
     var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
 
-    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 5, 
       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
       selector: selector, replacer: replacement,
@@ -40,7 +40,7 @@ public class GeneticAlgorithmSolvingTests {
     var replacement = new ElitismReplacer(0);
     var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
 
-    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 5, 
       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
       selector: selector, replacer: replacement,
@@ -63,7 +63,7 @@ public class GeneticAlgorithmSolvingTests {
     var replacement = new ElitismReplacer(0);
     var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
 
-    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 5, 
       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
       selector: selector, replacer: replacement,
@@ -83,20 +83,20 @@ public class GeneticAlgorithmSolvingTests {
   //   var problem = TravelingSalesmanProblem.CreateDefault();
   //   var evaluator = Evaluator.FromProblem(problem);
   //
-  //   var builder = new GeneticAlgorithmBuilder<Permutation, Tour, PermutationEncoding>()
+  //   var builder = new GeneticAlgorithmBuilder<Permutation, Tour, PermutationSearchSpace>()
   //     .WithEvaluator(evaluator);
   //   
   //   return Verify(builder);
   // }
   
   // [Fact]
-  // public Task GeneticAlgorithmBuilder_UsingProblemEncoding() {
+  // public Task GeneticAlgorithmBuilder_UsingProblemSearchSpace() {
   //   var problem = TravelingSalesmanProblem.CreateDefault();
   //   var encodedProblem = problem.EncodeAsPermutation();
   //
   //   // var builder = new GeneticAlgorithmBuilder()
-  //   //   .UsingEncoding<Permutation, Tour, PermutationEncoding>(encoding);
-  //   var config = encodedProblem.ToConfiguration<Permutation, PermutationEncoding>();
+  //   //   .UsingSearchSpace<Permutation, Tour, PermutationSearchSpace>(searchSpace);
+  //   var config = encodedProblem.ToConfiguration<Permutation, PermutationSearchSpace>();
   //   
   //   return Verify(config);
   // }
@@ -108,7 +108,7 @@ public class GeneticAlgorithmSolvingTests {
   //
   //   // var builder = new GeneticAlgorithmBuilder()
   //   //     .SolvingProblem(problem)
-  //   //     .UsingPermutationEncoding();
+  //   //     .UsingPermutationSearchSpace();
   //   var config = problem.EncodeAsPermutation();
   //   
   //   return Verify(config);

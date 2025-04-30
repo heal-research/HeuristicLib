@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -43,11 +43,11 @@ public class TravelingSalesmanProblem : ProblemBase<Tour> {
   #endregion
 }
 
-public static class TravelingSalesmanProblemPermutationEncoding {
-  public static EncodedProblem<Tour, Permutation, PermutationEncoding> EncodeAsPermutation(this TravelingSalesmanProblem problem) {
-    var searchSpace = new PermutationEncoding(problem.ProblemData.NumberOfCities);
+public static class TravelingSalesmanProblemEncodingExtensions {
+  public static EncodedProblem<Tour, Permutation, PermutationSearchSpace> EncodeAsPermutationSearchSpace(this TravelingSalesmanProblem problem) {
+    var searchSpace = new PermutationSearchSpace(problem.ProblemData.NumberOfCities);
 
-    return new EncodedProblem<Tour, Permutation, PermutationEncoding>(
+    return new EncodedProblem<Tour, Permutation, PermutationSearchSpace>(
       problem,
       searchSpace,
       new PermutationDecoder()
@@ -58,14 +58,6 @@ public static class TravelingSalesmanProblemPermutationEncoding {
     public Tour Decode(Permutation genotype) => new Tour(genotype);
   }
 }
-
-//public override PermutationEncoding GeTSearchSpace() => new PermutationEncoding(problemData.NumberOfCities);
-  
-// return new PermutationEncoding(problemData.NumberOfCities) {
-//   // Creator = new RandomPermutationCreator(),
-//   // Crossover = new OrderCrossover(),
-//   // Mutator = new InversionMutator()
-// };
 
 
 public interface ITravelingSalesmanProblemData {
@@ -151,10 +143,10 @@ public enum DistanceMetric {
 }
 
 // public static class GeneticAlgorithmBuilderTravelingSalesmanProblemExtensions {
-//   public static GeneticAlgorithmBuilder<Permutation, PermutationEncoding> UsingProblem(this GeneticAlgorithmBuilder<Permutation, PermutationEncoding> builder, TravelingSalesmanProblem problem) {
+//   public static GeneticAlgorithmBuilder<Permutation, PermutationSearchSpace> UsingProblem(this GeneticAlgorithmBuilder<Permutation, PermutationSearchSpace> builder, TravelingSalesmanProblem problem) {
 //     builder.WithEvaluator(problem.CreateEvaluator());
 //     builder.WithGoal(problem.Goal);
-//     builder.WithEncoding(problem.CreatePermutationEncoding());
+//     builder.WithSearchSpace(problem.CreatePermutationSearchSpace());
 //     builder.WithGeneticAlgorithmSpec(problem.CreateGASpec());
 //     return builder;
 //   }

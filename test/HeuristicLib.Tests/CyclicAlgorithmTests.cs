@@ -1,11 +1,8 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
-using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -14,7 +11,7 @@ public class CyclicAlgorithmTests {
   // public Task ConcatAlgorithm_ExecuteWithGAs() {
   //   var problem = new TestFunctionProblem(new SphereFunction(2));
   //
-  //   var ga1 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+  //   var ga1 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
   //     populationSize: 2,
   //     creator: new UniformDistributedCreator(),
   //     crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
@@ -26,7 +23,7 @@ public class CyclicAlgorithmTests {
   //     terminator: Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(3)
   //   );
   //   
-  //   var ga2 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+  //   var ga2 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
   //     populationSize: 2,
   //     creator: new UniformDistributedCreator(),
   //     crossover: new AlphaBetaBlendCrossover(0.5, 0.5),
@@ -38,7 +35,7 @@ public class CyclicAlgorithmTests {
   //     terminator: Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(3)
   //   );
   //   
-  //   var ga3 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+  //   var ga3 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
   //     populationSize: 3,
   //     creator: new UniformDistributedCreator(),
   //     crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
@@ -50,7 +47,7 @@ public class CyclicAlgorithmTests {
   //     terminator: Terminator.OnGeneration<GeneticAlgorithmIterationResult<RealVector>>(4)
   //   );
   //
-  //   var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorEncoding, GeneticAlgorithmState<RealVector>, GeneticAlgorithmIterationResult<RealVector>>([ga1, ga2, ga3]);
+  //   var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorSearchSpace, GeneticAlgorithmState<RealVector>, GeneticAlgorithmIterationResult<RealVector>>([ga1, ga2, ga3]);
   //
   //   var result = concatAlgorithm.Execute(problem);
   //   
@@ -62,7 +59,7 @@ public class CyclicAlgorithmTests {
   public Task ConcatAlgorithm_ExecuteStreamingWithGAs() {
     var problem = new TestFunctionProblem(new SphereFunction(2));
 
-    var ga1 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+    var ga1 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 2,
       creator: new UniformDistributedCreator(),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
@@ -74,7 +71,7 @@ public class CyclicAlgorithmTests {
       terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3)
     );
     
-    var ga2 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+    var ga2 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 2,
       creator: new UniformDistributedCreator(),
       crossover: new AlphaBetaBlendCrossover(0.5, 0.5),
@@ -86,7 +83,7 @@ public class CyclicAlgorithmTests {
       terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3)
     );
     
-    var ga3 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+    var ga3 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 3,
       creator: new UniformDistributedCreator(),
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
@@ -98,7 +95,7 @@ public class CyclicAlgorithmTests {
       terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(4)
     );
 
-    var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorEncoding, GeneticAlgorithmState<RealVector>, GeneticAlgorithmResult<RealVector>>([ga1, ga2, ga3]);
+    var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorSearchSpace, GeneticAlgorithmState<RealVector>, GeneticAlgorithmResult<RealVector>>([ga1, ga2, ga3]);
 
     var states = concatAlgorithm.ExecuteStreaming(problem).ToList();
     var lastState = states[^1];
@@ -113,15 +110,15 @@ public class CyclicAlgorithmTests {
   // [Fact]
   // public Task CyclicAlgorithm_WithGA() {
   //   var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
-  //   var encoding = problem.CreateRealVectorEncoding();
+  //   var searchSpace = problem.CreateRealVectorSearchSpace();
   //   var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
   //   var randomSource = new RandomSource(42);
   //
   //   var ga1 = new GeneticAlgorithm<RealVector>(
   //     populationSize: 2,
-  //     creator: new UniformDistributedCreator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     creator: new UniformDistributedCreator(null, null, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
-  //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     mutationRate: 0.1,
   //     evaluator: evaluator,
   //     SingleObjective.Minimize,
@@ -133,9 +130,9 @@ public class CyclicAlgorithmTests {
   //
   //   var ga2 = new GeneticAlgorithm<RealVector>(
   //     populationSize: 2,
-  //     creator: new UniformDistributedCreator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     creator: new UniformDistributedCreator(null, null, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     crossover: new AlphaBetaBlendCrossoverOperator(0.5, 0.5),
-  //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     mutationRate: 0.1,
   //     evaluator: evaluator,
   //     SingleObjective.Minimize,
@@ -147,9 +144,9 @@ public class CyclicAlgorithmTests {
   //   
   //   var ga3 = new GeneticAlgorithm<RealVector>(
   //     populationSize: 3,
-  //     creator: new UniformDistributedCreator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     creator: new UniformDistributedCreator(null, null, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
-  //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     mutationRate: 0.8,
   //     evaluator: evaluator,
   //     SingleObjective.Minimize,
@@ -172,7 +169,7 @@ public class CyclicAlgorithmTests {
   // [Fact]
   // public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
   //   var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
-  //   var encoding = problem.CreateRealVectorEncoding();
+  //   var searchSpace = problem.CreateRealVectorSearchSpace();
   //   var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
   //   var randomSource = new RandomSource(42);
   //
@@ -180,8 +177,8 @@ public class CyclicAlgorithmTests {
   //     populationSize: 10,
   //     children: 20,
   //     strategy: EvolutionStrategyType.Comma,
-  //     creator: new NormalDistributedCreator(0.0, 1.0, encoding, randomSource.CreateRandomNumberGenerator()),
-  //     mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     creator: new NormalDistributedCreator(0.0, 1.0, searchSpace, randomSource.CreateRandomNumberGenerator()),
+  //     mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     initialMutationStrength: 0.1,
   //     crossover: null,
   //     evaluator: evaluator,
@@ -192,9 +189,9 @@ public class CyclicAlgorithmTests {
   //
   //   var geneticAlgorithm = new GeneticAlgorithm<RealVector>(
   //     populationSize: 10,
-  //     creator: new UniformDistributedCreator(null, null, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     creator: new UniformDistributedCreator(null, null, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
-  //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, encoding, randomSource.CreateRandomNumberGenerator()),
+  //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
   //     mutationRate: 0.1,
   //     evaluator: evaluator,
   //     SingleObjective.Minimize,

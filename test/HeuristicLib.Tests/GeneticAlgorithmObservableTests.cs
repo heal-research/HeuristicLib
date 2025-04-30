@@ -2,7 +2,7 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 
@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmObservableTests {
   [Fact]
   public Task GeneticAlgorithm_ObservableFromExecutionStream() {
-    var encoding = new RealVectorEncoding(2, -5, +5);
+    var searchSpace = new RealVectorSearchSpace(2, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
@@ -20,11 +20,11 @@ public class GeneticAlgorithmObservableTests {
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
     var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3);
-    //var problem = new EncodedProblem<RealVector, RealVector, RealVectorEncoding> { SearchSpace = encoding, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize };
+    //var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> { SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize };
     var problem = new RealVectorMockOptimizable();
     
-    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
-      //Encoding = encoding,
+    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
+      //SearchSpace = searchSpace,
       populationSize: 2, creator, crossover, mutator, 0.5,
       //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
       selector, replacement, randomSeed: 42, terminator
@@ -51,9 +51,9 @@ public class GeneticAlgorithmObservableTests {
       .IgnoreMembersWithType<TimeSpan>();
   }
   
-  private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorEncoding> {
+  private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
     public Fitness Evaluate(RealVector genotype) => genotype.Sum();
     public Objective Objective => SingleObjective.Minimize;
-    public RealVectorEncoding SearchSpace => new RealVectorEncoding(2, -5, +5);
+    public RealVectorSearchSpace SearchSpace => new RealVectorSearchSpace(2, -5, +5);
   }
 }

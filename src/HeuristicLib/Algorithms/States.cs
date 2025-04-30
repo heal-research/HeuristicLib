@@ -11,10 +11,12 @@ public interface IAlgorithmResult {
 
 public interface ISingleObjectiveAlgorithmResult<TGenotype> : IAlgorithmResult {
   EvaluatedIndividual<TGenotype>? CurrentBestSolution { get; }
+  EvaluatedIndividual<TGenotype>? BestSolution { get; }
 }
 
 public interface IMultiObjectiveAlgorithmResult<TGenotype> : IAlgorithmResult {
   IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentParetoFront { get; }
+  IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront { get; }
 }
 
 // public interface IIterationResult {

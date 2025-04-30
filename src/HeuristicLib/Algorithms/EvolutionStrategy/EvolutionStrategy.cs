@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
-using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
@@ -65,15 +64,18 @@ public record EvolutionStrategyResult : ISingleObjectiveAlgorithmResult<RealVect
   
   public required IReadOnlyList<EvaluatedIndividual<RealVector>> CurrentPopulation { get; init; }
   
-  public EvolutionStrategyResult() {
-    currentBestSolution = new Lazy<EvaluatedIndividual<RealVector>>(() => {
-      if (CurrentPopulation!.Count == 0) throw new InvalidOperationException("Population is empty");
-      return CurrentPopulation.MinBy(x => x.Fitness, Objective!.TotalOrderComparer)!;
-    });
-  }
+  // public EvolutionStrategyResult() {
+  //   currentBestSolution = new Lazy<EvaluatedIndividual<RealVector>>(() => {
+  //     if (CurrentPopulation!.Count == 0) throw new InvalidOperationException("Population is empty");
+  //     return CurrentPopulation.MinBy(x => x.Fitness, Objective!.TotalOrderComparer)!;
+  //   });
+  // }
+  //
+  // private readonly Lazy<EvaluatedIndividual<RealVector>> currentBestSolution;
+  // public EvaluatedIndividual<RealVector> CurrentBestSolution => currentBestSolution.Value;
   
-  private readonly Lazy<EvaluatedIndividual<RealVector>> currentBestSolution;
-  public EvaluatedIndividual<RealVector> CurrentBestSolution => currentBestSolution.Value;
+  public required EvaluatedIndividual<RealVector>? CurrentBestSolution { get; init; }
+  public required EvaluatedIndividual<RealVector>? BestSolution { get; init; }
   
   public EvolutionStrategyState GetContinuationState() => new() {
     Generation = CurrentGeneration,
@@ -85,15 +87,15 @@ public record EvolutionStrategyResult : ISingleObjectiveAlgorithmResult<RealVect
 }
 
 public record class EvolutionStrategy
-  : IterativeAlgorithm<RealVector, RealVectorEncoding, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult> {
+  : IterativeAlgorithm<RealVector, RealVectorSearchSpace, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult> {
   public int PopulationSize { get; init;  }
   public int Children { get; init;  }
   public EvolutionStrategyType Strategy { get; init; }
 
-  public Creator<RealVector, RealVectorEncoding> Creator { get; init; }
+  public Creator<RealVector, RealVectorSearchSpace> Creator { get; init; }
 
-  //public ICrossover<RealVector, RealVectorEncoding>? Crossover { get; }
-  public Mutator<RealVector, RealVectorEncoding> Mutator { get; }
+  //public ICrossover<RealVector, RealVectorSearchSpace>? Crossover { get; }
+  public Mutator<RealVector, RealVectorSearchSpace> Mutator { get; }
   public double InitialMutationStrength { get; init;  }
   public Selector Selector { get; init;  }
   public int RandomSeed { get; init;  }
@@ -103,9 +105,9 @@ public record class EvolutionStrategy
     int populationSize,
     int children,
     EvolutionStrategyType strategy,
-    Creator<RealVector, RealVectorEncoding> creator,
-    //ICrossover<RealVector, RealVectorEncoding> crossover,
-    Mutator<RealVector, RealVectorEncoding> mutator,
+    Creator<RealVector, RealVectorSearchSpace> creator,
+    //ICrossover<RealVector, RealVectorSearchSpace> crossover,
+    Mutator<RealVector, RealVectorSearchSpace> mutator,
     double initialMutationStrength,
     Selector selector,
     int randomSeed,
@@ -130,12 +132,12 @@ public record class EvolutionStrategy
 }
 
 public class EvolutionStrategyInstance
-  : IterativeAlgorithmInstance<RealVector, RealVectorEncoding, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult, EvolutionStrategy> 
+  : IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult, EvolutionStrategy> 
 {
   public IRandomNumberGenerator Random { get; }
-  public ICreatorInstance<RealVector, RealVectorEncoding> Creator { get; }
-  //public ICrossoverInstance<RealVector, RealVectorEncoding>? Crossover { get; }
-  public IMutatorInstance<RealVector, RealVectorEncoding> Mutator { get; }
+  public ICreatorInstance<RealVector, RealVectorSearchSpace> Creator { get; }
+  //public ICrossoverInstance<RealVector, RealVectorSearchSpace>? Crossover { get; }
+  public IMutatorInstance<RealVector, RealVectorSearchSpace> Mutator { get; }
   public ISelectorInstance Selector { get; }
   public IInterceptorInstance<EvolutionStrategyIterationResult>? Interceptor { get; }
   
@@ -148,7 +150,7 @@ public class EvolutionStrategyInstance
     Interceptor = parameters.Interceptor?.CreateInstance();
   }
   
-  // public override EvolutionStrategyResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorEncoding> problem, EvolutionStrategyState? initialState = null) {
+  // public override EvolutionStrategyResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorSearchSpace> problem, EvolutionStrategyState? initialState = null) {
   //   EvaluatedIndividual<RealVector>? bestSolution = null;
   //   var comparer = problem.Objective.TotalOrderComparer;
   //   
@@ -172,7 +174,7 @@ public class EvolutionStrategyInstance
   //   };
   // }
   
-  protected override EvolutionStrategyIterationResult ExecuteInitialization(IOptimizable<RealVector, RealVectorEncoding> optimizable) {
+  protected override EvolutionStrategyIterationResult ExecuteInitialization(IOptimizable<RealVector, RealVectorSearchSpace> optimizable) {
     var start = Stopwatch.GetTimestamp();
 
     //var random = new SystemRandomNumberGenerator(Algorithm.RandomSeed);
@@ -226,7 +228,7 @@ public class EvolutionStrategyInstance
     };
   }
   
-  protected override EvolutionStrategyIterationResult ExecuteIteration(IOptimizable<RealVector, RealVectorEncoding> optimizable, EvolutionStrategyState state) {
+  protected override EvolutionStrategyIterationResult ExecuteIteration(IOptimizable<RealVector, RealVectorSearchSpace> optimizable, EvolutionStrategyState state) {
     var start = Stopwatch.GetTimestamp();
 
     // int newRandomSeed = SeedSequence.GetSeed(Algorithm.RandomSeed, state.Generation);
@@ -317,6 +319,7 @@ public class EvolutionStrategyInstance
     };
   }
   protected override EvolutionStrategyResult AggregateResult(EvolutionStrategyIterationResult iterationResult, EvolutionStrategyResult? algorithmResult) {
+    var currentBestSolution = iterationResult.Population.MinBy(x => x.Fitness, iterationResult.Objective.TotalOrderComparer);
     return new EvolutionStrategyResult() {
       CurrentGeneration = iterationResult.Generation,
       TotalGenerations = iterationResult.Generation,
@@ -327,6 +330,8 @@ public class EvolutionStrategyInstance
       TotalOperatorMetrics = iterationResult.OperatorMetrics + (algorithmResult?.TotalOperatorMetrics ?? new EvolutionStrategyOperatorMetrics()),
       Objective = iterationResult.Objective,
       CurrentPopulation = iterationResult.Population,
+      CurrentBestSolution = currentBestSolution,
+      BestSolution = algorithmResult is null ? currentBestSolution : new[] {algorithmResult.BestSolution, currentBestSolution}.MinBy(x => x.Fitness, iterationResult.Objective.TotalOrderComparer)
     };
   }
 }

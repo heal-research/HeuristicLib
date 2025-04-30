@@ -56,15 +56,20 @@ public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResul
   
   public required IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentPopulation { get; init; }
   
-  public GeneticAlgorithmResult() {
-    currentBestSolution = new Lazy<EvaluatedIndividual<TGenotype>>(() => {
-      if (CurrentPopulation!.Count == 0) throw new InvalidOperationException("Population is empty");
-      return CurrentPopulation.MinBy(x => x.Fitness, Objective!.TotalOrderComparer)!;
-    });
-  }
+  // public GeneticAlgorithmResult() {
+  //   currentBestSolution = new Lazy<EvaluatedIndividual<TGenotype>>(() => {
+  //     if (CurrentPopulation!.Count == 0) throw new InvalidOperationException("Population is empty");
+  //     return CurrentPopulation.MinBy(x => x.Fitness, Objective!.TotalOrderComparer)!;
+  //   });
+  // }
   
-  private readonly Lazy<EvaluatedIndividual<TGenotype>> currentBestSolution;
-  public EvaluatedIndividual<TGenotype> CurrentBestSolution => currentBestSolution.Value;
+  // private readonly Lazy<EvaluatedIndividual<TGenotype>> currentBestSolution;
+  // public EvaluatedIndividual<TGenotype> CurrentBestSolution => currentBestSolution.Value;
+
+  //private readonly Lazy<EvaluatedIndividual<TGenotype>> bestSolution;
+  // public EvaluatedIndividual<TGenotype> BestSolution => bestSolution.Value;
+  public required EvaluatedIndividual<TGenotype>? CurrentBestSolution { get; init; }
+  public required EvaluatedIndividual<TGenotype>? BestSolution { get; init; }
   
   public GeneticAlgorithmState<TGenotype> GetContinuationState() => new() {
     Generation = CurrentGeneration,

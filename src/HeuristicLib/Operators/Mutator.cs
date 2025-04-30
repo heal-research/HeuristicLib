@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -23,7 +22,7 @@ public abstract class MutatorInstance<TGenotype, TSearchSpace, TMutator> : Opera
 //
 // public static class Mutator {
 //   public static CustomMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(Func<TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> mutator) 
-//     where TSearchSpace : IEncoding<TGenotype>
+//     where TSearchSpace : ISearchSpace<TGenotype>
 //   {
 //     return new CustomMutator<TGenotype, TSearchSpace>(mutator);
 //   }
@@ -31,18 +30,18 @@ public abstract class MutatorInstance<TGenotype, TSearchSpace, TMutator> : Opera
 //
 // public sealed class CustomMutator<TGenotype, TSearchSpace> 
 //   : IMutator<TGenotype, TSearchSpace>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 // {
 //   private readonly Func<TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> mutator;
 //   internal CustomMutator(Func<TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> mutator) {
 //     this.mutator = mutator;
 //   }
-//   public TGenotype Mutate(TGenotype parent, TSearchSpace encoding, IRandomNumberGenerator random) => mutator(parent, encoding, random);
+//   public TGenotype Mutate(TGenotype parent, TSearchSpace searchSpace, IRandomNumberGenerator random) => mutator(parent, searchSpace, random);
 // }
 //
 // public abstract class MutatorBase<TGenotype, TSearchSpace>
 //   : IMutator<TGenotype, TSearchSpace>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 // {
-//   public abstract TGenotype Mutate(TGenotype parent, TSearchSpace encoding, IRandomNumberGenerator random);
+//   public abstract TGenotype Mutate(TGenotype parent, TSearchSpace searchSpace, IRandomNumberGenerator random);
 // }

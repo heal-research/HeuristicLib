@@ -1,8 +1,8 @@
-﻿using HEAL.HeuristicLib.Encodings;
+﻿using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class MultiObjectiveTestFunctionProblem : EncodedProblemBase<RealVector, RealVector, RealVectorEncoding> {
+public class MultiObjectiveTestFunctionProblem : EncodedProblemBase<RealVector, RealVector, RealVectorSearchSpace> {
   private readonly IMultiObjectiveTestFunction testFunction;
 
   public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) 
@@ -15,11 +15,11 @@ public class MultiObjectiveTestFunctionProblem : EncodedProblemBase<RealVector, 
     return new Fitness(testFunction.Evaluate(solution));
   }
   
-  public static RealVectorEncoding GeTSearchSpace(IMultiObjectiveTestFunction testFunction) => new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  public static RealVectorSearchSpace GeTSearchSpace(IMultiObjectiveTestFunction testFunction) => new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);
 
   public override RealVector Decode(RealVector genotype) => genotype;
   
-  // return new RealVectorEncoding<RealVector>(Decoder.Identity<RealVector>()) {
+  // return new RealVectorSearchSpace<RealVector>(Decoder.Identity<RealVector>()) {
   //   Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
   //   Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
   //   Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)

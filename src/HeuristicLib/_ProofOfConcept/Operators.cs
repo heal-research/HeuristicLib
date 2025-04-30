@@ -1,7 +1,7 @@
 ﻿#if false
 
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib._ProofOfConcept;
 

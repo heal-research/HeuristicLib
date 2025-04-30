@@ -59,7 +59,7 @@ public static class AlgorithmSolveExtensions {
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>
   {
     var result = algorithm.Execute(problem, initialState);
-    var bestSolution = result.CurrentBestSolution;
+    var bestSolution = result.BestSolution;
     
     if (bestSolution is null) return null;
     var phenotype = problem.Decode(bestSolution.Genotype);
@@ -85,7 +85,7 @@ public static class AlgorithmSolveExtensions {
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype> 
   {
     var result = algorithm.Execute(problem, initialState);
-    var paretoFront = result.CurrentParetoFront;
+    var paretoFront = result.ParetoFront;
 
     return paretoFront
       .Select(individual => new EvaluatedIndividual<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
@@ -144,7 +144,7 @@ public static class AlgorithmSolveStreamingExtensions {
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
   {
     foreach (var iterationResult in algorithm.ExecuteStreaming(problem, initialState)) {
-      var bestSolution = iterationResult.CurrentBestSolution;
+      var bestSolution = iterationResult.BestSolution;
       yield return new EvaluatedIndividual<TGenotype, TPhenotype>(bestSolution.Genotype, problem.Decode(bestSolution.Genotype), bestSolution.Fitness);
     }
   }
@@ -168,7 +168,7 @@ public static class AlgorithmSolveStreamingExtensions {
   {
     foreach (var iterationResult in algorithm.ExecuteStreaming(problem, initialState)) {
       yield return iterationResult
-        .CurrentParetoFront
+        .ParetoFront
         .Select(individual => new EvaluatedIndividual<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
         .ToList();
     }
@@ -178,7 +178,7 @@ public static class AlgorithmSolveStreamingExtensions {
 //
 // public abstract record class Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> 
 //   : IAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 //   where TState : class
 //   where TAlgorithmResult : class, IAlgorithmResult
 //   where TAlgorithmInstance : IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
@@ -188,7 +188,7 @@ public static class AlgorithmSolveStreamingExtensions {
 //
 // public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
 //   : IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 //   where TState : class
 //   where TAlgorithmResult : class, IAlgorithmResult 
 // {
@@ -197,7 +197,7 @@ public static class AlgorithmSolveStreamingExtensions {
 //
 // public abstract record class StreamableAlgorithm<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult, TAlgorithmInstance>
 //   : IStreamableAlgorithm<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult, TAlgorithmInstance>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 //   where TState : class
 //   where TIterationResult : class, IContinuableIterationResult<TState>
 //   where TAlgorithmResult : class, IAlgorithmResult
@@ -208,7 +208,7 @@ public static class AlgorithmSolveStreamingExtensions {
 //
 // public abstract class StreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
 //   : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 //   where TState : class
 //   where TIterationResult : class, IContinuableIterationResult<TState>
 //   where TAlgorithmResult : class, IAlgorithmResult
@@ -231,7 +231,7 @@ public abstract record class IterativeAlgorithm<TGenotype, TSearchSpace, TState,
 
 // public interface IIterativeAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
 //   : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 //   where TState : class
 //   where TIterationResult : class, IContinuableIterationResult<TState>
 //   where TAlgorithmResult : class, IAlgorithmResult 
@@ -257,9 +257,15 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TState
   }
 
   public override IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
-    var currentIterationResult = initialState is null
-      ? ExecuteInitialization(optimizable) 
-      : ExecuteIteration(optimizable, initialState);
+    TIterationResult currentIterationResult;
+    if (initialState is null) {
+      currentIterationResult = ExecuteInitialization(optimizable);
+    } else {
+      if (!IsValidState(initialState, optimizable)) {
+        throw new ArgumentException("Invalid initial state", nameof(initialState));
+      }
+      currentIterationResult = ExecuteIteration(optimizable, initialState);
+    }
     TAlgorithmResult? currentAlgorithmResult = null;
     currentAlgorithmResult = AggregateResult(currentIterationResult, currentAlgorithmResult);
     yield return currentAlgorithmResult;
@@ -271,10 +277,16 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TState
       yield return currentAlgorithmResult;
     }
   }
+
+
   
   protected abstract TIterationResult ExecuteInitialization(IOptimizable<TGenotype, TSearchSpace> optimizable);
   
   protected abstract TIterationResult ExecuteIteration(IOptimizable<TGenotype, TSearchSpace> optimizable, TState state);
   
   protected abstract TAlgorithmResult AggregateResult(TIterationResult iterationResult, TAlgorithmResult? algorithmResult);
+  
+  protected virtual bool IsValidState(TState state, IOptimizable<TGenotype, TSearchSpace> optimizable) {
+    return true;
+  }
 }

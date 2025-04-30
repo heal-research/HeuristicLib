@@ -1,6 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
@@ -186,7 +184,7 @@ public class CyclicAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithm
 //
 // public class ConcatAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargetIterationResult> 
 //   : IStreamableAlgorithm<TGenotype, TSearchSpace, object, IContinuableIterationResult<object>>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 //   where TSourceState : class
 //   where TTargetState : class
 //   where TSourceIterationResult : class, IContinuableIterationResult<TSourceState>
@@ -246,7 +244,7 @@ public class CyclicAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithm
 //
 // public class CyclicAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargetIterationResult> 
 //   : IStreamableAlgorithm<TGenotype, TSearchSpace, object, IContinuableIterationResult<object>>
-//   where TSearchSpace : IEncoding<TGenotype>
+//   where TSearchSpace : ISearchSpace<TGenotype>
 //   where TSourceState : class
 //   where TTargetState : class
 //   where TSourceIterationResult : class, IContinuableIterationResult<TSourceState>
