@@ -1,7 +1,10 @@
 using FluentValidation;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.RealVectorSpace;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests;

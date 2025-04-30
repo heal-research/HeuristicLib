@@ -1,9 +1,9 @@
 ﻿using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib;
+namespace HEAL.HeuristicLib.Genotypes;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
-public class RealVector : IReadOnlyList<double>, IEquatable<RealVector> {
+public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector> {
   private readonly double[] elements;
 
   public RealVector(params IEnumerable<double> elements) {
@@ -106,10 +106,16 @@ public class RealVector : IReadOnlyList<double>, IEquatable<RealVector> {
 
   public bool Contains(double value) => elements.Contains(value);
 
-  public virtual bool Equals(RealVector? other) {
+  public bool Equals(RealVector? other) {
     if (other is null) return false;
     return ReferenceEquals(this, other) 
            || elements.SequenceEqual(other.elements);
+  }
+  
+  public override bool Equals(object? obj) {
+    if (obj is null) return false;
+    if (ReferenceEquals(this, obj)) return true;
+    return obj is Permutation other && Equals(other);
   }
   
   public override int GetHashCode() {

@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Optimization;
+
+namespace HEAL.HeuristicLib.Problems;
 
 public interface IProblemInstanceProvider<TProblem>
   where TProblem : IProblem 

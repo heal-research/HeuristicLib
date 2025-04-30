@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 
-namespace HEAL.HeuristicLib;
+namespace HEAL.HeuristicLib.Optimization;
 
 public readonly record struct SingleFitness(double Value) {
   public static implicit operator SingleFitness(double value) {

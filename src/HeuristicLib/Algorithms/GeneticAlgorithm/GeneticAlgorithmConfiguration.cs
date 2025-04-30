@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 

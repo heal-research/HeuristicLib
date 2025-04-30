@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.SearchSpaces;
+﻿using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;

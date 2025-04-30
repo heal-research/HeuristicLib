@@ -1,4 +1,7 @@
-﻿namespace HEAL.HeuristicLib.SearchSpaces;
+﻿using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Optimization;
+
+namespace HEAL.HeuristicLib.SearchSpaces;
 
 public record class IntegerVectorSearchSpace : SearchSpace<IntegerVector> {
   public int Length { get; }

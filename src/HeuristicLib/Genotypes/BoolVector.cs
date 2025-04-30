@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib;
+﻿namespace HEAL.HeuristicLib.Genotypes;
 
 public class BoolVector : IReadOnlyList<bool> {
   private readonly bool[] elements;
@@ -8,7 +8,7 @@ public class BoolVector : IReadOnlyList<bool> {
   }
   
   public BoolVector(bool value) {
-    elements = new[] { value };
+    elements = [value];
   }
   
   public static implicit operator BoolVector(bool value) => new BoolVector(value);

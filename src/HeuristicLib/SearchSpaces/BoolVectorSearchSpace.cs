@@ -1,3 +1,6 @@
+using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Optimization;
+
 namespace HEAL.HeuristicLib.SearchSpaces;
 
 public record class BoolVectorSearchSpace : SearchSpace<BoolVector> {

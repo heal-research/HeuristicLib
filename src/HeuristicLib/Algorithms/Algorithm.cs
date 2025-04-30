@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Algorithms;
@@ -41,7 +42,7 @@ public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgori
 
 
 public static class AlgorithmSolveExtensions {
-  public static EvaluatedIndividual<TGenotype, TPhenotype>? Solve<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
+  public static Solution<TGenotype, TPhenotype>? Solve<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
     (this Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
@@ -52,7 +53,7 @@ public static class AlgorithmSolveExtensions {
     return instance.Solve(problem, initialState);
   }
   
-  public static EvaluatedIndividual<TGenotype, TPhenotype>? Solve<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
+  public static Solution<TGenotype, TPhenotype>? Solve<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
     (this IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
@@ -64,10 +65,10 @@ public static class AlgorithmSolveExtensions {
     if (bestSolution is null) return null;
     var phenotype = problem.Decode(bestSolution.Genotype);
 
-    return new EvaluatedIndividual<TGenotype, TPhenotype>(bestSolution.Genotype, phenotype, bestSolution.Fitness);
+    return new Solution<TGenotype, TPhenotype>(bestSolution.Genotype, phenotype, bestSolution.Fitness);
   }
 
-  public static IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>> SolvePareto<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
+  public static IReadOnlyList<Solution<TGenotype, TPhenotype>> SolvePareto<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
     (this Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
@@ -78,7 +79,7 @@ public static class AlgorithmSolveExtensions {
     return instance.SolvePareto(problem, initialState);
   }
   
-  public static IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>> SolvePareto<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
+  public static IReadOnlyList<Solution<TGenotype, TPhenotype>> SolvePareto<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
     (this IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
@@ -88,7 +89,7 @@ public static class AlgorithmSolveExtensions {
     var paretoFront = result.ParetoFront;
 
     return paretoFront
-      .Select(individual => new EvaluatedIndividual<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
+      .Select(individual => new Solution<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
       .ToList();
   }
 }
@@ -127,7 +128,7 @@ public abstract class StreamableAlgorithmInstance<TGenotype, TSearchSpace, TStat
 }
 
 public static class AlgorithmSolveStreamingExtensions {
-  public static IEnumerable<EvaluatedIndividual<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
+  public static IEnumerable<Solution<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
     (this StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
@@ -137,7 +138,7 @@ public static class AlgorithmSolveStreamingExtensions {
     return instance.SolveStreaming(problem, initialState);
   }
   
-  public static IEnumerable<EvaluatedIndividual<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
+  public static IEnumerable<Solution<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
     (this IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
@@ -145,11 +146,11 @@ public static class AlgorithmSolveStreamingExtensions {
   {
     foreach (var iterationResult in algorithm.ExecuteStreaming(problem, initialState)) {
       var bestSolution = iterationResult.BestSolution;
-      yield return new EvaluatedIndividual<TGenotype, TPhenotype>(bestSolution.Genotype, problem.Decode(bestSolution.Genotype), bestSolution.Fitness);
+      yield return new Solution<TGenotype, TPhenotype>(bestSolution.Genotype, problem.Decode(bestSolution.Genotype), bestSolution.Fitness);
     }
   }
   
-  public static IEnumerable<IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
+  public static IEnumerable<IReadOnlyList<Solution<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
     (this StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
@@ -160,7 +161,7 @@ public static class AlgorithmSolveStreamingExtensions {
     return instance.SolveParetoStreaming(problem, initialState);
   }
   
-  public static IEnumerable<IReadOnlyList<EvaluatedIndividual<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
+  public static IEnumerable<IReadOnlyList<Solution<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
     (this IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
     where TState : class
@@ -169,7 +170,7 @@ public static class AlgorithmSolveStreamingExtensions {
     foreach (var iterationResult in algorithm.ExecuteStreaming(problem, initialState)) {
       yield return iterationResult
         .ParetoFront
-        .Select(individual => new EvaluatedIndividual<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
+        .Select(individual => new Solution<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
         .ToList();
     }
   }

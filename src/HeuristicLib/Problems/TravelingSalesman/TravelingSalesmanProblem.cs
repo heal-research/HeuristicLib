@@ -1,6 +1,8 @@
-﻿using HEAL.HeuristicLib.SearchSpaces;
+﻿using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems;
+namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public class Tour {
   public IReadOnlyList<int> Cities { get; }

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.NSGA2;
@@ -225,7 +226,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     };
   }
   protected override NSGA2Result<TGenotype> AggregateResult(NSGA2IterationResult<TGenotype> iterationResult, NSGA2Result<TGenotype>? algorithmResult) {
-    var currentParetoFront = Population.ExtractParetoFront(iterationResult.Population, iterationResult.Objective);
+    var currentParetoFront = ParetoFront.ExtractFrom(iterationResult.Population, iterationResult.Objective);
     return new NSGA2Result<TGenotype>() {
       CurrentGeneration = iterationResult.Generation,
       TotalGenerations = iterationResult.Generation,
@@ -236,7 +237,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
       Objective = iterationResult.Objective,
       CurrentPopulation = iterationResult.Population,
       CurrentParetoFront = currentParetoFront,
-      ParetoFront = algorithmResult is null ? currentParetoFront : Population.ExtractParetoFront(algorithmResult.ParetoFront.Concat(currentParetoFront), iterationResult.Objective)
+      ParetoFront = algorithmResult is null ? currentParetoFront : ParetoFront.ExtractFrom(algorithmResult.ParetoFront.Concat(currentParetoFront), iterationResult.Objective)
     };
   }
 }
@@ -244,7 +245,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
 
 public record NSGA2State<TGenotype> {
   public required int Generation { get; init; }
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> Population { get; init; }
+  public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
 }
 
 public record NSGA2OperatorMetrics {
@@ -277,7 +278,7 @@ public record NSGA2IterationResult<TGenotype>  {
   public required TimeSpan Duration { get; init; }
   public required NSGA2OperatorMetrics OperatorMetrics { get; init; }
   public required Objective Objective { get; init; }
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> Population { get; init; }
+  public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
 }
 
 public record NSGA2Result<TGenotype> : IMultiObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<NSGA2State<TGenotype>> {
@@ -295,7 +296,7 @@ public record NSGA2Result<TGenotype> : IMultiObjectiveAlgorithmResult<TGenotype>
 
   public required Objective Objective { get; init; }
   
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentPopulation { get; init; }
+  public required IReadOnlyList<Solution<TGenotype>> CurrentPopulation { get; init; }
   
   // public NSGA2Result() {
   //   currentParetoFront = new Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>>(() => {
@@ -305,8 +306,8 @@ public record NSGA2Result<TGenotype> : IMultiObjectiveAlgorithmResult<TGenotype>
   
   // private readonly Lazy<IReadOnlyList<EvaluatedIndividual<TGenotype>>> currentParetoFront;
   // public IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentParetoFront => currentParetoFront.Value;
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentParetoFront { get; init; }
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront { get; init; }
+  public required IReadOnlyList<Solution<TGenotype>> CurrentParetoFront { get; init; }
+  public required IReadOnlyList<Solution<TGenotype>> ParetoFront { get; init; }
 
   public NSGA2State<TGenotype> GetContinuationState() => new() {
     Generation = CurrentGeneration,

@@ -1,6 +1,6 @@
 ﻿using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib;
+namespace HEAL.HeuristicLib.Genotypes;
 
 public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   private readonly int[] elements;

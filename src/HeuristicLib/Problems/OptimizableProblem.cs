@@ -1,4 +1,5 @@
-﻿
+﻿using HEAL.HeuristicLib.Optimization;
+
 namespace HEAL.HeuristicLib.Problems;
 
 public interface IOptimizableProblem<TSolution, in TGenotype, out TSearchSpace> : IProblem<TSolution>, IOptimizable<TGenotype, TSearchSpace>

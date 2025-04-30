@@ -1,8 +1,12 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.RealVectorSpace;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.TestFunctions;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -25,7 +29,7 @@ public class GeneticAlgorithmSolvingTests {
     );
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
 
-    EvaluatedIndividual<RealVector, RealVector>? result = ga.Solve(problem);
+    Solution<RealVector, RealVector>? result = ga.Solve(problem);
     
     return Verify(result)
       .IgnoreMembersWithType<TimeSpan>();
@@ -48,7 +52,7 @@ public class GeneticAlgorithmSolvingTests {
     );
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
 
-    List<EvaluatedIndividual<RealVector, RealVector>> results = ga.SolveStreaming(problem).ToList();
+    List<Solution<RealVector, RealVector>> results = ga.SolveStreaming(problem).ToList();
     
     return Verify(results)
       .IgnoreMembersWithType<TimeSpan>();

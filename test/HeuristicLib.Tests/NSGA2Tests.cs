@@ -1,8 +1,11 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.NSGA2;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.RealVectorSpace;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.TestFunctions;
 
 namespace HEAL.HeuristicLib.Tests;
 

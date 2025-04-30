@@ -1,9 +1,11 @@
 ﻿
+using HEAL.HeuristicLib.Optimization;
+
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
 public record GeneticAlgorithmState<TGenotype> {
   public required int Generation { get; init; }
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> Population { get; init; }
+  public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
 }
 
 public record GeneticAlgorithmOperatorMetrics {
@@ -36,7 +38,7 @@ public record GeneticAlgorithmIterationResult<TGenotype> {
   public required TimeSpan Duration { get; init; }
   public required GeneticAlgorithmOperatorMetrics OperatorMetrics { get; init; }
   public required Objective Objective { get; init; }
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> Population { get; init; }
+  public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
 }
 
 public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<GeneticAlgorithmState<TGenotype>> {
@@ -54,7 +56,7 @@ public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResul
 
   public required Objective Objective { get; init; }
   
-  public required IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentPopulation { get; init; }
+  public required IReadOnlyList<Solution<TGenotype>> CurrentPopulation { get; init; }
   
   // public GeneticAlgorithmResult() {
   //   currentBestSolution = new Lazy<EvaluatedIndividual<TGenotype>>(() => {
@@ -68,8 +70,8 @@ public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResul
 
   //private readonly Lazy<EvaluatedIndividual<TGenotype>> bestSolution;
   // public EvaluatedIndividual<TGenotype> BestSolution => bestSolution.Value;
-  public required EvaluatedIndividual<TGenotype>? CurrentBestSolution { get; init; }
-  public required EvaluatedIndividual<TGenotype>? BestSolution { get; init; }
+  public required Solution<TGenotype>? CurrentBestSolution { get; init; }
+  public required Solution<TGenotype>? BestSolution { get; init; }
   
   public GeneticAlgorithmState<TGenotype> GetContinuationState() => new() {
     Generation = CurrentGeneration,

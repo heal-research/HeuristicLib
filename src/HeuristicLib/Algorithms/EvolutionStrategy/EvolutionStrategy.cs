@@ -1,13 +1,15 @@
 ﻿using System.Diagnostics;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
 public record EvolutionStrategyState {
   public required int Generation { get; init; }
-  public required IReadOnlyList<EvaluatedIndividual<RealVector>> Population { get; init; }
+  public required IReadOnlyList<Solution<RealVector>> Population { get; init; }
   public required double MutationStrength { get; init; }
 }
 
@@ -42,7 +44,7 @@ public record EvolutionStrategyIterationResult {
   public required EvolutionStrategyOperatorMetrics OperatorMetrics { get; init; }
   public required double MutationStrength { get; init; }
   public required Objective Objective { get; init; }
-  public required IReadOnlyList<EvaluatedIndividual<RealVector>> Population { get; init; }
+  public required IReadOnlyList<Solution<RealVector>> Population { get; init; }
 }
 
 public record EvolutionStrategyResult : ISingleObjectiveAlgorithmResult<RealVector>, IContinuableAlgorithmResult<EvolutionStrategyState> {
@@ -62,7 +64,7 @@ public record EvolutionStrategyResult : ISingleObjectiveAlgorithmResult<RealVect
 
   public required Objective Objective { get; init; }
   
-  public required IReadOnlyList<EvaluatedIndividual<RealVector>> CurrentPopulation { get; init; }
+  public required IReadOnlyList<Solution<RealVector>> CurrentPopulation { get; init; }
   
   // public EvolutionStrategyResult() {
   //   currentBestSolution = new Lazy<EvaluatedIndividual<RealVector>>(() => {
@@ -74,8 +76,8 @@ public record EvolutionStrategyResult : ISingleObjectiveAlgorithmResult<RealVect
   // private readonly Lazy<EvaluatedIndividual<RealVector>> currentBestSolution;
   // public EvaluatedIndividual<RealVector> CurrentBestSolution => currentBestSolution.Value;
   
-  public required EvaluatedIndividual<RealVector>? CurrentBestSolution { get; init; }
-  public required EvaluatedIndividual<RealVector>? BestSolution { get; init; }
+  public required Solution<RealVector>? CurrentBestSolution { get; init; }
+  public required Solution<RealVector>? BestSolution { get; init; }
   
   public EvolutionStrategyState GetContinuationState() => new() {
     Generation = CurrentGeneration,

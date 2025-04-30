@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib;
+﻿using HEAL.HeuristicLib.Genotypes;
+
+namespace HEAL.HeuristicLib.Optimization;
 
 public enum ObjectiveDirection {
   Minimize,

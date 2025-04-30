@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib;
+﻿namespace HEAL.HeuristicLib.Optimization;
 
 public interface IOptimizable<in TGenotype, out TSearchSpace>
   where TSearchSpace : ISearchSpace<TGenotype>

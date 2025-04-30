@@ -2,8 +2,11 @@
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.RealVectorSpace;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests;
@@ -16,7 +19,7 @@ public class GeneticAlgorithmObservableTests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var decoder = Decoder.Identity<RealVector>();
-    var evaluator = Evaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
+    //var evaluator = Evaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
     var selector = new RandomSelector();
     var replacement = new ElitismReplacer(0);
     var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3);

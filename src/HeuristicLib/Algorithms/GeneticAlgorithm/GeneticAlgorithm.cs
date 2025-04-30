@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;

@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib;
+﻿namespace HEAL.HeuristicLib.Genotypes;
 
 
 public class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector> {

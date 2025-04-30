@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Algorithms;
+﻿using HEAL.HeuristicLib.Optimization;
+
+namespace HEAL.HeuristicLib.Algorithms;
 
 
 public interface IAlgorithmResult {
@@ -10,13 +12,13 @@ public interface IAlgorithmResult {
 }
 
 public interface ISingleObjectiveAlgorithmResult<TGenotype> : IAlgorithmResult {
-  EvaluatedIndividual<TGenotype>? CurrentBestSolution { get; }
-  EvaluatedIndividual<TGenotype>? BestSolution { get; }
+  Solution<TGenotype>? CurrentBestSolution { get; }
+  Solution<TGenotype>? BestSolution { get; }
 }
 
 public interface IMultiObjectiveAlgorithmResult<TGenotype> : IAlgorithmResult {
-  IReadOnlyList<EvaluatedIndividual<TGenotype>> CurrentParetoFront { get; }
-  IReadOnlyList<EvaluatedIndividual<TGenotype>> ParetoFront { get; }
+  IReadOnlyList<Solution<TGenotype>> CurrentParetoFront { get; }
+  IReadOnlyList<Solution<TGenotype>> ParetoFront { get; }
 }
 
 // public interface IIterationResult {

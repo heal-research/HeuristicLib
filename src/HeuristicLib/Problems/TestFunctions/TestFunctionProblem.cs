@@ -1,6 +1,8 @@
-﻿using HEAL.HeuristicLib.SearchSpaces;
+﻿using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class TestFunctionProblem : OptimizableProblemBase<RealVector, RealVector, RealVectorSearchSpace> {
   private readonly ITestFunction testFunction;
