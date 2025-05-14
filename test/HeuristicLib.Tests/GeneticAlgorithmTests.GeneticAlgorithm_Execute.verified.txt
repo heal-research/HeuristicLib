@@ -56,7 +56,7 @@
     }
   },
   CurrentPopulation: {
-    $type: EvaluatedIndividual<RealVector>[],
+    $type: Solution<RealVector>[],
     $values: [
       {
         Genotype: [

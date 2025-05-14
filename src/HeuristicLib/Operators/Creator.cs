@@ -8,13 +8,19 @@ public abstract record class Creator<TGenotype, TSearchSpace> : Operator<ICreato
 {
 }
 
-
 public interface ICreatorInstance<TGenotype, in TSearchSpace>
   where TSearchSpace : ISearchSpace<TGenotype>
 {
   TGenotype Create(TSearchSpace searchSpace, IRandomNumberGenerator random);
 }
 
+public abstract record class StatelessCreator<TGenotype, TSearchSpace> : Creator<TGenotype, TSearchSpace>, ICreatorInstance<TGenotype, TSearchSpace>
+  where TSearchSpace : ISearchSpace<TGenotype> {
+  public override ICreatorInstance<TGenotype, TSearchSpace> CreateInstance() {
+    return this;
+  }
+  public abstract TGenotype Create(TSearchSpace searchSpace, IRandomNumberGenerator random);
+}
 
 public abstract class CreatorInstance<TGenotype, TSearchSpace, TCreator> : OperatorInstance<TCreator>, ICreatorInstance<TGenotype, TSearchSpace> 
   where TSearchSpace : ISearchSpace<TGenotype>
