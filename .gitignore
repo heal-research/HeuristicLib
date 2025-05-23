@@ -435,3 +435,5 @@ Desktop.ini
 
 # Ignore Verify received files
 *.received.*
+
+/_site

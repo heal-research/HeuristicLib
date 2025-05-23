@@ -12,11 +12,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_ Solution Items", "_ Solut
 		.editorconfig = .editorconfig
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
+		docfx.json = docfx.json
+		index.md = index.md
+		toc.yml = toc.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{7D61D99E-D0EF-4AC1-8182-520A1990C4AC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{46DC3720-0661-44BE-9797-DDACE15A1F7B}"
+	ProjectSection(SolutionItems) = preProject
+		docs\getting-started.md = docs\getting-started.md
+		docs\introduction.md = docs\introduction.md
+		docs\toc.yml = docs\toc.yml
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Tests", "test\HeuristicLib.Tests\HeuristicLib.Tests.csproj", "{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}"
 EndProject
