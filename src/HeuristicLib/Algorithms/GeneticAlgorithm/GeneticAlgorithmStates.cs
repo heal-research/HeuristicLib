@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public record GeneticAlgorithmState<TGenotype> {
+public record GeneticAlgorithmState<TGenotype> : IAlgorithmState {
   public required int Generation { get; init; }
   public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
 }

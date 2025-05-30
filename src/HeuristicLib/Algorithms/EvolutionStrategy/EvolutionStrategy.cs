@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
-public record EvolutionStrategyState {
+public record EvolutionStrategyState : IAlgorithmState {
   public required int Generation { get; init; }
   public required IReadOnlyList<Solution<RealVector>> Population { get; init; }
   public required double MutationStrength { get; init; }
@@ -88,33 +88,35 @@ public record EvolutionStrategyResult : ISingleObjectiveAlgorithmResult<RealVect
   public EvolutionStrategyState GetRestartState() => GetContinuationState() with { Generation = 0 };
 }
 
-public record class EvolutionStrategy
-  : IterativeAlgorithm<RealVector, RealVectorSearchSpace, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult> {
+public record class EvolutionStrategy<TProblem>
+  : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TProblem, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult> 
+  where TProblem : IOptimizable<RealVector, RealVectorSearchSpace>
+{
   public int PopulationSize { get; init;  }
   public int Children { get; init;  }
   public EvolutionStrategyType Strategy { get; init; }
 
-  public Creator<RealVector, RealVectorSearchSpace> Creator { get; init; }
+  public Creator<RealVector, RealVectorSearchSpace, TProblem> Creator { get; init; }
 
   //public ICrossover<RealVector, RealVectorSearchSpace>? Crossover { get; }
-  public Mutator<RealVector, RealVectorSearchSpace> Mutator { get; }
+  public Mutator<RealVector, RealVectorSearchSpace, TProblem> Mutator { get; }
   public double InitialMutationStrength { get; init;  }
-  public Selector Selector { get; init;  }
+  public Selector<RealVector, RealVectorSearchSpace, TProblem> Selector { get; init;  }
   public int RandomSeed { get; init;  }
-  public Interceptor<EvolutionStrategyIterationResult>? Interceptor { get; init; }
+  public Interceptor<RealVector, RealVectorSearchSpace, TProblem, EvolutionStrategyIterationResult>? Interceptor { get; init; }
 
   public EvolutionStrategy(
     int populationSize,
     int children,
     EvolutionStrategyType strategy,
-    Creator<RealVector, RealVectorSearchSpace> creator,
+    Creator<RealVector, RealVectorSearchSpace, TProblem> creator,
     //ICrossover<RealVector, RealVectorSearchSpace> crossover,
-    Mutator<RealVector, RealVectorSearchSpace> mutator,
+    Mutator<RealVector, RealVectorSearchSpace, TProblem> mutator,
     double initialMutationStrength,
-    Selector selector,
+    Selector<RealVector, RealVectorSearchSpace, TProblem> selector,
     int randomSeed,
-    Terminator<EvolutionStrategyResult> terminator,
-    Interceptor<EvolutionStrategyIterationResult>? interceptor = null)
+    Terminator<RealVector, RealVectorSearchSpace, TProblem, EvolutionStrategyResult> terminator,
+    Interceptor<RealVector, RealVectorSearchSpace, TProblem, EvolutionStrategyIterationResult>? interceptor = null)
     : base(terminator) {
     PopulationSize = populationSize;
     Children = children;
@@ -128,28 +130,29 @@ public record class EvolutionStrategy
     Interceptor = interceptor;
   }
 
-  public override EvolutionStrategyInstance CreateInstance() {
-    return new EvolutionStrategyInstance(this);
+  public override EvolutionStrategyExecution<TProblem> CreateStreamingExecution(TProblem problem) {
+    return new EvolutionStrategyExecution<TProblem>(this, problem);
   }
 }
 
-public class EvolutionStrategyInstance
-  : IterativeAlgorithmInstance<RealVector, RealVectorSearchSpace, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult, EvolutionStrategy> 
+public class EvolutionStrategyExecution<TProblem>
+  : IterativeAlgorithmExecution<RealVector, RealVectorSearchSpace, TProblem, EvolutionStrategyState, EvolutionStrategyIterationResult, EvolutionStrategyResult, EvolutionStrategy<TProblem>>
+  where TProblem : IOptimizable<RealVector, RealVectorSearchSpace>
 {
   public IRandomNumberGenerator Random { get; }
-  public ICreatorInstance<RealVector, RealVectorSearchSpace> Creator { get; }
+  public ICreatorExecution<RealVector> Creator { get; }
   //public ICrossoverInstance<RealVector, RealVectorSearchSpace>? Crossover { get; }
-  public IMutatorInstance<RealVector, RealVectorSearchSpace> Mutator { get; }
-  public ISelectorInstance Selector { get; }
-  public IInterceptorInstance<EvolutionStrategyIterationResult>? Interceptor { get; }
+  public IMutatorExecution<RealVector> Mutator { get; }
+  public ISelectorExecution<RealVector> Selector { get; }
+  public IInterceptorExecution<EvolutionStrategyIterationResult>? Interceptor { get; }
   
-  public EvolutionStrategyInstance(EvolutionStrategy parameters) : base(parameters) {
+  public EvolutionStrategyExecution(EvolutionStrategy<TProblem> parameters, TProblem problem) : base(parameters, problem) {
     Random = new SystemRandomNumberGenerator(parameters.RandomSeed);
-    Creator = parameters.Creator.CreateInstance();
+    Creator = parameters.Creator.CreateExecution(problem.SearchSpace, problem);
     //Crossover = parameters.Crossover?.CreateInstance();
-    Mutator = parameters.Mutator.CreateInstance();
-    Selector = parameters.Selector.CreateInstance();
-    Interceptor = parameters.Interceptor?.CreateInstance();
+    Mutator = parameters.Mutator.CreateExecution(problem.SearchSpace, problem);
+    Selector = parameters.Selector.CreateExecution(problem.SearchSpace, problem);
+    Interceptor = parameters.Interceptor?.CreateExecution(problem.SearchSpace, problem);
   }
   
   // public override EvolutionStrategyResult Execute<TPhenotype>(IEncodedProblem<TPhenotype, RealVector, RealVectorSearchSpace> problem, EvolutionStrategyState? initialState = null) {
@@ -176,13 +179,13 @@ public class EvolutionStrategyInstance
   //   };
   // }
   
-  protected override EvolutionStrategyIterationResult ExecuteInitialization(IOptimizable<RealVector, RealVectorSearchSpace> optimizable) {
+  protected override EvolutionStrategyIterationResult ExecuteInitialization() {
     var start = Stopwatch.GetTimestamp();
 
     //var random = new SystemRandomNumberGenerator(Algorithm.RandomSeed);
     
     var startCreating = Stopwatch.GetTimestamp();
-    var genotypes = Enumerable.Range(0, Parameters.PopulationSize).Select(i => Creator.Create(optimizable.SearchSpace, Random)).ToArray();
+    var genotypes = Enumerable.Range(0, Parameters.PopulationSize).Select(i => Creator.Create(Random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     // var genotypePopulation = newPopulation;
@@ -192,7 +195,7 @@ public class EvolutionStrategyInstance
     // var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluating = Stopwatch.GetTimestamp();
-    var fitnesses = genotypes.Select(genotype => optimizable.Evaluate(genotype)).ToArray();
+    var fitnesses = genotypes.Select(genotype => Problem.Evaluate(genotype)).ToArray();
     var endEvaluating = Stopwatch.GetTimestamp();
 
     var population = Population.From(genotypes, /*phenotypePopulation,*/ fitnesses);
@@ -203,7 +206,7 @@ public class EvolutionStrategyInstance
       Generation = 0,
       Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       MutationStrength = Parameters.InitialMutationStrength,
-      Objective = optimizable.Objective,
+      Objective = Problem.Objective,
       Population = population,
       OperatorMetrics = new () {
         Creation = new(genotypes.Length, Stopwatch.GetElapsedTime(startCreating, endCreating)),
@@ -230,7 +233,7 @@ public class EvolutionStrategyInstance
     };
   }
   
-  protected override EvolutionStrategyIterationResult ExecuteIteration(IOptimizable<RealVector, RealVectorSearchSpace> optimizable, EvolutionStrategyState state) {
+  protected override EvolutionStrategyIterationResult ExecuteIteration(EvolutionStrategyState state) {
     var start = Stopwatch.GetTimestamp();
 
     // int newRandomSeed = SeedSequence.GetSeed(Algorithm.RandomSeed, state.Generation);
@@ -239,15 +242,15 @@ public class EvolutionStrategyInstance
     var oldPopulation = state.Population;
     
     var startSelection = Stopwatch.GetTimestamp();
-    var randomSelector = new RandomSelector().CreateInstance(); // improve
-    var parents = randomSelector.Select(oldPopulation, optimizable.Objective, Parameters.PopulationSize, Random).ToList();
+    var randomSelector = new RandomSelector().CreateExecution(); // improve
+    var parents = randomSelector.Select(oldPopulation, Problem.Objective, Parameters.PopulationSize, Random).ToList();
     var endSelection = Stopwatch.GetTimestamp();
      
     var genotypes = new RealVector[parents.Count];
     var startMutation = Stopwatch.GetTimestamp();
     for (int i = 0; i < parents.Count; i += 2) {
       var parent = parents[i];
-      var child = Mutator.Mutate(parent.Genotype, optimizable.SearchSpace, Random);
+      var child = Mutator.Mutate(parent.Genotype, Random);
       genotypes[i / 2] = child;
     }
     var endMutation = Stopwatch.GetTimestamp();
@@ -259,13 +262,13 @@ public class EvolutionStrategyInstance
     // var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluation = Stopwatch.GetTimestamp();
-    var fitnesses = genotypes.Select(genotype => optimizable.Evaluate(genotype)).ToArray();
+    var fitnesses = genotypes.Select(genotype => Problem.Evaluate(genotype)).ToArray();
     var endEvaluation = Stopwatch.GetTimestamp();
     
     // timing the adaption check
     int successfulOffspring = 0;
     for (int i = 0; i < fitnesses.Length; i++) {
-      if (fitnesses[i].CompareTo(parents[i].Fitness, optimizable.Objective) == DominanceRelation.Dominates) {
+      if (fitnesses[i].CompareTo(parents[i].Fitness, Problem.Objective) == DominanceRelation.Dominates) {
         successfulOffspring++;
       }
     }
@@ -279,12 +282,13 @@ public class EvolutionStrategyInstance
     var population = Population.From(genotypes, /*phenotypePopulation,*/ fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
-    Replacer replacer = Parameters.Strategy switch {
-      EvolutionStrategyType.Comma => new ElitismReplacer(0),
-      EvolutionStrategyType.Plus => new PlusSelectionReplacer(),
+    // ToDo: to create execution/instance
+    Replacer<RealVector, RealVectorSearchSpace> replacer = Parameters.Strategy switch {
+      EvolutionStrategyType.Comma => new ElitismReplacer<RealVector, RealVectorSearchSpace>(0),
+      EvolutionStrategyType.Plus => new PlusSelectionReplacer<RealVector, RealVectorSearchSpace>(),
       _ => throw new InvalidOperationException($"Unknown strategy {Parameters.Strategy}")
     };
-    var newPopulation = replacer.CreateInstance().Replace(oldPopulation, population, optimizable.Objective, Random);
+    var newPopulation = replacer.CreateExecution(Problem.SearchSpace).Replace(oldPopulation, population, Problem.Objective, Random);
     var endReplacement = Stopwatch.GetTimestamp();
     
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
@@ -293,7 +297,7 @@ public class EvolutionStrategyInstance
       Generation = state.Generation + 1,
       Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       MutationStrength = newMutationStrength,
-      Objective = optimizable.Objective,
+      Objective = Problem.Objective,
       Population = newPopulation,
       OperatorMetrics = new() {
         Selection = new(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection)),

@@ -1,10 +1,12 @@
 ﻿using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.RealVectorSpace;
 
-public record class NormalDistributedCreator : Creator<RealVector, RealVectorSearchSpace> {
+public record class NormalDistributedCreator : Creator<RealVector, RealVectorSearchSpace>
+{
   public RealVector Means { get; }
   public RealVector Sigmas { get; }
 
@@ -17,16 +19,17 @@ public record class NormalDistributedCreator : Creator<RealVector, RealVectorSea
     Sigmas = sigmas;
   }
   
-  public override NormalDistributedCreatorInstance CreateInstance() => new NormalDistributedCreatorInstance(this);
+  public override NormalDistributedCreatorExecution CreateExecution(RealVectorSearchSpace searchSpace) => new NormalDistributedCreatorExecution(this, searchSpace);
 }
 
-public class NormalDistributedCreatorInstance : CreatorInstance<RealVector, RealVectorSearchSpace, NormalDistributedCreator> {
-  public NormalDistributedCreatorInstance(NormalDistributedCreator parameters) : base(parameters) { }
-  public override RealVector Create(RealVectorSearchSpace searchSpace, IRandomNumberGenerator random) {
-    if (!RealVector.AreCompatible(searchSpace.Length, Parameters.Means, Parameters.Sigmas, searchSpace.Minimum, searchSpace.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
-    RealVector value = RealVector.CreateNormal(searchSpace.Length, Parameters.Means, Parameters.Sigmas, random);
+public class NormalDistributedCreatorExecution : CreatorExecution<RealVector, RealVectorSearchSpace, NormalDistributedCreator> 
+{
+  public NormalDistributedCreatorExecution(NormalDistributedCreator parameters, RealVectorSearchSpace searchSpace) : base(parameters, searchSpace) { }
+  public override RealVector Create(IRandomNumberGenerator random) {
+    if (!RealVector.AreCompatible(SearchSpace.Length, Parameters.Means, Parameters.Sigmas, SearchSpace.Minimum, SearchSpace.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+    RealVector value = RealVector.CreateNormal(SearchSpace.Length, Parameters.Means, Parameters.Sigmas, random);
     // Clamp value to min/max bounds
-    value = RealVector.Clamp(value, searchSpace.Minimum, searchSpace.Maximum);
+    value = RealVector.Clamp(value, SearchSpace.Minimum, SearchSpace.Maximum);
     return value;
   }
 }

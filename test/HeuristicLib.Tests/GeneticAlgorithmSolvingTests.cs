@@ -18,8 +18,8 @@ public class GeneticAlgorithmSolvingTests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var selector = new RandomSelector();
-    var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
+    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
 
     var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 5, 
@@ -29,7 +29,8 @@ public class GeneticAlgorithmSolvingTests {
     );
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
 
-    Solution<RealVector, RealVector>? result = ga.Solve(problem);
+    Solution<RealVector>? result = ga.Solve(problem);
+    //Solution<RealVector, RealVector>? result = AlgorithmSolveExtensions.Solve<RealVector, RealVector, RealVectorSearchSpace, TestFunctionProblem, GeneticAlgorithmState<RealVector>, GeneticAlgorithmResult<RealVector>>(ga, problem);
     
     return Verify(result)
       .IgnoreMembersWithType<TimeSpan>();
@@ -41,8 +42,8 @@ public class GeneticAlgorithmSolvingTests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var selector = new RandomSelector();
-    var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
+    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
 
     var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 5, 
@@ -52,7 +53,7 @@ public class GeneticAlgorithmSolvingTests {
     );
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
 
-    List<Solution<RealVector, RealVector>> results = ga.SolveStreaming(problem).ToList();
+    List<Solution<RealVector>> results = ga.SolveStreaming(problem).ToList();
     
     return Verify(results)
       .IgnoreMembersWithType<TimeSpan>();
@@ -64,8 +65,8 @@ public class GeneticAlgorithmSolvingTests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var selector = new RandomSelector();
-    var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
+    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
 
     var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       populationSize: 5, 

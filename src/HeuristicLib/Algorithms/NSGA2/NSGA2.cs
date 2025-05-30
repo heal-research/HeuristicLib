@@ -5,31 +5,32 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.NSGA2;
 
-public record class NSGA2<TGenotype, TSearchSpace>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, NSGA2State<TGenotype>, NSGA2IterationResult<TGenotype>, NSGA2Result<TGenotype>>
-  where TSearchSpace : ISearchSpace<TGenotype> 
+public record class NSGA2<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, NSGA2State<TGenotype>, NSGA2IterationResult<TGenotype>, NSGA2Result<TGenotype>>
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
 {
   public int PopulationSize { get; init; }
-  public Creator<TGenotype, TSearchSpace> Creator { get; init; }
-  public Crossover<TGenotype, TSearchSpace> Crossover { get; init; }
-  public Mutator<TGenotype, TSearchSpace> Mutator { get; init; }
+  public Creator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
+  public Crossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
+  public Mutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
 
   public double MutationRate { get; init; }
 
   //public ISelector Selector { get; init; }
-  public Replacer Replacer { get; init; }
+  public Replacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
   public int RandomSeed { get; init; }
-  public Interceptor<NSGA2IterationResult<TGenotype>>? Interceptor { get; init; }
+  public Interceptor<TGenotype, TSearchSpace, TProblem, NSGA2IterationResult<TGenotype>>? Interceptor { get; init; }
 
   public NSGA2(
     int populationSize,
-    Creator<TGenotype, TSearchSpace> creator,
-    Crossover<TGenotype, TSearchSpace> crossover,
-    Mutator<TGenotype, TSearchSpace> mutator, double mutationRate,
-    /*ISelector selector,*/ Replacer replacer,
+    Creator<TGenotype, TSearchSpace, TProblem> creator,
+    Crossover<TGenotype, TSearchSpace, TProblem> crossover,
+    Mutator<TGenotype, TSearchSpace, TProblem> mutator, double mutationRate,
+    /*ISelector selector,*/ Replacer<TGenotype, TSearchSpace, TProblem> replacer,
     int randomSeed,
-    Terminator<NSGA2Result<TGenotype>> terminator,
-    Interceptor<NSGA2IterationResult<TGenotype>>? interceptor = null
+    Terminator<TGenotype, TSearchSpace, TProblem, NSGA2Result<TGenotype>> terminator,
+    Interceptor<TGenotype, TSearchSpace, TProblem, NSGA2IterationResult<TGenotype>>? interceptor = null
   ) : base(terminator) {
     PopulationSize = populationSize;
     Creator = creator;
@@ -42,29 +43,46 @@ public record class NSGA2<TGenotype, TSearchSpace>
     Interceptor = interceptor;
   }
 
-  public override NSGA2Instance<TGenotype, TSearchSpace> CreateInstance() {
-    return new NSGA2Instance<TGenotype, TSearchSpace>(this);
+  public override Nsga2Execution<TGenotype, TSearchSpace, TProblem> CreateStreamingExecution(TProblem problem) {
+    return new Nsga2Execution<TGenotype, TSearchSpace, TProblem>(this, problem);
   }
 }
 
-public class NSGA2Instance<TGenotype, TSearchSpace>
-  : IterativeAlgorithmInstance<TGenotype, TSearchSpace, NSGA2State<TGenotype>, NSGA2IterationResult<TGenotype>, NSGA2Result<TGenotype>, NSGA2<TGenotype, TSearchSpace>>
+public record class NSGA2<TGenotype, TSearchSpace>
+  : NSGA2<TGenotype, TSearchSpace, IOptimizable<TGenotype, TSearchSpace>>
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
+  public NSGA2(
+    int populationSize,
+    Creator<TGenotype, TSearchSpace> creator,
+    Crossover<TGenotype, TSearchSpace> crossover,
+    Mutator<TGenotype, TSearchSpace> mutator, double mutationRate,
+    /*ISelector selector,*/ Replacer<TGenotype, TSearchSpace> replacer,
+    int randomSeed,
+    Terminator<TGenotype, TSearchSpace, NSGA2Result<TGenotype>> terminator,
+    Interceptor<TGenotype, TSearchSpace, IOptimizable<TGenotype, TSearchSpace>, NSGA2IterationResult<TGenotype>>? interceptor = null
+  ) : base(populationSize, creator, crossover, mutator, mutationRate, replacer, randomSeed, terminator, interceptor) { }
+}
+
+public class Nsga2Execution<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithmExecution<TGenotype, TSearchSpace, TProblem, NSGA2State<TGenotype>, NSGA2IterationResult<TGenotype>, NSGA2Result<TGenotype>, NSGA2<TGenotype, TSearchSpace, TProblem>>
   where TSearchSpace : ISearchSpace<TGenotype> 
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
 {
   public IRandomNumberGenerator Random { get; }
-  public ICreatorInstance<TGenotype, TSearchSpace> Creator { get; }
-  public ICrossoverInstance<TGenotype, TSearchSpace> Crossover { get; }
-  public IMutatorInstance<TGenotype, TSearchSpace> Mutator { get; }
-  public IReplacerInstance Replacer { get; }
-  public IInterceptorInstance<NSGA2IterationResult<TGenotype>>? Interceptor { get; }
+  public ICreatorExecution<TGenotype> Creator { get; }
+  public ICrossoverExecution<TGenotype> Crossover { get; }
+  public IMutatorExecution<TGenotype> Mutator { get; }
+  public IReplacerInstance<TGenotype> Replacer { get; }
+  public IInterceptorExecution<NSGA2IterationResult<TGenotype>>? Interceptor { get; }
   
-  public NSGA2Instance(NSGA2<TGenotype, TSearchSpace> parameters) : base (parameters) {
+  public Nsga2Execution(NSGA2<TGenotype, TSearchSpace, TProblem> parameters, TProblem problem) : base (parameters, problem) {
     Random = new SystemRandomNumberGenerator(parameters.RandomSeed);
-    Creator = parameters.Creator.CreateInstance();
-    Crossover = parameters.Crossover.CreateInstance();
-    Mutator = parameters.Mutator.CreateInstance();
-    Replacer = parameters.Replacer.CreateInstance();
-    Interceptor = parameters.Interceptor?.CreateInstance();
+    Creator = parameters.Creator.CreateExecution(problem.SearchSpace, problem);
+    Crossover = parameters.Crossover.CreateExecution(problem.SearchSpace, problem);
+    Mutator = parameters.Mutator.CreateExecution(problem.SearchSpace, problem);
+    Replacer = parameters.Replacer.CreateExecution(problem.SearchSpace, problem);
+    Interceptor = parameters.Interceptor?.CreateExecution(problem.SearchSpace, problem);
   }
 
   // public override NSGA2Result<TGenotype> Execute<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, NSGA2State<TGenotype>? initialState = null) {
@@ -89,13 +107,13 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
   //   };
   // }
   
-  protected override NSGA2IterationResult<TGenotype> ExecuteInitialization(IOptimizable<TGenotype, TSearchSpace> optimizable) {
+  protected override NSGA2IterationResult<TGenotype> ExecuteInitialization() {
     var start = Stopwatch.GetTimestamp();
 
     // var random = new SystemRandomNumberGenerator(Parameters.RandomSeed);
 
     var startCreating = Stopwatch.GetTimestamp();
-    var genotypes = Enumerable.Range(0, Parameters.PopulationSize).Select(i => Creator.Create(optimizable.SearchSpace, Random)).ToArray();
+    var genotypes = Enumerable.Range(0, Parameters.PopulationSize).Select(i => Creator.Create(Random)).ToArray();
     var endCreating = Stopwatch.GetTimestamp();
     
     // var genotypePopulation = newPopulation;
@@ -105,7 +123,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     // var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluating = Stopwatch.GetTimestamp();
-    var fitnesses = genotypes.Select(genotype => optimizable.Evaluate(genotype)).ToArray();
+    var fitnesses = genotypes.Select(genotype => Problem.Evaluate(genotype)).ToArray();
     var endEvaluating = Stopwatch.GetTimestamp();
 
     var population = Population.From(genotypes, /*phenotypePopulation,*/ fitnesses);
@@ -114,7 +132,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     
     var result = new NSGA2IterationResult<TGenotype>() {
       Generation = 0,
-      Objective = optimizable.Objective,
+      Objective = Problem.Objective,
       Population = population,
       Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       OperatorMetrics = new NSGA2OperatorMetrics() {
@@ -141,7 +159,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     };
   }
 
-  protected override NSGA2IterationResult<TGenotype> ExecuteIteration(IOptimizable<TGenotype, TSearchSpace> optimizable, NSGA2State<TGenotype> state) {
+  protected override NSGA2IterationResult<TGenotype> ExecuteIteration(NSGA2State<TGenotype> state) {
     var start = Stopwatch.GetTimestamp();
     
     // int newRandomSeed = SeedSequence.GetSeed(Algorithm.RandomSeed, state.Generation);
@@ -152,8 +170,8 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     var oldPopulation = state.Population;
     
     var startSelection = Stopwatch.GetTimestamp();
-    var selector = new RandomSelector().CreateInstance(); // ToDo: implement NSGA-specific selection (pareto-based selection)
-    var parents = selector.Select(oldPopulation, optimizable.Objective, offspringCount * 2, Random).ToList();
+    var selector = new RandomSelector().CreateExecution(); // ToDo: implement NSGA-specific selection (pareto-based selection)
+    var parents = selector.Select(oldPopulation, Problem.Objective, offspringCount * 2, Random).ToList();
     var endSelection = Stopwatch.GetTimestamp();
      
     var genotypes = new TGenotype[offspringCount];
@@ -162,7 +180,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     for (int i = 0; i < parents.Count; i += 2) {
       var parent1 = parents[i];
       var parent2 = parents[i + 1];
-      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, optimizable.SearchSpace, Random);
+      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, Random);
       genotypes[i / 2] = child;
       crossoverCount++;
     }
@@ -172,7 +190,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     int mutationCount = 0;
     for (int i = 0; i < genotypes.Length; i++) {
       if (Random.Random() < Parameters.MutationRate) {
-        genotypes[i] = Mutator.Mutate(genotypes[i], optimizable.SearchSpace, Random);
+        genotypes[i] = Mutator.Mutate(genotypes[i], Random);
         mutationCount++;
       }
     }
@@ -183,20 +201,20 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
     // var endDecoding = Stopwatch.GetTimestamp();
     
     var startEvaluation = Stopwatch.GetTimestamp();
-    var fitnesses = genotypes.Select(genotype => optimizable.Evaluate(genotype)).ToArray();
+    var fitnesses = genotypes.Select(genotype => Problem.Evaluate(genotype)).ToArray();
     var endEvaluation = Stopwatch.GetTimestamp();
     
     var population = Population.From(genotypes, /*phenotypePopulation,*/ fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
-    var newPopulation = Replacer.Replace(oldPopulation, population, optimizable.Objective, Random);
+    var newPopulation = Replacer.Replace(oldPopulation, population, Problem.Objective, Random);
     var endReplacement = Stopwatch.GetTimestamp();
     
     var endBeforeInterceptor = Stopwatch.GetTimestamp();
     
     var result = new NSGA2IterationResult<TGenotype>() {
       Generation = state.Generation + 1,
-      Objective = optimizable.Objective,
+      Objective = Problem.Objective,
       Population = newPopulation,
       Duration = Stopwatch.GetElapsedTime(start, endBeforeInterceptor),
       OperatorMetrics = new NSGA2OperatorMetrics() {
@@ -243,7 +261,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace>
 }
 
 
-public record NSGA2State<TGenotype> {
+public record NSGA2State<TGenotype> : IAlgorithmState {
   public required int Generation { get; init; }
   public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
 }

@@ -1,42 +1,157 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
 
-public abstract record class Selector : Operator<ISelectorInstance> {
+public abstract record class Selector<TGenotype, TSearchSpace, TProblem> : Operator<TGenotype, TSearchSpace, TProblem, ISelectorExecution<TGenotype>> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+{
+  [return: NotNullIfNotNull(nameof(problemAgnosticOperator))]
+  public static implicit operator Selector<TGenotype, TSearchSpace, TProblem>?(Selector<TGenotype, TSearchSpace>? problemAgnosticOperator) {
+    if (problemAgnosticOperator is null) return null;
+    return new ProblemSpecificSelector<TGenotype, TSearchSpace, TProblem>(problemAgnosticOperator);
+  }
+  
+  [return: NotNullIfNotNull(nameof(simpleSelector))]
+  public static implicit operator Selector<TGenotype, TSearchSpace, TProblem>?(Selector? simpleSelector) {
+    if (simpleSelector is null) return null;
+    return new SimpleProblemSpecificSelector<TGenotype, TSearchSpace, TProblem>(simpleSelector);
+  }
+}
+
+public abstract record class Selector<TGenotype, TSearchSpace> : Operator<TGenotype, TSearchSpace, ISelectorExecution<TGenotype>> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
+  [return: NotNullIfNotNull(nameof(simpleSelector))]
+  public static implicit operator Selector<TGenotype, TSearchSpace>?(Selector? simpleSelector) {
+    if (simpleSelector is null) return null;
+    return new SimpleSelector<TGenotype, TSearchSpace>(simpleSelector);
+  }
+}
+
+public abstract record class Selector : Operator<ISelectorExecution>
+{
+}
+
+public interface ISelectorExecution<TGenotype> {
+  IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random);
+}
+
+public interface ISelectorExecution {
+  IReadOnlyList<Solution<T>> Select<T>(IReadOnlyList<Solution<T>> population, Objective objective, int count, IRandomNumberGenerator random);
+}
+
+public abstract class SelectorExecution<TGenotype, TSearchSpace, TProblem, TSelector> : OperatorExecution<TGenotype, TSearchSpace, TProblem, TSelector>, ISelectorExecution<TGenotype>
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace> {
+  protected SelectorExecution(TSelector parameters, TSearchSpace searchSpace, TProblem problem) : base(parameters, searchSpace, problem) {}
+
+  public abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random);
+}
+
+public abstract class SelectorExecution<TGenotype, TSearchSpace, TSelector> : OperatorExecution<TGenotype, TSearchSpace, TSelector>, ISelectorExecution<TGenotype> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
+  protected SelectorExecution(TSelector parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
+  public abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random);
+}
+
+public abstract class SelectorExecution<TSelector> : OperatorExecution< TSelector>, ISelectorExecution 
+{
+  protected SelectorExecution(TSelector parameters) : base(parameters) { }
+
+  public abstract IReadOnlyList<Solution<T>> Select<T>(IReadOnlyList<Solution<T>> population, Objective objective, int count, IRandomNumberGenerator random);
+}
+
+public sealed record class ProblemSpecificSelector<TGenotype, TSearchSpace, TProblem> : Selector<TGenotype, TSearchSpace, TProblem> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+{
+  public Selector<TGenotype, TSearchSpace> ProblemAgnosticSelector { get; }
+
+  public ProblemSpecificSelector(Selector<TGenotype, TSearchSpace> problemAgnosticSelector) {
+    ProblemAgnosticSelector = problemAgnosticSelector;
+  }
+
+  public override ISelectorExecution<TGenotype> CreateExecution(TSearchSpace searchSpace, TProblem problem) {
+    return ProblemAgnosticSelector.CreateExecution(searchSpace);
+  }
+}
+
+internal sealed record class SimpleProblemSpecificSelector<TGenotype, TSearchSpace, TProblem> : Selector<TGenotype, TSearchSpace, TProblem> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+{
+  public Selector SimpleSelector { get; }
+
+  public SimpleProblemSpecificSelector(Selector simpleSelector) {
+    SimpleSelector = simpleSelector;
+  }
+
+  public override ISelectorExecution<TGenotype> CreateExecution(TSearchSpace searchSpace, TProblem problem) {
+    var simpleExecution = SimpleSelector.CreateExecution();
+    return new SimpleSelectorExecution<TGenotype>(simpleExecution);
+  }
+}
+
+internal sealed record class SimpleSelector<TGenotype, TSearchSpace> : Selector<TGenotype, TSearchSpace> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
+  public Selector ProblemAgnosticSelector { get; }
+
+  public SimpleSelector(Selector problemAgnosticSelector) {
+    ProblemAgnosticSelector = problemAgnosticSelector;
+  }
+
+  public override ISelectorExecution<TGenotype> CreateExecution(TSearchSpace searchSpace) {
+    var simpleExecution = ProblemAgnosticSelector.CreateExecution();
+    return new SimpleSelectorExecution<TGenotype>(simpleExecution);
+  }
 }
 
 
-public interface ISelectorInstance {
-  IReadOnlyList<Solution<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
+internal class SimpleSelectorExecution<TGenotype> : ISelectorExecution<TGenotype> {
+  public ISelectorExecution SimpleSelectionExecution { get; }
+
+  public SimpleSelectorExecution(ISelectorExecution simpleSelectionExecution) {
+    SimpleSelectionExecution = simpleSelectionExecution;
+  }
+
+  public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+  {
+    return SimpleSelectionExecution.Select(population, objective, count, random);
+  }
 }
 
-public abstract class SelectorInstance<TSelector> : OperatorInstance<TSelector>, ISelectorInstance {
-  protected SelectorInstance(TSelector parameters) : base(parameters) { }
-  public abstract IReadOnlyList<Solution<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
-}
+
 //
 // public abstract class SelectorBase : ISelector {
 //   public abstract IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
 // }
 
-public record class ProportionalSelector : Selector { // ToDo: Probability-based selection base class
+public record class ProportionalSelector<TGenotype, TSearchSpace> : Selector<TGenotype, TSearchSpace>
+  where TSearchSpace : ISearchSpace<TGenotype>
+{ // ToDo: Probability-based selection base class
   public bool Windowing { get; }
 
   public ProportionalSelector(bool windowing = true) {
     Windowing = windowing;
   }
 
-  public override ProportionalSelectorInstance CreateInstance() {
-    return new ProportionalSelectorInstance(this);
+  public override ProportionalSelectorExecution<TGenotype, TSearchSpace> CreateExecution(TSearchSpace searchSpace) {
+    return new ProportionalSelectorExecution<TGenotype, TSearchSpace>(this, searchSpace);
   }
 }
 
-public class ProportionalSelectorInstance : SelectorInstance<ProportionalSelector> {
-  public ProportionalSelectorInstance(ProportionalSelector parameters) : base(parameters) {}
+public class ProportionalSelectorExecution<TGenotype, TSearchSpace> : SelectorExecution<TGenotype, TSearchSpace, ProportionalSelector<TGenotype, TSearchSpace>>
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
+  public ProportionalSelectorExecution(ProportionalSelector<TGenotype, TSearchSpace> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) {}
 
-  public override IReadOnlyList<Solution<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
+  public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     // prepare qualities
     double minQuality = double.MaxValue, maxQuality = double.MinValue;
@@ -82,16 +197,18 @@ public class ProportionalSelectorInstance : SelectorInstance<ProportionalSelecto
   }
 }
 
-public record class RandomSelector : Selector {
-  public override RandomSelectorInstance CreateInstance() {
-    return new RandomSelectorInstance(this);
+public record class RandomSelector : Selector 
+{
+  public override RandomSelectorExecution CreateExecution() {
+    return new RandomSelectorExecution(this);
   }
 }
 
-public class RandomSelectorInstance : SelectorInstance<RandomSelector> {
-  public RandomSelectorInstance(RandomSelector parameters) : base(parameters) { }
-  public override IReadOnlyList<Solution<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
-    var selected = new Solution<TGenotype/*, TPhenotype*/>[count];
+public class RandomSelectorExecution : SelectorExecution<RandomSelector>
+{
+  public RandomSelectorExecution(RandomSelector parameters) : base(parameters) { }
+  public override IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
+    var selected = new Solution<TGenotype>[count];
     for (int i = 0; i < count; i++) {
       int index = random.Integer(population.Count);
       selected[i] = population[index];
@@ -100,21 +217,25 @@ public class RandomSelectorInstance : SelectorInstance<RandomSelector> {
   }
 }
 
-public record class TournamentSelector : Selector {
+public record class TournamentSelector<TGenotype, TSearchSpace> : Selector<TGenotype, TSearchSpace> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
   public int TournamentSize { get; }
   
   public TournamentSelector(int tournamentSize) {
     TournamentSize = tournamentSize;
   }
   
-  public override TournamentSelectorInstance CreateInstance() {
-    return new TournamentSelectorInstance(this);
+  public override TournamentSelectorExecution<TGenotype, TSearchSpace> CreateExecution(TSearchSpace searchSpace) {
+    return new TournamentSelectorExecution<TGenotype, TSearchSpace>(this, searchSpace);
   }
 }
 
-public class TournamentSelectorInstance : SelectorInstance<TournamentSelector> {
-  public TournamentSelectorInstance(TournamentSelector parameters) : base(parameters) { }
-  public override IReadOnlyList<Solution<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random) {
+public class TournamentSelectorExecution<TGenotype, TSearchSpace> : SelectorExecution<TGenotype, TSearchSpace, TournamentSelector<TGenotype, TSearchSpace>>
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
+  public TournamentSelectorExecution(TournamentSelector<TGenotype, TSearchSpace> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
+  public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     var selected = new Solution<TGenotype/*, TPhenotype*/>[count];
     for (int i = 0; i < count; i++) {
       var tournamentParticipants = new List<Solution<TGenotype/*, TPhenotype*/>>();

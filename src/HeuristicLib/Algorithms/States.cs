@@ -2,6 +2,9 @@
 
 namespace HEAL.HeuristicLib.Algorithms;
 
+public interface IAlgorithmState {
+  
+}
 
 public interface IAlgorithmResult {
   int CurrentIteration { get; }

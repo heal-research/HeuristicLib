@@ -11,17 +11,18 @@ public class Tour {
   }
 }
 
-public class TravelingSalesmanProblem : ProblemBase<Tour> {
+// public class TravelingSalesmanProblem : ProblemBase<Tour> {
+public class TravelingSalesmanProblem : ProblemBase<Permutation, PermutationSearchSpace, ITravelingSalesmanProblemData> {
 
-  public ITravelingSalesmanProblemData ProblemData { get; }
+  // public ITravelingSalesmanProblemData ProblemData { get; }
 
   public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
-    : base(SingleObjective.Minimize) {
-    ProblemData = problemData;
+    : base(new PermutationSearchSpace(problemData.NumberOfCities), SingleObjective.Minimize, problemData) {
+    // ProblemData = problemData;
   }
 
-  public override Fitness Evaluate(Tour solution) {
-    var tour = solution.Cities;
+  public override Fitness Evaluate(Permutation solution) {
+    var tour = solution;
     double totalDistance = 0.0;
     for (int i = 0; i < tour.Count - 1; i++) {
       totalDistance += ProblemData.GetDistance(tour[i], tour[i + 1]);
@@ -30,6 +31,8 @@ public class TravelingSalesmanProblem : ProblemBase<Tour> {
 
     return totalDistance;
   }
+  
+  // public override Tour Decode(Permutation genotype) => new Tour(genotype);
   
   #region Default Instance
   public static TravelingSalesmanProblem CreateDefault() {
@@ -45,21 +48,21 @@ public class TravelingSalesmanProblem : ProblemBase<Tour> {
   #endregion
 }
 
-public static class TravelingSalesmanProblemEncodingExtensions {
-  public static OptimizableProblem<Tour, Permutation, PermutationSearchSpace> EncodeAsPermutationSearchSpace(this TravelingSalesmanProblem problem) {
-    var searchSpace = new PermutationSearchSpace(problem.ProblemData.NumberOfCities);
-
-    return new OptimizableProblem<Tour, Permutation, PermutationSearchSpace>(
-      problem,
-      searchSpace,
-      new PermutationDecoder()
-    );
-  }
-  
-  private class PermutationDecoder : IDecoder<Permutation, Tour> {
-    public Tour Decode(Permutation genotype) => new Tour(genotype);
-  }
-}
+// public static class TravelingSalesmanProblemEncodingExtensions {
+//   public static OptimizableProblem<Tour, Permutation, PermutationSearchSpace> EncodeAsPermutationSearchSpace(this TravelingSalesmanProblem problem) {
+//     var searchSpace = new PermutationSearchSpace(problem.ProblemData.NumberOfCities);
+//
+//     return new OptimizableProblem<Tour, Permutation, PermutationSearchSpace>(
+//       problem,
+//       searchSpace,
+//       new PermutationDecoder()
+//     );
+//   }
+//   
+//   private class PermutationDecoder : IDecoder<Permutation, Tour> {
+//     public Tour Decode(Permutation genotype) => new Tour(genotype);
+//   }
+// }
 
 
 public interface ITravelingSalesmanProblemData {

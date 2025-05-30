@@ -1,9 +1,9 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public interface IOptimizable<in TGenotype, out TSearchSpace>
-  where TSearchSpace : ISearchSpace<TGenotype>
+public interface IOptimizable<in TSolution, out TSearchSpace>
+  where TSearchSpace : ISearchSpace<TSolution>
 {
-  Fitness Evaluate(TGenotype genotype);
+  Fitness Evaluate(TSolution solution);
   Objective Objective { get; }
   TSearchSpace SearchSpace { get; }
 }

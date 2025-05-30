@@ -1,0 +1,224 @@
+﻿{
+  CurrentGeneration: 5,
+  TotalGenerations: 5,
+  CurrentOperatorMetrics: {
+    Creation: {
+      Count: 0
+    },
+    Evaluation: {
+      Count: 5
+    },
+    Selection: {
+      Count: 10
+    },
+    Crossover: {
+      Count: 5
+    },
+    Mutation: {
+      Count: 4
+    },
+    Replacement: {
+      Count: 1
+    },
+    Interception: {
+      Count: 0
+    }
+  },
+  TotalOperatorMetrics: {
+    Creation: {
+      Count: 5
+    },
+    Evaluation: {
+      Count: 30
+    },
+    Selection: {
+      Count: 50
+    },
+    Crossover: {
+      Count: 25
+    },
+    Mutation: {
+      Count: 13
+    },
+    Replacement: {
+      Count: 5
+    },
+    Interception: {
+      Count: 0
+    }
+  },
+  Objective: {
+    Directions: [
+      Minimize
+    ],
+    TotalOrderComparer: {
+      $type: SingleObjectiveComparer
+    }
+  },
+  CurrentPopulation: {
+    $type: Solution<Permutation>[],
+    $values: [
+      {
+        Genotype: [
+          0,
+          1,
+          4,
+          5,
+          2,
+          8,
+          11,
+          6,
+          9,
+          10,
+          3,
+          12,
+          7,
+          15,
+          14,
+          13
+        ],
+        Fitness: [
+          3173.1818974490016
+        ]
+      },
+      {
+        Genotype: [
+          0,
+          1,
+          4,
+          5,
+          2,
+          6,
+          8,
+          9,
+          14,
+          11,
+          13,
+          7,
+          12,
+          3,
+          15,
+          10
+        ],
+        Fitness: [
+          3204.8249978940717
+        ]
+      },
+      {
+        Genotype: [
+          0,
+          1,
+          4,
+          5,
+          2,
+          8,
+          6,
+          13,
+          11,
+          12,
+          10,
+          9,
+          3,
+          7,
+          14,
+          15
+        ],
+        Fitness: [
+          3207.053960902518
+        ]
+      },
+      {
+        Genotype: [
+          0,
+          1,
+          4,
+          5,
+          2,
+          8,
+          6,
+          13,
+          7,
+          3,
+          9,
+          10,
+          12,
+          11,
+          14,
+          15
+        ],
+        Fitness: [
+          3184.104434114489
+        ]
+      },
+      {
+        Genotype: [
+          0,
+          1,
+          4,
+          5,
+          6,
+          8,
+          2,
+          9,
+          10,
+          12,
+          7,
+          13,
+          3,
+          11,
+          14,
+          15
+        ],
+        Fitness: [
+          3364.7228544785203
+        ]
+      }
+    ]
+  },
+  CurrentBestSolution: {
+    Genotype: [
+      0,
+      1,
+      4,
+      5,
+      2,
+      8,
+      11,
+      6,
+      9,
+      10,
+      3,
+      12,
+      7,
+      15,
+      14,
+      13
+    ],
+    Fitness: [
+      3173.1818974490016
+    ]
+  },
+  BestSolution: {
+    Genotype: [
+      0,
+      1,
+      4,
+      5,
+      2,
+      6,
+      8,
+      9,
+      10,
+      13,
+      7,
+      12,
+      3,
+      11,
+      14,
+      15
+    ],
+    Fitness: [
+      3081.2182001440924
+    ]
+  }
+}

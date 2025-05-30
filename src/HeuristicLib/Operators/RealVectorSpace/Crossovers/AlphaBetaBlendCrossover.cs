@@ -1,10 +1,12 @@
 ﻿using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.RealVectorSpace;
 
-public record class AlphaBetaBlendCrossover : Crossover<RealVector, RealVectorSearchSpace> {
+public record class AlphaBetaBlendCrossover : Crossover<RealVector, RealVectorSearchSpace>
+{
   public double Alpha { get; }
   public double Beta { get; }
   
@@ -13,12 +15,13 @@ public record class AlphaBetaBlendCrossover : Crossover<RealVector, RealVectorSe
     Beta = beta;
   }
 
-  public override AlphaBetaBlendCrossoverInstance CreateInstance() => new AlphaBetaBlendCrossoverInstance(this);
+  public override AlphaBetaBlendCrossoverExecution CreateExecution(RealVectorSearchSpace searchSpace) => new AlphaBetaBlendCrossoverExecution(this, searchSpace);
 }
 
-public class AlphaBetaBlendCrossoverInstance : CrossoverInstance<RealVector, RealVectorSearchSpace, AlphaBetaBlendCrossover> {
-  public AlphaBetaBlendCrossoverInstance(AlphaBetaBlendCrossover parameters) : base(parameters) { }
-  public override RealVector Cross(RealVector parent1, RealVector parent2, RealVectorSearchSpace searchSpace, IRandomNumberGenerator random) {
+public class AlphaBetaBlendCrossoverExecution : CrossoverExecution<RealVector, RealVectorSearchSpace, AlphaBetaBlendCrossover> 
+{
+  public AlphaBetaBlendCrossoverExecution(AlphaBetaBlendCrossover parameters, RealVectorSearchSpace searchSpace) : base(parameters, searchSpace) { }
+  public override RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random) {
     return Parameters.Alpha * parent1 + Parameters.Beta * parent2;
   }
 }

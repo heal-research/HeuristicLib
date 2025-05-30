@@ -1,31 +1,47 @@
 ﻿{
   PopulationSize: 200,
   Creator: {
-    $type: UniformDistributedCreator,
-    Minimum: null,
-    Maximum: [
-      3.0
-    ]
+    $type: ProblemSpecificCreator<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,
+    ProblemAgnosticCreator: {
+      $type: UniformDistributedCreator,
+      Minimum: null,
+      Maximum: [
+        3.0
+      ]
+    }
   },
   Crossover: {
-    $type: SinglePointCrossover
+    $type: ProblemSpecificCrossover<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,
+    ProblemAgnosticCrossover: {
+      $type: SinglePointCrossover
+    }
   },
   Mutator: {
-    $type: GaussianMutator,
-    MutationRate: 0.1,
-    MutationStrength: 0.1
+    $type: ProblemSpecificMutator<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>
   },
   MutationRate: 0.05,
   Selector: {
-    $type: RandomSelector
+    $type: ProblemSpecificSelector<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,
+    ProblemAgnosticSelector: {
+      $type: SimpleSelector<RealVector, RealVectorSearchSpace>,
+      ProblemAgnosticSelector: {
+        $type: RandomSelector
+      }
+    }
   },
   Replacer: {
-    $type: PlusSelectionReplacer
+    $type: ProblemSpecificReplacer<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,
+    ProblemAgnosticReplacer: {
+      $type: PlusSelectionReplacer<RealVector, RealVectorSearchSpace>
+    }
   },
   RandomSeed: 42,
   Interceptor: null,
   Terminator: {
-    $type: OnMaximumGenerationTerminator<GeneticAlgorithmResult<RealVector>>,
-    MaximumGeneration: 5
+    $type: ProblemSpecificTerminator<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>, GeneticAlgorithmResult<RealVector>>,
+    ProblemAgnosticTerminator: {
+      $type: OnMaximumGenerationTerminator<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>,
+      MaximumGeneration: 5
+    }
   }
 }

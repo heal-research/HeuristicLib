@@ -4,174 +4,207 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record class Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> 
+public abstract record class Algorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
-  where TAlgorithmResult : class, IAlgorithmResult
-  where TAlgorithmInstance : IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
-{
-  public abstract TAlgorithmInstance CreateInstance();
-
-  public virtual TAlgorithmResult Execute(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
-    var algorithmInstance = CreateInstance();
-    return algorithmInstance.Execute(optimizable, initialState);
-  }
-}
-
-public interface IAlgorithmInstance<out TGenotype, in TSearchSpace, in TState, out TAlgorithmResult>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   where TAlgorithmResult : class, IAlgorithmResult
 {
-  TAlgorithmResult Execute(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null);
+  public abstract IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> CreateExecution(TProblem optimizable);
+
+  // // Helper. Maybe remove, maybe to extension method?
+  // public virtual TAlgorithmResult Execute(TProblem problem, TState? initialState = null) {
+  //   var algorithmInstance = CreateExecution(problem);
+  //   return algorithmInstance.Start(initialState);
+  // }
 }
 
-public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithm> : IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+public interface IAlgorithmExecution<out TGenotype, in TSearchSpace, in TProblem, in TState, out TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   where TAlgorithmResult : class, IAlgorithmResult
+{
+  TAlgorithmResult Execute(TState? initialState = null);
+  // ToDo: stop pause ???
+}
+
+public abstract class AlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult, TAlgorithm> 
+  : IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
+  where TAlgorithmResult : class, IAlgorithmResult
+  // where TOptimizable : IOptimizable<TGenotype, TSearchSpace>
 {
   public TAlgorithm Parameters { get; }
+  public TProblem Problem { get; }
   
-  protected AlgorithmInstance(TAlgorithm parameters) {
+  protected AlgorithmExecution(TAlgorithm parameters, TProblem problem) {
     Parameters = parameters;
+    Problem = problem;
   }
   
-  public abstract TAlgorithmResult Execute(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null);
+  public abstract TAlgorithmResult Execute(TState? initialState = null);
 }
 
 
 public static class AlgorithmSolveExtensions {
-  public static Solution<TGenotype, TPhenotype>? Solve<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
-    (this Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+  public static Solution<TGenotype>? Solve<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+    (this Algorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> algorithm, TProblem problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
-    where TState : class
+    where TProblem : IOptimizable<TGenotype, TSearchSpace>
+    where TState : class, IAlgorithmState
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>
-    where TAlgorithmInstance : IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
   {
-    var instance = algorithm.CreateInstance();
-    return instance.Solve(problem, initialState);
+    var instance = algorithm.CreateExecution(problem);
+    return instance.Solve(initialState);
   }
   
-  public static Solution<TGenotype, TPhenotype>? Solve<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+  public static Solution<TGenotype>? Solve<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+    (this IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> algorithmExecution, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
-    where TState : class
+    where TProblem : IOptimizable<TGenotype, TSearchSpace>
+    where TState : class, IAlgorithmState
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>
   {
-    var result = algorithm.Execute(problem, initialState);
+    var result = algorithmExecution.Execute(initialState);
     var bestSolution = result.BestSolution;
-    
-    if (bestSolution is null) return null;
-    var phenotype = problem.Decode(bestSolution.Genotype);
 
-    return new Solution<TGenotype, TPhenotype>(bestSolution.Genotype, phenotype, bestSolution.Fitness);
+    return bestSolution;
+    //
+    // if (bestSolution is null) return null;
+    // // var phenotype = problem.Decode(bestSolution.Genotype);
+    //
+    // return new Solution<TGenotype>(bestSolution.Genotype, bestSolution.Fitness);
   }
 
-  public static IReadOnlyList<Solution<TGenotype, TPhenotype>> SolvePareto<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance>
-    (this Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithmInstance> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+  public static IReadOnlyList<Solution<TGenotype>> SolvePareto<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+    (this Algorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> algorithm, TProblem problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
-    where TState : class
+    where TProblem : IOptimizable<TGenotype, TSearchSpace>
+    where TState : class, IAlgorithmState
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype>
-    where TAlgorithmInstance : IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
   {
-    var instance = algorithm.CreateInstance();
-    return instance.SolvePareto(problem, initialState);
+    var instance = algorithm.CreateExecution(problem);
+    return instance.SolvePareto(initialState);
   }
   
-  public static IReadOnlyList<Solution<TGenotype, TPhenotype>> SolvePareto<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+  public static IReadOnlyList<Solution<TGenotype>> SolvePareto<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+    (this IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> algorithmExecution, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
-    where TState : class
+    where TProblem : IOptimizable<TGenotype, TSearchSpace>
+    where TState : class, IAlgorithmState
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype> 
   {
-    var result = algorithm.Execute(problem, initialState);
+    var result = algorithmExecution.Execute(initialState);
     var paretoFront = result.ParetoFront;
 
-    return paretoFront
-      .Select(individual => new Solution<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
-      .ToList();
+    return paretoFront;
+    //
+    // return paretoFront
+    //   .Select(individual => new Solution<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
+    //   .ToList();
   }
 }
 
 
-public abstract record class StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
-  : Algorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult, IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>>
+public abstract record class StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult/*, IStreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>*/>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
   // where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
 {
-  public virtual IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
-    var algorithmInstance = CreateInstance();
-    return algorithmInstance.ExecuteStreaming(optimizable, initialState);
+  public override IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> CreateExecution(TProblem optimizable) {
+    return CreateStreamingExecution(optimizable);
+  }
+  public abstract IStreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> CreateStreamingExecution(TProblem optimizable);
+  
+  // ToDo: helper, maybe remove, maybe to extension method?
+  public virtual IEnumerable<TAlgorithmResult> ExecuteStreaming(TProblem optimizable, TState? initialState = null) {
+    var algorithmInstance = CreateStreamingExecution(optimizable);
+    return algorithmInstance.ExecuteStreaming(initialState);
   }
 }
 
-public interface IStreamableAlgorithmInstance<out TGenotype, in TSearchSpace, in TState, out TAlgorithmResult>
-  : IAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+public interface IStreamableAlgorithmExecution<out TGenotype, in TSearchSpace, in TProblem, in TState, out TAlgorithmResult>
+  : IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 {
-  IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null);
+  IEnumerable<TAlgorithmResult> ExecuteStreaming(TState? initialState = null);
 }
 
-public abstract class StreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithm>
-  : AlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithm>, IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+public abstract class StreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult, TAlgorithm>
+  : AlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult, TAlgorithm>, IStreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 {
-  protected StreamableAlgorithmInstance(TAlgorithm parameters) : base(parameters) {}
-  public abstract IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null);
+  protected StreamableAlgorithmExecution(TAlgorithm parameters, TProblem problem) : base(parameters, problem) {}
+  public abstract IEnumerable<TAlgorithmResult> ExecuteStreaming(TState? initialState = null);
 }
 
 public static class AlgorithmSolveStreamingExtensions {
-  public static IEnumerable<Solution<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+  public static IEnumerable<Solution<TGenotype>> SolveStreaming<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+    (this StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> algorithm, TProblem problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
-    where TState : class
+    where TProblem : IOptimizable<TGenotype, TSearchSpace>
+    where TState : class, IAlgorithmState
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
   {
-    var instance = algorithm.CreateInstance();
-    return instance.SolveStreaming(problem, initialState);
+    var instance = algorithm.CreateStreamingExecution(problem);
+    return instance.SolveStreaming(initialState);
   }
   
-  public static IEnumerable<Solution<TGenotype, TPhenotype>> SolveStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+  public static IEnumerable<Solution<TGenotype>> SolveStreaming<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+    (this IStreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> algorithmExecution, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
-    where TState : class
+    where TProblem : IOptimizable<TGenotype, TSearchSpace>
+    where TState : class, IAlgorithmState
     where TAlgorithmResult : class, ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
   {
-    foreach (var iterationResult in algorithm.ExecuteStreaming(problem, initialState)) {
+    foreach (var iterationResult in algorithmExecution.ExecuteStreaming(initialState)) {
       var bestSolution = iterationResult.BestSolution;
-      yield return new Solution<TGenotype, TPhenotype>(bestSolution.Genotype, problem.Decode(bestSolution.Genotype), bestSolution.Fitness);
+
+      yield return bestSolution;
+      // yield return new Solution<TGenotype, TPhenotype>(bestSolution.Genotype, problem.Decode(bestSolution.Genotype), bestSolution.Fitness);
     }
   }
   
-  public static IEnumerable<IReadOnlyList<Solution<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+  public static IEnumerable<IReadOnlyList<Solution<TGenotype>>> SolveParetoStreaming<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+    (this StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> algorithm, TProblem problem, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
-    where TState : class
+    where TProblem : IOptimizable<TGenotype, TSearchSpace>
+    where TState : class, IAlgorithmState
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
     /*where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>*/
   {
-    var instance = algorithm.CreateInstance();
-    return instance.SolveParetoStreaming(problem, initialState);
+    var instance = algorithm.CreateStreamingExecution(problem);
+    return instance.SolveParetoStreaming(initialState);
   }
   
-  public static IEnumerable<IReadOnlyList<Solution<TGenotype, TPhenotype>>> SolveParetoStreaming<TGenotype, TPhenotype, TSearchSpace, TState, TAlgorithmResult>
-    (this IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> algorithm, IOptimizableProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null)
+  public static IEnumerable<IReadOnlyList<Solution<TGenotype>>> SolveParetoStreaming<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+    (this IStreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> algorithmExecution, TState? initialState = null)
     where TSearchSpace : ISearchSpace<TGenotype>
-    where TState : class
+    where TProblem : IOptimizable<TGenotype, TSearchSpace>
+    where TState : class, IAlgorithmState
     where TAlgorithmResult : class, IMultiObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<TState>
   {
-    foreach (var iterationResult in algorithm.ExecuteStreaming(problem, initialState)) {
-      yield return iterationResult
-        .ParetoFront
-        .Select(individual => new Solution<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
-        .ToList();
+    foreach (var iterationResult in algorithmExecution.ExecuteStreaming(initialState)) {
+      var paretoFront = iterationResult.ParetoFront;
+
+      yield return paretoFront;
+      //
+      // yield return iterationResult
+      //   .ParetoFront
+      //   .Select(individual => new Solution<TGenotype, TPhenotype>(individual.Genotype, problem.Decode(individual.Genotype), individual.Fitness))
+      //   .ToList();
     }
   }
 }
@@ -217,15 +250,16 @@ public static class AlgorithmSolveStreamingExtensions {
 //   
 // }
 
-public abstract record class IterativeAlgorithm<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
-  : StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+public abstract record class IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TIterationResult, TAlgorithmResult>
+  : StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 {
-  public Terminator<TAlgorithmResult> Terminator { get; init; }
+  public Terminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult> Terminator { get; init; }
 
-  protected IterativeAlgorithm(Terminator<TAlgorithmResult> terminator) {
+  protected IterativeAlgorithm(Terminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult> terminator) {
     Terminator = terminator;
   }
 }
@@ -240,32 +274,34 @@ public abstract record class IterativeAlgorithm<TGenotype, TSearchSpace, TState,
 //   ITerminatorInstance<TIterationResult> Terminator { get; set; }
 // }
 
-public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult, TAlgorithm>
-  : StreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithm>
+public abstract class IterativeAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TIterationResult, TAlgorithmResult, TAlgorithm>
+  : StreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult, TAlgorithm>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TState : class, IAlgorithmState
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
-  where TAlgorithm : IterativeAlgorithm<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
+  where TAlgorithm : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TIterationResult, TAlgorithmResult>
+  
 {
   public ITerminatorInstance<TAlgorithmResult> Terminator { get; set; }
 
-  protected IterativeAlgorithmInstance(TAlgorithm parameters) : base(parameters) {
-    Terminator = parameters.Terminator.CreateInstance();
+  protected IterativeAlgorithmExecution(TAlgorithm parameters, TProblem problem) : base(parameters, problem) {
+    Terminator = parameters.Terminator.CreateExecution(problem.SearchSpace, problem);
   }
 
-  public override TAlgorithmResult Execute(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
-    return ExecuteStreaming(optimizable, initialState).Last();
+  public override TAlgorithmResult Execute(TState? initialState = null) {
+    return ExecuteStreaming(initialState).Last();
   }
 
-  public override IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
+  public override IEnumerable<TAlgorithmResult> ExecuteStreaming(TState? initialState = null) {
     TIterationResult currentIterationResult;
     if (initialState is null) {
-      currentIterationResult = ExecuteInitialization(optimizable);
+      currentIterationResult = ExecuteInitialization();
     } else {
-      if (!IsValidState(initialState, optimizable)) {
+      if (!IsValidState(initialState)) {
         throw new ArgumentException("Invalid initial state", nameof(initialState));
       }
-      currentIterationResult = ExecuteIteration(optimizable, initialState);
+      currentIterationResult = ExecuteIteration(initialState);
     }
     TAlgorithmResult? currentAlgorithmResult = null;
     currentAlgorithmResult = AggregateResult(currentIterationResult, currentAlgorithmResult);
@@ -273,7 +309,7 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TState
     
     while (Terminator.ShouldContinue(currentAlgorithmResult)) {
       var currentState = currentAlgorithmResult.GetContinuationState();
-      currentIterationResult = ExecuteIteration(optimizable, currentState);
+      currentIterationResult = ExecuteIteration(currentState);
       currentAlgorithmResult = AggregateResult(currentIterationResult, currentAlgorithmResult);
       yield return currentAlgorithmResult;
     }
@@ -281,13 +317,13 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TState
 
 
   
-  protected abstract TIterationResult ExecuteInitialization(IOptimizable<TGenotype, TSearchSpace> optimizable);
+  protected abstract TIterationResult ExecuteInitialization();
   
-  protected abstract TIterationResult ExecuteIteration(IOptimizable<TGenotype, TSearchSpace> optimizable, TState state);
+  protected abstract TIterationResult ExecuteIteration(TState state);
   
   protected abstract TAlgorithmResult AggregateResult(TIterationResult iterationResult, TAlgorithmResult? algorithmResult);
   
-  protected virtual bool IsValidState(TState state, IOptimizable<TGenotype, TSearchSpace> optimizable) {
+  protected virtual bool IsValidState(TState state) {
     return true;
   }
 }

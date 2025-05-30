@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.RealVectorSpace;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 
@@ -15,8 +16,8 @@ public class NSGA2Tests {
     var creator = new UniformDistributedCreator();
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
-    var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<NSGA2Result<RealVector>>(5);
+    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, NSGA2Result<RealVector>>(5);
 
     var nsga = new NSGA2<RealVector, RealVectorSearchSpace>(
       populationSize: 5, 

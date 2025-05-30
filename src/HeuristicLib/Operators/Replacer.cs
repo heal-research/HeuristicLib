@@ -1,25 +1,63 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public abstract record class Replacer : Operator<IReplacerInstance> {
+public abstract record class Replacer<TGenotype, TSearchSpace, TProblem> : Operator<TGenotype, TSearchSpace, TProblem, IReplacerInstance<TGenotype>> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+{
+  [return: NotNullIfNotNull(nameof(problemAgnosticOperator))]
+  public static implicit operator Replacer<TGenotype, TSearchSpace, TProblem>?(Replacer<TGenotype, TSearchSpace>? problemAgnosticOperator) {
+    if (problemAgnosticOperator is null) return null;
+    return new ProblemSpecificReplacer<TGenotype, TSearchSpace, TProblem>(problemAgnosticOperator);
+  }
+}
+
+public abstract record class Replacer<TGenotype, TSearchSpace> : Operator<TGenotype, TSearchSpace, IReplacerInstance<TGenotype>> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
 }
 
 
-public interface IReplacerInstance {
-  IReadOnlyList<Solution<TGenotype>> Replace<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> previousPopulation/*, TPhenotype*/, IReadOnlyList<Solution<TGenotype>> offspringPopulation/*, TPhenotype*/, Objective objective, IRandomNumberGenerator random);
+public interface IReplacerInstance<TGenotype> {
+  IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random);
   int GetOffspringCount(int populationSize);
 }
 
-public abstract class ReplacerInstance<TReplacer> : OperatorInstance<TReplacer>, IReplacerInstance
-  where TReplacer : Replacer
+public abstract class ReplacerExecution<TGenotype, TSearchSpace, TProblem, TReplacer> : OperatorExecution<TGenotype, TSearchSpace, TProblem, TReplacer>, IReplacerInstance<TGenotype>
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
 {
-  protected ReplacerInstance(TReplacer parameters) : base(parameters) { }
+  protected ReplacerExecution(TReplacer parameters, TSearchSpace searchSpace, TProblem problem) : base(parameters, searchSpace, problem) { }
   
-  public abstract IReadOnlyList<Solution<TGenotype>> Replace<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> previousPopulation/*, TPhenotype*/, IReadOnlyList<Solution<TGenotype>> offspringPopulation/*, TPhenotype*/, Objective objective, IRandomNumberGenerator random);
+  public abstract IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random);
   public abstract int GetOffspringCount(int populationSize);
+}
+
+public abstract class ReplacerExecution<TGenotype, TSearchSpace, TReplacer> : OperatorExecution<TGenotype, TSearchSpace, TReplacer>, IReplacerInstance<TGenotype>
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
+  protected ReplacerExecution(TReplacer parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
   
+  public abstract IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random);
+  public abstract int GetOffspringCount(int populationSize);
+}
+
+public sealed record class ProblemSpecificReplacer<TGenotype, TSearchSpace, TProblem> : Replacer<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+{
+  public Replacer<TGenotype, TSearchSpace> ProblemAgnosticReplacer { get; }
+
+  public ProblemSpecificReplacer(Replacer<TGenotype, TSearchSpace> problemAgnosticReplacer) {
+    ProblemAgnosticReplacer = problemAgnosticReplacer;
+  }
+
+  public override IReplacerInstance<TGenotype> CreateExecution(TSearchSpace searchSpace, TProblem problem) {
+    return ProblemAgnosticReplacer.CreateExecution(searchSpace);
+  }
 }
 
 
@@ -29,16 +67,21 @@ public abstract class ReplacerInstance<TReplacer> : OperatorInstance<TReplacer>,
 //   public abstract int GetOffspringCount(int populationSize);
 // }
 
-public record class PlusSelectionReplacer : Replacer {
-  public override PlusSelectionReplacerInstance CreateInstance() {
-    return new PlusSelectionReplacerInstance(this);
+public record class PlusSelectionReplacer<TGenotype, TSearchSpace> : Replacer<TGenotype, TSearchSpace>
+  where TSearchSpace : ISearchSpace<TGenotype>
+
+{
+  public override PlusSelectionReplacerExecution<TGenotype, TSearchSpace> CreateExecution(TSearchSpace searchSpace) {
+    return new PlusSelectionReplacerExecution<TGenotype, TSearchSpace>(this, searchSpace);
   }
 }
 
-public class PlusSelectionReplacerInstance : ReplacerInstance<PlusSelectionReplacer> {
-  public PlusSelectionReplacerInstance(PlusSelectionReplacer parameters) : base(parameters) {}
+public class PlusSelectionReplacerExecution<TGenotype, TSearchSpace> : ReplacerExecution<TGenotype, TSearchSpace, PlusSelectionReplacer<TGenotype, TSearchSpace>> 
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
+  public PlusSelectionReplacerExecution(PlusSelectionReplacer<TGenotype, TSearchSpace> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) {}
   
-  public override IReadOnlyList<Solution<TGenotype>> Replace<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> previousPopulation/*, TPhenotype*/, IReadOnlyList<Solution<TGenotype>> offspringPopulation/*, TPhenotype*/, Objective objective, IRandomNumberGenerator random) {
+  public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
     return combinedPopulation
       .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
@@ -52,26 +95,30 @@ public class PlusSelectionReplacerInstance : ReplacerInstance<PlusSelectionRepla
 }
 
 
-public record class ElitismReplacer : Replacer {
+public record class ElitismReplacer<TGenotype, TSearchSpace> : Replacer<TGenotype, TSearchSpace>
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
   public int Elites { get; }
 
   public ElitismReplacer(int elites) {
     Elites = elites;
   }
 
-  public override ElitismReplacerInstance CreateInstance() {
-    return new ElitismReplacerInstance(this);
+  public override ElitismReplacerExecution<TGenotype, TSearchSpace> CreateExecution(TSearchSpace searchSpace) {
+    return new ElitismReplacerExecution<TGenotype, TSearchSpace>(this, searchSpace);
   }
 }
 
-public class ElitismReplacerInstance : ReplacerInstance<ElitismReplacer> {
+public class ElitismReplacerExecution<TGenotype, TSearchSpace> : ReplacerExecution<TGenotype, TSearchSpace, ElitismReplacer<TGenotype, TSearchSpace>>
+  where TSearchSpace : ISearchSpace<TGenotype>
+{
   // public ElitismReplacer Parameters { get; }
 
-  public ElitismReplacerInstance(ElitismReplacer parameters) : base (parameters) {
+  public ElitismReplacerExecution(ElitismReplacer<TGenotype, TSearchSpace> parameters, TSearchSpace searchSpace) : base (parameters, searchSpace) {
     // Parameters = parameters;
   }
 
-  public override IReadOnlyList<Solution<TGenotype>> Replace<TGenotype/*, TPhenotype*/>(IReadOnlyList<Solution<TGenotype>> previousPopulation/*, TPhenotype*/, IReadOnlyList<Solution<TGenotype>> offspringPopulation/*, TPhenotype*/, Objective objective, IRandomNumberGenerator random) {
+  public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var elitesPopulation = previousPopulation
       .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
       .Take(Parameters.Elites);

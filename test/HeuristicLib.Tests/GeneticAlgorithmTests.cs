@@ -6,6 +6,7 @@ using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.RealVectorSpace;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.TestFunctions;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -19,8 +20,8 @@ public class GeneticAlgorithmTests {
     var decoder = Decoder.Identity<RealVector>();
     // var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
-    var replacement = new PlusSelectionReplacer();
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
+    var replacement = new PlusSelectionReplacer<RealVector, RealVectorSearchSpace>();
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
     
     var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
       //SearchSpace = searchSpace,
@@ -42,8 +43,8 @@ public class GeneticAlgorithmTests {
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var selector = new RandomSelector();
-    var replacement = new PlusSelectionReplacer();
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
+    var replacement = new PlusSelectionReplacer<RealVector, RealVectorSearchSpace>();
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
     
     var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorSearchSpace> {
       PopulationSize = 200, 
@@ -84,8 +85,8 @@ public class GeneticAlgorithmTests {
     var decoder = Decoder.Identity<RealVector>();
     // var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
-    var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
+    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
     
     // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
     //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
@@ -99,7 +100,7 @@ public class GeneticAlgorithmTests {
       randomSeed: 42, terminator: terminator
     );
 
-    var finalState = ga.Execute(problem);
+    var finalState = ga.CreateExecution(problem).Execute();
     
     return Verify(finalState)
       .IgnoreMembersWithType<TimeSpan>();
@@ -114,8 +115,8 @@ public class GeneticAlgorithmTests {
     var decoder = Decoder.Identity<RealVector>();
     // var evaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector();
-    var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.NeverTerminate<GeneticAlgorithmResult<RealVector>>();
+    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
+    var terminator = Terminator.NeverTerminate<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>();
     var problem = new RealVectorMockOptimizable();
     // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
     //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
@@ -188,9 +189,9 @@ public class GeneticAlgorithmTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var decoder = Decoder.Identity<RealVector>();
     // var evaluator = new RealVectorMockEvaluator();
-    var selector = new ProportionalSelector();
-    var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
+    var selector = new ProportionalSelector<RealVector, RealVectorSearchSpace>();
+    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
 
     var problem = new RealVectorMockOptimizable();
     // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
@@ -206,13 +207,13 @@ public class GeneticAlgorithmTests {
 
     var firstResult = firstAlg.ExecuteStreaming(problem).Last();
 
-    var newTerminationCriterion = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(12);
+    var newTerminationCriterion = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(12);
     var continuationState = firstResult.GetContinuationState();
     var secondAlg = firstAlg with {
       PopulationSize = 8, Terminator = newTerminationCriterion
     };
 
-    var finalState = secondAlg.Execute(problem, initialState: continuationState);
+    var finalState = secondAlg.CreateExecution(problem).Execute(initialState: continuationState);
 
     await Verify(new { firstResult, finalState })
       .IgnoreMembersWithType<TimeSpan>();
@@ -226,9 +227,9 @@ public class GeneticAlgorithmTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var decoder = Decoder.Identity<RealVector>();
     // var evaluator = new RealVectorMockEvaluator();
-    var selector = new ProportionalSelector();
-    var replacement = new ElitismReplacer(0);
-    var terminator = Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(5);
+    var selector = new ProportionalSelector<RealVector, RealVectorSearchSpace>();
+    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
+    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
 
     var problem = new RealVectorMockOptimizable();
     // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
@@ -250,7 +251,7 @@ public class GeneticAlgorithmTests {
   
   
   private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
-    public Fitness Evaluate(RealVector genotype) => genotype.Sum();
+    public Fitness Evaluate(RealVector solution) => solution.Sum();
     public Objective Objective => SingleObjective.Minimize;
     public RealVectorSearchSpace SearchSpace => new RealVectorSearchSpace(3, -5, +5);
   }

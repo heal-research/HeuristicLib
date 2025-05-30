@@ -1,16 +1,19 @@
 ﻿using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.PermutationSpace;
 
-public record class OrderCrossover : Crossover<Permutation, PermutationSearchSpace> {
-  public override OrderCrossoverInstance CreateInstance() => new OrderCrossoverInstance(this);
+public record class OrderCrossover : Crossover<Permutation, PermutationSearchSpace> 
+{
+  public override OrderCrossoverExecution CreateExecution(PermutationSearchSpace searchSpace) => new OrderCrossoverExecution(this, searchSpace);
 }
 
-public class OrderCrossoverInstance : CrossoverInstance<Permutation, PermutationSearchSpace, OrderCrossover> {
-  public OrderCrossoverInstance(OrderCrossover parameters) : base(parameters) { }
-  public override Permutation Cross(Permutation parent1, Permutation parent2, PermutationSearchSpace searchSpace, IRandomNumberGenerator random) {
+public class OrderCrossoverExecution : CrossoverExecution<Permutation, PermutationSearchSpace, OrderCrossover> 
+{
+  public OrderCrossoverExecution(OrderCrossover parameters, PermutationSearchSpace searchSpace) : base(parameters, searchSpace) { }
+  public override Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random) {
     return Permutation.OrderCrossover(parent1, parent2, random);
   }
 

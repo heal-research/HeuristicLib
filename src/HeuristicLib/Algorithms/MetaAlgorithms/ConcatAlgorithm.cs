@@ -3,16 +3,17 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-public abstract record class MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
-  : StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+public abstract record class MetaAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+  : StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class 
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState 
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
   // where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
 {
-  public ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>> Algorithms { get; }
+  public ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>> Algorithms { get; }
   
-  protected MetaAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>> algorithms) {
+  protected MetaAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>> algorithms) {
     if (algorithms.Count == 0) throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms)); 
     Algorithms = algorithms;
   }
@@ -20,53 +21,69 @@ public abstract record class MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlg
   //public abstract IEnumerable<TIterationResult> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null);
 }
 
-public abstract class MetaAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithm>
-  : StreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, TAlgorithm>
+public abstract class MetaAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult, TAlgorithm>
+  : StreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult, TAlgorithm>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
-  where TAlgorithm : MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> 
+  where TAlgorithm : MetaAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> 
+  
 {
-  public IEnumerable<IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>> Algorithms { get; }
+  public IEnumerable<IStreamableAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>> Algorithms { get; }
 
-  protected MetaAlgorithmInstance(TAlgorithm parameters) : base(parameters) {
-    Algorithms = parameters.Algorithms.Select(a => a.CreateInstance()).ToList();
+  protected MetaAlgorithmExecution(TAlgorithm parameters, TProblem problem) : base(parameters, problem) {
+    Algorithms = parameters.Algorithms.Select(a => a.CreateStreamingExecution(problem)).ToList();
   }
 }
 
-public record class ConcatAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
-  : MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+public record class ConcatAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+  : MetaAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   // where TIterationResult : class, IContinuableIterationResult<TState>
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
   //where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationResult, TAlgorithmResult>
 {
-  public ConcatAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>> algorithms) : base(algorithms) { }
+  public ConcatAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>> algorithms) : base(algorithms) { }
 
-  public override ConcatAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> CreateInstance() {
-    return new ConcatAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>(this);
+  public override ConcatAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> CreateStreamingExecution(TProblem problem) {
+    return new ConcatAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>(this, problem);
   }
 }
 
-public class ConcatAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
-  : MetaAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, ConcatAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>>
+public record class ConcatAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+  : ConcatAlgorithm<TGenotype, TSearchSpace, IOptimizable<TGenotype, TSearchSpace>, TState, TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TState : class, IAlgorithmState
+  where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
+{
+  public ConcatAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, IOptimizable<TGenotype, TSearchSpace>, TState, TAlgorithmResult>> algorithms) : base(algorithms) { }
+  
+}
+
+
+
+public class ConcatAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+  : MetaAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult, ConcatAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>>
+  where TSearchSpace : ISearchSpace<TGenotype>
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   // where TIterationResult : class, IContinuableIterationResult<TState>
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
 {
-  public ConcatAlgorithmInstance(ConcatAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> parameters) : base(parameters) { }
+  public ConcatAlgorithmExecution(ConcatAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> parameters, TProblem problem) : base(parameters, problem) { }
   
-  public override TAlgorithmResult Execute(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
-    return ExecuteStreaming(optimizable, initialState).Last();
+  public override TAlgorithmResult Execute(TState? initialState = null) {
+    return ExecuteStreaming(initialState).Last();
   }
   
-  public override IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
+  public override IEnumerable<TAlgorithmResult> ExecuteStreaming(TState? initialState = null) {
     TState? currentState = initialState;
     foreach (var algorithm in Algorithms) {
       TAlgorithmResult? lastIterationResult = null;
-      foreach (var iterationResult in algorithm.ExecuteStreaming(optimizable, currentState)) {
+      foreach (var iterationResult in algorithm.ExecuteStreaming(currentState)) {
         yield return iterationResult;
         lastIterationResult = iterationResult;
       }
@@ -100,46 +117,49 @@ public class ConcatAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithm
 
 }
 
-public record class CyclicAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
-  : MetaAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>
+public record class CyclicAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+  : MetaAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
   // where TIterationResult : class, IContinuableIterationResult<TState>
   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 {
-  public Terminator<TAlgorithmResult> Terminator { get; }
+  public Terminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult> Terminator { get; }
 
-  public CyclicAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>> algorithms, Terminator<TAlgorithmResult> terminator)
+  public CyclicAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>> algorithms, Terminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult> terminator)
     : base(algorithms) {
     Terminator = terminator;
   }
-  public override CyclicAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult> CreateInstance() {
-    return new CyclicAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>(this);
+  public override CyclicAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> CreateStreamingExecution(TProblem problem) {
+    return new CyclicAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>(this, problem);
   }
 }
 
-public class CyclicAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult>
-  : MetaAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmResult, CyclicAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult>>
+public class CyclicAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>
+  : MetaAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult, CyclicAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult>>
   where TSearchSpace : ISearchSpace<TGenotype>
-  where TState : class
-  where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
+  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+  where TState : class, IAlgorithmState
+  where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
+
 {
   public ITerminatorInstance<TAlgorithmResult> Terminator { get; }
 
-  public CyclicAlgorithmInstance(CyclicAlgorithm<TGenotype, TSearchSpace, TState, TAlgorithmResult> parameters) : base(parameters) {
-    Terminator = parameters.Terminator.CreateInstance();
+  public CyclicAlgorithmExecution(CyclicAlgorithm<TGenotype, TSearchSpace, TProblem, TState, TAlgorithmResult> parameters, TProblem problem) : base(parameters, problem) {
+    Terminator = parameters.Terminator.CreateExecution(problem.SearchSpace, problem);
   }
 
-  public override TAlgorithmResult Execute(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
-    return ExecuteStreaming(optimizable, initialState).Last();
+  public override TAlgorithmResult Execute(TState? initialState = null) {
+    return ExecuteStreaming(initialState).Last();
   }
   
-  public override IEnumerable<TAlgorithmResult> ExecuteStreaming(IOptimizable<TGenotype, TSearchSpace> optimizable, TState? initialState = null) {
+  public override IEnumerable<TAlgorithmResult> ExecuteStreaming(TState? initialState = null) {
     TState? currentState = initialState;
     while (true) {
       foreach (var algorithm in Algorithms) {
         TAlgorithmResult? lastIterationResult = null;
-        foreach (var iterationResult in algorithm.ExecuteStreaming(optimizable, currentState)) {
+        foreach (var iterationResult in algorithm.ExecuteStreaming(currentState)) {
           yield return iterationResult;
           lastIterationResult = iterationResult;
           if (Terminator.ShouldTerminate(iterationResult)) {

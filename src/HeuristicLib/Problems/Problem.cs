@@ -4,12 +4,16 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IProblem { }
+// public interface IOptimizationProblem { }
 
-public interface IProblem<in TSolution> : IProblem {
+public interface IProblem<in TSolution, out TSearchSpace, out TProblemData> : IOptimizable<TSolution, TSearchSpace> 
+  where TSearchSpace : ISearchSpace<TSolution>
+/*: IProblem*/ {
+  TProblemData ProblemData { get; }
   // IEvaluator<TSolution> Evaluator { get; }
-  Objective Objective { get; }
-  Fitness Evaluate(TSolution solution);
+  // TSearchSpace SearchSpace { get; }
+  // Objective Objective { get; }
+  // Fitness Evaluate(TSolution solution);
 }
 
 //
@@ -47,13 +51,19 @@ public interface IProblem<in TSolution> : IProblem {
 //   //TSolution Decode(TGenotype genotype);
 // }
 
-public abstract class ProblemBase<TSolution> : IProblem<TSolution> {
+public abstract class ProblemBase<TSolution, TSearchSpace, TProblemData> : IProblem<TSolution, TSearchSpace, TProblemData>
+  where TSearchSpace : ISearchSpace<TSolution>
+{
   // public IEvaluator<TSolution> Evaluator { get; }
+  public TSearchSpace SearchSpace { get; }
   public Objective Objective { get; }
+  public TProblemData ProblemData { get; }
   
-  protected ProblemBase(Objective objective) {
+  protected ProblemBase(TSearchSpace searchSpace, Objective objective, TProblemData problemData) {
     // Evaluator = Operators.Evaluator.FromFitnessFunction<TSolution>(Evaluate);
+    SearchSpace = searchSpace;
     Objective = objective;
+    ProblemData = problemData;
   }
   
   public abstract Fitness Evaluate(TSolution solution);

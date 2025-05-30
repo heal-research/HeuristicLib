@@ -1,14 +1,15 @@
 ﻿using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.SearchSpaces;
+using LanguageExt;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public class MultiObjectiveTestFunctionProblem : OptimizableProblemBase<RealVector, RealVector, RealVectorSearchSpace> {
+public class MultiObjectiveTestFunctionProblem : ProblemBase<RealVector, RealVectorSearchSpace, Unit> {
   private readonly IMultiObjectiveTestFunction testFunction;
 
   public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) 
-    : base(testFunction.Objective, GeTSearchSpace(testFunction)) 
+    : base(GetSearchSpace(testFunction), testFunction.Objective, Unit.Default) 
   {
     this.testFunction = testFunction;
   }
@@ -17,9 +18,9 @@ public class MultiObjectiveTestFunctionProblem : OptimizableProblemBase<RealVect
     return new Fitness(testFunction.Evaluate(solution));
   }
   
-  public static RealVectorSearchSpace GeTSearchSpace(IMultiObjectiveTestFunction testFunction) => new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  public static RealVectorSearchSpace GetSearchSpace(IMultiObjectiveTestFunction testFunction) => new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);
 
-  public override RealVector Decode(RealVector genotype) => genotype;
+  // public override RealVector Decode(RealVector genotype) => genotype;
   
   // return new RealVectorSearchSpace<RealVector>(Decoder.Identity<RealVector>()) {
   //   Creator = new UniformDistributedCreator(minimum: null, maximum: null), 

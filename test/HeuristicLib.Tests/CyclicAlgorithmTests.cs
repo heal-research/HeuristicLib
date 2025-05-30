@@ -68,10 +68,10 @@ public class CyclicAlgorithmTests {
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5),
       mutationRate: 0.1,
-      selector: new TournamentSelector(2),
-      replacer: new ElitismReplacer(1), 
+      selector: new TournamentSelector<RealVector, RealVectorSearchSpace>(2),
+      replacer: new ElitismReplacer<RealVector, RealVectorSearchSpace>(1), 
       randomSeed: 42,
-      terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3)
+      terminator: Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(3)
     );
     
     var ga2 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
@@ -81,9 +81,9 @@ public class CyclicAlgorithmTests {
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5),
       mutationRate: 0.1,
       selector: new RandomSelector(),
-      replacer: new ElitismReplacer(1), 
+      replacer: new ElitismReplacer<RealVector, RealVectorSearchSpace>(1), 
       randomSeed: 42,
-      terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(3)
+      terminator: Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(3)
     );
     
     var ga3 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
@@ -92,10 +92,10 @@ public class CyclicAlgorithmTests {
       crossover: new AlphaBetaBlendCrossover(0.8, 0.2),
       mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5),
       mutationRate: 0.8,
-      selector: new TournamentSelector(2),
-      replacer: new ElitismReplacer(1), 
+      selector: new TournamentSelector<RealVector, RealVectorSearchSpace>(2),
+      replacer: new ElitismReplacer<RealVector, RealVectorSearchSpace>(1), 
       randomSeed: 42,
-      terminator: Terminator.OnGeneration<GeneticAlgorithmResult<RealVector>>(4)
+      terminator: Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(4)
     );
 
     var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorSearchSpace, GeneticAlgorithmState<RealVector>, GeneticAlgorithmResult<RealVector>>([ga1, ga2, ga3]);

@@ -17,10 +17,10 @@ public static class ParetoFront {
       .ToList();
   }
   
-  public static IReadOnlyList<Solution<TGenotype, TPhenotype>> ExtractFrom<TGenotype, TPhenotype>(IEnumerable<Solution<TGenotype, TPhenotype>> population, Objective objective) {
-    var uniqueSolutions = population.Distinct().ToList();
-    return uniqueSolutions
-      .Where(ind => !uniqueSolutions.Any(other => ind != other && ind.Fitness.IsDominatedBy(other.Fitness, objective)))
-      .ToList();
-  }
+  // public static IReadOnlyList<Solution<TGenotype, TPhenotype>> ExtractFrom<TGenotype, TPhenotype>(IEnumerable<Solution<TGenotype, TPhenotype>> population, Objective objective) {
+  //   var uniqueSolutions = population.Distinct().ToList();
+  //   return uniqueSolutions
+  //     .Where(ind => !uniqueSolutions.Any(other => ind != other && ind.Fitness.IsDominatedBy(other.Fitness, objective)))
+  //     .ToList();
+  // }
 }
