@@ -66,7 +66,7 @@ public abstract class ProblemBase<TSolution, TSearchSpace, TProblemData> : IProb
     ProblemData = problemData;
   }
   
-  public abstract Fitness Evaluate(TSolution solution);
+  public abstract ObjectiveVector Evaluate(TSolution solution);
 }
 
 

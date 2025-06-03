@@ -1,17 +1,17 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public record Solution<TGenotype>(TGenotype Genotype, Fitness Fitness);
+public record Solution<TGenotype>(TGenotype Genotype, ObjectiveVector ObjectiveVector);
 
 // public record Solution<TGenotype, TPhenotype>(TGenotype Genotype, TPhenotype Phenotype, Fitness Fitness); // : EvaluatedIndividual<TGenotype>(Genotype, Fitness);
 
 public static class Solution {
-  public static Solution<TGenotype> From<TGenotype>(TGenotype genotype, Fitness fitness) => new(genotype, fitness);
+  public static Solution<TGenotype> From<TGenotype>(TGenotype genotype, ObjectiveVector objectiveVector) => new(genotype, objectiveVector);
   // public static Solution<TGenotype, TPhenotype> From<TGenotype, TPhenotype>(TGenotype genotype, TPhenotype phenotype, Fitness fitness) => new(genotype, phenotype, fitness);
 }
 
 // ToDo: either generalize to "Multi-Solution" since Population is mostly EA specific
 public static class Population {
-  public static IReadOnlyList<Solution<TGenotype>> From<TGenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<Fitness> fitnesses) {
+  public static IReadOnlyList<Solution<TGenotype>> From<TGenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) {
     if (genotypes.Count != fitnesses.Count)
       throw new ArgumentException("Genotypes and fitnesses must have the same length.");
     

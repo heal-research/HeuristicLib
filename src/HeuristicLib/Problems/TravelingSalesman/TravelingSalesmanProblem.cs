@@ -21,7 +21,7 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, PermutationSear
     // ProblemData = problemData;
   }
 
-  public override Fitness Evaluate(Permutation solution) {
+  public override ObjectiveVector Evaluate(Permutation solution) {
     var tour = solution;
     double totalDistance = 0.0;
     for (int i = 0; i < tour.Count - 1; i++) {

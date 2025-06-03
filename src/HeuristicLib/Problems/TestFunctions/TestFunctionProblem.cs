@@ -14,7 +14,7 @@ public class TestFunctionProblem : ProblemBase<RealVector, RealVectorSearchSpace
     this.testFunction = testFunction;
   }
   
-  public override Fitness Evaluate(RealVector solution) {
+  public override ObjectiveVector Evaluate(RealVector solution) {
     return testFunction.Evaluate(solution);
   }
   

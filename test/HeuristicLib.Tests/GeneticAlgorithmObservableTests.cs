@@ -55,7 +55,7 @@ public class GeneticAlgorithmObservableTests {
   }
   
   private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
-    public Fitness Evaluate(RealVector solution) => solution.Sum();
+    public ObjectiveVector Evaluate(RealVector solution) => solution.Sum();
     public Objective Objective => SingleObjective.Minimize;
     public RealVectorSearchSpace SearchSpace => new RealVectorSearchSpace(2, -5, +5);
   }

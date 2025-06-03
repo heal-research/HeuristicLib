@@ -44,14 +44,14 @@ public static class FitnessTotalOrderComparer {
   }
 }
 
-public class SingleObjectiveComparer : IComparer<Fitness> {
+public class SingleObjectiveComparer : IComparer<ObjectiveVector> {
   private readonly ObjectiveDirection objectiveDirection;
   
   public SingleObjectiveComparer(ObjectiveDirection objectiveDirection) {
     this.objectiveDirection = objectiveDirection;
   }
   
-  public int Compare(Fitness? x, Fitness? y) {
+  public int Compare(ObjectiveVector? x, ObjectiveVector? y) {
     if (x is not null && !x.IsSingleObjective || y is not null && !y.IsSingleObjective) throw new ArgumentException("Fitness must be single-objective");
     if (x is null && y is null) return 0;
     if (x is null) return -1;
@@ -66,7 +66,7 @@ public class SingleObjectiveComparer : IComparer<Fitness> {
   }
 }
 
-public class WeightedSumComparer : IComparer<Fitness> {
+public class WeightedSumComparer : IComparer<ObjectiveVector> {
   private readonly ObjectiveDirection[] objectives;
   private readonly RealVector weights;
   
@@ -75,7 +75,7 @@ public class WeightedSumComparer : IComparer<Fitness> {
     this.objectives = objectives;
     this.weights = weights ?? RealVector.Repeat(1.0, this.objectives.Length);
   }
-  public int Compare(Fitness? x, Fitness? y) {
+  public int Compare(ObjectiveVector? x, ObjectiveVector? y) {
     if (x is not null && x.Count != objectives.Length || y is not null && y.Count != objectives.Length) throw new ArgumentException("Fitness must have the same length as the objective");
     if (x is null && y is null) return 0;
     if (x is null) return -1;
@@ -98,7 +98,7 @@ public class WeightedSumComparer : IComparer<Fitness> {
   }
 }
 
-public class LexicographicComparer : IComparer<Fitness> {
+public class LexicographicComparer : IComparer<ObjectiveVector> {
   private readonly ObjectiveDirection[] objectives;
   private readonly Permutation order;
   
@@ -107,7 +107,7 @@ public class LexicographicComparer : IComparer<Fitness> {
     this.order = order ?? Permutation.Range(objectives.Length);
   }
 
-  public int Compare(Fitness? x, Fitness? y) {
+  public int Compare(ObjectiveVector? x, ObjectiveVector? y) {
     if (x is not null && x.Count != objectives.Length() || y is not null && y.Count != objectives.Length) throw new ArgumentException("Fitness must have the same length as the objective");
     if (x is null && y is null) return 0;
     if (x is null) return -1;
@@ -125,8 +125,8 @@ public class LexicographicComparer : IComparer<Fitness> {
   }
 }
 
-public class NoTotalOrderComparer : IComparer<Fitness> {
-  public int Compare(Fitness? x, Fitness? y) => throw new InvalidOperationException("No total order defined");
+public class NoTotalOrderComparer : IComparer<ObjectiveVector> {
+  public int Compare(ObjectiveVector? x, ObjectiveVector? y) => throw new InvalidOperationException("No total order defined");
 }
 
 
@@ -135,9 +135,9 @@ public sealed class Objective /*: IReadOnlyList<ObjectiveDirection>, IEquatable<
   public ObjectiveDirection[] Directions { get; }
   //public int Dimensions => Directions.Length;
   
-  public IComparer<Fitness> TotalOrderComparer { get; }
+  public IComparer<ObjectiveVector> TotalOrderComparer { get; }
 
-  public Objective(ObjectiveDirection[] directions, IComparer<Fitness> totalOrderComparer) {
+  public Objective(ObjectiveDirection[] directions, IComparer<ObjectiveVector> totalOrderComparer) {
     if (directions.Length == 0) throw new ArgumentException("Direction vector must not be empty");
     Directions = directions;
     TotalOrderComparer = totalOrderComparer;

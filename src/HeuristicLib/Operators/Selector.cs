@@ -132,35 +132,90 @@ internal class SimpleSelectorExecution<TGenotype> : ISelectorExecution<TGenotype
 //   public abstract IReadOnlyList<EvaluatedIndividual<TGenotype>> Select<TGenotype/*, TPhenotype*/>(IReadOnlyList<EvaluatedIndividual<TGenotype>> population/*, TPhenotype*/, Objective objective, int count, IRandomNumberGenerator random);
 // }
 
-public record class ProportionalSelector<TGenotype, TSearchSpace> : Selector<TGenotype, TSearchSpace>
-  where TSearchSpace : ISearchSpace<TGenotype>
-{ // ToDo: Probability-based selection base class
-  public bool Windowing { get; }
 
-  public ProportionalSelector(bool windowing = true) {
-    Windowing = windowing;
-  }
+// public abstract record class FitnessAssignment {
+// }
+//
+// public abstract record class FitnessAssignment<TGenotype, TSearchSpace> {
+// }
 
-  public override ProportionalSelectorExecution<TGenotype, TSearchSpace> CreateExecution(TSearchSpace searchSpace) {
-    return new ProportionalSelectorExecution<TGenotype, TSearchSpace>(this, searchSpace);
+public interface IFitnessAssignment {
+  double AssignFitness<TGenotype>(Solution<TGenotype> solution, Objective objective, IReadOnlyList<Solution<TGenotype>> population);
+}
+
+public interface IFitnessAssignment<TGenotype> {
+  double AssignFitness(Solution<TGenotype> solution, Objective objective, IReadOnlyList<Solution<TGenotype>> population);
+}
+
+
+// public abstract record class FitnessBasedSelector<TGenotype, TSearchSpace> : Selector<TGenotype, TSearchSpace>
+//   where TSearchSpace : ISearchSpace<TGenotype>
+// {
+//   public IFitnessAssignment<TGenotype> FitnessAssignment { get; }
+//   
+//   protected FitnessBasedSelector(IFitnessAssignment<TGenotype> fitnessAssignment) {
+//     FitnessAssignment = fitnessAssignment;
+//   }
+// }
+
+public abstract record class FitnessBasedSelector : Selector
+{
+  public IFitnessAssignment FitnessAssignment { get; }
+  
+  protected FitnessBasedSelector(IFitnessAssignment fitnessAssignment) {
+    FitnessAssignment = fitnessAssignment;
   }
 }
 
-public class ProportionalSelectorExecution<TGenotype, TSearchSpace> : SelectorExecution<TGenotype, TSearchSpace, ProportionalSelector<TGenotype, TSearchSpace>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-{
-  public ProportionalSelectorExecution(ProportionalSelector<TGenotype, TSearchSpace> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) {}
+public abstract class FitnessBasedSelectorExecution<TSelector> : SelectorExecution<TSelector>
+  where TSelector : FitnessBasedSelector {
+  
+  protected FitnessBasedSelectorExecution(TSelector parameters) : base(parameters) {
+  }
 
-  public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
+  public sealed override IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
+    var fitnesses = population
+      .Select(solution => Parameters.FitnessAssignment.AssignFitness(solution, objective, population))
+      .ToList();
+
+    return Select(population, fitnesses, objective, count, random);
+  }
+
+  protected abstract IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(IReadOnlyList<Solution<TGenotype>> population, IReadOnlyList<double> fitnesses, Objective objective, int count, IRandomNumberGenerator random);
+}
+
+
+
+
+
+
+public record class ProportionalSelector : FitnessBasedSelector
+{ // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
+  public bool Windowing { get; }
+
+  public ProportionalSelector(bool windowing = true) : base(default(IFitnessAssignment)!) { /*ToDo: set assignment only if necessary*/
+    Windowing = windowing;
+  }
+
+  public override ProportionalSelectorExecution CreateExecution() {
+    return new ProportionalSelectorExecution(this);
+  }
+}
+
+public class ProportionalSelectorExecution : FitnessBasedSelectorExecution<ProportionalSelector>
+{
+  public ProportionalSelectorExecution(ProportionalSelector parameters) : base(parameters) {}
+
+  protected override IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(IReadOnlyList<Solution<TGenotype>> population, IReadOnlyList<double> fitnesses, Objective objective, int count, IRandomNumberGenerator random) {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     // prepare qualities
     double minQuality = double.MaxValue, maxQuality = double.MinValue;
-    foreach (double val in population.Select(p => p.Fitness.SingleFitness!.Value.Value)) {
+    foreach (double val in fitnesses) {
       minQuality = Math.Min(minQuality, val);
       maxQuality = Math.Max(maxQuality, val);
     }
     
-    var qualities = population.Select(p => p.Fitness.SingleFitness!.Value.Value);
+    var qualities = fitnesses.AsEnumerable();
     if (Math.Abs(minQuality - maxQuality) < double.Epsilon) {
       qualities = qualities.Select(_ => 1.0);
     } else {
@@ -243,7 +298,7 @@ public class TournamentSelectorExecution<TGenotype, TSearchSpace> : SelectorExec
         int index = random.Integer(population.Count);
         tournamentParticipants.Add(population[index]);
       }
-      var bestParticipant = tournamentParticipants.OrderBy(participant => participant.Fitness, objective.TotalOrderComparer).First();
+      var bestParticipant = tournamentParticipants.OrderBy(participant => participant.ObjectiveVector, objective.TotalOrderComparer).First();
       selected[i] = bestParticipant;
     }
     return selected;

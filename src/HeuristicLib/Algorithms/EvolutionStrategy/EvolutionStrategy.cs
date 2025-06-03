@@ -268,7 +268,7 @@ public class EvolutionStrategyExecution<TProblem>
     // timing the adaption check
     int successfulOffspring = 0;
     for (int i = 0; i < fitnesses.Length; i++) {
-      if (fitnesses[i].CompareTo(parents[i].Fitness, Problem.Objective) == DominanceRelation.Dominates) {
+      if (fitnesses[i].CompareTo(parents[i].ObjectiveVector, Problem.Objective) == DominanceRelation.Dominates) {
         successfulOffspring++;
       }
     }
@@ -325,7 +325,7 @@ public class EvolutionStrategyExecution<TProblem>
     };
   }
   protected override EvolutionStrategyResult AggregateResult(EvolutionStrategyIterationResult iterationResult, EvolutionStrategyResult? algorithmResult) {
-    var currentBestSolution = iterationResult.Population.MinBy(x => x.Fitness, iterationResult.Objective.TotalOrderComparer);
+    var currentBestSolution = iterationResult.Population.MinBy(x => x.ObjectiveVector, iterationResult.Objective.TotalOrderComparer);
     return new EvolutionStrategyResult() {
       CurrentGeneration = iterationResult.Generation,
       TotalGenerations = iterationResult.Generation,
@@ -337,7 +337,7 @@ public class EvolutionStrategyExecution<TProblem>
       Objective = iterationResult.Objective,
       CurrentPopulation = iterationResult.Population,
       CurrentBestSolution = currentBestSolution,
-      BestSolution = algorithmResult is null ? currentBestSolution : new[] {algorithmResult.BestSolution, currentBestSolution}.MinBy(x => x.Fitness, iterationResult.Objective.TotalOrderComparer)
+      BestSolution = algorithmResult is null ? currentBestSolution : new[] {algorithmResult.BestSolution, currentBestSolution}.MinBy(x => x.ObjectiveVector, iterationResult.Objective.TotalOrderComparer)
     };
   }
 }

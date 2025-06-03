@@ -189,7 +189,7 @@ public class GeneticAlgorithmTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var decoder = Decoder.Identity<RealVector>();
     // var evaluator = new RealVectorMockEvaluator();
-    var selector = new ProportionalSelector<RealVector, RealVectorSearchSpace>();
+    var selector = new ProportionalSelector();
     var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
     var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
 
@@ -227,7 +227,7 @@ public class GeneticAlgorithmTests {
     var mutator = new GaussianMutator(0.1, 0.1);
     var decoder = Decoder.Identity<RealVector>();
     // var evaluator = new RealVectorMockEvaluator();
-    var selector = new ProportionalSelector<RealVector, RealVectorSearchSpace>();
+    var selector = new ProportionalSelector();
     var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
     var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
 
@@ -251,7 +251,7 @@ public class GeneticAlgorithmTests {
   
   
   private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
-    public Fitness Evaluate(RealVector solution) => solution.Sum();
+    public ObjectiveVector Evaluate(RealVector solution) => solution.Sum();
     public Objective Objective => SingleObjective.Minimize;
     public RealVectorSearchSpace SearchSpace => new RealVectorSearchSpace(3, -5, +5);
   }

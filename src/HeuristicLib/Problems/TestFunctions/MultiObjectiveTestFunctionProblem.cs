@@ -14,8 +14,8 @@ public class MultiObjectiveTestFunctionProblem : ProblemBase<RealVector, RealVec
     this.testFunction = testFunction;
   }
   
-  public override Fitness Evaluate(RealVector solution) {
-    return new Fitness(testFunction.Evaluate(solution));
+  public override ObjectiveVector Evaluate(RealVector solution) {
+    return new ObjectiveVector(testFunction.Evaluate(solution));
   }
   
   public static RealVectorSearchSpace GetSearchSpace(IMultiObjectiveTestFunction testFunction) => new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);

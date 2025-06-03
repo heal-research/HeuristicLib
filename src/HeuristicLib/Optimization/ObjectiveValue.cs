@@ -2,31 +2,31 @@
 
 namespace HEAL.HeuristicLib.Optimization;
 
-public readonly record struct SingleFitness(double Value) {
-  public static implicit operator SingleFitness(double value) {
-    return new SingleFitness(value);
+public readonly record struct ObjectiveValue(double Value) {
+  public static implicit operator ObjectiveValue(double value) {
+    return new ObjectiveValue(value);
   }
   
-  public int CompareTo(SingleFitness other, ObjectiveDirection objectiveDirection) => objectiveDirection switch {
+  public int CompareTo(ObjectiveValue other, ObjectiveDirection objectiveDirection) => objectiveDirection switch {
     ObjectiveDirection.Minimize => Value.CompareTo(other.Value),
     ObjectiveDirection.Maximize => other.Value.CompareTo(Value),
     _ => throw new NotImplementedException()
   };
 
-  public bool IsBetterThan(SingleFitness other, ObjectiveDirection objectiveDirection) => CompareTo(other, objectiveDirection) < 0;
-  public bool IsWorseThan(SingleFitness other, ObjectiveDirection objectiveDirection) => CompareTo(other, objectiveDirection) > 0;
-  public bool IsEqualTo(SingleFitness other, ObjectiveDirection objectiveDirection) => CompareTo(other, objectiveDirection) == 0;
+  public bool IsBetterThan(ObjectiveValue other, ObjectiveDirection objectiveDirection) => CompareTo(other, objectiveDirection) < 0;
+  public bool IsWorseThan(ObjectiveValue other, ObjectiveDirection objectiveDirection) => CompareTo(other, objectiveDirection) > 0;
+  public bool IsEqualTo(ObjectiveValue other, ObjectiveDirection objectiveDirection) => CompareTo(other, objectiveDirection) == 0;
 
   public override string ToString() => $"{Value}";
 
-  public static SingleFitness BestValue(ObjectiveDirection objectiveDirection) => objectiveDirection switch {
-    ObjectiveDirection.Minimize => new SingleFitness(double.MinValue),
-    ObjectiveDirection.Maximize => new SingleFitness(double.MaxValue),
+  public static ObjectiveValue BestValue(ObjectiveDirection objectiveDirection) => objectiveDirection switch {
+    ObjectiveDirection.Minimize => new ObjectiveValue(double.MinValue),
+    ObjectiveDirection.Maximize => new ObjectiveValue(double.MaxValue),
     _ => throw new NotImplementedException()
   };
-  public static SingleFitness WorstValue(ObjectiveDirection objectiveDirection) => objectiveDirection switch {
-    ObjectiveDirection.Minimize => new SingleFitness(double.MaxValue),
-    ObjectiveDirection.Maximize => new SingleFitness(double.MinValue),
+  public static ObjectiveValue WorstValue(ObjectiveDirection objectiveDirection) => objectiveDirection switch {
+    ObjectiveDirection.Minimize => new ObjectiveValue(double.MaxValue),
+    ObjectiveDirection.Maximize => new ObjectiveValue(double.MinValue),
     _ => throw new NotImplementedException()
   };
   
@@ -41,25 +41,26 @@ public enum DominanceRelation {
   Incomparable
 }
 
-public sealed class Fitness : IReadOnlyList<double>, IEquatable<Fitness> {
+public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<ObjectiveVector> {
   private readonly double[] values;
   
-  public Fitness(params double[] values) {
-    if (values.Length() == 0) throw new ArgumentException("Fitness vector must not be empty");
+  public ObjectiveVector(params double[] values) : this(values.AsSpan()) { }
+  public ObjectiveVector(params IEnumerable<double> values) {
+    if (this.values.Length() == 0) throw new ArgumentException("Fitness vector must not be empty");
     this.values = values.ToArray();
   }
-  public Fitness(params IEnumerable<double> values) {
-    this.values = values.ToArray();
+  public ObjectiveVector(params ReadOnlySpan<double> values) {
     if (this.values.Length() == 0) throw new ArgumentException("Fitness vector must not be empty");
+    this.values = values.ToArray();
   }
   
   //public static implicit operator Fitness(SingleFitness[] values) => new(values);
-  public static implicit operator Fitness(double[] values) => new(values/*.Select(v => new SingleFitness(v))*/);
+  public static implicit operator ObjectiveVector(double[] values) => new(values/*.Select(v => new SingleFitness(v))*/);
   //public static implicit operator Fitness(SingleFitness value) => new(value);
-  public static implicit operator Fitness(double value) => new(value);
+  public static implicit operator ObjectiveVector(double value) => new(value);
 
   public bool IsSingleObjective => Count == 1;
-  public SingleFitness? SingleFitness => values.SingleOrDefault();
+  public ObjectiveValue? SingleFitness => values.SingleOrDefault();
   
 
 
@@ -72,17 +73,17 @@ public sealed class Fitness : IReadOnlyList<double>, IEquatable<Fitness> {
   public int Count => values.Length;
   public double this[int index] => values[index];
   
-  public bool Equals(Fitness? other) {
+  public bool Equals(ObjectiveVector? other) {
     if (other is null) return false;
     if (ReferenceEquals(this, other)) return true;
     if (Count != other.Count) return false;
     return values.SequenceEqual(other.values);
   }
-  public override bool Equals(object? obj) => Equals(obj as Fitness);
+  public override bool Equals(object? obj) => Equals(obj as ObjectiveVector);
   public override int GetHashCode() => values.Aggregate(0, HashCode.Combine);
 
   
-  public DominanceRelation CompareTo(Fitness? other, Objective objective) {
+  public DominanceRelation CompareTo(ObjectiveVector? other, Objective objective) {
     if (ReferenceEquals(this, other)) return 0;
     ArgumentNullException.ThrowIfNull(other);
     if (Count != other.Count) throw new ArgumentException("Fitness vectors must have the same length");
@@ -104,10 +105,10 @@ public sealed class Fitness : IReadOnlyList<double>, IEquatable<Fitness> {
     };
   }
 
-  public bool Dominates(Fitness other, Objective goals) => CompareTo(other, goals) == DominanceRelation.Dominates;
-  public bool IsDominatedBy(Fitness other, Objective goals) => CompareTo(other, goals) == DominanceRelation.IsDominatedBy;
-  public bool IsEquivalentTo(Fitness other, Objective goals) => CompareTo(other, goals) == DominanceRelation.Equivalent;
-  public bool IsIncomparableTo(Fitness other, Objective goals) => CompareTo(other, goals) == DominanceRelation.Incomparable;
+  public bool Dominates(ObjectiveVector other, Objective goals) => CompareTo(other, goals) == DominanceRelation.Dominates;
+  public bool IsDominatedBy(ObjectiveVector other, Objective goals) => CompareTo(other, goals) == DominanceRelation.IsDominatedBy;
+  public bool IsEquivalentTo(ObjectiveVector other, Objective goals) => CompareTo(other, goals) == DominanceRelation.Equivalent;
+  public bool IsIncomparableTo(ObjectiveVector other, Objective goals) => CompareTo(other, goals) == DominanceRelation.Incomparable;
 
   public override string ToString() => $"[{string.Join(", ", values.Select(v => v.ToString(CultureInfo.InvariantCulture)))}]";
 }

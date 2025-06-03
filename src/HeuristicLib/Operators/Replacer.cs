@@ -84,7 +84,7 @@ public class PlusSelectionReplacerExecution<TGenotype, TSearchSpace> : ReplacerE
   public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
     return combinedPopulation
-      .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
+      .OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer)
       .Take(previousPopulation.Count) // if algorithm population differs from previousPopulation.Length, it is not detected
       .ToArray();
   }
@@ -120,7 +120,7 @@ public class ElitismReplacerExecution<TGenotype, TSearchSpace> : ReplacerExecuti
 
   public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var elitesPopulation = previousPopulation
-      .OrderBy(p => p.Fitness, objective.TotalOrderComparer)
+      .OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer)
       .Take(Parameters.Elites);
     
     return elitesPopulation

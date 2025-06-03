@@ -241,7 +241,7 @@ public class GeneticAlgorithmExecution<TGenotype, TSearchSpace, TProblem>
   }
 
   protected override GeneticAlgorithmResult<TGenotype> AggregateResult(GeneticAlgorithmIterationResult<TGenotype> iterationResult, GeneticAlgorithmResult<TGenotype>? algorithmResult) {
-    var currentBestSolution = iterationResult.Population.MinBy(x => x.Fitness, iterationResult.Objective.TotalOrderComparer);
+    var currentBestSolution = iterationResult.Population.MinBy(x => x.ObjectiveVector, iterationResult.Objective.TotalOrderComparer);
     // ToDo: "Iteration" looks like a operator
     return new GeneticAlgorithmResult<TGenotype>() {
       CurrentGeneration = iterationResult.Generation,
@@ -253,7 +253,7 @@ public class GeneticAlgorithmExecution<TGenotype, TSearchSpace, TProblem>
       Objective = iterationResult.Objective,
       CurrentPopulation = iterationResult.Population,
       CurrentBestSolution = currentBestSolution,
-      BestSolution = algorithmResult is null ? currentBestSolution : new[] { algorithmResult.BestSolution, currentBestSolution }.MinBy(x => x.Fitness, iterationResult.Objective.TotalOrderComparer)};
+      BestSolution = algorithmResult is null ? currentBestSolution : new[] { algorithmResult.BestSolution, currentBestSolution }.MinBy(x => x.ObjectiveVector, iterationResult.Objective.TotalOrderComparer)};
   }
 
   protected override bool IsValidState(GeneticAlgorithmState<TGenotype> state) {
