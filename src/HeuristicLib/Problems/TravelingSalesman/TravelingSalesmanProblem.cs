@@ -11,7 +11,7 @@ public class Tour {
   }
 }
 
-// public class TravelingSalesmanProblem : ProblemBase<Tour> {
+// This is an example problem that uses a permutation search spaces to get access to the standard operators, but also offers custom TSP-specific operators.
 public class TravelingSalesmanProblem : ProblemBase<Permutation, PermutationSearchSpace, ITravelingSalesmanProblemData> {
 
   // public ITravelingSalesmanProblemData ProblemData { get; }

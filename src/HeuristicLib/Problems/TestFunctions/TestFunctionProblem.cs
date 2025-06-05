@@ -5,6 +5,7 @@ using LanguageExt;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
+// This is an example problem that fully uses the standard search space of real vectors and only the standard operators.
 public class TestFunctionProblem : ProblemBase<RealVector, RealVectorSearchSpace, Unit> {
   private readonly ITestFunction testFunction;
 
