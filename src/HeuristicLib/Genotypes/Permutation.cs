@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Genotypes;
 
-public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
+public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   private readonly int[] elements;
 
   public Permutation(IEnumerable<int> elements) {

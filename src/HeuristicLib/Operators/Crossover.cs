@@ -1,83 +1,93 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public abstract record class Crossover<TGenotype, TSearchSpace, TProblem> : Operator<TGenotype, TSearchSpace, TProblem, ICrossoverExecution<TGenotype>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+public interface ICrossover<TGenotype, in TEncoding, in TProblem>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
 {
-  [return: NotNullIfNotNull(nameof(problemAgnosticOperator))]
-  public static implicit operator Crossover<TGenotype, TSearchSpace, TProblem>?(Crossover<TGenotype, TSearchSpace>? problemAgnosticOperator) {
-    if (problemAgnosticOperator is null) return null;
-    return new ProblemSpecificCrossover<TGenotype, TSearchSpace, TProblem>(problemAgnosticOperator);
+  TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+}
+
+public abstract class Crossover<TGenotype, TEncoding, TProblem> : ICrossover<TGenotype, TEncoding, TProblem>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
+{
+  public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+}
+
+public abstract class Crossover<TGenotype, TEncoding> : ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
+  where TEncoding : IEncoding<TGenotype>
+{
+  public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random, TEncoding encoding);
+
+  TGenotype ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
+    return Cross(parent1, parent2, random, encoding);
   }
 }
 
-public abstract record class Crossover<TGenotype, TSearchSpace> : Operator<TGenotype, TSearchSpace, ICrossoverExecution<TGenotype>>
-  where TSearchSpace : ISearchSpace<TGenotype>
+public abstract class Crossover<TGenotype> : ICrossover<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
 {
-}
-
-public interface ICrossoverExecution<TGenotype> {
-  TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random);
-}
-
-public abstract class CrossoverExecution<TGenotype, TSearchSpace, TProblem, TCrossover> : OperatorExecution<TGenotype, TSearchSpace, TProblem, TCrossover>, ICrossoverExecution<TGenotype>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-{
-  protected CrossoverExecution(TCrossover parameters, TSearchSpace searchSpace, TProblem problem) : base(parameters, searchSpace, problem) { }
   public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random);
+
+  TGenotype ICrossover<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+    return Cross(parent1, parent2, random);
+  }
 }
 
-public abstract class CrossoverExecution<TGenotype, TSearchSpace, TCrossover> : OperatorExecution<TGenotype, TSearchSpace, TCrossover>, ICrossoverExecution<TGenotype>
-  where TSearchSpace : ISearchSpace<TGenotype>
+
+public class RandomCrossover<TGenotype> : Crossover<TGenotype>
 {
-  protected CrossoverExecution(TCrossover parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
-  
-  public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random);
-}
-
-//
-// public static class Crossover {
-//   public static CustomCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(Func<TGenotype, TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> crossover)
-//     where TSearchSpace : ISearchSpace<TGenotype>
-//   {
-//     return new CustomCrossover<TGenotype, TSearchSpace>(crossover);
-//   }
-// }
-//
-// public sealed class CustomCrossover<TGenotype, TSearchSpace> 
-//   : ICrossover<TGenotype, TSearchSpace>
-//   where TSearchSpace : ISearchSpace<TGenotype>
-// {
-//   private readonly Func<TGenotype, TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> crossover;
-//   internal CustomCrossover(Func<TGenotype, TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> crossover) {
-//     this.crossover = crossover;
-//   }
-//   public TGenotype Cross(TGenotype parent1, TGenotype parent2, TSearchSpace searchSpace, IRandomNumberGenerator random) => crossover(parent1, parent2, searchSpace, random);
-// }
-//
-// public abstract class CrossoverBase<TGenotype, TSearchSpace> 
-//   : ICrossover<TGenotype, TSearchSpace>
-//   where TSearchSpace : ISearchSpace<TGenotype> 
-// {
-//   public abstract TGenotype Cross(TGenotype parent1, TGenotype parent2, TSearchSpace searchSpace, IRandomNumberGenerator random); 
-// }
-
-public sealed record ProblemSpecificCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-{
-  public Crossover<TGenotype, TSearchSpace> ProblemAgnosticCrossover { get; }
-
-  public ProblemSpecificCrossover(Crossover<TGenotype, TSearchSpace> problemAgnosticCrossover) {
-    ProblemAgnosticCrossover = problemAgnosticCrossover;
+  public double Bias { get; }
+  public RandomCrossover(double bias = 0.5) {
+    if (bias is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(bias), "Bias must be between 0 and 1.");
+    Bias = bias;
+    
   }
   
-  public override ICrossoverExecution<TGenotype> CreateExecution(TSearchSpace searchSpace, TProblem problem) {
-    return ProblemAgnosticCrossover.CreateExecution(searchSpace);
+  public override TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random) {
+    if (random.Random() < Bias) {
+      return parent1;
+    } else {
+      return parent2;
+    }
+  }
+}
+
+public class MultiCrossover<TGenotype, TEncoding, TProblem> : Crossover<TGenotype, TEncoding, TProblem>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
+{
+  public IReadOnlyList<ICrossover<TGenotype, TEncoding, TProblem>> Crossovers { get; }
+  public IReadOnlyList<double> Weights { get; }
+  private readonly double totalWeightSum;
+  
+  public MultiCrossover(IReadOnlyList<ICrossover<TGenotype, TEncoding, TProblem>> crossovers, IReadOnlyList<double>? weights = null) {
+    if (crossovers.Count == 0) throw new ArgumentException("At least one crossover must be provided.", nameof(crossovers));
+    if (weights != null && weights.Count != crossovers.Count) throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
+    if (weights != null && weights.Any(p => p < 0)) throw new ArgumentException("Weights must be non-negative.", nameof(weights));
+    if (weights != null && weights.All(p => p <= 0)) throw new ArgumentException("At least one weight must be greater than zero.", nameof(weights));
+    
+    Crossovers = crossovers;
+    Weights = weights ?? Enumerable.Repeat(1.0, crossovers.Count).ToArray();
+    totalWeightSum = Weights.Sum();
+  }
+
+  public override TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+    // Select a crossover index based on the weights
+    double r = random.Random() * totalWeightSum;
+    double cumulative = 0.0;
+    int selectedIndex = 0;
+    for (int i = 0; i < Weights.Count; i++) {
+      cumulative += Weights[i];
+      if (r < cumulative) {
+        selectedIndex = i;
+        break;
+      }
+    }
+    return Crossovers[selectedIndex].Cross(parent1, parent2, random, encoding, problem);
   }
 }

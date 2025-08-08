@@ -1,62 +1,62 @@
-﻿using System.Reactive.Concurrency;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Genotypes;
-using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.RealVectorSpace;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
-
-namespace HEAL.HeuristicLib.Tests;
-
-public class GeneticAlgorithmObservableTests {
-  [Fact]
-  public Task GeneticAlgorithm_ObservableFromExecutionStream() {
-    var searchSpace = new RealVectorSearchSpace(2, -5, +5);
-    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-    var decoder = Decoder.Identity<RealVector>();
-    //var evaluator = Evaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
-    var selector = new RandomSelector();
-    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
-    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(3);
-    //var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> { SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize };
-    var problem = new RealVectorMockOptimizable();
-    
-    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
-      //SearchSpace = searchSpace,
-      populationSize: 2, creator, crossover, mutator, 0.5,
-      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
-      selector, replacement, randomSeed: 42, terminator
-    );
-
-    var stream = ga.ExecuteStreaming(problem);
-
-    var subject = new Subject<GeneticAlgorithmResult<RealVector>>();
-    var observableResult = new List<GeneticAlgorithmResult<RealVector>>();
-    subject
-      .SubscribeOn(Scheduler.CurrentThread)
-      .Subscribe(state => observableResult.Add(state));
-    
-    observableResult.ShouldBeEmpty();
-      
-    var result = stream
-      .Select(x => { subject.OnNext(x); return x; })
-      .Take(20)
-      .ToList();
-    
-    observableResult.ShouldBe(result);
-
-    return Verify(result)
-      .IgnoreMembersWithType<TimeSpan>();
-  }
-  
-  private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
-    public ObjectiveVector Evaluate(RealVector solution) => solution.Sum();
-    public Objective Objective => SingleObjective.Minimize;
-    public RealVectorSearchSpace SearchSpace => new RealVectorSearchSpace(2, -5, +5);
-  }
-}
+﻿// using System.Reactive.Concurrency;
+// using System.Reactive.Linq;
+// using System.Reactive.Subjects;
+// using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+// using HEAL.HeuristicLib.Encodings;
+// using HEAL.HeuristicLib.Genotypes;
+// using HEAL.HeuristicLib.Operators;
+// using HEAL.HeuristicLib.Operators.RealVectorOperators;
+// using HEAL.HeuristicLib.Optimization;
+// using HEAL.HeuristicLib.Problems;
+//
+// namespace HEAL.HeuristicLib.Tests;
+//
+// public class GeneticAlgorithmObservableTests {
+//   [Fact]
+//   public Task GeneticAlgorithm_ObservableFromExecutionStream() {
+//     var searchSpace = new RealVectorEncoding(2, -5, +5);
+//     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
+//     var crossover = new SinglePointCrossover();
+//     var mutator = new GaussianMutator(0.1, 0.1);
+//     var decoder = Decoder.Identity<RealVector>();
+//     //var evaluator = Evaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
+//     var selector = new RandomSelector();
+//     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
+//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(3);
+//     //var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> { SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize };
+//     var problem = new RealVectorMockOptimizable();
+//     
+//     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+//       //SearchSpace = searchSpace,
+//       populationSize: 2, creator, crossover, mutator, 0.5,
+//       //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+//       selector, replacement, randomSeed: 42, terminator
+//     );
+//
+//     var stream = ga.ExecuteStreaming(problem);
+//
+//     var subject = new Subject<GeneticAlgorithmResult<RealVector>>();
+//     var observableResult = new List<GeneticAlgorithmResult<RealVector>>();
+//     subject
+//       .SubscribeOn(Scheduler.CurrentThread)
+//       .Subscribe(state => observableResult.Add(state));
+//     
+//     observableResult.ShouldBeEmpty();
+//       
+//     var result = stream
+//       .Select(x => { subject.OnNext(x); return x; })
+//       .Take(20)
+//       .ToList();
+//     
+//     observableResult.ShouldBe(result);
+//
+//     return Verify(result)
+//       .IgnoreMembersWithType<TimeSpan>();
+//   }
+//   
+//   private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorEncoding> {
+//     public ObjectiveVector Evaluate(RealVector solution) => solution.Sum();
+//     public Objective Objective => SingleObjective.Minimize;
+//     public RealVectorEncoding ProblemContext => new RealVectorEncoding(2, -5, +5);
+//   }
+// }

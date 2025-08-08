@@ -1,80 +1,65 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public abstract record class Creator<TGenotype, TSearchSpace, TProblem> : Operator<TGenotype, TSearchSpace, TProblem, ICreatorExecution<TGenotype>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+public interface ICreator<TGenotype, in TEncoding, in TProblem>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
 {
-  [return: NotNullIfNotNull(nameof(problemAgnosticOperator))]
-  public static implicit operator Creator<TGenotype, TSearchSpace, TProblem>?(Creator<TGenotype, TSearchSpace>? problemAgnosticOperator) {
-    if (problemAgnosticOperator is null) return null;
-    return new ProblemSpecificCreator<TGenotype, TSearchSpace, TProblem>(problemAgnosticOperator);
+  TGenotype Create(IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+}
+
+
+public abstract class Creator<TGenotype, TEncoding, TProblem> : ICreator<TGenotype, TEncoding, TProblem>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
+{
+  public abstract TGenotype Create(IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+}
+
+public abstract class Creator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
+  where TEncoding : IEncoding<TGenotype>
+{
+  public abstract TGenotype Create(IRandomNumberGenerator random, TEncoding encoding);
+  
+  TGenotype ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Create(IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
+    return Create(random, encoding);
   }
 }
 
-public abstract record class Creator<TGenotype, TSearchSpace> : Operator<TGenotype, TSearchSpace, ICreatorExecution<TGenotype>>
-  where TSearchSpace : ISearchSpace<TGenotype>
+public abstract class Creator<TGenotype> : ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
 {
-}
-
-public interface ICreatorExecution<TGenotype>
-{
-  TGenotype Create(IRandomNumberGenerator random);
-}
-
-public abstract class CreatorExecution<TGenotype, TSearchSpace, TProblem, TCreator> : OperatorExecution<TGenotype, TSearchSpace, TProblem, TCreator>, ICreatorExecution<TGenotype> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-{
-  protected CreatorExecution(TCreator parameters, TSearchSpace searchSpace, TProblem problem) : base(parameters, searchSpace, problem) { }
   public abstract TGenotype Create(IRandomNumberGenerator random);
-}
-
-public abstract class CreatorExecution<TGenotype, TSearchSpace, TCreator> : OperatorExecution<TGenotype, TSearchSpace, TCreator>, ICreatorExecution<TGenotype> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-{
-  protected CreatorExecution(TCreator parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
   
-  public abstract TGenotype Create(IRandomNumberGenerator random);
-}
-
-// public static class Creator {
-//   public static CustomCreator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator) 
-//     where TSearchSpace : ISearchSpace<TGenotype> 
-//   {
-//     return new CustomCreator<TGenotype, TSearchSpace>(creator);
-//   }
-// }
-//
-// public sealed class CustomCreator<TGenotype, TSearchSpace> 
-//   : ICreator<TGenotype, TSearchSpace> 
-//   where TSearchSpace : ISearchSpace<TGenotype> {
-//   private readonly Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator;
-//   internal CustomCreator(Func<TSearchSpace, IRandomNumberGenerator, TGenotype> creator) {
-//     this.creator = creator;
-//   }
-//   public TGenotype Create(TSearchSpace searchSpace, IRandomNumberGenerator random) => creator(searchSpace, random);
-// }
-//
-// public abstract class CreatorBase<TGenotype, TSearchSpace> : ICreator<TGenotype, TSearchSpace> where TSearchSpace : ISearchSpace<TGenotype> {
-//   public abstract TGenotype Create(TSearchSpace searchSpace, IRandomNumberGenerator random);
-// }
-
-
-public sealed record class ProblemSpecificCreator<TGenotype, TSearchSpace, TProblem> : Creator<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-{
-  public Creator<TGenotype, TSearchSpace> ProblemAgnosticCreator { get; }
-
-  public ProblemSpecificCreator(Creator<TGenotype, TSearchSpace> problemAgnosticCreator) {
-    ProblemAgnosticCreator = problemAgnosticCreator;
+  TGenotype ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Create(IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+    return Create(random);
   }
+}
+
+
+
+public class PredefinedSolutionsCreator<TGenotype, TEncoding, TProblem> : Creator<TGenotype, TEncoding, TProblem>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
+{
+  private readonly TGenotype[] predefinedSolutions;
+  private readonly ICreator<TGenotype, TEncoding, TProblem> creatorForRemainingSolutions;
+
+  private int currentSolutionIndex = 0;
   
-  public override ICreatorExecution<TGenotype> CreateExecution(TSearchSpace searchSpace, TProblem problem) {
-    return ProblemAgnosticCreator.CreateExecution(searchSpace);
+  public PredefinedSolutionsCreator(TGenotype[] predefinedSolutions, ICreator<TGenotype, TEncoding, TProblem> creatorForRemainingSolutions) {
+    this.predefinedSolutions = predefinedSolutions;
+    this.creatorForRemainingSolutions = creatorForRemainingSolutions;
+  }
+
+  public override TGenotype Create(IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+    if (currentSolutionIndex < predefinedSolutions.Length) {
+      return predefinedSolutions[currentSolutionIndex++];
+    } else {
+      return creatorForRemainingSolutions.Create(random, encoding, problem);
+    }
   }
 }

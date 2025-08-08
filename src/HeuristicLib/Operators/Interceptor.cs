@@ -1,93 +1,88 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public abstract record class Interceptor<TGenotype, TSearchSpace, TProblem, TState> : Operator<TGenotype, TSearchSpace, TProblem, IInterceptorExecution<TState>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+public interface IInterceptor<TGenotype, TIterationResult, in TEncoding, in TProblem>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
 {
-  [return: NotNullIfNotNull(nameof(problemAgnosticOperator))]
-  public static implicit operator Interceptor<TGenotype, TSearchSpace, TProblem, TState>?(Interceptor<TGenotype, TSearchSpace, TState>? problemAgnosticOperator) {
-    if (problemAgnosticOperator is null) return null;
-    return new ProblemSpecificInterceptor<TGenotype, TSearchSpace, TProblem, TState>(problemAgnosticOperator);
+  TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TEncoding encoding, TProblem problem);
+}
+
+public abstract class Interceptor<TGenotype, TIterationResult, TEncoding, TProblem> : IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
+{
+  public abstract TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TEncoding encoding, TProblem problem);
+}
+
+public abstract class Interceptor<TGenotype, TIterationResult, TEncoding> : IInterceptor<TGenotype, TIterationResult, TEncoding, IProblem<TGenotype, TEncoding>>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
+{
+  public abstract TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TEncoding encoding);
+
+  TIterationResult IInterceptor<TGenotype, TIterationResult, TEncoding, IProblem<TGenotype, TEncoding>>.Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
+    return Transform(currentIterationResult, previousIterationResult, encoding);
   }
 }
 
-public abstract record class Interceptor<TGenotype, TSearchSpace, TState> : Operator<TGenotype, TSearchSpace, IInterceptorExecution<TState>>
-  where TSearchSpace : ISearchSpace<TGenotype>
+public abstract class Interceptor<TGenotype, TIterationResult> : IInterceptor<TGenotype, TIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
+  where TIterationResult : IIterationResult<TGenotype>
 {
-}
-  
-public interface IInterceptorExecution<TState> {
-  TState Transform(TState state);
-}
+  public abstract TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult);
 
-public abstract class InterceptorExecution<TGenotype, TSearchSpace, TProblem, TState, TInterceptor> : OperatorExecution<TGenotype, TSearchSpace, TProblem, TInterceptor>, IInterceptorExecution<TState> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-
-{
-  protected InterceptorExecution(TInterceptor parameters, TSearchSpace searchSpace, TProblem problem) : base(parameters, searchSpace, problem) { }
-  public abstract TState Transform(TState state);
-}
-
-public abstract class InterceptorExecution<TGenotype, TSearchSpace, TState, TInterceptor> : OperatorExecution<TGenotype, TSearchSpace, TInterceptor>, IInterceptorExecution<TState> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-
-{
-  protected InterceptorExecution(TInterceptor parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
-  public abstract TState Transform(TState state);
-}
-
-public sealed record ProblemSpecificInterceptor<TGenotype, TSearchSpace, TProblem, TState> : Interceptor<TGenotype, TSearchSpace, TProblem, TState>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-{
-  public Interceptor<TGenotype, TSearchSpace, TState> ProblemAgnosticInterceptor { get; }
-
-  public ProblemSpecificInterceptor(Interceptor<TGenotype, TSearchSpace, TState> problemAgnosticInterceptor) {
-    ProblemAgnosticInterceptor = problemAgnosticInterceptor;
+  TIterationResult IInterceptor<TGenotype, TIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+    return Transform(currentIterationResult, previousIterationResult);
   }
+}
 
-  public override IInterceptorExecution<TState> CreateExecution(TSearchSpace searchSpace, TProblem problem) {
-    return ProblemAgnosticInterceptor.CreateExecution(searchSpace);
+public abstract class Interceptor<TGenotype> : IInterceptor<TGenotype, IIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
+{
+  public abstract IIterationResult<TGenotype> Transform(IIterationResult<TGenotype> currentIterationResult, IIterationResult<TGenotype>? previousIterationResult);
+
+  IIterationResult<TGenotype> IInterceptor<TGenotype, IIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Transform(IIterationResult<TGenotype> currentIterationResult, IIterationResult<TGenotype>? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+    return Transform(currentIterationResult, previousIterationResult);
   }
 }
 
 
-public static class Interceptors {
-  public static IdentityInterceptor<TGenotype, TSearchSpace, TState> Identity<TGenotype, TSearchSpace, TState>()
-    where TSearchSpace : ISearchSpace<TGenotype>
-  {
-    return new IdentityInterceptor<TGenotype, TSearchSpace, TState>();
-  }
-  // public static Interceptor<TState> Create<TState>(Func<TState, TState> transform)/* where TState : IResultState*/ {
-  //   return new CustomInterceptor<TState>(transform);
-  // }
-}
-
-// public class CustomInterceptor<TState> : Interceptor<TState> /*where TState : IResultState*/ {
-//   private readonly Func<TState, TState> transform;
-//   internal CustomInterceptor(Func<TState, TState> transform) {
-//     this.transform = transform;
+// public class IdentityInterceptor<TGenotype> : Interceptor<TGenotype>
+// {
+//   public override IIterationResult<TGenotype> Transform(IIterationResult<TGenotype> currentIterationResult, IIterationResult<TGenotype>? previousIterationResult) {
+//     return currentIterationResult;
 //   }
-//   public TState Transform(TState state) => transform(state);
 // }
 
 
 
-public record class IdentityInterceptor<TGenotype, TSearchSpace, TState> : Interceptor<TGenotype, TSearchSpace, TState> 
-  where TSearchSpace : ISearchSpace<TGenotype>
+
+public interface IPopulationIterationResult<TGenotype, out TSelf> : IIterationResult<TGenotype>
+  where TSelf : IPopulationIterationResult<TGenotype, TSelf>
 {
-  public override IdentityInterceptorExecution<TGenotype, TSearchSpace, TState> CreateExecution(TSearchSpace searchSpace) {
-    return new IdentityInterceptorExecution<TGenotype, TSearchSpace, TState>(this, searchSpace);
-  }
+  Population<TGenotype> Solutions { get; }
+  TSelf WithSolutions(Population<TGenotype> solutions);
 }
 
-public class IdentityInterceptorExecution<TGenotype, TSearchSpace, TState> : InterceptorExecution<TGenotype, TSearchSpace, TState, IdentityInterceptor<TGenotype, TSearchSpace, TState>> 
-  where TSearchSpace : ISearchSpace<TGenotype>
+public class RemoveDuplicatesInterceptor<TGenotype, TIterationResult> : Interceptor<TGenotype, TIterationResult>
+  where TIterationResult : IPopulationIterationResult<TGenotype, TIterationResult>
 {
-  public IdentityInterceptorExecution(IdentityInterceptor<TGenotype, TSearchSpace, TState> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
-  public override TState Transform(TState state) => state;
+  private readonly IEqualityComparer<TGenotype> comparer;
+  public RemoveDuplicatesInterceptor(IEqualityComparer<TGenotype> comparer) {
+    this.comparer = comparer;
+  }
+  
+  public override TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult) {
+    var newSolutions = currentIterationResult.Solutions.DistinctBy(s => s.Genotype, comparer);
+    return currentIterationResult.WithSolutions(
+      new Population<TGenotype>(new ImmutableList<Solution<TGenotype>>(newSolutions))
+    );
+    // return currentIterationResult with {
+    //   Solutions = new ImmutableList<Solution<TGenotype>>(newSolutions)
+    // };
+  }
 }

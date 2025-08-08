@@ -10,7 +10,9 @@ public static class ParetoFront {
       .ToList();
   }
   
-  public static IReadOnlyList<Solution<TGenotype>> ExtractFrom<TGenotype>(IEnumerable<Solution<TGenotype>> population, Objective objective) {
+  public static IReadOnlyList<Solution<TGenotype>> ExtractFrom<TGenotype>(IEnumerable<Solution<TGenotype>> population, Objective objective)
+    where TGenotype : IEquatable<TGenotype> 
+  {
     var uniqueSolutions = population.Distinct().ToList();
     return uniqueSolutions
       .Where(ind => !uniqueSolutions.Any(other => ind != other && ind.ObjectiveVector.IsDominatedBy(other.ObjectiveVector, objective)))

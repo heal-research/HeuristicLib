@@ -9,63 +9,50 @@ namespace HEAL.HeuristicLib.Problems.Special;
 
 public record SpecialGenotype(int Value);
 
-public class SpecialProblem : IProblem<SpecialGenotype> {
-  public Objective Objective => SingleObjective.Minimize;
-  public double Data { get; }
+public record class SpecialEncoding : Encoding<SpecialGenotype> {
+  public override bool Contains(SpecialGenotype genotype) {
+    return true;
+  }
+}
 
-  public SpecialProblem(double data) {
+public class SpecialProblem : Problem<SpecialGenotype, SpecialEncoding> {
+  public double Data { get; set; }
+
+  public SpecialProblem(double data) : base (SingleObjective.Maximize) {
     Data = data;
   }
   
-  public ObjectiveVector Evaluate(SpecialGenotype solution) {
+  public override ObjectiveVector Evaluate(SpecialGenotype solution) {
     return Data + solution.Value;
   }
-}
 
-
-public record class SpecialGenotypeCreator : Creator<SpecialGenotype, SpecialProblem> {
-  public required int Parameter { get; init; }
-
-  public override ICreatorExecution<SpecialGenotype> CreateExecution(SpecialProblem problem) {
-    return new SpecialGenotypeCreatorExecution(this, problem);
-  }
-}
-
-public class SpecialGenotypeCreatorExecution : CreatorExecution<SpecialGenotype, SpecialProblem, SpecialGenotypeCreator> {
-  public SpecialGenotypeCreatorExecution(SpecialGenotypeCreator parameters, SpecialProblem problem) : base(parameters, problem) { }
-
-  public override SpecialGenotype Create(IRandomNumberGenerator random) {
-    return new SpecialGenotype(random.Integer(0, Parameters.Parameter));
+  public override SpecialEncoding GetEncoding() {
+    return new SpecialEncoding();
   }
 }
 
 
-public record class SpecialGenotypeCrossover : Operator<SpecialGenotype, SpecialProblem> {
-  public override ICrossoverExecution<SpecialGenotype> CreateExecution(SpecialProblem problem) {
-    return new SpecialGenotypeCrossoverExecution(this, problem);
+public class SpecialGenotypeCreator : Creator<SpecialGenotype, SpecialEncoding, SpecialProblem> {
+  public int Parameter { get; set; }
+  public SpecialGenotypeCreator(int parameter) {
+    Parameter = parameter;
+  }
+  public override SpecialGenotype Create(IRandomNumberGenerator random, SpecialEncoding encoding, SpecialProblem problem) {
+    return new SpecialGenotype(random.Integer(0, Parameter));
   }
 }
 
-public class SpecialGenotypeCrossoverExecution : CrossoverExecution<SpecialGenotype, SpecialProblem, SpecialGenotypeCrossover> {
-  public SpecialGenotypeCrossoverExecution(SpecialGenotypeCrossover parameters, SpecialProblem problem) : base(parameters, problem) { }
 
-  public override SpecialGenotype Cross(SpecialGenotype parent1, SpecialGenotype parent2, IRandomNumberGenerator random) {
+public class SpecialGenotypeCrossover : Crossover<SpecialGenotype, SpecialEncoding, SpecialProblem> {
+  public override SpecialGenotype Cross(SpecialGenotype parent1, SpecialGenotype parent2, IRandomNumberGenerator random, SpecialEncoding encoding, SpecialProblem problem) {
     return new SpecialGenotype(random.Random() < 0.5 ? parent1.Value : parent2.Value);
   }
 }
 
 
-public record class SpecialGenotypeMutator : Mutator<SpecialGenotype, SpecialProblem> {
-  public override IMutatorExecution<SpecialGenotype> CreateExecution(SpecialProblem problem) {
-    return new SpecialGenotypeMutatorExecution(this, problem);
-  }
-}
-
-public class SpecialGenotypeMutatorExecution : MutatorExecution<SpecialGenotype, SpecialProblem, SpecialGenotypeMutator> {
-  public SpecialGenotypeMutatorExecution(SpecialGenotypeMutator parameters, SpecialProblem problem) : base(parameters, problem) { }
-
-  public SpecialGenotype Mutate(IRandomNumberGenerator random, SpecialGenotype genotype) {
-    int strength = (int)SearchSpace.Data;
+public class SpecialGenotypeMutator : Mutator<SpecialGenotype, SpecialEncoding, SpecialProblem> {
+  public override SpecialGenotype Mutate(SpecialGenotype genotype, IRandomNumberGenerator random, SpecialEncoding encoding, SpecialProblem problem) {
+    int strength = (int)Math.Round(problem.Data);
     int offset = random.Integer(-strength, strength + 1);
     return new SpecialGenotype(genotype.Value + offset);
   }

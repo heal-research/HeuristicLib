@@ -1,83 +1,49 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public abstract record class Mutator<TGenotype, TSearchSpace, TProblem> : Operator<TGenotype, TSearchSpace, TProblem, IMutatorExecution<TGenotype>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
+public interface IMutator<TGenotype, in TEncoding, in TProblem> 
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
 {
-  [return: NotNullIfNotNull(nameof(problemAgnosticOperator))]
-  public static implicit operator Mutator<TGenotype, TSearchSpace, TProblem>?(Mutator<TGenotype, TSearchSpace>? problemAgnosticOperator) {
-    if (problemAgnosticOperator is null) return null;
-    return new ProblemSpecificMutator<TGenotype, TSearchSpace, TProblem>(problemAgnosticOperator);
+  TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+}
+
+public abstract class Mutator<TGenotype, TEncoding, TProblem> : IMutator<TGenotype, TEncoding, TProblem>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
+{
+  public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+}
+
+public abstract class Mutator<TGenotype, TEncoding> : IMutator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
+  where TEncoding : IEncoding<TGenotype>
+{
+  public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random, TEncoding encoding);
+  
+  TGenotype IMutator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Mutate(TGenotype parent, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
+    return Mutate(parent, random, encoding);
   }
 }
 
-public abstract record class Mutator<TGenotype, TSearchSpace> : Operator<TGenotype, TSearchSpace, IMutatorExecution<TGenotype>>
-  where TSearchSpace : ISearchSpace<TGenotype>
+public abstract class Mutator<TGenotype> : IMutator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
 {
-}
-
-public interface IMutatorExecution<TGenotype> {
-  TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random);
-}
-
-public abstract class MutatorExecution<TGenotype, TSearchSpace, TProblem, TMutator> : OperatorExecution<TGenotype, TSearchSpace, TProblem, TMutator>, IMutatorExecution<TGenotype>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-{
-  protected MutatorExecution(TMutator parameters, TSearchSpace searchSpace, TProblem problem) : base(parameters, searchSpace, problem) { }
   public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random);
-}
-
-public abstract class MutatorExecution<TGenotype, TSearchSpace, TMutator> : OperatorExecution<TGenotype, TSearchSpace, TMutator>, IMutatorExecution<TGenotype>
-  where TSearchSpace : ISearchSpace<TGenotype>
-{
-  protected MutatorExecution(TMutator parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
-  public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random);
-}
-
-
-//
-// public static class Mutator {
-//   public static CustomMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(Func<TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> mutator) 
-//     where TSearchSpace : ISearchSpace<TGenotype>
-//   {
-//     return new CustomMutator<TGenotype, TSearchSpace>(mutator);
-//   }
-// }
-//
-// public sealed class CustomMutator<TGenotype, TSearchSpace> 
-//   : IMutator<TGenotype, TSearchSpace>
-//   where TSearchSpace : ISearchSpace<TGenotype>
-// {
-//   private readonly Func<TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> mutator;
-//   internal CustomMutator(Func<TGenotype, TSearchSpace, IRandomNumberGenerator, TGenotype> mutator) {
-//     this.mutator = mutator;
-//   }
-//   public TGenotype Mutate(TGenotype parent, TSearchSpace searchSpace, IRandomNumberGenerator random) => mutator(parent, searchSpace, random);
-// }
-//
-// public abstract class MutatorBase<TGenotype, TSearchSpace>
-//   : IMutator<TGenotype, TSearchSpace>
-//   where TSearchSpace : ISearchSpace<TGenotype>
-// {
-//   public abstract TGenotype Mutate(TGenotype parent, TSearchSpace searchSpace, IRandomNumberGenerator random);
-// }
-
-public sealed record class ProblemSpecificMutator<TGenotype, TSearchSpace, TProblem> : Mutator<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-{
-  private readonly Mutator<TGenotype, TSearchSpace> problemAgnosticOperator;
-
-  public ProblemSpecificMutator(Mutator<TGenotype, TSearchSpace> problemAgnosticOperator) {
-    this.problemAgnosticOperator = problemAgnosticOperator;
-  }
-
-  public override IMutatorExecution<TGenotype> CreateExecution(TSearchSpace searchSpace, TProblem problem) {
-    return problemAgnosticOperator.CreateExecution(searchSpace);
+  
+  TGenotype IMutator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Mutate(TGenotype parent, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+    return Mutate(parent, random);
   }
 }
+
+
+public class NoChangeMutator<TGenotype> : Mutator<TGenotype>
+{
+  public override TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random) {
+    return parent;
+  }
+}
+
+

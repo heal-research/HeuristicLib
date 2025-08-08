@@ -1,96 +1,36 @@
+using System.Diagnostics;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators;
 
-// public interface IOperator<TGenotype, in TSearchSpace, in TProblem>
-//   where TSearchSpace : ISearchSpace<TGenotype>
-//   where TProblem : IOptimizable<TGenotype, TSearchSpace>
+// public interface IOperator
 // {
 // }
-
-public abstract record class Operator<TGenotype, TSearchSpace, TProblem, TOperatorExecution>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-{
-  public abstract TOperatorExecution CreateExecution(TSearchSpace searchSpace, TProblem problem);
-}
-
-public abstract record class Operator<TGenotype, TSearchSpace, TOperatorExecution>
-  where TSearchSpace : ISearchSpace<TGenotype>
-{
-  public abstract TOperatorExecution CreateExecution(TSearchSpace searchSpace);
-}
-
-public abstract record class Operator<TOperatorExecution>
-{
-  public abstract TOperatorExecution CreateExecution();
-}
-
-// public interface IOperatorExecution<TGenotype, in TSearchSpace, in TProblem> {
-//   
-// }
-
-public abstract class OperatorExecution<TGenotype, TSearchSpace, TProblem, TOperator> /*: IOperatorExecution<TGenotype, TSearchSpace, TProblem>*/
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-  // where TOperator : IOperator<TGenotype, TSearchSpace, TProblem>
-{
-  public TOperator Parameters { get; }
-  public TSearchSpace SearchSpace { get; }
-  public TProblem Problem { get; }
-  
-  protected OperatorExecution(TOperator parameters, TSearchSpace searchSpace, TProblem problem) {
-    Parameters = parameters;
-    SearchSpace = searchSpace;
-    Problem = problem;
-  }
-}
-
-public abstract class OperatorExecution<TGenotype, TSearchSpace, TOperator> /*: IOperatorExecution<TGenotype, TSearchSpace, TProblem>*/
-  where TSearchSpace : ISearchSpace<TGenotype>
-  // where TProblem : IOptimizable<TGenotype, TSearchSpace>
-// where TOperator : IOperator<TGenotype, TSearchSpace, TProblem>
-{
-  public TOperator Parameters { get; }
-  public TSearchSpace SearchSpace { get; }
-  // public TProblem Problem { get; }
-
-  protected OperatorExecution(TOperator parameters, TSearchSpace searchSpace/*, TProblem problem*/) {
-    Parameters = parameters;
-    SearchSpace = searchSpace;
-    // Problem = problem;
-  }
-}
-
-public abstract class OperatorExecution<TOperator> /*: IOperatorExecution<TGenotype, TSearchSpace, TProblem>*/
-// where TProblem : IOptimizable<TGenotype, TSearchSpace>
-// where TOperator : IOperator<TGenotype, TSearchSpace, TProblem>
-{
-  public TOperator Parameters { get; }
-  // public TProblem Problem { get; }
-
-  protected OperatorExecution(TOperator parameters/*, TProblem problem*/) {
-    Parameters = parameters;
-    // Problem = problem;
-  }
-}
-
-
-// public sealed record class ProblemSpecificOperator<TGenotype, TSearchSpace, TProblem, TOperatorExecution> : Operator<TGenotype, TSearchSpace, TProblem, TOperatorExecution>
-//   where TSearchSpace : ISearchSpace<TGenotype>
-//   where TProblem : IOptimizable<TGenotype, TSearchSpace>
-// {
-//   public Operator<TGenotype, TSearchSpace, TOperatorExecution> ProblemAgnosticOperator { get; }
 //
-//   public ProblemSpecificOperator(Operator<TGenotype, TSearchSpace, TOperatorExecution> problemAgnosticOperator) {
-//     ProblemAgnosticOperator = problemAgnosticOperator;
-//   }
-//   
-//   public override TOperatorExecution CreateExecution(TProblem problem) {
-//     return ProblemAgnosticOperator.CreateExecution();
-//   }
-//   
-//   public static implicit operator ProblemSpecificOperator<TGenotype, TSearchSpace, TProblem, TOperatorExecution>(Operator<TGenotype, TSearchSpace, TOperatorExecution> problemAgnosticOperator) {
-//     return new ProblemSpecificOperator<TGenotype, TSearchSpace, TProblem, TOperatorExecution>(problemAgnosticOperator);
-//   }
+// public interface IOperator<TGenotype> : IOperator
+// {
 // }
+
+
+
+public readonly record struct OperatorMetric(int Count, TimeSpan Duration) {
+  public static OperatorMetric Aggregate(OperatorMetric left, OperatorMetric right) {
+    return new OperatorMetric(left.Count + right.Count, left.Duration + right.Duration);
+  }
+  public static OperatorMetric operator +(OperatorMetric left, OperatorMetric right) => Aggregate(left, right);
+  
+  public static OperatorMetric Zero => new(0, TimeSpan.Zero);
+
+  public static OperatorMetric Measure(int count, Action action) {
+    long start = Stopwatch.GetTimestamp();
+    action();
+    long end = Stopwatch.GetTimestamp();
+
+    return new OperatorMetric(count, Stopwatch.GetElapsedTime(start, end));
+  }
+  
+  public static OperatorMetric Measure(Action action) {
+    return Measure(1, action);
+  }
+}

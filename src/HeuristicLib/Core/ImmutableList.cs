@@ -1,10 +1,9 @@
 ﻿namespace HEAL.HeuristicLib;
 
 
-
 [System.Runtime.CompilerServices.CollectionBuilder(typeof(ImmutableListBuilder), nameof(ImmutableListBuilder.Create))]
 public class ImmutableList<T> : IReadOnlyList<T>, IEquatable<ImmutableList<T>> 
-  where T : IEquatable<T>
+  // where T : IEquatable<T>
 {
   private readonly T[] items;
   

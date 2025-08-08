@@ -1,25 +1,29 @@
-﻿using HEAL.HeuristicLib.Genotypes;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.SearchSpaces;
-using LanguageExt;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 // This is an example problem that fully uses the standard search space of real vectors and only the standard operators.
-public class TestFunctionProblem : ProblemBase<RealVector, RealVectorSearchSpace, Unit> {
+public class TestFunctionProblem : RealVectorProblem {
   private readonly ITestFunction testFunction;
 
   public TestFunctionProblem(ITestFunction testFunction) 
-    : base(GetSearchSpace(testFunction), SingleObjective.Create(testFunction.Objective), Unit.Default) 
+    : base(SingleObjective.Create(testFunction.Objective)) 
   {
     this.testFunction = testFunction;
+  }
+  public TestFunctionProblem() :this(null!) {
   }
   
   public override ObjectiveVector Evaluate(RealVector solution) {
     return testFunction.Evaluate(solution);
   }
+
+  public override RealVectorEncoding GetEncoding() {
+    return new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  }
   
-  private static RealVectorSearchSpace GetSearchSpace(ITestFunction testFunction) => new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);
   
   //public override RealVector Decode(RealVector genotype) => genotype;
   

@@ -1,20 +1,33 @@
 ﻿// using HEAL.HeuristicLib.Operators;
 
+using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems;
 
 // public interface IOptimizationProblem { }
 
-public interface IProblem<in TSolution, out TSearchSpace, out TProblemData> : IOptimizable<TSolution, TSearchSpace> 
-  where TSearchSpace : ISearchSpace<TSolution>
-/*: IProblem*/ {
-  TProblemData ProblemData { get; }
-  // IEvaluator<TSolution> Evaluator { get; }
-  // TSearchSpace SearchSpace { get; }
-  // Objective Objective { get; }
-  // Fitness Evaluate(TSolution solution);
+public interface IProblem
+{
+  // IEncoding Encoding { get; }
+  Objective Objective { get; }
 }
+
+public interface IProblem<in TGenotype, out TEncoding> : IProblem
+  where TEncoding : IEncoding<TGenotype>
+{
+  ObjectiveVector Evaluate(TGenotype solution);
+  
+  TEncoding Encoding { get; }
+}
+
+//
+// public interface IEncodingProvider<out TEncoding> 
+//   where TEncoding : IEncoding 
+// {
+//   TEncoding Encoding { get; }
+// } 
 
 //
 // public static class EvaluationPipeline {
@@ -51,24 +64,47 @@ public interface IProblem<in TSolution, out TSearchSpace, out TProblemData> : IO
 //   //TSolution Decode(TGenotype genotype);
 // }
 
-public abstract class ProblemBase<TSolution, TSearchSpace, TProblemData> : IProblem<TSolution, TSearchSpace, TProblemData>
-  where TSearchSpace : ISearchSpace<TSolution>
+// public abstract class ProblemBase<TSolution> : IProblem<TSolution>
+// {
+//   // public IEvaluator<TSolution> Evaluator { get; }
+//   // public TSearchSpace ProblemContext { get; }
+//   public Objective Objective { get; }
+//   // public TProblemData ProblemData { get; }
+//   
+//   protected ProblemBase(/*TSearchSpace searchSpace,*/ Objective objective/*, TProblemData problemData*/) {
+//     // Evaluator = Operators.Evaluator.FromFitnessFunction<TSolution>(Evaluate);
+//     // ProblemContext = searchSpace;
+//     Objective = objective;
+//     // ProblemData = problemData;
+//   }
+//   
+//   public abstract ObjectiveVector Evaluate(TSolution solution);
+// }
+
+public abstract class Problem<TSolution, TEncoding> : IProblem<TSolution, TEncoding>
+  where TEncoding : IEncoding<TSolution>
 {
-  // public IEvaluator<TSolution> Evaluator { get; }
-  public TSearchSpace SearchSpace { get; }
   public Objective Objective { get; }
-  public TProblemData ProblemData { get; }
+  public TEncoding Encoding { get; }
   
-  protected ProblemBase(TSearchSpace searchSpace, Objective objective, TProblemData problemData) {
-    // Evaluator = Operators.Evaluator.FromFitnessFunction<TSolution>(Evaluate);
-    SearchSpace = searchSpace;
+  protected Problem(Objective objective) {
     Objective = objective;
-    ProblemData = problemData;
+    Encoding = GetEncoding();
   }
   
   public abstract ObjectiveVector Evaluate(TSolution solution);
+
+  public abstract TEncoding GetEncoding();
 }
 
+public abstract class PermutationProblem : Problem<Permutation, PermutationEncoding> {
+  protected PermutationProblem(Objective objective) : base(objective) {}
+}
+
+public abstract class RealVectorProblem : Problem<RealVector, RealVectorEncoding> {
+  protected RealVectorProblem(Objective objective) : base(objective) {
+  }
+}
 
 // public record class EncodedProblem<TSolution, TGenotype, TSearchSpace> : IEncodedProblem<TSolution, TGenotype, TSearchSpace>
 //   where TSearchSpace : ISearchSpace<TGenotype>

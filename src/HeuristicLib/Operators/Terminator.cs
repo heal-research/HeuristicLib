@@ -1,315 +1,192 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using HEAL.HeuristicLib.Algorithms;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public abstract record class Terminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult> : Operator<TGenotype, TSearchSpace, TProblem, ITerminatorInstance<TAlgorithmResult>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-  where TAlgorithmResult : IAlgorithmResult
+public interface ITerminator<TGenotype, in TIterationResult, in TEncoding, in TProblem>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
 {
-  [return: NotNullIfNotNull(nameof(problemAgnosticOperator))]
-  public static implicit operator Terminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult>?(Terminator<TGenotype, TSearchSpace, TAlgorithmResult>? problemAgnosticOperator) {
-    if (problemAgnosticOperator is null) return null;
-    return new ProblemSpecificTerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult>(problemAgnosticOperator);
+  bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem);
+  bool ShouldContinue(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem) {
+    return !ShouldTerminate(currentIterationState, previousIterationState, encoding, problem);
   }
 }
 
-public abstract record class Terminator<TGenotype, TSearchSpace, TAlgorithmResult> : Operator<TGenotype, TSearchSpace, ITerminatorInstance<TAlgorithmResult>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult
+public abstract class Terminator<TGenotype, TIterationResult, TEncoding, TProblem> : ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
 {
+  public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem);
 }
 
-public interface ITerminatorInstance<in TAlgorithmResult> 
-  where TAlgorithmResult : IAlgorithmResult 
+public abstract class Terminator<TGenotype, TIterationResult, TEncoding> : ITerminator<TGenotype, TIterationResult, TEncoding, IProblem<TGenotype, TEncoding>>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
 {
-  bool ShouldTerminate(TAlgorithmResult iterationResult);
-  bool ShouldContinue(TAlgorithmResult iterationResult);
-}
-
-public abstract class TerminatorExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmResult, TTerminator> : OperatorExecution<TGenotype, TSearchSpace, TProblem, TTerminator>, ITerminatorInstance<TAlgorithmResult> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-  where TAlgorithmResult : IAlgorithmResult
-{
-  protected TerminatorExecution(TTerminator parameters, TSearchSpace searchSpace, TProblem problem) : base(parameters, searchSpace, problem) { }
+  public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding);
   
-  public abstract bool ShouldTerminate(TAlgorithmResult iterationResult);
-  public bool ShouldContinue(TAlgorithmResult iterationResult) {
-    return !ShouldTerminate(iterationResult);
+  bool ITerminator<TGenotype, TIterationResult, TEncoding, IProblem<TGenotype, TEncoding>>.ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
+    return ShouldTerminate(currentIterationState, previousIterationState, encoding);
   }
 }
 
-public abstract class TerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult, TTerminator> : OperatorExecution<TGenotype, TSearchSpace, TTerminator>, ITerminatorInstance<TAlgorithmResult> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult
+public abstract class Terminator<TGenotype, TIterationResult> : ITerminator<TGenotype, TIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
+  where TIterationResult : IIterationResult<TGenotype>
 {
-  protected TerminatorExecution(TTerminator parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
-  
-  public abstract bool ShouldTerminate(TAlgorithmResult iterationResult);
-  public bool ShouldContinue(TAlgorithmResult iterationResult) {
-    return !ShouldTerminate(iterationResult);
+  public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState);
+
+  bool ITerminator<TGenotype, TIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+    return ShouldTerminate(currentIterationState, previousIterationState);
   }
 }
 
-public sealed record class ProblemSpecificTerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult> : Terminator<TGenotype, TSearchSpace, TProblem, TAlgorithmResult>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TProblem : IOptimizable<TGenotype, TSearchSpace>
-  where TAlgorithmResult : IAlgorithmResult
+public abstract class Terminator<TGenotype> : ITerminator<TGenotype, IIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
 {
-  public Terminator<TGenotype, TSearchSpace, TAlgorithmResult> ProblemAgnosticTerminator { get; }
-  
-  public ProblemSpecificTerminator(Terminator<TGenotype, TSearchSpace, TAlgorithmResult> problemAgnosticTerminator) {
-    ProblemAgnosticTerminator = problemAgnosticTerminator;
-  }
-  
-  public override ITerminatorInstance<TAlgorithmResult> CreateExecution(TSearchSpace searchSpace, TProblem problem) {
-    return ProblemAgnosticTerminator.CreateExecution(searchSpace);
+  public abstract bool ShouldTerminate();
+
+
+  bool ITerminator<TGenotype, IIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.ShouldTerminate(IIterationResult<TGenotype> currentIterationState, IIterationResult<TGenotype>? previousIterationState, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+    return ShouldTerminate();
   }
 }
 
 
 
 
-// public static class TerminatorExtensions {
-//   public static bool ShouldContinue<TIterationResult>(this ITerminator<TIterationResult> terminator, TIterationResult iterationResult) where TIterationResult : IIterationResult 
-//   {
-//     return !terminator.ShouldTerminate(iterationResult);
+
+// public class OnMaximumIterationTerminator : AlgorithmStateBasedTerminator<IIterativeAlgorithm>
+// {
+//   public int MaximumGeneration { get; set; }
+//   public OnMaximumIterationTerminator(int maximumGeneration) {
+//     MaximumGeneration = maximumGeneration;
+//   }
+//   public override bool ShouldTerminate(IIterativeAlgorithm iterationResult) {
+//     return iterationResult.CurrentIteration >= MaximumGeneration;
 //   }
 // }
 
-public static class Terminator {
-  // public static CustomTerminator<TIterationResult> Create<TIterationResult>(Func<TIterationResult, bool> shouldTerminatePredicate) where TIterationResult : IIterationResult {
-  //   return new CustomTerminator<TIterationResult>(shouldTerminatePredicate);
-  // }
-  public static OnMaximumGenerationTerminator<TGenotype, TSearchSpace, TAlgorithmResult> OnGeneration<TGenotype, TSearchSpace, TAlgorithmResult>(int maxGenerations) 
-    where TSearchSpace : ISearchSpace<TGenotype>
-    where TAlgorithmResult : IAlgorithmResult 
-  {
-    return new OnMaximumGenerationTerminator<TGenotype, TSearchSpace, TAlgorithmResult>(maxGenerations);
-  }
-  public static AfterIterationsTerminator<TGenotype, TSearchSpace, TAlgorithmResult> AfterIterations<TGenotype, TSearchSpace, TAlgorithmResult>(int iterations)
-    where TSearchSpace : ISearchSpace<TGenotype>
-    where TAlgorithmResult : IAlgorithmResult 
-  {
-    return new AfterIterationsTerminator<TGenotype, TSearchSpace, TAlgorithmResult>(iterations);
-  }
-  public static MaximumExecutionTimeTerminator<TGenotype, TSearchSpace, TAlgorithmResult> OnExecutionTime<TGenotype, TSearchSpace, TAlgorithmResult>(TimeSpan maxTime)
-    where TSearchSpace : ISearchSpace<TGenotype>
-    where TAlgorithmResult : IAlgorithmResult 
-  {
-    return new MaximumExecutionTimeTerminator<TGenotype, TSearchSpace, TAlgorithmResult>(maxTime);
-  }
-  public static NeverTerminator<TGenotype, TSearchSpace, TAlgorithmResult> NeverTerminate<TGenotype, TSearchSpace, TAlgorithmResult>()
-    where TSearchSpace : ISearchSpace<TGenotype>
-    where TAlgorithmResult : IAlgorithmResult 
-  {
-    return new NeverTerminator<TGenotype, TSearchSpace, TAlgorithmResult>();
-  }
-}
 
-// public sealed class CustomTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
-//   private readonly Func<TIterationResult, bool> predicate;
-//   internal CustomTerminator(Func<TIterationResult, bool> predicate) {
-//     this.predicate = predicate;
-//   }
-//   public bool ShouldTerminate(TIterationResult iterationResult) => predicate(iterationResult);
-// }
-
-
-public record class OnMaximumGenerationTerminator<TGenotype, TSearchSpace, TAlgorithmResult> : Terminator<TGenotype, TSearchSpace, TAlgorithmResult>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
-{
-  public int MaximumGeneration { get; }
-  public OnMaximumGenerationTerminator(int maximumGeneration) {
-    MaximumGeneration = maximumGeneration;
-  }
-
-  public override OnMaximumGenerationTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> CreateExecution(TSearchSpace searchSpace) {
-    return new OnMaximumGenerationTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult>(this, searchSpace);
-  }
-}
-
-public class OnMaximumGenerationTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> : TerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult, OnMaximumGenerationTerminator<TGenotype, TSearchSpace, TAlgorithmResult>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
-{
-  public OnMaximumGenerationTerminatorExecution(OnMaximumGenerationTerminator<TGenotype, TSearchSpace, TAlgorithmResult> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) {}  
-
-  public override bool ShouldTerminate(TAlgorithmResult iterationResult) {
-    return iterationResult.CurrentIteration >= Parameters.MaximumGeneration;
-  }
-}
-
-
-public record class AfterIterationsTerminator<TGenotype, TSearchSpace, TAlgorithmResult> : Terminator<TGenotype, TSearchSpace, TAlgorithmResult> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
+public class AfterIterationsTerminator<TGenotype> : Terminator<TGenotype> 
 {
   public int MaximumIterations { get; }
+  
   public AfterIterationsTerminator(int maximumIterations) {
     MaximumIterations = maximumIterations;
+    CurrentCount = 0;
   }
-
-  public override AfterIterationsTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> CreateExecution(TSearchSpace searchSpace) {
-    return new AfterIterationsTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult>(this, searchSpace);
-  }
-}
-
-public class AfterIterationsTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> : TerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult, AfterIterationsTerminator<TGenotype, TSearchSpace, TAlgorithmResult>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
-{
+  
   public int CurrentCount { get; private set; }
   
-  public AfterIterationsTerminatorExecution(AfterIterationsTerminator<TGenotype, TSearchSpace, TAlgorithmResult> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) {
-    CurrentCount = 0;
-  }  
-
-  public override bool ShouldTerminate(TAlgorithmResult iterationResult) {
+  public override bool ShouldTerminate() {
     CurrentCount += 1;
-    return CurrentCount >= Parameters.MaximumIterations;
+    return CurrentCount >= MaximumIterations;
   }
 }
 
 
-public record class MaximumExecutionTimeTerminator<TGenotype, TSearchSpace, TAlgorithmResult> : Terminator<TGenotype, TSearchSpace, TAlgorithmResult>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
-{
-  public TimeSpan MaximumExecutionTime { get; }
-  public MaximumExecutionTimeTerminator(TimeSpan maximumExecutionTime) {
-    MaximumExecutionTime = maximumExecutionTime;
-  }
-  
-  public override MaximumExecutionTimeTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> CreateExecution(TSearchSpace searchSpace) {
-    return new MaximumExecutionTimeTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult>(this, searchSpace);
-  }
-}
-
-public class MaximumExecutionTimeTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> : TerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult, MaximumExecutionTimeTerminator<TGenotype, TSearchSpace, TAlgorithmResult>> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
-{
-  public MaximumExecutionTimeTerminatorExecution(MaximumExecutionTimeTerminator<TGenotype, TSearchSpace, TAlgorithmResult> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
-  
-  public override bool ShouldTerminate(TAlgorithmResult iterationResult) {
-    return iterationResult.TotalDuration >= Parameters.MaximumExecutionTime;
-  }
-}
-
-
-// public class PauseToken {
-//   public bool IsPaused { get; private set; }
-//   public void RequestPause() => IsPaused = true;
-// }
-//
-// public class PauseTokenTerminator<TIterationResult> : ITerminator<TIterationResult> where TIterationResult : IIterationResult {
-//   public PauseToken Token { get; }
-//   public PauseTokenTerminator(PauseToken pauseToken) {
-//     Token = pauseToken;
+// public  class MaximumExecutionTimeTerminator : AlgorithmStateBasedTerminator<IIterativeAlgorithm>
+// {
+//   public TimeSpan MaximumExecutionTime { get; set; }
+//   public MaximumExecutionTimeTerminator(TimeSpan maximumExecutionTime) {
+//     MaximumExecutionTime = maximumExecutionTime;
 //   }
-//   public bool ShouldTerminate(TIterationResult iterationResult) => Token.IsPaused;
-// }
-
-
-public record class NeverTerminator<TGenotype, TSearchSpace, TAlgorithmResult> : Terminator<TGenotype, TSearchSpace, TAlgorithmResult> where TAlgorithmResult : IAlgorithmResult 
-  where TSearchSpace : ISearchSpace<TGenotype>
-{
-  public override NeverTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> CreateExecution(TSearchSpace searchSpace) {
-    return new NeverTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult>(this, searchSpace);
-  }
-}
-
-public class NeverTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> : TerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult, NeverTerminator<TGenotype, TSearchSpace, TAlgorithmResult>> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult
-{
-  public NeverTerminatorExecution(NeverTerminator<TGenotype, TSearchSpace, TAlgorithmResult> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) { }
-  public override bool ShouldTerminate(TAlgorithmResult iterationResult) => false;
-}
-//
-// // ToDo: generic immutable list for operators
-// public record class TerminatorList<TIterationResult> : IReadOnlyList<Terminator<TIterationResult>>, IEquatable<TerminatorList<TIterationResult>>
-//   where TIterationResult : IIterationResult {
-//   private readonly Terminator<TIterationResult>[] terminators;
-//   public TerminatorList(IEnumerable<Terminator<TIterationResult>> terminators) {
-//     this.terminators = terminators.ToArray();
-//   }
-//   public Terminator<TIterationResult> this[int index] => terminators[index];
-//   public int Count => terminators.Length;
-//   public IEnumerator<Terminator<TIterationResult>> GetEnumerator() => ((IEnumerable<Terminator<TIterationResult>>)terminators).GetEnumerator();
-//   System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => terminators.GetEnumerator();
 //   
-//   public virtual bool Equals(TerminatorList<TIterationResult>? other) {
-//     if (other == null) return false;
-//     if (Count != other.Count) return false;
-//     for (int i = 0; i < Count; i++) {
-//       if (!this[i].Equals(other[i])) return false;
-//     }
-//     return true;
+//   public override bool ShouldTerminate(IIterativeAlgorithm algorithm) {
+//     return algorithm.TotalElapsedTime >= MaximumExecutionTime;
 //   }
-//   public override int GetHashCode() {
-//     var hash = new HashCode();
-//     foreach (var terminator in terminators) {
-//       hash.Add(terminator);
-//     }
-//     return hash.ToHashCode();
-//   }
-// } 
+// }
 
-public record class AnyTerminator<TGenotype, TSearchSpace, TAlgorithmResult> : Terminator<TGenotype, TSearchSpace, TAlgorithmResult> where TAlgorithmResult : IAlgorithmResult 
-  where TSearchSpace : ISearchSpace<TGenotype>
+
+public class PauseToken {
+  public bool IsPaused { get; private set; }
+  public void RequestPause() => IsPaused = true;
+}
+
+public class PauseTokenTerminator<TGenotype> : Terminator<TGenotype> {
+  private readonly PauseToken pauseToken;
+  public PauseTokenTerminator(PauseToken pauseToken) {
+    this.pauseToken = pauseToken;
+  }
+
+  public override bool ShouldTerminate() {
+    return pauseToken.IsPaused;
+  }
+}
+
+
+public class NeverTerminator<TGenotype> : Terminator<TGenotype>
 {
-  public ImmutableList<Terminator<TGenotype, TSearchSpace, TAlgorithmResult>> Terminators { get; }
-  public AnyTerminator(ImmutableList<Terminator<TGenotype, TSearchSpace, TAlgorithmResult>> terminators) {
+  public override bool ShouldTerminate() {
+    return false;
+  }
+}
+
+// public class StagnatedFitnessTerminator : IterationStateBasedTerminator<IIterationResult> {
+//   public int NumberOfIterations { get; set; }
+//   public double MinimumImprovement { get; set; }
+//   
+//   public StagnatedFitnessTerminator(int numberOfIterations, double minimumImprovement = double.Epsilon) {
+//     NumberOfIterations = numberOfIterations;
+//     MinimumImprovement = minimumImprovement;
+//     
+//     FitnessHistory = new List<double>(numberOfIterations);
+//   }
+//   
+//   public List<double> FitnessHistory { get; }
+//   
+//   
+//   public override bool ShouldTerminate(IIterationResult iterationResult) {
+//     // drop old values
+//     if (FitnessHistory.Count >= NumberOfIterations) {
+//       FitnessHistory.RemoveAt(0);
+//     }
+//     // add new value
+//     FitnessHistory.Add(iterationResult.BestFitness);
+//     // check if ramp-up is complete
+//     if (FitnessHistory.Count < NumberOfIterations) {
+//       return false; // not enough data to determine stagnation
+//     }
+//     // check if stagnation occurred: if there was progress in "any" of the last N iterations
+//     for (int i = 1; i < NumberOfIterations; i++) {
+//       if (Math.Abs(FitnessHistory[i] - FitnessHistory[i - 1]) > MinimumImprovement) {
+//         return false; // progress was made
+//       }
+//     }
+//     // if we reach here, it means no progress was made in the last N iterations
+//     return true; // stagnation detected
+//   }
+// }
+
+
+public class AnyTerminator<TGenotype, TIterationResult, TEncoding, TProblem> : Terminator<TGenotype, TIterationResult, TEncoding, TProblem>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
+{
+  public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> Terminators { get; }
+  public AnyTerminator(IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators) {
     Terminators = terminators;
   }
-  public override AnyTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> CreateExecution(TSearchSpace searchSpace) {
-    return new AnyTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult>(this, searchSpace);
+  public override bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem) {
+    return Terminators.Any(criterion => criterion.ShouldTerminate(currentIterationState, previousIterationState, encoding, problem));
   }
 }
 
-public class AnyTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> : TerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult, AnyTerminator<TGenotype, TSearchSpace, TAlgorithmResult>> 
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
-{
-  public IReadOnlyList<ITerminatorInstance<TAlgorithmResult>> Terminators { get; }
-  public AnyTerminatorExecution(AnyTerminator<TGenotype, TSearchSpace, TAlgorithmResult> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) {
-    Terminators = parameters.Terminators.Select(t => t.CreateExecution(searchSpace)).ToList();
-  }
-  public override bool ShouldTerminate(TAlgorithmResult iterationResult) {
-    return Terminators.Any(criterion => criterion.ShouldTerminate(iterationResult));
-  }
-}
 
-public record class AllTerminator<TGenotype, TSearchSpace, TAlgorithmResult> : Terminator<TGenotype, TSearchSpace, TAlgorithmResult>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
+public class AllTerminator<TGenotype, TIterationResult, TEncoding, TProblem> : Terminator<TGenotype, TIterationResult, TEncoding, TProblem>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : IEncoding<TGenotype>
+  where TProblem : IProblem<TGenotype, TEncoding>
 {
-  public ImmutableList<Terminator<TGenotype, TSearchSpace, TAlgorithmResult>> Terminators { get; }
-  public AllTerminator(ImmutableList<Terminator<TGenotype, TSearchSpace, TAlgorithmResult>> terminators) {
+  public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> Terminators { get; }
+  public AllTerminator(IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators) {
     Terminators = terminators;
   }
-  
-  public override AllTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> CreateExecution(TSearchSpace searchSpace) {
-    return new AllTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult>(this, searchSpace);
-  }
-}
-
-public class AllTerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult> : TerminatorExecution<TGenotype, TSearchSpace, TAlgorithmResult, AllTerminator<TGenotype, TSearchSpace, TAlgorithmResult>>
-  where TSearchSpace : ISearchSpace<TGenotype>
-  where TAlgorithmResult : IAlgorithmResult 
-{
-  public IReadOnlyList<ITerminatorInstance<TAlgorithmResult>> Terminators { get; }
-  public AllTerminatorExecution(AllTerminator<TGenotype, TSearchSpace, TAlgorithmResult> parameters, TSearchSpace searchSpace) : base(parameters, searchSpace) {
-    Terminators = parameters.Terminators.Select(t => t.CreateExecution(searchSpace)).ToList();
-  }
-
-  public override bool ShouldTerminate(TAlgorithmResult iterationResult) {
-    return Terminators.All(criterion => criterion.ShouldTerminate(iterationResult));
+  public override bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem) {
+    return Terminators.All(criterion => criterion.ShouldTerminate(currentIterationState, previousIterationState, encoding, problem));
   }
 }

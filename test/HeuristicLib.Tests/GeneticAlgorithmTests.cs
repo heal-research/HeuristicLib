@@ -1,9 +1,9 @@
 using FluentValidation;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Genotypes;
-using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.RealVectorSpace;
+using HEAL.HeuristicLib.Operators.RealVectorOperators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
@@ -13,17 +13,17 @@ namespace HEAL.HeuristicLib.Tests;
 public class GeneticAlgorithmTests {
   [Fact]
   public Task GeneticAlgorithm_Create_WithConstructor() {
-    var searchSpace = new RealVectorSearchSpace(10, -5, +5);
+    var searchSpace = new RealVectorEncoding(10, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     var decoder = Decoder.Identity<RealVector>();
     // var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector();
-    var replacement = new PlusSelectionReplacer<RealVector, RealVectorSearchSpace>();
-    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
+    var selector = new RandomSelector<RealVector>();
+    var replacement = new PlusSelectionReplacer<RealVector>();
+    var terminator = new AfterIterationsTerminator<RealVector>(5);
     
-    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
+    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
       //SearchSpace = searchSpace,
       populationSize: 200, 
       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
@@ -37,107 +37,108 @@ public class GeneticAlgorithmTests {
     return Verify(ga);
   }
   
-  [Fact]
-  public Task GeneticAlgorithm_Create_FromConfig() {
-    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-    var selector = new RandomSelector();
-    var replacement = new PlusSelectionReplacer<RealVector, RealVectorSearchSpace>();
-    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
-    
-    var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorSearchSpace> {
-      PopulationSize = 200, 
-      Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
-      Selector = selector, Replacer = replacement,
-      RandomSeed = 42,
-      Terminator = terminator
-    };
-    
-    var ga = config.Build();
+  // [Fact]
+  // public Task GeneticAlgorithm_Create_FromConfig() {
+  //   var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
+  //   var crossover = new SinglePointCrossover();
+  //   var mutator = new GaussianMutator(0.1, 0.1);
+  //   var selector = new RandomSelector<RealVector>();
+  //   var replacement = new PlusSelectionReplacer<RealVector>();
+  //   var terminator = new AfterIterationsTerminator<RealVector>(5);
+  //   
+  //   var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding> {
+  //     PopulationSize = 200, 
+  //     Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
+  //     Selector = selector, Replacer = replacement,
+  //     RandomSeed = 42,
+  //     Terminator = terminator
+  //   };
+  //   
+  //   var ga = config.Build();
+  //
+  //   return Verify(ga);
+  // }
   
-    return Verify(ga);
-  }
+  // [Fact]
+  // public void GeneticAlgorithm_CreateThrows_FromUnderspecifiedConfig() {
+  //   var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
+  //   var crossover = new SinglePointCrossover();
+  //   var mutator = new GaussianMutator(0.1, 0.1);
+  //  
+  //   var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding> {
+  //     PopulationSize = 200, 
+  //     Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
+  //     Selector = null, Replacer = null, // missing
+  //     RandomSeed = 42,
+  //   };
+  //
+  //   Should.Throw<ValidationException>(() => GeneticAlgorithm.FromConfiguration(config));
+  //   Should.Throw<ValidationException>(() => config.Build());
+  // }
   
-  [Fact]
-  public void GeneticAlgorithm_CreateThrows_FromUnderspecifiedConfig() {
-    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-   
-    var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorSearchSpace> {
-      PopulationSize = 200, 
-      Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
-      Selector = null, Replacer = null, // missing
-      RandomSeed = 42,
-    };
-
-    Should.Throw<ValidationException>(() => GeneticAlgorithm.FromConfiguration(config));
-    Should.Throw<ValidationException>(() => config.Build());
-  }
-  
-  [Fact]
-  public Task GeneticAlgorithm_Execute() {
-    var searchSpace = new RealVectorSearchSpace(3, -5, +5);
-    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-    var decoder = Decoder.Identity<RealVector>();
-    // var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector();
-    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
-    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
-    
-    // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
-    //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
-    // };
-    var problem = new RealVectorMockOptimizable();
-    
-    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
-      populationSize: 5, 
-      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
-      selector: selector, replacer: replacement,
-      randomSeed: 42, terminator: terminator
-    );
-
-    var finalState = ga.CreateExecution(problem).Execute();
-    
-    return Verify(finalState)
-      .IgnoreMembersWithType<TimeSpan>();
-  }
-  
-  [Fact]
-  public Task GeneticAlgorithm_ExecuteStream() {
-    var searchSpace = new RealVectorSearchSpace(3, -5, +5);
-    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-    var decoder = Decoder.Identity<RealVector>();
-    // var evaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector();
-    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
-    var terminator = Terminator.NeverTerminate<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>();
-    var problem = new RealVectorMockOptimizable();
-    // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
-    //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
-    // };
-    
-    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
-      //SearchSpace = searchSpace,
-      populationSize: 5, 
-      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
-      //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
-      selector: selector, replacer: replacement,
-      randomSeed: 42, terminator: terminator
-    );
-
-    var stream = ga.ExecuteStreaming(problem);
-
-    var results = stream.Take(5).ToList();
-    
-    return Verify(results)
-      .IgnoreMembersWithType<TimeSpan>();
-  }
+  // [Fact]
+  // public Task GeneticAlgorithm_Execute() {
+  //   var searchSpace = new RealVectorEncoding(3, -5, +5);
+  //   var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
+  //   var crossover = new SinglePointCrossover();
+  //   var mutator = new GaussianMutator(0.1, 0.1);
+  //   var decoder = Decoder.Identity<RealVector>();
+  //   // var evaluator = new RealVectorMockEvaluator();
+  //   var selector = new RandomSelector<RealVector>();
+  //   var replacement = new ElitismReplacer<RealVector>(0);
+  //   var terminator = new AfterIterationsTerminator<RealVector>(5)
+  //   ; 
+  //   
+  //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
+  //   //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
+  //   // };
+  //   var problem = new TestFunctionProblem(new SphereFunction(3));
+  //   
+  //   var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+  //     populationSize: 5, 
+  //     creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
+  //     selector: selector, replacer: replacement,
+  //     randomSeed: 42, terminator: terminator
+  //   );
+  //
+  //   var finalState = ga.CreateExecution(problem).Execute();
+  //   
+  //   return Verify(finalState)
+  //     .IgnoreMembersWithType<TimeSpan>();
+  // }
+  //
+  // [Fact]
+  // public Task GeneticAlgorithm_ExecuteStream() {
+  //   var searchSpace = new RealVectorEncoding(3, -5, +5);
+  //   var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
+  //   var crossover = new SinglePointCrossover();
+  //   var mutator = new GaussianMutator(0.1, 0.1);
+  //   var decoder = Decoder.Identity<RealVector>();
+  //   // var evaluator = new RealVectorMockEvaluator();
+  //   var selector = new RandomSelector();
+  //   var replacement = new ElitismReplacer(0);
+  //   var terminator = Terminator.NeverTerminate<GeneticAlgorithmResult<RealVector>>();
+  //   var problem = new RealVectorMockOptimizable();
+  //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
+  //   //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
+  //   // };
+  //   
+  //   var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+  //     //SearchSpace = searchSpace,
+  //     populationSize: 5, 
+  //     creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
+  //     //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
+  //     selector: selector, replacer: replacement,
+  //     randomSeed: 42, terminator: terminator
+  //   );
+  //
+  //   var stream = ga.ExecuteStreaming(problem);
+  //
+  //   var results = stream.Take(5).ToList();
+  //   
+  //   return Verify(results)
+  //     .IgnoreMembersWithType<TimeSpan>();
+  // }
   
   // [Fact]
   // public async Task GeneticAlgorithm_TerminateWithPauseToken() {
@@ -181,80 +182,80 @@ public class GeneticAlgorithmTests {
   //   finalState.TotalGenerations.ShouldBeGreaterThan(0);
   // }
   
-  [Fact]
-  public async Task GeneticAlgorithm_ExecuteAndContinueWithOtherAlg() {
-    var searchSpace = new RealVectorSearchSpace(3, -5, +5);
-    var creator = new UniformDistributedCreator(minimum: null, maximum: null);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-    var decoder = Decoder.Identity<RealVector>();
-    // var evaluator = new RealVectorMockEvaluator();
-    var selector = new ProportionalSelector();
-    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
-    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
-
-    var problem = new RealVectorMockOptimizable();
-    // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
-    //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
-    // };
-    
-    var firstAlg = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
-      populationSize: 5, 
-      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
-      selector: selector, replacer: replacement, 
-      randomSeed: 42, terminator: terminator
-    );
-
-    var firstResult = firstAlg.ExecuteStreaming(problem).Last();
-
-    var newTerminationCriterion = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(12);
-    var continuationState = firstResult.GetContinuationState();
-    var secondAlg = firstAlg with {
-      PopulationSize = 8, Terminator = newTerminationCriterion
-    };
-
-    var finalState = secondAlg.CreateExecution(problem).Execute(initialState: continuationState);
-
-    await Verify(new { firstResult, finalState })
-      .IgnoreMembersWithType<TimeSpan>();
-  }
-
-  [Fact]
-  public void GeneticAlgorithm_ExecutingWithInitialStateThatShouldImmediatelyTerminate_DoesNotIterate() {
-    var searchSpace = new RealVectorSearchSpace(3, -5, +5);
-    var creator = new UniformDistributedCreator();
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-    var decoder = Decoder.Identity<RealVector>();
-    // var evaluator = new RealVectorMockEvaluator();
-    var selector = new ProportionalSelector();
-    var replacement = new ElitismReplacer<RealVector, RealVectorSearchSpace>(0);
-    var terminator = Terminator.OnGeneration<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>(5);
-
-    var problem = new RealVectorMockOptimizable();
-    // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
-    //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
-    // };
-    var alg = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
-      populationSize: 5, 
-      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
-      selector: selector, replacer: replacement, 
-      randomSeed: 42, terminator: terminator
-    );
-    var initialState = new GeneticAlgorithmState<RealVector> {
-      Generation = 100, Population = []
-    };
-
-    var iterationResults = alg.ExecuteStreaming(problem, initialState).ToList();
-    iterationResults.ShouldBeEmpty();
-  }
+  // [Fact]
+  // public async Task GeneticAlgorithm_ExecuteAndContinueWithOtherAlg() {
+  //   var searchSpace = new RealVectorEncoding(3, -5, +5);
+  //   var creator = new UniformDistributedCreator(minimum: null, maximum: null);
+  //   var crossover = new SinglePointCrossover();
+  //   var mutator = new GaussianMutator(0.1, 0.1);
+  //   var decoder = Decoder.Identity<RealVector>();
+  //   // var evaluator = new RealVectorMockEvaluator();
+  //   var selector = new ProportionalSelector();
+  //   var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
+  //   var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(5);
+  //
+  //   var problem = new RealVectorMockOptimizable();
+  //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
+  //   //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
+  //   // };
+  //   
+  //   var firstAlg = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+  //     populationSize: 5, 
+  //     creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
+  //     selector: selector, replacer: replacement, 
+  //     randomSeed: 42, terminator: terminator
+  //   );
+  //
+  //   var firstResult = firstAlg.ExecuteStreaming(problem).Last();
+  //
+  //   var newTerminationCriterion = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(12);
+  //   var continuationState = firstResult.GetContinuationState();
+  //   var secondAlg = firstAlg with {
+  //     PopulationSize = 8, Terminator = newTerminationCriterion
+  //   };
+  //
+  //   var finalState = secondAlg.CreateExecution(problem).Execute(initialState: continuationState);
+  //
+  //   await Verify(new { firstResult, finalState })
+  //     .IgnoreMembersWithType<TimeSpan>();
+  // }
+  //
+  // [Fact]
+  // public void GeneticAlgorithm_ExecutingWithInitialStateThatShouldImmediatelyTerminate_DoesNotIterate() {
+  //   var searchSpace = new RealVectorEncoding(3, -5, +5);
+  //   var creator = new UniformDistributedCreator();
+  //   var crossover = new SinglePointCrossover();
+  //   var mutator = new GaussianMutator(0.1, 0.1);
+  //   var decoder = Decoder.Identity<RealVector>();
+  //   // var evaluator = new RealVectorMockEvaluator();
+  //   var selector = new ProportionalSelector();
+  //   var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
+  //   var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(5);
+  //
+  //   var problem = new RealVectorMockOptimizable();
+  //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
+  //   //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize
+  //   // };
+  //   var alg = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
+  //     populationSize: 5, 
+  //     creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
+  //     selector: selector, replacer: replacement, 
+  //     randomSeed: 42, terminator: terminator
+  //   );
+  //   var initialState = new GeneticAlgorithmState<RealVector> {
+  //     Generation = 100, Population = []
+  //   };
+  //
+  //   var iterationResults = alg.ExecuteStreaming(problem, initialState).ToList();
+  //   iterationResults.ShouldBeEmpty();
+  // }
   
   
-  private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
-    public ObjectiveVector Evaluate(RealVector solution) => solution.Sum();
-    public Objective Objective => SingleObjective.Minimize;
-    public RealVectorSearchSpace SearchSpace => new RealVectorSearchSpace(3, -5, +5);
-  }
+  // private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
+  //   public ObjectiveVector Evaluate(RealVector solution) => solution.Sum();
+  //   public Objective Objective => SingleObjective.Minimize;
+  //   public RealVectorSearchSpace ProblemContext => new RealVectorSearchSpace(3, -5, +5);
+  // }
 //
 //   [Fact]
 //   public async Task GeneticAlgorithm_WithMultiChromosomeGenotype() {

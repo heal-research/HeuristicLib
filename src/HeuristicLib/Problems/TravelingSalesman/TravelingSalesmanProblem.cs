@@ -1,6 +1,6 @@
-﻿using HEAL.HeuristicLib.Genotypes;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
@@ -12,13 +12,15 @@ public class Tour {
 }
 
 // This is an example problem that uses a permutation search spaces to get access to the standard operators, but also offers custom TSP-specific operators.
-public class TravelingSalesmanProblem : ProblemBase<Permutation, PermutationSearchSpace, ITravelingSalesmanProblemData> {
+public class TravelingSalesmanProblem : PermutationProblem {
 
-  // public ITravelingSalesmanProblemData ProblemData { get; }
+  public ITravelingSalesmanProblemData ProblemData { get; }
 
   public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
-    : base(new PermutationSearchSpace(problemData.NumberOfCities), SingleObjective.Minimize, problemData) {
-    // ProblemData = problemData;
+    : base(SingleObjective.Minimize) {
+    ProblemData = problemData;
+  }
+  public TravelingSalesmanProblem() : this(null!) {
   }
 
   public override ObjectiveVector Evaluate(Permutation solution) {
@@ -30,6 +32,10 @@ public class TravelingSalesmanProblem : ProblemBase<Permutation, PermutationSear
     totalDistance += ProblemData.GetDistance(tour[^1], tour[0]);// Return to the starting city
 
     return totalDistance;
+  }
+  
+  public override PermutationEncoding GetEncoding() {
+    return new PermutationEncoding(ProblemData.NumberOfCities);
   }
   
   // public override Tour Decode(Permutation genotype) => new Tour(genotype);
