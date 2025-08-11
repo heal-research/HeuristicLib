@@ -71,19 +71,17 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
 
   protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteInitialization(TProblem problem) {
     var startCreating = Stopwatch.GetTimestamp();
-    var genotypes = Enumerable.Range(0, PopulationSize).Select(i => Creator.Create(random, problem.Encoding, problem)).ToArray();
+    var population = Creator.Create(PopulationSize, random, problem.Encoding, problem);
     var endCreating = Stopwatch.GetTimestamp();
     CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
     
     var startEvaluating = Stopwatch.GetTimestamp();
-    var fitnesses = genotypes.Select(genotype => problem.Evaluate(genotype)).ToArray();
+    var fitnesses = problem.Evaluate(population);
     var endEvaluating = Stopwatch.GetTimestamp();
-    EvaluationsMetric += new OperatorMetric(genotypes.Length, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating));
-
-    var population = Population.From(genotypes, fitnesses);
+    EvaluationsMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating));
     
     var result = new GeneticAlgorithmIterationResult<TGenotype>() {
-      Population = population
+      Population = Population.From(population, fitnesses)
     };
 
     return result;
@@ -92,46 +90,48 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteGeneration(TProblem problem, GeneticAlgorithmIterationResult<TGenotype> previousGenerationResult) {
     int offspringCount = Replacer.GetOffspringCount(PopulationSize);
 
-    var oldPopulation = previousGenerationResult.Population.ToList();
+    var oldPopulation = previousGenerationResult.Population.ToArray();
     
     var startSelection = Stopwatch.GetTimestamp();
-    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, problem.Encoding, problem).ToList();
+    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, problem.Encoding, problem);
     var endSelection = Stopwatch.GetTimestamp();
     SelectionMetric += new OperatorMetric(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection));
-     
-    var genotypes = new TGenotype[offspringCount];
+    
+    var parentPairs = new ValueTuple<TGenotype, TGenotype>[offspringCount];
+    for (int i = 0, j = 0; i < offspringCount; i++, j += 2) {
+      parentPairs[i] = (parents[j].Genotype, parents[j + 1].Genotype);
+    }
+
     var startCrossover = Stopwatch.GetTimestamp();
     int crossoverCount = 0;
-    for (int i = 0; i < parents.Count; i += 2) {
-      var parent1 = parents[i];
-      var parent2 = parents[i + 1];
-      var child = Crossover.Cross(parent1.Genotype, parent2.Genotype, random, problem.Encoding, problem);
-      genotypes[i / 2] = child;
-      crossoverCount++;
-    }
+    var population = Crossover.Cross(parentPairs, random, problem.Encoding, problem);
     var endCrossover = Stopwatch.GetTimestamp();
     CrossoverMetric += new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover));
     
     var startMutation = Stopwatch.GetTimestamp();
+    var mutatedGenotypes = new TGenotype[offspringCount];
     int mutationCount = 0;
-    for (int i = 0; i < genotypes.Length; i++) {
-      if (random.Random() < MutationRate) {
-        genotypes[i] = Mutator.Mutate(genotypes[i], random, problem.Encoding, problem);
-        mutationCount++;
-      }
-    }
+    // ToDo: use a MultiMutator with the "actual" mutator, biased by the mutation rate
+    population = Mutator.Mutate(population, random, problem.Encoding, problem);
+    //
+    // for (int i = 0; i < population.Count; i++) {
+    //   if (random.Random() < MutationRate) {
+    //     mutatedGenotypes[i] = Mutator.Mutate([population[i]], random, problem.Encoding, problem)[0];
+    //     mutationCount++;
+    //   }
+    // }
     var endMutation = Stopwatch.GetTimestamp();
     MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
     
     var startEvaluation = Stopwatch.GetTimestamp();
-    var fitnesses = genotypes.Select(genotype => problem.Evaluate(genotype)).ToArray();
+    var fitnesses = problem.Evaluate(mutatedGenotypes);
     var endEvaluation = Stopwatch.GetTimestamp();
-    EvaluationsMetric += new OperatorMetric(fitnesses.Length, Stopwatch.GetElapsedTime(startEvaluation, endEvaluation));
-    
-    var population = Population.From(genotypes, fitnesses).ToList();
+    EvaluationsMetric += new OperatorMetric(fitnesses.Count, Stopwatch.GetElapsedTime(startEvaluation, endEvaluation));
+
+    var evaluatedPopulation = Population.From(population, fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
-    var newPopulation = Replacer.Replace(oldPopulation, population, problem.Objective, random, problem.Encoding, problem);
+    var newPopulation = Replacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, random, problem.Encoding, problem);
     var endReplacement = Stopwatch.GetTimestamp();
     ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
     

@@ -14,7 +14,8 @@ public class AlphaBetaBlendCrossover : Crossover<RealVector, RealVectorEncoding>
     Beta = beta;
   }
 
-  public override RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+  public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+    var (parent1, parent2) = parents;
     var result = Alpha * parent1 + Beta * parent2;
     return RealVector.Clamp(result, encoding.Minimum, encoding.Maximum);
   }

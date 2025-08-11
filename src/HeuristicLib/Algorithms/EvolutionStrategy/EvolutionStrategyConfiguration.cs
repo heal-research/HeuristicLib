@@ -1,8 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Optimization;
-
-namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
+﻿namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
 public enum EvolutionStrategyType {
   Comma,

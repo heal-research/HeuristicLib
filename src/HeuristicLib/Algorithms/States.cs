@@ -1,8 +1,4 @@
-﻿using System.Collections;
-using System.Diagnostics;
-using HEAL.HeuristicLib.Optimization;
-
-namespace HEAL.HeuristicLib.Algorithms;
+﻿namespace HEAL.HeuristicLib.Algorithms;
 
 //
 // public interface IIterationResult {

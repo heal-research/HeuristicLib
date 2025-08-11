@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 

@@ -269,25 +269,25 @@ public class TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVe
 
 public class IndependentCrossover<TGenotype> : Crossover<TGenotype>
 {
-  public override TGenotype Cross(TGenotype parent1, TGenotype parent2, IRandomNumberGenerator random) => throw new NotImplementedException();
+  public override TGenotype Cross((TGenotype, TGenotype) parents, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class PermutationSpecificCrossover : Crossover<Permutation, PermutationEncoding>
 {
-  public override Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random, PermutationEncoding encoding) => throw new NotImplementedException();
+  public override Permutation Cross((Permutation, Permutation) parents, IRandomNumberGenerator random, PermutationEncoding encoding) => throw new NotImplementedException();
 }
 
 public class TspSpecificCrossover : Crossover<Permutation, PermutationEncoding, TravelingSalesmanProblem>
 {
-  public override Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random, PermutationEncoding encoding, TravelingSalesmanProblem problem) => throw new NotImplementedException();
+  public override Permutation Cross((Permutation, Permutation) parents, IRandomNumberGenerator random, PermutationEncoding encoding, TravelingSalesmanProblem problem) => throw new NotImplementedException();
 }
 
 public class RealVectorSpecificCrossover : Crossover<RealVector, RealVectorEncoding>
 {
-  public override RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, RealVectorEncoding encoding) => throw new NotImplementedException();
+  public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding) => throw new NotImplementedException();
 }
 
 public class TestFunctionProblemSpecificCrossover : Crossover<RealVector, RealVectorEncoding, TestFunctionProblem>
 {
-  public override RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, RealVectorEncoding encoding, TestFunctionProblem problem) => throw new NotImplementedException();
+  public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding, TestFunctionProblem problem) => throw new NotImplementedException();
 }

@@ -17,7 +17,7 @@ public interface IProblem
 public interface IProblem<in TGenotype, out TEncoding> : IProblem
   where TEncoding : IEncoding<TGenotype>
 {
-  ObjectiveVector Evaluate(TGenotype solution);
+  IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solution);
   
   TEncoding Encoding { get; }
 }
@@ -93,6 +93,14 @@ public abstract class Problem<TSolution, TEncoding> : IProblem<TSolution, TEncod
   }
   
   public abstract ObjectiveVector Evaluate(TSolution solution);
+
+  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> solution) {
+    var results = new ObjectiveVector[solution.Count];
+    Parallel.For(0, solution.Count, i => {
+      results[i] = Evaluate(solution[i]);
+    });
+    return results;
+  }
 
   public abstract TEncoding GetEncoding();
 }

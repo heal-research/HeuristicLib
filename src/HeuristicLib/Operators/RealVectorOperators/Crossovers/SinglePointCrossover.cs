@@ -7,7 +7,8 @@ namespace HEAL.HeuristicLib.Operators.RealVectorOperators;
 
 public class SinglePointCrossover : Crossover<RealVector, RealVectorEncoding>
 {
-  public override RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+  public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+    var (parent1, parent2) = parents;
     int crossoverPoint = random.Integer(1, parent1.Count);
     double[] offspringValues = new double[parent1.Count];
     for (int i = 0; i < crossoverPoint; i++) {

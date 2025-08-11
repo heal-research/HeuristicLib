@@ -6,7 +6,8 @@ namespace HEAL.HeuristicLib.Operators.PermutationOperators;
 
 public class PartiallyMatchedCrossover : Crossover<Permutation, PermutationEncoding>
 {
-  public override Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random, PermutationEncoding encoding) {
+  public override Permutation Cross((Permutation, Permutation) parents, IRandomNumberGenerator random, PermutationEncoding encoding) {
+    var (parent1, parent2) = parents;
     return Permutation.OrderCrossover(parent1, parent2, random); // implement PMX
   }
 }
