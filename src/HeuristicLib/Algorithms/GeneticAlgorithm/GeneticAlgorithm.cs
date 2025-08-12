@@ -63,15 +63,16 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   }
 
   public override GeneticAlgorithmIterationResult<TGenotype> ExecuteStep(TProblem problem, GeneticAlgorithmIterationResult<TGenotype>? previousIterationResult = null) {
+    var context = new ExecutionContext<TEncoding, TProblem>(random, problem.Encoding, problem);
     return previousIterationResult switch {
-      null => ExecuteInitialization(problem),
-      _ => ExecuteGeneration(problem, previousIterationResult)
+      null => ExecuteInitialization(problem, context),
+      _ => ExecuteGeneration(problem, previousIterationResult, context)
     };
   }
 
-  protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteInitialization(TProblem problem) {
+  protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteInitialization(TProblem problem, ExecutionContext<TEncoding, TProblem> context) {
     var startCreating = Stopwatch.GetTimestamp();
-    var population = Creator.Create(PopulationSize, random, problem.Encoding, problem);
+    var population = Creator.Create(PopulationSize, context);
     var endCreating = Stopwatch.GetTimestamp();
     CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
     
@@ -87,7 +88,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     return result;
   }
   
-  protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteGeneration(TProblem problem, GeneticAlgorithmIterationResult<TGenotype> previousGenerationResult) {
+  protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteGeneration(TProblem problem, GeneticAlgorithmIterationResult<TGenotype> previousGenerationResult, ExecutionContext<TEncoding, TProblem> context) {
     int offspringCount = Replacer.GetOffspringCount(PopulationSize);
 
     var oldPopulation = previousGenerationResult.Population.ToArray();

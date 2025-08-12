@@ -1,6 +1,5 @@
 ﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -8,7 +7,18 @@ public interface ICreator<TGenotype, in TEncoding, in TProblem>
   where TEncoding : IEncoding<TGenotype>
   where TProblem : IProblem<TGenotype, TEncoding>
 {
-  IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+  IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding, TProblem> context);
+}
+
+public interface ICreator<TGenotype, in TEncoding> : ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
+  where TEncoding : IEncoding<TGenotype>
+{
+  IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding> context);
+}
+
+public interface ICreator<TGenotype> : ICreator<TGenotype, IEncoding<TGenotype>>
+{
+  IReadOnlyList<TGenotype> Create(int count, IExecutionContext context);
 }
 
 
@@ -16,25 +26,28 @@ public abstract class BatchCreator<TGenotype, TEncoding, TProblem> : ICreator<TG
   where TEncoding : IEncoding<TGenotype>
   where TProblem : IProblem<TGenotype, TEncoding>
 {
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+  public abstract IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding, TProblem> context);
 }
 
-public abstract class BatchCreator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
+public abstract class BatchCreator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding>
   where TEncoding : IEncoding<TGenotype>
 {
-  public abstract IReadOnlyList<TGenotype> Create(IRandomNumberGenerator random, TEncoding encoding);
+  public abstract IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding> context);
 
-  IReadOnlyList<TGenotype> ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Create(int count, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
-    return Create(random, encoding);
+  IReadOnlyList<TGenotype> ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Create(int count, IExecutionContext<TEncoding, IProblem<TGenotype, TEncoding>> context) {
+    return Create(count, context);
   }
 }
 
-public abstract class BatchCreator<TGenotype> : ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
+public abstract class BatchCreator<TGenotype> : ICreator<TGenotype>
 {
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding);
+  public abstract IReadOnlyList<TGenotype> Create(int count, IExecutionContext context);
   
-  IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Create(int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
-    return Create(count, random, encoding);
+  IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Create(int count, IExecutionContext<IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> context) {
+    return Create(count, context);
+  }
+  IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>>.Create(int count, IExecutionContext<IEncoding<TGenotype>> context) {
+    return Create(count, context);
   }
 }
 
@@ -43,42 +56,40 @@ public abstract class Creator<TGenotype, TEncoding, TProblem> : ICreator<TGenoty
   where TEncoding : IEncoding<TGenotype>
   where TProblem : IProblem<TGenotype, TEncoding>
 {
-  public abstract TGenotype Create(IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+  public abstract TGenotype Create(IExecutionContext<TEncoding, TProblem> context);
 
-
-  IReadOnlyList<TGenotype> ICreator<TGenotype, TEncoding, TProblem>.Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    var offspring = new TGenotype[count];
-    Parallel.For(0, count, i => {
-      offspring[i] = Create(random, encoding, problem);
-    });
-    return offspring;
+  public IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding, TProblem> context) {
+    return context.ParallelFor(0, count, Create);
   }
 }
 
-public abstract class Creator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
+public abstract class Creator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding>
   where TEncoding : IEncoding<TGenotype>
 {
-  public abstract TGenotype Create(IRandomNumberGenerator random, TEncoding encoding);
+  public abstract TGenotype Create(IExecutionContext<TEncoding> context);
   
-  IReadOnlyList<TGenotype> ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Create(int count, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
-    var offspring = new TGenotype[count];
-    Parallel.For(0, count, i => {
-      offspring[i] = Create(random, encoding);
-    });
-    return offspring;
+  public IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding> context) {
+    return context.ParallelFor(0, count, Create);
+  }
+  
+  IReadOnlyList<TGenotype> ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Create(int count, IExecutionContext<TEncoding, IProblem<TGenotype, TEncoding>> context) {
+    return Create(count, context);
   }
 }
 
-public abstract class Creator<TGenotype> : ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
+public abstract class Creator<TGenotype> : ICreator<TGenotype>
 {
-  public abstract TGenotype Create(IRandomNumberGenerator random);
+  public abstract TGenotype Create(IExecutionContext context);
   
-  IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Create(int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
-    var offspring = new TGenotype[count];
-    Parallel.For(0, count, i => {
-      offspring[i] = Create(random);
-    });
-    return offspring;
+  public IReadOnlyList<TGenotype> Create(int count, IExecutionContext context) {
+    return context.ParallelFor(0, count, Create);
+  }
+  
+  IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Create(int count, IExecutionContext<IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> context) {
+    return Create(count, context);
+  }
+  IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>>.Create(int count, IExecutionContext<IEncoding<TGenotype>> context) {
+    return Create(count, context);
   }
 }
 
@@ -98,7 +109,7 @@ public class PredefinedSolutionsCreator<TGenotype, TEncoding, TProblem> : BatchC
     this.creatorForRemainingSolutions = creatorForRemainingSolutions;
   }
 
-  public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+  public override IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding, TProblem> context) {
     var offspring = new TGenotype[count];
     
     int countPredefined = Math.Min(predefinedSolutions.Count - currentSolutionIndex, count);
@@ -111,7 +122,7 @@ public class PredefinedSolutionsCreator<TGenotype, TEncoding, TProblem> : BatchC
 
     int countRemaining = count - countPredefined;
     if (countRemaining > 0) {
-      var remaining = creatorForRemainingSolutions.Create(countRemaining, random, encoding, problem);
+      var remaining = creatorForRemainingSolutions.Create(countRemaining, context);
       for (int i = 0; i < countRemaining; i++) {
         offspring[countPredefined + i] = remaining[i];
       }

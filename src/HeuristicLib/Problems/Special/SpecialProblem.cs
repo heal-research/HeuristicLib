@@ -37,7 +37,8 @@ public class SpecialGenotypeCreator : Creator<SpecialGenotype, SpecialEncoding, 
   public SpecialGenotypeCreator(int parameter) {
     Parameter = parameter;
   }
-  public override SpecialGenotype Create(IRandomNumberGenerator random, SpecialEncoding encoding, SpecialProblem problem) {
+  public override SpecialGenotype Create(IExecutionContext<SpecialEncoding, SpecialProblem> context) {
+    var random = context.Random;
     return new SpecialGenotype(random.Integer(0, Parameter));
   }
 }

@@ -77,6 +77,8 @@ public interface IRandomNumberGenerator {
   double Random();
   int Integer(int low, int high, bool endpoint = false);
   byte[] Bytes(int length);
+
+  IRandomNumberGenerator Fork(params int[] keys);
 }
 
 public static class RandomGeneratorExtensions {
@@ -128,6 +130,10 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
     return bytes;
   }
   
+  public IRandomNumberGenerator Fork(params int[] keys) {
+    int newSeed = keys.Aggregate(random.Next(), (current, key) => current ^ key);
+    return new SystemRandomNumberGenerator(newSeed);
+  }
 }
 
 // ToDo: and others
@@ -139,6 +145,9 @@ public class MersenneTwister : IRandomNumberGenerator {
     throw new NotImplementedException();
   }
   public byte[] Bytes(int length) {
+    throw new NotImplementedException();
+  }
+  public IRandomNumberGenerator Fork(params int[] keys) {
     throw new NotImplementedException();
   }
 }

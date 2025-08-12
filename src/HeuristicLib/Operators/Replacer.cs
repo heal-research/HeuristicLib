@@ -12,6 +12,18 @@ public interface IReplacer<TGenotype, in TEncoding, in TProblem>
   int GetOffspringCount(int populationSize);
 }
 
+public interface IReplacer<TGenotype, in TEncoding> : IReplacer<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
+  where TEncoding : IEncoding<TGenotype>
+{
+  IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, TEncoding encoding);
+}
+
+public interface IReplacer<TGenotype> : IReplacer<TGenotype, IEncoding<TGenotype>>
+{
+  IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random);
+}
+
+
 public abstract class Replacer<TGenotype, TEncoding, TProblem> : IReplacer<TGenotype, TEncoding, TProblem>
   where TEncoding : IEncoding<TGenotype>
   where TProblem : IProblem<TGenotype, TEncoding>
@@ -21,7 +33,7 @@ public abstract class Replacer<TGenotype, TEncoding, TProblem> : IReplacer<TGeno
   public abstract int GetOffspringCount(int populationSize);
 }
 
-public abstract class Replacer<TGenotype, TEncoding> : IReplacer<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
+public abstract class Replacer<TGenotype, TEncoding> : IReplacer<TGenotype, TEncoding>
   where TEncoding : IEncoding<TGenotype>
 {
   public abstract IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, TEncoding encoding);
@@ -33,13 +45,16 @@ public abstract class Replacer<TGenotype, TEncoding> : IReplacer<TGenotype, TEnc
   }
 }
 
-public abstract class Replacer<TGenotype> : IReplacer<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
+public abstract class Replacer<TGenotype> : IReplacer<TGenotype>
 {
   public abstract IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random);
   
   public abstract int GetOffspringCount(int populationSize);
   
   IReadOnlyList<Solution<TGenotype>> IReplacer<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>?> problem) {
+    return Replace(previousPopulation, offspringPopulation, objective, random);
+  }
+  IReadOnlyList<Solution<TGenotype>> IReplacer<TGenotype, IEncoding<TGenotype>>.Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
     return Replace(previousPopulation, offspringPopulation, objective, random);
   }
 }

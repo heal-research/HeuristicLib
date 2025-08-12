@@ -45,12 +45,12 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
   private readonly double[] values;
   
   public ObjectiveVector(params double[] values) : this(values.AsSpan()) { }
-  public ObjectiveVector(params IEnumerable<double> values) {
-    if (this.values.Length() == 0) throw new ArgumentException("Fitness vector must not be empty");
+  public ObjectiveVector(params IReadOnlyList<double> values) {
+    if (values.Count == 0) throw new ArgumentException("Fitness vector must not be empty");
     this.values = values.ToArray();
   }
   public ObjectiveVector(params ReadOnlySpan<double> values) {
-    if (this.values.Length() == 0) throw new ArgumentException("Fitness vector must not be empty");
+    if (values.Length == 0) throw new ArgumentException("Fitness vector must not be empty");
     this.values = values.ToArray();
   }
   

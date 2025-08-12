@@ -6,7 +6,8 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public class TspCreator : Creator<Permutation, PermutationEncoding, TravelingSalesmanProblem> {
-  public override Permutation Create(IRandomNumberGenerator random, PermutationEncoding encoding, TravelingSalesmanProblem problem) {
+  public override Permutation Create(IExecutionContext<PermutationEncoding, TravelingSalesmanProblem> context) {
+    var problem = context.Problem;
     var problemData = problem.ProblemData;
     var destinationsSortedToFirstCities = Enumerable
       .Range(1, problemData.NumberOfCities - 1)
