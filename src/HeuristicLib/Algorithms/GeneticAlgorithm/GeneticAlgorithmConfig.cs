@@ -2,29 +2,34 @@
 // using FluentValidation.Results;
 // using HEAL.HeuristicLib.Operators;
 // using HEAL.HeuristicLib.Optimization;
+// using HEAL.HeuristicLib.Problems;
 //
 // namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-//
-// public record GeneticAlgorithmConfiguration<TGenotype, TEncoding, TProblem>
-//   where TEncoding : IEncoding<TGenotype>
-//   where TProblem : IOptimizable<TGenotype>
+
+// public abstract record IterativeAlgorithmConfig<TGenotype, TEncoding, TProblem, TIterationResult>
 // {
-//   public int? PopulationSize { get; init; }
-//   public CreatorConfiguration<TGenotype, TEncoding, TProblem>? Creator { get; init; }
-//   public Crossover<TGenotype, TEncoding, TProblem>? Crossover { get; init; }
-//   public Mutator<TGenotype, TEncoding, TProblem>? Mutator { get; init; }
-//   public double? MutationRate { get; init; }
-//   public Selector<TGenotype, TEncoding, TProblem>? Selector { get; init; }
-//   public Replacer<TGenotype, TEncoding, TProblem>? Replacer { get; init; }
-//   public int? RandomSeed { get; init; }
-//   public Interceptor<TProblem, GeneticAlgorithmIterationResult<TGenotype>>? Interceptor { get; init; }
-//   public Terminator<TProblem, GeneticAlgorithmResult<TGenotype>>? Terminator { get; init; }
+//   public TerminatorConfig<TGenotype, TIterationResult, TEncoding, TProblem>? Terminator { get; }
+//   public InterceptorConfig<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; }
 // }
 //
-// // public record GeneticAlgorithmConfiguration<TGenotype> : GeneticAlgorithmConfiguration<TGenotype, IOptimizable<TGenotype>>
-// // {
-// // }
-//
+// public record GeneticAlgorithmConfig<TGenotype, TEncoding, TProblem> : IterativeAlgorithmConfig<TGenotype, TEncoding, TProblem, GeneticAlgorithmIterationResult<TGenotype>>
+//   where TEncoding : class, IEncoding<TGenotype>
+//   where TProblem : IProblem<TGenotype>
+// {
+//   public int? PopulationSize { get; init; }
+//   public CreatorConfig<TGenotype, TEncoding, TProblem>? Creator { get; init; }
+//   public CrossoverConfig<TGenotype, TEncoding, TProblem>? Crossover { get; init; }
+//   public MutatorConfig<TGenotype, TEncoding, TProblem>? Mutator { get; init; }
+//   public double? MutationRate { get; init; }
+//   public SelectorConfig<TGenotype, TEncoding, TProblem>? Selector { get; init; }
+//   public ReplacerConfig<TGenotype, TEncoding, TProblem>? Replacer { get; init; }
+//   public int? RandomSeed { get; init; }
+// }
+
+// public record GeneticAlgorithmConfiguration<TGenotype> : GeneticAlgorithmConfiguration<TGenotype, IOptimizable<TGenotype>>
+// {
+// }
+
 // public static class GeneticAlgorithmConfiguration {
 //   
 //   public static GeneticAlgorithmConfiguration<TGenotype, TProblem> Merge<TGenotype, TProblem>(
@@ -161,4 +166,4 @@
 //     }
 //   }
 // }
-//
+

@@ -4,14 +4,14 @@ using HEAL.HeuristicLib.Problems;
 namespace HEAL.HeuristicLib.Operators;
 
 public interface ICreator<TGenotype, in TEncoding, in TProblem>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding, TProblem> context);
 }
 
 public interface ICreator<TGenotype, in TEncoding> : ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
   IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding> context);
 }
@@ -23,14 +23,14 @@ public interface ICreator<TGenotype> : ICreator<TGenotype, IEncoding<TGenotype>>
 
 
 public abstract class BatchCreator<TGenotype, TEncoding, TProblem> : ICreator<TGenotype, TEncoding, TProblem>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public abstract IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding, TProblem> context);
 }
 
 public abstract class BatchCreator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
   public abstract IReadOnlyList<TGenotype> Create(int count, IExecutionContext<TEncoding> context);
 
@@ -53,8 +53,8 @@ public abstract class BatchCreator<TGenotype> : ICreator<TGenotype>
 
 
 public abstract class Creator<TGenotype, TEncoding, TProblem> : ICreator<TGenotype, TEncoding, TProblem>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public abstract TGenotype Create(IExecutionContext<TEncoding, TProblem> context);
 
@@ -64,7 +64,7 @@ public abstract class Creator<TGenotype, TEncoding, TProblem> : ICreator<TGenoty
 }
 
 public abstract class Creator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
   public abstract TGenotype Create(IExecutionContext<TEncoding> context);
   
@@ -96,8 +96,8 @@ public abstract class Creator<TGenotype> : ICreator<TGenotype>
 
 
 public class PredefinedSolutionsCreator<TGenotype, TEncoding, TProblem> : BatchCreator<TGenotype, TEncoding, TProblem>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   private readonly IReadOnlyList<TGenotype> predefinedSolutions;
   private readonly ICreator<TGenotype, TEncoding, TProblem> creatorForRemainingSolutions;

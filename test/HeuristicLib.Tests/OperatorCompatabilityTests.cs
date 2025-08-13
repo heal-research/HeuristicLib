@@ -209,8 +209,8 @@ public class OperatorCompatabilityTests {
 public abstract record AlgorithmResult<TGenotype> : IAlgorithmResult<TGenotype>;
 
 public class IndependentAlgorithm<TGenotype, TEncoding, TProblem> : Algorithm<TGenotype, TEncoding, TProblem, AlgorithmResult<TGenotype>>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
 
@@ -218,7 +218,7 @@ public class IndependentAlgorithm<TGenotype, TEncoding, TProblem> : Algorithm<TG
 }
 
 public class IndependentAlgorithm<TGenotype, TEncoding> : IndependentAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
 }
 
@@ -227,7 +227,7 @@ public class IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, I
 }
 
 public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutation, PermutationEncoding, TProblem, AlgorithmResult<Permutation>>
-  where TProblem : IProblem<Permutation, PermutationEncoding>
+  where TProblem : class, IProblem<Permutation, PermutationEncoding>
 {
   public ICrossover<Permutation, PermutationEncoding, TProblem> Crossover { get; set; }
 
@@ -247,7 +247,7 @@ public class TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, 
 }
 
 public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorEncoding, TProblem, AlgorithmResult<RealVector>>
-  where TProblem : IProblem<RealVector, RealVectorEncoding>
+  where TProblem : class, IProblem<RealVector, RealVectorEncoding>
 {
   public ICrossover<RealVector, RealVectorEncoding, TProblem> Crossover { get; set; }
 

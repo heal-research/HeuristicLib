@@ -6,8 +6,8 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface ITerminator<TGenotype, in TIterationResult, in TEncoding, in TProblem>
   where TIterationResult : IIterationResult<TGenotype>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem);
   bool ShouldContinue(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem) {
@@ -17,15 +17,15 @@ public interface ITerminator<TGenotype, in TIterationResult, in TEncoding, in TP
 
 public abstract class Terminator<TGenotype, TIterationResult, TEncoding, TProblem> : ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>
   where TIterationResult : IIterationResult<TGenotype>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem);
 }
 
 public abstract class Terminator<TGenotype, TIterationResult, TEncoding> : ITerminator<TGenotype, TIterationResult, TEncoding, IProblem<TGenotype, TEncoding>>
   where TIterationResult : IIterationResult<TGenotype>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
   public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding);
   
@@ -164,8 +164,8 @@ public class NeverTerminator<TGenotype> : Terminator<TGenotype>
 
 public class AnyTerminator<TGenotype, TIterationResult, TEncoding, TProblem> : Terminator<TGenotype, TIterationResult, TEncoding, TProblem>
   where TIterationResult : IIterationResult<TGenotype>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> Terminators { get; }
   public AnyTerminator(IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators) {
@@ -179,8 +179,8 @@ public class AnyTerminator<TGenotype, TIterationResult, TEncoding, TProblem> : T
 
 public class AllTerminator<TGenotype, TIterationResult, TEncoding, TProblem> : Terminator<TGenotype, TIterationResult, TEncoding, TProblem>
   where TIterationResult : IIterationResult<TGenotype>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> Terminators { get; }
   public AllTerminator(IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators) {

@@ -5,14 +5,14 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Operators;
 
 public interface ICrossover<TGenotype, in TEncoding, in TProblem>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 }
 
 public interface ICrossover<TGenotype, in TEncoding> : ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
   IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, TEncoding encoding);
 }
@@ -24,14 +24,14 @@ public interface ICrossover<TGenotype> : ICrossover<TGenotype, IEncoding<TGenoty
 
 
 public abstract class BatchCrossover<TGenotype, TEncoding, TProblem> : ICrossover<TGenotype, TEncoding, TProblem>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 }
 
 public abstract class BatchCrossover<TGenotype, TEncoding> : ICrossover<TGenotype, TEncoding>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
   public abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, TEncoding encoding);
   
@@ -54,8 +54,8 @@ public abstract class BatchCrossover<TGenotype> : ICrossover<TGenotype>
 
 
 public abstract class Crossover<TGenotype, TEncoding, TProblem> : ICrossover<TGenotype, TEncoding, TProblem>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public abstract TGenotype Cross((TGenotype, TGenotype) parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 
@@ -69,7 +69,7 @@ public abstract class Crossover<TGenotype, TEncoding, TProblem> : ICrossover<TGe
 }
 
 public abstract class Crossover<TGenotype, TEncoding> : ICrossover<TGenotype, TEncoding>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
   public abstract TGenotype Cross((TGenotype, TGenotype) parents, IRandomNumberGenerator random, TEncoding encoding);
 
@@ -129,8 +129,8 @@ public class RandomCrossover<TGenotype> : BatchCrossover<TGenotype>
 }
   
 public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGenotype, TEncoding, TProblem>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public IReadOnlyList<ICrossover<TGenotype, TEncoding, TProblem>> Crossovers { get; }
   public IReadOnlyList<double> Weights { get; }

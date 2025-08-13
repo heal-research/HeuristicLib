@@ -10,8 +10,8 @@ public interface IAlgorithmResult<out TGenotype>
 }
 
 public interface IAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgorithmResult>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
   where TAlgorithmResult : IAlgorithmResult<TGenotype>
 {
   TimeSpan TotalExecutionTime { get; }
@@ -22,8 +22,8 @@ public interface IAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgorithmResu
 
 
 public abstract class Algorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult> : IAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
   where TAlgorithmResult : IAlgorithmResult<TGenotype>
 {
   public TimeSpan TotalExecutionTime { get; protected set; } = TimeSpan.Zero;
@@ -39,8 +39,8 @@ public interface IIterationResult<out TGenotype>
 
 public interface IIterativeAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgorithmResult, TIterationResult>
   : IAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
   where TAlgorithmResult : IAlgorithmResult<TGenotype>
   where TIterationResult : IIterationResult<TGenotype>
 {
@@ -54,8 +54,8 @@ public interface IIterativeAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgo
 
 public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult, TIterationResult>
   : Algorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult>, IIterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult, TIterationResult>
-  where TEncoding : IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding>
   where TAlgorithmResult : IAlgorithmResult<TGenotype>
   where TIterationResult : IIterationResult<TGenotype>
 {

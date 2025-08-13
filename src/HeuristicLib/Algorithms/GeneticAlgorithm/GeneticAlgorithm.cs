@@ -18,8 +18,8 @@ public record GeneticAlgorithmResult<TGenotype> : IAlgorithmResult<TGenotype>
 
 public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   : IterativeAlgorithm<TGenotype, TEncoding, TProblem, GeneticAlgorithmResult<TGenotype>, GeneticAlgorithmIterationResult<TGenotype>>
-   where TEncoding : IEncoding<TGenotype>
-   where TProblem : IProblem<TGenotype, TEncoding>
+   where TEncoding : class, IEncoding<TGenotype>
+   where TProblem : class, IProblem<TGenotype, TEncoding>
 {
   public int PopulationSize { get; }
   public ICreator<TGenotype, TEncoding, TProblem> Creator { get; }
@@ -27,10 +27,13 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; }
   public double MutationRate { get; }
   public ISelector<TGenotype, TEncoding, TProblem> Selector { get; }
-  public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; }
+  public int Elites { get; }
+  // public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; }
   public int RandomSeed { get; }
 
   private readonly SystemRandomNumberGenerator random;
+  private readonly MultiMutator<TGenotype, TEncoding, TProblem> internalMutator;
+  private readonly IReplacer<TGenotype, TEncoding, TProblem> internalReplacer;
 
   public OperatorMetric CreatorMetric { get; protected set; } = OperatorMetric.Zero;
   public OperatorMetric CrossoverMetric { get; protected set; } = OperatorMetric.Zero;
@@ -45,7 +48,8 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     ICrossover<TGenotype, TEncoding, TProblem> crossover,
     IMutator<TGenotype, TEncoding, TProblem> mutator, double mutationRate,
     ISelector<TGenotype, TEncoding, TProblem> selector,
-    IReplacer<TGenotype, TEncoding, TProblem> replacer,
+    // IReplacer<TGenotype, TEncoding, TProblem> replacer,
+    int elites,
     int randomSeed,
     ITerminator<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, TProblem> terminator,
     IInterceptor<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
@@ -56,10 +60,13 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     Mutator = mutator;
     MutationRate = mutationRate;
     Selector = selector;
-    Replacer = replacer;
+    //Replacer = replacer;
+    Elites = elites;
     RandomSeed = randomSeed;
     
     random = new SystemRandomNumberGenerator(randomSeed);
+    internalMutator = new MultiMutator<TGenotype, TEncoding, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
+    internalReplacer = new ElitismReplacer<TGenotype>(elites);
   }
 
   public override GeneticAlgorithmIterationResult<TGenotype> ExecuteStep(TProblem problem, GeneticAlgorithmIterationResult<TGenotype>? previousIterationResult = null) {
@@ -89,7 +96,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   }
   
   protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteGeneration(TProblem problem, GeneticAlgorithmIterationResult<TGenotype> previousGenerationResult, ExecutionContext<TEncoding, TProblem> context) {
-    int offspringCount = Replacer.GetOffspringCount(PopulationSize);
+    int offspringCount = internalReplacer.GetOffspringCount(PopulationSize);
 
     var oldPopulation = previousGenerationResult.Population.ToArray();
     
@@ -110,29 +117,20 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     CrossoverMetric += new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover));
     
     var startMutation = Stopwatch.GetTimestamp();
-    var mutatedGenotypes = new TGenotype[offspringCount];
     int mutationCount = 0;
-    // ToDo: use a MultiMutator with the "actual" mutator, biased by the mutation rate
-    population = Mutator.Mutate(population, random, problem.Encoding, problem);
-    //
-    // for (int i = 0; i < population.Count; i++) {
-    //   if (random.Random() < MutationRate) {
-    //     mutatedGenotypes[i] = Mutator.Mutate([population[i]], random, problem.Encoding, problem)[0];
-    //     mutationCount++;
-    //   }
-    // }
+    population = internalMutator.Mutate(population, random, problem.Encoding, problem);
     var endMutation = Stopwatch.GetTimestamp();
     MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
     
     var startEvaluation = Stopwatch.GetTimestamp();
-    var fitnesses = problem.Evaluate(mutatedGenotypes);
+    var fitnesses = problem.Evaluate(population);
     var endEvaluation = Stopwatch.GetTimestamp();
     EvaluationsMetric += new OperatorMetric(fitnesses.Count, Stopwatch.GetElapsedTime(startEvaluation, endEvaluation));
 
     var evaluatedPopulation = Population.From(population, fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
-    var newPopulation = Replacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, random, problem.Encoding, problem);
+    var newPopulation = internalReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, random, problem.Encoding, problem);
     var endReplacement = Stopwatch.GetTimestamp();
     ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
     
@@ -152,11 +150,11 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
 
 public class GeneticAlgorithm<TGenotype, TEncoding>
   : GeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : IEncoding<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
 {
 
-  public GeneticAlgorithm(int populationSize, ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> creator, ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> crossover, IMutator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> mutator, double mutationRate, ISelector<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> selector, IReplacer<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> replacer, int randomSeed, ITerminator<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>> terminator, IInterceptor<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>>? interceptor = null)
-    : base(populationSize, creator, crossover, mutator, mutationRate, selector, replacer, randomSeed, terminator, interceptor) {
+  public GeneticAlgorithm(int populationSize, ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> creator, ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> crossover, IMutator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> mutator, double mutationRate, ISelector<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> selector, int elites, int randomSeed, ITerminator<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>> terminator, IInterceptor<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>>? interceptor = null)
+    : base(populationSize, creator, crossover, mutator, mutationRate, selector, elites, randomSeed, terminator, interceptor) {
   }
 }
 
@@ -164,7 +162,7 @@ public class GeneticAlgorithm<TGenotype>
   : GeneticAlgorithm<TGenotype, IEncoding<TGenotype>>
 {
 
-  public GeneticAlgorithm(int populationSize, ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> creator, ICrossover<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> crossover, IMutator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> mutator, double mutationRate, ISelector<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> selector, IReplacer<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> replacer, int randomSeed, ITerminator<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> terminator, IInterceptor<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>? interceptor = null) 
-    : base(populationSize, creator, crossover, mutator, mutationRate, selector, replacer, randomSeed, terminator, interceptor) {
+  public GeneticAlgorithm(int populationSize, ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> creator, ICrossover<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> crossover, IMutator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> mutator, double mutationRate, ISelector<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> selector, int elites, int randomSeed, ITerminator<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> terminator, IInterceptor<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>? interceptor = null) 
+    : base(populationSize, creator, crossover, mutator, mutationRate, selector, elites, randomSeed, terminator, interceptor) {
   }
 }

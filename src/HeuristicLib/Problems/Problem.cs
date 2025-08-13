@@ -14,11 +14,19 @@ public interface IProblem
   Objective Objective { get; }
 }
 
-public interface IProblem<in TGenotype, out TEncoding> : IProblem
-  where TEncoding : IEncoding<TGenotype>
+public interface IProblem<in TGenotype> : IProblem
 {
   IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solution);
+  //ObjectiveVector Evaluate(TGenotype solution);
   
+  // IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solution);
+  
+  // IEncoding<TGenotype> Encoding { get; }
+}
+
+public interface IProblem<in TGenotype, out TEncoding> : IProblem<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
+{
   TEncoding Encoding { get; }
 }
 
@@ -82,7 +90,7 @@ public interface IProblem<in TGenotype, out TEncoding> : IProblem
 // }
 
 public abstract class Problem<TSolution, TEncoding> : IProblem<TSolution, TEncoding>
-  where TEncoding : IEncoding<TSolution>
+  where TEncoding : class, IEncoding<TSolution>
 {
   public Objective Objective { get; }
   public TEncoding Encoding { get; }

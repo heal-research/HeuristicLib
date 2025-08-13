@@ -28,7 +28,7 @@ public class GeneticAlgorithmTests {
       populationSize: 200, 
       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
       //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
-      selector: selector, replacer: replacement,
+      selector: selector, elites: 1, //replacer: replacement,
       randomSeed: 42,
       terminator: terminator
       //RandomSource = randomSource, Terminator = terminator

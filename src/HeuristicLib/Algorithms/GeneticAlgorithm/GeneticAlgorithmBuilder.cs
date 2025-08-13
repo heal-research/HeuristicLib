@@ -6,8 +6,8 @@
 //
 // public class GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem>
 //   : IAlgorithmBuilder<TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>
-//   where TEncoding : IEncoding<TGenotype>
-//   where TProblem : IProblem<TGenotype, TEncoding>
+//   where TEncoding : class, IEncoding<TGenotype>
+//   where TProblem : class, IProblem<TGenotype, TEncoding>
 // {
 //   public GeneticAlgorithm<TGenotype, TEncoding, TProblem> Create() {
 //     if (!IsValid()) {
