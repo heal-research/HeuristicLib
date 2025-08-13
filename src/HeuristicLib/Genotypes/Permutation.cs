@@ -2,22 +2,65 @@
 
 namespace HEAL.HeuristicLib.Genotypes;
 
-public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
-  private readonly int[] elements;
-
-  public Permutation(IEnumerable<int> elements) {
-    this.elements = elements.ToArray();
-  }
+public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
+{
+  private readonly ReadOnlyMemory<int> memory;
   
+  public Permutation(IEnumerable<int> elements) {
+    this.memory = elements.ToArray();
+    if (!IsValidPermutation(memory.Span)) throw new ArgumentException("The provided elements do not form a valid permutation.");
+  }
+
+  private Permutation(ReadOnlyMemory<int> memory, bool takeOwnership) {
+    if (!IsValidPermutation(memory.Span)) throw new ArgumentException("The provided memory does not form a valid permutation.");
+    this.memory = takeOwnership ? memory : memory.ToArray();
+  }
+  public static Permutation FromMemory(ReadOnlyMemory<int> memory) {
+    return new Permutation(memory, true);
+  }
+  public ReadOnlySpan<int> Span => memory.Span;
+
+  private static bool IsValidPermutation(ReadOnlySpan<int> values) {
+    Span<bool> seen = stackalloc bool[values.Length];
+    seen.Clear();
+    
+    foreach (int value in values) {
+      if (value < 0 || value >= values.Length || seen[value]) {
+        return false;
+      }
+      seen[value] = true;
+    }
+
+    return true;
+  }
+
   public static implicit operator Permutation(int[] elements) => new(elements);
 
-  public int this[int index] => elements[index];
+  public int this[int index] => Span[index];
 
-  public int this[Index index] => elements[index];
+  public int this[Index index] => Span[index];
 
-  public IEnumerator<int> GetEnumerator() => ((IEnumerable<int>)elements).GetEnumerator();
+  
+  public IEnumerator<int> GetEnumerator() => new Enumerator(memory);
 
-  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => elements.GetEnumerator();
+  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => this.GetEnumerator();
+  
+  public struct Enumerator : IEnumerator<int> {
+    private readonly ReadOnlyMemory<int> memory;
+    private int index;
+
+    public Enumerator(ReadOnlyMemory<int> memory) {
+      this.memory = memory;
+      index = -1;
+    }
+
+    public int Current => memory.Span[index];
+    object System.Collections.IEnumerator.Current => Current;
+
+    public bool MoveNext() => ++index < memory.Length;
+    public void Reset() => index = -1;
+    public void Dispose() { }
+  }
 
   public static Permutation CreateRandom(int length, IRandomNumberGenerator rng) {
     int[] elements = Enumerable.Range(0, length).ToArray();
@@ -25,69 +68,41 @@ public class Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
       int j = rng.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
     }
-    return new Permutation(elements);
+    return FromMemory(elements);
   }
-
-  public static Permutation OrderCrossover(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng) {
-    int length = parent1.elements.Length;
-    int start = rng.Integer(length);
-    int end = rng.Integer(start, length);
-    var childElements = new int[length];
-    Array.Fill(childElements, -1);
-
-    for (int i = start; i <= end; i++) {
-      childElements[i] = parent1.elements[i];
-    }
-
-    int currentIndex = 0;
-    for (int i = 0; i < length; i++) {
-      if (!childElements.Contains(parent2.elements[i])) {
-        while (childElements[currentIndex] != -1) {
-          currentIndex++;
-        }
-        childElements[currentIndex] = parent2.elements[i];
-      }
-    }
-
-    return new Permutation(childElements);
-  }
-
+  
   public static Permutation SwapRandomElements(Permutation permutation, IRandomNumberGenerator rng) {
-    int length = permutation.elements.Length;
+    int length = permutation.Count;
     int index1 = rng.Integer(length);
     int index2 = rng.Integer(length);
-    var newElements = (int[])permutation.elements.Clone();
+    
+    int[] newElements = permutation.memory.ToArray();
     (newElements[index1], newElements[index2]) = (newElements[index2], newElements[index1]);
-    return new Permutation(newElements);
+    return FromMemory(newElements);
   }
 
   public static Permutation Range(int count) {
-    return new Permutation(Enumerable.Range(0, count));
+    return FromMemory(Enumerable.Range(0, count).ToArray());
   }
   
-  public int Count => elements.Length;
+  public int Count => memory.Length;
 
-  public bool Contains(int value) => elements.Contains(value);
+  public bool Contains(int value) => Span.Contains(value);
 
+  public bool Equals(Permutation other) {
+    return memory.Equals(other.memory) && memory.Span.SequenceEqual(other.memory.Span);
+  }
+  
   public bool Equals(Permutation? other) {
-    if (other is null) return false;
-    if (ReferenceEquals(this, other)) return true;
-    if (Count != other.Count) return false;
-    return elements.SequenceEqual(other.elements);
+    return other is not null && Equals(other.Value);
   }
 
   public override bool Equals(object? obj) {
-    if (obj is null) return false;
-    if (ReferenceEquals(this, obj)) return true;
     return obj is Permutation other && Equals(other);
   }
 
   public override int GetHashCode() {
-    var hashCode = new HashCode();
-    foreach (var item in elements) {
-      hashCode.Add(item);
-    }
-    return hashCode.ToHashCode();
+    return memory.GetHashCode();
   }
 
   public static bool operator ==(Permutation? left, Permutation? right) {
