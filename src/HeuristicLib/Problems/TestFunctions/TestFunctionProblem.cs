@@ -9,7 +9,7 @@ public class TestFunctionProblem : RealVectorProblem {
   private readonly ITestFunction testFunction;
 
   public TestFunctionProblem(ITestFunction testFunction) 
-    : base(SingleObjective.Create(testFunction.Objective)) 
+    : base(SingleObjective.Create(testFunction.Objective), GetEncoding(testFunction)) 
   {
     this.testFunction = testFunction;
   }
@@ -20,7 +20,7 @@ public class TestFunctionProblem : RealVectorProblem {
     return testFunction.Evaluate(solution);
   }
 
-  public override RealVectorEncoding GetEncoding() {
+  private static RealVectorEncoding GetEncoding(ITestFunction testFunction) {
     return new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
   }
   

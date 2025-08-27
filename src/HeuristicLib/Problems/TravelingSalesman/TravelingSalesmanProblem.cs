@@ -12,12 +12,14 @@ public class Tour {
 }
 
 // This is an example problem that uses a permutation search spaces to get access to the standard operators, but also offers custom TSP-specific operators.
-public class TravelingSalesmanProblem : PermutationProblem {
+public class TravelingSalesmanProblem : PermutationProblem/*, IDeterministicProblem<Permutation>*/ {
 
+  //public int? Seed { get; init; }
+  
   public ITravelingSalesmanProblemData ProblemData { get; }
 
   public TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
-    : base(SingleObjective.Minimize) {
+    : base(SingleObjective.Minimize, GetEncoding(problemData)) {
     ProblemData = problemData;
   }
   public TravelingSalesmanProblem() : this(null!) {
@@ -34,9 +36,13 @@ public class TravelingSalesmanProblem : PermutationProblem {
     return totalDistance;
   }
   
-  public override PermutationEncoding GetEncoding() {
-    return new PermutationEncoding(ProblemData.NumberOfCities);
+  private static PermutationEncoding GetEncoding(ITravelingSalesmanProblemData problemData) {
+    return new PermutationEncoding(problemData.NumberOfCities);
   }
+
+  // public IEvaluator<Permutation> CreateEvaluator() {
+  //   return new DeterministicProblemEvaluator<Permutation>(this);
+  // }
   
   // public override Tour Decode(Permutation genotype) => new Tour(genotype);
   
@@ -53,6 +59,14 @@ public class TravelingSalesmanProblem : PermutationProblem {
   };
   #endregion
 }
+
+
+
+
+// public class TspEvaluator : IEvaluator<Permutation>
+// {
+//   
+// }
 
 // public static class TravelingSalesmanProblemEncodingExtensions {
 //   public static OptimizableProblem<Tour, Permutation, PermutationSearchSpace> EncodeAsPermutationSearchSpace(this TravelingSalesmanProblem problem) {

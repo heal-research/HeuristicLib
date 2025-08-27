@@ -2,7 +2,10 @@
 
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.PermutationOperators;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -17,12 +20,25 @@ public interface IProblem
 public interface IProblem<in TGenotype> : IProblem
 {
   IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solution);
-  //ObjectiveVector Evaluate(TGenotype solution);
+ 
   
-  // IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solution);
-  
-  // IEncoding<TGenotype> Encoding { get; }
+  //IEncoding<TGenotype> Encoding { get; }
+  //IEvaluator<TGenotype> GetEvaluator();
 }
+
+// public interface IDeterministicProblem<in TGenotype> : IProblem<TGenotype>
+// {
+//   double Evaluate(TGenotype solution);
+//   
+//   // IEvaluator<TGenotype> GetEvaluator()
+//   // {
+//   //   return new DeterministicProblemEvaluator<TGenotype>(this);
+//   // }
+// }
+// public interface IStochasticProblem<in TGenotype> : IProblem<TGenotype>
+// {
+//   double Evaluate(TGenotype solution, IRandomNumberGenerator random);
+// }
 
 public interface IProblem<in TGenotype, out TEncoding> : IProblem<TGenotype>
   where TEncoding : class, IEncoding<TGenotype>
@@ -95,9 +111,9 @@ public abstract class Problem<TSolution, TEncoding> : IProblem<TSolution, TEncod
   public Objective Objective { get; }
   public TEncoding Encoding { get; }
   
-  protected Problem(Objective objective) {
+  protected Problem(Objective objective, TEncoding encoding) {
     Objective = objective;
-    Encoding = GetEncoding();
+    Encoding = encoding;
   }
   
   public abstract ObjectiveVector Evaluate(TSolution solution);
@@ -110,15 +126,17 @@ public abstract class Problem<TSolution, TEncoding> : IProblem<TSolution, TEncod
     return results;
   }
 
-  public abstract TEncoding GetEncoding();
+  // public abstract TEncoding GetEncoding();
 }
 
 public abstract class PermutationProblem : Problem<Permutation, PermutationEncoding> {
-  protected PermutationProblem(Objective objective) : base(objective) {}
+  protected PermutationProblem(Objective objective, PermutationEncoding encoding) :
+    base(objective, encoding) {}
 }
 
 public abstract class RealVectorProblem : Problem<RealVector, RealVectorEncoding> {
-  protected RealVectorProblem(Objective objective) : base(objective) {
+  protected RealVectorProblem(Objective objective, RealVectorEncoding encoding) 
+    : base(objective, encoding) {
   }
 }
 
@@ -130,3 +148,55 @@ public abstract class RealVectorProblem : Problem<RealVector, RealVectorEncoding
 //   public required IEvaluator<TSolution> Evaluator { get; init; }
 //   public required Objective Objective { get; init; }
 // }
+
+
+public class FuncProblem<TGenotype, TEncoding> : Problem<TGenotype, TEncoding>/*, IDeterministicProblem<TGenotype>*/
+  where TEncoding : class, IEncoding<TGenotype>
+{
+  public Func<TGenotype, double> EvaluateFunc { get; }
+  // public IEvaluator<TGenotype> GetEvaluator() {
+  //   return new DeterministicProblemEvaluator<TGenotype>(this);
+  // }
+
+  public FuncProblem(Func<TGenotype, double> evaluateFunc, TEncoding encoding, Objective objective)
+    : base(objective, encoding) {
+    EvaluateFunc = evaluateFunc;
+  }
+
+  public override ObjectiveVector Evaluate(TGenotype solution) {
+    return EvaluateFunc(solution);
+  }
+}
+
+public class FuncProblem
+{
+  public static FuncProblem<TGenotype, TEncoding> Create<TGenotype, TEncoding>(
+    Func<TGenotype, double> evaluateFunc,
+    TEncoding encoding,
+    Objective objective
+  ) where TEncoding : class, IEncoding<TGenotype> {
+    return new FuncProblem<TGenotype, TEncoding>(evaluateFunc, encoding, objective);
+  }
+
+
+  private static void Test() {
+    var f = new FuncProblem<RealVector, RealVectorEncoding>(
+      x => (x * x).Sum(),
+      new RealVectorEncoding(2, -10, 10),
+      SingleObjective.Minimize
+    );
+    
+    var fs = FuncProblem.Create(
+      (RealVector r) => (r * r).Sum(),
+      new RealVectorEncoding(2, -10, 10),
+      SingleObjective.Minimize
+    );
+
+
+    // var mutator = new InversionMutator();
+    // mutator.Mutate(new Permutation([0, 2, 3, 1]), new SystemRandomNumberGenerator(1), new PermutationEncoding(3));
+    //
+    // var creator = new RandomPermutationCreator();
+    // creator.Create(new SystemRandomNumberGenerator(1), new PermutationEncoding(3));
+  }
+}

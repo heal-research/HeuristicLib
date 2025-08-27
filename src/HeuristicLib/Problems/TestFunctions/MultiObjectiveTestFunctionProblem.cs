@@ -8,7 +8,7 @@ public class MultiObjectiveTestFunctionProblem : RealVectorProblem {
   private readonly IMultiObjectiveTestFunction testFunction;
 
   public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) 
-    : base(testFunction.Objective)
+    : base(testFunction.Objective, GetEncoding(testFunction))
   {
     this.testFunction = testFunction;
   }
@@ -17,7 +17,7 @@ public class MultiObjectiveTestFunctionProblem : RealVectorProblem {
     return new ObjectiveVector(testFunction.Evaluate(solution));
   }
   
-  public override RealVectorEncoding GetEncoding() {
+  private static RealVectorEncoding GetEncoding(IMultiObjectiveTestFunction testFunction) {
     return new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
   }
 

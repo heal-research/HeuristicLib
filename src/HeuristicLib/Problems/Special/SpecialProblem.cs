@@ -18,7 +18,7 @@ public record class SpecialEncoding : Encoding<SpecialGenotype> {
 public class SpecialProblem : Problem<SpecialGenotype, SpecialEncoding> {
   public double Data { get; set; }
 
-  public SpecialProblem(double data) : base (SingleObjective.Maximize) {
+  public SpecialProblem(double data) : base (SingleObjective.Maximize, GetEncoding()) {
     Data = data;
   }
   
@@ -26,7 +26,7 @@ public class SpecialProblem : Problem<SpecialGenotype, SpecialEncoding> {
     return Data + solution.Value;
   }
 
-  public override SpecialEncoding GetEncoding() {
+  private static SpecialEncoding GetEncoding() {
     return new SpecialEncoding();
   }
 }
