@@ -19,7 +19,6 @@
  */
 #endregion
 
-using System.Data;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
@@ -38,7 +37,7 @@ public abstract class RegressionProblem<TProblemData, TSolution, TEncoding>(TPro
   : DataAnalysisProblem<TProblemData, TSolution, TEncoding>(problemData, new(objective.Select(x => x.Direction).ToArray(), a), encoding)
   where TProblemData : DataAnalysisProblemData
   where TEncoding : class, IEncoding<TSolution>
-  where TSolution : IRegressionSolution {
+  where TSolution : IRegressionModel {
   public List<IRegressionEvaluator> Evaluators { get; set; } = objective.ToList();
   public override ObjectiveVector Evaluate(TSolution solution) => throw new NotImplementedException();
 }
@@ -48,8 +47,8 @@ public interface IRegressionEvaluator {
   public double Evaluate(IEnumerable<double> trueValues, IEnumerable<double> predictedValues);
 }
 
-public interface IRegressionSolution {
-  IEnumerable<double> Predict(DataSet data, IEnumerable<int> rows);
+public interface IRegressionModel {
+  IEnumerable<double> Predict(Dataset data, IEnumerable<int> rows);
 
-  double Predict(DataSet data, int rows) => Predict(data, [rows]).First();
+  double Predict(Dataset data, int rows) => Predict(data, [rows]).First();
 }

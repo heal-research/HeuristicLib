@@ -20,7 +20,7 @@
 #endregion
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
-
+#pragma warning disable S2178
 public class OnlineMeanErrorCalculator {
   private readonly OnlineMeanAndVarianceCalculator meanAndVarianceCalculator;
   public double MeanError => meanAndVarianceCalculator.Mean;

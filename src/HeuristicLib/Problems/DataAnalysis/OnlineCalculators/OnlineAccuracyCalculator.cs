@@ -20,7 +20,7 @@
 #endregion
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
-
+#pragma warning disable S2178
 public class OnlineAccuracyCalculator {
   private int correctlyClassified;
   private int n;

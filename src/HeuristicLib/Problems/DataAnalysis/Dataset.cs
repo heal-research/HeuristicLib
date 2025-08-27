@@ -42,6 +42,8 @@ public abstract class Dataset {
     Rows = 0;
   }
 
+  public ModifiableDataset ToModifiable() => new(VariableNames, VariableNames.Select(n => VariableValues[n]), true);
+
   /// <summary>
   ///   Creates a new dataset. The variableValues are not cloned.
   /// </summary>
