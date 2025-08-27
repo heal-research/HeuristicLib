@@ -2,6 +2,7 @@
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
@@ -17,7 +18,7 @@ public interface IAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgorithmResu
   TimeSpan TotalExecutionTime { get; }
   OperatorMetric EvaluationsMetric { get; }
   
-  TAlgorithmResult Execute(TProblem problem);
+  TAlgorithmResult Execute(TProblem problem, IRandomNumberGenerator? random = null);
 }
 
 
@@ -29,7 +30,7 @@ public abstract class Algorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult
   public TimeSpan TotalExecutionTime { get; protected set; } = TimeSpan.Zero;
   public OperatorMetric EvaluationsMetric { get; protected set; } = OperatorMetric.Zero;
   
-  public abstract TAlgorithmResult Execute(TProblem problem);
+  public abstract TAlgorithmResult Execute(TProblem problem, IRandomNumberGenerator? random = null);
 }
 
 
@@ -46,9 +47,9 @@ public interface IIterativeAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgo
 {
   int CurrentIteration { get; }
   
-  TAlgorithmResult Execute(TProblem problem, TIterationResult? previousIterationResult);
-  TIterationResult ExecuteStep(TProblem problem, TIterationResult? previousIterationResult = default);
-  IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TIterationResult? previousIterationResult = default);
+  TAlgorithmResult Execute(TProblem problem, TIterationResult? previousIterationResult, IRandomNumberGenerator? random = null);
+  TIterationResult ExecuteStep(TProblem problem, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
+  IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
 }
 
 
@@ -73,15 +74,15 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
     Interceptor = interceptor;
   }
   
-  public abstract TIterationResult ExecuteStep(TProblem problem, TIterationResult? previousIterationResult = default);
+  public abstract TIterationResult ExecuteStep(TProblem problem, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
 
   protected abstract TAlgorithmResult FinalizeResult(TIterationResult iterationResult, TProblem problem);
   
-  public override TAlgorithmResult Execute(TProblem problem) {
-    return Execute(problem, previousIterationResult: default);
+  public override TAlgorithmResult Execute(TProblem problem, IRandomNumberGenerator? random = null) {
+    return Execute(problem, previousIterationResult: default, random);
   }
 
-  public virtual TAlgorithmResult Execute(TProblem problem, TIterationResult? previousIterationResult) {
+  public virtual TAlgorithmResult Execute(TProblem problem, TIterationResult? previousIterationResult, IRandomNumberGenerator? random = null) {
     TIterationResult? lastResult = ExecuteStreaming(problem, previousIterationResult).LastOrDefault();
 
     if (lastResult is null) {
@@ -91,7 +92,7 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
     return FinalizeResult(lastResult, problem);
   }
 
-  public virtual IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TIterationResult? previousIterationResult = default) {
+  public virtual IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
     long start = Stopwatch.GetTimestamp();
 
     bool shouldContinue = previousIterationResult is null;
@@ -103,7 +104,7 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
     }
 
     while (shouldContinue) {
-      var newIterationResult = ExecuteStep(problem, previousIterationResult);
+      var newIterationResult = ExecuteStep(problem, previousIterationResult, random);
 
       if (Interceptor is not null) {
         long startInterceptor = Stopwatch.GetTimestamp();

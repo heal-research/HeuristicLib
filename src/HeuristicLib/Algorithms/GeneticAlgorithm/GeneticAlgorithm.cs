@@ -31,7 +31,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   // public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; }
   public int RandomSeed { get; }
 
-  private readonly SystemRandomNumberGenerator random;
+  private readonly IRandomNumberGenerator algorithmRandom;
   private readonly MultiMutator<TGenotype, TEncoding, TProblem> internalMutator;
   private readonly IReplacer<TGenotype, TEncoding, TProblem> internalReplacer;
 
@@ -50,7 +50,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     ISelector<TGenotype, TEncoding, TProblem> selector,
     // IReplacer<TGenotype, TEncoding, TProblem> replacer,
     int elites,
-    int randomSeed,
+    int? randomSeed,
     ITerminator<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, TProblem> terminator,
     IInterceptor<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
   ) : base(terminator, interceptor) {
@@ -62,24 +62,24 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     Selector = selector;
     //Replacer = replacer;
     Elites = elites;
-    RandomSeed = randomSeed;
+    RandomSeed = randomSeed ?? SystemRandomNumberGenerator.RandomSeed();
     
-    random = new SystemRandomNumberGenerator(randomSeed);
+    algorithmRandom = new SystemRandomNumberGenerator(RandomSeed);
     internalMutator = new MultiMutator<TGenotype, TEncoding, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
     internalReplacer = new ElitismReplacer<TGenotype>(elites);
   }
 
-  public override GeneticAlgorithmIterationResult<TGenotype> ExecuteStep(TProblem problem, GeneticAlgorithmIterationResult<TGenotype>? previousIterationResult = null) {
-    var context = new ExecutionContext<TEncoding, TProblem>(random, problem.Encoding, problem);
+  public override GeneticAlgorithmIterationResult<TGenotype> ExecuteStep(TProblem problem, GeneticAlgorithmIterationResult<TGenotype>? previousIterationResult = null, IRandomNumberGenerator? random = null) {
+    var iterationRandom = (random ?? algorithmRandom).Fork(CurrentIteration);
     return previousIterationResult switch {
-      null => ExecuteInitialization(problem, context),
-      _ => ExecuteGeneration(problem, previousIterationResult, context)
+      null => ExecuteInitialization(problem, iterationRandom),
+      _ => ExecuteGeneration(problem, previousIterationResult, iterationRandom)
     };
   }
 
-  protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteInitialization(TProblem problem, ExecutionContext<TEncoding, TProblem> context) {
+  protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteInitialization(TProblem problem, IRandomNumberGenerator iterationRandom) {
     var startCreating = Stopwatch.GetTimestamp();
-    var population = Creator.Create(PopulationSize, context);
+    var population = Creator.Create(PopulationSize, iterationRandom, problem.Encoding, problem);
     var endCreating = Stopwatch.GetTimestamp();
     CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
     
@@ -95,13 +95,13 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     return result;
   }
   
-  protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteGeneration(TProblem problem, GeneticAlgorithmIterationResult<TGenotype> previousGenerationResult, ExecutionContext<TEncoding, TProblem> context) {
+  protected virtual GeneticAlgorithmIterationResult<TGenotype> ExecuteGeneration(TProblem problem, GeneticAlgorithmIterationResult<TGenotype> previousGenerationResult, IRandomNumberGenerator iterationRandom) {
     int offspringCount = internalReplacer.GetOffspringCount(PopulationSize);
 
     var oldPopulation = previousGenerationResult.Population.ToArray();
     
     var startSelection = Stopwatch.GetTimestamp();
-    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, problem.Encoding, problem);
+    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, iterationRandom, problem.Encoding, problem);
     var endSelection = Stopwatch.GetTimestamp();
     SelectionMetric += new OperatorMetric(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection));
     
@@ -112,13 +112,13 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
 
     var startCrossover = Stopwatch.GetTimestamp();
     int crossoverCount = 0;
-    var population = Crossover.Cross(parentPairs, random, problem.Encoding, problem);
+    var population = Crossover.Cross(parentPairs, iterationRandom, problem.Encoding, problem);
     var endCrossover = Stopwatch.GetTimestamp();
     CrossoverMetric += new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover));
     
     var startMutation = Stopwatch.GetTimestamp();
     int mutationCount = 0;
-    population = internalMutator.Mutate(population, random, problem.Encoding, problem);
+    population = internalMutator.Mutate(population, iterationRandom, problem.Encoding, problem);
     var endMutation = Stopwatch.GetTimestamp();
     MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
     
@@ -130,7 +130,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var evaluatedPopulation = Population.From(population, fitnesses);
     
     var startReplacement = Stopwatch.GetTimestamp();
-    var newPopulation = internalReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, random, problem.Encoding, problem);
+    var newPopulation = internalReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, iterationRandom, problem.Encoding, problem);
     var endReplacement = Stopwatch.GetTimestamp();
     ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
     
