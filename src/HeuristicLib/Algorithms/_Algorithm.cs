@@ -18,7 +18,7 @@ public interface IAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgorithmResu
   TimeSpan TotalExecutionTime { get; }
   OperatorMetric EvaluationsMetric { get; }
   
-  TAlgorithmResult Execute(TProblem problem, IRandomNumberGenerator? random = null);
+  TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null);
 }
 
 
@@ -30,7 +30,7 @@ public abstract class Algorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult
   public TimeSpan TotalExecutionTime { get; protected set; } = TimeSpan.Zero;
   public OperatorMetric EvaluationsMetric { get; protected set; } = OperatorMetric.Zero;
   
-  public abstract TAlgorithmResult Execute(TProblem problem, IRandomNumberGenerator? random = null);
+  public abstract TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null);
 }
 
 
@@ -47,9 +47,9 @@ public interface IIterativeAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgo
 {
   int CurrentIteration { get; }
   
-  TAlgorithmResult Execute(TProblem problem, TIterationResult? previousIterationResult, IRandomNumberGenerator? random = null);
-  TIterationResult ExecuteStep(TProblem problem, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
-  IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
+  TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
+  TIterationResult ExecuteStep(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
+  IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
 }
 
 
@@ -74,16 +74,16 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
     Interceptor = interceptor;
   }
   
-  public abstract TIterationResult ExecuteStep(TProblem problem, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
+  public abstract TIterationResult ExecuteStep(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
 
   protected abstract TAlgorithmResult FinalizeResult(TIterationResult iterationResult, TProblem problem);
   
-  public override TAlgorithmResult Execute(TProblem problem, IRandomNumberGenerator? random = null) {
-    return Execute(problem, previousIterationResult: default, random);
+  public override TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) {
+    return Execute(problem, searchSpace, previousIterationResult: default, random);
   }
 
-  public virtual TAlgorithmResult Execute(TProblem problem, TIterationResult? previousIterationResult, IRandomNumberGenerator? random = null) {
-    TIterationResult? lastResult = ExecuteStreaming(problem, previousIterationResult).LastOrDefault();
+  public virtual TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+    TIterationResult? lastResult = ExecuteStreaming(problem, searchSpace, previousIterationResult).LastOrDefault();
 
     if (lastResult is null) {
       throw new InvalidOperationException("The algorithm did not produce any iteration result.");
@@ -92,23 +92,23 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
     return FinalizeResult(lastResult, problem);
   }
 
-  public virtual IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+  public virtual IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
     long start = Stopwatch.GetTimestamp();
 
     bool shouldContinue = previousIterationResult is null;
     if (previousIterationResult is not null) {
       long startTerminator = Stopwatch.GetTimestamp();
-      shouldContinue = Terminator.ShouldContinue(previousIterationResult, previousIterationState: default, problem.Encoding, problem);
+      shouldContinue = Terminator.ShouldContinue(previousIterationResult, previousIterationState: default, searchSpace ?? problem.SearchSpace, problem);
       long endTerminator = Stopwatch.GetTimestamp();
       TerminatorMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startTerminator, endTerminator));
     }
 
     while (shouldContinue) {
-      var newIterationResult = ExecuteStep(problem, previousIterationResult, random);
+      var newIterationResult = ExecuteStep(problem, searchSpace, previousIterationResult, random);
 
       if (Interceptor is not null) {
         long startInterceptor = Stopwatch.GetTimestamp();
-        newIterationResult = Interceptor.Transform(newIterationResult, previousIterationResult, problem.Encoding, problem);
+        newIterationResult = Interceptor.Transform(newIterationResult, previousIterationResult, searchSpace ?? problem.SearchSpace, problem);
         long endInterceptor = Stopwatch.GetTimestamp();
         InterceptorMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startInterceptor, endInterceptor));
       }
@@ -123,7 +123,7 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
       start = Stopwatch.GetTimestamp();
 
       long startTerminator = Stopwatch.GetTimestamp();
-      shouldContinue = Terminator.ShouldContinue(newIterationResult, previousIterationResult, problem.Encoding, problem);
+      shouldContinue = Terminator.ShouldContinue(newIterationResult, previousIterationResult, searchSpace ?? problem.SearchSpace, problem);
       long endTerminator = Stopwatch.GetTimestamp();
       TerminatorMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startTerminator, endTerminator));
 
