@@ -214,7 +214,7 @@ public class IndependentAlgorithm<TGenotype, TEncoding, TProblem> : Algorithm<TG
 {
   public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<TGenotype> Execute(TProblem problem) => throw new NotImplementedException();
+  public override AlgorithmResult<TGenotype> Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
 public class IndependentAlgorithm<TGenotype, TEncoding> : IndependentAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
@@ -231,7 +231,7 @@ public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutat
 {
   public ICrossover<Permutation, PermutationEncoding, TProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<Permutation> Execute(TProblem problem) => throw new NotImplementedException();
+  public override AlgorithmResult<Permutation> Execute(TProblem problem, PermutationEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
 public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationEncoding>>
@@ -243,7 +243,7 @@ public class TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, 
 {
   public ICrossover<Permutation, PermutationEncoding, TravelingSalesmanProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<Permutation> Execute(TravelingSalesmanProblem problem) => throw new NotImplementedException();
+  public override AlgorithmResult<Permutation> Execute(TravelingSalesmanProblem problem, PermutationEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorEncoding, TProblem, AlgorithmResult<RealVector>>
@@ -251,7 +251,7 @@ public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVecto
 {
   public ICrossover<RealVector, RealVectorEncoding, TProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<RealVector> Execute(TProblem problem) => throw new NotImplementedException();
+  public override AlgorithmResult<RealVector> Execute(TProblem problem, RealVectorEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorEncoding>>
@@ -263,7 +263,7 @@ public class TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVe
 {
   public ICrossover<RealVector, RealVectorEncoding, TestFunctionProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<RealVector> Execute(TestFunctionProblem problem) => throw new NotImplementedException();
+  public override AlgorithmResult<RealVector> Execute(TestFunctionProblem problem, RealVectorEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
 

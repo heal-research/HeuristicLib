@@ -14,9 +14,7 @@ public class UniformDistributedCreator : Creator<RealVector, RealVectorEncoding>
     Maximum = maximum;
   }
   
-  public override RealVector Create(IExecutionContext<RealVectorEncoding> context) {
-    var encoding = context.Encoding;
-    var random = context.Random;
+  public override RealVector Create(IRandomNumberGenerator random, RealVectorEncoding encoding) {
     if (Minimum is not null && (Minimum < encoding.Minimum).Any()) throw new ArgumentException("Minimum values must be greater or equal to searchSpace minimum values");
     if (Maximum is not null && (Maximum > encoding.Maximum).Any()) throw new ArgumentException("Maximum values must be less or equal to searchSpace maximum values");
     if (!RealVector.AreCompatible(encoding.Length, Minimum ?? encoding.Minimum, Maximum ?? encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");

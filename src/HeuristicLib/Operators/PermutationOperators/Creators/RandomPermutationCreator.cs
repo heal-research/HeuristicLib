@@ -7,10 +7,10 @@ namespace HEAL.HeuristicLib.Operators.PermutationOperators;
 
 public class RandomPermutationCreator : Creator<Permutation, PermutationEncoding> 
 {
-  public override Permutation Create(IExecutionContext<PermutationEncoding> context) {
-    int[] elements = Enumerable.Range(0, context.Encoding.Length).ToArray();
+  public override Permutation Create(IRandomNumberGenerator random, PermutationEncoding encoding) {
+    int[] elements = Enumerable.Range(0, encoding.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
-      int j = context.Random.Integer(i + 1);
+      int j = random.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
     }
     return new Permutation(elements);

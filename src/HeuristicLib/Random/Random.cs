@@ -1,45 +1,45 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
-public class SeedSequence {
-  public static int GetSeed(int baseSeed, int index) {
-    return Math.Abs((int)Hash(baseSeed, index));
-  }
-  
-  private const uint FnvPrime = 16777619;
-  private const uint OffsetBasis = 2166136261;
-  private static uint Hash(params int[] values) {
-    uint hash = OffsetBasis;
-
-    foreach (int value in values) {
-      unchecked {
-        // Break each int into 4 bytes (little endian) and feed each byte
-        hash ^= (byte)(value & 0xFF);
-        hash *= FnvPrime;
-
-        hash ^= (byte)((value >> 8) & 0xFF);
-        hash *= FnvPrime;
-
-        hash ^= (byte)((value >> 16) & 0xFF);
-        hash *= FnvPrime;
-
-        hash ^= (byte)((value >> 24) & 0xFF);
-        hash *= FnvPrime;
-      }
-    }
-
-    return hash;
-  }
-  //
-  // private readonly int baseSeed;
-  // public SeedSequence(int baseSeed) {
-  //   this.baseSeed = baseSeed;
-  // }
-  //
-  // public SeedSequence[] Spawn(int children) {
-  //   return Enumerable.Range(0, children).Select(
-  //     index => new SeedSequence(GetSeed(baseSeed, index))).ToArray();
-  // }
-}
+// public class SeedSequence {
+//   public static int GetSeed(int baseSeed, int index) {
+//     return Math.Abs((int)Hash(baseSeed, index));
+//   }
+//   
+//   private const uint FnvPrime = 16777619;
+//   private const uint OffsetBasis = 2166136261;
+//   private static uint Hash(params int[] values) {
+//     uint hash = OffsetBasis;
+//
+//     foreach (int value in values) {
+//       unchecked {
+//         // Break each int into 4 bytes (little endian) and feed each byte
+//         hash ^= (byte)(value & 0xFF);
+//         hash *= FnvPrime;
+//
+//         hash ^= (byte)((value >> 8) & 0xFF);
+//         hash *= FnvPrime;
+//
+//         hash ^= (byte)((value >> 16) & 0xFF);
+//         hash *= FnvPrime;
+//
+//         hash ^= (byte)((value >> 24) & 0xFF);
+//         hash *= FnvPrime;
+//       }
+//     }
+//
+//     return hash;
+//   }
+//   //
+//   // private readonly int baseSeed;
+//   // public SeedSequence(int baseSeed) {
+//   //   this.baseSeed = baseSeed;
+//   // }
+//   //
+//   // public SeedSequence[] Spawn(int children) {
+//   //   return Enumerable.Range(0, children).Select(
+//   //     index => new SeedSequence(GetSeed(baseSeed, index))).ToArray();
+//   // }
+// }
 
 // public interface IRandomSource {
 //   IRandomNumberGenerator CreateRandomNumberGenerator();
@@ -78,7 +78,21 @@ public interface IRandomNumberGenerator {
   int Integer(int low, int high, bool endpoint = false);
   byte[] Bytes(int length);
 
-  IRandomNumberGenerator Fork(params int[] keys);
+  IRandomNumberGenerator Fork(int key);
+  IRandomNumberGenerator Fork(string key) => Fork(Hash(key)); // string.GetHash() is not stable across .NET versions
+  private static int Hash(string str) {
+    unchecked {
+      int hash1 = (5381 << 16) + 5381;
+      int hash2 = hash1;
+      for (int i = 0; i < str.Length; i += 2) {
+        hash1 = ((hash1 << 5) + hash1) ^ str[i];
+        if (i == str.Length - 1) break;
+        hash2 = ((hash2 << 5) + hash2) ^ str[i + 1];
+      }
+      return hash1 + (hash2 * 1566083941);
+    }
+  }
+  IReadOnlyList<IRandomNumberGenerator> Spawn(int count);
 }
 
 public static class RandomGeneratorExtensions {
@@ -108,9 +122,17 @@ public static class RandomGeneratorExtensions {
 }
 
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
+  private readonly int seed;
   private readonly System.Random random;
   public SystemRandomNumberGenerator(int seed) {
+    this.seed = seed;
     random = new System.Random(seed);
+  }
+  
+  public static int RandomSeed() {
+    Span<byte> bytes = stackalloc byte[4];
+    System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
+    return Math.Abs(BitConverter.ToInt32(bytes));
   }
   
   public double Random() {
@@ -130,27 +152,35 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
     return bytes;
   }
   
-  public IRandomNumberGenerator Fork(params int[] keys) {
-    int newSeed = keys.Aggregate(random.Next(), (current, key) => current ^ key);
+  public IRandomNumberGenerator Fork(int key) {
+    int newSeed = HashCode.Combine(seed, key);
     return new SystemRandomNumberGenerator(newSeed);
+  }
+  public IReadOnlyList<IRandomNumberGenerator> Spawn(int count) {
+    var randoms = new SystemRandomNumberGenerator[count];
+    for (int i = 0; i < count; i++) {
+      int newSeed = HashCode.Combine(seed, i);
+      randoms[i] = new SystemRandomNumberGenerator(newSeed);
+    }
+    return randoms;
   }
 }
 
 // ToDo: and others
-public class MersenneTwister : IRandomNumberGenerator {
-  public double Random() {
-    throw new NotImplementedException();
-  }
-  public int Integer(int low, int high, bool endpoint = false) {
-    throw new NotImplementedException();
-  }
-  public byte[] Bytes(int length) {
-    throw new NotImplementedException();
-  }
-  public IRandomNumberGenerator Fork(params int[] keys) {
-    throw new NotImplementedException();
-  }
-}
+// public class MersenneTwister : IRandomNumberGenerator {
+//   public double Random() {
+//     throw new NotImplementedException();
+//   }
+//   public int Integer(int low, int high, bool endpoint = false) {
+//     throw new NotImplementedException();
+//   }
+//   public byte[] Bytes(int length) {
+//     throw new NotImplementedException();
+//   }
+//   public IRandomNumberGenerator Fork(params int[] keys) {
+//     throw new NotImplementedException();
+//   }
+// }
 
 
 public interface IDistribution {

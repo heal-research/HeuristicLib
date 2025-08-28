@@ -16,6 +16,7 @@ public class PartiallyMatchedCrossover : BatchCrossover<Permutation, Permutation
       lengths[i] = Math.Max(parents[i].Item1.Count, parents[i].Item2.Count);
     }
     
+    // ToDo: use random spawn for parallelizing breakpoint generation for each individual?
     var breakpoints = new (int, int)[lengths.Length];
     GetRandomBreakPoints(lengths, breakpoints, rng);
     
