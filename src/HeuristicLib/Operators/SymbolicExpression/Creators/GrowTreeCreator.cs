@@ -34,9 +34,9 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
   /// <param name="grammar">Available tree grammar</param>
   /// <param name="encoding"></param>
   /// <returns></returns>
-  public override SymbolicExpressionTree Create(IRandom random, SymbolicExpressionTreeEncoding encoding) => CreateTree(random, encoding);
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => CreateTree(random, encoding);
 
-  private static SymbolicExpressionTree CreateTree(IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  private static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var rootNode = encoding.Grammar.ProgramRootSymbol.CreateTreeNode();
     if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
 
@@ -49,7 +49,7 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
     return new(rootNode);
   }
 
-  public static void Create(IRandom random, SymbolicExpressionTreeNode seedNode, int maxDepth, SymbolicExpressionTreeEncoding encoding) {
+  public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, SymbolicExpressionTreeEncoding encoding) {
     // make sure it is possible to create a trees smaller than maxDepth
     if (encoding.Grammar.GetMinimumExpressionDepth(seedNode.Symbol) > maxDepth)
       throw new ArgumentException("Cannot create trees of depth " + maxDepth + " or smaller because of grammar constraints.", nameof(maxDepth));
@@ -81,7 +81,7 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
         RecursiveCreate(random, subTree, 2, maxDepth, encoding);
   }
 
-  private static void RecursiveCreate(IRandom random, SymbolicExpressionTreeNode root, int currentDepth, int maxDepth, SymbolicExpressionTreeEncoding encoding) {
+  private static void RecursiveCreate(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, int currentDepth, int maxDepth, SymbolicExpressionTreeEncoding encoding) {
     var arity = SampleArity(random, root, encoding);
     if (arity == 0)
       return;
@@ -111,7 +111,7 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
           RecursiveCreate(random, subTree, currentDepth + 1, maxDepth, encoding);
   }
 
-  private static int SampleArity(IRandom random, SymbolicExpressionTreeNode node, SymbolicExpressionTreeEncoding encoding) {
+  private static int SampleArity(IRandomNumberGenerator random, SymbolicExpressionTreeNode node, SymbolicExpressionTreeEncoding encoding) {
     var minArity = encoding.Grammar.GetMinimumSubtreeCount(node.Symbol);
     var maxArity = encoding.Grammar.GetMaximumSubtreeCount(node.Symbol);
 

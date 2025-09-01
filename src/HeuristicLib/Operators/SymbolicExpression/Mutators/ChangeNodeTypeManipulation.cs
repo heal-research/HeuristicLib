@@ -28,7 +28,7 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Mutators;
 public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var allowedSymbols = new List<Symbol>();
     var mutant = new SymbolicExpressionTree(symbolicExpressionTree);
 
@@ -88,7 +88,7 @@ public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
     return mutant;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     return ChangeNodeType(parent, random, encoding);
   }
 }

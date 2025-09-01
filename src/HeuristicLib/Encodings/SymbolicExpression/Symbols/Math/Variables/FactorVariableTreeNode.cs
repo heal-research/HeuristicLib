@@ -41,7 +41,7 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode {
 
   public override bool HasLocalParameters => true;
 
-  public override void ResetLocalParameters(IRandom random) {
+  public override void ResetLocalParameters(IRandomNumberGenerator random) {
     base.ResetLocalParameters(random);
     VariableName = Symbol.VariableNames.SampleRandom(random);
     Weights =
@@ -49,7 +49,7 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode {
             .Select(_ => NormalDistributedRandomPolar.NextDouble(random, 0, 1)).ToArray();
   }
 
-  public override void ShakeLocalParameters(IRandom random, double shakingFactor) {
+  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
     // mutate only one randomly selected weight
     var idx = random.Integer(Weights!.Length);
     // 50% additive & 50% multiplicative

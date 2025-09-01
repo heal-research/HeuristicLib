@@ -28,7 +28,7 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
 public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
   private const int MAX_TRIES = 100;
 
-  public override SymbolicExpressionTree Create(IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var rootNode = encoding.Grammar.ProgramRootSymbol.CreateTreeNode();
     if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
 
@@ -40,7 +40,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     return new(rootNode);
   }
 
-  public static SymbolicExpressionTree CreateExpressionTree(IRandom random, ISymbolicExpressionGrammar grammar, int targetLength,
+  public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, ISymbolicExpressionGrammar grammar, int targetLength,
                                                             int maxTreeDepth, SymbolicExpressionTreeEncoding encoding) {
     var rootNode = grammar.ProgramRootSymbol.CreateTreeNode();
     if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
@@ -62,7 +62,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     public int MinimumExtensionLength { get; set; }
   }
 
-  public static void PTC2(IRandom random, SymbolicExpressionTreeNode seedNode,
+  public static void PTC2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode,
                           SymbolicExpressionTreeEncoding encoding) {
     // make sure it is possible to create a trees smaller than maxLength and maxDepth
     var maxDepth = encoding.TreeDepth;
@@ -98,7 +98,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     throw new ArgumentException("Couldn't create a random valid tree.");
   }
 
-  private static bool TryCreateFullTreeFromSeed(IRandom random, SymbolicExpressionTreeNode root,
+  private static bool TryCreateFullTreeFromSeed(IRandomNumberGenerator random, SymbolicExpressionTreeNode root,
                                                 int targetLength, int maxDepth, SymbolicExpressionTreeEncoding encoding) {
     var extensionPoints = new List<TreeExtensionPoint>();
     var currentLength = 0;
@@ -194,7 +194,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     return true;
   }
 
-  private static void ReplaceWithMinimalTree(IRandom random, SymbolicExpressionTreeNode parent,
+  private static void ReplaceWithMinimalTree(IRandomNumberGenerator random, SymbolicExpressionTreeNode parent,
                                              int childIndex, SymbolicExpressionTreeEncoding encoding) {
     // determine possible symbols that will lead to the smallest possible tree
     var possibleSymbols = (from s in encoding.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
@@ -237,7 +237,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     extension.MinimumExtensionLength = minLength;
   }
 
-  private static int SampleArity(IRandom random, SymbolicExpressionTreeNode node, int targetLength, int maxDepth, SymbolicExpressionTreeEncoding encoding) {
+  private static int SampleArity(IRandomNumberGenerator random, SymbolicExpressionTreeNode node, int targetLength, int maxDepth, SymbolicExpressionTreeEncoding encoding) {
     // select actualArity randomly with the constraint that the sub-trees in the minimal arity can become large enough
     var minArity = encoding.Grammar.GetMinimumSubtreeCount(node.Symbol);
     var maxArity = encoding.Grammar.GetMaximumSubtreeCount(node.Symbol);

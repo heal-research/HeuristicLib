@@ -448,7 +448,7 @@ public static class RandomEnumerable {
   //algorithm taken from programming pearls page 127
   //IMPORTANT because IEnumerables with yield are used the seed must be specified to return always 
   //the same sequence of numbers without caching the values.
-  public static IEnumerable<int> SampleRandomNumbers(this IRandom generator, int start, int end, int count) {
+  public static IEnumerable<int> SampleRandomNumbers(this IRandomNumberGenerator generator, int start, int end, int count) {
     var remaining = end - start;
     for (var i = start; i < end && count > 0; i++) {
       var probability = generator.Random();
@@ -474,7 +474,7 @@ public static class RandomEnumerable {
   /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
   /// <param name="count">The number of items to be selected.</param>
   /// <returns>An element that has been chosen randomly from the sequence.</returns>
-  public static T SampleRandom<T>(this IEnumerable<T> source, IRandom random) {
+  public static T SampleRandom<T>(this IEnumerable<T> source, IRandomNumberGenerator random) {
     return source.SampleRandom(random, 1).First();
   }
 
@@ -492,7 +492,7 @@ public static class RandomEnumerable {
   /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
   /// <param name="count">The number of items to be selected.</param>
   /// <returns>A sequence of elements that have been chosen randomly.</returns>
-  public static IEnumerable<T> SampleRandom<T>(this IEnumerable<T> source, IRandom random, int count) {
+  public static IEnumerable<T> SampleRandom<T>(this IEnumerable<T> source, IRandomNumberGenerator random, int count) {
     if (source is IList<T> listSource) {
       while (count > 0) {
         yield return listSource[random.Integer(listSource.Count)];
@@ -532,7 +532,7 @@ public static class RandomEnumerable {
   /// <param name="count">The number of items to be selected.</param>
   /// <param name="sourceCount">Optional parameter specifying the number of elements in the source enumerations</param>
   /// <returns>A sequence of elements that have been chosen randomly.</returns>
-  public static IEnumerable<T> SampleRandomWithoutRepetition<T>(this IEnumerable<T> source, IRandom random, int count, int sourceCount = -1) {
+  public static IEnumerable<T> SampleRandomWithoutRepetition<T>(this IEnumerable<T> source, IRandomNumberGenerator random, int count, int sourceCount = -1) {
     if (sourceCount == -1) sourceCount = source.Count();
     var remaining = sourceCount;
     foreach (var item in source) {
@@ -546,11 +546,11 @@ public static class RandomEnumerable {
     }
   }
 
-  public static T SampleProportional<T>(this IEnumerable<T> source, IRandom random, IEnumerable<double> weights) {
+  public static T SampleProportional<T>(this IEnumerable<T> source, IRandomNumberGenerator random, IEnumerable<double> weights) {
     return source.SampleProportional(random, weights, false, false).First();
   }
 
-  public static T SampleProportional<T>(this IEnumerable<T> source, IEnumerable<double> weights, IRandom random) {
+  public static T SampleProportional<T>(this IEnumerable<T> source, IEnumerable<double> weights, IRandomNumberGenerator random) {
     return source.SampleProportional(random, weights);
   }
 
@@ -572,7 +572,7 @@ public static class RandomEnumerable {
   /// <param name="windowing">Whether to scale the proportional values or not.</param>
   /// <param name="inverseProportional">Determines whether to choose proportionally (false) or inverse-proportionally (true).</param>
   /// <returns>A sequence of selected items. The sequence might contain the same item more than once.</returns>
-  public static IEnumerable<T> SampleProportional<T>(this IEnumerable<T> source, IRandom random, int count, IEnumerable<double> weights, bool windowing = true, bool inverseProportional = false) {
+  public static IEnumerable<T> SampleProportional<T>(this IEnumerable<T> source, IRandomNumberGenerator random, int count, IEnumerable<double> weights, bool windowing = true, bool inverseProportional = false) {
     return source.SampleProportional(random, weights, windowing, inverseProportional).Take(count);
   }
 
@@ -595,12 +595,12 @@ public static class RandomEnumerable {
   /// <param name="windowing">Whether to scale the proportional values or not.</param>
   /// <param name="inverseProportional">Determines whether to choose proportionally (true) or inverse-proportionally (false).</param>
   /// <returns>A sequence of selected items. Might actually be shorter than <paramref name="count"/> elements if source has less than <paramref name="count"/> elements.</returns>
-  public static IEnumerable<T> SampleProportionalWithoutRepetition<T>(this IEnumerable<T> source, IRandom random, int count, IEnumerable<double> weights, bool windowing = true, bool inverseProportional = false) {
+  public static IEnumerable<T> SampleProportionalWithoutRepetition<T>(this IEnumerable<T> source, IRandomNumberGenerator random, int count, IEnumerable<double> weights, bool windowing = true, bool inverseProportional = false) {
     return source.SampleProportionalWithoutRepetition(random, weights, windowing, inverseProportional).Take(count);
   }
 
   #region Proportional Helpers
-  private static IEnumerable<T> SampleProportional<T>(this IEnumerable<T> source, IRandom random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
+  private static IEnumerable<T> SampleProportional<T>(this IEnumerable<T> source, IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
     var sourceArray = source.ToArray();
     var valueArray = PrepareProportional(weights, windowing, inverseProportional);
     var total = valueArray.Sum();
@@ -614,7 +614,7 @@ public static class RandomEnumerable {
     }
   }
 
-  private static IEnumerable<T> SampleProportionalWithoutRepetition<T>(this IEnumerable<T> source, IRandom random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
+  private static IEnumerable<T> SampleProportionalWithoutRepetition<T>(this IEnumerable<T> source, IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
     var valueArray = PrepareProportional(weights, windowing, inverseProportional);
     var list = new LinkedList<Tuple<T, double>>(source.Zip(valueArray, Tuple.Create));
     var total = valueArray.Sum();
@@ -684,7 +684,7 @@ public static class RandomEnumerable {
   /// <param name="source">The enumerable that contains the items.</param>
   /// <param name="random">The random number generator, its Next(n) method must deliver uniformly distributed random numbers in the range [0;n).</param>
   /// <returns>An enumerable with the elements shuffled.</returns>
-  public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> source, IRandom random) {
+  public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> source, IRandomNumberGenerator random) {
     var elements = source.ToArray();
     for (var i = elements.Length - 1; i > 0; i--) {
       // Swap element "i" with a random earlier element (including itself)

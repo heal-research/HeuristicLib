@@ -35,13 +35,13 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode {
     VariableName = other.VariableName;
   }
 
-  public override void ResetLocalParameters(IRandom random) {
+  public override void ResetLocalParameters(IRandomNumberGenerator random) {
     base.ResetLocalParameters(random);
     Weight = NormalDistributedRandomPolar.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
     VariableName = Symbol.VariableNames.SampleRandom(random, 1).Single();
   }
 
-  public override void ShakeLocalParameters(IRandom random, double shakingFactor) {
+  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
     base.ShakeLocalParameters(random, shakingFactor);
 
     // 50% additive & 50% multiplicative (TODO: BUG in if statement below -> fix in HL 4.0!)

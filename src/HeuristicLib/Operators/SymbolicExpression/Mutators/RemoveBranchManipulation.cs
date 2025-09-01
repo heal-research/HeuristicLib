@@ -28,7 +28,7 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Mutators;
 public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator {
   private const int MAX_TRIES = 100;
 
-  public static SymbolicExpressionTree RemoveRandomBranch(IRandom random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeEncoding encoding) {
+  public static SymbolicExpressionTree RemoveRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeEncoding encoding) {
     SymbolicExpressionTree childTree = new(symbolicExpressionTree);
     var allowedSymbols = new List<Symbol>();
     SymbolicExpressionTreeNode parent;
@@ -66,7 +66,7 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
     return childTree;
   }
 
-  private static void ReplaceWithMinimalTree(IRandom random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeEncoding encoding) {
+  private static void ReplaceWithMinimalTree(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeEncoding encoding) {
     // determine possible symbols that will lead to the smallest possible tree
     var possibleSymbols = (from s in encoding.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
                            where s.InitialFrequency > 0.0
@@ -92,7 +92,7 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
     }
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     return RemoveRandomBranch(random, parent, encoding);
   }
 }

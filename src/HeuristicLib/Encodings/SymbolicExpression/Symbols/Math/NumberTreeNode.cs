@@ -40,13 +40,13 @@ public sealed class NumberTreeNode : SymbolicExpressionTreeNode {
 
   public override bool HasLocalParameters => true;
 
-  public override void ResetLocalParameters(IRandom random) {
+  public override void ResetLocalParameters(IRandomNumberGenerator random) {
     base.ResetLocalParameters(random);
     var range = Symbol.MaxValue - Symbol.MinValue;
     Value = random.Random() * range + Symbol.MinValue;
   }
 
-  public override void ShakeLocalParameters(IRandom random, double shakingFactor) {
+  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
     base.ShakeLocalParameters(random, shakingFactor);
     // 50% additive & 50% multiplicative
     if (random.Random() < 0.5) {

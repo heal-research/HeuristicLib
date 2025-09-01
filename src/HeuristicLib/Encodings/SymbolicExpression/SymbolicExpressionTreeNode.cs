@@ -109,8 +109,8 @@ public class SymbolicExpressionTreeNode {
     return int.MaxValue;
   }
 
-  public virtual void ResetLocalParameters(IRandom random) { }
-  public virtual void ShakeLocalParameters(IRandom random, double shakingFactor) { }
+  public virtual void ResetLocalParameters(IRandomNumberGenerator random) { }
+  public virtual void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) { }
 
   public int SubtreeCount {
     get {

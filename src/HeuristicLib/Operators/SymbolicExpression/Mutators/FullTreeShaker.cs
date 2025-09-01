@@ -31,7 +31,7 @@ public sealed class FullTreeShaker : SymbolicExpressionTreeManipulator {
   } = 1.0;
 
   public static SymbolicExpressionTree Apply(
-    IRandom random, SymbolicExpressionTree tree, double shakingFactor) {
+    IRandomNumberGenerator random, SymbolicExpressionTree tree, double shakingFactor) {
     var clone = new SymbolicExpressionTree(tree);
     clone.Root.ForEachNodePostfix(node => {
       if (node.HasLocalParameters) {
@@ -42,6 +42,6 @@ public sealed class FullTreeShaker : SymbolicExpressionTreeManipulator {
   }
 
   public override SymbolicExpressionTree Mutate(
-    SymbolicExpressionTree parent, IRandom random, SymbolicExpressionTreeEncoding encoding)
+    SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding)
     => Apply(random, parent, ShakingFactor);
 }

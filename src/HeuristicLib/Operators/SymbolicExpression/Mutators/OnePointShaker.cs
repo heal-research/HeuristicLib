@@ -32,7 +32,7 @@ public sealed class OnePointShaker : SymbolicExpressionTreeManipulator {
   } = 1.0;
   #endregion
 
-  public static SymbolicExpressionTree Shake(IRandom random, SymbolicExpressionTree tree, double shakingFactor) {
+  public static SymbolicExpressionTree Shake(IRandomNumberGenerator random, SymbolicExpressionTree tree, double shakingFactor) {
     tree = new(tree);
     var parametricNodes = new List<SymbolicExpressionTreeNode?>();
     tree.Root.ForEachNodePostfix(n => {
@@ -47,7 +47,7 @@ public sealed class OnePointShaker : SymbolicExpressionTreeManipulator {
     return tree;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     return Shake(random, parent, ShakingFactor);
   }
 }

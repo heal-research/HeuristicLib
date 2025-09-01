@@ -43,7 +43,7 @@ public class SeedSequence {
 }
 
 // public interface IRandomSource {
-//   IRandom CreateRandomNumberGenerator();
+//   IRandomNumberGenerator CreateRandomNumberGenerator();
 // }
 //
 // public class RandomSource : IRandomSource {
@@ -56,7 +56,7 @@ public class SeedSequence {
 //   }
 //   public RandomSource() : this(GetRandomSeed()) { }
 //   
-//   public IRandom CreateRandomNumberGenerator() {
+//   public IRandomNumberGenerator CreateRandomNumberGenerator() {
 //     return new SystemRandomNumberGenerator(random);
 //   }
 //
@@ -69,23 +69,25 @@ public class SeedSequence {
 //     Seed = seed;
 //   }
 //
-//   public IRandom CreateRandomNumberGenerator() {
+//   public IRandomNumberGenerator CreateRandomNumberGenerator() {
 //     return new SystemRandomNumberGenerator(new System.Random(Seed));
 //   }
 // }
 
-public interface IRandom {
+public interface IRandomNumberGenerator {
   double Random();
   int Integer(int low, int high, bool endpoint = false);
   byte[] Bytes(int length);
 
-  IRandom Fork(params int[] keys);
+  IRandomNumberGenerator Fork(params int[] keys);
   int Next(int low, int high) => Integer(low, high);
   int Next(int high) => Integer(0, high);
 }
 
+public interface IRandom : IRandomNumberGenerator { } //TODO remove after migration
+
 public static class RandomGeneratorExtensions {
-  public static double[] Random(this IRandom random, int length) {
+  public static double[] Random(this IRandomNumberGenerator random, int length) {
     double[] values = new double[length];
     for (int i = 0; i < length; i++) {
       values[i] = random.Random();
@@ -94,11 +96,11 @@ public static class RandomGeneratorExtensions {
     return values;
   }
 
-  public static int Integer(this IRandom random, int high, bool endpoint = false) {
+  public static int Integer(this IRandomNumberGenerator random, int high, bool endpoint = false) {
     return random.Integer(0, high, endpoint);
   }
 
-  public static int[] Integers(this IRandom random, int length, int low, int high, bool endpoint = false) {
+  public static int[] Integers(this IRandomNumberGenerator random, int length, int low, int high, bool endpoint = false) {
     int[] values = new int[length];
     for (int i = 0; i < length; i++) {
       values[i] = random.Integer(low, high, endpoint);
@@ -107,12 +109,12 @@ public static class RandomGeneratorExtensions {
     return values;
   }
 
-  public static int[] Integers(this IRandom random, int length, int high, bool endpoint = false) {
+  public static int[] Integers(this IRandomNumberGenerator random, int length, int high, bool endpoint = false) {
     return random.Integers(length, 0, high, endpoint);
   }
 }
 
-public class SystemRandomNumberGenerator : IRandom {
+public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   private readonly System.Random random;
 
   public SystemRandomNumberGenerator(int seed) {
@@ -136,14 +138,14 @@ public class SystemRandomNumberGenerator : IRandom {
     return bytes;
   }
 
-  public IRandom Fork(params int[] keys) {
+  public IRandomNumberGenerator Fork(params int[] keys) {
     int newSeed = keys.Aggregate(random.Next(), (current, key) => current ^ key);
     return new SystemRandomNumberGenerator(newSeed);
   }
 }
 
 // ToDo: and others
-public class MersenneTwister : IRandom {
+public class MersenneTwister : IRandomNumberGenerator {
   public double Random() {
     throw new NotImplementedException();
   }
@@ -156,7 +158,7 @@ public class MersenneTwister : IRandom {
     throw new NotImplementedException();
   }
 
-  public IRandom Fork(params int[] keys) {
+  public IRandomNumberGenerator Fork(params int[] keys) {
     throw new NotImplementedException();
   }
 }
@@ -164,11 +166,11 @@ public class MersenneTwister : IRandom {
 public interface IDistribution { }
 
 public class UniformDistribution : IDistribution {
-  private readonly IRandom random;
+  private readonly IRandomNumberGenerator random;
   private readonly double low;
   private readonly double high;
 
-  public UniformDistribution(IRandom random, double low, double high) {
+  public UniformDistribution(IRandomNumberGenerator random, double low, double high) {
     this.random = random;
     this.low = low;
     this.high = high;
@@ -180,11 +182,11 @@ public class UniformDistribution : IDistribution {
 }
 
 public class NormalDistribution : IDistribution {
-  private readonly IRandom random;
+  private readonly IRandomNumberGenerator random;
   private readonly double mean;
   private readonly double standardDeviation;
 
-  public NormalDistribution(IRandom random, double mean, double standardDeviation) {
+  public NormalDistribution(IRandomNumberGenerator random, double mean, double standardDeviation) {
     this.random = random;
     this.mean = mean;
     this.standardDeviation = standardDeviation;
