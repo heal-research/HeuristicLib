@@ -45,14 +45,14 @@ public sealed class VariableConditionTreeNode : SymbolicExpressionTreeNode {
   public VariableConditionTreeNode(VariableCondition variableConditionSymbol) : base(variableConditionSymbol) { }
   public override bool HasLocalParameters => true;
 
-  public override void ResetLocalParameters(IRandomNumberGenerator random) {
+  public override void ResetLocalParameters(IRandom random) {
     base.ResetLocalParameters(random);
     Threshold = NormalDistributedRandomPolar.NextDouble(random, Symbol.ThresholdInitializerMu, Symbol.ThresholdInitializerSigma);
     VariableName = Symbol.VariableNames.SampleRandom(random);
     Slope = NormalDistributedRandomPolar.NextDouble(random, Symbol.SlopeInitializerMu, Symbol.SlopeInitializerSigma);
   }
 
-  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
+  public override void ShakeLocalParameters(IRandom random, double shakingFactor) {
     base.ShakeLocalParameters(random, shakingFactor);
     var x = NormalDistributedRandomPolar.NextDouble(random, Symbol.ThresholdManipulatorMu, Symbol.ThresholdManipulatorSigma);
     Threshold += x * shakingFactor;

@@ -21,58 +21,59 @@
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
+using HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Mutators {
-  public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulator {
-    private const int MAX_TRIES = 100;
+namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Mutators;
 
-    public static SymbolicExpressionTree ReplaceRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeEncoding encoding) {
-      var allowedSymbols = new List<Symbol>();
-      SymbolicExpressionTreeNode parent;
-      int childIndex;
-      int maxLength;
-      int maxDepth;
-      // repeat until a fitting parent and child are found (MAX_TRIES times)
-      var tries = 0;
+public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulator {
+  private const int MAX_TRIES = 100;
 
-      var childTree = new SymbolicExpressionTree(symbolicExpressionTree);
-      do {
-        parent = childTree.Root.IterateNodesPrefix().Skip(1).Where(n => n.SubtreeCount > 0).SampleRandom(random);
+  public static SymbolicExpressionTree ReplaceRandomBranch(IRandom random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeEncoding encoding) {
+    var allowedSymbols = new List<Symbol>();
+    SymbolicExpressionTreeNode parent;
+    int childIndex;
+    int maxLength;
+    int maxDepth;
+    // repeat until a fitting parent and child are found (MAX_TRIES times)
+    var tries = 0;
 
-        childIndex = random.Integer(parent.SubtreeCount);
-        var child = parent.GetSubtree(childIndex);
-        maxLength = encoding.TreeLength - childTree.Length + child.GetLength();
-        maxDepth = encoding.TreeDepth - childTree.Depth + child.GetDepth();
+    var childTree = new SymbolicExpressionTree(symbolicExpressionTree);
+    do {
+      parent = childTree.Root.IterateNodesPrefix().Skip(1).Where(n => n.SubtreeCount > 0).SampleRandom(random);
 
-        allowedSymbols.Clear();
-        allowedSymbols.AddRange(encoding.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
-                                        .Where(symbol => symbol != child.Symbol
-                                                         && symbol.InitialFrequency > 0
-                                                         && encoding.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
-                                                         && encoding.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
+      childIndex = random.Integer(parent.SubtreeCount);
+      var child = parent.GetSubtree(childIndex);
+      maxLength = encoding.TreeLength - childTree.Length + child.GetLength();
+      maxDepth = encoding.TreeDepth - childTree.Depth + child.GetDepth();
 
-        tries++;
-      } while (tries < MAX_TRIES && allowedSymbols.Count == 0);
+      allowedSymbols.Clear();
+      allowedSymbols.AddRange(encoding.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
+                                      .Where(symbol => symbol != child.Symbol
+                                                       && symbol.InitialFrequency > 0
+                                                       && encoding.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
+                                                       && encoding.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
 
-      if (tries < MAX_TRIES) {
-        var weights = allowedSymbols.Select(s => s.InitialFrequency).ToList();
-        var seedSymbol = allowedSymbols.SampleProportional(random, 1, weights).First();
+      tries++;
+    } while (tries < MAX_TRIES && allowedSymbols.Count == 0);
 
-        // replace the old node with the new node
-        var seedNode = seedSymbol.CreateTreeNode();
-        if (seedNode.HasLocalParameters)
-          seedNode.ResetLocalParameters(random);
+    if (tries < MAX_TRIES) {
+      var weights = allowedSymbols.Select(s => s.InitialFrequency).ToList();
+      var seedSymbol = allowedSymbols.SampleProportional(random, 1, weights).First();
 
-        parent.RemoveSubtree(childIndex);
-        parent.InsertSubtree(childIndex, seedNode);
-        ProbabilisticTreeCreator.PTC2(random, seedNode, maxLength, maxDepth);
-        return childTree;
-      }
+      // replace the old node with the new node
+      var seedNode = seedSymbol.CreateTreeNode();
+      if (seedNode.HasLocalParameters)
+        seedNode.ResetLocalParameters(random);
 
-      return symbolicExpressionTree;
+      parent.RemoveSubtree(childIndex);
+      parent.InsertSubtree(childIndex, seedNode);
+      ProbabilisticTreeCreator.PTC2(random, seedNode, encoding);
+      return childTree;
     }
 
-    public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => ReplaceRandomBranch(random, parent, encoding);
+    return symbolicExpressionTree;
   }
+
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandom random, SymbolicExpressionTreeEncoding encoding) => ReplaceRandomBranch(random, parent, encoding);
 }

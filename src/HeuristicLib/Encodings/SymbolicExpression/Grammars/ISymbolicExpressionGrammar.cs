@@ -42,21 +42,16 @@
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 
-namespace HEAL.HeuristicLib.Encodings.Grammars {
-  public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase {
-    ProgramRootSymbol ProgramRootSymbol { get; }
-    StartSymbol StartSymbol { get; }
+namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 
-    int MinimumFunctionDefinitions { get; set; }
-    int MaximumFunctionDefinitions { get; set; }
-    int MinimumFunctionArguments { get; set; }
-    int MaximumFunctionArguments { get; set; }
+public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase {
+  ProgramRootSymbol ProgramRootSymbol { get; }
+  StartSymbol StartSymbol { get; }
 
-    bool ReadOnly { get; set; }
+  int MinimumFunctionDefinitions { get; set; }
+  int MaximumFunctionDefinitions { get; set; }
+  int MinimumFunctionArguments { get; set; }
+  int MaximumFunctionArguments { get; set; }
 
-    void StartGrammarManipulation();
-    void FinishedGrammarManipulation();
-
-    ISymbolicExpressionTreeGrammar CreateExpressionTreeGrammar();
-  }
+  bool ReadOnly { get; set; }
 }

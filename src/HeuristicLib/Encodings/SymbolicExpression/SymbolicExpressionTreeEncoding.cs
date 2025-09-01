@@ -19,32 +19,32 @@
  */
 #endregion
 
-using HEAL.HeuristicLib.Encodings.Grammars;
+using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression;
 
-public sealed record SymbolicExpressionTreeEncoding(SymbolicExpressionGrammar Grammar, int TreeLength, int TreeDepth)
+public sealed record SymbolicExpressionTreeEncoding(ISymbolicExpressionGrammar Grammar, int TreeLength, int TreeDepth)
   : Encoding<SymbolicExpressionTree> {
   #region Parameter properties
   public int TreeLength { get; } = TreeLength;
 
   public int TreeDepth { get; } = TreeDepth;
 
-  public SymbolicExpressionGrammar Grammar { get; } = Grammar;
+  public ISymbolicExpressionGrammar Grammar { get; } = Grammar;
 
   public int FunctionDefinitions { get; set; }
 
   public int FunctionArguments { get; set; }
   #endregion
 
-  public SymbolicExpressionTreeEncoding(SymbolicExpressionGrammar grammar) : this(grammar, 50, 50) { }
+  public SymbolicExpressionTreeEncoding(ISymbolicExpressionGrammar grammar) : this(grammar, 50, 50) { }
 
   public override bool Contains(SymbolicExpressionTree genotype) {
     return genotype.Length <= TreeLength &&
            genotype.Depth <= TreeDepth
-      //&& Grammar.Conforms(genotype)
+      //TODO && Grammar.Conforms(genotype)
       ;
   }
 }

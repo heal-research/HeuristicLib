@@ -19,54 +19,25 @@
  */
 #endregion
 
-namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Grammars {
-  [StorableType("70D190B2-22F4-41E5-9938-EFD1B14ECF43")]
-  public sealed class SimpleSymbolicExpressionGrammar : SymbolicExpressionGrammar {
-    [StorableConstructor]
-    private SimpleSymbolicExpressionGrammar(StorableConstructorFlag _) : base(_) { }
+using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 
-    private SimpleSymbolicExpressionGrammar(SimpleSymbolicExpressionGrammar original, Cloner cloner) : base(original, cloner) { }
+namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 
-    public override IDeepCloneable Clone(Cloner cloner) {
-      return new SimpleSymbolicExpressionGrammar(this, cloner);
-    }
+public sealed class SimpleSymbolicExpressionGrammar() : SymbolicExpressionGrammar() {
+  public void AddSymbol(SimpleSymbol symbol) {
+    SetSubtreeCount(symbol, symbol.MinimumArity, symbol.MaximumArity);
 
-    public SimpleSymbolicExpressionGrammar()
-      : base("Simple Grammar", "A simple grammar containing symbols that differ only in their name.") { }
-
-    public void AddSymbol(string symbolName, int minimumArity, int maximumArity) {
-      AddSymbol(symbolName, string.Empty, minimumArity, maximumArity);
-    }
-
-    public void AddSymbol(string symbolName, string description, int minimumArity, int maximumArity) {
-      var symbol = new SimpleSymbol(symbolName, description, minimumArity, maximumArity);
-      AddSymbol(symbol);
-      SetSubtreeCount(symbol, symbol.MinimumArity, symbol.MaximumArity);
-
-      foreach (var s in Symbols) {
-        if (s == ProgramRootSymbol) continue;
-        if (s.MaximumArity > 0) AddAllowedChildSymbol(s, symbol);
-
-        if (s == DefunSymbol) continue;
-        if (s == StartSymbol) continue;
-        if (symbol.MaximumArity > 0) AddAllowedChildSymbol(symbol, s);
-      }
-    }
-
-    public void AddSymbols(IEnumerable<string> symbolNames, int minimumArity, int maximumArity) {
-      foreach (var symbolName in symbolNames) AddSymbol(symbolName, minimumArity, maximumArity);
-    }
-
-    public void AddTerminalSymbol(string symbolName) {
-      AddTerminalSymbol(symbolName, string.Empty);
-    }
-
-    public void AddTerminalSymbol(string symbolName, string description) {
-      AddSymbol(symbolName, description, 0, 0);
-    }
-
-    public void AddTerminalSymbols(IEnumerable<string> symbolNames) {
-      foreach (var symbolName in symbolNames) AddTerminalSymbol(symbolName);
+    foreach (var s in Symbols) {
+      if (s == ProgramRootSymbol)
+        continue;
+      if (s.MaximumArity > 0)
+        AddAllowedChildSymbol(s, symbol);
+      if (s == DefunSymbol)
+        continue;
+      if (s == StartSymbol)
+        continue;
+      if (symbol.MaximumArity > 0)
+        AddAllowedChildSymbol(symbol, s);
     }
   }
 }

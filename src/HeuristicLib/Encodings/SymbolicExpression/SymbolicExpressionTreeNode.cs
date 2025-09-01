@@ -93,11 +93,11 @@ public class SymbolicExpressionTreeNode {
     return depth;
   }
 
-  public int GetBranchLevel(SymbolicExpressionTreeNode child) {
+  public int GetBranchLevel(SymbolicExpressionTreeNode? child) {
     return GetBranchLevel(this, child);
   }
 
-  private static int GetBranchLevel(SymbolicExpressionTreeNode root, SymbolicExpressionTreeNode point) {
+  private static int GetBranchLevel(SymbolicExpressionTreeNode root, SymbolicExpressionTreeNode? point) {
     if (root == point)
       return 0;
     foreach (var subtree in root.Subtrees) {
@@ -109,8 +109,8 @@ public class SymbolicExpressionTreeNode {
     return int.MaxValue;
   }
 
-  public virtual void ResetLocalParameters(IRandomNumberGenerator random) { }
-  public virtual void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) { }
+  public virtual void ResetLocalParameters(IRandom random) { }
+  public virtual void ShakeLocalParameters(IRandom random, double shakingFactor) { }
 
   public int SubtreeCount {
     get {
@@ -189,13 +189,13 @@ public class SymbolicExpressionTreeNode {
     }
   }
 
-  public IEnumerable<SymbolicExpressionTreeNode> IterateNodesPostfix() {
-    var list = new List<SymbolicExpressionTreeNode>();
+  public IEnumerable<SymbolicExpressionTreeNode?> IterateNodesPostfix() {
+    var list = new List<SymbolicExpressionTreeNode?>();
     ForEachNodePostfix((n) => list.Add(n));
     return list;
   }
 
-  public void ForEachNodePostfix(Action<SymbolicExpressionTreeNode> a) {
+  public void ForEachNodePostfix(Action<SymbolicExpressionTreeNode?> a) {
     if (subtrees != null) {
       //avoid linq to reduce memory pressure
       for (var i = 0; i < subtrees.Count; i++) {

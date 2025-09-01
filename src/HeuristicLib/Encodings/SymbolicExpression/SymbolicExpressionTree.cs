@@ -34,5 +34,5 @@ public class SymbolicExpressionTree(SymbolicExpressionTreeNode root) {
 
   public IEnumerable<SymbolicExpressionTreeNode> IterateNodesPrefix() => Root.IterateNodesPrefix();
 
-  public IEnumerable<SymbolicExpressionTreeNode> IterateNodesPostfix() => Root.IterateNodesPostfix();
+  public IEnumerable<SymbolicExpressionTreeNode?> IterateNodesPostfix() => Root.IterateNodesPostfix();
 }

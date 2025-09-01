@@ -20,14 +20,10 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Mutators;
+namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Crossovers;
 
-public sealed class MultiSymbolicExpressionTreeManipulator : SymbolicExpressionTreeManipulator {
-  public List<SymbolicExpressionTreeManipulator> SubOperators { get; } = [];
-
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandom random, SymbolicExpressionTreeEncoding encoding) {
-    return SubOperators.SampleRandom(random).Mutate(parent, random, encoding);
-  }
-}
+/// <summary>
+/// A base class for operators that perform a crossover of symbolic expression trees.
+/// </summary>
+public abstract class SymbolicExpressionTreeCrossover : Crossover<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>;

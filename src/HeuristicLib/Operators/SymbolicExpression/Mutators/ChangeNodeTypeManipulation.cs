@@ -23,72 +23,72 @@ using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Mutators {
-  public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
-    private const int MaxTries = 100;
+namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Mutators;
 
-    public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-      var allowedSymbols = new List<Symbol>();
-      var mutant = new SymbolicExpressionTree(symbolicExpressionTree);
+public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
+  private const int MaxTries = 100;
 
-      SymbolicExpressionTreeNode parent;
-      int childIndex;
-      SymbolicExpressionTreeNode child;
-      // repeat until a fitting parent and child are found (MAX_TRIES times)
-      var tries = 0;
-      var grammar = encoding.Grammar;
-      do {
-        parent = mutant.Root.IterateNodesPrefix().Skip(1).Where(n => n.SubtreeCount > 0).SampleRandom(random, 1).First();
+  public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandom random, SymbolicExpressionTreeEncoding encoding) {
+    var allowedSymbols = new List<Symbol>();
+    var mutant = new SymbolicExpressionTree(symbolicExpressionTree);
 
-        childIndex = random.Integer(parent.SubtreeCount);
+    SymbolicExpressionTreeNode parent;
+    int childIndex;
+    SymbolicExpressionTreeNode child;
+    // repeat until a fitting parent and child are found (MAX_TRIES times)
+    var tries = 0;
+    var grammar = encoding.Grammar;
+    do {
+      parent = mutant.Root.IterateNodesPrefix().Skip(1).Where(n => n.SubtreeCount > 0).SampleRandom(random, 1).First();
 
-        child = parent.GetSubtree(childIndex);
-        var existingSubtreeCount = child.SubtreeCount;
-        allowedSymbols.Clear();
-        foreach (var symbol in grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)) {
-          // check basic properties that the new symbol must have
-          if (symbol == child.Symbol ||
-              symbol.InitialFrequency <= 0 ||
-              existingSubtreeCount > grammar.GetMinimumSubtreeCount(symbol) ||
-              existingSubtreeCount < grammar.GetMaximumSubtreeCount(symbol)) {
-            continue;
-          }
+      childIndex = random.Integer(parent.SubtreeCount);
 
-          // check that all existing subtrees are also allowed for the new symbol
-          var allExistingSubtreesAllowed = true;
-          for (var existingSubtreeIndex = 0; existingSubtreeIndex < existingSubtreeCount && allExistingSubtreesAllowed; existingSubtreeIndex++) {
-            var existingSubtree = child.GetSubtree(existingSubtreeIndex);
-            allExistingSubtreesAllowed &= grammar.IsAllowedChildSymbol(symbol, existingSubtree.Symbol, existingSubtreeIndex);
-          }
-
-          if (allExistingSubtreesAllowed) {
-            allowedSymbols.Add(symbol);
-          }
+      child = parent.GetSubtree(childIndex);
+      var existingSubtreeCount = child.SubtreeCount;
+      allowedSymbols.Clear();
+      foreach (var symbol in grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)) {
+        // check basic properties that the new symbol must have
+        if (symbol == child.Symbol ||
+            symbol.InitialFrequency <= 0 ||
+            existingSubtreeCount > grammar.GetMinimumSubtreeCount(symbol) ||
+            existingSubtreeCount < grammar.GetMaximumSubtreeCount(symbol)) {
+          continue;
         }
 
-        tries++;
-      } while (tries < MaxTries && allowedSymbols.Count == 0);
+        // check that all existing subtrees are also allowed for the new symbol
+        var allExistingSubtreesAllowed = true;
+        for (var existingSubtreeIndex = 0; existingSubtreeIndex < existingSubtreeCount && allExistingSubtreesAllowed; existingSubtreeIndex++) {
+          var existingSubtree = child.GetSubtree(existingSubtreeIndex);
+          allExistingSubtreesAllowed &= grammar.IsAllowedChildSymbol(symbol, existingSubtree.Symbol, existingSubtreeIndex);
+        }
 
-      if (tries >= MaxTries)
-        return symbolicExpressionTree;
+        if (allExistingSubtreesAllowed) {
+          allowedSymbols.Add(symbol);
+        }
+      }
 
-      var weights = allowedSymbols.Select(s => s.InitialFrequency).ToList();
-      var newSymbol = allowedSymbols.SampleProportional(random, 1, weights).First();
+      tries++;
+    } while (tries < MaxTries && allowedSymbols.Count == 0);
 
-      // replace the old node with the new node
-      var newNode = newSymbol.CreateTreeNode();
-      if (newNode.HasLocalParameters)
-        newNode.ResetLocalParameters(random);
-      foreach (var subtree in child.Subtrees)
-        newNode.AddSubtree(subtree);
+    if (tries >= MaxTries)
+      return symbolicExpressionTree;
 
-      parent.RemoveSubtree(childIndex);
-      parent.InsertSubtree(childIndex, newNode);
-      return mutant;
-    }
+    var weights = allowedSymbols.Select(s => s.InitialFrequency).ToList();
+    var newSymbol = allowedSymbols.SampleProportional(random, 1, weights).First();
 
-    public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-      return ChangeNodeType(parent, random, encoding);
-    }
+    // replace the old node with the new node
+    var newNode = newSymbol.CreateTreeNode();
+    if (newNode.HasLocalParameters)
+      newNode.ResetLocalParameters(random);
+    foreach (var subtree in child.Subtrees)
+      newNode.AddSubtree(subtree);
+
+    parent.RemoveSubtree(childIndex);
+    parent.InsertSubtree(childIndex, newNode);
+    return mutant;
+  }
+
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandom random, SymbolicExpressionTreeEncoding encoding) {
+    return ChangeNodeType(parent, random, encoding);
   }
 }

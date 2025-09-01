@@ -36,12 +36,12 @@ public sealed class BinaryFactorVariableTreeNode : VariableTreeNodeBase {
 
   public override bool HasLocalParameters => true;
 
-  public override void ResetLocalParameters(IRandomNumberGenerator random) {
+  public override void ResetLocalParameters(IRandom random) {
     base.ResetLocalParameters(random);
     VariableValue = Symbol.GetVariableValues(VariableName).SampleRandom(random);
   }
 
-  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
+  public override void ShakeLocalParameters(IRandom random, double shakingFactor) {
     // 50% additive & 50% multiplicative (override of functionality of base class because of a BUG)
     if (random.Random() < 0.5) {
       var x = NormalDistributedRandomPolar.NextDouble(random, Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);

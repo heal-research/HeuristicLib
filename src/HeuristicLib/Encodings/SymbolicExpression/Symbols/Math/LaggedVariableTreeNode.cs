@@ -33,12 +33,12 @@ public sealed class LaggedVariableTreeNode : VariableTreeNodeBase {
   public LaggedVariableTreeNode(LaggedVariableTreeNode other) : base(other) { }
   public LaggedVariableTreeNode(LaggedVariable variableSymbol) : base(variableSymbol) { }
 
-  public override void ResetLocalParameters(IRandomNumberGenerator random) {
+  public override void ResetLocalParameters(IRandom random) {
     base.ResetLocalParameters(random);
     Lag = random.Integer(Symbol.MinLag, Symbol.MaxLag + 1);
   }
 
-  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
+  public override void ShakeLocalParameters(IRandom random, double shakingFactor) {
     base.ShakeLocalParameters(random, shakingFactor);
     Lag = System.Math.Min(Symbol.MaxLag, System.Math.Max(Symbol.MinLag, Lag + random.Integer(-1, 2)));
   }

@@ -5,7 +5,7 @@
 /// Uses Marsaglia's polar method
 /// </summary>
 public sealed class NormalDistributedRandomPolar {
-  public static double NextDouble(IRandomNumberGenerator uniformRandom, double mu, double sigma) {
+  public static double NextDouble(IRandom uniformRandom, double mu, double sigma) {
     // we don't use spare numbers (efficiency loss but easier for multithreaded code)
     double u;
     double s;

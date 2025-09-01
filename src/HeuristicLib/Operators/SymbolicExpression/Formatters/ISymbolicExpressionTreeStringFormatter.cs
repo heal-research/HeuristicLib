@@ -1,4 +1,4 @@
-#region License Information
+﻿#region License Information
 /* HeuristicLab
  * Copyright (C) Heuristic and Evolutionary Algorithms Laboratory (HEAL)
  *
@@ -19,11 +19,10 @@
  */
 #endregion
 
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
+using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 
-namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Grammars {
-  public interface ISymbolicExpressionTreeGrammar : ISymbolicExpressionGrammarBase {
-    IEnumerable<Symbol> ModifiableSymbols { get; }
-    bool IsModifiableSymbol(Symbol symbol);
+namespace HEAL.HeuristicLib.Operators.Formatters {
+  public interface ISymbolicExpressionTreeStringFormatter {
+    string Format(SymbolicExpressionTree symbolicExpressionTree);
   }
 }
