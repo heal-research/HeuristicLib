@@ -1,13 +1,8 @@
-﻿using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
+﻿namespace HEAL.HeuristicLib.Operators;
 
-namespace HEAL.HeuristicLib.Operators;
-
-public interface IEvaluator<in TGentype>
-{
+public interface IEvaluator<in TGentype> {
   double Evaluate(TGentype solution);
 }
-
 
 // public class DeterministicProblemEvaluator<TGenotype> : IEvaluator<TGenotype>
 // {
@@ -36,12 +31,10 @@ public interface IEvaluator<in TGentype>
 //   }
 // }
 
-
-public class RepeatingEvaluator<TGenotype> : IEvaluator<TGenotype>
-{
+public class RepeatingEvaluator<TGenotype> : IEvaluator<TGenotype> {
   private int count;
   private readonly IEvaluator<TGenotype> evaluator;
-  
+
   public RepeatingEvaluator(IEvaluator<TGenotype> evaluator, int count) {
     this.evaluator = evaluator;
     this.count = count;

@@ -38,7 +38,7 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
 
   public double InternalCrossoverPointProbability { get; set; }
 
-  public static SymbolicExpressionTree Cross(IRandom random,
+  public static SymbolicExpressionTree Cross(IRandomNumberGenerator random,
                                              SymbolicExpressionTree parent0, SymbolicExpressionTree parent1,
                                              double probability,
                                              double internalCrossoverPointProbability, SymbolicExpressionTreeEncoding encoding) {
@@ -84,7 +84,7 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     return parent0;
   }
 
-  private static void SelectCrossoverPoint(IRandom random, SymbolicExpressionTree parent0, double internalNodeProbability, SymbolicExpressionTreeEncoding encoding, out CutPoint crossoverPoint) {
+  private static void SelectCrossoverPoint(IRandomNumberGenerator random, SymbolicExpressionTree parent0, double internalNodeProbability, SymbolicExpressionTreeEncoding encoding, out CutPoint crossoverPoint) {
     if (internalNodeProbability is < 0.0 or > 1.0) throw new ArgumentException("internalNodeProbability");
     var maxBranchLength = encoding.TreeLength;
     var maxBranchDepth = encoding.TreeDepth;
@@ -133,7 +133,7 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     }
   }
 
-  private static SymbolicExpressionTreeNode? SelectRandomBranch(IRandom random, List<SymbolicExpressionTreeNode?> branches, double internalNodeProbability) {
+  private static SymbolicExpressionTreeNode? SelectRandomBranch(IRandomNumberGenerator random, List<SymbolicExpressionTreeNode?> branches, double internalNodeProbability) {
     if (internalNodeProbability is < 0.0 or > 1.0) throw new ArgumentException("internalNodeProbability");
     List<SymbolicExpressionTreeNode> allowedInternalBranches;
     List<SymbolicExpressionTreeNode> allowedLeafBranches;
@@ -165,5 +165,5 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     return allowedInternalBranches.Count == 0 ? null : allowedLeafBranches.SampleRandom(random);
   }
 
-  public override SymbolicExpressionTree Cross((SymbolicExpressionTree, SymbolicExpressionTree) parents, IRandom random, SymbolicExpressionTreeEncoding encoding) => Cross(random, parents.Item1, parents.Item2, CrossoverProbability, InternalCrossoverPointProbability, encoding);
+  public override SymbolicExpressionTree Cross((SymbolicExpressionTree, SymbolicExpressionTree) parents, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => Cross(random, parents.Item1, parents.Item2, CrossoverProbability, InternalCrossoverPointProbability, encoding);
 }

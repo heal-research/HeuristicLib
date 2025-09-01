@@ -29,7 +29,7 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Mutators;
 public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulator {
   private const int MAX_TRIES = 100;
 
-  public static SymbolicExpressionTree ReplaceRandomBranch(IRandom random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeEncoding encoding) {
+  public static SymbolicExpressionTree ReplaceRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeEncoding encoding) {
     var allowedSymbols = new List<Symbol>();
     SymbolicExpressionTreeNode parent;
     int childIndex;
@@ -75,5 +75,5 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
     return symbolicExpressionTree;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandom random, SymbolicExpressionTreeEncoding encoding) => ReplaceRandomBranch(random, parent, encoding);
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => ReplaceRandomBranch(random, parent, encoding);
 }

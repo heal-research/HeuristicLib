@@ -19,14 +19,12 @@
  */
 #endregion
 
-using System.Collections.Generic;
 using System.Text;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
-using HEAL.HeuristicLib.Operators.Formatters;
 
-namespace HeuristicLab.Encodings.SymbolicExpressionTreeEncoding {
+namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters {
   public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressionTreeStringFormatter {
     public bool Indent {
       get => indent;
@@ -55,7 +53,8 @@ namespace HeuristicLab.Encodings.SymbolicExpressionTreeEncoding {
       nodeId++;
 
       var strBuilder = new StringBuilder();
-      if (Indent) strBuilder.Append(' ', indentLength);
+      if (Indent)
+        strBuilder.Append(' ', indentLength);
 
       // get label for node and map if necessary
 
@@ -104,7 +103,8 @@ namespace HeuristicLab.Encodings.SymbolicExpressionTreeEncoding {
       // internal nodes or leaf nodes?
       foreach (var subTree in node.Subtrees) {
         // add an edge 
-        if (Indent) strBuilder.Append(' ', indentLength);
+        if (Indent)
+          strBuilder.Append(' ', indentLength);
         strBuilder.AppendLine(nameof(node) + currentNodeId + " -- node" + nodeId + ";");
         // format the whole subtree
         strBuilder.Append(FormatRecursively(subTree, indentLength + 2, ref nodeId));

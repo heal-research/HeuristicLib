@@ -2,10 +2,9 @@
 
 namespace HEAL.HeuristicLib.Genotypes;
 
-public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
-{
+public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
   private readonly ReadOnlyMemory<int> memory;
-  
+
   public Permutation(IEnumerable<int> elements) {
     this.memory = elements.ToArray();
     if (!IsValidPermutation(memory.Span)) throw new ArgumentException("The provided elements do not form a valid permutation.");
@@ -15,19 +14,22 @@ public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
     if (!IsValidPermutation(memory.Span)) throw new ArgumentException("The provided memory does not form a valid permutation.");
     this.memory = takeOwnership ? memory : memory.ToArray();
   }
+
   public static Permutation FromMemory(ReadOnlyMemory<int> memory) {
     return new Permutation(memory, true);
   }
+
   public ReadOnlySpan<int> Span => memory.Span;
 
   private static bool IsValidPermutation(ReadOnlySpan<int> values) {
     Span<bool> seen = stackalloc bool[values.Length];
     seen.Clear();
-    
+
     foreach (int value in values) {
       if (value < 0 || value >= values.Length || seen[value]) {
         return false;
       }
+
       seen[value] = true;
     }
 
@@ -40,11 +42,10 @@ public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
 
   public int this[Index index] => Span[index];
 
-  
   public IEnumerator<int> GetEnumerator() => new Enumerator(memory);
 
   System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => this.GetEnumerator();
-  
+
   public struct Enumerator : IEnumerator<int> {
     private readonly ReadOnlyMemory<int> memory;
     private int index;
@@ -68,14 +69,15 @@ public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
       int j = rng.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
     }
+
     return FromMemory(elements);
   }
-  
+
   public static Permutation SwapRandomElements(Permutation permutation, IRandomNumberGenerator rng) {
     int length = permutation.Count;
     int index1 = rng.Integer(length);
     int index2 = rng.Integer(length);
-    
+
     int[] newElements = permutation.memory.ToArray();
     (newElements[index1], newElements[index2]) = (newElements[index2], newElements[index1]);
     return FromMemory(newElements);
@@ -84,7 +86,7 @@ public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
   public static Permutation Range(int count) {
     return FromMemory(Enumerable.Range(0, count).ToArray());
   }
-  
+
   public int Count => memory.Length;
 
   public bool Contains(int value) => Span.Contains(value);
@@ -92,7 +94,7 @@ public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
   public bool Equals(Permutation other) {
     return memory.Equals(other.memory) && memory.Span.SequenceEqual(other.memory.Span);
   }
-  
+
   public bool Equals(Permutation? other) {
     return other is not null && Equals(other.Value);
   }

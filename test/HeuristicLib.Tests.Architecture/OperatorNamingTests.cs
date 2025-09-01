@@ -1,17 +1,14 @@
 using ArchUnitNET.Loader;
-using ArchUnitNET.xUnit;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Operators;
-using static ArchUnitNET.Fluent.ArchRuleDefinition;
 
 namespace HEAL.HeuristicLib.Tests.Architecture;
 
 public class OperatorNamingTests {
-  private static readonly ArchUnitNET.Domain. Architecture Architecture =
+  private static readonly ArchUnitNET.Domain.Architecture Architecture =
     new ArchLoader().LoadAssemblies(
-      typeof(Algorithm<,,,>).Assembly  
+      typeof(Algorithm<,,,>).Assembly
     ).Build();
-  
+
   // [Fact]
   // public void OperatorNamesAreEndingWithOperator() {
   //   var rule = Types()

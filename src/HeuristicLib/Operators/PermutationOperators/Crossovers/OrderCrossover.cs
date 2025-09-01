@@ -2,19 +2,18 @@
 using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators.PermutationOperators;
+namespace HEAL.HeuristicLib.Operators.PermutationOperators.Crossovers;
 
-public class OrderCrossover : Crossover<Permutation, PermutationEncoding> 
-{
+public class OrderCrossover : Crossover<Permutation, PermutationEncoding> {
   public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng, Memory<int>? memory = null) {
     if (parent1.Count != parent2.Count) throw new ArgumentException("Parent permutations must have the same length.");
     if (memory.HasValue && memory.Value.Length < parent1.Count) throw new ArgumentException("Provided memory length is less than parent permutations length.");
 
     var (start, end) = GetRandomBreakPoints(parent1.Count, rng);
-    
+
     return Cross(parent1, parent2, start, end, memory);
   }
-  
+
   public static Permutation Cross(Permutation parent1, Permutation parent2, int start, int end, Memory<int>? memory = null) {
     if (parent1.Count != parent2.Count) throw new ArgumentException("Parent permutations must have the same length.");
     if (memory.HasValue && memory.Value.Length < parent1.Count) throw new ArgumentException("Provided memory length is less than parent permutations length.");
@@ -25,11 +24,11 @@ public class OrderCrossover : Crossover<Permutation, PermutationEncoding>
 
     return Permutation.FromMemory(offspringMemory);
   }
-  
+
   private static void Cross(ReadOnlySpan<int> parent1, ReadOnlySpan<int> parent2, int start, int end, Span<int> offspring) {
     Span<bool> contains = stackalloc bool[offspring.Length];
     contains.Clear();
-    
+
     // 1. copy segment from parent1
     for (int i = start; i <= end; i++) {
       int value = parent1[i];
@@ -47,6 +46,7 @@ public class OrderCrossover : Crossover<Permutation, PermutationEncoding>
         currentIndex++;
       }
     }
+
     for (int i = end; i < parent1.Length; i++) {
       int value = parent2[i];
       if (!contains[value]) {
@@ -56,18 +56,18 @@ public class OrderCrossover : Crossover<Permutation, PermutationEncoding>
       }
     }
   }
-  
+
   public override Permutation Cross((Permutation, Permutation) parents, IRandomNumberGenerator random, PermutationEncoding encoding) {
     var (parent1, parent2) = parents;
     return Cross(parent1, parent2, random);
   }
-  
+
   public static (int, int) GetRandomBreakPoints(int length, IRandomNumberGenerator rng) {
     if (length < 2) throw new ArgumentException("Length must be at least 2 to have break points.");
-    
+
     int start = rng.Integer(0, length - 1);
     int end = rng.Integer(start + 1, length);
-    
+
     return (start, end);
   }
 

@@ -2,12 +2,11 @@
 
 namespace HEAL.HeuristicLib.Operators;
 
-public class ExecutionContext
-{
+public class ExecutionContext {
   public IRandomNumberGenerator Random { get; }
-  
+
   public CancellationToken CancellationToken { get; init; }
-  
+
   //public ParallelOptions ParallelOptions { get; }
 
   public ExecutionContext(IRandomNumberGenerator random, CancellationToken? cancellationToken = null) {
@@ -15,20 +14,21 @@ public class ExecutionContext
     CancellationToken = cancellationToken ?? CancellationToken.None;
     //ParallelOptions = parallelOptions ?? new ParallelOptions { CancellationToken = CancellationToken };
   }
-  
+
   public ExecutionContext Fork(int key) {
     return new ExecutionContext(Random.Fork(key), CancellationToken);
   }
-  
+
   public IReadOnlyList<ExecutionContext> Spawn(int count) {
     var contexts = new ExecutionContext[count];
     var randoms = Random.Spawn(count);
     for (int i = 0; i < count; i++) {
       contexts[i] = new ExecutionContext(randoms[i], CancellationToken);
     }
+
     return contexts;
   }
-  
+
   // public void ParallelFor(int fromInclusive, int toExclusive, Action<IExecutionContext> body) {
   //   var partitioner = Partitioner.Create(fromInclusive, toExclusive);
   //   
@@ -52,7 +52,6 @@ public class ExecutionContext
   //   return results;
   // }
 }
-
 
 // public interface IExecutionContext
 // {

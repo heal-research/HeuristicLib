@@ -22,7 +22,7 @@
 using System.Text;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 
-namespace HEAL.HeuristicLib.Operators.Formatters {
+namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters {
   public class SymbolicExpressionTreeStringFormatter : ISymbolicExpressionTreeStringFormatter {
     public bool Indent {
       get;
@@ -35,7 +35,8 @@ namespace HEAL.HeuristicLib.Operators.Formatters {
 
     private string FormatRecursively(SymbolicExpressionTreeNode node, int indentLength) {
       var strBuilder = new StringBuilder();
-      if (Indent) strBuilder.Append(' ', indentLength);
+      if (Indent)
+        strBuilder.Append(' ', indentLength);
       strBuilder.Append('(');
       // internal nodes or leaf nodes?
       if (node.Subtrees.Any()) {
@@ -47,7 +48,8 @@ namespace HEAL.HeuristicLib.Operators.Formatters {
           strBuilder.AppendLine(FormatRecursively(subtree, indentLength + 2));
         }
 
-        if (Indent) strBuilder.Append(' ', indentLength);
+        if (Indent)
+          strBuilder.Append(' ', indentLength);
       } else {
         // symbol in the same line with as '(' and ')'
         strBuilder.Append(node);

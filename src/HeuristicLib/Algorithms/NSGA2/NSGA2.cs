@@ -332,3 +332,5 @@
 //
 //   public NSGA2State<TGenotype> GetRestartState() => GetContinuationState() with { Generation = 0 };
 // }
+
+

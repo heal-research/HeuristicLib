@@ -20,7 +20,6 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
@@ -35,7 +34,7 @@ public class RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator {
   /// <param name="maxTreeLength">Maximum tree length (this parameter is ignored)</param>
   /// <param name="maxTreeDepth">Maximum tree depth</param>
   /// <returns></returns>
-  public static SymbolicExpressionTree CreateTree(IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var rootNode = encoding.Grammar.ProgramRootSymbol.CreateTreeNode();
     if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
 
@@ -51,5 +50,5 @@ public class RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator {
     return new(rootNode);
   }
 
-  public override SymbolicExpressionTree Create(IRandom random, SymbolicExpressionTreeEncoding encoding) => CreateTree(random, encoding);
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => CreateTree(random, encoding);
 }

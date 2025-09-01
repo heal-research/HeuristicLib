@@ -82,6 +82,7 @@ public interface IRandomNumberGenerator {
   IRandomNumberGenerator Fork(params int[] keys);
   int Next(int low, int high) => Integer(low, high);
   int Next(int high) => Integer(0, high);
+  IReadOnlyList<IRandomNumberGenerator> Spawn(int count);
 }
 
 public interface IRandom : IRandomNumberGenerator { } //TODO remove after migration
@@ -115,10 +116,16 @@ public static class RandomGeneratorExtensions {
 }
 
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
+  private static readonly SystemRandomNumberGenerator GlobalInstance = new();
+
   private readonly System.Random random;
 
   public SystemRandomNumberGenerator(int seed) {
-    random = new System.Random(seed);
+    random = new(seed);
+  }
+
+  public SystemRandomNumberGenerator() {
+    random = new();
   }
 
   public double Random() {
@@ -132,6 +139,8 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
     };
   }
 
+  public int Integer() => random.Next();
+
   public byte[] Bytes(int length) {
     byte[] bytes = new byte[length];
     random.NextBytes(bytes);
@@ -142,10 +151,19 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
     int newSeed = keys.Aggregate(random.Next(), (current, key) => current ^ key);
     return new SystemRandomNumberGenerator(newSeed);
   }
+
+  public IReadOnlyList<IRandomNumberGenerator> Spawn(int count) => Enumerable
+                                                                   .Range(0, count)
+                                                                   .Select(_ => new MersenneTwister(Integer()))
+                                                                   .ToArray();
+
+  public static int RandomSeed() {
+    lock (GlobalInstance) return GlobalInstance.Integer();
+  }
 }
 
 // ToDo: and others
-public class MersenneTwister : IRandomNumberGenerator {
+public class MersenneTwister(int seed) : IRandomNumberGenerator {
   public double Random() {
     throw new NotImplementedException();
   }
@@ -161,6 +179,8 @@ public class MersenneTwister : IRandomNumberGenerator {
   public IRandomNumberGenerator Fork(params int[] keys) {
     throw new NotImplementedException();
   }
+
+  public IReadOnlyList<IRandomNumberGenerator> Spawn(int count) => Enumerable.Range(0, count).Select(x => new MersenneTwister(Integer(0, int.MaxValue))).ToArray();
 }
 
 public interface IDistribution { }

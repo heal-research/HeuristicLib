@@ -1,5 +1,4 @@
 ﻿#if false
-
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.SearchSpaces;
 

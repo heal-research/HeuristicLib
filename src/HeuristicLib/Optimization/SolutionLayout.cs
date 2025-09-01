@@ -1,14 +1,13 @@
 ﻿using System.Collections;
+using HEAL.HeuristicLib.Core;
 
 namespace HEAL.HeuristicLib.Optimization;
 
-public interface ISolutionLayout<TGenotype> : IEnumerable<Solution<TGenotype>> {
-  
-}
+public interface ISolutionLayout<TGenotype> : IEnumerable<Solution<TGenotype>> { }
 
 public record class SingleSolution<TGenotype> : ISolutionLayout<TGenotype> {
   public Solution<TGenotype> Solution { get; init; }
-  
+
   public SingleSolution(Solution<TGenotype> solution) {
     Solution = solution;
   }
@@ -22,7 +21,7 @@ public record class SingleSolution<TGenotype> : ISolutionLayout<TGenotype> {
 
 public record class Population<TGenotype> : ISolutionLayout<TGenotype> {
   public ImmutableList<Solution<TGenotype>> Solutions { get; init; }
-  
+
   public Population(ImmutableList<Solution<TGenotype>> solutions) {
     Solutions = solutions;
   }
@@ -32,31 +31,29 @@ public record class Population<TGenotype> : ISolutionLayout<TGenotype> {
   }
 
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-  
-  public static Population<TGenotype> From(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) 
-  {
+
+  public static Population<TGenotype> From(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) {
     if (genotypes.Count != fitnesses.Count) throw new ArgumentException("Genotypes and fitnesses must have the same length.");
 
     var solutions = Enumerable.Zip(genotypes, fitnesses)
-      .Select(x => Solution.From(x.First, x.Second));
+                              .Select(x => Solution.From(x.First, x.Second));
     return new Population<TGenotype>(new ImmutableList<Solution<TGenotype>>(solutions));
   }
 }
 
 public static class Population {
-  public static Population<TGenotype> From<TGenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) 
-  {
+  public static Population<TGenotype> From<TGenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) {
     if (genotypes.Count != fitnesses.Count) throw new ArgumentException("Genotypes and fitnesses must have the same length.");
 
     var solutions = Enumerable.Zip(genotypes, fitnesses)
-      .Select(x => Solution.From(x.First, x.Second));
+                              .Select(x => Solution.From(x.First, x.Second));
     return new Population<TGenotype>(new ImmutableList<Solution<TGenotype>>(solutions));
   }
 }
 
 public record class IslandPopulation<TGenotype> : ISolutionLayout<TGenotype> {
   public ImmutableList<Population<TGenotype>> Islands { get; init; }
-  
+
   public IslandPopulation(ImmutableList<Population<TGenotype>> islands) {
     Islands = islands;
   }

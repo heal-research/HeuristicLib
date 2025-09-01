@@ -4,59 +4,51 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ISelector<TGenotype, in TEncoding, in TProblem> 
+public interface ISelector<TGenotype, in TEncoding, in TProblem>
   where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
-{
+  where TProblem : class, IProblem<TGenotype, TEncoding> {
   IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 }
 
 public interface ISelector<TGenotype, in TEncoding> : ISelector<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : class, IEncoding<TGenotype>
-{
+  where TEncoding : class, IEncoding<TGenotype> {
   IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding);
 }
 
-public interface ISelector<TGenotype> : ISelector<TGenotype, IEncoding<TGenotype>>
-{
+public interface ISelector<TGenotype> : ISelector<TGenotype, IEncoding<TGenotype>> {
   IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random);
 }
 
-
 public abstract class BatchSelector<TGenotype, TEncoding, TProblem> : ISelector<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
-{
+  where TProblem : class, IProblem<TGenotype, TEncoding> {
   public abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 }
 
 public abstract class BatchSelector<TGenotype, TEncoding> : ISelector<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype>
-{
+  where TEncoding : class, IEncoding<TGenotype> {
   public abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding);
-  
+
   IReadOnlyList<Solution<TGenotype>> ISelector<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
     return Select(population, objective, count, random, encoding);
   }
 }
 
-public abstract class BatchSelector<TGenotype> : ISelector<TGenotype>
-{
+public abstract class BatchSelector<TGenotype> : ISelector<TGenotype> {
   public abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random);
-  
+
   IReadOnlyList<Solution<TGenotype>> ISelector<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
     return Select(population, objective, count, random);
   }
+
   IReadOnlyList<Solution<TGenotype>> ISelector<TGenotype, IEncoding<TGenotype>>.Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
     return Select(population, objective, count, random);
   }
 }
 
-
 public abstract class Selector<TGenotype, TEncoding, TProblem> : ISelector<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
-{
+  where TProblem : class, IProblem<TGenotype, TEncoding> {
   public abstract Solution<TGenotype> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 
   public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
@@ -69,8 +61,7 @@ public abstract class Selector<TGenotype, TEncoding, TProblem> : ISelector<TGeno
 }
 
 public abstract class Selector<TGenotype, TEncoding> : ISelector<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype>
-{
+  where TEncoding : class, IEncoding<TGenotype> {
   public abstract Solution<TGenotype> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, IRandomNumberGenerator random, TEncoding encoding);
 
   public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding) {
@@ -80,14 +71,13 @@ public abstract class Selector<TGenotype, TEncoding> : ISelector<TGenotype, TEnc
     });
     return selected;
   }
-  
+
   IReadOnlyList<Solution<TGenotype>> ISelector<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
     return Select(population, objective, count, random, encoding);
   }
 }
 
-public abstract class Selector<TGenotype> : ISelector<TGenotype>
-{
+public abstract class Selector<TGenotype> : ISelector<TGenotype> {
   public abstract Solution<TGenotype> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, IRandomNumberGenerator random);
 
   public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
@@ -97,19 +87,17 @@ public abstract class Selector<TGenotype> : ISelector<TGenotype>
     });
     return selected;
   }
-  
+
   IReadOnlyList<Solution<TGenotype>> ISelector<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
     return Select(population, objective, count, random);
   }
+
   IReadOnlyList<Solution<TGenotype>> ISelector<TGenotype, IEncoding<TGenotype>>.Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
     return Select(population, objective, count, random);
   }
 }
 
-
-
-public class ProportionalSelector<TGenotype> : BatchSelector<TGenotype>
-{ // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
+public class ProportionalSelector<TGenotype> : BatchSelector<TGenotype> { // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
   public bool Windowing { get; set; }
 
   public ProportionalSelector(bool windowing = true) {
@@ -119,14 +107,14 @@ public class ProportionalSelector<TGenotype> : BatchSelector<TGenotype>
   public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     var fitnesses = population.Select(s => s.ObjectiveVector.Count == 1 ? s.ObjectiveVector[0] : throw new InvalidOperationException("Proportional selection requires a single objective.")).ToList();
-    
+
     // prepare qualities
     double minQuality = double.MaxValue, maxQuality = double.MinValue;
     foreach (double val in fitnesses) {
       minQuality = Math.Min(minQuality, val);
       maxQuality = Math.Max(maxQuality, val);
     }
-    
+
     var qualities = fitnesses.AsEnumerable();
     if (Math.Abs(minQuality - maxQuality) < double.Epsilon) {
       qualities = qualities.Select(_ => 1.0);
@@ -149,7 +137,7 @@ public class ProportionalSelector<TGenotype> : BatchSelector<TGenotype>
 
     double[] list = qualities.ToArray();
     double qualitySum = list.Sum();
-    
+
     var selected = new Solution<TGenotype>[count];
     for (int i = 0; i < selected.Length; i++) {
       double selectedQuality = random.Random() * qualitySum;
@@ -159,15 +147,15 @@ public class ProportionalSelector<TGenotype> : BatchSelector<TGenotype>
         index++;
         currentQuality += list[index];
       }
+
       selected[i] = population[index];
     }
-    
+
     return selected;
   }
 }
 
-public class RandomSelector<TGenotype> : BatchSelector<TGenotype> 
-{
+public class RandomSelector<TGenotype> : BatchSelector<TGenotype> {
   public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     var selected = new Solution<TGenotype>[count];
     var randoms = random.Integers(population.Count, selected.Length);
@@ -175,18 +163,18 @@ public class RandomSelector<TGenotype> : BatchSelector<TGenotype>
       int index = randoms[i];
       selected[i] = population[index];
     }
+
     return selected;
   }
 }
 
-public class TournamentSelector<TGenotype> : BatchSelector<TGenotype>
-{
+public class TournamentSelector<TGenotype> : BatchSelector<TGenotype> {
   public int TournamentSize { get; set; }
-  
+
   public TournamentSelector(int tournamentSize) {
     TournamentSize = tournamentSize;
   }
-  
+
   public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     var selected = new Solution<TGenotype>[count];
     var tournamentParticipants = new List<Solution<TGenotype>>(TournamentSize);
@@ -197,9 +185,11 @@ public class TournamentSelector<TGenotype> : BatchSelector<TGenotype>
         int index = randoms[j];
         tournamentParticipants.Add(population[index]);
       }
+
       var bestParticipant = tournamentParticipants.MinBy(participant => participant.ObjectiveVector, objective.TotalOrderComparer)!;
       selected[i] = bestParticipant;
     }
+
     return selected;
   }
 }

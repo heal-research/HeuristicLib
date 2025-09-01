@@ -20,9 +20,8 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Operators.Formatters;
 
-namespace HeuristicLab.Encodings.SymbolicExpressionTreeEncoding {
+namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters {
   public sealed class SymbolicExpressionTreeHierarchicalFormatter : ISymbolicExpressionTreeStringFormatter {
     public string Format(SymbolicExpressionTree symbolicExpressionTree) {
       var sw = new StringWriter();

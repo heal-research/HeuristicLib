@@ -35,11 +35,11 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
   /// <param name="maxTreeDepth">Maximum tree depth</param>
   /// <param name="maxTreeLength">Maximum tree length. This parameter is not used.</param>
   /// <returns></returns>
-  public override SymbolicExpressionTree Create(IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     return CreateTree(random, encoding);
   }
 
-  public static SymbolicExpressionTree CreateTree(IRandom random, SymbolicExpressionTreeEncoding encoding) {
+  public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var rootNode = encoding.Grammar.ProgramRootSymbol.CreateTreeNode();
     var tree = new SymbolicExpressionTree(rootNode);
     if (rootNode.HasLocalParameters)
@@ -56,7 +56,7 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
     return tree;
   }
 
-  public static void Create(IRandom random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeEncoding encoding, int maxDepth) {
+  public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeEncoding encoding, int maxDepth) {
     // make sure it is possible to create a trees smaller than maxDepth
     if (encoding.Grammar.GetMinimumExpressionDepth(seedNode.Symbol) > maxDepth)
       throw new ArgumentException("Cannot create trees of depth " + maxDepth + " or smaller because of grammar constraints.", nameof(maxDepth));
@@ -93,7 +93,7 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
         RecursiveCreate(random, subTree, encoding, 2, maxDepth);
   }
 
-  private static void RecursiveCreate(IRandom random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeEncoding encoding, int currentDepth, int maxDepth) {
+  private static void RecursiveCreate(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeEncoding encoding, int currentDepth, int maxDepth) {
     var arity = encoding.Grammar.GetMaximumSubtreeCount(root.Symbol);
     // In the 'Full' grow method, we cannot have terminals on the intermediate tree levels.
     if (arity <= 0)

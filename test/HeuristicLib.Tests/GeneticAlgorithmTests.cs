@@ -1,12 +1,11 @@
-using FluentValidation;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.RealVectorOperators;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Operators.RealVectorOperators.Creators;
+using HEAL.HeuristicLib.Operators.RealVectorOperators.Crossovers;
+using HEAL.HeuristicLib.Operators.RealVectorOperators.Mutators;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.TestFunctions;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -22,10 +21,10 @@ public class GeneticAlgorithmTests {
     var selector = new RandomSelector<RealVector>();
     var replacement = new PlusSelectionReplacer<RealVector>();
     var terminator = new AfterIterationsTerminator<RealVector>(5);
-    
+
     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
       //SearchSpace = searchSpace,
-      populationSize: 200, 
+      populationSize: 200,
       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
       //Decoder = decoder, Evaluator = evaluator, Objective = SingleObjective.Minimize,
       selector: selector, elites: 1, //replacer: replacement,
@@ -36,7 +35,7 @@ public class GeneticAlgorithmTests {
 
     return Verify(ga);
   }
-  
+
   // [Fact]
   // public Task GeneticAlgorithm_Create_FromConfig() {
   //   var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
@@ -58,7 +57,7 @@ public class GeneticAlgorithmTests {
   //
   //   return Verify(ga);
   // }
-  
+
   // [Fact]
   // public void GeneticAlgorithm_CreateThrows_FromUnderspecifiedConfig() {
   //   var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
@@ -75,7 +74,7 @@ public class GeneticAlgorithmTests {
   //   Should.Throw<ValidationException>(() => GeneticAlgorithm.FromConfiguration(config));
   //   Should.Throw<ValidationException>(() => config.Build());
   // }
-  
+
   // [Fact]
   // public Task GeneticAlgorithm_Execute() {
   //   var searchSpace = new RealVectorEncoding(3, -5, +5);
@@ -139,7 +138,7 @@ public class GeneticAlgorithmTests {
   //   return Verify(results)
   //     .IgnoreMembersWithType<TimeSpan>();
   // }
-  
+
   // [Fact]
   // public async Task GeneticAlgorithm_TerminateWithPauseToken() {
   //   var searchSpace = new RealVectorSearchSpace(5, -5, +5);
@@ -181,7 +180,7 @@ public class GeneticAlgorithmTests {
   //   finalState.ShouldNotBeNull();
   //   finalState.TotalGenerations.ShouldBeGreaterThan(0);
   // }
-  
+
   // [Fact]
   // public async Task GeneticAlgorithm_ExecuteAndContinueWithOtherAlg() {
   //   var searchSpace = new RealVectorEncoding(3, -5, +5);
@@ -249,8 +248,7 @@ public class GeneticAlgorithmTests {
   //   var iterationResults = alg.ExecuteStreaming(problem, initialState).ToList();
   //   iterationResults.ShouldBeEmpty();
   // }
-  
-  
+
   // private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
   //   public ObjectiveVector Evaluate(RealVector solution) => solution.Sum();
   //   public Objective Objective => SingleObjective.Minimize;

@@ -1,15 +1,10 @@
 ﻿using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Genotypes;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.PermutationOperators;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems;
 
-
-public interface IProblem
-{
+public interface IProblem {
   Objective Objective { get; }
 }
 
@@ -18,7 +13,6 @@ public interface IProblem<in TGenotype> : IProblem {
 
   //IEvaluator<TGenotype> GetEvaluator();
 }
-
 
 // public interface IDeterministicProblem<in TGenotype> : IProblem<TGenotype>
 // {
@@ -35,8 +29,7 @@ public interface IProblem<in TGenotype> : IProblem {
 // }
 
 public interface IProblem<in TGenotype, out TEncoding> : IProblem<TGenotype>
-  where TEncoding : class, IEncoding<TGenotype>
-{
+  where TEncoding : class, IEncoding<TGenotype> {
   TEncoding SearchSpace { get; }
 }
 
@@ -99,10 +92,9 @@ public interface IProblem<in TGenotype, out TEncoding> : IProblem<TGenotype>
 //   public abstract ObjectiveVector Evaluate(TSolution solution);
 // }
 
-public abstract class Problem<TSolution> : IProblem<TSolution>
-{
+public abstract class Problem<TSolution> : IProblem<TSolution> {
   public Objective Objective { get; }
-  
+
   protected Problem(Objective objective) {
     Objective = objective;
   }
@@ -119,16 +111,15 @@ public abstract class Problem<TSolution> : IProblem<TSolution>
 }
 
 public abstract class Problem<TSolution, TEncoding> : IProblem<TSolution, TEncoding>
-  where TEncoding : class, IEncoding<TSolution>
-{
+  where TEncoding : class, IEncoding<TSolution> {
   public Objective Objective { get; }
   public TEncoding SearchSpace { get; }
-  
+
   protected Problem(Objective objective, TEncoding searchSpace) {
     Objective = objective;
     SearchSpace = searchSpace;
   }
-  
+
   public abstract ObjectiveVector Evaluate(TSolution solution);
 
   public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> solution) {
@@ -142,13 +133,12 @@ public abstract class Problem<TSolution, TEncoding> : IProblem<TSolution, TEncod
 
 public abstract class PermutationProblem : Problem<Permutation, PermutationEncoding> {
   protected PermutationProblem(Objective objective, PermutationEncoding searchSpace) :
-    base(objective, searchSpace) {}
+    base(objective, searchSpace) { }
 }
 
 public abstract class RealVectorProblem : Problem<RealVector, RealVectorEncoding> {
-  protected RealVectorProblem(Objective objective, RealVectorEncoding searchSpace) 
-    : base(objective, searchSpace) {
-  }
+  protected RealVectorProblem(Objective objective, RealVectorEncoding searchSpace)
+    : base(objective, searchSpace) { }
 }
 
 // public record class EncodedProblem<TSolution, TGenotype, TSearchSpace> : IEncodedProblem<TSolution, TGenotype, TSearchSpace>

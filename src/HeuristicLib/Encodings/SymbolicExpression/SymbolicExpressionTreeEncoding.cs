@@ -20,7 +20,6 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression;
