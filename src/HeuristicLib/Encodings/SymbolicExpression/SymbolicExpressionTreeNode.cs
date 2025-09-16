@@ -33,7 +33,7 @@ public class SymbolicExpressionTreeNode {
 
   public Symbol Symbol { get; } = null!;
 
-  public SymbolicExpressionTreeNode? Parent { get; set; } = null!;
+  public SymbolicExpressionTreeNode? Parent { get; set; }
 
   public double NodeWeight { get; set; }
 

@@ -1,4 +1,4 @@
-#region License Information
+﻿#region License Information
 /* HeuristicLab
  * Copyright (C) Heuristic and Evolutionary Algorithms Laboratory (HEAL)
  *
@@ -19,19 +19,13 @@
  */
 #endregion
 
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
-
-/// <summary>
-/// Symbol for function defining branches
-/// </summary>
-public sealed class DefunSymbol : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-
-  public override SymbolicExpressionTreeNode CreateTreeNode() {
-    return new DefunTreeNode(this, "function");
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic {
+  // total size of this class should be small to improve cache access while executing the code
+  public class LinearInstruction(SymbolicExpressionTreeNode dynamicNode, ushort nArguments, byte opCode, object data, double value = 0, int childIndex = 0, bool skip = false) : Instruction(dynamicNode, nArguments, opCode, data) {
+    public double value = value;
+    public int childIndex = childIndex;
+    public bool skip = skip;
   }
 }

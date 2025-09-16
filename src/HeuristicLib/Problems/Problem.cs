@@ -44,17 +44,17 @@ public interface IProblem<in TGenotype, out TEncoding> : IProblem<TGenotype>
 // public static class EvaluationPipeline {
 //   public static EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult> Create<TGenotype, TPhenotype, TEvaluationResult>(
 //     IDecoder<TGenotype, TPhenotype> decoder,
-//     IEvaluator<TPhenotype, TEvaluationResult> evaluator,
+//     IEvaluator<TPhenotype, TEvaluationResult> Evaluator,
 //     IFitnessExtractor<TEvaluationResult> fitnessExtractor
 //   ) {
-//     return new EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult>(decoder, evaluator, fitnessExtractor);
+//     return new EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult>(decoder, Evaluator, fitnessExtractor);
 //   }
 // }
 //
 // public class EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult> {
-//   public EvaluationPipeline(IDecoder<TGenotype, TPhenotype> decoder, IEvaluator<TPhenotype, TEvaluationResult> evaluator, IFitnessExtractor<TEvaluationResult> fitnessExtractor) {
+//   public EvaluationPipeline(IDecoder<TGenotype, TPhenotype> decoder, IEvaluator<TPhenotype, TEvaluationResult> Evaluator, IFitnessExtractor<TEvaluationResult> fitnessExtractor) {
 //     Decoder = decoder;
-//     Evaluator = evaluator;
+//     Evaluator = Evaluator;
 //     FitnessExtractor = fitnessExtractor;
 //   }
 //   public IDecoder<TGenotype, TPhenotype> Decoder { get; }

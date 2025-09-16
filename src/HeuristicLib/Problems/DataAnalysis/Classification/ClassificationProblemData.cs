@@ -1,4 +1,4 @@
-#region License Information
+﻿#region License Information
 /* HeuristicLab
  * Copyright (C) Heuristic and Evolutionary Algorithms Laboratory (HEAL)
  *
@@ -19,19 +19,11 @@
  */
 #endregion
 
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
-
-/// <summary>
-/// Symbol for function defining branches
-/// </summary>
-public sealed class DefunSymbol : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-
-  public override SymbolicExpressionTreeNode CreateTreeNode() {
-    return new DefunTreeNode(this, "function");
-  }
+public class ClassificationProblemData(Dataset dataset, IEnumerable<string> allowedInputVariables, string targetVariable)
+  : DataAnalysisProblemData(dataset, allowedInputVariables) {
+  public string TargetVariable { get; set; } = targetVariable;
+  public IEnumerable<double> TargetVariableValues(PartitionType partition) => Dataset.GetDoubleValues(TargetVariable, Partitions[partition].Enumerate());
+  public IEnumerable<double> TargetVariableValues() => Dataset.GetDoubleValues(TargetVariable);
 }

@@ -153,11 +153,11 @@ public abstract class Dataset {
   public IEnumerable<string> StringVariables => VariableValues.Where(p => p.Value is IList<string>).Select(p => p.Key);
   public IEnumerable<string> DateTimeVariables => VariableValues.Where(p => p.Value is IList<DateTime>).Select(p => p.Key);
 
-  public IEnumerable<double> GetDoubleValues(string variableName) => GetValues<double>(variableName);
+  public IReadOnlyList<double> GetDoubleValues(string variableName) => GetValues<double>(variableName);
   public IEnumerable<double> GetDoubleValues(string variableName, IEnumerable<int> rows) => GetValues<double>(variableName, rows);
-  public IEnumerable<string> GetStringValues(string variableName) => GetValues<string>(variableName);
+  public IReadOnlyList<string> GetStringValues(string variableName) => GetValues<string>(variableName);
   public IEnumerable<string> GetStringValues(string variableName, IEnumerable<int> rows) => GetValues<string>(variableName, rows);
-  public IEnumerable<DateTime> GetDateTimeValues(string variableName) => GetValues<DateTime>(variableName);
+  public IReadOnlyList<DateTime> GetDateTimeValues(string variableName) => GetValues<DateTime>(variableName);
   public IEnumerable<DateTime> GetDateTimeValues(string variableName, IEnumerable<int> rows) => GetValues<DateTime>(variableName, rows);
 
   public double GetDoubleValue(string variableName, int row) => GetValues<double>(variableName)[row];
@@ -166,16 +166,16 @@ public abstract class Dataset {
 
   private IEnumerable<T> GetValues<T>(string variableName, IEnumerable<int> rows) => rows.Select(x => GetValues<T>(variableName)[x]);
 
-  private IList<T> GetValues<T>(string variableName) {
+  private List<T> GetValues<T>(string variableName) {
     if (!VariableValues.TryGetValue(variableName, out var list)) {
       throw new ArgumentException("The variable " + variableName + " does not exist in the dataset.");
     }
 
-    if (list is not IList<T> values) {
-      throw new ArgumentException("The variable " + variableName + " is not a " + typeof(T) + " variable.");
-    }
-
-    return values;
+    return list switch {
+      List<T> values => values,
+      IList<T> => throw new NotImplementedException($"Dataset is supposed to work on List<T> directly. This is a bug. Actual type is {list.GetType()}"),
+      _ => throw new ArgumentException("The variable " + variableName + " is not a " + typeof(T) + " variable.")
+    };
   }
 
   public bool VariableHasType<T>(string variableName) => VariableValues[variableName] is IList<T>;

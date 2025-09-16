@@ -104,7 +104,7 @@ public class PredefinedSolutionsCreator<TGenotype, TEncoding, TProblem>(IReadOnl
   : BatchCreator<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
-  private int currentSolutionIndex = 0;
+  private int currentSolutionIndex;
 
   public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
     var offspring = new TGenotype[count];

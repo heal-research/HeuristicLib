@@ -29,26 +29,5 @@ public abstract class DataAnalysisProblem<TProblemData, TSolution, TEncoding>(TP
   where TEncoding : class, IEncoding<TSolution> {
   public TProblemData ProblemData {
     get;
-    set;
   } = problemData;
-}
-
-public abstract class RegressionProblem<TProblemData, TSolution, TEncoding>(TProblemData problemData, ICollection<IRegressionEvaluator> objective, IComparer<ObjectiveVector> a, TEncoding encoding)
-  : DataAnalysisProblem<TProblemData, TSolution, TEncoding>(problemData, new(objective.Select(x => x.Direction).ToArray(), a), encoding)
-  where TProblemData : DataAnalysisProblemData
-  where TEncoding : class, IEncoding<TSolution>
-  where TSolution : IRegressionModel {
-  public List<IRegressionEvaluator> Evaluators { get; set; } = objective.ToList();
-  public override ObjectiveVector Evaluate(TSolution solution) => throw new NotImplementedException();
-}
-
-public interface IRegressionEvaluator {
-  public ObjectiveDirection Direction { get; }
-  public double Evaluate(IEnumerable<double> trueValues, IEnumerable<double> predictedValues);
-}
-
-public interface IRegressionModel {
-  IEnumerable<double> Predict(Dataset data, IEnumerable<int> rows);
-
-  double Predict(Dataset data, int rows) => Predict(data, [rows]).First();
 }

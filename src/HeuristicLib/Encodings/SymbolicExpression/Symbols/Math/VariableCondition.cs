@@ -54,7 +54,7 @@ public sealed class VariableCondition : Symbol {
     }
   }
 
-  private List<string> allVariableNames = [];
+  private readonly List<string> allVariableNames = [];
   public IReadOnlyList<string> AllVariableNames {
     get => allVariableNames;
     set {
@@ -75,7 +75,7 @@ public sealed class VariableCondition : Symbol {
   }
 
   public double SlopeManipulatorMu { get; set; } = 0.0;
-  private double slopeManipulatorSigma = 0.0;
+  private double slopeManipulatorSigma;
   public double SlopeManipulatorSigma {
     get => slopeManipulatorSigma;
     set {

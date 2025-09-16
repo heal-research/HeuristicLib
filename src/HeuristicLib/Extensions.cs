@@ -12,6 +12,10 @@ public static class Extensions {
     if (dict.TryGetValue(key, out var v)) return v;
     return dict[key] = defaultValue;
   }
+
+  public static int Count(this Range r) {
+    return r.End.Value - r.Start.Value;
+  }
 }
 
 public static class EnumerableExtensions {

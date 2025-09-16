@@ -17,8 +17,8 @@
 // }
 //
 // public static class Evaluator {
-//   public static FitnessFunctionEvaluator<TPhenotype> FromFitnessFunction<TPhenotype>(Func<TPhenotype, Fitness> evaluator) {
-//     return new FitnessFunctionEvaluator<TPhenotype>(evaluator);
+//   public static FitnessFunctionEvaluator<TPhenotype> FromFitnessFunction<TPhenotype>(Func<TPhenotype, Fitness> Evaluator) {
+//     return new FitnessFunctionEvaluator<TPhenotype>(Evaluator);
 //   }
 //   // public static ProblemEvaluator<TPhenotype> FromProblem<TPhenotype>(IProblem<TPhenotype> problem) {
 //   //   return new ProblemEvaluator<TPhenotype>(problem);
@@ -41,3 +41,5 @@
 // //   }
 // //   public override Fitness Evaluate(TPhenotype phenotype) => problem.Evaluate(phenotype);
 // // }
+
+

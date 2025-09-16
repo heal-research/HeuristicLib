@@ -19,29 +19,18 @@
  */
 #endregion
 
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
-using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpression;
-
-public record SymbolicExpressionTreeEncoding(ISymbolicExpressionGrammar Grammar, int TreeLength = 50, int TreeDepth = 50)
-  : Encoding<SymbolicExpressionTree> {
-  #region Parameter properties
-  public int TreeLength { get; } = TreeLength;
-
-  public int TreeDepth { get; } = TreeDepth;
-
-  public ISymbolicExpressionGrammar Grammar { get; } = Grammar;
-
-  public int FunctionDefinitions { get; set; }
-
-  public int FunctionArguments { get; set; }
-  #endregion
-
-  public override bool Contains(SymbolicExpressionTree genotype) {
-    return genotype.Length <= TreeLength &&
-           genotype.Depth <= TreeDepth
-      //TODO && Grammar.Conforms(genotype)
-      ;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic {
+  // total size of this class should be small to improve cache access while executing the code
+  public class Instruction(SymbolicExpressionTreeNode dynamicNode, ushort nArguments, byte opCode, object data) {
+    // the tree node can hold additional data that is necessary for the execution of this instruction
+    public SymbolicExpressionTreeNode dynamicNode = dynamicNode;
+    // op code of the function that determines what operation should be executed
+    public byte opCode = opCode;
+    // number of arguments of the current instruction
+    public ushort nArguments = nArguments;
+    // an optional object value (addresses for calls, argument index for arguments)
+    public object data = data;
   }
 }

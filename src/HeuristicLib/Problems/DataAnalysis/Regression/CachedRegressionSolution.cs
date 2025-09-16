@@ -22,17 +22,17 @@
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 /// <summary>
-/// Represents a regression data analysis model
+/// Represents a regression data analysis solution
 /// </summary>
-public class CachedRegressionModel(IRegressionModel model) : IRegressionModel {
+public class CachedRegressionSolution(IRegressionModel solution) : IRegressionModel {
   protected readonly Dictionary<int, double> EvaluationCache = new();
-  protected readonly IRegressionModel Model = model;
+  protected readonly IRegressionModel Solution = solution;
 
   public IEnumerable<double> GetEstimatedValues(Dataset data, IEnumerable<int> rows) {
     var rowsP = rows as ICollection<int> ?? rows.ToArray();
     var rowsToEvaluate = rowsP.Where(row => !EvaluationCache.ContainsKey(row)).ToList();
     var rowsEnumerator = rowsToEvaluate.GetEnumerator();
-    using var valuesEnumerator = Model.Predict(data, rowsToEvaluate).GetEnumerator();
+    using var valuesEnumerator = Solution.Predict(data, rowsToEvaluate).GetEnumerator();
     while (rowsEnumerator.MoveNext() & valuesEnumerator.MoveNext()) {
       EvaluationCache.Add(rowsEnumerator.Current, valuesEnumerator.Current);
     }

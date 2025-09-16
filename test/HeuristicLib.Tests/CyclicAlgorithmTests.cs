@@ -114,7 +114,7 @@
 //   // public Task CyclicAlgorithm_WithGA() {
 //   //   var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
 //   //   var searchSpace = problem.CreateRealVectorSearchSpace();
-//   //   var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+//   //   var Evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
 //   //   var randomSource = new RandomSource(42);
 //   //
 //   //   var ga1 = new GeneticAlgorithm<RealVector>(
@@ -123,7 +123,7 @@
 //   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
 //   //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     mutationRate: 0.1,
-//   //     evaluator: evaluator,
+//   //     Evaluator: Evaluator,
 //   //     SingleObjective.Minimize,
 //   //     selector: new TournamentSelector(2, randomSource.CreateRandomNumberGenerator()),
 //   //     replacer: new ElitismReplacer(1), 
@@ -137,7 +137,7 @@
 //   //     crossover: new AlphaBetaBlendCrossoverOperator(0.5, 0.5),
 //   //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     mutationRate: 0.1,
-//   //     evaluator: evaluator,
+//   //     Evaluator: Evaluator,
 //   //     SingleObjective.Minimize,
 //   //     selector: new RandomSelector(randomSource.CreateRandomNumberGenerator()),
 //   //     replacer: new ElitismReplacer(1), 
@@ -151,7 +151,7 @@
 //   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
 //   //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     mutationRate: 0.8,
-//   //     evaluator: evaluator,
+//   //     Evaluator: Evaluator,
 //   //     SingleObjective.Minimize,
 //   //     selector: new TournamentSelector(2, randomSource.CreateRandomNumberGenerator()),
 //   //     replacer: new ElitismReplacer(1), 
@@ -173,7 +173,7 @@
 //   // public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
 //   //   var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
 //   //   var searchSpace = problem.CreateRealVectorSearchSpace();
-//   //   var evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+//   //   var Evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
 //   //   var randomSource = new RandomSource(42);
 //   //
 //   //   var evolutionStrategy = new EvolutionStrategy(
@@ -184,7 +184,7 @@
 //   //     mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     initialMutationStrength: 0.1,
 //   //     crossover: null,
-//   //     evaluator: evaluator,
+//   //     Evaluator: Evaluator,
 //   //     SingleObjective.Minimize,
 //   //     terminator: Terminator.OnGeneration(6),
 //   //     randomSource: randomSource
@@ -196,7 +196,7 @@
 //   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
 //   //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     mutationRate: 0.1,
-//   //     evaluator: evaluator,
+//   //     Evaluator: Evaluator,
 //   //     SingleObjective.Minimize,
 //   //     selector: new TournamentSelector(2, randomSource.CreateRandomNumberGenerator()),
 //   //     replacer: new ElitismReplacer(1), 
@@ -236,3 +236,5 @@
 //   //   }
 //   // }
 // }
+
+

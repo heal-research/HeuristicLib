@@ -49,23 +49,23 @@ public sealed class RegressionVariableImpactsCalculator(
   public DataAnalysisProblemData.PartitionType DataPartition { get; set; } = dataPartition;
   #endregion
 
-  public IEnumerable<Tuple<string, double>> Calculate(IRegressionModel model, RegressionProblemData data) {
-    return CalculateImpacts(data, model, ReplacementMethod, FactorReplacementMethod, DataPartition);
+  public IEnumerable<Tuple<string, double>> Calculate(IRegressionModel solution, RegressionProblemData data) {
+    return CalculateImpacts(data, solution, ReplacementMethod, FactorReplacementMethod, DataPartition);
   }
 
   public static IEnumerable<Tuple<string, double>> CalculateImpacts(
     RegressionProblemData data,
-    IRegressionModel model,
+    IRegressionModel solution,
     ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle,
     FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best,
     DataAnalysisProblemData.PartitionType dataPartition = DataAnalysisProblemData.PartitionType.Training) {
     var rows = data.Partitions[dataPartition].Enumerate().ToArray();
-    var estimatedValues = model.Predict(data.Dataset, rows).ToArray();
-    return CalculateImpacts(model, data, estimatedValues, rows, replacementMethod, factorReplacementMethod);
+    var estimatedValues = solution.Predict(data.Dataset, rows).ToArray();
+    return CalculateImpacts(solution, data, estimatedValues, rows, replacementMethod, factorReplacementMethod);
   }
 
   public static IEnumerable<Tuple<string, double>> CalculateImpacts(
-    IRegressionModel model,
+    IRegressionModel solution,
     RegressionProblemData problemData,
     IReadOnlyList<double> estimatedValues,
     IReadOnlyList<int> rows,
@@ -79,14 +79,14 @@ public sealed class RegressionVariableImpactsCalculator(
     var modifiableDataset = problemData.Dataset.ToModifiable();
 
     foreach (var inputVariable in inputVariables) {
-      impacts[inputVariable] = CalculateImpact(inputVariable, model, problemData, modifiableDataset, rows, replacementMethod, factorReplacementMethod, targetValues, originalQuality);
+      impacts[inputVariable] = CalculateImpact(inputVariable, solution, problemData, modifiableDataset, rows, replacementMethod, factorReplacementMethod, targetValues, originalQuality);
     }
 
     return impacts.Select(i => Tuple.Create(i.Key, i.Value));
   }
 
   public static double CalculateImpact(string variableName,
-                                       IRegressionModel model,
+                                       IRegressionModel solution,
                                        RegressionProblemData problemData,
                                        ModifiableDataset modifiableDataset,
                                        IReadOnlyList<int> rows,
@@ -95,18 +95,18 @@ public sealed class RegressionVariableImpactsCalculator(
                                        IReadOnlyList<double>? targetValues = null,
                                        double quality = double.NaN) {
     if (!problemData.InputVariables.Contains(variableName)) {
-      throw new InvalidOperationException($"Can not calculate variable impact, because the model uses inputs missing in the dataset ({variableName})");
+      throw new InvalidOperationException($"Can not calculate variable impact, because the solution uses inputs missing in the dataset ({variableName})");
     }
 
     targetValues ??= problemData.Dataset.GetDoubleValues(problemData.TargetVariable, rows).ToArray();
 
     if (double.IsNaN(quality)) {
-      quality = CalculateQuality(model.Predict(modifiableDataset, rows), targetValues);
+      quality = CalculateQuality(solution.Predict(modifiableDataset, rows), targetValues);
     }
 
-    var replacementValues = GetReplacementValues(modifiableDataset, variableName, model, rows, targetValues, out var originalValues, replacementMethod, factorReplacementMethod);
+    var replacementValues = GetReplacementValues(modifiableDataset, variableName, solution, rows, targetValues, out var originalValues, replacementMethod, factorReplacementMethod);
 
-    var newValue = CalculateQualityForReplacement(model, modifiableDataset, variableName, originalValues, rows, replacementValues, targetValues);
+    var newValue = CalculateQualityForReplacement(solution, modifiableDataset, variableName, originalValues, rows, replacementValues, targetValues);
     var impact = quality - newValue;
 
     return impact;
@@ -114,7 +114,7 @@ public sealed class RegressionVariableImpactsCalculator(
 
   private static IList GetReplacementValues(ModifiableDataset modifiableDataset,
                                             string variableName,
-                                            IRegressionModel model,
+                                            IRegressionModel solution,
                                             IReadOnlyList<int> rows,
                                             IReadOnlyList<double> targetValues,
                                             out IList originalValues,
@@ -126,7 +126,7 @@ public sealed class RegressionVariableImpactsCalculator(
       replacementValues = GetReplacementValuesForDouble(modifiableDataset, rows, (List<double>)originalValues, replacementMethod);
     } else if (modifiableDataset.VariableHasType<string>(variableName)) {
       originalValues = modifiableDataset.GetDoubleValues(variableName).ToList();
-      replacementValues = GetReplacementValuesForString(model, modifiableDataset, variableName, rows, (List<string>)originalValues, targetValues, factorReplacementMethod);
+      replacementValues = GetReplacementValuesForString(solution, modifiableDataset, variableName, rows, (List<string>)originalValues, targetValues, factorReplacementMethod);
     } else {
       throw new NotSupportedException("Variable not supported");
     }
@@ -134,10 +134,10 @@ public sealed class RegressionVariableImpactsCalculator(
     return replacementValues;
   }
 
-  private static IList GetReplacementValuesForDouble(ModifiableDataset modifiableDataset,
-                                                     IReadOnlyList<int> rows,
-                                                     List<double> originalValues,
-                                                     ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle) {
+  private static List<double> GetReplacementValuesForDouble(ModifiableDataset modifiableDataset,
+                                                            IReadOnlyList<int> rows,
+                                                            List<double> originalValues,
+                                                            ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle) {
     var random = new System.Random(31475);
     var r2 = new SystemRandomNumberGenerator(31475);
     List<double> replacementValues;
@@ -184,13 +184,13 @@ public sealed class RegressionVariableImpactsCalculator(
     return replacementValues;
   }
 
-  private static IList GetReplacementValuesForString(IRegressionModel model,
-                                                     ModifiableDataset modifiableDataset,
-                                                     string variableName,
-                                                     IReadOnlyList<int> rows,
-                                                     List<string> originalValues,
-                                                     IReadOnlyList<double> targetValues,
-                                                     FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Shuffle) {
+  private static List<string> GetReplacementValuesForString(IRegressionModel solution,
+                                                            ModifiableDataset modifiableDataset,
+                                                            string variableName,
+                                                            IReadOnlyList<int> rows,
+                                                            List<string> originalValues,
+                                                            IReadOnlyList<double> targetValues,
+                                                            FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Shuffle) {
     List<string> replacementValues = [];
     var random = new System.Random(31415);
 
@@ -201,7 +201,7 @@ public sealed class RegressionVariableImpactsCalculator(
         foreach (var repl in modifiableDataset.GetStringValues(variableName, rows).Distinct()) {
           var curReplacementValues = Enumerable.Repeat(repl, modifiableDataset.Rows).ToList();
           //fholzing: this result could be used later on (theoretically), but is neglected for better readability/method consistency 
-          var newValue = CalculateQualityForReplacement(model, modifiableDataset, variableName, originalValues, rows, curReplacementValues, targetValues);
+          var newValue = CalculateQualityForReplacement(solution, modifiableDataset, variableName, originalValues, rows, curReplacementValues, targetValues);
 
           if (newValue <= bestQuality) {
             continue;
@@ -240,7 +240,7 @@ public sealed class RegressionVariableImpactsCalculator(
   }
 
   private static double CalculateQualityForReplacement(
-    IRegressionModel model,
+    IRegressionModel solution,
     ModifiableDataset modifiableDataset,
     string variableName,
     IList originalValues,
@@ -249,7 +249,7 @@ public sealed class RegressionVariableImpactsCalculator(
     IEnumerable<double> targetValues) {
     modifiableDataset.ReplaceVariable(variableName, replacementValues);
     //mkommend: ToList is used on purpose to avoid lazy evaluation that could result in wrong estimates due to variable replacements
-    var estimates = model.Predict(modifiableDataset, rows).ToList();
+    var estimates = solution.Predict(modifiableDataset, rows).ToList();
     var ret = CalculateQuality(targetValues, estimates);
     modifiableDataset.ReplaceVariable(variableName, originalValues);
 

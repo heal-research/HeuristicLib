@@ -19,19 +19,12 @@
  */
 #endregion
 
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering {
+  public class ClusteringProblemData(Dataset dataset, IEnumerable<string> allowedInputVariables, IDistance<int> distance) : DataAnalysisProblemData(dataset, allowedInputVariables) {
+    public IDistance<int> Distance { get; set; } = distance;
+  }
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
-
-/// <summary>
-/// Symbol for function defining branches
-/// </summary>
-public sealed class DefunSymbol : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-
-  public override SymbolicExpressionTreeNode CreateTreeNode() {
-    return new DefunTreeNode(this, "function");
+  public interface IDistance<in TKey> {
+    double GetDistance(TKey a, TKey b);
   }
 }

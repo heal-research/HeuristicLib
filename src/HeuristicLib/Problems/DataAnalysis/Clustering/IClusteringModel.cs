@@ -1,4 +1,4 @@
-#region License Information
+﻿#region License Information
 /* HeuristicLab
  * Copyright (C) Heuristic and Evolutionary Algorithms Laboratory (HEAL)
  *
@@ -19,19 +19,10 @@
  */
 #endregion
 
-using System.Diagnostics;
-using System.Runtime.InteropServices;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering {
+  public interface IClusteringModel {
+    IEnumerable<int> GetClusterValues(Dataset dataset, IEnumerable<int> rows);
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
-
-/// <summary>
-/// Symbol for function defining branches
-/// </summary>
-public sealed class DefunSymbol : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-
-  public override SymbolicExpressionTreeNode CreateTreeNode() {
-    return new DefunTreeNode(this, "function");
+    double GetClusterValue(Dataset data, int rows) => GetClusterValues(data, [rows]).First();
   }
 }
