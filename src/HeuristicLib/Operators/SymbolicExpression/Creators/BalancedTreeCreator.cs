@@ -40,7 +40,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
   public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding, int targetLength, double irregularityBias = 1) {
     // even lengths cannot be achieved without symbols of odd arity
     // therefore we randomly pick a neighbouring odd length value
-    var tree = MakeStump(random, encoding.Grammar); // create a stump consisting of just a ProgramRootSymbol and a StartSymbol
+    var tree = encoding.Grammar.MakeStump(random); // create a stump consisting of just a ProgramRootSymbol and a StartSymbol
     CreateExpression(random, tree.Root.GetSubtree(0), encoding, targetLength - tree.Length, encoding.TreeDepth - 2, irregularityBias); // -2 because the stump has length 2 and depth 2
     return tree;
   }
@@ -135,17 +135,6 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
 
   #region helpers
   private sealed record NodeInfo(SymbolicExpressionTreeNode Node, int Depth, int Arity);
-
-  private static SymbolicExpressionTree MakeStump(IRandomNumberGenerator random, ISymbolicExpressionGrammar grammar) {
-    var rootNode = grammar.ProgramRootSymbol.CreateTreeNode();
-    var tree = new SymbolicExpressionTree(rootNode);
-    if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
-    var startNode = grammar.StartSymbol.CreateTreeNode();
-    if (startNode.HasLocalParameters) startNode.ResetLocalParameters(random);
-    rootNode.AddSubtree(startNode);
-    tree.Root = rootNode;
-    return tree;
-  }
 
   public void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeEncoding encoding, int maxTreeLength, int maxTreeDepth) {
     CreateExpression(random, seedNode, encoding, maxTreeLength, maxTreeDepth, IrregularityBias);

@@ -30,22 +30,15 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
   /// All symbols are allowed for nodes, so the resulting trees can be of any shape and size. 
   /// </summary>
   /// <param name="random">Random generator</param>
-  /// <param name="grammar">Available tree grammar</param>
   /// <param name="encoding"></param>
   /// <returns></returns>
   public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => CreateTree(random, encoding);
 
   private static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var rootNode = encoding.Grammar.ProgramRootSymbol.CreateTreeNode();
-    if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
+    var tree = encoding.Grammar.MakeStump(random);
 
-    var startNode = encoding.Grammar.StartSymbol.CreateTreeNode();
-    if (startNode.HasLocalParameters) startNode.ResetLocalParameters(random);
-
-    rootNode.AddSubtree(startNode);
-
-    Create(random, startNode, encoding.TreeDepth - 1, encoding);
-    return new(rootNode);
+    Create(random, tree.Root.GetSubtree(0), encoding.TreeDepth - 1, encoding);
+    return tree;
   }
 
   public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, SymbolicExpressionTreeEncoding encoding) {
@@ -64,10 +57,7 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
       var possibleSymbols = allowedSymbols.Where(s => encoding.Grammar.IsAllowedChildSymbol(seedNode.Symbol, s, i)).ToList();
       var weights = possibleSymbols.Select(s => s.InitialFrequency).ToList();
 
-#pragma warning disable 612, 618
       var selectedSymbol = possibleSymbols.SampleProportional(random, weights);
-#pragma warning restore 612, 618
-
       var tree = selectedSymbol.CreateTreeNode();
       if (tree.HasLocalParameters) tree.ResetLocalParameters(random);
       seedNode.AddSubtree(tree);
@@ -91,23 +81,24 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
       var possibleSymbols = allowedSymbols.Where(s => encoding.Grammar.IsAllowedChildSymbol(root.Symbol, s, i) &&
                                                       encoding.Grammar.GetMinimumExpressionDepth(s) - 1 <= maxDepth - currentDepth).ToList();
 
-      if (!possibleSymbols.Any())
+      if (possibleSymbols.Count == 0)
         throw new InvalidOperationException("No symbols are available for the tree.");
 
       var weights = possibleSymbols.Select(s => s.InitialFrequency).ToList();
-#pragma warning disable 612, 618
+
       var selectedSymbol = possibleSymbols.SampleProportional(random, weights);
-#pragma warning restore 612, 618
 
       var tree = selectedSymbol.CreateTreeNode();
       if (tree.HasLocalParameters) tree.ResetLocalParameters(random);
       root.AddSubtree(tree);
     }
 
-    if (maxDepth > currentDepth)
-      foreach (var subTree in root.Subtrees)
-        if (encoding.Grammar.GetMaximumSubtreeCount(subTree.Symbol) != 0)
-          RecursiveCreate(random, subTree, currentDepth + 1, maxDepth, encoding);
+    if (maxDepth <= currentDepth)
+      return;
+
+    foreach (var subTree in root.Subtrees)
+      if (encoding.Grammar.GetMaximumSubtreeCount(subTree.Symbol) != 0)
+        RecursiveCreate(random, subTree, currentDepth + 1, maxDepth, encoding);
   }
 
   private static int SampleArity(IRandomNumberGenerator random, SymbolicExpressionTreeNode node, SymbolicExpressionTreeEncoding encoding) {

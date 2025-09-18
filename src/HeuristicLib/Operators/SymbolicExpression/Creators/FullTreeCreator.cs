@@ -40,19 +40,8 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
   }
 
   public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var rootNode = encoding.Grammar.ProgramRootSymbol.CreateTreeNode();
-    var tree = new SymbolicExpressionTree(rootNode);
-    if (rootNode.HasLocalParameters)
-      rootNode.ResetLocalParameters(random);
-
-    var startNode = encoding.Grammar.StartSymbol.CreateTreeNode();
-    if (startNode.HasLocalParameters)
-      startNode.ResetLocalParameters(random);
-
-    rootNode.AddSubtree(startNode);
-
-    Create(random, startNode, encoding, encoding.TreeDepth - 1);
-    tree.Root = rootNode;
+    var tree = encoding.Grammar.MakeStump(random);
+    Create(random, tree.Root.GetSubtree(0), encoding, encoding.TreeDepth - 1);
     return tree;
   }
 

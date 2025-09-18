@@ -325,7 +325,9 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var endReplacement = Stopwatch.GetTimestamp();
     ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
 
-    var result = new ALPSIterationResult<TGenotype>() { Population = [new(new(newPopulation))], };
+    var result = new ALPSIterationResult<TGenotype>() {
+      Population = [new(new(newPopulation))],
+    };
 
     return result;
   }
@@ -344,6 +346,15 @@ public class GeneticAlgorithm<TGenotype, TEncoding>
 
 public class GeneticAlgorithm<TGenotype>
   : GeneticAlgorithm<TGenotype, IEncoding<TGenotype>> {
-  public GeneticAlgorithm(int populationSize, ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> creator, ICrossover<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> crossover, IMutator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> mutator, double mutationRate, ISelector<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> selector, int elites, int randomSeed, ITerminator<TGenotype, ALPSIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> terminator, IInterceptor<TGenotype, ALPSIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>? interceptor = null)
+  public GeneticAlgorithm(int populationSize,
+                          ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> creator,
+                          ICrossover<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> crossover,
+                          IMutator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> mutator,
+                          double mutationRate,
+                          ISelector<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> selector,
+                          int elites,
+                          int randomSeed,
+                          ITerminator<TGenotype, ALPSIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> terminator,
+                          IInterceptor<TGenotype, ALPSIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>? interceptor = null)
     : base(populationSize, creator, crossover, mutator, mutationRate, selector, elites, randomSeed, terminator, interceptor) { }
 }

@@ -25,7 +25,7 @@ namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
 public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode {
   public new VariableBase Symbol => (VariableBase)base.Symbol;
-  public double Weight { get; set; }
+  public double Weight { get; set; } = 1;
   public string VariableName { get; set; } = "";
 
   protected VariableTreeNodeBase(VariableBase variableSymbol) : base(variableSymbol) { }

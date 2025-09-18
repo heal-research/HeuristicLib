@@ -35,19 +35,15 @@ public class RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator {
   /// <param name="maxTreeDepth">Maximum tree depth</param>
   /// <returns></returns>
   public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var rootNode = encoding.Grammar.ProgramRootSymbol.CreateTreeNode();
-    if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
-
-    var startNode = encoding.Grammar.StartSymbol.CreateTreeNode();
-    if (startNode.HasLocalParameters) startNode.ResetLocalParameters(random);
-    rootNode.AddSubtree(startNode);
+    var tree = encoding.Grammar.MakeStump(random);
+    var startNode = tree.Root.GetSubtree(0);
 
     if (random.Random() < 0.5)
       GrowTreeCreator.Create(random, startNode, encoding.TreeDepth - 2, encoding);
     else
       FullTreeCreator.Create(random, startNode, encoding, encoding.TreeDepth - 2);
 
-    return new(rootNode);
+    return tree;
   }
 
   public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => CreateTree(random, encoding);

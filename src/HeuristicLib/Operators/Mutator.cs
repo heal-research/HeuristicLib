@@ -138,6 +138,12 @@ public static class MeasuredMutatorExtension {
   }
 }
 
+public class MultiMutator {
+  public static MultiMutator<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(IReadOnlyList<IMutator<TGenotype, TEncoding, TProblem>> mutators, IReadOnlyList<double>? weights = null) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
+    return new(mutators, weights);
+  }
+}
+
 // ToDo: extract base class for multi-operators 
 public class MultiMutator<TGenotype, TEncoding, TProblem> : BatchMutator<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>

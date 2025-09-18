@@ -29,15 +29,9 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
   private const int MAX_TRIES = 100;
 
   public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var rootNode = encoding.Grammar.ProgramRootSymbol.CreateTreeNode();
-    if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
-
-    var startNode = encoding.Grammar.StartSymbol.CreateTreeNode();
-    if (startNode.HasLocalParameters) startNode.ResetLocalParameters(random);
-
-    rootNode.AddSubtree(startNode);
-    PTC2(random, startNode, encoding);
-    return new(rootNode);
+    var tree = encoding.Grammar.MakeStump(random);
+    PTC2(random, tree.Root.GetSubtree(0), encoding);
+    return tree;
   }
 
   public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, ISymbolicExpressionGrammar grammar, int targetLength,
@@ -109,7 +103,11 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
       // insert a dummy sub-tree and add the pending extension to the list
       var dummy = new SymbolicExpressionTreeNode();
       root.AddSubtree(dummy);
-      var x = new TreeExtensionPoint { Parent = root, ChildIndex = i, ExtensionPointDepth = 0 };
+      var x = new TreeExtensionPoint {
+        Parent = root,
+        ChildIndex = i,
+        ExtensionPointDepth = 0
+      };
       FillExtensionLengths(x, maxDepth, encoding);
       extensionPoints.Add(x);
     }
@@ -172,7 +170,11 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
           // insert a dummy sub-tree and add the pending extension to the list
           var dummy = new SymbolicExpressionTreeNode();
           newTree.AddSubtree(dummy);
-          var x = new TreeExtensionPoint { Parent = newTree, ChildIndex = i, ExtensionPointDepth = extensionDepth + 1 };
+          var x = new TreeExtensionPoint {
+            Parent = newTree,
+            ChildIndex = i,
+            ExtensionPointDepth = extensionDepth + 1
+          };
           FillExtensionLengths(x, maxDepth, encoding);
           extensionPoints.Add(x);
           maxExtensionPointsLength += x.MaximumExtensionLength;

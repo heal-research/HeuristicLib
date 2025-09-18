@@ -41,6 +41,7 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 
@@ -54,4 +55,15 @@ public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase {
   int MaximumFunctionArguments { get; set; }
 
   bool ReadOnly { get; set; }
+
+  public SymbolicExpressionTree MakeStump(IRandomNumberGenerator random) {
+    var rootNode = ProgramRootSymbol.CreateTreeNode();
+    var tree = new SymbolicExpressionTree(rootNode);
+    if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
+    var startNode = StartSymbol.CreateTreeNode();
+    if (startNode.HasLocalParameters) startNode.ResetLocalParameters(random);
+    rootNode.AddSubtree(startNode);
+    tree.Root = rootNode;
+    return tree;
+  }
 }
