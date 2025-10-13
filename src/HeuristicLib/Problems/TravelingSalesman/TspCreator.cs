@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
