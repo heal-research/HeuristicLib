@@ -1,27 +1,6 @@
-using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-
-public static class RegressionProblemDataExtensions {
-  public static ObjectiveVector Evaluate(IRegressionModel solution, Dataset dataset, IEnumerable<int> rows, IReadOnlyList<IRegressionEvaluator> evaluators, double[] targets) {
-    var predictions = solution.Predict(dataset, rows);
-    if (evaluators.Count == 1)
-      return new(evaluators[0].Evaluate(targets, predictions));
-
-    if (predictions is not ICollection<double> materialPredictions)
-      materialPredictions = predictions.ToArray();
-    return new(evaluators.Select(x => x.Evaluate(targets, materialPredictions)));
-  }
-
-  public static ObjectiveVector Evaluate(this RegressionProblemData data, IRegressionModel solution, DataAnalysisProblemData.PartitionType type, IReadOnlyList<IRegressionEvaluator> evaluators) {
-    var targets = data.TargetVariableValues(type).ToArray();
-    var rows = data.Partitions[type].Enumerate();
-    return Evaluate(solution, data.Dataset, rows, evaluators, targets);
-  }
-}
 
 public abstract class RegressionProblem<TProblemData, TSolution, TEncoding>(TProblemData problemData, ICollection<IRegressionEvaluator> objective, IComparer<ObjectiveVector> a, TEncoding encoding)
   : DataAnalysisProblem<TProblemData, TSolution, TEncoding>(problemData, new(objective.Select(x => x.Direction).ToArray(), a), encoding)
@@ -35,27 +14,4 @@ public abstract class RegressionProblem<TProblemData, TSolution, TEncoding>(TPro
   public override ObjectiveVector Evaluate(TSolution solution) => RegressionProblemDataExtensions.Evaluate(Decode(solution), ProblemData.Dataset, rowIndicesCache, Evaluators, trainingTargetCache);
 
   protected abstract IRegressionModel Decode(TSolution solution);
-}
-
-public record SymbolicRegressionModel(SymbolicExpressionTree tree, ISymbolicDataAnalysisExpressionTreeInterpreter interpreter) : IRegressionModel {
-  public virtual IEnumerable<double> Predict(Dataset data, IEnumerable<int> rows) => interpreter.GetSymbolicExpressionTreeValues(tree, data, rows);
-}
-
-public record BoundedSymbolicRegressionModel(SymbolicExpressionTree tree, ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, double lowerPredictionBound, double upperPredictionBound) :
-  SymbolicRegressionModel(tree, interpreter) {
-  public virtual IEnumerable<double> Predict(Dataset data, IEnumerable<int> rows) {
-    return interpreter.GetSymbolicExpressionTreeValues(tree, data, rows).Select(v => Math.Min(upperPredictionBound, Math.Max(lowerPredictionBound, v)));
-  }
-}
-
-public class SymbolicRegressionProblem(RegressionProblemData data, ICollection<IRegressionEvaluator> objective, IComparer<ObjectiveVector> a, SymbolicExpressionTreeEncoding encoding, ISymbolicDataAnalysisExpressionTreeInterpreter interpreter) :
-  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeEncoding>(data, objective, a, encoding) {
-  protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, interpreter);
-  public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get { return interpreter; } }
-
-  public SymbolicRegressionProblem(RegressionProblemData data, ICollection<IRegressionEvaluator> objective) :
-    this(data, objective,
-      objective.Count == 1 ? new SingleObjectiveComparer(objective.Single().Direction) : new LexicographicComparer(objective.Select(x => x.Direction).ToArray()),
-      new SymbolicExpressionTreeEncoding(new SimpleSymbolicExpressionGrammar()),
-      new SymbolicDataAnalysisExpressionTreeInterpreter()) { }
 }

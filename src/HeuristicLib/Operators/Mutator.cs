@@ -1,15 +1,9 @@
-﻿using System.Diagnostics;
+﻿using HEAL.HeuristicLib.Operators.BatchOperators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
-
-public interface IMutator<TGenotype, in TEncoding, in TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
-}
 
 public interface IMutator<TGenotype, in TEncoding> : IMutator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
   where TEncoding : class, IEncoding<TGenotype> {
@@ -18,12 +12,6 @@ public interface IMutator<TGenotype, in TEncoding> : IMutator<TGenotype, TEncodi
 
 public interface IMutator<TGenotype> : IMutator<TGenotype, IEncoding<TGenotype>> {
   IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random);
-}
-
-public abstract class BatchMutator<TGenotype, TEncoding, TProblem> : IMutator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 }
 
 public abstract class BatchMutator<TGenotype, TEncoding> : IMutator<TGenotype, TEncoding>
@@ -98,51 +86,7 @@ public abstract class Mutator<TGenotype> : IMutator<TGenotype> {
   }
 }
 
-public class NoChangeMutator<TGenotype> : BatchMutator<TGenotype> {
-  public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random) {
-    return parent;
-  }
-}
-
 // This would also work for other operators
-
-public class MeasuredMutator<TGenotype, TEncoding, TProblem> : IMutator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  private readonly IMutator<TGenotype, TEncoding, TProblem> mutator;
-
-  public OperatorMetric Metric { get; private set; }
-
-  public MeasuredMutator(IMutator<TGenotype, TEncoding, TProblem> mutator) {
-    this.mutator = mutator;
-
-    Metric = new OperatorMetric();
-  }
-
-  public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    long start = Stopwatch.GetTimestamp();
-    var offspring = mutator.Mutate(parent, random, encoding, problem);
-    long end = Stopwatch.GetTimestamp();
-
-    Metric += new OperatorMetric(offspring.Count, Stopwatch.GetElapsedTime(start, end));
-
-    return offspring;
-  }
-}
-
-public static class MeasuredMutatorExtension {
-  public static MeasuredMutator<TGenotype, TEncoding, TProblem> MeasureTime<TGenotype, TEncoding, TProblem>(this IMutator<TGenotype, TEncoding, TProblem> mutator)
-    where TEncoding : class, IEncoding<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new MeasuredMutator<TGenotype, TEncoding, TProblem>(mutator);
-  }
-}
-
-public class MultiMutator {
-  public static MultiMutator<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(IReadOnlyList<IMutator<TGenotype, TEncoding, TProblem>> mutators, IReadOnlyList<double>? weights = null) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new(mutators, weights);
-  }
-}
 
 // ToDo: extract base class for multi-operators 
 public class MultiMutator<TGenotype, TEncoding, TProblem> : BatchMutator<TGenotype, TEncoding, TProblem>

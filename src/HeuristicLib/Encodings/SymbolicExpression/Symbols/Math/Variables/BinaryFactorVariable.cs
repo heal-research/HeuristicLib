@@ -22,13 +22,9 @@
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math.Variables;
 
 public sealed class BinaryFactorVariable : VariableBase {
-  private readonly Dictionary<string, List<string>> variableValues;
+  private readonly Dictionary<string, List<string>> variableValues = new();
 
   public IReadOnlyDictionary<string, List<string>> VariableValues => variableValues;
-
-  public BinaryFactorVariable() : base() {
-    variableValues = new();
-  }
 
   public override SymbolicExpressionTreeNode CreateTreeNode() {
     return new BinaryFactorVariableTreeNode(this);

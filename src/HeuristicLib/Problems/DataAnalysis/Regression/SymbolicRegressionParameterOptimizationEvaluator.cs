@@ -26,11 +26,6 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression {
-  public class EvaluationsCounter {
-    public int FunctionEvaluations;
-    public int GradientEvaluations;
-  }
-
   public class SymbolicRegressionParameterOptimizationEvaluator {
     public static readonly PearsonR2Evaluator[] Evaluator = [new()];
 

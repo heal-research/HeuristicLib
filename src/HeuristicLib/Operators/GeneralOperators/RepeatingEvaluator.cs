@@ -1,9 +1,5 @@
 ﻿namespace HEAL.HeuristicLib.Operators;
 
-public interface IEvaluator<in TGentype> {
-  double Evaluate(TGentype solution);
-}
-
 // public class DeterministicProblemEvaluator<TGenotype> : IEvaluator<TGenotype>
 // {
 //   private readonly IDeterministicProblem<TGenotype> problem;
@@ -31,15 +27,7 @@ public interface IEvaluator<in TGentype> {
 //   }
 // }
 
-public class RepeatingEvaluator<TGenotype> : IEvaluator<TGenotype> {
-  private int count;
-  private readonly IEvaluator<TGenotype> evaluator;
-
-  public RepeatingEvaluator(IEvaluator<TGenotype> evaluator, int count) {
-    this.evaluator = evaluator;
-    this.count = count;
-  }
-
+public class RepeatingEvaluator<TGenotype>(IEvaluator<TGenotype> evaluator, int count) : IEvaluator<TGenotype> {
   public double Evaluate(TGenotype solution) {
     return Enumerable.Range(0, count).Select(i => evaluator.Evaluate(solution)).Average();
   }

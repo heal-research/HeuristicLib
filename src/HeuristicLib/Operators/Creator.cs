@@ -4,12 +4,6 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ICreator<out TGenotype, in TEncoding, in TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
-}
-
 public interface ICreator<out TGenotype, in TEncoding> : ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
   where TEncoding : class, IEncoding<TGenotype> {
   IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding);
@@ -17,12 +11,6 @@ public interface ICreator<out TGenotype, in TEncoding> : ICreator<TGenotype, TEn
 
 public interface ICreator<out TGenotype> : ICreator<TGenotype, IEncoding<TGenotype>> {
   IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random);
-}
-
-public abstract class BatchCreator<TGenotype, TEncoding, TProblem> : ICreator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 }
 
 public abstract class BatchCreator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding>
@@ -53,7 +41,8 @@ public abstract class Creator<TGenotype, TEncoding, TProblem> : ICreator<TGenoty
 
   public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
     var offspring = new TGenotype[count];
-    if (offspring.Length < count) throw new ArgumentException("Offspring span is smaller than count.");
+    if (offspring.Length < count)
+      throw new ArgumentException("Offspring span is smaller than count.");
     var randoms = random.Spawn(count);
     Parallel.For(0, count, i => offspring[i] = Create(randoms[i], encoding, problem));
 
@@ -97,35 +86,5 @@ public abstract class Creator<TGenotype> : ICreator<TGenotype> {
 
   IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>>.Create(int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
     return Create(count, random);
-  }
-}
-
-public class PredefinedSolutionsCreator<TGenotype, TEncoding, TProblem>(IReadOnlyList<TGenotype> predefinedSolutions, ICreator<TGenotype, TEncoding, TProblem> creatorForRemainingSolutions)
-  : BatchCreator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  private int currentSolutionIndex;
-
-  public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    var offspring = new TGenotype[count];
-
-    int countPredefined = Math.Min(predefinedSolutions.Count - currentSolutionIndex, count);
-    if (countPredefined > 0) {
-      for (int i = 0; i < countPredefined; i++) {
-        offspring[i] = predefinedSolutions[currentSolutionIndex + i];
-      }
-
-      currentSolutionIndex += countPredefined;
-    }
-
-    int countRemaining = count - countPredefined;
-    if (countRemaining <= 0) return offspring;
-    var remainingRandom = random.Fork(1); //random.Fork("remaining");
-    var remaining = creatorForRemainingSolutions.Create(countRemaining, remainingRandom, encoding, problem);
-    for (int i = 0; i < remaining.Count; i++) {
-      offspring[countPredefined + i] = remaining[i];
-    }
-
-    return offspring;
   }
 }

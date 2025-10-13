@@ -1,16 +1,8 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators;
-
-public interface IInterceptor<TGenotype, TIterationResult, in TEncoding, in TProblem>
-  where TIterationResult : IIterationResult<TGenotype>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TEncoding encoding, TProblem problem);
-}
 
 public abstract class Interceptor<TGenotype, TIterationResult, TEncoding, TProblem> : IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>
   where TIterationResult : IIterationResult<TGenotype>
@@ -52,28 +44,3 @@ public abstract class Interceptor<TGenotype> : IInterceptor<TGenotype, IIteratio
 //     return currentIterationResult;
 //   }
 // }
-
-public interface IPopulationIterationResult<TGenotype, out TSelf> : IIterationResult<TGenotype>
-  where TSelf : IPopulationIterationResult<TGenotype, TSelf> {
-  Population<TGenotype> Solutions { get; }
-  TSelf WithSolutions(Population<TGenotype> solutions);
-}
-
-public class RemoveDuplicatesInterceptor<TGenotype, TIterationResult> : Interceptor<TGenotype, TIterationResult>
-  where TIterationResult : IPopulationIterationResult<TGenotype, TIterationResult> {
-  private readonly IEqualityComparer<TGenotype> comparer;
-
-  public RemoveDuplicatesInterceptor(IEqualityComparer<TGenotype> comparer) {
-    this.comparer = comparer;
-  }
-
-  public override TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult) {
-    var newSolutions = currentIterationResult.Solutions.DistinctBy(s => s.Genotype, comparer);
-    return currentIterationResult.WithSolutions(
-      new Population<TGenotype>(new ImmutableList<Solution<TGenotype>>(newSolutions))
-    );
-    // return currentIterationResult with {
-    //   Solutions = new ImmutableList<Solution<TGenotype>>(newSolutions)
-    // };
-  }
-}

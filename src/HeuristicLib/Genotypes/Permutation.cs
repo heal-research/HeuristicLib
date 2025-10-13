@@ -46,14 +46,8 @@ public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
 
   System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => this.GetEnumerator();
 
-  public struct Enumerator : IEnumerator<int> {
-    private readonly ReadOnlyMemory<int> memory;
-    private int index;
-
-    public Enumerator(ReadOnlyMemory<int> memory) {
-      this.memory = memory;
-      index = -1;
-    }
+  public struct Enumerator(ReadOnlyMemory<int> memory) : IEnumerator<int> {
+    private int index = -1;
 
     public int Current => memory.Span[index];
     object System.Collections.IEnumerator.Current => Current;

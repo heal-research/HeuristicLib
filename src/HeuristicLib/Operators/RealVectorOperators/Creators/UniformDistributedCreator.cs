@@ -4,14 +4,9 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.RealVectorOperators.Creators;
 
-public class UniformDistributedCreator : Creator<RealVector, RealVectorEncoding> {
-  public RealVector? Minimum { get; set; }
-  public RealVector? Maximum { get; set; }
-
-  public UniformDistributedCreator(RealVector? minimum = null, RealVector? maximum = null) {
-    Minimum = minimum;
-    Maximum = maximum;
-  }
+public class UniformDistributedCreator(RealVector? minimum = null, RealVector? maximum = null) : Creator<RealVector, RealVectorEncoding> {
+  public RealVector? Minimum { get; set; } = minimum;
+  public RealVector? Maximum { get; set; } = maximum;
 
   public override RealVector Create(IRandomNumberGenerator random, RealVectorEncoding encoding) {
     if (Minimum is not null && (Minimum < encoding.Minimum).Any()) throw new ArgumentException("Minimum values must be greater or equal to searchSpace minimum values");

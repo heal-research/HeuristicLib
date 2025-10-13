@@ -4,13 +4,6 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IReplacer<TGenotype, in TEncoding, in TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
-  int GetOffspringCount(int populationSize);
-}
-
 public interface IReplacer<TGenotype, in TEncoding> : IReplacer<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
   where TEncoding : class, IEncoding<TGenotype> {
   IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, TEncoding encoding);
@@ -51,41 +44,4 @@ public abstract class Replacer<TGenotype> : IReplacer<TGenotype> {
   IReadOnlyList<Solution<TGenotype>> IReplacer<TGenotype, IEncoding<TGenotype>>.Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
     return Replace(previousPopulation, offspringPopulation, objective, random);
   }
-}
-
-public class PlusSelectionReplacer<TGenotype> : Replacer<TGenotype> {
-  public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
-    var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();
-    return combinedPopulation
-           .OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer)
-           .Take(previousPopulation.Count) // if algorithm population differs from previousPopulation.Length, it is not detected
-           .ToArray();
-  }
-
-  public override int GetOffspringCount(int populationSize) {
-    return populationSize;
-  }
-}
-
-public class ElitismReplacer<TGenotype> : Replacer<TGenotype> {
-  public int Elites { get; }
-
-  public ElitismReplacer(int elites) {
-    if (elites < 0) throw new ArgumentOutOfRangeException(nameof(elites), "Elites must be non-negative.");
-    Elites = elites;
-  }
-
-  public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
-    if (Elites < 0) throw new ArgumentOutOfRangeException(nameof(Elites), "Elites must be non-negative.");
-
-    var elitesPopulation = previousPopulation
-                           .OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer)
-                           .Take(Elites);
-
-    return elitesPopulation
-           .Concat(offspringPopulation) // requires that offspring population size is correct
-           .ToArray();
-  }
-
-  public override int GetOffspringCount(int populationSize) => populationSize - Elites;
 }

@@ -4,15 +4,11 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.RealVectorOperators.Creators;
 
-public class NormalDistributedCreator : Creator<RealVector, RealVectorEncoding> {
-  public RealVector Means { get; set; }
-  public RealVector Sigmas { get; set; }
+public class NormalDistributedCreator(RealVector means, RealVector sigmas) : Creator<RealVector, RealVectorEncoding> {
+  public RealVector Means { get; set; } = means;
+  public RealVector Sigmas { get; set; } = sigmas;
 
-  public NormalDistributedCreator(RealVector means, RealVector sigmas) {
-    //if (!RealVector.AreCompatible(searchSpace.Length, means, sigmas, searchSpace.Minimum, searchSpace.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
-    Means = means;
-    Sigmas = sigmas;
-  }
+  //if (!RealVector.AreCompatible(searchSpace.Length, means, sigmas, searchSpace.Minimum, searchSpace.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
 
   public override RealVector Create(IRandomNumberGenerator random, RealVectorEncoding encoding) {
     if (!RealVector.AreCompatible(encoding.Length, Means, Sigmas, encoding.Minimum, encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");

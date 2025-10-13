@@ -1,0 +1,17 @@
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+
+namespace HEAL.HeuristicLib.Operators;
+
+public class AnyTerminator<TGenotype, TIterationResult, TEncoding, TProblem>(IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators)
+  : Terminator<TGenotype, TIterationResult, TEncoding, TProblem>
+  where TIterationResult : IIterationResult<TGenotype>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding> {
+  public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> Terminators { get; } = terminators;
+
+  public override bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem) {
+    return Terminators.Any(criterion => criterion.ShouldTerminate(currentIterationState, previousIterationState, encoding, problem));
+  }
+}

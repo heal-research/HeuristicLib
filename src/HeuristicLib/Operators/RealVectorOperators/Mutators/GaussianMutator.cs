@@ -4,14 +4,9 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.RealVectorOperators.Mutators;
 
-public class GaussianMutator : Mutator<RealVector, RealVectorEncoding> {
-  public double MutationRate { get; set; }
-  public double MutationStrength { get; set; }
-
-  public GaussianMutator(double mutationRate, double mutationStrength) {
-    MutationRate = mutationRate;
-    MutationStrength = mutationStrength;
-  }
+public class GaussianMutator(double mutationRate, double mutationStrength) : Mutator<RealVector, RealVectorEncoding> {
+  public double MutationRate { get; set; } = mutationRate;
+  public double MutationStrength { get; set; } = mutationStrength;
 
   public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorEncoding encoding) {
     double[] newElements = solution.ToArray();

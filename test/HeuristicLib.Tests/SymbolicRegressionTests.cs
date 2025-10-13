@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms.ALPS;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
@@ -121,12 +122,6 @@ public class SymbolicRegressionTests {
     public IReadOnlyList<SymbolicExpressionTree> Create(int count, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => throw new NotImplementedException();
   }
 
-  class Asol { }
-
-  class Aenc : IEncoding<Asol> {
-    public bool Contains(Asol genotype) => throw new NotImplementedException();
-  }
-
   [Fact]
   public void AddOptTest2() {
     var data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
@@ -139,8 +134,7 @@ public class SymbolicRegressionTests {
     var creator = new BalancedTreeCreator();
     var cross = new SubtreeCrossover();
 
-    var ga = new GeneticAlgorithm<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>(
-      100,
+    var ga = AlgorithmFactory.GeneticAlgorithm(100,
       creator,
       cross,
       mutator,
@@ -149,5 +143,6 @@ public class SymbolicRegressionTests {
       1,
       0, new AfterIterationsTerminator<SymbolicExpressionTree>(100)
     );
+    var res = ga.Execute(problem);
   }
 }

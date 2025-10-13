@@ -3,17 +3,11 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Encodings;
 
-public record class PermutationEncoding : Encoding<Permutation>, ISubencodingComparable<PermutationEncoding> {
-  public int Length { get; }
-  
-  public PermutationEncoding(int length) {
-    Length = length;
-  }
-
+public record PermutationEncoding(int Length) : Encoding<Permutation>, ISubencodingComparable<PermutationEncoding> {
   public override bool Contains(Permutation genotype) {
     return genotype.Count == Length;
   }
-  
+
   public virtual bool IsSubspaceOf(PermutationEncoding other) {
     return other.Length == Length;
   }
@@ -38,9 +32,6 @@ public record class PermutationEncoding : Encoding<Permutation>, ISubencodingCom
 // public class PermutationSearchSpace : PermutationSearchSpace<Permutation> { // Genotype = Phenotype
 //   public PermutationSearchSpace(PermutationSearchSpace parameter) : base(Operators.Decoder.Identity<Permutation>()) { }
 // }
-
-
-
 
 // // ToDo: move to different file
 // public static class GeneticAlgorithmBuilderPermutationSearchSpaceExtensions {

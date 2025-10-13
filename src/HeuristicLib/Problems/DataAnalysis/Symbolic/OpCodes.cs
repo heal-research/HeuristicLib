@@ -20,68 +20,10 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math.Variables;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic {
-  public enum OpCode : byte {
-    Add = 1,
-    Sub = 2,
-    Mul = 3,
-    Div = 4,
-    Sin = 5,
-    Cos = 6,
-    Tan = 7,
-    Log = 8,
-    Exp = 9,
-    IfThenElse = 10,
-    GT = 11,
-    LT = 12,
-    AND = 13,
-    OR = 14,
-    NOT = 15,
-    Average = 16,
-    Call = 17,
-    Variable = 18,
-    LagVariable = 19,
-    Number = 20,
-    Arg = 21,
-    Power = 22,
-    Root = 23,
-    TimeLag = 24,
-    Integral = 25,
-    Derivative = 26,
-    VariableCondition = 27,
-    Square = 28,
-    SquareRoot = 29,
-    Gamma = 30,
-    Psi = 31,
-    Dawson = 32,
-    ExponentialIntegralEi = 33,
-    CosineIntegral = 34,
-    SineIntegral = 35,
-    HyperbolicCosineIntegral = 36,
-    HyperbolicSineIntegral = 37,
-    FresnelCosineIntegral = 38,
-    FresnelSineIntegral = 39,
-    AiryA = 40,
-    AiryB = 41,
-    Norm = 42,
-    Erf = 43,
-    Bessel = 44,
-    XOR = 45,
-    FactorVariable = 46,
-    BinaryFactorVariable = 47,
-    Absolute = 48,
-    AnalyticQuotient = 49,
-    Cube = 50,
-    CubeRoot = 51,
-    Tanh = 52,
-    SubFunction = 53,
-    Constant = 54
-  };
-
   public static class OpCodes {
     // constants for API compatibility only
     public const byte Add = (byte)OpCode.Add;
@@ -201,21 +143,5 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic {
       if (SymbolToOpcode.TryGetValue(treeNode.Symbol.GetType(), out var opCode)) return opCode;
       throw new NotSupportedException("Symbol: " + treeNode.Symbol);
     }
-  }
-
-  /// <summary>
-  /// Placeholder symbol Function Invocation and Arguments are not yet implemented
-  /// </summary>
-  internal class Argument(int minimumArity, int maximumArity) : Symbol {
-    public override int MinimumArity { get; } = minimumArity;
-    public override int MaximumArity { get; } = maximumArity;
-  }
-
-  /// <summary>
-  /// Placeholder symbol Function Invocation and Arguments are not yet implemented
-  /// </summary>
-  internal class InvokeFunction(int minimumArity, int maximumArity) : Symbol {
-    public override int MinimumArity { get; } = minimumArity;
-    public override int MaximumArity { get; } = maximumArity;
   }
 }

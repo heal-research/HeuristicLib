@@ -2,18 +2,14 @@
 
 namespace HEAL.HeuristicLib.Operators;
 
-public class ExecutionContext {
-  public IRandomNumberGenerator Random { get; }
+public class ExecutionContext(IRandomNumberGenerator random, CancellationToken? cancellationToken = null) {
+  public IRandomNumberGenerator Random { get; } = random;
 
-  public CancellationToken CancellationToken { get; init; }
+  public CancellationToken CancellationToken { get; init; } = cancellationToken ?? CancellationToken.None;
 
   //public ParallelOptions ParallelOptions { get; }
 
-  public ExecutionContext(IRandomNumberGenerator random, CancellationToken? cancellationToken = null) {
-    Random = random;
-    CancellationToken = cancellationToken ?? CancellationToken.None;
-    //ParallelOptions = parallelOptions ?? new ParallelOptions { CancellationToken = CancellationToken };
-  }
+  //ParallelOptions = parallelOptions ?? new ParallelOptions { CancellationToken = CancellationToken };
 
   public ExecutionContext Fork(int key) {
     return new ExecutionContext(Random.Fork(key), CancellationToken);

@@ -22,7 +22,7 @@
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math.Variables;
 
 public sealed class FactorVariable : VariableBase {
-  private readonly Dictionary<string, Dictionary<string, int>> variableValues; // for each variable value also store a zero-based index
+  private readonly Dictionary<string, Dictionary<string, int>> variableValues = new(); // for each variable value also store a zero-based index
 
   public IEnumerable<KeyValuePair<string, Dictionary<string, int>>> VariableValues {
     get => variableValues;
@@ -33,10 +33,6 @@ public sealed class FactorVariable : VariableBase {
         variableValues.Add(kvp.Key, new Dictionary<string, int>(kvp.Value));
       }
     }
-  }
-
-  public FactorVariable() {
-    variableValues = new();
   }
 
   public override SymbolicExpressionTreeNode CreateTreeNode() {

@@ -3,12 +3,8 @@
 namespace HEAL.HeuristicLib.Genotypes;
 
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
-public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector> {
-  private readonly double[] elements;
-
-  public RealVector(params IEnumerable<double> elements) {
-    this.elements = elements.ToArray();
-  }
+public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyList<double>, IEquatable<RealVector> {
+  private readonly double[] elements = elements.ToArray();
 
   // public RealVector(double value) {
   //   elements = [value];

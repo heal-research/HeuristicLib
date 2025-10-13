@@ -216,5 +216,3 @@ public class SymbolicExpressionTreeNode {
 public class SymbolicExpressionTreeNode<TNodeParameters, TSymbol> : SymbolicExpressionTreeNode where TNodeParameters : INodeParameters {
   public TNodeParameters Nodeparameters { get; set; }
 }
-
-public interface INodeParameters { }
