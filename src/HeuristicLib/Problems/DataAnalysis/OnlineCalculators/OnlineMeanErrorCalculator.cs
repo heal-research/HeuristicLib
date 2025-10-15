@@ -26,7 +26,7 @@ public class OnlineMeanErrorCalculator {
   public double MeanError => meanAndVarianceCalculator.Mean;
 
   public OnlineMeanErrorCalculator() {
-    meanAndVarianceCalculator = new();
+    meanAndVarianceCalculator = new OnlineMeanAndVarianceCalculator();
     Reset();
   }
 

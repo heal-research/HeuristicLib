@@ -19,7 +19,7 @@
 //     var mutator = new GaussianMutator(0.1, 0.1);
 //     var selector = new RandomSelector();
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
-//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(5);
+//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
 //
 //     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
 //       populationSize: 5, 
@@ -30,7 +30,7 @@
 //     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
 //
 //     Solution<RealVector>? result = ga.Solve(problem);
-//     //Solution<RealVector, RealVector>? result = AlgorithmSolveExtensions.Solve<RealVector, RealVector, RealVectorSearchSpace, TestFunctionProblem, GeneticAlgorithmState<RealVector>, GeneticAlgorithmResult<RealVector>>(ga, problem);
+//     //Solution<RealVector, RealVector>? result = AlgorithmSolveExtensions.Solve<RealVector, RealVector, RealVectorSearchSpace, TestFunctionProblem, GeneticAlgorithmState<RealVector>, PopulationResult<RealVector>>(ga, problem);
 //     
 //     return Verify(result)
 //       .IgnoreMembersWithType<TimeSpan>();
@@ -43,7 +43,7 @@
 //     var mutator = new GaussianMutator(0.1, 0.1);
 //     var selector = new RandomSelector();
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
-//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(5);
+//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
 //
 //     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
 //       populationSize: 5, 
@@ -66,7 +66,7 @@
 //     var mutator = new GaussianMutator(0.1, 0.1);
 //     var selector = new RandomSelector();
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
-//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(5);
+//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
 //
 //     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
 //       populationSize: 5, 

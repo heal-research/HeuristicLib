@@ -48,9 +48,9 @@ public class OnlineLinearScalingParameterCalculator {
   private readonly OnlineCovarianceCalculator originalTargetCovarianceCalculator;
 
   public OnlineLinearScalingParameterCalculator() {
-    targetMeanCalculator = new();
-    originalMeanAndVarianceCalculator = new();
-    originalTargetCovarianceCalculator = new();
+    targetMeanCalculator = new OnlineMeanAndVarianceCalculator();
+    originalMeanAndVarianceCalculator = new OnlineMeanAndVarianceCalculator();
+    originalTargetCovarianceCalculator = new OnlineCovarianceCalculator();
     Reset();
   }
 

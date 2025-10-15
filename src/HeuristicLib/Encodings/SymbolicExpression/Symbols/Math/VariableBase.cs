@@ -23,42 +23,22 @@ namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
 public abstract class VariableBase : Symbol {
   #region Properties
-  private double weightMu;
-  public double WeightMu {
-    get => weightMu;
-    set {
-      if (value != weightMu) {
-        weightMu = value;
-      }
-    }
-  }
+  public double WeightMu { get; set; }
   private double weightSigma;
   public double WeightSigma {
     get => weightSigma;
     set {
       if (weightSigma < 0.0) throw new ArgumentException("Negative sigma is not allowed.");
-      if (value != weightSigma) {
-        weightSigma = value;
-      }
+      weightSigma = value;
     }
   }
-  private double weightManipulatorMu;
-  public double WeightManipulatorMu {
-    get => weightManipulatorMu;
-    set {
-      if (value != weightManipulatorMu) {
-        weightManipulatorMu = value;
-      }
-    }
-  }
+  public double WeightManipulatorMu { get; set; }
   private double weightManipulatorSigma;
   public double WeightManipulatorSigma {
     get => weightManipulatorSigma;
     set {
       if (weightManipulatorSigma < 0.0) throw new ArgumentException("Negative sigma is not allowed.");
-      if (value != weightManipulatorSigma) {
-        weightManipulatorSigma = value;
-      }
+      weightManipulatorSigma = value;
     }
   }
   private double multiplicativeWeightManipulatorSigma;
@@ -66,9 +46,7 @@ public abstract class VariableBase : Symbol {
     get => multiplicativeWeightManipulatorSigma;
     set {
       if (multiplicativeWeightManipulatorSigma < 0.0) throw new ArgumentException("Negative sigma is not allowed.");
-      if (value != multiplicativeWeightManipulatorSigma) {
-        multiplicativeWeightManipulatorSigma = value;
-      }
+      multiplicativeWeightManipulatorSigma = value;
     }
   }
 
@@ -86,7 +64,7 @@ public abstract class VariableBase : Symbol {
   public IEnumerable<string> VariableNames {
     get => variableNames;
     set {
-      if (value == null) throw new ArgumentNullException();
+      ArgumentNullException.ThrowIfNull(value);
       variableNames.Clear();
       variableNames.AddRange(value);
     }
@@ -96,7 +74,7 @@ public abstract class VariableBase : Symbol {
   public IEnumerable<string> AllVariableNames {
     get => allVariableNames;
     set {
-      if (value == null) throw new ArgumentNullException();
+      ArgumentNullException.ThrowIfNull(value);
       allVariableNames.Clear();
       allVariableNames.AddRange(value);
     }
@@ -107,20 +85,20 @@ public abstract class VariableBase : Symbol {
   #endregion
 
   protected VariableBase(VariableBase original) {
-    weightMu = original.weightMu;
+    WeightMu = original.WeightMu;
     weightSigma = original.weightSigma;
     variableNames = [..original.variableNames];
     allVariableNames = [..original.allVariableNames];
-    weightManipulatorMu = original.weightManipulatorMu;
+    WeightManipulatorMu = original.WeightManipulatorMu;
     weightManipulatorSigma = original.weightManipulatorSigma;
     multiplicativeWeightManipulatorSigma = original.multiplicativeWeightManipulatorSigma;
     variableChangeProbability = original.variableChangeProbability;
   }
 
   protected VariableBase() {
-    weightMu = 1.0;
+    WeightMu = 1.0;
     weightSigma = 1.0;
-    weightManipulatorMu = 0.0;
+    WeightManipulatorMu = 0.0;
     weightManipulatorSigma = 0.05;
     multiplicativeWeightManipulatorSigma = 0.03;
     variableChangeProbability = 0.2;

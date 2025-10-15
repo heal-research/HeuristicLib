@@ -26,7 +26,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression {
-  public class SymbolicRegressionParameterOptimizationEvaluator {
+  public class SymbolicRegressionParameterOptimization {
     public static readonly PearsonR2Evaluator[] Evaluator = [new()];
 
     public static double OptimizeParameters(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter,
@@ -68,7 +68,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression {
       //  lowerEstimationLimit,
       //  upperEstimationLimit);
 
-      counter ??= new();
+      counter ??= new EvaluationsCounter();
       var rowEvaluationsCounter = new EvaluationsCounter();
 
       int retVal;

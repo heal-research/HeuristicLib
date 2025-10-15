@@ -41,6 +41,8 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
+using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
@@ -66,4 +68,18 @@ public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase {
     tree.Root = rootNode;
     return tree;
   }
+
+  public void AddFullyConnectedSymbols(ICollection<Symbol> symbols) {
+    foreach (var symbol in symbols) {
+      AddSymbol(symbol);
+      AddAllowedChildSymbol(StartSymbol, symbol);
+      if (symbol.MaximumArity == 0)
+        continue;
+      foreach (var symbol1 in symbols) {
+        AddAllowedChildSymbol(symbol, symbol1);
+      }
+    }
+  }
+
+  bool Conforms(SymbolicExpressionTree symbolicExpressionTree);
 }

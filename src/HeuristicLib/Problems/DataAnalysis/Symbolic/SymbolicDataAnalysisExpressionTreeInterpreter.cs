@@ -22,6 +22,7 @@
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math.Variables;
+using HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic {
   public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter {
@@ -82,7 +83,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic {
         }
       }
 
-      return new(code, necessaryArgStackSize);
+      return new InterpreterState(code, necessaryArgStackSize);
     }
 
     public virtual double Evaluate(Dataset dataset, ref int row, InterpreterState state) {

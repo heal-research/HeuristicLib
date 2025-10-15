@@ -3,19 +3,29 @@ using HEAL.HeuristicLib.Optimization;
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public static class RegressionProblemDataExtensions {
-  public static ObjectiveVector Evaluate(IRegressionModel solution, Dataset dataset, IEnumerable<int> rows, IReadOnlyList<IRegressionEvaluator> evaluators, double[] targets) {
-    var predictions = solution.Predict(dataset, rows);
+  public static IEnumerable<double> LimitToRange(this IEnumerable<double> values, double min, double max) {
+    if (min > max) throw new ArgumentException($"Minimum {min} is larger than maximum {max}.");
+    foreach (var x in values) {
+      if (double.IsNaN(x)) yield return (max + min) / 2.0;
+      else if (x < min) yield return min;
+      else if (x > max) yield return max;
+      else yield return x;
+    }
+  }
+
+  public static ObjectiveVector Evaluate(IRegressionModel solution, Dataset dataset, IEnumerable<int> rows, IReadOnlyList<IRegressionEvaluator> evaluators, double[] targets, double lowerPredictionLimit = double.MinValue, double upperPredictionLimit = double.MaxValue) {
+    var predictions = solution.Predict(dataset, rows).LimitToRange(lowerPredictionLimit, upperPredictionLimit);
     if (evaluators.Count == 1)
-      return new(evaluators[0].Evaluate(targets, predictions));
+      return new ObjectiveVector(evaluators[0].Evaluate(targets, predictions));
 
     if (predictions is not ICollection<double> materialPredictions)
       materialPredictions = predictions.ToArray();
-    return new(evaluators.Select(x => x.Evaluate(targets, materialPredictions)));
+    return new ObjectiveVector(evaluators.Select(x => x.Evaluate(targets, materialPredictions)));
   }
 
-  public static ObjectiveVector Evaluate(this RegressionProblemData data, IRegressionModel solution, DataAnalysisProblemData.PartitionType type, IReadOnlyList<IRegressionEvaluator> evaluators) {
+  public static ObjectiveVector Evaluate(this RegressionProblemData data, IRegressionModel solution, DataAnalysisProblemData.PartitionType type, IReadOnlyList<IRegressionEvaluator> evaluators, double lowerPredictionLimit = double.MinValue, double upperPredictionLimit = double.MaxValue) {
     var targets = data.TargetVariableValues(type).ToArray();
     var rows = data.Partitions[type].Enumerate();
-    return Evaluate(solution, data.Dataset, rows, evaluators, targets);
+    return Evaluate(solution, data.Dataset, rows, evaluators, targets, lowerPredictionLimit, upperPredictionLimit);
   }
 }

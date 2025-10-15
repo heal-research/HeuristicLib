@@ -35,8 +35,8 @@ public class OnlineNormalizedMeanSquaredErrorCalculator {
   }
 
   public OnlineNormalizedMeanSquaredErrorCalculator() {
-    meanSquaredErrorCalculator = new();
-    originalVarianceCalculator = new();
+    meanSquaredErrorCalculator = new OnlineMeanAndVarianceCalculator();
+    originalVarianceCalculator = new OnlineMeanAndVarianceCalculator();
     Reset();
   }
 

@@ -73,4 +73,5 @@ internal sealed class EmptySymbolicExpressionTreeGrammar : ISymbolicExpressionGr
   public int MinimumFunctionArguments { get => grammar.MinimumFunctionArguments; set => grammar.MinimumFunctionArguments = value; }
   public int MaximumFunctionArguments { get => grammar.MaximumFunctionArguments; set => grammar.MaximumFunctionArguments = value; }
   public bool ReadOnly { get; set; }
+  public bool Conforms(SymbolicExpressionTree symbolicExpressionTree) => symbolicExpressionTree.Root.Symbol == grammar.ProgramRootSymbol;
 }

@@ -13,6 +13,6 @@ public record Population<TGenotype>(ImmutableList<Solution<TGenotype>> Solutions
 
     var solutions = Enumerable.Zip(genotypes, fitnesses)
                               .Select(x => Solution.From(x.First, x.Second));
-    return new(new ImmutableList<Solution<TGenotype>>(solutions));
+    return new Population<TGenotype>(new ImmutableList<Solution<TGenotype>>(solutions));
   }
 }

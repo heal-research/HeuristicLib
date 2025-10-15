@@ -98,12 +98,10 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
                                         encoding.Grammar.GetMinimumExpressionDepth(s) - 1 <= maxDepth - currentDepth &&
                                         encoding.Grammar.GetMaximumExpressionDepth(s) > maxDepth - currentDepth)
                             .ToList();
-      if (!possibleSymbols.Any())
+      if (possibleSymbols.Count == 0)
         throw new InvalidOperationException("No symbols are available for the tree.");
       var weights = possibleSymbols.Select(s => s.InitialFrequency).ToList();
-
       var selectedSymbol = possibleSymbols.SampleProportional(random, weights);
-
       var tree = selectedSymbol.CreateTreeNode();
       if (tree.HasLocalParameters)
         tree.ResetLocalParameters(random);

@@ -116,7 +116,7 @@ public class GeneticAlgorithmTests {
   //   // var Evaluator = new RealVectorMockEvaluator();
   //   var selector = new RandomSelector();
   //   var replacement = new ElitismReplacer(0);
-  //   var terminator = Terminator.NeverTerminate<GeneticAlgorithmResult<RealVector>>();
+  //   var terminator = Terminator.NeverTerminate<PopulationResult<RealVector>>();
   //   var problem = new RealVectorMockOptimizable();
   //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
   //   //   SearchSpace = searchSpace, Decoder = decoder, Evaluator = Evaluator, Objective = SingleObjective.Minimize
@@ -150,7 +150,7 @@ public class GeneticAlgorithmTests {
   //   var selector = new ProportionalSelector();
   //   var replacement = new PlusSelectionReplacer();
   //   var pauseToken = new PauseToken();
-  //   var terminator = new PauseTokenTerminator<GeneticAlgorithmIterationResult<RealVector>>(pauseToken);
+  //   var terminator = new PauseTokenTerminator<PopulationIterationResult<RealVector>>(pauseToken);
   //   var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
   //     SearchSpace = searchSpace, Decoder = decoder, Evaluator = Evaluator, Objective = SingleObjective.Minimize
   //   };
@@ -191,7 +191,7 @@ public class GeneticAlgorithmTests {
   //   // var Evaluator = new RealVectorMockEvaluator();
   //   var selector = new ProportionalSelector();
   //   var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
-  //   var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(5);
+  //   var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
   //
   //   var problem = new RealVectorMockOptimizable();
   //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
@@ -207,7 +207,7 @@ public class GeneticAlgorithmTests {
   //
   //   var firstResult = firstAlg.ExecuteStreaming(problem).Last();
   //
-  //   var newTerminationCriterion = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(12);
+  //   var newTerminationCriterion = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(12);
   //   var continuationState = firstResult.GetContinuationState();
   //   var secondAlg = firstAlg with {
   //     PopulationSize = 8, Terminator = newTerminationCriterion
@@ -229,7 +229,7 @@ public class GeneticAlgorithmTests {
   //   // var Evaluator = new RealVectorMockEvaluator();
   //   var selector = new ProportionalSelector();
   //   var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
-  //   var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(5);
+  //   var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
   //
   //   var problem = new RealVectorMockOptimizable();
   //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {

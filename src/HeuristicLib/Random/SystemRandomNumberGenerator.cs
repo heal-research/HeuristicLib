@@ -6,11 +6,11 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   private readonly System.Random random;
 
   public SystemRandomNumberGenerator(int seed) {
-    random = new(seed);
+    random = new System.Random(seed);
   }
 
   public SystemRandomNumberGenerator() {
-    random = new();
+    random = new System.Random();
   }
 
   public double Random() {
@@ -39,7 +39,7 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
 
   public IReadOnlyList<IRandomNumberGenerator> Spawn(int count) => Enumerable
                                                                    .Range(0, count)
-                                                                   .Select(_ => new MersenneTwister(Integer()))
+                                                                   .Select(_ => new SystemRandomNumberGenerator(Integer()))
                                                                    .ToArray();
 
   public static int RandomSeed() {

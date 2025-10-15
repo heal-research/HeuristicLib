@@ -39,6 +39,10 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode {
   public FactorVariableTreeNode(FactorVariable variableSymbol)
     : base(variableSymbol) { }
 
+  public override SymbolicExpressionTreeNode Clone() {
+    return new FactorVariableTreeNode(this);
+  }
+
   public override bool HasLocalParameters => true;
 
   public override void ResetLocalParameters(IRandomNumberGenerator random) {
@@ -72,10 +76,6 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode {
               .Select(_ => NormalDistributedRandomPolar.NextDouble(random, 0, 1))
               .ToArray();
     }
-  }
-
-  public override SymbolicExpressionTreeNode Clone() {
-    return new FactorVariableTreeNode(this);
   }
 
   public double GetValue(string cat) {

@@ -1,9 +1,17 @@
 ﻿using System.Collections;
+using System.Diagnostics;
 using YamlDotNet.Core.Tokens;
 
 namespace HEAL.HeuristicLib;
 
 public static class Extensions {
+  private class DebugException(string message) : Exception(message);
+
+  [Conditional("DEBUG")]
+  public static void CheckDebug(bool value, string text) {
+    if (!value) throw new DebugException(text);
+  }
+
   public static bool IsAlmost(this double a, double b, double tolerance = 1E-10) {
     return Math.Abs(a - b) <= tolerance;
   }

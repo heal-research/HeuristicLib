@@ -192,7 +192,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic {
 
     private static void InitCache(Dataset dataset) {
       cachedDataset = dataset;
-      cachedData = new();
+      cachedData = new Dictionary<string, double[]>();
       foreach (var v in dataset.DoubleVariables) {
         cachedData[v] = dataset.GetDoubleValues(v).ToArray();
       }
@@ -259,7 +259,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic {
           }
         }
 
-        code[i] = new(opcode: opCodeMapper(node), numberOfArguments: (ushort)node.SubtreeCount, buf: new double[BatchSize], childIndex: c, weight: w, data: d, value: v);
+        code[i] = new BatchInstruction(opcode: opCodeMapper(node), numberOfArguments: (ushort)node.SubtreeCount, buf: new double[BatchSize], childIndex: c, weight: w, data: d, value: v);
 
         c += node.SubtreeCount;
         ++i;

@@ -12,7 +12,7 @@
 //   public InterceptorConfig<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; }
 // }
 //
-// public record GeneticAlgorithmConfig<TGenotype, TEncoding, TProblem> : IterativeAlgorithmConfig<TGenotype, TEncoding, TProblem, GeneticAlgorithmIterationResult<TGenotype>>
+// public record GeneticAlgorithmConfig<TGenotype, TEncoding, TProblem> : IterativeAlgorithmConfig<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>>
 //   where TEncoding : class, IEncoding<TGenotype>
 //   where TProblem : IProblem<TGenotype>
 // {

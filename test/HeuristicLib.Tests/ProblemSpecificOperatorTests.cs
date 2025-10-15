@@ -31,7 +31,7 @@
 //       creator: new TspCreator(), 
 //       crossover: new OrderCrossover(), mutator: new InversionMutator(), mutationRate: 0.5,
 //       selector: new RandomSelector(), replacer: new ElitismReplacer<Permutation, PermutationEncoding>(0),
-//       randomSeed: 42, terminator: Terminator.OnGeneration<Permutation, PermutationEncoding, GeneticAlgorithmResult<Permutation>>(5)
+//       randomSeed: 42, terminator: Terminator.OnGeneration<Permutation, PermutationEncoding, PopulationResult<Permutation>>(5)
 //     );
 //
 //     var problem = TravelingSalesmanProblem.CreateDefault();

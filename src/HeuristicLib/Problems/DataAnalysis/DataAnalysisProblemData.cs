@@ -29,7 +29,12 @@ public abstract class DataAnalysisProblemData {
   protected DataAnalysisProblemData(Dataset dataset, IEnumerable<string> inputs) {
     Dataset = dataset;
     InputVariables = inputs.Where(variable => dataset.VariableHasType<double>(variable) || dataset.VariableHasType<string>(variable)).ToList();
-    Partitions = new() { [PartitionType.Training] = new(0, dataset.Rows / 2), [PartitionType.Test] = new(dataset.Rows / 2, dataset.Rows), [PartitionType.Validation] = new(0, 0), [PartitionType.All] = new(0, dataset.Rows) };
+    Partitions = new Dictionary<PartitionType, Range> {
+      [PartitionType.Training] = new(0, dataset.Rows / 2),
+      [PartitionType.Test] = new(dataset.Rows / 2, dataset.Rows),
+      [PartitionType.Validation] = new(0, 0),
+      [PartitionType.All] = new(0, dataset.Rows)
+    };
   }
 
   public enum PartitionType {

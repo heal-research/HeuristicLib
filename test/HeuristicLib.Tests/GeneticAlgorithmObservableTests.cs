@@ -22,7 +22,7 @@
 //     //var Evaluator = Evaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
 //     var selector = new RandomSelector();
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
-//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, GeneticAlgorithmResult<RealVector>>(3);
+//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(3);
 //     //var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> { SearchSpace = searchSpace, Decoder = decoder, Evaluator = Evaluator, Objective = SingleObjective.Minimize };
 //     var problem = new RealVectorMockOptimizable();
 //     
@@ -35,8 +35,8 @@
 //
 //     var stream = ga.ExecuteStreaming(problem);
 //
-//     var subject = new Subject<GeneticAlgorithmResult<RealVector>>();
-//     var observableResult = new List<GeneticAlgorithmResult<RealVector>>();
+//     var subject = new Subject<PopulationResult<RealVector>>();
+//     var observableResult = new List<PopulationResult<RealVector>>();
 //     subject
 //       .SubscribeOn(Scheduler.CurrentThread)
 //       .Subscribe(state => observableResult.Add(state));

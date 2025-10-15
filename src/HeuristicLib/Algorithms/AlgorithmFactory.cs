@@ -19,7 +19,7 @@ public static class AlgorithmFactory {
     ISelector<TGenotype, TEncoding, TProblem> selector,
     int elites,
     int? randomSeed,
-    ITerminator<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-    IInterceptor<TGenotype, GeneticAlgorithmIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
+    ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
   ) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> => new(populationSize, creator, crossover, mutator, mutationRate, selector, elites, randomSeed, terminator, interceptor);
 }

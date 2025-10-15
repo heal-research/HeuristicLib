@@ -38,7 +38,7 @@ public abstract class Dataset {
 
   protected Dataset() {
     VariableNames = [];
-    VariableValues = new();
+    VariableValues = new Dictionary<string, IList>();
     Rows = 0;
   }
 
@@ -62,7 +62,7 @@ public abstract class Dataset {
     if (cloneValues) {
       VariableValues = CloneValues(VariableNames, vvalues);
     } else {
-      VariableValues = new(VariableNames.Count);
+      VariableValues = new Dictionary<string, IList>(VariableNames.Count);
       for (var i = 0; i < VariableNames.Count; i++) {
         VariableValues.Add(VariableNames[i], vvalues[i]);
       }
@@ -86,7 +86,7 @@ public abstract class Dataset {
     Rows = variableValues.GetLength(0);
     VariableNames = vnames;
 
-    VariableValues = new(variableValues.GetLength(1));
+    VariableValues = new Dictionary<string, IList>(variableValues.GetLength(1));
     for (var col = 0; col < variableValues.GetLength(1); col++) {
       var columName = VariableNames[col];
       var values = new List<double>(variableValues.GetLength(0));

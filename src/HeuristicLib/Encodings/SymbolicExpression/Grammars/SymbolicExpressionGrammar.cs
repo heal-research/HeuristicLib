@@ -26,6 +26,27 @@ namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 public abstract class SymbolicExpressionGrammar : SymbolicExpressionGrammarBase, ISymbolicExpressionGrammar {
   #region fields & properties
   public bool ReadOnly { get; set; }
+  public bool Conforms(SymbolicExpressionTree symbolicExpressionTree) => Conforms(symbolicExpressionTree.Root);
+
+  private bool Conforms(SymbolicExpressionTreeNode parent) {
+    var symbol = parent.Symbol;
+    if (!Symbols.Contains(symbol))
+      return false;
+    if (parent.SubtreeCount > symbol.MaximumArity)
+      return false;
+    if (parent.SubtreeCount < symbol.MinimumArity)
+      return false;
+    var pos = 0;
+    foreach (var child in parent.Subtrees) {
+      if (!IsAllowedChildSymbol(symbol, child.Symbol, pos))
+        return false;
+      if (!Conforms(child))
+        return false;
+      pos++;
+    }
+
+    return true;
+  }
 
   public int MinimumFunctionDefinitions { get; set; }
   public int MaximumFunctionDefinitions { get; set; }
@@ -38,15 +59,15 @@ public abstract class SymbolicExpressionGrammar : SymbolicExpressionGrammarBase,
   #endregion
 
   protected SymbolicExpressionGrammar() {
-    ProgramRootSymbol = new();
+    ProgramRootSymbol = new ProgramRootSymbol();
     AddSymbol(ProgramRootSymbol);
     SetSubtreeCount(ProgramRootSymbol, 1, 1);
 
-    StartSymbol = new();
+    StartSymbol = new StartSymbol();
     AddSymbol(StartSymbol);
     SetSubtreeCount(StartSymbol, 1, 1);
 
-    DefunSymbol = new();
+    DefunSymbol = new DefunSymbol();
     AddSymbol(DefunSymbol);
     SetSubtreeCount(DefunSymbol, 1, 1);
 

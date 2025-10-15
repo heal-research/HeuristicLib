@@ -81,6 +81,8 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters {
         Cube => "cube",
         GreaterThan => ">",
         LessThan => "<",
+        Variable => $"{((VariableTreeNode)node).Weight} * {((VariableTreeNode)node).VariableName}",
+        Number => $"{((NumberTreeNode)node).Value}",
         _ => nodeLabel
       };
 

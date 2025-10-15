@@ -34,7 +34,7 @@
 //   public static GeneticAlgorithmOperatorMetrics operator +(GeneticAlgorithmOperatorMetrics left, GeneticAlgorithmOperatorMetrics right) => Aggregate(left, right);
 // }
 //
-// public record GeneticAlgorithmIterationResult<TGenotype> {
+// public record PopulationIterationResult<TGenotype> {
 //   public required int Generation { get; init; }
 //   public required TimeSpan Duration { get; init; }
 //   public required GeneticAlgorithmOperatorMetrics OperatorMetrics { get; init; }
@@ -42,7 +42,7 @@
 //   public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
 // }
 //
-// public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<GeneticAlgorithmState<TGenotype>> {
+// public record PopulationResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<GeneticAlgorithmState<TGenotype>> {
 //   int IAlgorithmResult.CurrentIteration => CurrentGeneration;
 //   int IAlgorithmResult.TotalIterations => TotalGenerations;
 //   
@@ -59,7 +59,7 @@
 //   
 //   public required IReadOnlyList<Solution<TGenotype>> CurrentPopulation { get; init; }
 //   
-//   // public GeneticAlgorithmResult() {
+//   // public PopulationResult() {
 //   //   currentBestSolution = new Lazy<EvaluatedIndividual<TGenotype>>(() => {
 //   //     if (CurrentPopulation!.Count == 0) throw new InvalidOperationException("Population is empty");
 //   //     return CurrentPopulation.MinBy(x => x.Fitness, Objective!.TotalOrderComparer)!;
@@ -82,7 +82,7 @@
 //   public GeneticAlgorithmState<TGenotype> GetRestartState() => GetContinuationState() with { Generation = 0 };
 // }
 //
-// // public record GeneticAlgorithmResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype> {
+// // public record PopulationResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype> {
 // //   public required TimeSpan TotalDuration { get; init; }
 // //   public required int TotalGenerations { get; init; }
 // //   public required GeneticAlgorithmOperatorMetrics OperatorMetrics { get; init; }

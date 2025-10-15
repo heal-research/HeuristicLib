@@ -68,12 +68,16 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
 
       parent.RemoveSubtree(childIndex);
       parent.InsertSubtree(childIndex, seedNode);
-      ProbabilisticTreeCreator.PTC2(random, seedNode, encoding);
+      ProbabilisticTreeCreator.PTC2(random, seedNode, maxDepth, maxLength, encoding);
       return childTree;
     }
 
     return symbolicExpressionTree;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => ReplaceRandomBranch(random, parent, encoding);
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
+    var t = ReplaceRandomBranch(random, parent, encoding);
+    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
+    return t;
+  }
 }

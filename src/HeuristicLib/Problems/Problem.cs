@@ -133,7 +133,7 @@ public class FuncProblem {
     TEncoding encoding,
     Objective objective
   ) where TEncoding : class, IEncoding<TGenotype> {
-    return new(evaluateFunc, encoding, objective);
+    return new FuncProblem<TGenotype, TEncoding>(evaluateFunc, encoding, objective);
   }
 
   private static void Test() {

@@ -30,7 +30,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
 
   public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var tree = encoding.Grammar.MakeStump(random);
-    PTC2(random, tree.Root.GetSubtree(0), encoding);
+    PTC2(random, tree.Root.GetSubtree(0), encoding.TreeDepth - 2, encoding.TreeLength - 2, encoding);
     return tree;
   }
 
@@ -45,7 +45,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     var success = TryCreateFullTreeFromSeed(random, startNode, targetLength - 2, maxTreeDepth - 1, encoding);
     if (!success) throw new InvalidOperationException($"Could not create a tree with target length {targetLength} and max depth {maxTreeDepth}");
 
-    return new(rootNode);
+    return new SymbolicExpressionTree(rootNode);
   }
 
   private class TreeExtensionPoint {
@@ -56,12 +56,8 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     public int MinimumExtensionLength { get; set; }
   }
 
-  public static void PTC2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode,
-                          SymbolicExpressionTreeEncoding encoding) {
+  public static void PTC2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, int maxLength, SymbolicExpressionTreeEncoding encoding) {
     // make sure it is possible to create a trees smaller than maxLength and maxDepth
-    var maxDepth = encoding.TreeDepth;
-    var maxLength = encoding.TreeLength;
-
     if (encoding.Grammar.GetMinimumExpressionLength(seedNode.Symbol) > maxLength)
       throw new ArgumentException("Cannot create trees of length " + maxLength + " or shorter because of grammar constraints.", "maxLength");
     if (encoding.Grammar.GetMinimumExpressionDepth(seedNode.Symbol) > maxDepth)
@@ -73,8 +69,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     var tries = 0;
     while (tries++ < MAX_TRIES) {
       // select a target tree length uniformly in the possible range (as determined by explicit limits and limits of the grammar)
-      int targetTreeLength;
-      targetTreeLength = random.Integer(allowedMinLength, allowedMaxLength + 1);
+      var targetTreeLength = random.Integer(allowedMinLength, allowedMaxLength + 1);
       if (targetTreeLength <= 1 || maxDepth <= 1) return;
 
       var success = TryCreateFullTreeFromSeed(random, seedNode, targetTreeLength - 1, maxDepth - 1, encoding);
@@ -82,10 +77,10 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
       // if successful => check constraints and return the tree if everything looks ok        
       if (success && seedNode.GetLength() <= maxLength && seedNode.GetDepth() <= maxDepth) {
         return;
-      } else {
-        // clean seedNode
-        while (seedNode.Subtrees.Any()) seedNode.RemoveSubtree(0);
       }
+
+      // clean seedNode
+      while (seedNode.Subtrees.Any()) seedNode.RemoveSubtree(0);
       // try a different length MAX_TRIES times
     }
 

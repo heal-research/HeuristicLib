@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using HEAL.HeuristicLib.Core;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -143,7 +144,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
 
     var result = new ALPSIterationResult<TGenotype>() {
-      Population = [new(new(newPopulation))],
+      Population = [new Population<AgedGenotype<TGenotype>>(new ImmutableList<Solution<AgedGenotype<TGenotype>>>(newPopulation))],
     };
 
     return result;

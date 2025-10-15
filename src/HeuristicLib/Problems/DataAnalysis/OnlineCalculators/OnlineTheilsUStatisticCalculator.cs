@@ -32,8 +32,8 @@ public class OnlineTheilsUStatisticCalculator {
   public OnlineCalculatorError ErrorState => errorState | squaredErrorMeanCalculator.MeanErrorState | unbiasedEstimatorMeanCalculator.MeanErrorState;
 
   public OnlineTheilsUStatisticCalculator() {
-    squaredErrorMeanCalculator = new();
-    unbiasedEstimatorMeanCalculator = new();
+    squaredErrorMeanCalculator = new OnlineMeanAndVarianceCalculator();
+    unbiasedEstimatorMeanCalculator = new OnlineMeanAndVarianceCalculator();
     Reset();
   }
 

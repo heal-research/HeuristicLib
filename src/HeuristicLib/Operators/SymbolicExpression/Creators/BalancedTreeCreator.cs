@@ -88,10 +88,9 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
     // we use tuples.Count instead of targetLength in the if condition 
     // because depth limits may prevent reaching the target length 
     for (var i = 0; i < tuples.Count; ++i) {
-      var t = tuples[i];
-      var node = t.Node;
+      var (node, depth, arity1) = tuples[i];
 
-      for (var childIndex = 0; childIndex < t.Arity; ++childIndex) {
+      for (var childIndex = 0; childIndex < arity1; ++childIndex) {
         // min and max arity here refer to the required arity limits for the child node
         var minChildArity = 0;
         var maxChildArity = 0;
@@ -100,17 +99,17 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
 
         // if we are reaching max depth we have to fill the slot with a leaf node (max arity will be zero)
         // otherwise, find the maximum value from the grammar which does not exceed the length limit 
-        if (t.Depth < maxDepth - 1 && openSlots < targetLength) {
+        if (depth < maxDepth - 1 && openSlots < targetLength) {
           // we don't want to allow sampling a leaf symbol if it prevents us from reaching the target length
           // this should be allowed only when we have enough open expansion points (more than one)
           // the random check against the irregularity bias helps to increase shape variability when the conditions are met
-          var minAllowedArity = allowedChildSymbols.Min(x => grammar.GetMaximumSubtreeCount(x));
+          var minAllowedArity = allowedChildSymbols.Min(grammar.GetMaximumSubtreeCount);
           if (minAllowedArity == 0 && (openSlots - tuples.Count <= 1 || random.Random() > irregularityBias)) {
             minAllowedArity = 1;
           }
 
           // finally adjust min and max arity according to the expansion limits
-          var maxAllowedArity = allowedChildSymbols.Max(x => grammar.GetMaximumSubtreeCount(x));
+          var maxAllowedArity = allowedChildSymbols.Max(grammar.GetMaximumSubtreeCount);
           maxChildArity = Math.Min(maxAllowedArity, targetLength - openSlots);
           minChildArity = Math.Min(minAllowedArity, maxChildArity);
         }
@@ -125,9 +124,9 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
 
         // pick a random arity for the new child node
         var childArity = random.Integer(minChildArity, maxChildArity + 1);
-        var childDepth = t.Depth + 1;
+        var childDepth = depth + 1;
         node.AddSubtree(child);
-        tuples.Add(new(child, childDepth, childArity));
+        tuples.Add(new NodeInfo(child, childDepth, childArity));
         openSlots += childArity;
       }
     }

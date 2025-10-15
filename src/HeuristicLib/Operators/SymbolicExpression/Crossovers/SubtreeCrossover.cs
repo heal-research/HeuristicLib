@@ -20,6 +20,7 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+using HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Crossovers;
@@ -31,19 +32,14 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Crossovers;
 /// until a valid configuration is found.
 /// </summary>  
 public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
-  public double CrossoverProbability {
-    get;
-    set;
-  }
-
-  public double InternalCrossoverPointProbability { get; set; }
+  public double InternalCrossoverPointProbability { get; set; } = 0.9;
 
   public static SymbolicExpressionTree Cross(IRandomNumberGenerator random,
                                              SymbolicExpressionTree parent0, SymbolicExpressionTree parent1,
-                                             double probability,
                                              double internalCrossoverPointProbability, SymbolicExpressionTreeEncoding encoding) {
-    if (probability < 1 && random.Random() >= probability) return parent0;
+    var op0 = parent0;
     // select a random crossover point in the first parent 
+    parent0 = new SymbolicExpressionTree(parent0.Root.Clone());
     SelectCrossoverPoint(random, parent0, internalCrossoverPointProbability, encoding, out var crossoverPoint0);
 
     var childLength = crossoverPoint0.Child?.GetLength() ?? 0;
@@ -70,8 +66,9 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     if (crossoverPoint0.Child != null) {
       // manipulate the tree of parent0 in place
       // replace the branch in tree0 with the selected branch from tree1
-      crossoverPoint0.Parent.RemoveSubtree(crossoverPoint0.ChildIndex);
+
       if (selectedBranch != null) {
+        crossoverPoint0.Parent.RemoveSubtree(crossoverPoint0.ChildIndex);
         crossoverPoint0.Parent.InsertSubtree(crossoverPoint0.ChildIndex, selectedBranch);
       }
     } else {
@@ -81,6 +78,7 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
       }
     }
 
+    Extensions.CheckDebug(encoding.Contains(parent0), "Generated Invalid Child");
     return parent0;
   }
 
@@ -103,15 +101,15 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
           }
 
           if (child.SubtreeCount > 0)
-            internalCrossoverPoints.Add(new(n, child, encoding));
+            internalCrossoverPoints.Add(new CutPoint(n, child, encoding));
           else
-            leafCrossoverPoints.Add(new(n, child, encoding));
+            leafCrossoverPoints.Add(new CutPoint(n, child, encoding));
         }
 
         // add one additional extension point if the number of subtrees for the symbol is not full
         if (n.SubtreeCount < encoding.Grammar.GetMaximumSubtreeCount(n.Symbol)) {
           // empty extension point
-          internalCrossoverPoints.Add(new(n, n.SubtreeCount, encoding));
+          internalCrossoverPoints.Add(new CutPoint(n, n.SubtreeCount, encoding));
         }
       }
     );
@@ -149,7 +147,7 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
       allowedLeafBranches = (from branch in branches
                              where branch == null || branch.SubtreeCount == 0
                              select branch).ToList();
-      return allowedInternalBranches.Count == 0 ? null : allowedLeafBranches.SampleRandom(random);
+      return allowedLeafBranches.Count == 0 ? null : allowedLeafBranches.SampleRandom(random);
     }
 
     // select leaf node if possible
@@ -165,5 +163,5 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     return allowedInternalBranches.Count == 0 ? null : allowedLeafBranches.SampleRandom(random);
   }
 
-  public override SymbolicExpressionTree Cross((SymbolicExpressionTree, SymbolicExpressionTree) parents, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => Cross(random, parents.Item1, parents.Item2, CrossoverProbability, InternalCrossoverPointProbability, encoding);
+  public override SymbolicExpressionTree Cross((SymbolicExpressionTree, SymbolicExpressionTree) parents, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, encoding);
 }

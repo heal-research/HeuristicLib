@@ -59,7 +59,3 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
   protected override SingleSolutionSearchResult<TGenotype> FinalizeResult(SingleSolutionIterationResult<TGenotype> iterationResult, TProblem problem) =>
     new(iterationResult.Solution);
 }
-
-public record SingleSolutionIterationResult<T>(Solution<T> Solution) : IIterationResult<T>;
-
-public record SingleSolutionSearchResult<T>(Solution<T> Solution) : IAlgorithmResult<T>;

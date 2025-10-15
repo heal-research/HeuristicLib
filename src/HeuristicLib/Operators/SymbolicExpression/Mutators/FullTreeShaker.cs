@@ -42,6 +42,9 @@ public sealed class FullTreeShaker : SymbolicExpressionTreeManipulator {
   }
 
   public override SymbolicExpressionTree Mutate(
-    SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding)
-    => Apply(random, parent, ShakingFactor);
+    SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
+    var t = Apply(random, parent, ShakingFactor);
+    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
+    return t;
+  }
 }

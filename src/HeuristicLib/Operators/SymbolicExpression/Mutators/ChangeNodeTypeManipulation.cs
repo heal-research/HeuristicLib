@@ -89,6 +89,8 @@ public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
   }
 
   public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    return ChangeNodeType(parent, random, encoding);
+    var t = ChangeNodeType(parent, random, encoding);
+    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
+    return t;
   }
 }

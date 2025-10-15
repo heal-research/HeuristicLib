@@ -37,7 +37,7 @@ public abstract class SymbolicExpressionGrammarBase {
     if (ContainsSymbol(symbol))
       throw new ArgumentException("Symbol " + symbol + " is already defined.");
     foreach (var s in symbol.Flatten()) {
-      SymbolConfigurations.Add(s, new((s.MinimumArity, Math.Min(s.MinimumArity + 1, s.MaximumArity)), [], []));
+      SymbolConfigurations.Add(s, new SymbolConfiguration((s.MinimumArity, Math.Min(s.MinimumArity + 1, s.MaximumArity)), [], []));
     }
 
     ClearCaches();

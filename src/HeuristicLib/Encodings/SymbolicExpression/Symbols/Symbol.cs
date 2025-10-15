@@ -47,7 +47,7 @@ public abstract class Symbol {
   #endregion
 
   public virtual SymbolicExpressionTreeNode CreateTreeNode() {
-    return new(this);
+    return new SymbolicExpressionTreeNode(this);
   }
 
   public virtual IEnumerable<Symbol> Flatten() {

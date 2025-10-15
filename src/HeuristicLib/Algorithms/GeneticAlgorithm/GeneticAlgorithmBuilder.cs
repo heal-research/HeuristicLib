@@ -49,8 +49,8 @@
 //   private ISelector<TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>? selector;
 //   private IReplacer<TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>? replacer;
 //   private int? randomSeed;
-//   private ITerminator<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>? terminator;
-//   private IInterceptor<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>? interceptor;
+//   private ITerminator<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>? terminator;
+//   private IInterceptor<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>? interceptor;
 //
 //   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithPopulationSize(int populationSize) {
 //     this.populationSize = populationSize;
@@ -153,43 +153,43 @@
 //   }
 //   
 //   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator terminator) {
-//     this.terminator = new TerminatorAdapter<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(terminator);
+//     this.terminator = new TerminatorAdapter<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(terminator);
 //     return this;
 //   }
-//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator<GeneticAlgorithmIterationResult<TGenotype>> terminator) {
-//     this.terminator = new TerminatorAdapter<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(terminator);
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator<PopulationIterationResult<TGenotype>> terminator) {
+//     this.terminator = new TerminatorAdapter<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(terminator);
 //     return this;
 //   }
-//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding> terminator) {
-//     this.terminator = new TerminatorAdapter<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(terminator);
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator<PopulationIterationResult<TGenotype>, TGenotype, TEncoding> terminator) {
+//     this.terminator = new TerminatorAdapter<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(terminator);
 //     return this;
 //   }
-//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem> terminator) {
-//     this.terminator = new TerminatorAdapter<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(terminator);
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem> terminator) {
+//     this.terminator = new TerminatorAdapter<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(terminator);
 //     return this;
 //   }
-//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>> terminator) {
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithTerminator(ITerminator<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>> terminator) {
 //     this.terminator = terminator;
 //     return this;
 //   }
 //   
 //   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor interceptor) {
-//     this.interceptor = new InterceptorAdapter<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(interceptor);
+//     this.interceptor = new InterceptorAdapter<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(interceptor);
 //     return this;
 //   }
-//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor<GeneticAlgorithmIterationResult<TGenotype>> interceptor) {
-//     this.interceptor = new InterceptorAdapter<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(interceptor);
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor<PopulationIterationResult<TGenotype>> interceptor) {
+//     this.interceptor = new InterceptorAdapter<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(interceptor);
 //     return this;
 //   }
-//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding> interceptor) {
-//     this.interceptor = new InterceptorAdapter<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(interceptor);
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor<PopulationIterationResult<TGenotype>, TGenotype, TEncoding> interceptor) {
+//     this.interceptor = new InterceptorAdapter<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(interceptor);
 //     return this;
 //   }
-//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem> interceptor) {
-//     this.interceptor = new InterceptorAdapter<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(interceptor);
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem> interceptor) {
+//     this.interceptor = new InterceptorAdapter<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>>(interceptor);
 //     return this;
 //   }
-//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor<GeneticAlgorithmIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>> interceptor) {
+//   public GeneticAlgorithmBuilder<TGenotype, TEncoding, TProblem> WithInterceptor(IInterceptor<PopulationIterationResult<TGenotype>, TGenotype, TEncoding, TProblem, GeneticAlgorithm<TGenotype, TEncoding, TProblem>> interceptor) {
 //     this.interceptor = interceptor;
 //     return this;
 //   }

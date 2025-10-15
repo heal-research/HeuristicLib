@@ -93,6 +93,8 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
   }
 
   public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    return RemoveRandomBranch(random, parent, encoding);
+    var t = RemoveRandomBranch(random, parent, encoding);
+    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
+    return t;
   }
 }
