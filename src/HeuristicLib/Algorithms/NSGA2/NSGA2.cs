@@ -143,7 +143,7 @@
 //     if (Interceptor is null) return result;
 //     
 //     var interceptorStart = Stopwatch.GetTimestamp();
-//     var interceptedResult = Interceptor.Transform(result);
+//     var interceptedResult = Interceptor.Analyze(result);
 //     var interceptorEnd = Stopwatch.GetTimestamp();
 //     
 //     if (interceptedResult == result) return result;
@@ -228,7 +228,7 @@
 //     if (Interceptor is null) return result;
 //     
 //     var interceptorStart = Stopwatch.GetTimestamp();
-//     var interceptedResult = Interceptor.Transform(result);
+//     var interceptedResult = Interceptor.Analyze(result);
 //     var interceptorEnd = Stopwatch.GetTimestamp();
 //     if (interceptedResult == result) return result;
 //     

@@ -1,14 +1,11 @@
-﻿using System.Reflection.Emit;
-using System.Text;
-using HEAL.HeuristicLib.Algorithms;
+﻿using System.Text;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public static class GenealogyGraph {
-  public static GenealogyGraphInterceptor<TGenotype> GetInterceptor<TGenotype>(this GenealogyGraph<TGenotype> graph) where TGenotype : notnull => new(graph);
+  public static GenealogyGraphAnalyzer<TGenotype> GetInterceptor<TGenotype>(this GenealogyGraph<TGenotype> graph) where TGenotype : notnull => new(graph);
 
   public static GenealogyGraphCrossover<TGenotype, TEncoding, TProblem> WrapCrossover<TGenotype, TEncoding, TProblem>(this GenealogyGraph<TGenotype> graph, ICrossover<TGenotype, TEncoding, TProblem> crossover)
     where TEncoding : class, IEncoding<TGenotype>
@@ -101,22 +98,23 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
       sb.AppendLine($"label=\"Generation {genId}\"");
       foreach (var nl in gen.Values.GroupBy(x => x.Layer).OrderBy(x => x.Key)) {
         sb.AppendLine($"subgraph cluster_gen{genId}_{nl.Key} {{");
-        sb.AppendLine($"label=\"\"");
-        if (nl.Key != 0)
-          sb.AppendLine("style=invis;");
-        else
-          sb.AppendLine("style=solid;");
+        sb.AppendLine("label=\"\"");
+        sb.AppendLine(nl.Key != 0 ? "style=invis;" : "style=solid;");
         sb.AppendLine("{");
         sb.AppendLine("rank=same;");
 
         if (nl.Key != 0) {
-          foreach (var t in nl)
-            sb.AppendLine($"\"{t.Id}\"");
+          foreach (var t in nl) {
+            var shape = t.Parents.Any(x => equality.Equals(x.Value, t.Value) && x.Layer == 0) ? "doublecircle" : "circle";
+            sb.AppendLine($"\"{t.Id}\" [label = {t.Id}, shape={shape}]");
+          }
         } else {
           var ranked = nl.Where(x => x.Rank != -1).OrderBy(x => x.Rank).ToArray();
           elites.Add(ranked[0]);
-          foreach (var t in ranked)
-            sb.AppendLine($"\"{t.Id}\"");
+          foreach (var t in ranked) {
+            var shape = t.Parents.Any(x => equality.Equals(x.Value, t.Value) && x.Layer == 0) ? "doublecircle" : "circle";
+            sb.AppendLine($"\"{t.Id}\" [label = {t.Id}, shape={shape}]");
+          }
 
           //set invisible edges to help ranked-layout
           for (int i = 0; i < ranked.Length - 1; i++)
@@ -138,43 +136,5 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
 
     sb.AppendLine("}");
     return sb.ToString();
-  }
-}
-
-public class GenealogyGraphInterceptor<T1>(GenealogyGraph<T1> graph) : Interceptor<T1, PopulationIterationResult<T1>, IEncoding<T1>, IProblem<T1, IEncoding<T1>>>
-  where T1 : notnull {
-  /// <summary>
-  /// forget all but the last generation to save space
-  /// </summary>
-  public bool SaveSpace { get; set; } = true;
-
-  public override PopulationIterationResult<T1> Transform(PopulationIterationResult<T1> currentIterationResult, PopulationIterationResult<T1>? previousIterationResult, IEncoding<T1> encoding, IProblem<T1, IEncoding<T1>> problem) {
-    var ordered = currentIterationResult.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
-    graph.SetAsNewGeneration(ordered.Select(x => x.Genotype), SaveSpace);
-    return currentIterationResult;
-  }
-}
-
-public class GenealogyGraphCrossover<T1, T2, T3>(ICrossover<T1, T2, T3> internalCrossover, GenealogyGraph<T1> graph) : ICrossover<T1, T2, T3>
-  where T2 : class, IEncoding<T1>
-  where T3 : class, IProblem<T1, T2>
-  where T1 : notnull {
-  public IReadOnlyList<T1> Cross(IReadOnlyList<(T1, T1)> parents, IRandomNumberGenerator random, T2 encoding, T3 problem) {
-    var res = internalCrossover.Cross(parents, random, encoding, problem);
-    foreach (var (parents1, child) in parents.Zip(res))
-      graph.AddConnection([parents1.Item1, parents1.Item2], child);
-    return res;
-  }
-}
-
-public class GenealogyGraphMutator<T1, T2, T3>(IMutator<T1, T2, T3> internalMutator, GenealogyGraph<T1> graph) : IMutator<T1, T2, T3>
-  where T2 : class, IEncoding<T1>
-  where T3 : class, IProblem<T1, T2>
-  where T1 : notnull {
-  public IReadOnlyList<T1> Mutate(IReadOnlyList<T1> parent, IRandomNumberGenerator random, T2 encoding, T3 problem) {
-    var res = internalMutator.Mutate(parent, random, encoding, problem);
-    foreach (var (parents1, child) in parent.Zip(res))
-      graph.AddConnection([parents1], child);
-    return res;
   }
 }

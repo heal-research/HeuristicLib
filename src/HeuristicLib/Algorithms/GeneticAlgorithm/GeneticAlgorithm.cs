@@ -75,7 +75,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var population = Creator.Create(PopulationSize, iterationRandom, searchSpace, problem);
     Extensions.CheckDebug(population.All(searchSpace.Contains), "population is invalid");
     var objectives = problem.Evaluate(population);
-    return new PopulationIterationResult<TGenotype> { Population = Population.From(population, objectives) };
+    return new PopulationIterationResult<TGenotype>(Population.From(population, objectives));
   }
 
   protected virtual PopulationIterationResult<TGenotype> ExecuteGeneration(TProblem problem, TEncoding searchSpace, PopulationIterationResult<TGenotype> previousGenerationResult, IRandomNumberGenerator iterationRandom) {
@@ -98,7 +98,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var evaluatedPopulation = Population.From(population, fitnesses);
     var newPopulation = internalReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, iterationRandom, searchSpace, problem);
 
-    var result = new PopulationIterationResult<TGenotype> {
+    var result = new PopulationIterationResult<TGenotype>(Population.From(newPopulation)) {
       Population = new Population<TGenotype>(new ImmutableList<Solution<TGenotype>>(newPopulation)),
     };
 
@@ -106,7 +106,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   }
 
   protected override PopulationResult<TGenotype> FinalizeResult(PopulationIterationResult<TGenotype> iterationResult, TProblem problem) {
-    return new PopulationResult<TGenotype>() { Population = iterationResult.Population };
+    return new PopulationResult<TGenotype>(iterationResult.Population);
   }
 }
 

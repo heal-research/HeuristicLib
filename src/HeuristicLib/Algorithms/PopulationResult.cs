@@ -2,6 +2,4 @@
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record PopulationResult<TGenotype> : IAlgorithmResult<TGenotype> {
-  public required Population<TGenotype> Population { get; init; }
-}
+public record PopulationResult<TGenotype>(Population<TGenotype> Population) : IAlgorithmResult<TGenotype>;

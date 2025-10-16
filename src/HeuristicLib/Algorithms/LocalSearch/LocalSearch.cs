@@ -1,4 +1,6 @@
-﻿using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -21,7 +23,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
 
   public SearchDirection Direction { get; } = SearchDirection.FirstImprovement;
 
-  public int MaxNeighbors { get; } = int.MaxValue;
+  public int MaxNeighbors { get; set; } = int.MaxValue;
   public int BatchSize { get; set; } = 16;
   private readonly IRandomNumberGenerator algorithmRandom = new SystemRandomNumberGenerator(randomSeed ?? SystemRandomNumberGenerator.RandomSeed());
 
@@ -42,7 +44,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
     var sol = previousIterationResult.Solution;
     Solution<TGenotype> newSolution = sol;
 
-    for (int i = 0; i < MaxNeighbors; i++) {
+    for (int i = 0; i < MaxNeighbors; i += BatchSize) {
       var child = Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, searchSpace, problem);
       var res = problem.Evaluate(child);
       var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1, random)[0];

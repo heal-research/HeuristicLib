@@ -40,7 +40,7 @@ public abstract class Interceptor<TGenotype> : IInterceptor<TGenotype, IIteratio
 
 // public class IdentityInterceptor<TGenotype> : Interceptor<TGenotype>
 // {
-//   public override IIterationResult<TGenotype> Transform(IIterationResult<TGenotype> currentIterationResult, IIterationResult<TGenotype>? previousIterationResult) {
+//   public override IIterationResult<TGenotype> Analyze(IIterationResult<TGenotype> currentIterationResult, IIterationResult<TGenotype>? previousIterationResult) {
 //     return currentIterationResult;
 //   }
 // }

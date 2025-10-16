@@ -228,7 +228,7 @@
 //   // }
 //   //
 //   // private class EvolutionToGeneticStateTransformer : IStateTransformer<EvolutionStrategyPopulationState, PopulationState<RealVector>> {
-//   //   public PopulationState<RealVector> Transform(EvolutionStrategyPopulationState sourceState, PopulationState<RealVector>? previousTargetState = null) {
+//   //   public PopulationState<RealVector> Analyze(EvolutionStrategyPopulationState sourceState, PopulationState<RealVector>? previousTargetState = null) {
 //   //     previousTargetState ??= new PopulationState<RealVector>() { Objective = SingleObjective.Minimize, Population = sourceState.Population };
 //   //     return previousTargetState.Reset() with {
 //   //       Population = sourceState.Population
