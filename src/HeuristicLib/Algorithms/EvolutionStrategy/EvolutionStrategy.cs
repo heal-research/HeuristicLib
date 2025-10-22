@@ -19,8 +19,9 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
   double initialMutationStrength,
   ISelector<TGenotype, TEncoding, TProblem> selector,
   int? randomSeed,
-  ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-  IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor)
+  ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator = null,
+  ICrossover<TGenotype, TEncoding, TProblem>? crossOver = null, 
+  IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
   : IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationResult<TGenotype>, EvolutionStrategyIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
@@ -30,6 +31,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
   public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
   //public ICrossover<TGenotype, TGenotypeSearchSpace>? Crossover { get; }
   public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator;
+  public ICrossover<TGenotype, TEncoding, TProblem>? CrossOver { get; } = crossOver;
   public double InitialMutationStrength { get; } = initialMutationStrength;
   public ISelector<TGenotype, TEncoding, TProblem> Selector { get; } = selector;
 
@@ -48,6 +50,8 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
     // var startDecoding = Stopwatch.GetTimestamp();
     // var phenotypePopulation = genotypePopulation.Select(genotype => optimizable.Decoder.Decode(genotype)).ToArray();
     // var endDecoding = Stopwatch.GetTimestamp();
+    CrossOver
+
 
     var fitnesses = problem.Evaluate(children);
 
