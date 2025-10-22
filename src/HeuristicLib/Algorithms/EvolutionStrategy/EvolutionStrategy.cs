@@ -1,55 +1,46 @@
 ﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.RealVectorOperators.Mutators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
-public record EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> Population, double MutationStrength) : PopulationIterationResult<TGenotype>(Population);
+public class EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> population, double mutationStrength) : PopulationIterationResult<TGenotype>(population) {
+  public double MutationStrength { get; } = mutationStrength;
+}
 
-public class EvolutionStrategy<TGenotype, TEncoding, TProblem> : IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationResult<TGenotype>, EvolutionStrategyIterationResult<TGenotype>> where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public EvolutionStrategy(
-    int populationSize,
-    int children,
-    EvolutionStrategyType strategy,
-    ICreator<TGenotype, TEncoding, TProblem> creator,
-    IMutator<TGenotype, TEncoding, TProblem> mutator,
-    double initialMutationStrength,
-    ISelector<TGenotype, TEncoding, TProblem> selector,
-    int? randomSeed, ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-    IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor) : base(terminator, randomSeed, interceptor) {
-    PopulationSize = populationSize;
-    Children = children;
-    Strategy = strategy;
-    Creator = creator;
-    Mutator = mutator;
-    InitialMutationStrength = initialMutationStrength;
-    Selector = selector;
-    Interceptor = interceptor;
-  }
-
-  public int PopulationSize { get; }
-  public int Children { get; }
-  public EvolutionStrategyType Strategy { get; }
-  public ICreator<TGenotype, TEncoding, TProblem> Creator { get; }
+public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
+  int populationSize,
+  int noChildren,
+  EvolutionStrategyType strategy,
+  ICreator<TGenotype, TEncoding, TProblem> creator,
+  IMutator<TGenotype, TEncoding, TProblem> mutator,
+  double initialMutationStrength,
+  ISelector<TGenotype, TEncoding, TProblem> selector,
+  int? randomSeed,
+  ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+  IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor)
+  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationResult<TGenotype>, EvolutionStrategyIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding> {
+  public int PopulationSize { get; } = populationSize;
+  public int NoChildren { get; } = noChildren;
+  public EvolutionStrategyType Strategy { get; } = strategy;
+  public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
   //public ICrossover<TGenotype, TGenotypeSearchSpace>? Crossover { get; }
-  public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; }
-  public double InitialMutationStrength { get; }
-  public ISelector<TGenotype, TEncoding, TProblem> Selector { get; }
-  public IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? Interceptor { get; }
+  public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator;
+  public double InitialMutationStrength { get; } = initialMutationStrength;
+  public ISelector<TGenotype, TEncoding, TProblem> Selector { get; } = selector;
 
-  public override EvolutionStrategyIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding? searchSpace = default, EvolutionStrategyIterationResult<TGenotype>? previousIterationResult = default, IRandomNumberGenerator? random = null) {
-    random ??= AlgorithmRandom;
-    searchSpace ??= problem.SearchSpace;
-
+  public override EvolutionStrategyIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, EvolutionStrategyIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       var pop = Creator.Create(PopulationSize, random, searchSpace, problem);
-      var objs = problem.Evaluate(pop);
-      return new EvolutionStrategyIterationResult<TGenotype>(Population.From(pop, objs), InitialMutationStrength);
+      var fitnesses1 = problem.Evaluate(pop);
+      return new EvolutionStrategyIterationResult<TGenotype>(Population.From(pop, fitnesses1), InitialMutationStrength);
     }
 
     var oldPopulation = previousIterationResult.Population.Solutions;
-
     var parents = Selector.Select(oldPopulation, problem.Objective, PopulationSize, random, problem.SearchSpace, problem).ToArray();
     var children = Mutator.Mutate(parents.Select(x => x.Genotype).ToArray(), random, searchSpace, problem);
 
@@ -59,17 +50,20 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem> : IterativeAlgori
     // var endDecoding = Stopwatch.GetTimestamp();
 
     var fitnesses = problem.Evaluate(children);
-    var successes = parents.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1.ObjectiveVector, problem.Objective) == DominanceRelation.Dominates);
-    var successRate = successes / (double)parents.Length;
-    double newMutationStrength = successRate switch {
-      > 0.2 => previousIterationResult.MutationStrength * 1.5,
-      < 0.2 => previousIterationResult.MutationStrength / 1.5,
-      _ => previousIterationResult.MutationStrength
-    };
+
+    if (Mutator is IVariableStrengthMutator<TGenotype, TEncoding, TProblem> vm) {
+      //adapt Mutation Strength based on 1/5th rule
+      var successes = parents.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1.ObjectiveVector, problem.Objective) == DominanceRelation.Dominates);
+      var successRate = successes / (double)parents.Length;
+      double newMutationStrength = successRate switch {
+        > 0.2 => previousIterationResult.MutationStrength * 1.5,
+        < 0.2 => previousIterationResult.MutationStrength / 1.5,
+        _ => previousIterationResult.MutationStrength
+      };
+      vm.MutationStrength = newMutationStrength;
+    }
 
     var population = Population.From(children, fitnesses);
-
-    // ToDo: to create execution/instance
     Replacer<TGenotype> replacer = Strategy switch {
       EvolutionStrategyType.Comma => new ElitismReplacer<TGenotype>(0),
       EvolutionStrategyType.Plus => new PlusSelectionReplacer<TGenotype>(),

@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public class BestMedianWorstInterceptor<TGenotype> : IAnalyzer<TGenotype, PopulationIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> {
+public class BestMedianWorstAnalyzer<TGenotype> : IAnalyzer<TGenotype, PopulationIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> {
   public readonly List<(Solution<TGenotype> best, Solution<TGenotype> median, Solution<TGenotype> worst)> CurrentState = [];
 
   public void Analyze(PopulationIterationResult<TGenotype> currentIterationResult, PopulationIterationResult<TGenotype>? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {

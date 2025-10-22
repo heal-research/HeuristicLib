@@ -9,7 +9,7 @@ public enum EvolutionStrategyType {
 //   where TProblemContext : IOptimizable<RealVector>
 // {
 //   public int? PopulationSize { get; init; }
-//   public int? Children { get; init; }
+//   public int? NoChildren { get; init; }
 //   public EvolutionStrategyType? Strategy { get; init; }
 //   public Creator<RealVector, TProblemContext>? Creator { get; init; }
 //   //public ICrossover<RealVector, RealVectorSearchSpace>? Crossover { get; init; }

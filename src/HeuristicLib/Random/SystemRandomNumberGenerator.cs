@@ -1,28 +1,15 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
-public class SystemRandomNumberGenerator : IRandomNumberGenerator {
+public class SystemRandomNumberGenerator(int seed) : IRandomNumberGenerator {
   private static readonly SystemRandomNumberGenerator GlobalInstance = new();
 
-  private readonly System.Random random;
+  private readonly System.Random random = new(seed);
 
-  public SystemRandomNumberGenerator(int seed) {
-    random = new System.Random(seed);
-  }
+  public SystemRandomNumberGenerator() : this(RandomSeed()) { }
 
-  public SystemRandomNumberGenerator() {
-    random = new System.Random();
-  }
+  public double Random() => random.NextDouble();
 
-  public double Random() {
-    return random.NextDouble();
-  }
-
-  public int Integer(int low, int high, bool endpoint = false) {
-    return endpoint switch {
-      false => random.Next(low, high),
-      true => random.Next(low, high + 1),
-    };
-  }
+  public int Integer(int low, int high, bool endpoint = false) => random.Next(low, endpoint ? high : high + 1);
 
   public int Integer() => random.Next();
 
@@ -32,10 +19,7 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
     return bytes;
   }
 
-  public IRandomNumberGenerator Fork(params int[] keys) {
-    int newSeed = keys.Aggregate(random.Next(), (current, key) => current ^ key);
-    return new SystemRandomNumberGenerator(newSeed);
-  }
+  public IRandomNumberGenerator Fork(params int[] keys) => new SystemRandomNumberGenerator(keys.Aggregate(random.Next(), (current, key) => current ^ key));
 
   public IReadOnlyList<IRandomNumberGenerator> Spawn(int count) => Enumerable
                                                                    .Range(0, count)

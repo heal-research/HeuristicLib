@@ -59,7 +59,8 @@ public class BernhardPlayground {
       int iterations = 30
     ) {
     var problem = CreateTestSymbolicRegressionProblem(file);
-    var qualities = new BestMedianWorstInterceptor<SymbolicExpressionTree>();
+    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
+
     var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
     var graphAnalyzer = graph.GetInterceptor();
     graphAnalyzer.SaveSpace = true;
@@ -67,7 +68,6 @@ public class BernhardPlayground {
     var graphMutator = graph.WrapMutator(CreateSymRegAllMutator());
 
     var ranks = new List<List<double>>();
-
     var rankExtractor = FuncAnalyzer.Build<SymbolicExpressionTree, PopulationIterationResult<SymbolicExpressionTree>>(
       (_, _) => RecordRanks(graph, ranks));
     var pythonCallback = FuncAnalyzer.Build<SymbolicExpressionTree, PopulationIterationResult<SymbolicExpressionTree>>(

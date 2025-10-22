@@ -47,6 +47,6 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
   protected override NSGA2Result<TGenotype> FinalizeResult(NSGA2IterationResult<TGenotype> iterationResult, TProblem problem) => throw new NotImplementedException();
 }
 
-public record NSGA2IterationResult<TGenotype>(Population<TGenotype> Population) : PopulationIterationResult<TGenotype>(Population);
+public class NSGA2IterationResult<TGenotype>(Population<TGenotype> population) : PopulationIterationResult<TGenotype>(population);
 
-public record NSGA2Result<TGenotype>(Population<TGenotype> Population) : PopulationResult<TGenotype>(Population) { }
+public class NSGA2Result<TGenotype>(Population<TGenotype> population) : PopulationResult<TGenotype>(population);
