@@ -10,17 +10,14 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
   : Algorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult>, IIterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult, TIterationResult>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
-  where TAlgorithmResult : IAlgorithmResult<TGenotype>
-  where TIterationResult : IIterationResult<TGenotype> {
+  where TAlgorithmResult : IAlgorithmResult
+  where TIterationResult : IIterationResult {
   public int CurrentIteration { get; protected set; }
 
   protected readonly IRandomNumberGenerator AlgorithmRandom = new SystemRandomNumberGenerator(randomSeed ?? SystemRandomNumberGenerator.RandomSeed());
 
   public ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> Terminator { get; } = terminator;
   public IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; } = interceptor;
-
-  public OperatorMetric TerminatorMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric InterceptorMetric { get; protected set; } = OperatorMetric.Zero;
 
   public abstract TIterationResult ExecuteStep(TProblem problem, TEncoding searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
 
@@ -40,45 +37,23 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
     return FinalizeResult(lastResult, problem);
   }
 
-  public virtual IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
-    if (searchSpace is ISubencodingComparable<TEncoding> s && !s.IsSubspaceOf(problem.SearchSpace))
-      throw new ArgumentException("The provided search space is not a subspace of the problem's search space.");
-
-    long start = Stopwatch.GetTimestamp();
-
-    bool shouldContinue = previousIterationResult is null;
-    if (previousIterationResult is not null) {
-      long startTerminator = Stopwatch.GetTimestamp();
-      shouldContinue = Terminator.ShouldContinue(previousIterationResult, previousIterationState: default, searchSpace ?? problem.SearchSpace, problem);
-      long endTerminator = Stopwatch.GetTimestamp();
-      TerminatorMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startTerminator, endTerminator));
-    }
+  public IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+    CheckSearchSpaceCompatible(problem, searchSpace);
+    bool shouldContinue = previousIterationResult is null ||
+                          Terminator.ShouldContinue(previousIterationResult, previousIterationState: default, searchSpace ?? problem.SearchSpace, problem);
 
     while (shouldContinue) {
       var newIterationResult = ExecuteStep(problem, searchSpace ?? problem.SearchSpace, previousIterationResult, random ?? AlgorithmRandom);
-
-      if (Interceptor is not null) {
-        long startInterceptor = Stopwatch.GetTimestamp();
-        newIterationResult = Interceptor.Transform(newIterationResult, previousIterationResult, searchSpace ?? problem.SearchSpace, problem);
-        long endInterceptor = Stopwatch.GetTimestamp();
-        InterceptorMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startInterceptor, endInterceptor));
-      }
-
-      long end = Stopwatch.GetTimestamp();
-
+      if (Interceptor != null) newIterationResult = Interceptor.Transform(newIterationResult, previousIterationResult, searchSpace ?? problem.SearchSpace, problem);
       CurrentIteration += 1;
-      TotalExecutionTime += Stopwatch.GetElapsedTime(start, end);
-
       yield return newIterationResult;
-
-      start = Stopwatch.GetTimestamp();
-
-      long startTerminator = Stopwatch.GetTimestamp();
       shouldContinue = Terminator.ShouldContinue(newIterationResult, previousIterationResult, searchSpace ?? problem.SearchSpace, problem);
-      long endTerminator = Stopwatch.GetTimestamp();
-      TerminatorMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startTerminator, endTerminator));
-
       previousIterationResult = newIterationResult;
     }
+  }
+
+  private static void CheckSearchSpaceCompatible(TProblem problem, TEncoding? searchSpace) {
+    if (searchSpace is ISubencodingComparable<TEncoding> s && !s.IsSubspaceOf(problem.SearchSpace))
+      throw new ArgumentException("The provided search space is not a subspace of the problem's search space.");
   }
 }

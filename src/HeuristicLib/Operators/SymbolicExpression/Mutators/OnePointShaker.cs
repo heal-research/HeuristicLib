@@ -41,15 +41,12 @@ public sealed class OnePointShaker : SymbolicExpressionTreeManipulator {
     if (parametricNodes.Count <= 0)
       return tree;
 
-    var selectedPoint = parametricNodes.SampleRandom(random);
-    selectedPoint.ShakeLocalParameters(random, shakingFactor);
+    parametricNodes.SampleRandom(random)!.ShakeLocalParameters(random, shakingFactor);
 
     return tree;
   }
 
   public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var t = Shake(random, parent, ShakingFactor);
-    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
-    return t;
+    return Shake(random, parent, ShakingFactor);
   }
 }

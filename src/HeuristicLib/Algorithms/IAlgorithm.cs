@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Algorithms;
 public interface IAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgorithmResult>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
-  where TAlgorithmResult : IAlgorithmResult<TGenotype> {
+  where TAlgorithmResult : IAlgorithmResult {
   TimeSpan TotalExecutionTime { get; }
   OperatorMetric EvaluationsMetric { get; }
 

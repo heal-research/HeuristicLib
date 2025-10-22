@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 public class AllTerminator<TGenotype, TIterationResult, TEncoding, TProblem>(IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators)
   : Terminator<TGenotype, TIterationResult, TEncoding, TProblem>
-  where TIterationResult : IIterationResult<TGenotype>
+  where TIterationResult : IIterationResult
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> Terminators { get; } = terminators;

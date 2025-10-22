@@ -5,14 +5,14 @@ using HEAL.HeuristicLib.Problems;
 namespace HEAL.HeuristicLib.Operators;
 
 public abstract class Interceptor<TGenotype, TIterationResult, TEncoding, TProblem> : IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>
-  where TIterationResult : IIterationResult<TGenotype>
+  where TIterationResult : IIterationResult
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public abstract TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TEncoding encoding, TProblem problem);
 }
 
 public abstract class Interceptor<TGenotype, TIterationResult, TEncoding> : IInterceptor<TGenotype, TIterationResult, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TIterationResult : IIterationResult<TGenotype>
+  where TIterationResult : IIterationResult
   where TEncoding : class, IEncoding<TGenotype> {
   public abstract TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TEncoding encoding);
 
@@ -22,7 +22,7 @@ public abstract class Interceptor<TGenotype, TIterationResult, TEncoding> : IInt
 }
 
 public abstract class Interceptor<TGenotype, TIterationResult> : IInterceptor<TGenotype, TIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
-  where TIterationResult : IIterationResult<TGenotype> {
+  where TIterationResult : IIterationResult {
   public abstract TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult);
 
   TIterationResult IInterceptor<TGenotype, TIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
@@ -30,10 +30,10 @@ public abstract class Interceptor<TGenotype, TIterationResult> : IInterceptor<TG
   }
 }
 
-public abstract class Interceptor<TGenotype> : IInterceptor<TGenotype, IIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> {
-  public abstract IIterationResult<TGenotype> Transform(IIterationResult<TGenotype> currentIterationResult, IIterationResult<TGenotype>? previousIterationResult);
+public abstract class Interceptor<TGenotype> : IInterceptor<TGenotype, IIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> {
+  public abstract IIterationResult Transform(IIterationResult currentIterationResult, IIterationResult? previousIterationResult);
 
-  IIterationResult<TGenotype> IInterceptor<TGenotype, IIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Transform(IIterationResult<TGenotype> currentIterationResult, IIterationResult<TGenotype>? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  IIterationResult IInterceptor<TGenotype, IIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Transform(IIterationResult currentIterationResult, IIterationResult? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
     return Transform(currentIterationResult, previousIterationResult);
   }
 }

@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Problems;
 namespace HEAL.HeuristicLib.Operators;
 
 public interface ITerminator<TGenotype, in TIterationResult, in TEncoding, in TProblem>
-  where TIterationResult : IIterationResult<TGenotype>
+  where TIterationResult : IIterationResult
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem);

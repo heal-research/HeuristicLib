@@ -49,8 +49,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>(
     var population = Crossover.Cross(parents, random, searchSpace, problem);
     population = internalMutator.Mutate(population, random, searchSpace, problem);
     var fitnesses = problem.Evaluate(population);
-    var evaluatedPopulation = Population.From(population, fitnesses);
-    var newPopulation = internalReplacer.Replace(oldPopulation, evaluatedPopulation.Solutions, problem.Objective, random);
+    var newPopulation = internalReplacer.Replace(oldPopulation, Population.From(population, fitnesses).Solutions, problem.Objective, random);
 
     return new PopulationIterationResult<TGenotype>(Population.From(newPopulation));
   }

@@ -8,8 +8,8 @@ public interface IIterativeAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgo
   : IAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
-  where TAlgorithmResult : IAlgorithmResult<TGenotype>
-  where TIterationResult : IIterationResult<TGenotype> {
+  where TAlgorithmResult : IAlgorithmResult
+  where TIterationResult : IIterationResult {
   int CurrentIteration { get; }
 
   TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);

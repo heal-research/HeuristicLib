@@ -206,7 +206,7 @@ public class OperatorCompatabilityTests {
   }
 }
 
-public abstract record AlgorithmResult<TGenotype> : IAlgorithmResult<TGenotype>;
+public abstract record AlgorithmResult<TGenotype> : IAlgorithmResult;
 
 public class IndependentAlgorithm<TGenotype, TEncoding, TProblem> : Algorithm<TGenotype, TEncoding, TProblem, AlgorithmResult<TGenotype>>
   where TEncoding : class, IEncoding<TGenotype>

@@ -31,7 +31,7 @@ public static class AlgorithmFactory {
     IAnalyzer<TGenotype, TResult, TEncoding, TProblem>[] analyzers)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding>
-    where TResult : IIterationResult<TGenotype> {
+    where TResult : IIterationResult {
     var list = new List<IInterceptor<TGenotype, TResult, TEncoding, TProblem>>();
     if (interceptor != null)
       list.Add(interceptor);

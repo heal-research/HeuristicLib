@@ -20,7 +20,8 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
   ISelector<TGenotype, TEncoding, TProblem> selector,
   int? randomSeed,
   ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-  IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor)
+  ICrossover<TGenotype, TEncoding, TProblem>? crossover = null,
+  IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
   : IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationResult<TGenotype>, EvolutionStrategyIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
@@ -28,8 +29,8 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
   public int NoChildren { get; } = noChildren;
   public EvolutionStrategyType Strategy { get; } = strategy;
   public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
-  //public ICrossover<TGenotype, TGenotypeSearchSpace>? Crossover { get; }
   public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator;
+  public ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; } = crossover;
   public double InitialMutationStrength { get; } = initialMutationStrength;
   public ISelector<TGenotype, TEncoding, TProblem> Selector { get; } = selector;
 
@@ -40,25 +41,31 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
       return new EvolutionStrategyIterationResult<TGenotype>(Population.From(pop, fitnesses1), InitialMutationStrength);
     }
 
-    var oldPopulation = previousIterationResult.Population.Solutions;
-    var parents = Selector.Select(oldPopulation, problem.Objective, PopulationSize, random, problem.SearchSpace, problem).ToArray();
-    var children = Mutator.Mutate(parents.Select(x => x.Genotype).ToArray(), random, searchSpace, problem);
+    IReadOnlyList<TGenotype> parents;
+    IReadOnlyList<ObjectiveVector> parentQualities;
 
-    // ToDo: optional crossover
-    // var startDecoding = Stopwatch.GetTimestamp();
-    // var phenotypePopulation = genotypePopulation.Select(genotype => optimizable.Decoder.Decode(genotype)).ToArray();
-    // var endDecoding = Stopwatch.GetTimestamp();
+    if (Crossover == null) {
+      var parentSolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
+      parents = parentSolutions.Select(x => x.Genotype).ToArray();
+      parentQualities = parentSolutions.Select(x => x.ObjectiveVector).ToArray();
+    } else {
+      var parentSolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, PopulationSize * 2, random, problem.SearchSpace, problem);
+      parents = Crossover!.Cross(parentSolutions.ToGenotypePairs(), random, searchSpace, problem);
+      parentQualities = parentSolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
+    }
 
+    var children = Mutator.Mutate(parents, random, searchSpace, problem);
     var fitnesses = problem.Evaluate(children);
 
+    double newMutationStrength = previousIterationResult.MutationStrength;
     if (Mutator is IVariableStrengthMutator<TGenotype, TEncoding, TProblem> vm) {
       //adapt Mutation Strength based on 1/5th rule
-      var successes = parents.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1.ObjectiveVector, problem.Objective) == DominanceRelation.Dominates);
-      var successRate = successes / (double)parents.Length;
-      double newMutationStrength = successRate switch {
-        > 0.2 => previousIterationResult.MutationStrength * 1.5,
-        < 0.2 => previousIterationResult.MutationStrength / 1.5,
-        _ => previousIterationResult.MutationStrength
+      var successes = parentQualities.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1, problem.Objective) == DominanceRelation.Dominates);
+      var successRate = successes / (double)PopulationSize;
+      newMutationStrength *= successRate switch {
+        > 0.2 => 1.5,
+        < 0.2 => 1 / 1.5,
+        _ => 1
       };
       vm.MutationStrength = newMutationStrength;
     }
@@ -69,7 +76,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
       EvolutionStrategyType.Plus => new PlusSelectionReplacer<TGenotype>(),
       _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
     };
-    var newPopulation = replacer.Replace(oldPopulation, population.Solutions, problem.Objective, random);
+    var newPopulation = replacer.Replace(previousIterationResult.Population.Solutions, population.Solutions, problem.Objective, random);
     return new EvolutionStrategyIterationResult<TGenotype>(Population.From(newPopulation), newMutationStrength);
   }
 

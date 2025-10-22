@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Algorithms;
 public abstract class Algorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult> : IAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
-  where TAlgorithmResult : IAlgorithmResult<TGenotype> {
+  where TAlgorithmResult : IAlgorithmResult {
   public TimeSpan TotalExecutionTime { get; protected set; } = TimeSpan.Zero;
   public OperatorMetric EvaluationsMetric { get; protected set; } = OperatorMetric.Zero;
 

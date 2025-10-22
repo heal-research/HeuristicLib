@@ -121,7 +121,7 @@ public class SymbolicRegressionTests {
   public void GeneticAlgorithmTest() {
     var problem = CreateTestSymbolicRegressionProblem();
 
-    var qualities = new BestMedianWorstInterceptor<SymbolicExpressionTree>();
+    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
 
     var ga = AlgorithmFactory.GeneticAlgorithm(100,
       new ProbabilisticTreeCreator(),
@@ -145,7 +145,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void GenealogyGraphTestGeneticAlgorithm() {
     var problem = CreateTestSymbolicRegressionProblem();
-    var qualities = new BestMedianWorstInterceptor<SymbolicExpressionTree>();
+    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
     var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
     var graphAnalyzer = graph.GetInterceptor();
     graphAnalyzer.SaveSpace = true;
@@ -184,7 +184,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void GenealogyGraphTestLocalSearch() {
     var problem = CreateTestSymbolicRegressionProblem();
-    var qualities = new BestMedianWorstInterceptor<SymbolicExpressionTree>();
+    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
     var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
     var graphAnalyzer = graph.GetInterceptor();
     graphAnalyzer.SaveSpace = false;
