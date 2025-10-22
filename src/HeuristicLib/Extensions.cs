@@ -1,15 +1,34 @@
-﻿using System.Collections;
-using System.Diagnostics;
-using YamlDotNet.Core.Tokens;
+﻿using System.Diagnostics;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib;
 
 public static class Extensions {
+  public static IReadOnlyList<TOut> ParallelSelect<TOut, TIn>(this IReadOnlyList<TIn> source, IRandomNumberGenerator random, Func<int, TIn, IRandomNumberGenerator, TOut> action) {
+    var selected = new TOut[source.Count];
+    var randoms = random.Spawn(source.Count);
+    Parallel.For(0, source.Count, i => {
+      selected[i] = action(i, source[i], randoms[i]);
+    });
+    return selected;
+  }
+
+  public static IReadOnlyList<TOut> ParallelSelect<TOut, TIn>(this IEnumerable<TIn> source, IRandomNumberGenerator random, Func<int, TIn, IRandomNumberGenerator, TOut> action) => source.ToArray().ParallelSelect(random, action);
+
   private class DebugException(string message) : Exception(message);
 
   [Conditional("DEBUG")]
   public static void CheckDebug(bool value, string text) {
     if (!value) throw new DebugException(text);
+  }
+
+  public static (TGenotype p1, TGenotype p2)[] ToGenotypePairs<TGenotype>(this IReadOnlyList<Solution<TGenotype>> parents) {
+    var offspringCount = parents.Count / 2;
+    var parentPairs = new (TGenotype p1, TGenotype p2)[offspringCount];
+    for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
+      parentPairs[i] = (parents[j].Genotype, parents[j + 1].Genotype);
+    return parentPairs;
   }
 
   public static bool IsAlmost(this double a, double b, double tolerance = 1E-10) {

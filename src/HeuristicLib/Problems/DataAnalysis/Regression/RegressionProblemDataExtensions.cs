@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+using HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
@@ -14,6 +16,8 @@ public static class RegressionProblemDataExtensions {
   }
 
   public static ObjectiveVector Evaluate(IRegressionModel solution, Dataset dataset, IEnumerable<int> rows, IReadOnlyList<IRegressionEvaluator> evaluators, double[] targets, double lowerPredictionLimit = double.MinValue, double upperPredictionLimit = double.MaxValue) {
+    var debug = new SymbolicExpressionTreeGraphvizFormatter().Format(((SymbolicRegressionModel)solution).Tree);
+
     var predictions = solution.Predict(dataset, rows).LimitToRange(lowerPredictionLimit, upperPredictionLimit);
     if (evaluators.Count == 1)
       return new ObjectiveVector(evaluators[0].Evaluate(targets, predictions));

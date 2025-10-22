@@ -21,6 +21,7 @@
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
+using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
@@ -245,7 +246,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     if (minArity == maxArity) return minArity;
 
     // the min number of sub-trees has to be set to a value that is large enough so that the largest possible tree is at least tree length
-    // if 1..3 trees are possible and the largest possible first sub-tree is smaller larger than the target length then minArity should be at least 2
+    // if 1..3 trees are possible and the largest possible first sub-tree is smaller than the target length then minArity should be at least 2
     long aggregatedLongestExpressionLength = 0;
     for (var i = 0; i < maxArity; i++) {
       aggregatedLongestExpressionLength += (from s in encoding.Grammar.GetAllowedChildSymbols(node.Symbol, i)
@@ -262,13 +263,17 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
       aggregatedShortestExpressionLength += (from s in encoding.Grammar.GetAllowedChildSymbols(node.Symbol, i)
                                              where s.InitialFrequency > 0.0
                                              select encoding.Grammar.GetMinimumExpressionLength(s)).Min();
-      if (aggregatedShortestExpressionLength > targetLength) {
-        maxArity = i;
-        break;
-      }
+      if (aggregatedShortestExpressionLength <= targetLength)
+        continue;
+
+      maxArity = i;
+      break;
     }
 
     if (minArity > maxArity) return -1;
+    var defaultArity = node.Symbol.DefaultArity;
+    if (minArity <= defaultArity && defaultArity <= maxArity) return defaultArity;
+
     return random.Next(minArity, maxArity + 1);
   }
 }

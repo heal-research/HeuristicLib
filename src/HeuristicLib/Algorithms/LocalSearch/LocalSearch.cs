@@ -1,40 +1,35 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters;
+﻿using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
+public enum LocalSearchDirection { FirstImprovement, BestImprovement }
+
 public class LocalSearch<TGenotype, TEncoding, TProblem>(
   ITerminator<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator,
   IInterceptor<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor,
   ICreator<TGenotype, TEncoding, TProblem> creator,
   IMutator<TGenotype, TEncoding, TProblem> mutator,
-  int? randomSeed)
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleSolutionSearchResult<TGenotype>, SingleSolutionIterationResult<TGenotype>>(terminator, interceptor)
+  int? randomSeed,
+  int maxNeighbors,
+  int batchSize,
+  LocalSearchDirection direction)
+  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleSolutionResult<TGenotype>, SingleSolutionIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public enum SearchDirection { FirstImprovement, BestImprovement }
-
   public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
   public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator;
-
-  public SearchDirection Direction { get; } = SearchDirection.FirstImprovement;
-
-  public int MaxNeighbors { get; set; } = int.MaxValue;
-  public int BatchSize { get; set; } = 16;
-  private readonly IRandomNumberGenerator algorithmRandom = new SystemRandomNumberGenerator(randomSeed ?? SystemRandomNumberGenerator.RandomSeed());
+  public LocalSearchDirection Direction { get; } = direction;
+  public int MaxNeighbors { get; } = maxNeighbors;
+  public int BatchSize { get; } = batchSize;
 
   public override SingleSolutionIterationResult<TGenotype> ExecuteStep(
     TProblem problem,
-    TEncoding? searchSpace = default,
-    SingleSolutionIterationResult<TGenotype>? previousIterationResult = default,
-    IRandomNumberGenerator? random = default) {
-    random ??= algorithmRandom;
-    searchSpace ??= problem.SearchSpace;
-
+    TEncoding searchSpace,
+    SingleSolutionIterationResult<TGenotype>? previousIterationResult,
+    IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       var ind = Creator.Create(1, random, searchSpace, problem);
       var obj = problem.Evaluate(ind);
@@ -51,13 +46,13 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
       if (best == BatchSize)
         continue;
       newSolution = new Solution<TGenotype>(child[best], res[best]);
-      if (Direction == SearchDirection.FirstImprovement)
+      if (Direction == LocalSearchDirection.FirstImprovement)
         return new SingleSolutionIterationResult<TGenotype>(newSolution);
     }
 
     return new SingleSolutionIterationResult<TGenotype>(newSolution);
   }
 
-  protected override SingleSolutionSearchResult<TGenotype> FinalizeResult(SingleSolutionIterationResult<TGenotype> iterationResult, TProblem problem) =>
+  protected override SingleSolutionResult<TGenotype> FinalizeResult(SingleSolutionIterationResult<TGenotype> iterationResult, TProblem problem) =>
     new(iterationResult.Solution);
 }

@@ -24,4 +24,5 @@ namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 public sealed class Addition : Symbol {
   public override int MinimumArity => 1;
   public override int MaximumArity => byte.MaxValue;
+  public override int DefaultArity => 2;
 }

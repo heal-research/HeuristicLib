@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult, TIterationResult>(ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> terminator, IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? interceptor)
+public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult, TIterationResult>(ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> terminator, int? randomSeed, IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? interceptor)
   : Algorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult>, IIterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult, TIterationResult>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
@@ -14,13 +14,15 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
   where TIterationResult : IIterationResult<TGenotype> {
   public int CurrentIteration { get; protected set; }
 
+  protected readonly IRandomNumberGenerator AlgorithmRandom = new SystemRandomNumberGenerator(randomSeed ?? SystemRandomNumberGenerator.RandomSeed());
+
   public ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> Terminator { get; } = terminator;
   public IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; } = interceptor;
 
   public OperatorMetric TerminatorMetric { get; protected set; } = OperatorMetric.Zero;
   public OperatorMetric InterceptorMetric { get; protected set; } = OperatorMetric.Zero;
 
-  public abstract TIterationResult ExecuteStep(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
+  public abstract TIterationResult ExecuteStep(TProblem problem, TEncoding searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
 
   protected abstract TAlgorithmResult FinalizeResult(TIterationResult iterationResult, TProblem problem);
 
@@ -29,7 +31,7 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
   }
 
   public virtual TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
-    TIterationResult? lastResult = ExecuteStreaming(problem, searchSpace, previousIterationResult).LastOrDefault();
+    TIterationResult? lastResult = ExecuteStreaming(problem, searchSpace, previousIterationResult, random).LastOrDefault();
 
     if (lastResult is null) {
       throw new InvalidOperationException("The algorithm did not produce any iteration result.");
@@ -39,6 +41,9 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
   }
 
   public virtual IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+    if (searchSpace is ISubencodingComparable<TEncoding> s && !s.IsSubspaceOf(problem.SearchSpace))
+      throw new ArgumentException("The provided search space is not a subspace of the problem's search space.");
+
     long start = Stopwatch.GetTimestamp();
 
     bool shouldContinue = previousIterationResult is null;
@@ -50,7 +55,7 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
     }
 
     while (shouldContinue) {
-      var newIterationResult = ExecuteStep(problem, searchSpace, previousIterationResult, random);
+      var newIterationResult = ExecuteStep(problem, searchSpace ?? problem.SearchSpace, previousIterationResult, random ?? AlgorithmRandom);
 
       if (Interceptor is not null) {
         long startInterceptor = Stopwatch.GetTimestamp();

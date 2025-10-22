@@ -20,7 +20,6 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Crossovers;

@@ -72,6 +72,7 @@ public abstract class Creator<TGenotype> : ICreator<TGenotype> {
   public abstract TGenotype Create(IRandomNumberGenerator random);
 
   public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) {
+    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r)).ToArray();
     var offspring = new TGenotype[count];
 
     var randoms = random.Spawn(count);

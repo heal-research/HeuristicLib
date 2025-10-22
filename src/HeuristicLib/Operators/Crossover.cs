@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using System.Text;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
@@ -40,11 +41,7 @@ public abstract class Crossover<TGenotype, TEncoding, TProblem> : ICrossover<TGe
   public abstract TGenotype Cross((TGenotype, TGenotype) parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 
   public IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    var offspring = new TGenotype[parents.Count];
-    Parallel.For(0, parents.Count, i => {
-      offspring[i] = Cross(parents[i], random, encoding, problem);
-    });
-    return offspring;
+    return parents.ParallelSelect(random, (_, x, r) => Cross(x, r, encoding, problem));
   }
 }
 
@@ -53,11 +50,7 @@ public abstract class Crossover<TGenotype, TEncoding> : ICrossover<TGenotype, TE
   public abstract TGenotype Cross((TGenotype, TGenotype) parents, IRandomNumberGenerator random, TEncoding encoding);
 
   public IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, TEncoding encoding) {
-    var offspring = new TGenotype[parents.Count];
-    Parallel.For(0, parents.Count, i => {
-      offspring[i] = Cross(parents[i], random, encoding);
-    });
-    return offspring;
+    return parents.ParallelSelect(random, (_, x, r) => Cross(x, r, encoding));
   }
 
   IReadOnlyList<TGenotype> ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
@@ -69,11 +62,7 @@ public abstract class Crossover<TGenotype> : ICrossover<TGenotype> {
   public abstract TGenotype Cross((TGenotype, TGenotype) parents, IRandomNumberGenerator random);
 
   public IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random) {
-    var offspring = new TGenotype[parents.Count];
-    Parallel.For(0, parents.Count, i => {
-      offspring[i] = Cross(parents[i], random);
-    });
-    return offspring;
+    return parents.ParallelSelect(random, (_, x, r) => Cross(x, r));
   }
 
   IReadOnlyList<TGenotype> ICrossover<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {

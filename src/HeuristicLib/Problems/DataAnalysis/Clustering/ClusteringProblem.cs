@@ -20,7 +20,6 @@
 #endregion
 
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering {
   public class ClusteringProblem<TProblemData, TSolution, TEncoding>(TProblemData problemData, ICollection<IClusteringEvaluator> objective, IComparer<ObjectiveVector> a, TEncoding encoding)

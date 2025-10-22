@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Algorithms.NSGA2;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
@@ -30,7 +26,12 @@ public static class AlgorithmFactory {
     return new GeneticAlgorithm<TGenotype, TEncoding, TProblem>(populationSize, creator, crossover, mutator, mutationRate, selector, elites, randomSeed, terminator, MultiInterceptor(interceptor, analyzers));
   }
 
-  public static MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>? MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>(IInterceptor<TGenotype, TResult, TEncoding, TProblem>? interceptor, IAnalyzer<TGenotype, TResult, TEncoding, TProblem>[] analyzers) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> where TResult : IIterationResult<TGenotype> {
+  public static MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>? MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>(
+    IInterceptor<TGenotype, TResult, TEncoding, TProblem>? interceptor,
+    IAnalyzer<TGenotype, TResult, TEncoding, TProblem>[] analyzers)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding>
+    where TResult : IIterationResult<TGenotype> {
     var list = new List<IInterceptor<TGenotype, TResult, TEncoding, TProblem>>();
     if (interceptor != null)
       list.Add(interceptor);
@@ -44,9 +45,29 @@ public static class AlgorithmFactory {
     IMutator<TGenotype, TEncoding, TProblem> mutator,
     ITerminator<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator,
     int? randomSeed,
+    int maxNeighbors,
+    int batchSize,
+    LocalSearchDirection direction,
     IInterceptor<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null,
     params IAnalyzer<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new(terminator, MultiInterceptor(interceptor, analyzers), creator, mutator, randomSeed);
+    => new(terminator, MultiInterceptor(interceptor, analyzers), creator, mutator, randomSeed, maxNeighbors, batchSize, direction);
+
+  public static NSGA2<TGenotype, TEncoding, TProblem> NSGA2<TGenotype, TEncoding, TProblem>(
+    ICreator<TGenotype, TEncoding, TProblem> creator,
+    ICrossover<TGenotype, TEncoding, TProblem> crossover,
+    IMutator<TGenotype, TEncoding, TProblem> mutator,
+    ISelector<TGenotype, TEncoding, TProblem> selector,
+    ITerminator<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    int? randomSeed,
+    int populationSize,
+    double mutationRate,
+    LocalSearchDirection direction,
+    bool dominateOnEquals,
+    IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null,
+    params IAnalyzer<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding>
+    => new(terminator, interceptor, populationSize, creator, crossover, mutator, mutationRate, selector, randomSeed, dominateOnEquals);
 }

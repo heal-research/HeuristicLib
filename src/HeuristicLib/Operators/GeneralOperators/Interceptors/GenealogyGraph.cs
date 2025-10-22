@@ -50,9 +50,6 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
 
   public void AddConnection(ICollection<TGenotype> parent, TGenotype child) {
     if (CurrentGeneration.TryGetValue(child, out var cNode) && parent.Any(x => equality.Equals(x, child))) return; //operators sometimes just "give up" and return one of the parents as child
-
-    if (CurrentGeneration.ContainsKey(child)) { }
-
     var pNodes = parent.Where(x => !equality.Equals(x, child)).Select(x => CurrentGeneration[x]).ToArray();
     cNode = new Node(nextId++, child, Nodes.Count - 1, pNodes.Max(x => x.Layer) + 1, -1);
     CurrentGeneration.Add(child, cNode);
@@ -76,9 +73,9 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
 
     //only keep parents for the last generation to save space
     if (saveSpace && Nodes.Count > 1) {
-      foreach (var node in CurrentGeneration.Values)
+      foreach (var node in Nodes[^1].Values.Where(x => x.Layer == 0))
         node.Parents.Clear();
-      Nodes[^1].Clear();
+      Nodes[^2].Clear();
     }
 
     Nodes.Add(newGen);

@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 using HEAL.HeuristicLib.Operators;
@@ -10,6 +11,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Operators.Interceptors;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -124,16 +126,86 @@ public class SymbolicRegressionTests {
     var ga = AlgorithmFactory.GeneticAlgorithm(100,
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
-      MultiMutator.Create([new ChangeNodeTypeManipulation(), new FullTreeShaker(), new OnePointShaker(), new RemoveBranchManipulation(), new ReplaceBranchManipulation()]), //
+      CreateSymRegAllMutator(), //
       0.05,
       new TournamentSelector<SymbolicExpressionTree>(3),
       1,
       0,
       new AfterIterationsTerminator<SymbolicExpressionTree>(100),
-      null, qualities
+      null,
+      qualities
+    );
+
+    var res = ga.Execute(problem);
+
+    Assert.Equal(100, qualities.CurrentState.Count);
+    Assert.Equal(100, res.Population.Solutions.Count);
+  }
+
+  [Fact]
+  public void GenealogyGraphTestGeneticAlgorithm() {
+    var problem = CreateTestSymbolicRegressionProblem();
+    var qualities = new BestMedianWorstInterceptor<SymbolicExpressionTree>();
+    var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
+    var graphAnalyzer = graph.GetInterceptor();
+    graphAnalyzer.SaveSpace = true;
+    var graphCrossover = graph.WrapCrossover(new SubtreeCrossover());
+    var graphMutator = graph.WrapMutator(CreateSymRegAllMutator());
+
+    var ga = AlgorithmFactory.GeneticAlgorithm(10,
+      new ProbabilisticTreeCreator(),
+      graphCrossover,
+      graphMutator, //
+      0.05,
+      new RandomSelector<SymbolicExpressionTree>(),
+      1,
+      0,
+      new AfterIterationsTerminator<SymbolicExpressionTree>(30), null,
+      qualities,
+      graphAnalyzer
     );
     var res = ga.Execute(problem);
-    Assert.Equal(100, qualities.CurrentState.Count);
+    Assert.Equal(30, qualities.CurrentState.Count);
+    Assert.Equal(10, res.Population.Solutions.Count);
+
+    _ = qualities.CurrentState.Select(x => x.best).ToArray();
+    var graphViz = graph.ToGraphViz();
+  }
+
+  [Fact]
+  public void TestPlayground() {
+    var iterations = 4;
+    var bp = new BernhardPlayground();
+    var i = 0;
+    bp.GenealogyGraphGeneticAlgorithm("D:\\Projekte\\HCAI\\HL\\datasets\\extracted - Kopie\\192_vineyard.tsv", _ => i++, 10, iterations);
+    Assert.Equal(iterations, i);
+  }
+
+  [Fact]
+  public void GenealogyGraphTestLocalSearch() {
+    var problem = CreateTestSymbolicRegressionProblem();
+    var qualities = new BestMedianWorstInterceptor<SymbolicExpressionTree>();
+    var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
+    var graphAnalyzer = graph.GetInterceptor();
+    graphAnalyzer.SaveSpace = false;
+    var symRegAllMutator = CreateSymRegAllMutator();
+    var graphMutator = graph.WrapMutator(symRegAllMutator);
+    var ls = AlgorithmFactory.LocalSearch(
+      new ProbabilisticTreeCreator(),
+      graphMutator,
+      new AfterIterationsTerminator<SymbolicExpressionTree>(50),
+      0,
+      10,
+      5,
+      LocalSearchDirection.FirstImprovement,
+      null,
+      qualities,
+      graphAnalyzer);
+
+    var res = ls.Execute(problem);
+    Assert.Single(res.Population.Solutions);
+    _ = qualities.CurrentState.Select(x => x.best).ToArray();
+    var graphViz = graph.ToGraphViz();
   }
 
   private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem() {
@@ -146,111 +218,19 @@ public class SymbolicRegressionTests {
         TreeLength = 40
       }
     };
-    problem.SearchSpace.Grammar.AddFullyConnectedSymbols([new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables }]);
+
+    var aroot = problem.SearchSpace.Grammar.AddLinearScaling();
+    problem.SearchSpace.Grammar.AddFullyConnectedSymbols([new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables }], aroot);
     return problem;
   }
 
-  [Fact]
-  public void GenealogyGraphTestGA() {
-    var problem = CreateTestSymbolicRegressionProblem();
-    var qualities = new BestMedianWorstInterceptor<SymbolicExpressionTree>();
-    var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
-    var graphAnalyzer = graph.GetInterceptor();
-    graphAnalyzer.SaveSpace = true;
-    var graphCrossover = graph.WrapCrossover(new SubtreeCrossover());
-    var graphMutator = graph.WrapMutator(
-      MultiMutator.Create(
-        new ChangeNodeTypeManipulation(),
-        new FullTreeShaker(),
-        new OnePointShaker(),
-        new RemoveBranchManipulation(),
-        new ReplaceBranchManipulation()));
-
-    var values = new List<List<double>>();
-    var extractor = FuncAnalyzer.Build<SymbolicExpressionTree, PopulationIterationResult<SymbolicExpressionTree>>(
-      (_, _) => {
-        if (graph.Nodes.Count < 2)
-          return;
-        var line = new List<double>();
-        values.Add(line);
-        line.AddRange(graph.Nodes[^2].Values
-                           .Where(x => x.Layer == 0)
-                           .OrderBy(x => x.Rank)
-                           .Select(node => node.Children.Count > 0
-                             ? node.GetAllDescendants()
-                                   .Where(x => x.Rank >= 0)
-                                   .Average(x => x.Rank)
-                             : Double.NaN)
-        );
-      });
-
-    var ga = AlgorithmFactory.GeneticAlgorithm(10,
-      new ProbabilisticTreeCreator(),
-      graphCrossover,
-      graphMutator, //
-      0.05,
-      new RandomSelector<SymbolicExpressionTree>(),
-      1,
-      0,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(30), null,
-      qualities,
-      graphAnalyzer,
-      extractor
-    );
-    var res = ga.Execute(problem);
-
-    var best = qualities.CurrentState.Select(x => x.best).ToArray();
-    var graphViz = graph.ToGraphViz();
-  }
-
-  [Fact]
-  public void GenealogyGraphTestLS() {
-    var problem = CreateTestSymbolicRegressionProblem();
-    var qualities = new BestMedianWorstInterceptor<SymbolicExpressionTree>();
-    var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
-    var graphAnalyzer = graph.GetInterceptor();
-    graphAnalyzer.SaveSpace = false;
-    var graphMutator = graph.WrapMutator(
-      MultiMutator.Create(
-        new ChangeNodeTypeManipulation(),
-        new FullTreeShaker(),
-        new OnePointShaker(),
-        new RemoveBranchManipulation(),
-        new ReplaceBranchManipulation()));
-
-    var values = new List<List<double>>();
-    var extractor = FuncAnalyzer.Build<SymbolicExpressionTree, SingleSolutionIterationResult<SymbolicExpressionTree>>(
-      (_, _) => {
-        if (graph.Nodes.Count < 2)
-          return;
-        var line = new List<double>();
-        values.Add(line);
-        line.AddRange(graph.Nodes[^2].Values
-                           .Where(x => x.Layer == 0)
-                           .OrderBy(x => x.Rank)
-                           .Select(node => node.Children.Count > 0
-                             ? node.GetAllDescendants()
-                                   .Where(x => x.Rank >= 0)
-                                   .Average(x => x.Rank)
-                             : Double.NaN)
-        );
-      });
-
-    var ls = AlgorithmFactory.LocalSearch(
-      new ProbabilisticTreeCreator(),
-      graphMutator,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(50),
-      0,
-      null,
-      qualities,
-      graphAnalyzer,
-      extractor);
-
-    ls.MaxNeighbors = 10;
-    ls.BatchSize = 5;
-    var res = ls.Execute(problem);
-
-    var best = qualities.CurrentState.Select(x => x.best).ToArray();
-    var graphViz = graph.ToGraphViz();
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>> CreateSymRegAllMutator() {
+    var symRegAllMutator = MultiMutator.Create(
+      new ChangeNodeTypeManipulation(),
+      new FullTreeShaker(),
+      new OnePointShaker(),
+      new RemoveBranchManipulation(),
+      new ReplaceBranchManipulation());
+    return symRegAllMutator;
   }
 }

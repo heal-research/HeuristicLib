@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using System.Text;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
@@ -40,11 +41,7 @@ public abstract class Selector<TGenotype, TEncoding, TProblem> : ISelector<TGeno
   public abstract Solution<TGenotype> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 
   public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    var selected = new Solution<TGenotype>[count];
-    Parallel.For(0, selected.Length, i => {
-      selected[i] = Select(population, objective, random, encoding, problem);
-    });
-    return selected;
+    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Select(population, objective, r, encoding, problem));
   }
 }
 
@@ -53,11 +50,7 @@ public abstract class Selector<TGenotype, TEncoding> : ISelector<TGenotype, TEnc
   public abstract Solution<TGenotype> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, IRandomNumberGenerator random, TEncoding encoding);
 
   public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding) {
-    var selected = new Solution<TGenotype>[count];
-    Parallel.For(0, selected.Length, i => {
-      selected[i] = Select(population, objective, random, encoding);
-    });
-    return selected;
+    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Select(population, objective, r, encoding));
   }
 
   IReadOnlyList<Solution<TGenotype>> ISelector<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
@@ -69,11 +62,7 @@ public abstract class Selector<TGenotype> : ISelector<TGenotype> {
   public abstract Solution<TGenotype> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, IRandomNumberGenerator random);
 
   public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
-    var selected = new Solution<TGenotype>[count];
-    Parallel.For(0, selected.Length, i => {
-      selected[i] = Select(population, objective, random);
-    });
-    return selected;
+    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Select(population, objective, r));
   }
 
   IReadOnlyList<Solution<TGenotype>> ISelector<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {

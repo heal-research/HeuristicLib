@@ -19,7 +19,6 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   public ISelector<TGenotype, TEncoding, TProblem> Selector { get; }
   public int Elites { get; }
   // public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; }
-  public int RandomSeed { get; }
 
   private readonly IRandomNumberGenerator algorithmRandom;
 
@@ -49,7 +48,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     int? randomSeed,
     ITerminator<TGenotype, ALPSIterationResult<TGenotype>, TEncoding, TProblem> terminator,
     IInterceptor<TGenotype, ALPSIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
-  ) : base(terminator, interceptor) {
+  ) : base(terminator, randomSeed, interceptor) {
     PopulationSize = populationSize;
     Creator = creator;
     Crossover = crossover;
@@ -58,10 +57,8 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     Selector = selector;
     //Replacer = replacer;
     Elites = elites;
-    RandomSeed = randomSeed ?? SystemRandomNumberGenerator.RandomSeed();
 
-    algorithmRandom = new SystemRandomNumberGenerator(RandomSeed);
-
+    algorithmRandom = new SystemRandomNumberGenerator(randomSeed ?? SystemRandomNumberGenerator.RandomSeed());
     internalMutator = new MultiMutator<TGenotype, TEncoding, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
     internalReplacer = new ElitismReplacer<TGenotype>(elites);
 
@@ -72,16 +69,10 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     agedReplacer = new AgedReplacer<TGenotype, TEncoding, TProblem>(internalReplacer);
   }
 
-  public override ALPSIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding? searchSpace = null, ALPSIterationResult<TGenotype>? previousIterationResult = null, IRandomNumberGenerator? random = null) {
-    if (searchSpace is ISubencodingComparable<TEncoding> s && !s.IsSubspaceOf(problem.SearchSpace))
-      throw new ArgumentException("The provided search space is not a subspace of the problem's search space.");
-
-    var activeSearchSpace = searchSpace ?? problem.SearchSpace;
-
+  public override ALPSIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, ALPSIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     var agedProblem = new AgedProblem<TGenotype, TEncoding, TProblem>(problem);
-    var agedEncoding = new AgedEncoding<TGenotype, TEncoding>(activeSearchSpace);
-
-    var iterationRandom = (random ?? algorithmRandom).Fork(CurrentIteration);
+    var agedEncoding = new AgedEncoding<TGenotype, TEncoding>(searchSpace);
+    var iterationRandom = random.Fork(CurrentIteration);
     return previousIterationResult switch {
       null => ExecuteInitialization(agedProblem, agedEncoding, iterationRandom),
       _ => ExecuteGeneration(agedProblem, agedEncoding, previousIterationResult, iterationRandom)

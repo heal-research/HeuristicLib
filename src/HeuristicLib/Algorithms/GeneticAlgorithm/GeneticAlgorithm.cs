@@ -1,113 +1,61 @@
-﻿using System.Diagnostics;
-using HEAL.HeuristicLib.Core;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+﻿using System;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.SymbolicExpression.Formatters;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationResult<TGenotype>, PopulationIterationResult<TGenotype>>
+public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>(
+  int populationSize,
+  ICreator<TGenotype, TEncoding, TProblem> creator,
+  ICrossover<TGenotype, TEncoding, TProblem> crossover,
+  IMutator<TGenotype, TEncoding, TProblem> mutator,
+  double mutationRate,
+  ISelector<TGenotype, TEncoding, TProblem> selector,
+  int elites,
+  int? randomSeed,
+  ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+  IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
+  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationResult<TGenotype>, PopulationIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public int PopulationSize { get; }
-  public ICreator<TGenotype, TEncoding, TProblem> Creator { get; }
-  public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; }
-  public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; }
-  public double MutationRate { get; }
-  public ISelector<TGenotype, TEncoding, TProblem> Selector { get; }
-  public int Elites { get; }
-  // public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; }
-  public int RandomSeed { get; }
+  public int PopulationSize { get; } = populationSize;
+  public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
+  public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; } = crossover;
+  public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator;
+  public ISelector<TGenotype, TEncoding, TProblem> Selector { get; } = selector;
+  private readonly MultiMutator<TGenotype, TEncoding, TProblem> internalMutator = new([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
+  private readonly ElitismReplacer<TGenotype> internalReplacer = new(elites);
 
-  private readonly IRandomNumberGenerator algorithmRandom;
-  private readonly MultiMutator<TGenotype, TEncoding, TProblem> internalMutator;
-  private readonly IReplacer<TGenotype, TEncoding, TProblem> internalReplacer;
-
-  public OperatorMetric CreatorMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric CrossoverMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric MutationMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric SelectionMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric ReplacementMetric { get; protected set; } = OperatorMetric.Zero;
-
-  public GeneticAlgorithm(
-    int populationSize,
-    ICreator<TGenotype, TEncoding, TProblem> creator,
-    ICrossover<TGenotype, TEncoding, TProblem> crossover,
-    IMutator<TGenotype, TEncoding, TProblem> mutator, double mutationRate,
-    ISelector<TGenotype, TEncoding, TProblem> selector,
-    // IReplacer<TGenotype, TEncoding, TProblem> replacer,
-    int elites,
-    int? randomSeed,
-    ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-    IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
-  ) : base(terminator, interceptor) {
-    PopulationSize = populationSize;
-    Creator = creator;
-    Crossover = crossover;
-    Mutator = mutator;
-    MutationRate = mutationRate;
-    Selector = selector;
-    //Replacer = replacer;
-    Elites = elites;
-    RandomSeed = randomSeed ?? SystemRandomNumberGenerator.RandomSeed();
-
-    algorithmRandom = new SystemRandomNumberGenerator(RandomSeed);
-    internalMutator = new MultiMutator<TGenotype, TEncoding, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
-    internalReplacer = new ElitismReplacer<TGenotype>(elites);
-  }
-
-  public override PopulationIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding? searchSpace = null, PopulationIterationResult<TGenotype>? previousIterationResult = null, IRandomNumberGenerator? random = null) {
-    if (searchSpace is ISubencodingComparable<TEncoding> s && !s.IsSubspaceOf(problem.SearchSpace))
-      throw new ArgumentException("The provided search space is not a subspace of the problem's search space.");
-
-    var iterationRandom = (random ?? algorithmRandom).Fork(CurrentIteration);
+  public override PopulationIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, PopulationIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     return previousIterationResult switch {
-      null => ExecuteInitialization(problem, searchSpace ?? problem.SearchSpace, iterationRandom),
-      _ => ExecuteGeneration(problem, searchSpace ?? problem.SearchSpace, previousIterationResult, iterationRandom)
+      null => ExecuteInitialization(problem, searchSpace, random),
+      _ => ExecuteGeneration(problem, searchSpace, previousIterationResult, random)
     };
   }
 
-  protected virtual PopulationIterationResult<TGenotype> ExecuteInitialization(TProblem problem, TEncoding searchSpace, IRandomNumberGenerator iterationRandom) {
-    var population = Creator.Create(PopulationSize, iterationRandom, searchSpace, problem);
-    Extensions.CheckDebug(population.All(searchSpace.Contains), "population is invalid");
+  protected virtual PopulationIterationResult<TGenotype> ExecuteInitialization(TProblem problem, TEncoding searchSpace, IRandomNumberGenerator random) {
+    var population = Creator.Create(PopulationSize, random, searchSpace, problem);
     var objectives = problem.Evaluate(population);
     return new PopulationIterationResult<TGenotype>(Population.From(population, objectives));
   }
 
-  protected virtual PopulationIterationResult<TGenotype> ExecuteGeneration(TProblem problem, TEncoding searchSpace, PopulationIterationResult<TGenotype> previousGenerationResult, IRandomNumberGenerator iterationRandom) {
-    int offspringCount = internalReplacer.GetOffspringCount(PopulationSize);
-    var oldPopulation = previousGenerationResult.Population.ToArray();
-    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, iterationRandom, searchSpace, problem);
+  protected virtual PopulationIterationResult<TGenotype> ExecuteGeneration(TProblem problem, TEncoding searchSpace, PopulationIterationResult<TGenotype> previousGenerationResult, IRandomNumberGenerator random) {
+    var offspringCount = internalReplacer.GetOffspringCount(PopulationSize);
+    var oldPopulation = previousGenerationResult.Population.Solutions;
 
-    var parentPairs = new ValueTuple<TGenotype, TGenotype>[offspringCount];
-    for (int i = 0, j = 0; i < offspringCount; i++, j += 2) {
-      parentPairs[i] = (parents[j].Genotype, parents[j + 1].Genotype);
-    }
-
-    var population = Crossover.Cross(parentPairs, iterationRandom, searchSpace, problem);
-    Extensions.CheckDebug(population.All(searchSpace.Contains), "population is invalid");
-
-    population = internalMutator.Mutate(population, iterationRandom, searchSpace, problem);
-    Extensions.CheckDebug(population.All(searchSpace.Contains), "population is invalid");
-
+    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
+    var population = Crossover.Cross(parents, random, searchSpace, problem);
+    population = internalMutator.Mutate(population, random, searchSpace, problem);
     var fitnesses = problem.Evaluate(population);
     var evaluatedPopulation = Population.From(population, fitnesses);
-    var newPopulation = internalReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, iterationRandom, searchSpace, problem);
+    var newPopulation = internalReplacer.Replace(oldPopulation, evaluatedPopulation.Solutions, problem.Objective, random);
 
-    var result = new PopulationIterationResult<TGenotype>(Population.From(newPopulation)) {
-      Population = new Population<TGenotype>(new ImmutableList<Solution<TGenotype>>(newPopulation)),
-    };
-
-    return result;
+    return new PopulationIterationResult<TGenotype>(Population.From(newPopulation));
   }
 
-  protected override PopulationResult<TGenotype> FinalizeResult(PopulationIterationResult<TGenotype> iterationResult, TProblem problem) {
-    return new PopulationResult<TGenotype>(iterationResult.Population);
-  }
+  protected override PopulationResult<TGenotype> FinalizeResult(PopulationIterationResult<TGenotype> iterationResult, TProblem problem) => new(iterationResult.Population);
 }
 
 public class GeneticAlgorithm<TGenotype, TEncoding>(int populationSize, ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> creator, ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> crossover, IMutator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> mutator, double mutationRate, ISelector<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> selector, int elites, int randomSeed, ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>> terminator, IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>>? interceptor = null)

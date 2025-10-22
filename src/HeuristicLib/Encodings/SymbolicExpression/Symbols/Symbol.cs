@@ -43,6 +43,7 @@ public abstract class Symbol {
   }
 
   public abstract int MinimumArity { get; }
+  public virtual int DefaultArity => MinimumArity;
   public abstract int MaximumArity { get; }
   #endregion
 
