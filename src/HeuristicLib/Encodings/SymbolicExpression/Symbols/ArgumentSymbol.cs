@@ -24,9 +24,6 @@ namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 /// <summary>
 /// Symbol for function arguments
 /// </summary>
-public sealed class ArgumentSymbol(int argumentIndex) : Symbol {
-  public override int MinimumArity => 0;
-  public override int MaximumArity => 0;
-
+public sealed class ArgumentSymbol(int argumentIndex) : Symbol(0, 0, 0) {
   public int ArgumentIndex => argumentIndex;
 }

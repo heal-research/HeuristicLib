@@ -27,16 +27,9 @@ public class OnlineWeightedDirectionalSymmetryCalculator {
   private double correctSum;
   private double incorrectSum;
 
-  public double WeightedDirectionalSymmetry {
-    get {
-      if (n <= 1) return 0.0;
-      return incorrectSum / correctSum;
-    }
-  }
+  public double WeightedDirectionalSymmetry => n <= 1 ? 0.0 : incorrectSum / correctSum;
 
-  public OnlineWeightedDirectionalSymmetryCalculator() {
-    Reset();
-  }
+  public OnlineWeightedDirectionalSymmetryCalculator() => Reset();
 
   public double Value => WeightedDirectionalSymmetry;
 
@@ -45,34 +38,36 @@ public class OnlineWeightedDirectionalSymmetryCalculator {
   public void Add(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> predictedContinuation) {
     if (double.IsNaN(startValue) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-    } else {
-      using var actualEnumerator = actualContinuation.GetEnumerator();
-      using var predictedEnumerator = predictedContinuation.GetEnumerator();
-      while (actualEnumerator.MoveNext() & predictedEnumerator.MoveNext() & ErrorState != OnlineCalculatorError.InvalidValueAdded) {
-        var actual = actualEnumerator.Current;
-        var predicted = predictedEnumerator.Current;
-        if (double.IsNaN(actual) || double.IsNaN(predicted)) {
-          ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-        } else {
-          var err = Math.Abs(actual - predicted);
-          // count as correct only if the trend (positive/negative/no change) is predicted correctly
-          if ((actual - startValue) * (predicted - startValue) > 0.0 ||
-              (actual - startValue).IsAlmost(predicted - startValue)) {
-            correctSum += err;
-          } else {
-            incorrectSum += err;
-          }
+      return;
+    }
 
-          n++;
-        }
-      }
-
-      // check if both enumerators are at the end to make sure both enumerations have the same length
-      if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext()) {
+    using var actualEnumerator = actualContinuation.GetEnumerator();
+    using var predictedEnumerator = predictedContinuation.GetEnumerator();
+    while (actualEnumerator.MoveNext() & predictedEnumerator.MoveNext() & ErrorState != OnlineCalculatorError.InvalidValueAdded) {
+      var actual = actualEnumerator.Current;
+      var predicted = predictedEnumerator.Current;
+      if (double.IsNaN(actual) || double.IsNaN(predicted)) {
         ErrorState |= OnlineCalculatorError.InvalidValueAdded;
       } else {
-        ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+        var err = Math.Abs(actual - predicted);
+
+        // count as correct only if the trend (positive/negative/no change) is predicted correctly
+        if ((actual - startValue) * (predicted - startValue) > 0.0 ||
+            (actual - startValue).IsAlmost(predicted - startValue)) {
+          correctSum += err;
+        } else {
+          incorrectSum += err;
+        }
+
+        n++;
       }
+    }
+
+    // check if both enumerators are at the end to make sure both enumerations have the same length
+    if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext()) {
+      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
+    } else {
+      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
     }
   }
 
@@ -106,9 +101,9 @@ public class OnlineWeightedDirectionalSymmetryCalculator {
     if (calculator.ErrorState == OnlineCalculatorError.None &&
         (startValueEnumerator.MoveNext() || actualContinuationsEnumerator.MoveNext() || predictedContinuationsEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in startValues, actualContinuations and estimatedValues predictedContinuations doesn't match.");
-    } else {
-      errorState = calculator.ErrorState;
-      return calculator.WeightedDirectionalSymmetry;
     }
+
+    errorState = calculator.ErrorState;
+    return calculator.WeightedDirectionalSymmetry;
   }
 }

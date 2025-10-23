@@ -34,60 +34,60 @@ public class TreeToAutoDiffTermConverter {
 
   #region derivations of functions
   // create function factory for arctangent
-  private static readonly Func<Term, UnaryFunc> arctan = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Arctan = UnaryFunc.Factory(
     eval: Math.Atan,
     diff: x => 1 / (1 + x * x));
 
-  private static readonly Func<Term, UnaryFunc> sin = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Sin = UnaryFunc.Factory(
     eval: Math.Sin,
     diff: Math.Cos);
 
-  private static readonly Func<Term, UnaryFunc> cos = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Cos = UnaryFunc.Factory(
     eval: Math.Cos,
     diff: x => -Math.Sin(x));
 
-  private static readonly Func<Term, UnaryFunc> tan = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Tan = UnaryFunc.Factory(
     eval: Math.Tan,
     diff: x => 1 + Math.Tan(x) * Math.Tan(x));
-  private static readonly Func<Term, UnaryFunc> tanh = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Tanh = UnaryFunc.Factory(
     eval: Math.Tanh,
     diff: x => 1 - Math.Tanh(x) * Math.Tanh(x));
-  private static readonly Func<Term, UnaryFunc> erf = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Erf = UnaryFunc.Factory(
     eval: alglib.errorfunction,
     diff: x => 2.0 * Math.Exp(-(x * x)) / Math.Sqrt(Math.PI));
 
-  private static readonly Func<Term, UnaryFunc> norm = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Norm = UnaryFunc.Factory(
     eval: alglib.normaldistribution,
     diff: x => -(Math.Exp(-(x * x)) * Math.Sqrt(Math.Exp(x * x)) * x) / Math.Sqrt(2 * Math.PI));
 
-  private static readonly Func<Term, UnaryFunc> abs = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Abs = UnaryFunc.Factory(
     eval: Math.Abs,
     diff: x => Math.Sign(x)
   );
 
-  private static readonly Func<Term, UnaryFunc> cbrt = UnaryFunc.Factory(
+  private static readonly Func<Term, UnaryFunc> Cbrt = UnaryFunc.Factory(
     eval: x => x < 0 ? -Math.Pow(-x, 1.0 / 3) : Math.Pow(x, 1.0 / 3),
     diff: x => {
-      var cbrt_x = x < 0 ? -Math.Pow(-x, 1.0 / 3) : Math.Pow(x, 1.0 / 3);
-      return 1.0 / (3 * cbrt_x * cbrt_x);
+      var cbrtX = x < 0 ? -Math.Pow(-x, 1.0 / 3) : Math.Pow(x, 1.0 / 3);
+      return 1.0 / (3 * cbrtX * cbrtX);
     }
   );
   #endregion
 
-  public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable, bool addLinearScalingTerms,
-                                          out List<DataForVariable> parameters, out double[] initialParamValues,
-                                          out ParametricFunction func,
-                                          out ParametricFunctionGradient funcGrad) {
-    return TryConvertToAutoDiff(tree, makeVariableWeightsVariable, addLinearScalingTerms, [],
+  public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable,
+                                          out List<DataForVariable>? parameters, out double[]? initialParamValues,
+                                          out ParametricFunction? func,
+                                          out ParametricFunctionGradient? funcGrad) {
+    return TryConvertToAutoDiff(tree, makeVariableWeightsVariable, [],
       out parameters, out initialParamValues, out func, out funcGrad);
   }
 
-  public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable, bool addLinearScalingTerms, IEnumerable<SymbolicExpressionTreeNode> excludedNodes,
-                                          out List<DataForVariable> parameters, out double[] initialParamValues,
-                                          out ParametricFunction func,
-                                          out ParametricFunctionGradient funcGrad) {
+  public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable, IEnumerable<SymbolicExpressionTreeNode> excludedNodes,
+                                          out List<DataForVariable>? parameters, out double[]? initialParamValues,
+                                          out ParametricFunction? func,
+                                          out ParametricFunctionGradient? funcGrad) {
     // use a transformator object which holds the state (variable list, parameter list, ...) for recursive transformation of the tree
-    var transformator = new TreeToAutoDiffTermConverter(makeVariableWeightsVariable, addLinearScalingTerms, excludedNodes);
+    var transformator = new TreeToAutoDiffTermConverter(makeVariableWeightsVariable, excludedNodes);
     try {
       var term = transformator.ConvertToAutoDiff(tree.Root.GetSubtree(0));
       var parameterEntries = transformator.parameters.ToArray(); // guarantee same order for keys and values
@@ -114,12 +114,10 @@ public class TreeToAutoDiffTermConverter {
   private readonly Dictionary<DataForVariable, AutoDiff.Variable> parameters;
   private readonly List<AutoDiff.Variable> variables;
   private readonly bool makeVariableWeightsVariable;
-  private readonly bool addLinearScalingTerms;
   private readonly HashSet<SymbolicExpressionTreeNode> excludedNodes;
 
-  private TreeToAutoDiffTermConverter(bool makeVariableWeightsVariable, bool addLinearScalingTerms, IEnumerable<SymbolicExpressionTreeNode> excludedNodes) {
+  private TreeToAutoDiffTermConverter(bool makeVariableWeightsVariable, IEnumerable<SymbolicExpressionTreeNode> excludedNodes) {
     this.makeVariableWeightsVariable = makeVariableWeightsVariable;
-    this.addLinearScalingTerms = addLinearScalingTerms;
     this.excludedNodes = [..excludedNodes];
 
     initialParamValues = [];
@@ -207,7 +205,7 @@ public class TreeToAutoDiffTermConverter {
       }
       case Absolute: {
         var x1 = ConvertToAutoDiff(node.GetSubtree(0));
-        return abs(x1);
+        return Abs(x1);
       }
       case AnalyticQuotient: {
         var x1 = ConvertToAutoDiff(node.GetSubtree(0));
@@ -230,44 +228,34 @@ public class TreeToAutoDiffTermConverter {
         return TermBuilder.Power(
           ConvertToAutoDiff(node.GetSubtree(0)), 3.0);
       case CubeRoot:
-        return cbrt(ConvertToAutoDiff(node.GetSubtree(0)));
+        return Cbrt(ConvertToAutoDiff(node.GetSubtree(0)));
       case Power: {
         if (node.GetSubtree(1) is not NumberTreeNode powerNode)
           throw new NotSupportedException("Only numeric powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
         var intPower = Math.Truncate(powerNode.Value);
-        if (intPower != powerNode.Value)
+        if (Math.Abs(intPower - powerNode.Value) > 1e-15)
           throw new NotSupportedException("Only integer powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
         return TermBuilder.Power(ConvertToAutoDiff(node.GetSubtree(0)), intPower);
       }
       case Sine:
-        return sin(
+        return Sin(
           ConvertToAutoDiff(node.GetSubtree(0)));
       case Cosine:
-        return cos(
+        return Cos(
           ConvertToAutoDiff(node.GetSubtree(0)));
       case Tangent:
-        return tan(
+        return Tan(
           ConvertToAutoDiff(node.GetSubtree(0)));
       case HyperbolicTangent:
-        return tanh(
+        return Tanh(
           ConvertToAutoDiff(node.GetSubtree(0)));
-      case Erf:
-        return erf(
+      case Encodings.SymbolicExpression.Symbols.Math.Erf:
+        return Erf(
           ConvertToAutoDiff(node.GetSubtree(0)));
-      case Norm:
-        return norm(
+      case Encodings.SymbolicExpression.Symbols.Math.Norm:
+        return Norm(
           ConvertToAutoDiff(node.GetSubtree(0)));
-      case StartSymbol when !addLinearScalingTerms:
-        return ConvertToAutoDiff(node.GetSubtree(0));
-      // scaling variables ?, ? are given at the beginning of the parameter vector
-      case StartSymbol: {
-        var alpha = new AutoDiff.Variable();
-        var beta = new AutoDiff.Variable();
-        variables.Add(beta);
-        variables.Add(alpha);
-        var t = ConvertToAutoDiff(node.GetSubtree(0));
-        return t * alpha + beta;
-      }
+      case StartSymbol:
       case SubFunctionSymbol:
         return ConvertToAutoDiff(node.GetSubtree(0));
       default:
@@ -277,8 +265,7 @@ public class TreeToAutoDiffTermConverter {
 
   // for each factor variable value we need a parameter which represents a binary indicator for that variable & value combination
   // each binary indicator is only necessary once. So we only create a parameter if this combination is not yet available
-  private static Term FindOrCreateParameter(Dictionary<DataForVariable, AutoDiff.Variable> parameters,
-                                            string varName, string varValue = "", int lag = 0) {
+  private static Term FindOrCreateParameter(Dictionary<DataForVariable, AutoDiff.Variable> parameters, string varName, string varValue = "", int lag = 0) {
     var data = new DataForVariable(varName, varValue, lag);
 
     if (parameters.TryGetValue(data, out var par)) {
@@ -312,8 +299,8 @@ public class TreeToAutoDiffTermConverter {
         n.Symbol is not Cosine &&
         n.Symbol is not Tangent &&
         n.Symbol is not HyperbolicTangent &&
-        n.Symbol is not Erf &&
-        n.Symbol is not Norm &&
+        n.Symbol is not Encodings.SymbolicExpression.Symbols.Math.Erf &&
+        n.Symbol is not Encodings.SymbolicExpression.Symbols.Math.Norm &&
         n.Symbol is not StartSymbol &&
         n.Symbol is not Absolute &&
         n.Symbol is not AnalyticQuotient &&
@@ -326,17 +313,12 @@ public class TreeToAutoDiffTermConverter {
   }
 
   #region exception class
-  [Serializable]
   public class ConversionException : Exception {
     public ConversionException() { }
 
     public ConversionException(string message) : base(message) { }
 
     public ConversionException(string message, Exception inner) : base(message, inner) { }
-
-    protected ConversionException(
-      SerializationInfo info,
-      StreamingContext context) : base(info, context) { }
   }
   #endregion
 }

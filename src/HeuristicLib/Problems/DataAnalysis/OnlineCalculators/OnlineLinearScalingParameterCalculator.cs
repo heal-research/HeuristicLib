@@ -32,12 +32,7 @@ public class OnlineLinearScalingParameterCalculator {
   /// Multiplicative factor
   /// </summary>
   public double Beta {
-    get {
-      if (originalMeanAndVarianceCalculator.PopulationVariance.IsAlmost(0.0))
-        return 1;
-      else
-        return originalTargetCovarianceCalculator.Covariance / originalMeanAndVarianceCalculator.PopulationVariance;
-    }
+    get { return originalMeanAndVarianceCalculator.PopulationVariance.IsAlmost(0.0) ? 1 : originalTargetCovarianceCalculator.Covariance / originalMeanAndVarianceCalculator.PopulationVariance; }
   }
 
   public OnlineCalculatorError ErrorState => targetMeanCalculator.MeanErrorState | originalMeanAndVarianceCalculator.MeanErrorState |
@@ -98,10 +93,10 @@ public class OnlineLinearScalingParameterCalculator {
     if (calculator.ErrorState == OnlineCalculatorError.None &&
         (originalEnumerator.MoveNext() || targetEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in original and target enumeration do not match.");
-    } else {
-      errorState = calculator.ErrorState;
-      alpha = calculator.Alpha;
-      beta = calculator.Beta;
     }
+
+    errorState = calculator.ErrorState;
+    alpha = calculator.Alpha;
+    beta = calculator.Beta;
   }
 }

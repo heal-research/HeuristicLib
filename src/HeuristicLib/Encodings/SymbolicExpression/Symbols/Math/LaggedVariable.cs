@@ -26,7 +26,5 @@ public class LaggedVariable : VariableBase {
 
   public int MaxLag { get; set; }
 
-  public override SymbolicExpressionTreeNode CreateTreeNode() {
-    return new LaggedVariableTreeNode(this);
-  }
+  public override SymbolicExpressionTreeNode CreateTreeNode() => new LaggedVariableTreeNode(this);
 }

@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class IfThenElse : Symbol {
-  public override int MinimumArity => 3;
-  public override int MaximumArity => 3;
-}
+public sealed class IfThenElse() : Symbol(3, 3, 3);

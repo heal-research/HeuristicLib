@@ -53,7 +53,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
       var minSubtreeCount = grammar.GetMinimumSubtreeCount(s);
       var maxSubtreeCount = grammar.GetMaximumSubtreeCount(s);
 
-      if (maxChildArity < minSubtreeCount || minChildArity > maxSubtreeCount) { continue; }
+      if (maxChildArity < minSubtreeCount || minChildArity > maxSubtreeCount) continue;
 
       candidates.Add(s);
       weights.Add(s.InitialFrequency);
@@ -61,9 +61,8 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
 
     var symbol = candidates.SampleProportional(random, 1, weights).First();
     var node = symbol.CreateTreeNode();
-    if (node.HasLocalParameters) {
+    if (node.HasLocalParameters)
       node.ResetLocalParameters(random);
-    }
 
     return node;
   }
@@ -72,7 +71,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
     var grammar = encoding.Grammar;
     var minSubtreeCount = grammar.GetMinimumSubtreeCount(root.Symbol);
     var maxSubtreeCount = grammar.GetMaximumSubtreeCount(root.Symbol);
-    var arity = random.Integer(minSubtreeCount, maxSubtreeCount + 1);
+    var arity = random.Integer(minSubtreeCount, maxSubtreeCount, true);
     var openSlots = arity;
 
     var allowedSymbols = grammar.AllowedSymbols.Where(x => x is not (ProgramRootSymbol or GroupSymbol or DefunSymbol or StartSymbol)).ToList();
@@ -90,7 +89,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
     for (var i = 0; i < tuples.Count; ++i) {
       var (node, depth, arity1) = tuples[i];
 
-      for (var childIndex = 0; childIndex < arity1; ++childIndex) {
+      for (var childIndex = 0; childIndex < arity1; childIndex++) {
         // min and max arity here refer to the required arity limits for the child node
         var minChildArity = 0;
         var maxChildArity = 0;
@@ -123,7 +122,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
         minChildArity = Math.Min(minChildArity, maxChildArity);
 
         // pick a random arity for the new child node
-        var childArity = random.Integer(minChildArity, maxChildArity + 1);
+        var childArity = random.Integer(minChildArity, maxChildArity, true);
         var childDepth = depth + 1;
         node.AddSubtree(child);
         tuples.Add(new NodeInfo(child, childDepth, childArity));
@@ -135,12 +134,10 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
   #region helpers
   private sealed record NodeInfo(SymbolicExpressionTreeNode Node, int Depth, int Arity);
 
-  public void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeEncoding encoding, int maxTreeLength, int maxTreeDepth) {
-    CreateExpression(random, seedNode, encoding, maxTreeLength, maxTreeDepth, IrregularityBias);
-  }
+  public void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeEncoding encoding, int maxTreeLength, int maxTreeDepth)
+    => CreateExpression(random, seedNode, encoding, maxTreeLength, maxTreeDepth, IrregularityBias);
   #endregion
 
-  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    return Create(random, encoding, IrregularityBias);
-  }
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding)
+    => Create(random, encoding, IrregularityBias);
 }

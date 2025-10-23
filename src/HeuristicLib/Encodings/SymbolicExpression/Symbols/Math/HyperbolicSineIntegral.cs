@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class HyperbolicSineIntegral : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-}
+public sealed class HyperbolicSineIntegral() : Symbol(1, 1, 1);

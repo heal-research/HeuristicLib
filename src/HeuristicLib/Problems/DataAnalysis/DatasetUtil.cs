@@ -34,7 +34,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis {
     /// <param name="random">The random number generator</param>
     /// <returns>A new list containing shuffled copies of the original value lists.</returns>
     public static List<IList> ShuffleLists(this List<IList> values, IRandom random) {
-      var count = values.First().Count;
+      var count = values[0].Count;
       var indices = Enumerable.Range(0, count).Shuffle(random).ToArray();
       var shuffled = new List<IList>(values.Count);
       for (var col = 0; col < values.Count; col++) {
@@ -60,9 +60,6 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis {
       return shuffled;
     }
 
-    private static readonly Action<Dataset, ValuesType> setValues;
-    private static readonly Func<Dataset, ValuesType> getValues;
-
     static DatasetUtil() {
       var dataset = Expression.Parameter(typeof(Dataset));
       var variableValues = Expression.Parameter(typeof(ValuesType));
@@ -70,10 +67,10 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis {
       var assignExpression = Expression.Assign(valuesExpression, variableValues);
 
       var variableValuesSetExpression = Expression.Lambda<Action<Dataset, ValuesType>>(assignExpression, dataset, variableValues);
-      setValues = variableValuesSetExpression.Compile();
+      variableValuesSetExpression.Compile();
 
       var variableValuesGetExpression = Expression.Lambda<Func<Dataset, ValuesType>>(valuesExpression, dataset);
-      getValues = variableValuesGetExpression.Compile();
+      variableValuesGetExpression.Compile();
     }
 
     //public static Dictionary<string, Interval> GetVariableRanges(IDataset dataset, IEnumerable<int> rows = null) {

@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class LessThan : Symbol {
-  public override int MinimumArity => 2;
-  public override int MaximumArity => 2;
-}
+public sealed class LessThan() : Symbol(2, 2, 2);

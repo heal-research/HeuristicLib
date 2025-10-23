@@ -78,9 +78,9 @@ public class OnlineCovarianceCalculator {
     if (covarianceCalculator.ErrorState == OnlineCalculatorError.None &&
         (secondEnumerator.MoveNext() || firstEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in first and second enumeration doesn't match.");
-    } else {
-      errorState = covarianceCalculator.ErrorState;
-      return covarianceCalculator.Covariance;
     }
+
+    errorState = covarianceCalculator.ErrorState;
+    return covarianceCalculator.Covariance;
   }
 }

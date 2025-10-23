@@ -44,12 +44,13 @@ public class OnlineMeanAbsoluteErrorCalculator {
     if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
         double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-    } else {
-      var error = estimated - original;
-      sae += Math.Abs(error);
-      n++;
-      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+      return;
     }
+
+    var error = estimated - original;
+    sae += Math.Abs(error);
+    n++;
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
   }
   #endregion
 
@@ -70,9 +71,9 @@ public class OnlineMeanAbsoluteErrorCalculator {
     if (maeCalculator.ErrorState == OnlineCalculatorError.None &&
         (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
-    } else {
-      errorState = maeCalculator.ErrorState;
-      return maeCalculator.MeanAbsoluteError;
     }
+
+    errorState = maeCalculator.ErrorState;
+    return maeCalculator.MeanAbsoluteError;
   }
 }

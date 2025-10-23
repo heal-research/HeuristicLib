@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 
-public sealed class StartSymbol : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-}
+public sealed class StartSymbol() : Symbol(1, 1, 1);

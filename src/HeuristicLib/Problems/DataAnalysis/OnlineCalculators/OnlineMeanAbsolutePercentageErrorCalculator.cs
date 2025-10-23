@@ -46,11 +46,12 @@ public class OnlineMeanAbsolutePercentageErrorCalculator {
         double.IsNaN(original) || double.IsInfinity(original) ||
         original.IsAlmost(0.0)) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-    } else {
-      sre += Math.Abs((estimated - original) / original);
-      n++;
-      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+      return;
     }
+
+    sre += Math.Abs((estimated - original) / original);
+    n++;
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
   }
   #endregion
 
@@ -64,16 +65,17 @@ public class OnlineMeanAbsolutePercentageErrorCalculator {
       var original = originalEnumerator.Current;
       var estimated = estimatedEnumerator.Current;
       calculator.Add(original, estimated);
-      if (calculator.ErrorState != OnlineCalculatorError.None) break;
+      if (calculator.ErrorState != OnlineCalculatorError.None)
+        break;
     }
 
     // check if both enumerators are at the end to make sure both enumerations have the same length
     if (calculator.ErrorState == OnlineCalculatorError.None &&
         (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and second estimatedValues doesn't match.");
-    } else {
-      errorState = calculator.ErrorState;
-      return calculator.MeanAbsolutePercentageError;
     }
+
+    errorState = calculator.ErrorState;
+    return calculator.MeanAbsolutePercentageError;
   }
 }

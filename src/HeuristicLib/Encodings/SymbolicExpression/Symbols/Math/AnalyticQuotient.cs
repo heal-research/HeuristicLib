@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class AnalyticQuotient : Symbol {
-  public override int MinimumArity => 2;
-  public override int MaximumArity => 2;
-}
+public sealed class AnalyticQuotient() : Symbol(2, 2, 2);

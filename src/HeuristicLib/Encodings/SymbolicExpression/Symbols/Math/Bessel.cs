@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class Bessel : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-}
+public sealed class Bessel() : Symbol(1, 2, byte.MaxValue);

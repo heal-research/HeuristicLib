@@ -50,15 +50,16 @@ public class OnlineBoundedMeanSquaredErrorCalculator {
     if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
         double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-    } else {
-      var error = estimated - original;
-      if (estimated < LowerBound || estimated > UpperBound)
-        errorSum += Math.Abs(error);
-      else
-        errorSum += error * error;
-      n++;
-      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+      return;
     }
+
+    var error = estimated - original;
+    if (estimated < LowerBound || estimated > UpperBound)
+      errorSum += Math.Abs(error);
+    else
+      errorSum += error * error;
+    n++;
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
   }
   #endregion
 
@@ -79,9 +80,9 @@ public class OnlineBoundedMeanSquaredErrorCalculator {
     if (boundedMseCalculator.ErrorState == OnlineCalculatorError.None &&
         (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
-    } else {
-      errorState = boundedMseCalculator.ErrorState;
-      return boundedMseCalculator.BoundedMeanSquaredError;
     }
+
+    errorState = boundedMseCalculator.ErrorState;
+    return boundedMseCalculator.BoundedMeanSquaredError;
   }
 }

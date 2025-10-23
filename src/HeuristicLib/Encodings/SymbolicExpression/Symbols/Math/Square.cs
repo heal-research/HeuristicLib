@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class Square : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-}
+public sealed class Square() : Symbol(1, 1, 1);

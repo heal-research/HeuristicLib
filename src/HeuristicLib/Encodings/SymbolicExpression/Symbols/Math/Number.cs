@@ -25,57 +25,41 @@ public sealed class Number : Symbol {
   #region Properties
   public double MinValue { get; set; }
   public double MaxValue { get; set; }
-  private double manipulatorMu;
-  public double ManipulatorMu {
-    get => manipulatorMu;
-    set {
-      manipulatorMu = value;
-    }
-  }
+  public double ManipulatorMu { get; set; }
   private double manipulatorSigma;
   public double ManipulatorSigma {
     get => manipulatorSigma;
     set {
-      if (value < 0)
-        throw new ArgumentException();
-      if (value != manipulatorSigma) {
-        manipulatorSigma = value;
-      }
+      ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
+      manipulatorSigma = value;
     }
   }
   private double multiplicativeManipulatorSigma;
   public double MultiplicativeManipulatorSigma {
     get => multiplicativeManipulatorSigma;
     set {
-      if (value < 0)
-        throw new ArgumentException();
-      if (value != multiplicativeManipulatorSigma) {
-        multiplicativeManipulatorSigma = value;
-      }
+      ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
+      multiplicativeManipulatorSigma = value;
     }
   }
-
-  public override int MinimumArity => 0;
-  public override int MaximumArity => 0;
   #endregion
 
-  private Number(Number original) {
+  private Number(Number original) : base(original.MinimumArity, original.DefaultArity, original.MaximumArity) {
     MinValue = original.MinValue;
     MaxValue = original.MaxValue;
-    manipulatorMu = original.manipulatorMu;
+    ManipulatorMu = original.ManipulatorMu;
     manipulatorSigma = original.manipulatorSigma;
     multiplicativeManipulatorSigma = original.multiplicativeManipulatorSigma;
   }
 
-  public Number() {
-    manipulatorMu = 0.0;
+  public Number() : base(0, 0, 0) {
+    ManipulatorMu = 0.0;
     manipulatorSigma = 1.0;
     multiplicativeManipulatorSigma = 0.03;
     MinValue = -20.0;
     MaxValue = 20.0;
   }
 
-  public override SymbolicExpressionTreeNode CreateTreeNode() {
-    return new NumberTreeNode(this);
-  }
+  public override SymbolicExpressionTreeNode CreateTreeNode()
+    => new NumberTreeNode(this);
 }

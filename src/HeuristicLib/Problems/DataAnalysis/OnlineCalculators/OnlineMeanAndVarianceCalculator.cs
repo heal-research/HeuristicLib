@@ -22,17 +22,17 @@
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public class OnlineMeanAndVarianceCalculator {
-  private double m_oldM, m_newM, m_oldS, m_newS;
+  private double mOldM, mNewM, mOldS, mNewS;
 
   public OnlineCalculatorError VarianceErrorState { get; private set; }
 
-  public double Variance => Count > 1 ? m_newS / (Count - 1) : 0.0;
+  public double Variance => Count > 1 ? mNewS / (Count - 1) : 0.0;
 
   public OnlineCalculatorError PopulationVarianceErrorState { get; private set; }
-  public double PopulationVariance => Count > 0 ? m_newS / Count : 0.0;
+  public double PopulationVariance => Count > 0 ? mNewS / Count : 0.0;
 
   public OnlineCalculatorError MeanErrorState => PopulationVarianceErrorState;
-  public double Mean => Count > 0 ? m_newM : 0.0;
+  public double Mean => Count > 0 ? mNewM : 0.0;
 
   public int Count { get; private set; }
 
@@ -54,17 +54,17 @@ public class OnlineMeanAndVarianceCalculator {
       Count++;
       // See Knuth TAOCP vol 2, 3rd edition, page 232
       if (Count == 1) {
-        m_oldM = m_newM = x;
-        m_oldS = 0.0;
+        mOldM = mNewM = x;
+        mOldS = 0.0;
         PopulationVarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
       } else {
         VarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 2
-        m_newM = m_oldM + (x - m_oldM) / Count;
-        m_newS = m_oldS + (x - m_oldM) * (x - m_newM);
+        mNewM = mOldM + (x - mOldM) / Count;
+        mNewS = mOldS + (x - mOldM) * (x - mNewM);
 
         // set up for next iteration
-        m_oldM = m_newM;
-        m_oldS = m_newS;
+        mOldM = mNewM;
+        mOldS = mNewS;
       }
     }
   }

@@ -24,9 +24,6 @@ namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 /// <summary>
 /// Symbol for invoking automatically defined functions
 /// </summary>
-public sealed class InvokeFunctionSymbol(string functionName) : Symbol {
-  public override int MinimumArity => 0;
-  public override int MaximumArity => byte.MaxValue;
-
+public sealed class InvokeFunctionSymbol(string functionName) : Symbol(0, 1, byte.MaxValue) {
   public string FunctionName => functionName;
 }

@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
 using HEAL.HeuristicLib.Operators.SymbolicExpression.Crossovers;

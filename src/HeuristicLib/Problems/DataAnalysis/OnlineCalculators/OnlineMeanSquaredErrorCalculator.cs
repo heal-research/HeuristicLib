@@ -45,12 +45,13 @@ public class OnlineMeanSquaredErrorCalculator {
     if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
         double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-    } else {
-      var error = estimated - original;
-      sse += error * error;
-      n++;
-      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+      return;
     }
+
+    var error = estimated - original;
+    sse += error * error;
+    n++;
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
   }
   #endregion
 
@@ -71,9 +72,9 @@ public class OnlineMeanSquaredErrorCalculator {
     if (mseCalculator.ErrorState == OnlineCalculatorError.None &&
         (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
-    } else {
-      errorState = mseCalculator.ErrorState;
-      return mseCalculator.MeanSquaredError;
     }
+
+    errorState = mseCalculator.ErrorState;
+    return mseCalculator.MeanSquaredError;
   }
 }

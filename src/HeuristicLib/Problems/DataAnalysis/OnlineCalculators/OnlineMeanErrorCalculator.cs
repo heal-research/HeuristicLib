@@ -22,25 +22,17 @@
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 #pragma warning disable S2178
 public class OnlineMeanErrorCalculator {
-  private readonly OnlineMeanAndVarianceCalculator meanAndVarianceCalculator;
+  private readonly OnlineMeanAndVarianceCalculator meanAndVarianceCalculator = new();
   public double MeanError => meanAndVarianceCalculator.Mean;
 
-  public OnlineMeanErrorCalculator() {
-    meanAndVarianceCalculator = new OnlineMeanAndVarianceCalculator();
-    Reset();
-  }
+  public OnlineMeanErrorCalculator() => Reset();
 
   #region IOnlineCalculator Members
   public OnlineCalculatorError ErrorState => meanAndVarianceCalculator.MeanErrorState;
   public double Value => MeanError;
+  public void Reset() => meanAndVarianceCalculator.Reset();
 
-  public void Reset() {
-    meanAndVarianceCalculator.Reset();
-  }
-
-  public void Add(double original, double estimated) {
-    meanAndVarianceCalculator.Add(estimated - original);
-  }
+  public void Add(double original, double estimated) => meanAndVarianceCalculator.Add(estimated - original);
   #endregion
 
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
@@ -60,9 +52,9 @@ public class OnlineMeanErrorCalculator {
     if (meCalculator.ErrorState == OnlineCalculatorError.None &&
         (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
-    } else {
-      errorState = meCalculator.ErrorState;
-      return meCalculator.MeanError;
     }
+
+    errorState = meCalculator.ErrorState;
+    return meCalculator.MeanError;
   }
 }

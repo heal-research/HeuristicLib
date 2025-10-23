@@ -96,9 +96,9 @@ public class OnlineWeightedClassificationMeanSquaredErrorCalculator {
     if (calculator.ErrorState == OnlineCalculatorError.None &&
         (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
-    } else {
-      errorState = calculator.ErrorState;
-      return calculator.WeightedResidualsMeanSquaredError;
     }
+
+    errorState = calculator.ErrorState;
+    return calculator.WeightedResidualsMeanSquaredError;
   }
 }

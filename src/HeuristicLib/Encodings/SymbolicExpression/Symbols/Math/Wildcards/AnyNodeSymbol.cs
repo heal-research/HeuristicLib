@@ -21,14 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math.Wildcards;
 
-public class AnyNodeSymbol : Symbol {
-  public AnyNodeSymbol() { }
-
-  public AnyNodeSymbol(int minimumArity, int maximumArity) {
-    MinimumArity = minimumArity;
-    MaximumArity = maximumArity;
-  }
-
-  public override int MinimumArity { get; }
-  public override int MaximumArity { get; }
-}
+public class AnyNodeSymbol(int minimumArity, int maximumArity) : Symbol(minimumArity, minimumArity, maximumArity);

@@ -179,7 +179,7 @@ public static class RandomEnumerable {
 
     while (list.Count > 0) {
       var cur = list.First;
-      double ball = cur.Value.Item2, sum = random.Random() * total; // assert: sum < total. When there is only one item remaining: sum < ball
+      double ball = cur!.Value.Item2, sum = random.Random() * total; // assert: sum < total. When there is only one item remaining: sum < ball
       while (ball < sum && cur.Next != null) {
         cur = cur.Next;
         ball += cur.Value.Item2;

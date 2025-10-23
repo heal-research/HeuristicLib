@@ -31,9 +31,7 @@ public class OnlinePearsonsRCalculator {
     get {
       var xVar = sxCalculator.PopulationVariance;
       var yVar = syCalculator.PopulationVariance;
-      if (xVar.IsAlmost(0.0) || yVar.IsAlmost(0.0)) {
-        return 0.0;
-      }
+      if (xVar.IsAlmost(0.0) || yVar.IsAlmost(0.0)) return 0.0;
 
       var r = covCalculator.Covariance / (Math.Sqrt(xVar) * Math.Sqrt(yVar));
       r = r switch {
@@ -44,8 +42,6 @@ public class OnlinePearsonsRCalculator {
       return r;
     }
   }
-
-  public OnlinePearsonsRCalculator() { }
 
   #region IOnlineCalculator Members
   public OnlineCalculatorError ErrorState => covCalculator.ErrorState | sxCalculator.PopulationVarianceErrorState | syCalculator.PopulationVarianceErrorState;
@@ -82,9 +78,9 @@ public class OnlinePearsonsRCalculator {
     if (calculator.ErrorState == OnlineCalculatorError.None &&
         (secondEnumerator.MoveNext() || firstEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in first and second enumeration doesn't match.");
-    } else {
-      errorState = calculator.ErrorState;
-      return calculator.R;
     }
+
+    errorState = calculator.ErrorState;
+    return calculator.R;
   }
 }

@@ -19,30 +19,26 @@ public class ImmutableList<T> : IReadOnlyList<T>, IEquatable<ImmutableList<T>>
   public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)items).GetEnumerator();
   System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => items.GetEnumerator();
 
+  public override bool Equals(object? obj) {
+    if (obj is null) return false;
+    if (ReferenceEquals(this, obj)) return true;
+    return obj.GetType() == GetType() && Equals((ImmutableList<T>)obj);
+  }
+
   public virtual bool Equals(ImmutableList<T>? other) {
     if (other is null) return false;
     if (Count != other.Count) return false;
-    for (int i = 0; i < Count; i++) {
-      if (!this[i].Equals(other[i])) return false;
-    }
-
+    for (int i = 0; i < Count; i++)
+      if (!this[i]!.Equals(other[i]))
+        return false;
     return true;
   }
 
   public override int GetHashCode() {
     var hash = new HashCode();
-    foreach (var terminator in items) {
+    foreach (var terminator in items)
       hash.Add(terminator);
-    }
-
     return hash.ToHashCode();
-  }
-
-  public override bool Equals(object? obj) {
-    if (obj is null) return false;
-    if (ReferenceEquals(this, obj)) return true;
-    if (obj.GetType() != GetType()) return false;
-    return Equals((ImmutableList<T>)obj);
   }
 
   public static bool operator ==(ImmutableList<T> left, ImmutableList<T> right) {

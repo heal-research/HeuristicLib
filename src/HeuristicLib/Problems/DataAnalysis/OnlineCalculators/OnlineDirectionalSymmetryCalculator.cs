@@ -26,16 +26,9 @@ public class OnlineDirectionalSymmetryCalculator {
   private int n;
   private int nCorrect;
 
-  public double DirectionalSymmetry {
-    get {
-      if (n < 1) return 0.0;
-      return (double)nCorrect / n;
-    }
-  }
+  public double DirectionalSymmetry => n < 1 ? 0.0 : (double)nCorrect / n;
 
-  public OnlineDirectionalSymmetryCalculator() {
-    Reset();
-  }
+  public OnlineDirectionalSymmetryCalculator() => Reset();
 
   public double Value => DirectionalSymmetry;
 
@@ -102,9 +95,9 @@ public class OnlineDirectionalSymmetryCalculator {
     if (dsCalculator.ErrorState == OnlineCalculatorError.None &&
         (startValueEnumerator.MoveNext() || actualContinuationsEnumerator.MoveNext() || predictedContinuationsEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in startValues, actualContinuations and estimatedValues predictedContinuations doesn't match.");
-    } else {
-      errorState = dsCalculator.ErrorState;
-      return dsCalculator.DirectionalSymmetry;
     }
+
+    errorState = dsCalculator.ErrorState;
+    return dsCalculator.DirectionalSymmetry;
   }
 }

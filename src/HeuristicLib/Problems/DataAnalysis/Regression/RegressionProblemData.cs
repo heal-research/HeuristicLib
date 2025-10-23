@@ -19,11 +19,19 @@
  */
 #endregion
 
+using System.Collections.Concurrent;
+
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public class RegressionProblemData(Dataset dataset, IEnumerable<string> allowedInputVariables, string targetVariable)
   : DataAnalysisProblemData(dataset, allowedInputVariables) {
-  public string TargetVariable { get; set; } = targetVariable;
-  public IEnumerable<double> TargetVariableValues(PartitionType partition) => Dataset.GetDoubleValues(TargetVariable, Partitions[partition].Enumerate());
+  public string TargetVariable { get; } = targetVariable;
+  private readonly Dictionary<PartitionType, double[]> cachedTargets = [];
+
+  public IReadOnlyList<double> TargetVariableValues(PartitionType partition) {
+    if (cachedTargets.TryGetValue(partition, out var res)) return res;
+    return cachedTargets[partition] = Dataset.GetDoubleValues(TargetVariable, Partitions[partition].Enumerate()).ToArray();
+  }
+
   public IEnumerable<double> TargetVariableValues() => Dataset.GetDoubleValues(TargetVariable);
 }

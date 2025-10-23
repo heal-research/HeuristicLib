@@ -1,15 +1,19 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
-public class SystemRandomNumberGenerator(int seed) : IRandomNumberGenerator {
-  private static readonly SystemRandomNumberGenerator GlobalInstance = new();
+public class SystemRandomNumberGenerator : IRandomNumberGenerator {
+  private static readonly SystemRandomNumberGenerator GlobalInstance = new(new System.Random());
 
-  private readonly System.Random random = new(seed);
+  private readonly System.Random random;
 
-  public SystemRandomNumberGenerator() : this(RandomSeed()) { }
+  public SystemRandomNumberGenerator() => random = new System.Random(RandomSeed());
+
+  private SystemRandomNumberGenerator(System.Random random) => this.random = random;
+
+  public SystemRandomNumberGenerator(int seed) => random = new System.Random(seed);
 
   public double Random() => random.NextDouble();
 
-  public int Integer(int low, int high, bool endpoint = false) => random.Next(low, endpoint ? high : high + 1);
+  public int Integer(int low, int high, bool endpoint = false) => random.Next(low, endpoint ? high + 1 : high);
 
   public int Integer() => random.Next();
 
@@ -27,6 +31,7 @@ public class SystemRandomNumberGenerator(int seed) : IRandomNumberGenerator {
                                                                    .ToArray();
 
   public static int RandomSeed() {
-    lock (GlobalInstance) return GlobalInstance.Integer();
+    lock (GlobalInstance)
+      return GlobalInstance.Integer();
   }
 }

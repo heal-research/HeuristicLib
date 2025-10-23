@@ -26,7 +26,9 @@ public abstract class RegressionProblem<TProblemData, TSolution, TEncoding> : Da
 
   public double LowerPredictionBound { get; set; }
 
-  public override ObjectiveVector Evaluate(TSolution solution) => RegressionProblemDataExtensions.Evaluate(Decode(solution), ProblemData.Dataset, rowIndicesCache, Evaluators, trainingTargetCache, LowerPredictionBound, UpperPredictionBound);
+  public override ObjectiveVector Evaluate(TSolution solution) {
+    return RegressionProblemDataExtensions.Evaluate(Decode(solution), ProblemData.Dataset, rowIndicesCache, Evaluators, trainingTargetCache, LowerPredictionBound, UpperPredictionBound);
+  }
 
   protected abstract IRegressionModel Decode(TSolution solution);
 }

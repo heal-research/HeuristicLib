@@ -25,7 +25,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression;
 
 public class SymbolicExpressionTreeNode {
-  private readonly IList<SymbolicExpressionTreeNode>? subtrees;
+  private readonly List<SymbolicExpressionTreeNode>? subtrees;
 
   // cached values to prevent unnecessary tree iterations
   private ushort length;
@@ -112,19 +112,11 @@ public class SymbolicExpressionTreeNode {
   public virtual void ResetLocalParameters(IRandomNumberGenerator random) { }
   public virtual void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) { }
 
-  public int SubtreeCount {
-    get {
-      return subtrees?.Count ?? 0;
-    }
-  }
+  public int SubtreeCount => subtrees?.Count ?? 0;
 
-  public SymbolicExpressionTreeNode GetSubtree(int index) {
-    return subtrees![index];
-  }
+  public SymbolicExpressionTreeNode GetSubtree(int index) => subtrees![index];
 
-  public int IndexOfSubtree(SymbolicExpressionTreeNode tree) {
-    return subtrees!.IndexOf(tree);
-  }
+  public int IndexOfSubtree(SymbolicExpressionTreeNode tree) => subtrees!.IndexOf(tree);
 
   public void AddSubtree(SymbolicExpressionTreeNode tree) {
     subtrees!.Add(tree);
@@ -179,14 +171,12 @@ public class SymbolicExpressionTreeNode {
 
   public void ForEachNodePrefix(Action<SymbolicExpressionTreeNode> a) {
     a(this);
-    if (subtrees == null) {
-      return;
-    }
+    if (subtrees == null) return;
 
     //avoid linq to reduce memory pressure
-    for (var i = 0; i < subtrees.Count; i++) {
+    // ReSharper disable once ForCanBeConvertedToForeach
+    for (var i = 0; i < subtrees.Count; i++)
       subtrees[i].ForEachNodePrefix(a);
-    }
   }
 
   public IEnumerable<SymbolicExpressionTreeNode?> IterateNodesPostfix() {
@@ -195,9 +185,10 @@ public class SymbolicExpressionTreeNode {
     return list;
   }
 
-  public void ForEachNodePostfix(Action<SymbolicExpressionTreeNode?> a) {
+  public void ForEachNodePostfix(Action<SymbolicExpressionTreeNode> a) {
     if (subtrees != null) {
       //avoid linq to reduce memory pressure
+      // ReSharper disable once ForCanBeConvertedToForeach
       for (var i = 0; i < subtrees.Count; i++) {
         subtrees[i].ForEachNodePostfix(a);
       }
@@ -211,8 +202,4 @@ public class SymbolicExpressionTreeNode {
     depth = 0;
     Parent?.ResetCachedValues();
   }
-}
-
-public class SymbolicExpressionTreeNode<TNodeParameters, TSymbol> : SymbolicExpressionTreeNode where TNodeParameters : INodeParameters {
-  public TNodeParameters Nodeparameters { get; set; }
 }

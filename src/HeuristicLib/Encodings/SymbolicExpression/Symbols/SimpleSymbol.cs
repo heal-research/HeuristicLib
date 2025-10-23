@@ -21,11 +21,6 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 
-public sealed class SimpleSymbol(int minimumArity, int maximumArity) : Symbol {
-  public override int MinimumArity { get; } = minimumArity;
-
-  public override int MaximumArity { get; } = maximumArity;
-
-  public SimpleSymbol(int arity)
-    : this(arity, arity) { }
+public sealed class SimpleSymbol(int minimumArity, int maximumArity) : Symbol(minimumArity, minimumArity, maximumArity) {
+  public SimpleSymbol(int arity) : this(arity, arity) { }
 }

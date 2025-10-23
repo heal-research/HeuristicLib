@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 
-public sealed class ProgramRootSymbol : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => byte.MaxValue;
-}
+public sealed class ProgramRootSymbol() : Symbol(1, 1, 1);

@@ -41,7 +41,6 @@
 #endregion
 
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
@@ -66,37 +65,6 @@ public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase {
     rootNode.AddSubtree(startNode);
     tree.Root = rootNode;
     return tree;
-  }
-
-  public Symbol AddLinearScaling() {
-    var rem = GetAllowedChildSymbols(StartSymbol).ToArray();
-    foreach (var child in rem) {
-      RemoveAllowedChildSymbol(StartSymbol, child);
-    }
-
-    var rem2 = GetAllowedChildSymbols(StartSymbol, 0).ToArray();
-    foreach (var child in rem2) {
-      RemoveAllowedChildSymbol(StartSymbol, child, 0);
-    }
-
-    var offset = new Number();
-    var intercept = new Number();
-    var mult = new Multiplication();
-    var add = new Addition();
-    AddSymbol(offset);
-    AddSymbol(intercept);
-    AddSymbol(mult);
-    AddSymbol(add);
-    AddAllowedChildSymbol(StartSymbol, add);
-    AddAllowedChildSymbol(add, mult, 0);
-    AddAllowedChildSymbol(add, offset, 1);
-    AddAllowedChildSymbol(mult, intercept, 1);
-
-    foreach (var symbol in rem.Concat(rem2)) {
-      AddAllowedChildSymbol(mult, symbol, 0);
-    }
-
-    return mult;
   }
 
   public void AddFullyConnectedSymbols(ICollection<Symbol> symbols, Symbol root) {

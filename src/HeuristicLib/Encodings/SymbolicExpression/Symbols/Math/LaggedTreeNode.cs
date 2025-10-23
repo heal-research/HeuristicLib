@@ -28,9 +28,7 @@ public class LaggedTreeNode : SymbolicExpressionTreeNode {
 
   public int Lag { get; set; }
 
-  protected LaggedTreeNode(LaggedTreeNode original) : base(original) {
-    Lag = original.Lag;
-  }
+  protected LaggedTreeNode(LaggedTreeNode original) : base(original) => Lag = original.Lag;
 
   public LaggedTreeNode(LaggedSymbol timeLagSymbol) : base(timeLagSymbol) { }
 

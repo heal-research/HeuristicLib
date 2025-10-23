@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class TimeLag : LaggedSymbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-}
+public sealed class TimeLag() : Symbol(1, 1, 1);

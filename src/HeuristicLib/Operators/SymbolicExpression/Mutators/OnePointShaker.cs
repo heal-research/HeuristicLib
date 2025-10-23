@@ -36,13 +36,11 @@ public sealed class OnePointShaker : SymbolicExpressionTreeManipulator {
     tree = new SymbolicExpressionTree(tree);
     var parametricNodes = new List<SymbolicExpressionTreeNode?>();
     tree.Root.ForEachNodePostfix(n => {
-      if (n.HasLocalParameters) parametricNodes.Add(n);
+      if (n!.HasLocalParameters) parametricNodes.Add(n);
     });
     if (parametricNodes.Count <= 0)
       return tree;
-
     parametricNodes.SampleRandom(random)!.ShakeLocalParameters(random, shakingFactor);
-
     return tree;
   }
 

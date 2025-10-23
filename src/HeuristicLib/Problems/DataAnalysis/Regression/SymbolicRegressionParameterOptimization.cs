@@ -26,54 +26,54 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression {
-  public class SymbolicRegressionParameterOptimization {
+  public static class SymbolicRegressionParameterOptimization {
     public static readonly PearsonR2Evaluator[] Evaluator = [new()];
 
     public static double OptimizeParameters(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter,
-                                            SymbolicExpressionTree tree, RegressionProblemData problemData, DataAnalysisProblemData.PartitionType type, bool applyLinearScaling,
-                                            int maxIterations, bool updateVariableWeights = true,
-                                            double lowerEstimationLimit = double.MinValue, double upperEstimationLimit = double.MaxValue,
+                                            SymbolicExpressionTree tree,
+                                            RegressionProblemData problemData,
+                                            DataAnalysisProblemData.PartitionType type,
+                                            int maxIterations,
+                                            bool updateVariableWeights = true,
+                                            double lowerEstimationLimit = double.MinValue,
+                                            double upperEstimationLimit = double.MaxValue,
                                             bool updateParametersInTree = true,
-                                            Action<double[], double, object>? iterationCallback = null, EvaluationsCounter? counter = null) {
+                                            Action<double[], double, object>? iterationCallback = null,
+                                            EvaluationsCounter? counter = null) {
       // Numeric parameters in the tree become variables for parameter optimization.
       // Variables in the tree become parameters (fixed values) for parameter optimization.
       // For each parameter (variable in the original tree) we store the 
       // variable name, variable value (for factor vars) and lag as a DataForVariable object.
       // A dictionary is used to find parameters
 
-      if (!TreeToAutoDiffTermConverter.TryConvertToAutoDiff(tree, updateVariableWeights, applyLinearScaling, out var parameters, out var initialParameters, out var func, out var funcGrad))
+      if (!TreeToAutoDiffTermConverter.TryConvertToAutoDiff(tree, updateVariableWeights, out var parameters, out var initialParameters, out var func, out var funcGrad))
         throw new NotSupportedException("Could not optimize parameters of symbolic expression tree due to not supported symbols used in the tree.");
-      if (parameters.Count == 0) return 0.0; // constant expressions always have an R² of 0.0 
+      ArgumentNullException.ThrowIfNull(parameters);
+      ArgumentNullException.ThrowIfNull(initialParameters);
+      ArgumentNullException.ThrowIfNull(func);
+      ArgumentNullException.ThrowIfNull(funcGrad);
+
+      if (parameters.Count == 0)
+        return 0.0; // constant expressions always have an R² of 0.0 
       var parameterEntries = parameters.ToArray(); // order of entries must be the same for x
 
       // extract initial parameters
-      double[] c;
-      if (applyLinearScaling) {
-        c = new double[initialParameters.Length + 2];
-        c[0] = 0.0;
-        c[1] = 1.0;
-        Array.Copy(initialParameters, 0, c, 2, initialParameters.Length);
-      } else {
-        c = (double[])initialParameters.Clone();
-      }
+
+      var c = (double[])initialParameters.Clone();
 
       var problemDataPartition = problemData.Partitions[type];
+      var (_, count) = problemDataPartition.GetOffsetAndLength(problemData.Dataset.Rows);
       interpreter.GetSymbolicExpressionTreeValues(tree, problemData.Dataset, problemDataPartition);
 
       var model = new BoundedSymbolicRegressionModel(tree, interpreter, lowerEstimationLimit, upperEstimationLimit); // applyLinearScaling, lowerEstimationLimit, upperEstimationLimit;
       var originalQuality = problemData.Evaluate(model, type, Evaluator)[0];
-      //var originalQuality = SymbolicRegressionSingleObjectivePearsonRSquaredEvaluator.Calculate(
-      //  tree, problemData, rows,
-      //  interpreter, applyLinearScaling,
-      //  lowerEstimationLimit,
-      //  upperEstimationLimit);
 
       counter ??= new EvaluationsCounter();
       var rowEvaluationsCounter = new EvaluationsCounter();
 
       int retVal;
       var ds = problemData.Dataset;
-      var x = new double[problemDataPartition.Count(), parameters.Count];
+      var x = new double[count, parameters.Count];
       var row = 0;
       foreach (var r in problemDataPartition.Enumerate()) {
         var col = 0;
@@ -82,7 +82,9 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression {
             x[row, col] = ds.GetDoubleValue(info.VariableName, r + info.Lag);
           } else if (ds.VariableHasType<string>(info.VariableName)) {
             x[row, col] = ds.GetStringValue(info.VariableName, r) == info.VariableValue ? 1 : 0;
-          } else throw new InvalidProgramException("found a variable of unknown type");
+          } else {
+            throw new InvalidProgramException("found a variable of unknown type");
+          }
 
           col++;
         }
@@ -97,7 +99,6 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression {
 
       var functionCx1Func = CreatePFunc(func);
       var functionCx1Grad = CreatePGrad(funcGrad);
-      void Xrep(double[] p, double f, object obj) => iterationCallback?.Invoke(p, f, obj);
 
       try {
         alglib.lsfitcreatefg(x, y, c, n, m, k, false, out var state);
@@ -119,22 +120,23 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression {
       //retVal == -7  => parameter optimization failed due to wrong gradient
       //          -8  => optimizer detected  NAN / INF  in  the target
       //                 function and/ or gradient
-      if (retVal != -7 && retVal != -8) {
-        if (applyLinearScaling) {
-          var tmp = new double[c.Length - 2];
-          Array.Copy(c, 2, tmp, 0, tmp.Length);
-          UpdateParameters(tree, tmp, updateVariableWeights);
-        } else UpdateParameters(tree, c, updateVariableWeights);
-      }
+      if (retVal != -7 && retVal != -8)
+        UpdateParameters(tree, c, updateVariableWeights);
 
       var quality = problemData.Evaluate(model, type, Evaluator)[0];
-      if (!updateParametersInTree) UpdateParameters(tree, initialParameters, updateVariableWeights);
 
-      if (originalQuality - quality <= 0.001 && !double.IsNaN(quality))
-        return quality;
+      var improvement = originalQuality - quality <= 0.001 && !double.IsNaN(quality);
 
-      UpdateParameters(tree, initialParameters, updateVariableWeights);
-      return originalQuality;
+      if (!improvement) {
+        UpdateParameters(tree, initialParameters, updateVariableWeights); //reset tree parameters
+        return originalQuality;
+      }
+
+      if (!updateParametersInTree)
+        UpdateParameters(tree, initialParameters, updateVariableWeights); //reset tree parameters
+      return quality;
+
+      void Xrep(double[] p, double f, object obj) => iterationCallback?.Invoke(p, f, obj);
     }
 
     private static void UpdateParameters(SymbolicExpressionTree tree, double[] parameters, bool updateVariableWeights) {

@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
@@ -98,7 +99,7 @@ public class SymbolicRegressionTests {
     add.AddSubtree(variableTreeNode);
     add.AddSubtree(numberTreeNode);
     tree.Root.GetSubtree(0).AddSubtree(add);
-    SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData, DataAnalysisProblemData.PartitionType.Training, false, 10);
+    SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData, DataAnalysisProblemData.PartitionType.Training, 10);
     var y = problem.Evaluate(tree)[0];
     Assert.Equal(0, y, 1.0e-15);
   }
@@ -177,7 +178,7 @@ public class SymbolicRegressionTests {
     var iterations = 4;
     var bp = new BernhardPlayground();
     var i = 0;
-    bp.GenealogyGraphGeneticAlgorithm("D:\\Projekte\\HCAI\\HL\\datasets\\extracted - Kopie\\192_vineyard.tsv", _ => i++, 10, iterations);
+    bp.GenealogyGraphGeneticAlgorithm("D:\\Projekte\\HCAI\\HL\\datasets\\extracted - Kopie\\192_vineyard.tsv", _ => i++, 0, 10, iterations);
     Assert.Equal(iterations, i);
   }
 

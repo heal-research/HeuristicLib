@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math.Wildcards;
 
-public class AnySubtreeSymbol(int minimumArity, int maximumArity) : Symbol {
-  public override int MinimumArity { get; } = minimumArity;
-  public override int MaximumArity { get; } = maximumArity;
-};
+public class AnySubtreeSymbol(int minimumArity, int maximumArity) : Symbol(minimumArity, minimumArity, maximumArity);

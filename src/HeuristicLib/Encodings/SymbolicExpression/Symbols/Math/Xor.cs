@@ -21,7 +21,4 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class Xor : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => byte.MaxValue;
-}
+public sealed class Xor() : Symbol(1, 2, byte.MaxValue);

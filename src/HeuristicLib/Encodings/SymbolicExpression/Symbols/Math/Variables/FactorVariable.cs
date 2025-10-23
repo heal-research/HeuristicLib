@@ -27,7 +27,7 @@ public sealed class FactorVariable : VariableBase {
   public IEnumerable<KeyValuePair<string, Dictionary<string, int>>> VariableValues {
     get => variableValues;
     set {
-      if (value == null) throw new ArgumentNullException();
+      ArgumentNullException.ThrowIfNull(value);
       variableValues.Clear();
       foreach (var kvp in value) {
         variableValues.Add(kvp.Key, new Dictionary<string, int>(kvp.Value));

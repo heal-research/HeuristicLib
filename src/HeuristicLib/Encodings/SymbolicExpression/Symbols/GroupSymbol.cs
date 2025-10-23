@@ -22,15 +22,12 @@
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 
 public sealed class GroupSymbol : Symbol {
-  public override int MinimumArity => 0;
-  public override int MaximumArity => 0;
-
-  public List<Symbol> SymbolsCollection { get; private set; }
+  public List<Symbol> SymbolsCollection { get; }
   public IEnumerable<Symbol> Symbols => SymbolsCollection;
 
   public GroupSymbol() : this([]) { }
 
-  public GroupSymbol(IEnumerable<Symbol> symbols) {
+  public GroupSymbol(IEnumerable<Symbol> symbols) : base(0, 0, 0) {
     SymbolsCollection = [..symbols];
     InitialFrequency = 0.0;
   }

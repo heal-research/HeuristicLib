@@ -42,8 +42,6 @@ public abstract class Dataset {
     Rows = 0;
   }
 
-  public ModifiableDataset ToModifiable() => new(VariableNames, VariableNames.Select(n => VariableValues[n]), true);
-
   /// <summary>
   ///   Creates a new dataset. The variableValues are not cloned.
   /// </summary>
@@ -53,30 +51,30 @@ public abstract class Dataset {
     : this(variableNames, variableValues, true) { }
 
   protected Dataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues, bool cloneValues) {
-    var vnames = variableNames.ToList();
-    var vvalues = variableValues.ToList();
-    VariableNames = vnames.Count > 0 ? vnames : Enumerable.Range(0, vvalues.Count).Select(x => "Column " + x).ToList();
+    var vNames = variableNames.ToList();
+    var vValues = variableValues.ToList();
+    VariableNames = vNames.Count > 0 ? vNames : Enumerable.Range(0, vValues.Count).Select(x => "Column " + x).ToList();
     // check if the arguments are consistent (no duplicate variables, same number of rows, correct data types, ...)
-    CheckArguments(VariableNames, vvalues);
-    Rows = vvalues[0].Count;
+    CheckArguments(VariableNames, vValues);
+    Rows = vValues[0].Count;
     if (cloneValues) {
-      VariableValues = CloneValues(VariableNames, vvalues);
+      VariableValues = CloneValues(VariableNames, vValues);
     } else {
       VariableValues = new Dictionary<string, IList>(VariableNames.Count);
       for (var i = 0; i < VariableNames.Count; i++) {
-        VariableValues.Add(VariableNames[i], vvalues[i]);
+        VariableValues.Add(VariableNames[i], vValues[i]);
       }
     }
   }
 
   protected Dataset(IEnumerable<string> variableNames, double[,] variableValues) {
-    var vnames = variableNames.ToList();
-    if (vnames.Count != variableValues.GetLength(1)) {
+    var vNames = variableNames.ToList();
+    if (vNames.Count != variableValues.GetLength(1)) {
       throw new ArgumentException("Number of variable names doesn't match the number of columns of variableValues");
     }
 
-    if (vnames.Distinct().Count() != vnames.Count) {
-      var duplicateVariableNames = vnames.GroupBy(v => v).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+    if (vNames.Distinct().Count() != vNames.Count) {
+      var duplicateVariableNames = vNames.GroupBy(v => v).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
       var message = "The dataset cannot contain duplicate variables names: " + Environment.NewLine;
       message = duplicateVariableNames.Aggregate(message, (current, duplicateVariableName) =>
         current + duplicateVariableName + Environment.NewLine);
@@ -84,7 +82,7 @@ public abstract class Dataset {
     }
 
     Rows = variableValues.GetLength(0);
-    VariableNames = vnames;
+    VariableNames = vNames;
 
     VariableValues = new Dictionary<string, IList>(variableValues.GetLength(1));
     for (var col = 0; col < variableValues.GetLength(1); col++) {
@@ -98,17 +96,19 @@ public abstract class Dataset {
     }
   }
 
+  public ModifiableDataset ToModifiable() => new(VariableNames, VariableNames.Select(n => VariableValues[n]), true);
+
   public static Dataset FromRowData(IEnumerable<string> variableNames, double[,] data) => new ModifiableDataset(variableNames, data);
 
   public static Dataset FromRowData(IEnumerable<string> variableNames, IEnumerable<IEnumerable> data) {
-    var vnames = variableNames.ToList();
+    var vNames = variableNames.ToList();
     var transposed = new List<IList>();
 
     int rowCount = 0;
     foreach (var row in data) {
       int colCount = 0;
       foreach (var value in row) {
-        if (colCount >= vnames.Count)
+        if (colCount >= vNames.Count)
           throw new ArgumentException("There are more variables in data, than variable names.", nameof(variableNames));
 
         if (value == null)
@@ -126,7 +126,7 @@ public abstract class Dataset {
               transposed.Add(new List<string> { s });
               break;
             default:
-              throw new NotSupportedException($"Variable {vnames[colCount]} has type {value.GetType()}. This is not supported when converting from row-wise data.");
+              throw new NotSupportedException($"Variable {vNames[colCount]} has type {value.GetType()}. This is not supported when converting from row-wise data.");
           }
         } else {
           transposed[colCount].Add(value);
@@ -135,7 +135,7 @@ public abstract class Dataset {
         colCount++;
       }
 
-      if (colCount < vnames.Count)
+      if (colCount < vNames.Count)
         throw new ArgumentException($"There are less variables in row{rowCount}, than variable names.", nameof(variableNames));
 
       rowCount++;
@@ -144,7 +144,7 @@ public abstract class Dataset {
     if (rowCount == 0)
       throw new ArgumentException("Data does not contain any rows", nameof(data));
 
-    return new ModifiableDataset(vnames, transposed);
+    return new ModifiableDataset(vNames, transposed);
   }
 
   public bool ContainsVariable(string variableName) => VariableValues.ContainsKey(variableName);
@@ -167,9 +167,8 @@ public abstract class Dataset {
   private IEnumerable<T> GetValues<T>(string variableName, IEnumerable<int> rows) => rows.Select(x => GetValues<T>(variableName)[x]);
 
   private List<T> GetValues<T>(string variableName) {
-    if (!VariableValues.TryGetValue(variableName, out var list)) {
+    if (!VariableValues.TryGetValue(variableName, out var list))
       throw new ArgumentException("The variable " + variableName + " does not exist in the dataset.");
-    }
 
     return list switch {
       List<T> values => values,

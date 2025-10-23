@@ -21,15 +21,14 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class VariableCondition : Symbol {
+public sealed class VariableCondition() : Symbol(2, 2, 2) {
   #region properties
   public double ThresholdInitializerMu { get; set; } = 0.0;
   private double thresholdInitializerSigma = 0.1;
   public double ThresholdInitializerSigma {
     get => thresholdInitializerSigma;
     set {
-      if (thresholdInitializerSigma < 0.0)
-        throw new ArgumentException("Negative sigma is not allowed.");
+      ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
       thresholdInitializerSigma = value;
     }
   }
@@ -39,8 +38,7 @@ public sealed class VariableCondition : Symbol {
   public double ThresholdManipulatorSigma {
     get => thresholdManipulatorSigma;
     set {
-      if (thresholdManipulatorSigma < 0.0)
-        throw new ArgumentException("Negative sigma is not allowed.");
+      ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
       thresholdManipulatorSigma = value;
     }
   }
@@ -90,9 +88,6 @@ public sealed class VariableCondition : Symbol {
   /// </summary>
 
   public bool IgnoreSlope { get; set; }
-
-  public override int MinimumArity => 2;
-  public override int MaximumArity => 2;
   #endregion
 
   public override SymbolicExpressionTreeNode CreateTreeNode() {

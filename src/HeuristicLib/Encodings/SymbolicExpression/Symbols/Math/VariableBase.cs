@@ -21,7 +21,7 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public abstract class VariableBase : Symbol {
+public class VariableBase : Symbol {
   #region Properties
   public double WeightMu { get; set; }
   private double weightSigma;
@@ -70,7 +70,7 @@ public abstract class VariableBase : Symbol {
     }
   }
 
-  private List<string> allVariableNames;
+  private readonly List<string> allVariableNames;
   public IEnumerable<string> AllVariableNames {
     get => allVariableNames;
     set {
@@ -79,12 +79,9 @@ public abstract class VariableBase : Symbol {
       allVariableNames.AddRange(value);
     }
   }
-
-  public override int MinimumArity => 0;
-  public override int MaximumArity => 0;
   #endregion
 
-  protected VariableBase(VariableBase original) {
+  protected VariableBase(VariableBase original) : base(original.MinimumArity, original.DefaultArity, original.MaximumArity) {
     WeightMu = original.WeightMu;
     weightSigma = original.weightSigma;
     variableNames = [..original.variableNames];
@@ -95,7 +92,7 @@ public abstract class VariableBase : Symbol {
     variableChangeProbability = original.variableChangeProbability;
   }
 
-  protected VariableBase() {
+  protected VariableBase() : base(0, 0, 0) {
     WeightMu = 1.0;
     weightSigma = 1.0;
     WeightManipulatorMu = 0.0;

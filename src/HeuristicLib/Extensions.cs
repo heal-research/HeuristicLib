@@ -5,12 +5,26 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib;
 
 public static class Extensions {
-  public static IReadOnlyList<TOut> ParallelSelect<TOut, TIn>(this IReadOnlyList<TIn> source, IRandomNumberGenerator random, Func<int, TIn, IRandomNumberGenerator, TOut> action) {
+  public static IReadOnlyList<TOut> ParallelSelect<TOut, TIn>(this IReadOnlyList<TIn> source,
+                                                              IRandomNumberGenerator random, Func<int, TIn, IRandomNumberGenerator, TOut> action,
+                                                              ParallelOptions? parallelOptions = null) {
     var selected = new TOut[source.Count];
     var randoms = random.Spawn(source.Count);
-    Parallel.For(0, source.Count, i => {
-      selected[i] = action(i, source[i], randoms[i]);
-    });
+
+    if (parallelOptions == null) {
+      Parallel.For(0, source.Count, i => {
+        selected[i] = action(i, source[i], randoms[i]);
+      });
+    } else if (parallelOptions.MaxDegreeOfParallelism == 1) { //avoid parallel overhead
+      for (int i = 0; i < source.Count; i++) {
+        selected[i] = action(i, source[i], randoms[i]);
+      }
+    } else {
+      Parallel.For(0, source.Count, parallelOptions, i => {
+        selected[i] = action(i, source[i], randoms[i]);
+      });
+    }
+
     return selected;
   }
 
@@ -20,7 +34,8 @@ public static class Extensions {
 
   [Conditional("DEBUG")]
   public static void CheckDebug(bool value, string text) {
-    if (!value) throw new DebugException(text);
+    if (!value)
+      throw new DebugException(text);
   }
 
   public static (TGenotype p1, TGenotype p2)[] ToGenotypePairs<TGenotype>(this IReadOnlyList<Solution<TGenotype>> parents) {

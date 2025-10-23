@@ -49,10 +49,10 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     return new SymbolicExpressionTree(rootNode);
   }
 
-  private class TreeExtensionPoint {
-    public SymbolicExpressionTreeNode Parent { get; init; }
-    public int ChildIndex { get; init; }
-    public int ExtensionPointDepth { get; init; }
+  private class TreeExtensionPoint(SymbolicExpressionTreeNode parent, int childIndex, int extensionPointDepth) {
+    public SymbolicExpressionTreeNode Parent { get; } = parent;
+    public int ChildIndex { get; } = childIndex;
+    public int ExtensionPointDepth { get; } = extensionPointDepth;
     public int MaximumExtensionLength { get; set; }
     public int MinimumExtensionLength { get; set; }
   }
@@ -99,11 +99,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
       // insert a dummy sub-tree and add the pending extension to the list
       var dummy = new SymbolicExpressionTreeNode();
       root.AddSubtree(dummy);
-      var x = new TreeExtensionPoint {
-        Parent = root,
-        ChildIndex = i,
-        ExtensionPointDepth = 0
-      };
+      var x = new TreeExtensionPoint(root, i, 0);
       FillExtensionLengths(x, maxDepth, encoding);
       extensionPoints.Add(x);
     }
@@ -166,11 +162,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
           // insert a dummy sub-tree and add the pending extension to the list
           var dummy = new SymbolicExpressionTreeNode();
           newTree.AddSubtree(dummy);
-          var x = new TreeExtensionPoint {
-            Parent = newTree,
-            ChildIndex = i,
-            ExtensionPointDepth = extensionDepth + 1
-          };
+          var x = new TreeExtensionPoint(newTree, i, extensionDepth + 1);
           FillExtensionLengths(x, maxDepth, encoding);
           extensionPoints.Add(x);
           maxExtensionPointsLength += x.MaximumExtensionLength;

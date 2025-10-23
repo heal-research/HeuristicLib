@@ -24,10 +24,7 @@ namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 /// <summary>
 /// Symbol for function defining branches
 /// </summary>
-public sealed class DefunSymbol : Symbol {
-  public override int MinimumArity => 1;
-  public override int MaximumArity => 1;
-
+public sealed class DefunSymbol() : Symbol(1, 1, 1) {
   public override SymbolicExpressionTreeNode CreateTreeNode() {
     return new DefunTreeNode(this, "function");
   }

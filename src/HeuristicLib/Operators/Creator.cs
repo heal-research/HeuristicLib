@@ -73,12 +73,6 @@ public abstract class Creator<TGenotype> : ICreator<TGenotype> {
 
   public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) {
     return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r)).ToArray();
-    var offspring = new TGenotype[count];
-
-    var randoms = random.Spawn(count);
-    Parallel.For(0, count, i => offspring[i] = Create(randoms[i]));
-
-    return offspring;
   }
 
   IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Create(int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {

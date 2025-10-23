@@ -21,14 +21,6 @@
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
 
-public sealed class Constant : Symbol {
-  private double value;
-
-  public override int MinimumArity => 0;
-  public override int MaximumArity => 0;
-
-  public double Value {
-    get => value;
-    set => this.value = value;
-  }
+public sealed class Constant() : Symbol(0, 0, 0) {
+  public double Value { get; set; }
 }

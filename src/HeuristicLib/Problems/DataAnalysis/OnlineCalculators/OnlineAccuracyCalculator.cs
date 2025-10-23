@@ -42,16 +42,14 @@ public class OnlineAccuracyCalculator {
 
   public void Add(double original, double estimated) {
     // ignore cases where original is NaN completely 
-    if (double.IsNaN(original))
-      return;
+    if (double.IsNaN(original)) return;
 
     // increment number of observed samples
     n++;
-    if (original.IsAlmost(estimated)) {
-      // original = estimated = +Inf counts as correctly classified
-      // original = estimated = -Inf counts as correctly classified
-      correctlyClassified++;
-    }
+
+    // original = estimated = +Inf counts as correctly classified
+    // original = estimated = -Inf counts as correctly classified
+    if (original.IsAlmost(estimated)) correctlyClassified++;
 
     ErrorState = OnlineCalculatorError.None; // number of (non-NaN) samples >= 1
   }
@@ -74,9 +72,9 @@ public class OnlineAccuracyCalculator {
     if (accuracyCalculator.ErrorState == OnlineCalculatorError.None &&
         (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
-    } else {
-      errorState = accuracyCalculator.ErrorState;
-      return accuracyCalculator.Accuracy;
     }
+
+    errorState = accuracyCalculator.ErrorState;
+    return accuracyCalculator.Accuracy;
   }
 }
