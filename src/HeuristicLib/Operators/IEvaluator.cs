@@ -1,5 +1,8 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Optimization;
 
-public interface IEvaluator<in TGentype> {
-  double Evaluate(TGentype solution);
+namespace HEAL.HeuristicLib.Operators;
+
+public interface IEvaluator<in TGenotype> {
+  ObjectiveDirection Direction { get; }
+  double Evaluate(TGenotype solution);
 }

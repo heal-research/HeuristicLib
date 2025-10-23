@@ -1,0 +1,14 @@
+using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
+
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+
+public class TreeLengthEvaluator : IRegressionEvaluator<SymbolicExpressionTree> {
+  public ObjectiveDirection Direction => ObjectiveDirection.Minimize;
+
+  public double Evaluate(SymbolicExpressionTree solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) {
+    return solution.Length;
+  }
+}

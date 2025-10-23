@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Optimization;
+
+namespace HEAL.HeuristicLib.Operators;
 
 // public class DeterministicProblemEvaluator<TGenotype> : IEvaluator<TGenotype>
 // {
@@ -28,6 +30,8 @@
 // }
 
 public class RepeatingEvaluator<TGenotype>(IEvaluator<TGenotype> evaluator, int count) : IEvaluator<TGenotype> {
+  public ObjectiveDirection Direction => evaluator.Direction;
+
   public double Evaluate(TGenotype solution) {
     return Enumerable.Range(0, count).Select(i => evaluator.Evaluate(solution)).Average();
   }

@@ -3,10 +3,10 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 
-public class RootMeanSquaredErrorEvaluator : IRegressionEvaluator {
-  public ObjectiveDirection Direction => ObjectiveDirection.Minimize;
+public class RootMeanSquaredErrorEvaluator : RegressionEvaluator {
+  public override ObjectiveDirection Direction => ObjectiveDirection.Minimize;
 
-  public double Evaluate(IEnumerable<double> trueValues, IEnumerable<double> predictedValues) {
+  public override double Evaluate(IEnumerable<double> predictedValues, IEnumerable<double> trueValues) {
     var r = OnlineMeanSquaredErrorCalculator.Calculate(trueValues, predictedValues, out var state);
     if (state != OnlineCalculatorError.None)
       throw new InvalidOperationException("can not calculate RMSE");

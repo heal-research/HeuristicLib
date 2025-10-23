@@ -175,10 +175,10 @@ public class SymbolicRegressionTests {
 
   [Fact]
   public void TestPlayground() {
-    var iterations = 4;
+    const int iterations = 4;
     var bp = new BernhardPlayground();
     var i = 0;
-    bp.GenealogyGraphGeneticAlgorithm("D:\\Projekte\\HCAI\\HL\\datasets\\extracted - Kopie\\192_vineyard.tsv", _ => i++, 0, 10, iterations);
+    bp.GenealogyGraphGeneticAlgorithm("TestData\\192_vineyard.tsv", _ => i++, 0, 10, iterations);
     Assert.Equal(iterations, i);
   }
 

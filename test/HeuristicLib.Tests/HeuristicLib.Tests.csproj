@@ -37,4 +37,10 @@
       <ProjectReference Include="..\..\src\HeuristicLib\HeuristicLib.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="TestData\192_vineyard.tsv">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>

@@ -68,7 +68,7 @@ public static class LinearScaling {
     return unscaled;
   }
 
-  public static IEnumerable<double> GetAndAdjustScaling(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows, IEnumerable<double> targets) {
+  public static IEnumerable<double> PredictAndAdjustScaling(this SymbolicExpressionTree tree, ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, Dataset dataset, IEnumerable<int> rows, IEnumerable<double> targets) {
     var start = tree.Root.GetSubtree(0);
     if (start.SubtreeCount == 0) return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows);
     var add = start.GetSubtree(0);
