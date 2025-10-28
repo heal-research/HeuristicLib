@@ -1,25 +1,4 @@
-﻿#region License Information
-/* HeuristicLab
- * Copyright (C) Heuristic and Evolutionary Algorithms Laboratory (HEAL)
- *
- * This file is part of HeuristicLab.
- *
- * HeuristicLab is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * HeuristicLab is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with HeuristicLab. If not, see <http://www.gnu.org/licenses/>.
- */
-#endregion
-
-using System.Collections;
+﻿using System.Collections;
 using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Random;
 using MoreLinq;
@@ -49,11 +28,11 @@ public sealed class RegressionVariableImpactsCalculator(
   public DataAnalysisProblemData.PartitionType DataPartition { get; set; } = dataPartition;
   #endregion
 
-  public IEnumerable<Tuple<string, double>> Calculate(IRegressionModel solution, RegressionProblemData data) {
+  public ICollection<(string, double)> Calculate(IRegressionModel solution, RegressionProblemData data) {
     return CalculateImpacts(data, solution, ReplacementMethod, FactorReplacementMethod, DataPartition);
   }
 
-  public static IEnumerable<Tuple<string, double>> CalculateImpacts(
+  public static ICollection<(string, double)> CalculateImpacts(
     RegressionProblemData data,
     IRegressionModel solution,
     ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle,
@@ -64,7 +43,7 @@ public sealed class RegressionVariableImpactsCalculator(
     return CalculateImpacts(solution, data, estimatedValues, rows, replacementMethod, factorReplacementMethod);
   }
 
-  public static IEnumerable<Tuple<string, double>> CalculateImpacts(
+  public static ICollection<(string, double)> CalculateImpacts(
     IRegressionModel solution,
     RegressionProblemData problemData,
     IReadOnlyList<double> estimatedValues,
@@ -74,15 +53,19 @@ public sealed class RegressionVariableImpactsCalculator(
     var targetValues = problemData.Dataset.GetDoubleValues(problemData.TargetVariable, rows).ToArray();
     var originalQuality = CalculateQuality(targetValues, estimatedValues);
 
-    var impacts = new Dictionary<string, double>();
-    var inputVariables = new HashSet<string>(problemData.InputVariables);
     var modifiableDataset = problemData.Dataset.ToModifiable();
 
-    foreach (var inputVariable in inputVariables) {
-      impacts[inputVariable] = CalculateImpact(inputVariable, solution, problemData, modifiableDataset, rows, replacementMethod, factorReplacementMethod, targetValues, originalQuality);
-    }
-
-    return impacts.Select(i => Tuple.Create(i.Key, i.Value));
+    return problemData.InputVariables
+                      .Select(x => (x,
+                        CalculateImpact(x,
+                          solution,
+                          problemData,
+                          modifiableDataset,
+                          rows,
+                          replacementMethod,
+                          factorReplacementMethod,
+                          targetValues, originalQuality)))
+                      .ToArray();
   }
 
   public static double CalculateImpact(string variableName,
@@ -94,22 +77,15 @@ public sealed class RegressionVariableImpactsCalculator(
                                        FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best,
                                        IReadOnlyList<double>? targetValues = null,
                                        double quality = double.NaN) {
-    if (!problemData.InputVariables.Contains(variableName)) {
+    if (!problemData.InputVariables.Contains(variableName))
       throw new InvalidOperationException($"Can not calculate variable impact, because the solution uses inputs missing in the dataset ({variableName})");
-    }
 
     targetValues ??= problemData.Dataset.GetDoubleValues(problemData.TargetVariable, rows).ToArray();
 
-    if (double.IsNaN(quality)) {
-      quality = CalculateQuality(solution.Predict(modifiableDataset, rows), targetValues);
-    }
-
+    if (double.IsNaN(quality)) quality = CalculateQuality(solution.Predict(modifiableDataset, rows), targetValues);
     var replacementValues = GetReplacementValues(modifiableDataset, variableName, solution, rows, targetValues, out var originalValues, replacementMethod, factorReplacementMethod);
-
     var newValue = CalculateQualityForReplacement(solution, modifiableDataset, variableName, originalValues, rows, replacementValues, targetValues);
-    var impact = quality - newValue;
-
-    return impact;
+    return quality - newValue;
   }
 
   private static IList GetReplacementValues(ModifiableDataset modifiableDataset,
@@ -171,9 +147,8 @@ public sealed class RegressionVariableImpactsCalculator(
         // prepare a complete column for the dataset
         replacementValues = Enumerable.Repeat(double.NaN, modifiableDataset.Rows).ToList();
         // update column values 
-        foreach (var r in rows) {
+        foreach (var r in rows)
           replacementValues[r] = NormalDistributedRandomPolar.NextDouble(r2, avg, stdDev);
-        }
 
         break;
 
@@ -227,9 +202,8 @@ public sealed class RegressionVariableImpactsCalculator(
         var shuffledValues = rows.Select(r => originalValues[r]).Shuffle(random).ToList();
         var i = 0;
         // update column values 
-        foreach (var r in rows) {
+        foreach (var r in rows)
           replacementValues[r] = shuffledValues[i++];
-        }
 
         break;
       default:
@@ -249,17 +223,14 @@ public sealed class RegressionVariableImpactsCalculator(
     IEnumerable<double> targetValues) {
     modifiableDataset.ReplaceVariable(variableName, replacementValues);
     //mkommend: ToList is used on purpose to avoid lazy evaluation that could result in wrong estimates due to variable replacements
-    var estimates = solution.Predict(modifiableDataset, rows).ToList();
-    var ret = CalculateQuality(targetValues, estimates);
+    var ret = CalculateQuality(targetValues, solution.Predict(modifiableDataset, rows));
     modifiableDataset.ReplaceVariable(variableName, originalValues);
-
     return ret;
   }
 
   public static double CalculateQuality(IEnumerable<double> targetValues, IEnumerable<double> estimatedValues) {
     var ret = OnlinePearsonsRCalculator.Calculate(targetValues, estimatedValues, out var errorState);
-    if (errorState != OnlineCalculatorError.None) { throw new InvalidOperationException("Error during calculation with replaced inputs."); }
-
+    if (errorState != OnlineCalculatorError.None) throw new InvalidOperationException("Error during calculation with replaced inputs.");
     return ret * ret;
   }
 }

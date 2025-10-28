@@ -1,25 +1,4 @@
-﻿#region License Information
-/* HeuristicLab
- * Copyright (C) Heuristic and Evolutionary Algorithms Laboratory (HEAL)
- *
- * This file is part of HeuristicLab.
- *
- * HeuristicLab is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * HeuristicLab is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with HeuristicLab. If not, see <http://www.gnu.org/licenses/>.
- */
-#endregion
-
-using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+﻿using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Random;
@@ -41,7 +20,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
     // even lengths cannot be achieved without symbols of odd arity
     // therefore we randomly pick a neighbouring odd length value
     var tree = encoding.Grammar.MakeStump(random); // create a stump consisting of just a ProgramRootSymbol and a StartSymbol
-    CreateExpression(random, tree.Root.GetSubtree(0), encoding, targetLength - tree.Length, encoding.TreeDepth - 2, irregularityBias); // -2 because the stump has length 2 and depth 2
+    CreateExpression(random, tree.Root[0], encoding, targetLength - tree.Length, encoding.TreeDepth - 2, irregularityBias); // -2 because the stump has length 2 and depth 2
     return tree;
   }
 

@@ -35,7 +35,7 @@ public class BernhardPlayground {
     }
 
     var aroot = problem.SearchSpace.Grammar.AddLinearScaling();
-    problem.SearchSpace.Grammar.AddFullyConnectedSymbols([new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables }], aroot);
+    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(aroot, [new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables }]);
     return problem;
   }
 

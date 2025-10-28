@@ -1,4 +1,3 @@
-using System.Runtime.Serialization;
 using AutoDiff;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
@@ -89,7 +88,7 @@ public class TreeToAutoDiffTermConverter {
     // use a transformator object which holds the state (variable list, parameter list, ...) for recursive transformation of the tree
     var transformator = new TreeToAutoDiffTermConverter(makeVariableWeightsVariable, excludedNodes);
     try {
-      var term = transformator.ConvertToAutoDiff(tree.Root.GetSubtree(0));
+      var term = transformator.ConvertToAutoDiff(tree.Root[0]);
       var parameterEntries = transformator.parameters.ToArray(); // guarantee same order for keys and values
       var compiledTerm = term.Compile(transformator.variables.ToArray(),
         parameterEntries.Select(kvp => kvp.Value).ToArray());
@@ -187,7 +186,7 @@ public class TreeToAutoDiffTermConverter {
       case Subtraction: {
         var terms = new List<Term>();
         for (var i = 0; i < node.SubtreeCount; i++) {
-          var t = ConvertToAutoDiff(node.GetSubtree(i));
+          var t = ConvertToAutoDiff(node[i]);
           if (i > 0) t = -t;
           terms.Add(t);
         }
@@ -204,60 +203,60 @@ public class TreeToAutoDiffTermConverter {
         return terms.Aggregate((a, b) => new Product(a, 1.0 / b));
       }
       case Absolute: {
-        var x1 = ConvertToAutoDiff(node.GetSubtree(0));
+        var x1 = ConvertToAutoDiff(node[0]);
         return Abs(x1);
       }
       case AnalyticQuotient: {
-        var x1 = ConvertToAutoDiff(node.GetSubtree(0));
-        var x2 = ConvertToAutoDiff(node.GetSubtree(1));
+        var x1 = ConvertToAutoDiff(node[0]);
+        var x2 = ConvertToAutoDiff(node[1]);
         return x1 / TermBuilder.Power(1 + x2 * x2, 0.5);
       }
       case Logarithm:
         return TermBuilder.Log(
-          ConvertToAutoDiff(node.GetSubtree(0)));
+          ConvertToAutoDiff(node[0]));
       case Exponential:
         return TermBuilder.Exp(
-          ConvertToAutoDiff(node.GetSubtree(0)));
+          ConvertToAutoDiff(node[0]));
       case Square:
         return TermBuilder.Power(
-          ConvertToAutoDiff(node.GetSubtree(0)), 2.0);
+          ConvertToAutoDiff(node[0]), 2.0);
       case SquareRoot:
         return TermBuilder.Power(
-          ConvertToAutoDiff(node.GetSubtree(0)), 0.5);
+          ConvertToAutoDiff(node[0]), 0.5);
       case Cube:
         return TermBuilder.Power(
-          ConvertToAutoDiff(node.GetSubtree(0)), 3.0);
+          ConvertToAutoDiff(node[0]), 3.0);
       case CubeRoot:
-        return Cbrt(ConvertToAutoDiff(node.GetSubtree(0)));
+        return Cbrt(ConvertToAutoDiff(node[0]));
       case Power: {
-        if (node.GetSubtree(1) is not NumberTreeNode powerNode)
+        if (node[1] is not NumberTreeNode powerNode)
           throw new NotSupportedException("Only numeric powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
         var intPower = Math.Truncate(powerNode.Value);
         if (Math.Abs(intPower - powerNode.Value) > 1e-15)
           throw new NotSupportedException("Only integer powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
-        return TermBuilder.Power(ConvertToAutoDiff(node.GetSubtree(0)), intPower);
+        return TermBuilder.Power(ConvertToAutoDiff(node[0]), intPower);
       }
       case Sine:
         return Sin(
-          ConvertToAutoDiff(node.GetSubtree(0)));
+          ConvertToAutoDiff(node[0]));
       case Cosine:
         return Cos(
-          ConvertToAutoDiff(node.GetSubtree(0)));
+          ConvertToAutoDiff(node[0]));
       case Tangent:
         return Tan(
-          ConvertToAutoDiff(node.GetSubtree(0)));
+          ConvertToAutoDiff(node[0]));
       case HyperbolicTangent:
         return Tanh(
-          ConvertToAutoDiff(node.GetSubtree(0)));
+          ConvertToAutoDiff(node[0]));
       case Encodings.SymbolicExpression.Symbols.Math.Erf:
         return Erf(
-          ConvertToAutoDiff(node.GetSubtree(0)));
+          ConvertToAutoDiff(node[0]));
       case Encodings.SymbolicExpression.Symbols.Math.Norm:
         return Norm(
-          ConvertToAutoDiff(node.GetSubtree(0)));
+          ConvertToAutoDiff(node[0]));
       case StartSymbol:
       case SubFunctionSymbol:
-        return ConvertToAutoDiff(node.GetSubtree(0));
+        return ConvertToAutoDiff(node[0]);
       default:
         throw new ConversionException();
     }
@@ -280,7 +279,7 @@ public class TreeToAutoDiffTermConverter {
 
   public static bool IsCompatible(SymbolicExpressionTree tree) {
     var containsUnknownSymbol = (
-      from n in tree.Root.GetSubtree(0).IterateNodesPrefix()
+      from n in tree.Root[0].IterateNodesPrefix()
       where
         n.Symbol is not Variable &&
         n.Symbol is not BinaryFactorVariable &&

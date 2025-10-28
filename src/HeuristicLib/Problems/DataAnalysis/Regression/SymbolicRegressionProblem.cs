@@ -29,7 +29,7 @@ public class SymbolicRegressionProblem(
 
   public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get { return interpreter; } }
 
-  public SymbolicRegressionProblem(RegressionProblemData data, ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
+  public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
     this(data, objective,
       objective.Count == 1 ? new SingleObjectiveComparer(objective.Single().Direction) : new LexicographicComparer(objective.Select(x => x.Direction).ToArray()),
       new SymbolicExpressionTreeEncoding(new SimpleSymbolicExpressionGrammar()),

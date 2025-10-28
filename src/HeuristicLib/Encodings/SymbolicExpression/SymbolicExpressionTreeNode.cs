@@ -1,26 +1,8 @@
-#region License Information
-/* HeuristicLab
- * Copyright (C) Heuristic and Evolutionary Algorithms Laboratory (HEAL)
- *
- * This file is part of HeuristicLab.
- *
- * HeuristicLab is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * HeuristicLab is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with HeuristicLab. If not, see <http://www.gnu.org/licenses/>.
- */
-#endregion
-
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Random;
+
+// ReSharper disable ForCanBeConvertedToForeach
+// ReSharper disable LoopCanBeConvertedToQuery
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpression;
 
@@ -116,6 +98,11 @@ public class SymbolicExpressionTreeNode {
 
   public SymbolicExpressionTreeNode GetSubtree(int index) => subtrees![index];
 
+  public SymbolicExpressionTreeNode this[int key] {
+    get => subtrees![key];
+    set => ReplaceSubtree(key, value);
+  }
+
   public int IndexOfSubtree(SymbolicExpressionTreeNode tree) => subtrees!.IndexOf(tree);
 
   public void AddSubtree(SymbolicExpressionTreeNode tree) {
@@ -156,7 +143,7 @@ public class SymbolicExpressionTreeNode {
     var i = 0;
     while (i != list.Count) {
       for (var j = 0; j != list[i].SubtreeCount; ++j)
-        list.Add(list[i].GetSubtree(j));
+        list.Add(list[i][j]);
       ++i;
     }
 

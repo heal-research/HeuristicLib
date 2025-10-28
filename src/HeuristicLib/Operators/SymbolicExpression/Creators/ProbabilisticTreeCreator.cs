@@ -1,37 +1,15 @@
-#region License Information
-/* HeuristicLab
- * Copyright (C) Heuristic and Evolutionary Algorithms Laboratory (HEAL)
- *
- * This file is part of HeuristicLab.
- *
- * HeuristicLab is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * HeuristicLab is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with HeuristicLab. If not, see <http://www.gnu.org/licenses/>.
- */
-#endregion
-
 using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
 
 public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
-  private const int MAX_TRIES = 100;
+  private const int MaxTries = 100;
 
   public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var tree = encoding.Grammar.MakeStump(random);
-    PTC2(random, tree.Root.GetSubtree(0), encoding.TreeDepth - 2, encoding.TreeLength - 2, encoding);
+    PTC2(random, tree.Root[0], encoding.TreeDepth - 2, encoding.TreeLength - 2, encoding);
     return tree;
   }
 
@@ -68,7 +46,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     var allowedMinLength = encoding.Grammar.GetMinimumExpressionLength(seedNode.Symbol);
     var allowedMaxLength = Math.Min(maxLength, encoding.Grammar.GetMaximumExpressionLength(seedNode.Symbol, maxDepth));
     var tries = 0;
-    while (tries++ < MAX_TRIES) {
+    while (tries++ < MaxTries) {
       // select a target tree length uniformly in the possible range (as determined by explicit limits and limits of the grammar)
       var targetTreeLength = random.Integer(allowedMinLength, allowedMaxLength + 1);
       if (targetTreeLength <= 1 || maxDepth <= 1) return;
@@ -119,7 +97,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
 
       if (encoding.Grammar.GetMinimumExpressionDepth(parent.Symbol) > maxDepth - extensionDepth) {
         ReplaceWithMinimalTree(random, parent, argumentIndex, encoding);
-        var insertedTreeLength = parent.GetSubtree(argumentIndex).GetLength();
+        var insertedTreeLength = parent[argumentIndex].GetLength();
         currentLength += insertedTreeLength;
         minExtensionPointsLength -= insertedTreeLength;
         maxExtensionPointsLength -= insertedTreeLength;

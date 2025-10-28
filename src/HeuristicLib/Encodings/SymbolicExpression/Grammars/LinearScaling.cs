@@ -45,12 +45,12 @@ public static class LinearScaling {
   }
 
   public static double[] AdjustScalingFactors(this SymbolicExpressionTree tree, double[] predictions, double[] targets) {
-    var start = tree.Root.GetSubtree(0);
+    var start = tree.Root[0];
     if (start.SubtreeCount == 0) return predictions;
-    var add = start.GetSubtree(0);
+    var add = start[0];
     if (add.Symbol != Add) return predictions; // not a tree with linear scaling
-    var offsetNode = (NumberTreeNode)add.GetSubtree(1);
-    var interceptNode = (NumberTreeNode)add.GetSubtree(0).GetSubtree(1);
+    var offsetNode = (NumberTreeNode)add[1];
+    var interceptNode = (NumberTreeNode)add[0][1];
 
     var o = offsetNode.Value;
     var b = interceptNode.Value;
@@ -69,12 +69,12 @@ public static class LinearScaling {
   }
 
   public static IEnumerable<double> PredictAndAdjustScaling(this SymbolicExpressionTree tree, ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, Dataset dataset, IEnumerable<int> rows, IEnumerable<double> targets) {
-    var start = tree.Root.GetSubtree(0);
+    var start = tree.Root[0];
     if (start.SubtreeCount == 0) return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows);
-    var add = start.GetSubtree(0);
+    var add = start[0];
     if (add.Symbol != Add) return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows); // not a tree with linear scaling
-    var offsetNode = (NumberTreeNode)add.GetSubtree(1);
-    var interceptNode = (NumberTreeNode)add.GetSubtree(0).GetSubtree(1);
+    var offsetNode = (NumberTreeNode)add[1];
+    var interceptNode = (NumberTreeNode)add[0][1];
     offsetNode.Value = 0;
     interceptNode.Value = 1;
     var unscaled = interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows).ToArray();

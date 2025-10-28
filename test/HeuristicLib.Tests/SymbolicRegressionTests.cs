@@ -12,6 +12,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Operators.Interceptors;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests;
@@ -20,44 +21,44 @@ public class SymbolicRegressionTests {
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
 
   [Fact]
-  public void ConstantTest() {
-    var problem = CreateTestSymbolicRegressionProblem();
-
+  public void MultiObjectiveConstantTest() {
+    var problem = CreateTestSymbolicRegressionProblem(multiObjective: true);
     var r = new SystemRandomNumberGenerator();
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
-    var startNode = tree.Root.GetSubtree(0);
-    var numberNode = (NumberTreeNode)new Number().CreateTreeNode();
-    numberNode.Value = 10;
-    startNode.AddSubtree(numberNode);
+    var numberNode = new Number().CreateTreeNode(10);
+    tree.Root[0].AddSubtree(numberNode);
+    var res = problem.Evaluate(tree);
+    Assert.Equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3], res);
+    const ObjectiveDirection min = ObjectiveDirection.Minimize;
+    const ObjectiveDirection max = ObjectiveDirection.Maximize;
+    Assert.Equal([min, min, min, min, min, min, min, max, min, min, min], problem.Objective.Directions);
+  }
 
+  [Fact]
+  public void ConstantTest() {
+    var problem = CreateTestSymbolicRegressionProblem();
+    var r = new SystemRandomNumberGenerator();
+    var tree = problem.SearchSpace.Grammar.MakeStump(r);
+    var startNode = tree.Root[0];
+    var numberNode = new Number().CreateTreeNode(10);
+    startNode.AddSubtree(numberNode);
     var x = problem.Evaluate(tree);
     Assert.Equal(0, x[0]);
     numberNode.Value = 11;
     var y = problem.Evaluate(tree);
     Assert.Equal(1, y[0]);
-
     var tree2 = problem.SearchSpace.Grammar.MakeStump(r);
-    startNode = tree2.Root.GetSubtree(0);
-    startNode.AddSubtree(new VariableTreeNode(new Variable()) {
-      NodeWeight = 1,
-      VariableName = "x"
-    });
-
-    _ = problem.Evaluate(tree);
+    startNode = tree2.Root[0];
+    startNode.AddSubtree(new Variable().CreateTreeNode("x", 1));
+    _ = problem.Evaluate(tree2);
   }
 
   [Fact]
   public void VariableTest() {
     var problem = CreateTestSymbolicRegressionProblem();
-
     var r = new SystemRandomNumberGenerator();
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
-    tree.Root.GetSubtree(0).AddSubtree(new VariableTreeNode(new Variable()) {
-      NodeWeight = 1,
-      VariableName = "x",
-      Weight = 1
-    });
-
+    tree.Root[0].AddSubtree(new Variable().CreateTreeNode("x", 1));
     var y = problem.Evaluate(tree)[0];
     Assert.Equal(Math.Sqrt(66), y, 1.0e-15);
   }
@@ -65,20 +66,14 @@ public class SymbolicRegressionTests {
   [Fact]
   public void AddTest() {
     var problem = CreateTestSymbolicRegressionProblem();
-
     var r = new SystemRandomNumberGenerator();
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
-
-    var variableTreeNode = new VariableTreeNode(new Variable()) {
-      NodeWeight = 1,
-      VariableName = "x",
-      Weight = 1
-    };
-    var numberTreeNode = new NumberTreeNode(new Number()) { Value = 1 };
-    var add = new Addition().CreateTreeNode(); //  
+    var variableTreeNode = new Variable().CreateTreeNode("x", 1);
+    var numberTreeNode = new Number().CreateTreeNode(1);
+    var add = new Addition().CreateTreeNode();
     add.AddSubtree(variableTreeNode);
     add.AddSubtree(numberTreeNode);
-    tree.Root.GetSubtree(0).AddSubtree(add);
+    tree.Root[0].AddSubtree(add);
 
     var y = problem.Evaluate(tree)[0];
     Assert.Equal(Math.Sqrt(51), y, 1.0e-15);
@@ -89,16 +84,12 @@ public class SymbolicRegressionTests {
     var problem = CreateTestSymbolicRegressionProblem();
     var r = new SystemRandomNumberGenerator();
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
-    var variableTreeNode = new VariableTreeNode(new Variable()) {
-      NodeWeight = 1,
-      VariableName = "x",
-      Weight = 1
-    };
-    var numberTreeNode = new NumberTreeNode(new Number()) { Value = 1 };
+    var variableTreeNode = new Variable().CreateTreeNode("x", 1);
+    var numberTreeNode = new Number().CreateTreeNode(1);
     var add = new SymbolicExpressionTreeNode(new Addition());
     add.AddSubtree(variableTreeNode);
     add.AddSubtree(numberTreeNode);
-    tree.Root.GetSubtree(0).AddSubtree(add);
+    tree.Root[0].AddSubtree(add);
     SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData, DataAnalysisProblemData.PartitionType.Training, 10);
     var y = problem.Evaluate(tree)[0];
     Assert.Equal(0, y, 1.0e-15);
@@ -153,24 +144,28 @@ public class SymbolicRegressionTests {
     var graphCrossover = graph.WrapCrossover(new SubtreeCrossover());
     var graphMutator = graph.WrapMutator(CreateSymRegAllMutator());
 
-    var ga = AlgorithmFactory.GeneticAlgorithm(10,
+    const int populationSize = 10;
+    const double mutationRate = 0.05;
+    const int maximumIterations = 30;
+    var ga = AlgorithmFactory.GeneticAlgorithm(populationSize,
       new ProbabilisticTreeCreator(),
       graphCrossover,
-      graphMutator, //
-      0.05,
+      graphMutator,
+      mutationRate,
       new RandomSelector<SymbolicExpressionTree>(),
       1,
       0,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(30), null,
+      new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations), null,
       qualities,
       graphAnalyzer
     );
     var res = ga.Execute(problem);
-    Assert.Equal(30, qualities.CurrentState.Count);
-    Assert.Equal(10, res.Population.Solutions.Count);
+    Assert.Equal(maximumIterations, qualities.CurrentState.Count);
+    Assert.Equal(populationSize, res.Population.Solutions.Count);
 
     _ = qualities.CurrentState.Select(x => x.best).ToArray();
     var graphViz = graph.ToGraphViz();
+    Assert.True(graphViz.Length > 0);
   }
 
   [Fact]
@@ -207,31 +202,57 @@ public class SymbolicRegressionTests {
     Assert.Single(res.Population.Solutions);
     _ = qualities.CurrentState.Select(x => x.best).ToArray();
     var graphViz = graph.ToGraphViz();
+    Assert.True(graphViz.Length > 0);
   }
 
-  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem() {
-    var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data), ["x"], "y");
-    var problem = new SymbolicRegressionProblem(problemData, [new RootMeanSquaredErrorEvaluator()]) {
+  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false) {
+    var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
+
+    IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
+      ? [
+        new MaxAbsoluteErrorEvaluator(),
+        new MeanAbsoluteErrorEvaluator(),
+        new MeanLogErrorEvaluator(),
+        new MeanRelativeErrorEvaluator(),
+        new MeanSquaredErrorCalculator(),
+        new NormalizedMeanSquaredErrorEvaluator(),
+        new NumberOfVariablesEvaluator(),
+        new PearsonR2Evaluator(),
+        new RootMeanSquaredErrorEvaluator(),
+        new TreeComplexityEvaluator(),
+        new TreeLengthEvaluator()
+      ]
+      : [new RootMeanSquaredErrorEvaluator()];
+    var problem = new SymbolicRegressionProblem(problemData, objectives) {
       LowerPredictionBound = 0,
       UpperPredictionBound = 100,
       SearchSpace = {
-        TreeDepth = 40,
-        TreeLength = 40
+        TreeDepth = treeLength,
+        TreeLength = treeLength
       }
     };
 
-    var aroot = problem.SearchSpace.Grammar.AddLinearScaling();
-    problem.SearchSpace.Grammar.AddFullyConnectedSymbols([new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables }], aroot);
+    var linearScalingRoot = problem.SearchSpace.Grammar.AddLinearScaling();
+    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(
+      linearScalingRoot,
+      new Addition(),
+      new Subtraction(),
+      new Multiplication(),
+      new Division(),
+      new Number(),
+      new SquareRoot(),
+      new Logarithm(),
+      new Exponential(),
+      new Variable { VariableNames = problemData.InputVariables });
     return problem;
   }
 
   private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>> CreateSymRegAllMutator() {
-    var symRegAllMutator = MultiMutator.Create(
+    return MultiMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
       new OnePointShaker(),
       new RemoveBranchManipulation(),
       new ReplaceBranchManipulation());
-    return symRegAllMutator;
   }
 }
