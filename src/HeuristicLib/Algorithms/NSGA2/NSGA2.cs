@@ -36,16 +36,13 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
     var offspringCount = Replacer.GetOffspringCount(PopulationSize);
     var parents = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
     var children = Crossover.Cross(parents, random, searchSpace, problem);
-    children = Mutator.Mutate(children, random, searchSpace, problem);
-    var newPop = Population.From(children, problem.Evaluate(children));
+    var mutants = Mutator.Mutate(children, random, searchSpace, problem);
+    var newPop = Population.From(children, problem.Evaluate(mutants));
     var nextPop = Replacer.Replace(previousIterationResult.Population.Solutions, newPop.Solutions, problem.Objective, random, searchSpace, problem);
-
     return new NSGA2IterationResult<TGenotype>(Population.From(nextPop));
   }
 
-  protected override NSGA2Result<TGenotype> FinalizeResult(NSGA2IterationResult<TGenotype> iterationResult, TProblem problem) => throw new NotImplementedException();
+  protected override NSGA2Result<TGenotype> FinalizeResult(NSGA2IterationResult<TGenotype> iterationResult, TProblem problem) {
+    return new NSGA2Result<TGenotype>(iterationResult.Population);
+  }
 }
-
-public class NSGA2IterationResult<TGenotype>(Population<TGenotype> population) : PopulationIterationResult<TGenotype>(population);
-
-public class NSGA2Result<TGenotype>(Population<TGenotype> population) : PopulationResult<TGenotype>(population);

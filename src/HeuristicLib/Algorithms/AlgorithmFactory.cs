@@ -63,11 +63,10 @@ public static class AlgorithmFactory {
     int? randomSeed,
     int populationSize,
     double mutationRate,
-    LocalSearchDirection direction,
     bool dominateOnEquals,
     IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null,
     params IAnalyzer<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new(terminator, interceptor, populationSize, creator, crossover, mutator, mutationRate, selector, randomSeed, dominateOnEquals);
+    => new(terminator, MultiInterceptor(interceptor, analyzers), populationSize, creator, crossover, mutator, mutationRate, selector, randomSeed, dominateOnEquals);
 }

@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Algorithms;
+﻿//namespace HEAL.HeuristicLib.Algorithms;
 
 //
 // public interface IIterationResult {
@@ -110,4 +110,5 @@
 //   TState GetContinuationState();
 //   TState GetRestartState();
 // }
+
 

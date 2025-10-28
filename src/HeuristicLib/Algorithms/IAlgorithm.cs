@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IAlgorithm<TGenotype, in TEncoding, in TProblem, TAlgorithmResult>
+public interface IAlgorithm<TGenotype, in TEncoding, in TProblem, out TAlgorithmResult>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
   where TAlgorithmResult : IAlgorithmResult {

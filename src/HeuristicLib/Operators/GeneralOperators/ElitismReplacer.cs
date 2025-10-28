@@ -39,10 +39,12 @@ public class ParetoCrowdingReplacer<TGenotype>(bool dominateOnEqualities) : Repl
       if (front.Count < size) {
         l.AddRange(front);
         size -= front.Count;
+        continue;
       }
 
       var dist = CalculateCrowdingDistances(front.Select(x => x.ObjectiveVector).ToList());
       l.AddRange(front.Select((x, i) => (x, i)).OrderBy(x => dist[x.i]).Select(x => x.x).Take(size));
+      break;
     }
 
     return l;
