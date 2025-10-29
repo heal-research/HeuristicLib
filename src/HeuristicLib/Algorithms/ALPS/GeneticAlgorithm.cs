@@ -58,7 +58,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     //Replacer = replacer;
     Elites = elites;
 
-    algorithmRandom = new SystemRandomNumberGenerator(randomSeed ?? SystemRandomNumberGenerator.RandomSeed());
+    algorithmRandom = new SystemRandomNumberGenerator(randomSeed);
     internalMutator = new MultiMutator<TGenotype, TEncoding, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
     internalReplacer = new ElitismReplacer<TGenotype>(elites);
 

@@ -5,11 +5,9 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
 
   private readonly System.Random random;
 
-  public SystemRandomNumberGenerator() => random = new System.Random(RandomSeed());
-
   private SystemRandomNumberGenerator(System.Random random) => this.random = random;
 
-  public SystemRandomNumberGenerator(int seed) => random = new System.Random(seed);
+  public SystemRandomNumberGenerator(int? seed) => random = new System.Random(seed ?? RandomSeed());
 
   public double Random() => random.NextDouble();
 
