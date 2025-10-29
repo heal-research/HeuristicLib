@@ -1,4 +1,7 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using System.Text;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+using MoreLinq;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -29,10 +32,12 @@ namespace HEAL.HeuristicLib.Operators;
 //   }
 // }
 
-public class RepeatingEvaluator<TGenotype>(IEvaluator<TGenotype> evaluator, int count) : IEvaluator<TGenotype> {
-  public ObjectiveDirection Direction => evaluator.Direction;
-
-  public double Evaluate(TGenotype solution) {
-    return Enumerable.Range(0, count).Select(i => evaluator.Evaluate(solution)).Average();
+public class RepeatingEvaluator<TGenotype, TEncoding, TProblem>(IEvaluator<TGenotype, TEncoding, TProblem> evaluator, int count, Func<IEnumerable<ObjectiveVector>, ObjectiveVector> aggregator) : IEvaluator<TGenotype, TEncoding, TProblem> where TEncoding : class, IEncoding<TGenotype> where TProblem : IProblem<TGenotype, TEncoding> {
+  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TEncoding encoding, TProblem problem) {
+    var tests = genotypes.Repeat(count).ToArray();
+    var subResults = evaluator.Evaluate(tests, encoding, problem); //avoid calling evaluator multiple times
+    return Enumerable.Range(0, genotypes.Count)
+                     .Select(localI => aggregator(Enumerable.Range(0, count).Select(j => subResults[j * genotypes.Count + localI])))
+                     .ToArray();
   }
 }

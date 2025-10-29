@@ -122,6 +122,7 @@ public class SymbolicRegressionTests {
       CreateSymRegAllMutator(), //
       0.05,
       new TournamentSelector<SymbolicExpressionTree>(3),
+      problem.CreateEvaluator(),
       1,
       AlgorithmRandomSeed,
       new AfterIterationsTerminator<SymbolicExpressionTree>(100),
@@ -140,8 +141,10 @@ public class SymbolicRegressionTests {
     var problem = CreateTestSymbolicRegressionProblem();
     var symRegAllMutator = CreateSymRegAllMutator();
     var subtreeCrossover = new SubtreeCrossover();
+
     var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
     var graph = AddGenealogyGraph(subtreeCrossover, symRegAllMutator, out var graphAnalyzer, out var graphCrossover, out var graphMutator);
+    var evalQualities = AddQualityCurveTracking(problem.CreateEvaluator(), out var evaluator);
 
     const int populationSize = 10;
     const double mutationRate = 0.05;
@@ -152,6 +155,7 @@ public class SymbolicRegressionTests {
       graphMutator,
       mutationRate,
       new RandomSelector<SymbolicExpressionTree>(),
+      evaluator,
       1,
       AlgorithmRandomSeed,
       new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations), null,
@@ -164,6 +168,13 @@ public class SymbolicRegressionTests {
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
+    Assert.Equal(qualities.CurrentState[^1].best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
+  }
+
+  private static QualityCurveTracker<T> AddQualityCurveTracking<T, T1, T2>(IEvaluator<T, T1, T2> problem, out QualityCurveEvaluationWrapper<T, T1, T2> trackingProblem) where T1 : class, IEncoding<T> where T2 : IProblem<T, T1> {
+    var evalQualities = new QualityCurveTracker<T>();
+    trackingProblem = evalQualities.WrapEvaluator(problem);
+    return evalQualities;
   }
 
   [Fact]
@@ -173,11 +184,13 @@ public class SymbolicRegressionTests {
     var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
 
     var graph = AddGenealogyGraph(new SubtreeCrossover(), symRegAllMutator, out var graphAnalyzer, out _, out var graphMutator);
+    var evalQualities = AddQualityCurveTracking(problem.CreateEvaluator(), out var evaluator);
 
     var ls = AlgorithmFactory.LocalSearch(
       new ProbabilisticTreeCreator(),
       graphMutator,
       new AfterIterationsTerminator<SymbolicExpressionTree>(50),
+      evaluator,
       AlgorithmRandomSeed,
       10,
       5,
@@ -198,6 +211,7 @@ public class SymbolicRegressionTests {
     var symRegAllMutator = CreateSymRegAllMutator();
     var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
     var graph = AddGenealogyGraph(new SubtreeCrossover(), symRegAllMutator, out var graphAnalyzer, out var crossover, out var graphMutator);
+    var evalQualities = AddQualityCurveTracking(problem.CreateEvaluator(), out var evaluator);
 
     const int populationSize = 10;
     const int maximumIterations = 50;
@@ -208,6 +222,7 @@ public class SymbolicRegressionTests {
       graphMutator,
       new RandomSelector<SymbolicExpressionTree>(),
       new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations),
+      evaluator,
       AlgorithmRandomSeed,
       populationSize,
       mutationRate,

@@ -7,7 +7,7 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
 
   private SystemRandomNumberGenerator(System.Random random) => this.random = random;
 
-  public SystemRandomNumberGenerator(int? seed) => random = new System.Random(seed ?? RandomSeed());
+  public SystemRandomNumberGenerator(int? seed = null) => random = new System.Random(seed ?? RandomSeed());
 
   public double Random() => random.NextDouble();
 

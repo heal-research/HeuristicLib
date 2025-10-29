@@ -114,7 +114,7 @@
 //   // public Task CyclicAlgorithm_WithGA() {
 //   //   var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
 //   //   var searchSpace = problem.CreateRealVectorSearchSpace();
-//   //   var Evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+//   //   var ProblemEvaluator = ProblemEvaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
 //   //   var randomSource = new RandomSource(42);
 //   //
 //   //   var ga1 = new GeneticAlgorithm<RealVector>(
@@ -123,7 +123,7 @@
 //   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
 //   //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     mutationRate: 0.1,
-//   //     Evaluator: Evaluator,
+//   //     ProblemEvaluator: ProblemEvaluator,
 //   //     SingleObjective.Minimize,
 //   //     selector: new TournamentSelector(2, randomSource.CreateRandomNumberGenerator()),
 //   //     replacer: new ElitismReplacer(1), 
@@ -137,7 +137,7 @@
 //   //     crossover: new AlphaBetaBlendCrossoverOperator(0.5, 0.5),
 //   //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     mutationRate: 0.1,
-//   //     Evaluator: Evaluator,
+//   //     ProblemEvaluator: ProblemEvaluator,
 //   //     SingleObjective.Minimize,
 //   //     selector: new RandomSelector(randomSource.CreateRandomNumberGenerator()),
 //   //     replacer: new ElitismReplacer(1), 
@@ -151,7 +151,7 @@
 //   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
 //   //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     mutationRate: 0.8,
-//   //     Evaluator: Evaluator,
+//   //     ProblemEvaluator: ProblemEvaluator,
 //   //     SingleObjective.Minimize,
 //   //     selector: new TournamentSelector(2, randomSource.CreateRandomNumberGenerator()),
 //   //     replacer: new ElitismReplacer(1), 
@@ -173,7 +173,7 @@
 //   // public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
 //   //   var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
 //   //   var searchSpace = problem.CreateRealVectorSearchSpace();
-//   //   var Evaluator = Evaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+//   //   var ProblemEvaluator = ProblemEvaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
 //   //   var randomSource = new RandomSource(42);
 //   //
 //   //   var evolutionStrategy = new EvolutionStrategy(
@@ -184,7 +184,7 @@
 //   //     mutator: new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     initialMutationStrength: 0.1,
 //   //     crossover: null,
-//   //     Evaluator: Evaluator,
+//   //     ProblemEvaluator: ProblemEvaluator,
 //   //     SingleObjective.Minimize,
 //   //     terminator: Terminator.OnGeneration(6),
 //   //     randomSource: randomSource
@@ -196,7 +196,7 @@
 //   //     crossover: new AlphaBetaBlendCrossoverOperator(0.8, 0.2),
 //   //     mutator: new GaussianMutator(mutationRate: 10, mutationStrength: 1.5, searchSpace, randomSource.CreateRandomNumberGenerator()),
 //   //     mutationRate: 0.1,
-//   //     Evaluator: Evaluator,
+//   //     ProblemEvaluator: ProblemEvaluator,
 //   //     SingleObjective.Minimize,
 //   //     selector: new TournamentSelector(2, randomSource.CreateRandomNumberGenerator()),
 //   //     replacer: new ElitismReplacer(1), 
@@ -207,7 +207,7 @@
 //   //     firstAlgorithm: evolutionStrategy,
 //   //     secondAlgorithm: geneticAlgorithm,
 //   //     transformer: new EvolutionToGeneticStateTransformer(),
-//   //     repetitionTransformer: StateTransformer.Create((PopulationState<RealVector> sourceState, EvolutionStrategyPopulationState? previousTargetState) => {
+//   //     repetitionTransformer: StateTransformer.GetEvaluator((PopulationState<RealVector> sourceState, EvolutionStrategyPopulationState? previousTargetState) => {
 //   //       previousTargetState ??= new EvolutionStrategyPopulationState() { Objective = SingleObjective.Minimize, Population = sourceState.Population, MutationStrength = 0.1 };
 //   //       return previousTargetState.Reset() with {
 //   //         Population = sourceState.Population, MutationStrength = previousTargetState.MutationStrength

@@ -68,6 +68,8 @@ public class BernhardPlayground {
     var graphCrossover = graph.WrapCrossover(new SubtreeCrossover());
     var graphMutator = graph.WrapMutator(CreateSymRegAllMutator());
 
+    var evaluator = new Evaluator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, SymbolicRegressionProblem>();
+
     var ranks = new List<List<double>>();
     var rankExtractor = FuncAnalyzer.Build<SymbolicExpressionTree, PopulationIterationResult<SymbolicExpressionTree>>(
       (_, _) => RecordRanks(graph, ranks));
@@ -82,6 +84,7 @@ public class BernhardPlayground {
       graphMutator,
       0.05,
       new TournamentSelector<SymbolicExpressionTree>(2),
+      evaluator,
       1,
       0,
       new AfterIterationsTerminator<SymbolicExpressionTree>(iterations),

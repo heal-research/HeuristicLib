@@ -18,6 +18,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
   IMutator<TGenotype, TEncoding, TProblem> mutator,
   double initialMutationStrength,
   ISelector<TGenotype, TEncoding, TProblem> selector,
+  IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
   int? randomSeed,
   ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator,
   ICrossover<TGenotype, TEncoding, TProblem>? crossover = null,
@@ -33,11 +34,12 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
   public ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; } = crossover;
   public double InitialMutationStrength { get; } = initialMutationStrength;
   public ISelector<TGenotype, TEncoding, TProblem> Selector { get; } = selector;
+  public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; } = evaluator;
 
   public override EvolutionStrategyIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, EvolutionStrategyIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       var pop = Creator.Create(PopulationSize, random, searchSpace, problem);
-      var fitnesses1 = problem.Evaluate(pop);
+      var fitnesses1 = Evaluator.Evaluate(pop, searchSpace, problem);
       return new EvolutionStrategyIterationResult<TGenotype>(Population.From(pop, fitnesses1), InitialMutationStrength);
     }
 
@@ -55,7 +57,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
     }
 
     var children = Mutator.Mutate(parents, random, searchSpace, problem);
-    var fitnesses = problem.Evaluate(children);
+    var fitnesses = Evaluator.Evaluate(children, searchSpace, problem);
 
     double newMutationStrength = previousIterationResult.MutationStrength;
     if (Mutator is IVariableStrengthMutator<TGenotype, TEncoding, TProblem> vm) {

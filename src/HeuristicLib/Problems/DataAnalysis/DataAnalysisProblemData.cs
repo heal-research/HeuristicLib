@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public abstract class DataAnalysisProblemData {
+public abstract class DataAnalysisProblemData : IProblemData {
   public Dataset Dataset { get; set; }
   public List<string> InputVariables { get; }
   public Dictionary<PartitionType, Range> Partitions { get; }

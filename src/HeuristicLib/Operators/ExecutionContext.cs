@@ -26,7 +26,7 @@ public class ExecutionContext(IRandomNumberGenerator random, CancellationToken? 
   }
 
   // public void ParallelFor(int fromInclusive, int toExclusive, Action<IExecutionContext> body) {
-  //   var partitioner = Partitioner.Create(fromInclusive, toExclusive);
+  //   var partitioner = Partitioner.GetEvaluator(fromInclusive, toExclusive);
   //   
   //   Parallel.ForEach(partitioner, (range, state, partitionIndex) => {
   //     var forkedContext = Fork((int)partitionIndex);
@@ -36,7 +36,7 @@ public class ExecutionContext(IRandomNumberGenerator random, CancellationToken? 
   //
   // public IReadOnlyList<T> ParallelFor<T>(int fromInclusive, int toExclusive, Func<IExecutionContext, T> body) {
   //   var results = new T[toExclusive - fromInclusive];
-  //   var partitioner = Partitioner.Create(fromInclusive, toExclusive);
+  //   var partitioner = Partitioner.GetEvaluator(fromInclusive, toExclusive);
   //   
   //   Parallel.ForEach(partitioner, (range, state, partitionIndex) => {
   //     var forkedContext = Fork((int)partitionIndex);
@@ -105,7 +105,7 @@ public class ExecutionContext(IRandomNumberGenerator random, CancellationToken? 
 //   }
 //   
 //   public void ParallelFor(int fromInclusive, int toExclusive, Action<IExecutionContext<TEncoding>> body) {
-//     var partitioner = Partitioner.Create(fromInclusive, toExclusive);
+//     var partitioner = Partitioner.GetEvaluator(fromInclusive, toExclusive);
 //     
 //     Parallel.ForEach(partitioner, (range, state, partitionIndex) => {
 //       var forkedContext = Fork((int)partitionIndex);
@@ -115,7 +115,7 @@ public class ExecutionContext(IRandomNumberGenerator random, CancellationToken? 
 //   
 //   public IReadOnlyList<T> ParallelFor<T>(int fromInclusive, int toExclusive, Func<IExecutionContext<TEncoding>, T> body) {
 //     var results = new T[toExclusive - fromInclusive];
-//     var partitioner = Partitioner.Create(fromInclusive, toExclusive);
+//     var partitioner = Partitioner.GetEvaluator(fromInclusive, toExclusive);
 //     
 //     Parallel.ForEach(partitioner, (range, state, partitionIndex) => {
 //       var forkedContext = Fork((int)partitionIndex);
@@ -143,7 +143,7 @@ public class ExecutionContext(IRandomNumberGenerator random, CancellationToken? 
 //   }
 //
 //   public void ParallelFor(int fromInclusive, int toExclusive, Action<IExecutionContext<TEncoding, TProblem>> body) {
-//     var partitioner = Partitioner.Create(fromInclusive, toExclusive);
+//     var partitioner = Partitioner.GetEvaluator(fromInclusive, toExclusive);
 //     
 //     Parallel.ForEach(partitioner, (range, state, partitionIndex) => {
 //       var forkedContext = Fork((int)partitionIndex);
@@ -153,7 +153,7 @@ public class ExecutionContext(IRandomNumberGenerator random, CancellationToken? 
 //   
 //   public IReadOnlyList<T> ParallelFor<T>(int fromInclusive, int toExclusive, Func<IExecutionContext<TEncoding, TProblem>, T> body) {
 //     var results = new T[toExclusive - fromInclusive];
-//     var partitioner = Partitioner.Create(fromInclusive, toExclusive);
+//     var partitioner = Partitioner.GetEvaluator(fromInclusive, toExclusive);
 //     
 //     Parallel.ForEach(partitioner, (range, state, partitionIndex) => {
 //       var forkedContext = Fork((int)partitionIndex);

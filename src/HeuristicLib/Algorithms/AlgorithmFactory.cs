@@ -16,6 +16,7 @@ public static class AlgorithmFactory {
     IMutator<TGenotype, TEncoding, TProblem> mutator,
     double mutationRate,
     ISelector<TGenotype, TEncoding, TProblem> selector,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
     int elites,
     int? randomSeed,
     ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem> terminator,
@@ -23,7 +24,7 @@ public static class AlgorithmFactory {
     params IAnalyzer<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new GeneticAlgorithm<TGenotype, TEncoding, TProblem>(populationSize, creator, crossover, mutator, mutationRate, selector, elites, randomSeed, terminator, MultiInterceptor(interceptor, analyzers));
+    return new GeneticAlgorithm<TGenotype, TEncoding, TProblem>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, MultiInterceptor(interceptor, analyzers));
   }
 
   public static MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>? MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>(
@@ -44,6 +45,7 @@ public static class AlgorithmFactory {
     ICreator<TGenotype, TEncoding, TProblem> creator,
     IMutator<TGenotype, TEncoding, TProblem> mutator,
     ITerminator<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
     int? randomSeed,
     int maxNeighbors,
     int batchSize,
@@ -52,7 +54,7 @@ public static class AlgorithmFactory {
     params IAnalyzer<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new(terminator, MultiInterceptor(interceptor, analyzers), creator, mutator, randomSeed, maxNeighbors, batchSize, direction);
+    => new(terminator, MultiInterceptor(interceptor, analyzers), creator, mutator, evaluator, randomSeed, maxNeighbors, batchSize, direction);
 
   public static NSGA2<TGenotype, TEncoding, TProblem> NSGA2<TGenotype, TEncoding, TProblem>(
     ICreator<TGenotype, TEncoding, TProblem> creator,
@@ -60,6 +62,7 @@ public static class AlgorithmFactory {
     IMutator<TGenotype, TEncoding, TProblem> mutator,
     ISelector<TGenotype, TEncoding, TProblem> selector,
     ITerminator<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
     int? randomSeed,
     int populationSize,
     double mutationRate,
@@ -68,5 +71,5 @@ public static class AlgorithmFactory {
     params IAnalyzer<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new(terminator, MultiInterceptor(interceptor, analyzers), populationSize, creator, crossover, mutator, mutationRate, selector, randomSeed, dominateOnEquals);
+    => new(terminator, MultiInterceptor(interceptor, analyzers), populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, randomSeed, dominateOnEquals);
 }

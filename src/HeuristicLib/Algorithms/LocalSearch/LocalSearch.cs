@@ -12,6 +12,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
   IInterceptor<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor,
   ICreator<TGenotype, TEncoding, TProblem> creator,
   IMutator<TGenotype, TEncoding, TProblem> mutator,
+  IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
   int? randomSeed,
   int maxNeighbors,
   int batchSize,
@@ -21,6 +22,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
   public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator;
+  public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; } = evaluator;
   public LocalSearchDirection Direction { get; } = direction;
   public int MaxNeighbors { get; } = maxNeighbors;
   public int BatchSize { get; } = batchSize;
@@ -32,7 +34,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
     IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       var ind = Creator.Create(1, random, searchSpace, problem);
-      var obj = problem.Evaluate(ind);
+      var obj = Evaluator.Evaluate(ind, searchSpace, problem);
       return new SingleSolutionIterationResult<TGenotype>(new Solution<TGenotype>(ind[0], obj[0]));
     }
 
@@ -41,7 +43,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
 
     for (int i = 0; i < MaxNeighbors; i += BatchSize) {
       var child = Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, searchSpace, problem);
-      var res = problem.Evaluate(child);
+      var res = Evaluator.Evaluate(child, searchSpace, problem);
       var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1, random)[0];
       if (best == BatchSize)
         continue;

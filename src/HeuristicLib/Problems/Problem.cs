@@ -1,14 +1,8 @@
 ﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems;
-
-public interface IProblem<in TGenotype> : IProblem {
-  IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solution);
-
-  //IEvaluator<TGenotype> GetEvaluator();
-}
 
 // public interface IDeterministicProblem<in TGenotype> : IProblem<TGenotype>
 // {
@@ -23,11 +17,6 @@ public interface IProblem<in TGenotype> : IProblem {
 // {
 //   double Evaluate(TGenotype solution, IRandomNumberGenerator random);
 // }
-
-public interface IProblem<in TGenotype, out TEncoding> : IProblem<TGenotype>
-  where TEncoding : class, IEncoding<TGenotype> {
-  TEncoding SearchSpace { get; }
-}
 
 //
 // public interface IEncodingProvider<out TEncoding> 
@@ -88,19 +77,8 @@ public interface IProblem<in TGenotype, out TEncoding> : IProblem<TGenotype>
 //   public abstract ObjectiveVector Evaluate(TSolution solution);
 // }
 
-public abstract class Problem<TSolution>(Objective objective) : IProblem<TSolution> {
-  public Objective Objective { get; } = objective;
-
-  public abstract ObjectiveVector Evaluate(TSolution solution);
-
-  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> solution) {
-    var results = new ObjectiveVector[solution.Count];
-    Parallel.For(0, solution.Count, i => {
-      results[i] = Evaluate(solution[i]);
-    });
-    return results;
-  }
-}
+public abstract class Problem<TSolution>(Objective objective)
+  : Problem<TSolution, IEncoding<TSolution>>(objective, AnyEncoding<TSolution>.Instance);
 
 public abstract class Problem<TSolution, TEncoding>(Objective objective, TEncoding searchSpace) : IProblem<TSolution, TEncoding>
   where TEncoding : class, IEncoding<TSolution> {
@@ -108,51 +86,4 @@ public abstract class Problem<TSolution, TEncoding>(Objective objective, TEncodi
   public TEncoding SearchSpace { get; } = searchSpace;
 
   public abstract ObjectiveVector Evaluate(TSolution solution);
-
-  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> solution) {
-    var results = new ObjectiveVector[solution.Count];
-    Parallel.For(0, solution.Count, i => {
-      results[i] = Evaluate(solution[i]);
-    });
-    return results;
-  }
-}
-
-// public record class EncodedProblem<TSolution, TGenotype, TSearchSpace> : IEncodedProblem<TSolution, TGenotype, TSearchSpace>
-//   where TSearchSpace : ISearchSpace<TGenotype>
-// {
-//   public required TSearchSpace SearchSpace { get; init; }
-//   public required IDecoder<TGenotype, TSolution> Decoder { get; init; }
-//   public required IEvaluator<TSolution> Evaluator { get; init; }
-//   public required Objective Objective { get; init; }
-// }
-
-public class FuncProblem {
-  public static FuncProblem<TGenotype, TEncoding> Create<TGenotype, TEncoding>(
-    Func<TGenotype, double> evaluateFunc,
-    TEncoding encoding,
-    Objective objective
-  ) where TEncoding : class, IEncoding<TGenotype> {
-    return new FuncProblem<TGenotype, TEncoding>(evaluateFunc, encoding, objective);
-  }
-
-  private static void Test() {
-    var f = new FuncProblem<RealVector, RealVectorEncoding>(
-      x => (x * x).Sum(),
-      new RealVectorEncoding(2, -10, 10),
-      SingleObjective.Minimize
-    );
-
-    var fs = FuncProblem.Create(
-      (RealVector r) => (r * r).Sum(),
-      new RealVectorEncoding(2, -10, 10),
-      SingleObjective.Minimize
-    );
-
-    // var mutator = new InversionMutator();
-    // mutator.Mutate(new Permutation([0, 2, 3, 1]), new SystemRandomNumberGenerator(1), new PermutationEncoding(3));
-    //
-    // var creator = new RandomPermutationCreator();
-    // creator.Create(new SystemRandomNumberGenerator(1), new PermutationEncoding(3));
-  }
 }

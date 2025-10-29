@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
 
 public class RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator {
   /// <summary>
-  /// Create a symbolic expression tree using 'RampedHalfAndHalf' strategy.
+  /// GetEvaluator a symbolic expression tree using 'RampedHalfAndHalf' strategy.
   /// Half the trees are created with the 'Grow' method, and the other half are created with the 'Full' method.
   /// </summary>
   /// <param name="random">Random generator</param>

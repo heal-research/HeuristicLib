@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Random;
+using LanguageExt;
 
 namespace HEAL.HeuristicLib.Genotypes;
 
@@ -119,14 +120,17 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   public bool Contains(double value) => elements.Contains(value);
 
   public bool Equals(RealVector? other) {
-    if (other is null) return false;
+    if (other is null)
+      return false;
     return ReferenceEquals(this, other)
            || elements.SequenceEqual(other.elements);
   }
 
   public override bool Equals(object? obj) {
-    if (obj is null) return false;
-    if (ReferenceEquals(this, obj)) return true;
+    if (obj is null)
+      return false;
+    if (ReferenceEquals(this, obj))
+      return true;
     return obj is Permutation other && Equals(other);
   }
 
@@ -156,12 +160,14 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   }
 
   public static int BroadcastLength(RealVector vector, IEnumerable<RealVector> others) {
-    if (!AreCompatible(vector, others)) throw new ArgumentException("Vectors must be compatible for broadcasting");
+    if (!AreCompatible(vector, others))
+      throw new ArgumentException("Vectors must be compatible for broadcasting");
     return others.Max(v => v.Count);
   }
 
   public static RealVector CreateNormal(int length, RealVector mean, RealVector std, IRandomNumberGenerator random) {
-    if (!AreCompatible(length, mean, std)) throw new ArgumentException("Vectors must be compatible for broadcasting");
+    if (!AreCompatible(length, mean, std))
+      throw new ArgumentException("Vectors must be compatible for broadcasting");
 
     // Box-Muller transform to generate normal distributed random values
     RealVector u1, u2;
@@ -179,7 +185,8 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   }
 
   public static RealVector CreateUniform(int length, RealVector low, RealVector high, IRandomNumberGenerator random) {
-    if (!AreCompatible(length, low, high)) throw new ArgumentException("Vectors must be compatible for broadcasting");
+    if (!AreCompatible(length, low, high))
+      throw new ArgumentException("Vectors must be compatible for broadcasting");
 
     RealVector value = new RealVector(random.Random(length));
     value = low + (high - low) * value;
@@ -199,40 +206,63 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   }
 
   public static RealVector Clamp(RealVector input, RealVector? min, RealVector? max) {
-    if (min is null && max is null) return input; // No clamping needed
+    if (min is null && max is null)
+      return input;
 
-    // Validate lengths
-    if (min is not null && min.Count != 1 && min.Count != input.Count)
-      throw new ArgumentException($"Min vector must be of length 1 or match input length ({input.Count})");
+    int n = input.Count;
+    var values = input.elements;
 
-    if (max is not null && max.Count != 1 && max.Count != input.Count)
-      throw new ArgumentException($"Max vector must be of length 1 or match input length ({input.Count})");
+    var minIsScalar = min is null || min.Count <= 1;
+    var maxIsScalar = max is null || max.Count <= 1;
 
-    double[] result = new double[input.Count];
+    // Length validation
+    if (!minIsScalar && min!.Count != n)
+      throw new ArgumentException($"Min vector must be of length 1 or match input length ({n})");
+    if (!maxIsScalar && max!.Count != n)
+      throw new ArgumentException($"Max vector must be of length 1 or match input length ({n})");
 
-    for (int i = 0; i < input.Count; i++) {
-      double value = input[i];
+    var minVals = min?.elements;
+    var maxVals = max?.elements;
 
-      // Apply lower bound if present
-      if (min is not null) {
-        double minValue = min.Count == 1 ? min[0] : min[i];
-        value = Math.Max(value, minValue);
+    double minScalarVal = min?.Count == 1 ? min[0] : double.NegativeInfinity;
+    double maxScalarVal = max?.Count == 1 ? max[0] : double.PositiveInfinity;
+
+    double[]? result = null;
+
+    for (int i = 0; i < n; i++) {
+      double v = values[i];
+      double lo = minIsScalar ? minScalarVal : minVals![i];
+      double hi = maxIsScalar ? maxScalarVal : maxVals![i];
+
+      double clamped = v;
+      bool changed = false;
+
+      if (v < lo) {
+        clamped = lo;
+        changed = true;
       }
 
-      // Apply upper bound if present
-      if (max is not null) {
-        double maxValue = max.Count == 1 ? max[0] : max[i];
-        value = Math.Min(value, maxValue);
+      if (clamped > hi) {
+        clamped = hi;
+        changed = true;
       }
 
-      result[i] = value;
+      if (result is not null) {
+        result[i] = clamped;
+      } else if (changed) {
+        // First actual clamp -> allocate and copy prefix
+        result = new double[n];
+        Array.Copy(values, 0, result, 0, i);
+        result[i] = clamped;
+      }
     }
 
-    return new RealVector(result);
+    return result is null ? input : new RealVector(result);
   }
 
   public static BoolVector operator >(RealVector a, RealVector b) {
-    if (!AreCompatible(a, b)) throw new ArgumentException("Vectors must be compatible for comparison");
+    if (!AreCompatible(a, b))
+      throw new ArgumentException("Vectors must be compatible for comparison");
 
     int length = BroadcastLength(a, b);
     bool[] result = new bool[length];
@@ -247,7 +277,8 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   }
 
   public static BoolVector operator <(RealVector a, RealVector b) {
-    if (!AreCompatible(a, b)) throw new ArgumentException("Vectors must be compatible for comparison");
+    if (!AreCompatible(a, b))
+      throw new ArgumentException("Vectors must be compatible for comparison");
 
     int length = BroadcastLength(a, b);
     bool[] result = new bool[length];
@@ -262,7 +293,8 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   }
 
   public static BoolVector operator >=(RealVector a, RealVector b) {
-    if (!AreCompatible(a, b)) throw new ArgumentException("Vectors must be compatible for comparison");
+    if (!AreCompatible(a, b))
+      throw new ArgumentException("Vectors must be compatible for comparison");
 
     int length = BroadcastLength(a, b);
     bool[] result = new bool[length];
@@ -277,7 +309,8 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   }
 
   public static BoolVector operator <=(RealVector a, RealVector b) {
-    if (!AreCompatible(a, b)) throw new ArgumentException("Vectors must be compatible for comparison");
+    if (!AreCompatible(a, b))
+      throw new ArgumentException("Vectors must be compatible for comparison");
 
     int length = BroadcastLength(a, b);
     bool[] result = new bool[length];

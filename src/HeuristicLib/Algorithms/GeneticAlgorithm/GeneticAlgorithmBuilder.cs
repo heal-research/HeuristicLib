@@ -9,7 +9,7 @@
 //   where TEncoding : class, IEncoding<TGenotype>
 //   where TProblem : class, IProblem<TGenotype, TEncoding>
 // {
-//   public GeneticAlgorithm<TGenotype, TEncoding, TProblem> Create() {
+//   public GeneticAlgorithm<TGenotype, TEncoding, TProblem> GetEvaluator() {
 //     if (!IsValid()) {
 //       throw new InvalidOperationException("Genetic Algorithm is not valid. Please check the configuration.");
 //     }

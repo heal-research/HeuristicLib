@@ -17,10 +17,9 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; }
   public double MutationRate { get; }
   public ISelector<TGenotype, TEncoding, TProblem> Selector { get; }
+  public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; }
   public int Elites { get; }
   // public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; }
-
-  private readonly IRandomNumberGenerator algorithmRandom;
 
   private readonly AgedGenotypeCreator<TGenotype, TEncoding, TProblem> agedCreator;
   private readonly AgedCrossover<TGenotype, TEncoding, TProblem> agedCrossover;
@@ -43,6 +42,8 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     ICrossover<TGenotype, TEncoding, TProblem> crossover,
     IMutator<TGenotype, TEncoding, TProblem> mutator, double mutationRate,
     ISelector<TGenotype, TEncoding, TProblem> selector,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+
     // IReplacer<TGenotype, TEncoding, TProblem> replacer,
     int elites,
     int? randomSeed,
@@ -55,10 +56,10 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     Mutator = mutator;
     MutationRate = mutationRate;
     Selector = selector;
+    Evaluator = evaluator;
     //Replacer = replacer;
     Elites = elites;
 
-    algorithmRandom = new SystemRandomNumberGenerator(randomSeed);
     internalMutator = new MultiMutator<TGenotype, TEncoding, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
     internalReplacer = new ElitismReplacer<TGenotype>(elites);
 
@@ -86,7 +87,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
 
     var startEvaluating = Stopwatch.GetTimestamp();
-    var fitnesses = problem.Evaluate(initialLayerPopulation);
+    var fitnesses = Evaluator.Evaluate(initialLayerPopulation.Select(x => x.InnerGenotype).ToArray(), searchSpace.InnerEncoding, problem.InnerProblem);
     var endEvaluating = Stopwatch.GetTimestamp();
     EvaluationsMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating));
 
@@ -123,7 +124,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
 
     var startEvaluation = Stopwatch.GetTimestamp();
-    var fitnesses = problem.Evaluate(population);
+    var fitnesses = Evaluator.Evaluate(population.Select(x => x.InnerGenotype).ToArray(), searchSpace.InnerEncoding, problem.InnerProblem);
     var endEvaluation = Stopwatch.GetTimestamp();
     EvaluationsMetric += new OperatorMetric(fitnesses.Count, Stopwatch.GetElapsedTime(startEvaluation, endEvaluation));
 

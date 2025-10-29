@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
 
 public class FullTreeCreator : SymbolicExpressionTreeCreator {
   /// <summary>
-  /// Create a symbolic expression tree using the 'Full' method.
+  /// GetEvaluator a symbolic expression tree using the 'Full' method.
   /// Function symbols are used for all nodes situated on a level above the maximum tree depth. 
   /// Nodes on the last tree level will have Terminal symbols.
   /// </summary>

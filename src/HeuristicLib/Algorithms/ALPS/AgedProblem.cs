@@ -9,15 +9,16 @@ public class AgedProblem<TGenotype, TEncoding, TProblem>(TProblem innerProblem) 
   public TProblem InnerProblem { get; } = innerProblem;
 
   public Objective Objective => InnerProblem.Objective;
+  public ObjectiveVector Evaluate(AgedGenotype<TGenotype> solution) => InnerProblem.Evaluate(solution.InnerGenotype);
 
   public AgedEncoding<TGenotype, TEncoding> SearchSpace { get; } = new(innerProblem.SearchSpace);
 
-  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<AgedGenotype<TGenotype>> solutions) {
-    var genotypes = new TGenotype[solutions.Count];
-    for (int i = 0; i < solutions.Count; i++) {
-      genotypes[i] = solutions[i].InnerGenotype;
-    }
+  //public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<AgedGenotype<TGenotype>> solutions) {
+  //  var genotypes = new TGenotype[solutions.Count];
+  //  for (int i = 0; i < solutions.Count; i++) {
+  //    genotypes[i] = solutions[i].InnerGenotype;
+  //  }
 
-    return InnerProblem.Evaluate(genotypes);
-  }
+  //  return InnerProblem.Evaluate(genotypes);
+  //}
 }

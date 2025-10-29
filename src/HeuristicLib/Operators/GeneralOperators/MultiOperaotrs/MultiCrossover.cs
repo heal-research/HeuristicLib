@@ -91,7 +91,7 @@ public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGe
   //
   //     if (indices.Length == 0) continue;
   //
-  //     // Create temporary arrays for this batch
+  //     // GetEvaluator temporary arrays for this batch
   //     TGenotype[] p1 = new TGenotype[indices.Length];
   //     TGenotype[] p2 = new TGenotype[indices.Length];
   //     for (int j = 0; j < indices.Length; j++) {

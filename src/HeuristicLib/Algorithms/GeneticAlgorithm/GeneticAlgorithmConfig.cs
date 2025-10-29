@@ -92,7 +92,7 @@
 //   {
 //     configuration.ThrowIfInvalid();
 //
-//     return Create(configuration);
+//     return GetEvaluator(configuration);
 //   }
 //   
 //   public static bool TryBuild<TGenotype, TProblem>(this GeneticAlgorithmConfiguration<TGenotype, TProblem> configuration, out  GeneticAlgorithm<TGenotype, TProblem>? algorithm)
@@ -103,11 +103,11 @@
 //       return false;
 //     }
 //     
-//     algorithm = Create(configuration);
+//     algorithm = GetEvaluator(configuration);
 //     return true;
 //   }
 //
-//   private static GeneticAlgorithm<TGenotype, TProblem> Create<TGenotype, TProblem>(GeneticAlgorithmConfiguration<TGenotype, TProblem> configuration)
+//   private static GeneticAlgorithm<TGenotype, TProblem> GetEvaluator<TGenotype, TProblem>(GeneticAlgorithmConfiguration<TGenotype, TProblem> configuration)
 //     where TProblem : IOptimizable<TGenotype>
 //   {
 //     return new GeneticAlgorithm<TGenotype, TProblem>(

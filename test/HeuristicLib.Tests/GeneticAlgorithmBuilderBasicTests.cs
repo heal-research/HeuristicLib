@@ -25,7 +25,7 @@
 //       Mutator = new GaussianMutator(0.1, 0.1),
 //       MutationRate = 0.05,
 //       // Decoder = Decoder.Identity<RealVector>(),
-//       // Evaluator = new MockEvaluator(),
+//       // ProblemEvaluator = new MockEvaluator(),
 //       // Objective = SingleObjective.Minimize,
 //       Selector = new ProportionalSelector(),
 //       Replacer = new PlusSelectionReplacer()
@@ -54,7 +54,7 @@
 //   //     Crossover = new SinglePointCrossover(),
 //   //     Mutator = new GaussianMutator(0.1, 0.1),
 //   //     Decoder = Decoder.Identity<RealVector>(),
-//   //     Evaluator = new MockEvaluator(),
+//   //     ProblemEvaluator = new MockEvaluator(),
 //   //     Objective = SingleObjective.Minimize,
 //   //     Selector = new ProportionalSelector(),
 //   //     Replacer = new PlusSelectionReplacer()
@@ -108,7 +108,7 @@
 //   //   var additionalConfig = new GeneticAlgorithmConfiguration<RealVector, RealVector, RealVectorSearchSpace>() {
 //   //     RandomSource = new RandomSource(42),
 //   //     Decoder = Decoder.Identity<RealVector>(),
-//   //     Evaluator = new MockEvaluator(),
+//   //     ProblemEvaluator = new MockEvaluator(),
 //   //     Objective = SingleObjective.Minimize,
 //   //     SearchSpace = new RealVectorSearchSpace(10, -5, +5)
 //   //   };

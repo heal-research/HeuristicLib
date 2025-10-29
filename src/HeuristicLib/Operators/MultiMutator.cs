@@ -1,0 +1,67 @@
+﻿using HEAL.HeuristicLib.Operators.BatchOperators;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+
+namespace HEAL.HeuristicLib.Operators;
+
+public class MultiMutator<TGenotype, TEncoding, TProblem> : BatchMutator<TGenotype, TEncoding, TProblem>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding> {
+  public IReadOnlyList<IMutator<TGenotype, TEncoding, TProblem>> Mutators { get; }
+  public IReadOnlyList<double> Weights { get; }
+  private readonly double sumWeights;
+  private readonly double[] cumulativeSumWeights;
+
+  public MultiMutator(IReadOnlyList<IMutator<TGenotype, TEncoding, TProblem>> mutators, IReadOnlyList<double>? weights = null) {
+    if (mutators.Count == 0) throw new ArgumentException("At least one crossover must be provided.", nameof(mutators));
+    if (weights != null && weights.Count != mutators.Count) throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
+    if (weights != null && weights.Any(p => p < 0)) throw new ArgumentException("Weights must be non-negative.", nameof(weights));
+    if (weights != null && weights.All(p => p <= 0)) throw new ArgumentException("At least one weight must be greater than zero.", nameof(weights));
+
+    Mutators = mutators;
+    Weights = weights ?? Enumerable.Repeat(1.0, mutators.Count).ToArray();
+
+    cumulativeSumWeights = new double[Weights.Count];
+    for (int i = 0; i < Weights.Count; i++) {
+      sumWeights += Weights[i];
+      cumulativeSumWeights[i] = sumWeights;
+    }
+  }
+
+  public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+    int offspringCount = parent.Count;
+
+    // determine which crossover to use for each offspring
+    int[] operatorAssignment = new int[offspringCount];
+    int[] operatorCounts = new int[Mutators.Count];
+    double[] randoms = random.Random(offspringCount);
+    for (int i = 0; i < offspringCount; i++) {
+      double r = randoms[i] * sumWeights;
+      int idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
+      operatorAssignment[i] = idx;
+      operatorCounts[idx]++;
+    }
+
+    // batch parents by operator
+    var parentBatches = new List<TGenotype>[Mutators.Count];
+    for (int i = 0; i < Mutators.Count; i++) {
+      parentBatches[i] = new List<TGenotype>(operatorCounts[i]);
+    }
+
+    for (int i = 0; i < offspringCount; i++) {
+      int opIdx = operatorAssignment[i];
+      parentBatches[opIdx].Add(parent[i]);
+    }
+
+    // batch-create for each operator and collect
+    var offspring = new List<TGenotype>(offspringCount);
+
+    for (int i = 0; i < Mutators.Count; i++) {
+      var batchOffspring = Mutators[i].Mutate(parentBatches[i], random, encoding, problem);
+      offspring.AddRange(batchOffspring);
+    }
+
+    return offspring;
+  }
+}

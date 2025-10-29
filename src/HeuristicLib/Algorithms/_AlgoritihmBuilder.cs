@@ -6,7 +6,7 @@
 // public interface IAlgorithmBuilder<out TAlgorithm>
 //   where TAlgorithm : IAlgorithm
 // {
-//   TAlgorithm Create();
+//   TAlgorithm GetEvaluator();
 // }
 //
 //
@@ -14,7 +14,7 @@
 //   where TEncoding : class, IEncoding<TGenotype>
 //   where TAlgorithm : IAlgorithm<TGenotype, TEncoding>
 // {
-//   TAlgorithm Create();
+//   TAlgorithm GetEvaluator();
 // }
 //
 // public interface IAlgorithmBuilder<TGenotype, TEncoding, TProblem, out TAlgorithm>
@@ -22,5 +22,5 @@
 //   where TProblem : class, IProblem<TGenotype, TEncoding>
 //   where TAlgorithm : IAlgorithm<TGenotype, TEncoding, TProblem>
 // {
-//   TAlgorithm Create();
+//   TAlgorithm GetEvaluator();
 // }

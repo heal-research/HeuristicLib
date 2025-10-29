@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Operators.SymbolicExpression.Creators;
 
 public class GrowTreeCreator : SymbolicExpressionTreeCreator {
   /// <summary>
-  /// Create a symbolic expression tree using the 'Grow' method.
+  /// GetEvaluator a symbolic expression tree using the 'Grow' method.
   /// All symbols are allowed for nodes, so the resulting trees can be of any shape and size. 
   /// </summary>
   /// <param name="random">Random generator</param>

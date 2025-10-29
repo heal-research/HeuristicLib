@@ -19,6 +19,7 @@
 
     <ItemGroup>
       <Folder Include="Problems\DataAnalysis\Clustering\Evaluators\" />
+      <Folder Include="Problems\Dynamic\" />
     </ItemGroup>
 
 </Project>

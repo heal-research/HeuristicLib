@@ -2,6 +2,16 @@
 
 namespace HEAL.HeuristicLib.Problems;
 
+public class FuncProblem {
+  public static FuncProblem<TGenotype, TEncoding> Create<TGenotype, TEncoding>(
+    Func<TGenotype, double> evaluateFunc,
+    TEncoding encoding,
+    Objective objective
+  ) where TEncoding : class, IEncoding<TGenotype> {
+    return new FuncProblem<TGenotype, TEncoding>(evaluateFunc, encoding, objective);
+  }
+}
+
 public class FuncProblem<TGenotype, TEncoding>(Func<TGenotype, double> evaluateFunc, TEncoding searchSpace, Objective objective)
   : Problem<TGenotype, TEncoding>(objective, searchSpace) /*, IDeterministicProblem<TGenotype>*/
   where TEncoding : class, IEncoding<TGenotype> {
