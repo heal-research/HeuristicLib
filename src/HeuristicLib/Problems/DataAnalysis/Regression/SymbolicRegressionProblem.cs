@@ -13,17 +13,21 @@ public class SymbolicRegressionProblem(
   ISymbolicDataAnalysisExpressionTreeInterpreter interpreter,
   int parameterOptimizationIterations = -1) :
   RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeEncoding>(data, objective, a, encoding) {
-  protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, interpreter);
+  protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, Interpreter);
 
   public override ObjectiveVector Evaluate(SymbolicExpressionTree solution) {
     var rows = ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate();
     var targets = ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training);
+    return Evaluate(solution, rows, targets);
+  }
+
+  protected ObjectiveVector Evaluate(SymbolicExpressionTree solution, IEnumerable<int> rows, IReadOnlyList<double> targets) {
     var predictions = solution
-                      .PredictAndAdjustScaling(interpreter, ProblemData.Dataset, rows, targets)
+                      .PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets)
                       .LimitToRange(LowerPredictionBound, UpperPredictionBound)
                       .ToArray();
     if (parameterOptimizationIterations > 0)
-      _ = SymbolicRegressionParameterOptimization.OptimizeParameters(interpreter, solution, ProblemData, DataAnalysisProblemData.PartitionType.Training, parameterOptimizationIterations, true, LowerPredictionBound, UpperPredictionBound);
+      _ = SymbolicRegressionParameterOptimization.OptimizeParameters(Interpreter, solution, ProblemData, DataAnalysisProblemData.PartitionType.Training, parameterOptimizationIterations, true, LowerPredictionBound, UpperPredictionBound);
     return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(solution, targets, predictions)));
   }
 

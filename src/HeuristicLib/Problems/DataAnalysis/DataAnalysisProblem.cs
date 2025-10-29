@@ -6,7 +6,7 @@ public abstract class DataAnalysisProblem<TProblemData, TSolution, TEncoding>(TP
   : Problem<TSolution, TEncoding>(objective, encoding)
   where TProblemData : DataAnalysisProblemData
   where TEncoding : class, IEncoding<TSolution> {
-  public TProblemData ProblemData {
+  public virtual TProblemData ProblemData {
     get;
   } = problemData;
 }
