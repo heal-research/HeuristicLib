@@ -438,3 +438,5 @@ Desktop.ini
 
 /_site/
 /api/
+/.idea/
+*.DotSettings

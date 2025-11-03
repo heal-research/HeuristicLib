@@ -1,5 +1,8 @@
 # Introduction
 
+!! WARNING !!
+This document is out of date and does not reflect the current design state of HeuristicLib!
+
 ## HeuristicLab vs HeuristicLib
 
 General:
