@@ -195,12 +195,12 @@ public static class RandomEnumerable {
     double maxValue = double.MinValue, minValue = double.MaxValue;
     var valueArray = weights.ToArray();
 
-    for (var i = 0; i < valueArray.Length; i++) {
-      if (valueArray[i] > maxValue) maxValue = valueArray[i];
-      if (valueArray[i] < minValue) minValue = valueArray[i];
+    foreach (var t in valueArray) {
+      if (t > maxValue) maxValue = t;
+      if (t < minValue) minValue = t;
     }
 
-    if (minValue == maxValue) { // all values are equal
+    if (minValue.IsAlmost(maxValue)) { // all values are equal
       for (var i = 0; i < valueArray.Length; i++) {
         valueArray[i] = 1.0;
       }

@@ -96,7 +96,7 @@ public static class DominationCalculator {
             break;
           case DominanceRelation.Equivalent:
           default:
-            throw new ArgumentOutOfRangeException();
+            throw new InvalidOperationException("Encountered invalid dominance relation");
         }
 
         if (pI != populationSize - 2

@@ -1,17 +1,18 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35728.132 d17.12
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C68DA1AA-87E6-411E-B117-C2E48815E70F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLab", "src\HeuristicLab\HeuristicLab.csproj", "{FF784266-ED28-4A8C-8E54-45B3A55D4807}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib", "src\HeuristicLib\HeuristicLib.csproj", "{EF0D8218-AD1B-4839-BF18-D63D6B4FAC8D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_ Solution Items", "_ Solution Items", "{3092DE3B-69B5-4A4B-A51E-BA7C33FC1621}"
 	ProjectSection(SolutionItems) = preProject
-		Directory.Build.props = Directory.Build.props
 		.editorconfig = .editorconfig
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
+		Directory.Build.props = Directory.Build.props
 		docfx.json = docfx.json
 		index.md = index.md
 		toc.yml = toc.yml
@@ -30,18 +31,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Tests", "test\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Tests.Architecture", "test\HeuristicLib.Tests.Architecture\HeuristicLib.Tests.Architecture.csproj", "{15FA9445-CEA3-44FC-9B06-3724C0FA6CB9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLab.ProofOfConcepts", "HeuristicLab.ProofOfConcepts\HeuristicLab.ProofOfConcepts.csproj", "{3802DE35-A559-4C25-ACAA-94A4311EDB22}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{FF784266-ED28-4A8C-8E54-45B3A55D4807}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FF784266-ED28-4A8C-8E54-45B3A55D4807}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FF784266-ED28-4A8C-8E54-45B3A55D4807}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FF784266-ED28-4A8C-8E54-45B3A55D4807}.Release|Any CPU.Build.0 = Release|Any CPU
 		{EF0D8218-AD1B-4839-BF18-D63D6B4FAC8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{EF0D8218-AD1B-4839-BF18-D63D6B4FAC8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF0D8218-AD1B-4839-BF18-D63D6B4FAC8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -54,16 +49,13 @@ Global
 		{15FA9445-CEA3-44FC-9B06-3724C0FA6CB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{15FA9445-CEA3-44FC-9B06-3724C0FA6CB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{15FA9445-CEA3-44FC-9B06-3724C0FA6CB9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3802DE35-A559-4C25-ACAA-94A4311EDB22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3802DE35-A559-4C25-ACAA-94A4311EDB22}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{3802DE35-A559-4C25-ACAA-94A4311EDB22}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{3802DE35-A559-4C25-ACAA-94A4311EDB22}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{FF784266-ED28-4A8C-8E54-45B3A55D4807} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
 		{EF0D8218-AD1B-4839-BF18-D63D6B4FAC8D} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
 		{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF} = {7D61D99E-D0EF-4AC1-8182-520A1990C4AC}
 		{15FA9445-CEA3-44FC-9B06-3724C0FA6CB9} = {7D61D99E-D0EF-4AC1-8182-520A1990C4AC}
-		{3802DE35-A559-4C25-ACAA-94A4311EDB22} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
 	EndGlobalSection
 EndGlobal

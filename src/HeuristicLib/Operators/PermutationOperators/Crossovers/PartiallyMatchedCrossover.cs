@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Operators.BatchOperators;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.PermutationOperators.Crossovers;

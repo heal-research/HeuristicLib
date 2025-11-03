@@ -14,6 +14,7 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.PythonInterOptScripts;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -241,7 +242,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void TestPlayground() {
     const int iterations = 4;
-    var bp = new BernhardPlayground();
+    var bp = new GenealogyAnalysis();
     var i = 0;
     bp.GenealogyGraphGeneticAlgorithm("TestData\\192_vineyard.tsv", _ => i++, AlgorithmRandomSeed, 10, iterations);
     Assert.Equal(iterations, i);

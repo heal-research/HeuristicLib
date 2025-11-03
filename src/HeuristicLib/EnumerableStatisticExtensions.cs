@@ -94,7 +94,7 @@ public static class EnumerableStatisticExtensions {
       i = l + 1; // Initialize pointers for partitioning.
       j = ir;
       a = arr[l + 1]; // Partitioning element.
-      for (;;) { // Beginning of innermost loop.
+      while (true) { // Beginning of innermost loop.
         do
           i++;
         while (arr[i] < a /* arr[i].CompareTo(a) < 0 */); // Scan up to find element > a.

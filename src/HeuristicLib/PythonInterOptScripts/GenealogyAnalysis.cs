@@ -14,16 +14,16 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib;
+namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
-public class BernhardPlayground {
+public class GenealogyAnalysis {
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
 
   public delegate void GenerationCallback(PopulationIterationResult<SymbolicExpressionTree> current);
 
   private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(string? file) {
     var problemData = file is null ? new RegressionProblemData(new ModifiableDataset(["x", "y"], Data), ["x"], "y") : RegressionCsvInstanceProvider.ImportData(file);
-    var problem = new SymbolicRegressionProblem(problemData, [new RootMeanSquaredErrorEvaluator()]) {
+    var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator()) {
       SearchSpace = {
         TreeDepth = 40,
         TreeLength = 40
@@ -35,7 +35,7 @@ public class BernhardPlayground {
     }
 
     var aroot = problem.SearchSpace.Grammar.AddLinearScaling();
-    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(aroot, [new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables }]);
+    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(aroot, new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables });
     return problem;
   }
 
@@ -100,7 +100,7 @@ public class BernhardPlayground {
     return (graphViz, ranks, qualities.CurrentState);
   }
 
-  public static void RecordRanks<TGenotype>(GenealogyGraph<TGenotype> graph, List<List<double>> ranks) where TGenotype : notnull {
+  private static void RecordRanks<TGenotype>(GenealogyGraph<TGenotype> graph, List<List<double>> ranks) where TGenotype : notnull {
     if (graph.Nodes.Count < 2)
       return;
     var line = graph.Nodes[^2].Values

@@ -20,14 +20,18 @@ public class ImmutableList<T> : IReadOnlyList<T>, IEquatable<ImmutableList<T>>
   System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => items.GetEnumerator();
 
   public override bool Equals(object? obj) {
-    if (obj is null) return false;
-    if (ReferenceEquals(this, obj)) return true;
+    if (obj is null)
+      return false;
+    if (ReferenceEquals(this, obj))
+      return true;
     return obj.GetType() == GetType() && Equals((ImmutableList<T>)obj);
   }
 
   public virtual bool Equals(ImmutableList<T>? other) {
-    if (other is null) return false;
-    if (Count != other.Count) return false;
+    if (other is null)
+      return false;
+    if (Count != other.Count)
+      return false;
     for (int i = 0; i < Count; i++)
       if (!this[i]!.Equals(other[i]))
         return false;

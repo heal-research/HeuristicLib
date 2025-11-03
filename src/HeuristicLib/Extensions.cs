@@ -55,12 +55,9 @@ public static class Extensions {
     Func<T1, T2> selector,
     IComparer<T2> comparer,
     int m) {
-    if (source == null)
-      throw new ArgumentNullException(nameof(source));
-    if (selector == null)
-      throw new ArgumentNullException(nameof(selector));
-    if (comparer == null)
-      throw new ArgumentNullException(nameof(comparer));
+    ArgumentNullException.ThrowIfNull(source);
+    ArgumentNullException.ThrowIfNull(selector);
+    ArgumentNullException.ThrowIfNull(comparer);
     if (m <= 0)
       return [];
 
