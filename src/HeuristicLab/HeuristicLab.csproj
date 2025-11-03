@@ -8,4 +8,8 @@
         <RootNamespace>HEAL.HeuristicLab</RootNamespace>
     </PropertyGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\HeuristicLib\HeuristicLib.csproj" />
+    </ItemGroup>
+
 </Project>
