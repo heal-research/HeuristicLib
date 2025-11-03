@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
+﻿using HEAL.HeuristicLib.Optimization;
+
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 #pragma warning disable S2178
 public class OnlineAccuracyCalculator {
   private int correctlyClassified;

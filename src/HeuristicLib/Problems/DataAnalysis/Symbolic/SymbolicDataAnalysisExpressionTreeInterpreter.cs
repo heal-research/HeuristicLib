@@ -1,6 +1,7 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math.Variables;
+﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
+using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 

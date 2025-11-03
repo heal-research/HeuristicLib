@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;

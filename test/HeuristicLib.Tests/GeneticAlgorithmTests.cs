@@ -1,10 +1,12 @@
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Encodings.RealVector;
+using HEAL.HeuristicLib.Encodings.RealVector.Creators;
+using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
+using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.RealVectorOperators.Creators;
-using HEAL.HeuristicLib.Operators.RealVectorOperators.Crossovers;
-using HEAL.HeuristicLib.Operators.RealVectorOperators.Mutators;
+using HEAL.HeuristicLib.Operators.Evaluator;
+using HEAL.HeuristicLib.Operators.Replacer;
+using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Tests;

@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
+﻿using HEAL.HeuristicLib.Optimization;
+
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public class ClassificationPerformanceMeasuresCalculator {
   public ClassificationPerformanceMeasuresCalculator(string positiveClassName, double positiveClassValue) {

@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;

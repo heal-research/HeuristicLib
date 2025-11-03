@@ -1,5 +1,5 @@
-using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 using HEAL.HeuristicLib.Random;

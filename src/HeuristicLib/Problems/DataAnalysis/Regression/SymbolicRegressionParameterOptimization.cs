@@ -1,6 +1,6 @@
-using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math.Variables;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
@@ -34,7 +34,7 @@ public static class SymbolicRegressionParameterOptimization {
     ArgumentNullException.ThrowIfNull(funcGrad);
 
     if (parameters.Count == 0)
-      return 0.0; // constant expressions always have an R² of 0.0 
+      return 0.0; // constant expressions always have an Rï¿½ of 0.0 
     var parameterEntries = parameters.ToArray(); // order of entries must be the same for x
 
     // extract initial parameters
