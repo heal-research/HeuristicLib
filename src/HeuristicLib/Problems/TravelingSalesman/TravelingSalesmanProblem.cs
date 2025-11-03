@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
@@ -12,7 +13,7 @@ public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
 
   public TravelingSalesmanProblem() : this(null!) { }
 
-  public override ObjectiveVector Evaluate(Permutation solution) {
+  public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random) {
     var tour = solution;
     double totalDistance = 0.0;
     for (int i = 0; i < tour.Count - 1; i++) {

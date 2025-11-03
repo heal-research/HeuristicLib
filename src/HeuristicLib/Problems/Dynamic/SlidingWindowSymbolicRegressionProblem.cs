@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
@@ -28,7 +29,7 @@ public class SlidingWindowSymbolicRegressionProblem(
 
   public override RegressionProblemData ProblemData => CurrentState;
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution) {
+  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random) {
     var dataPartition = ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
     var rows = RoundRobinRange(CurrentState.StartIndex, CurrentState.EndIndex, dataPartition);
     var targets = ProblemData.Dataset.GetDoubleValues(ProblemData.TargetVariable,

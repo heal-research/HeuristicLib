@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -85,5 +86,6 @@ public abstract class Problem<TSolution, TEncoding>(Objective objective, TEncodi
   public Objective Objective { get; } = objective;
   public TEncoding SearchSpace { get; } = searchSpace;
 
-  public abstract ObjectiveVector Evaluate(TSolution solution);
+  public abstract ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random);
+  public virtual ObjectiveVector Evaluate(TSolution solution) => Evaluate(solution, NoRandomNumberGenerator.Instance);
 }

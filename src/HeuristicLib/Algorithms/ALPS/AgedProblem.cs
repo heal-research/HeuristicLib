@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.ALPS;
 
@@ -9,7 +10,7 @@ public class AgedProblem<TGenotype, TEncoding, TProblem>(TProblem innerProblem) 
   public TProblem InnerProblem { get; } = innerProblem;
 
   public Objective Objective => InnerProblem.Objective;
-  public ObjectiveVector Evaluate(AgedGenotype<TGenotype> solution) => InnerProblem.Evaluate(solution.InnerGenotype);
+  public ObjectiveVector Evaluate(AgedGenotype<TGenotype> solution, IRandomNumberGenerator random) => InnerProblem.Evaluate(solution.InnerGenotype, random);
 
   public AgedEncoding<TGenotype, TEncoding> SearchSpace { get; } = new(innerProblem.SearchSpace);
 

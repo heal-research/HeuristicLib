@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Special;
 
@@ -7,7 +8,7 @@ namespace HEAL.HeuristicLib.Problems.Special;
 public class SpecialProblem(double data) : Problem<SpecialGenotype, SpecialEncoding>(SingleObjective.Maximize, GetEncoding()) {
   public double Data { get; set; } = data;
 
-  public override ObjectiveVector Evaluate(SpecialGenotype solution) {
+  public override ObjectiveVector Evaluate(SpecialGenotype solution, IRandomNumberGenerator random) {
     return Data + solution.Value;
   }
 

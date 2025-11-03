@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -20,7 +21,7 @@ public class FuncProblem<TGenotype, TEncoding>(Func<TGenotype, double> evaluateF
   //   return new DeterministicProblemEvaluator<TGenotype>(this);
   // }
 
-  public override ObjectiveVector Evaluate(TGenotype solution) {
+  public override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random) {
     return EvaluateFunc(solution);
   }
 }

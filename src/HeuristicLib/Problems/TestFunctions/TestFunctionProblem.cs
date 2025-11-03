@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
@@ -8,7 +9,7 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions;
 public class TestFunctionProblem(ITestFunction testFunction) : RealVectorProblem(SingleObjective.Create(testFunction.Objective), GetEncoding(testFunction)) {
   public TestFunctionProblem() : this(null!) { }
 
-  public override ObjectiveVector Evaluate(RealVector solution) {
+  public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) {
     return testFunction.Evaluate(solution);
   }
 

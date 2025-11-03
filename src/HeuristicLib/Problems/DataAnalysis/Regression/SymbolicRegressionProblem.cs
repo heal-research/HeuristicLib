@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Encodings.SymbolicExpression;
 using HEAL.HeuristicLib.Encodings.SymbolicExpression.Grammars;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
@@ -15,7 +16,7 @@ public class SymbolicRegressionProblem(
   RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeEncoding>(data, objective, a, encoding) {
   protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, Interpreter);
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution) {
+  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random) {
     var rows = ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate();
     var targets = ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training);
     return Evaluate(solution, rows, targets);
