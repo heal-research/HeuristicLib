@@ -1,7 +1,5 @@
-﻿using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
-using LanguageExt;
 
 namespace HEAL.HeuristicLib.Problems;
 

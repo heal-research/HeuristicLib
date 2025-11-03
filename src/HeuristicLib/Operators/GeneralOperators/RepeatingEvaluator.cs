@@ -1,5 +1,4 @@
-﻿using System.Text;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using MoreLinq;
 

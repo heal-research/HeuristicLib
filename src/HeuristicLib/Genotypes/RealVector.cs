@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Random;
-using LanguageExt;
 
 namespace HEAL.HeuristicLib.Genotypes;
 

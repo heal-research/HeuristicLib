@@ -1,5 +1,4 @@
-﻿using System.Text;
-using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 

@@ -3,6 +3,14 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
+public static class QualityCurveTracker {
+  public static QualityCurveTracker<T> AddQualityCurveTracking<T, T1, T2>(IEvaluator<T, T1, T2> problem, out QualityCurveEvaluationWrapper<T, T1, T2> trackingProblem) where T1 : class, IEncoding<T> where T2 : IProblem<T, T1> {
+    var evalQualities = new QualityCurveTracker<T>();
+    trackingProblem = evalQualities.WrapEvaluator(problem);
+    return evalQualities;
+  }
+}
+
 public class QualityCurveTracker<TGenotype> {
   public readonly List<(Solution<TGenotype> best, int evalCount)> CurrentState = [];
 

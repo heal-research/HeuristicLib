@@ -144,8 +144,8 @@ public class SymbolicRegressionTests {
     var subtreeCrossover = new SubtreeCrossover();
 
     var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
-    var graph = AddGenealogyGraph(subtreeCrossover, symRegAllMutator, out var graphAnalyzer, out var graphCrossover, out var graphMutator);
-    var evalQualities = AddQualityCurveTracking(problem.CreateEvaluator(), out var evaluator);
+    var graph = GenealogyGraph.AddGenealogyAnalysis(subtreeCrossover, symRegAllMutator, ReferenceEqualityComparer.Instance, out var graphAnalyzer, out var graphCrossover, out var graphMutator);
+    var evalQualities = QualityCurveTracker.AddQualityCurveTracking(problem.CreateEvaluator(), out var evaluator);
 
     const int populationSize = 10;
     const double mutationRate = 0.05;
@@ -169,7 +169,7 @@ public class SymbolicRegressionTests {
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
-    Assert.Equal(qualities.CurrentState[^1].best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
+    Assert.Equal(qualities.CurrentState[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
   }
 
   private static QualityCurveTracker<T> AddQualityCurveTracking<T, T1, T2>(IEvaluator<T, T1, T2> problem, out QualityCurveEvaluationWrapper<T, T1, T2> trackingProblem) where T1 : class, IEncoding<T> where T2 : IProblem<T, T1> {
@@ -182,9 +182,9 @@ public class SymbolicRegressionTests {
   public void GenealogyGraphOnLocalSearch() {
     var problem = CreateTestSymbolicRegressionProblem();
     var symRegAllMutator = CreateSymRegAllMutator();
-    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
 
-    var graph = AddGenealogyGraph(new SubtreeCrossover(), symRegAllMutator, out var graphAnalyzer, out _, out var graphMutator);
+    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
+    var graph = GenealogyGraph.AddGenealogyAnalysis(new SubtreeCrossover(), symRegAllMutator, ReferenceEqualityComparer.Instance, out var graphAnalyzer, out _, out var graphMutator);
     var evalQualities = AddQualityCurveTracking(problem.CreateEvaluator(), out var evaluator);
 
     var ls = AlgorithmFactory.LocalSearch(
@@ -204,6 +204,7 @@ public class SymbolicRegressionTests {
     Assert.Single(res.Population.Solutions);
     var graphViz = graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
+    Assert.Equal(qualities.CurrentState[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
   }
 
   [Fact]
@@ -211,7 +212,7 @@ public class SymbolicRegressionTests {
     var problem = CreateTestSymbolicRegressionProblem(multiObjective: true);
     var symRegAllMutator = CreateSymRegAllMutator();
     var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
-    var graph = AddGenealogyGraph(new SubtreeCrossover(), symRegAllMutator, out var graphAnalyzer, out var crossover, out var graphMutator);
+    var graph = GenealogyGraph.AddGenealogyAnalysis(new SubtreeCrossover(), symRegAllMutator, ReferenceEqualityComparer.Instance, out var graphAnalyzer, out var crossover, out var graphMutator);
     var evalQualities = AddQualityCurveTracking(problem.CreateEvaluator(), out var evaluator);
 
     const int populationSize = 10;
@@ -237,14 +238,14 @@ public class SymbolicRegressionTests {
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
+    Assert.Equal(qualities.CurrentState[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
   }
 
   [Fact]
   public void TestPlayground() {
     const int iterations = 4;
-    var bp = new GenealogyAnalysis();
     var i = 0;
-    bp.GenealogyGraphGeneticAlgorithm("TestData\\192_vineyard.tsv", _ => i++, AlgorithmRandomSeed, 10, iterations);
+    GenealogyAnalysis.GenealogyGraphGeneticAlgorithm("TestData\\192_vineyard.tsv", _ => i++, AlgorithmRandomSeed, 10, iterations);
     Assert.Equal(iterations, i);
   }
 

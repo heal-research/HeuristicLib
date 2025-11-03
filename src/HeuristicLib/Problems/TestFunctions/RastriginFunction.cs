@@ -11,10 +11,11 @@ public class RastriginFunction(int dimension) : ITestFunction {
 
   public double Evaluate(RealVector solution) {
     int n = solution.Count;
-    double A = 10;
-    double sum = A * n;
+    const double a = 10;
+    double sum = a * n;
     for (int i = 0; i < n; i++) {
-      sum += solution[i] * solution[i] - A * Math.Cos(2 * Math.PI * solution[i]);
+      var d = solution[i];
+      sum += d * d - a * Math.Cos(2 * Math.PI * d);
     }
 
     return sum;
