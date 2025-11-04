@@ -1,5 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
+[Obsolete]
 public class NoRandomNumberGenerator : IRandomNumberGenerator {
   public static readonly IRandomNumberGenerator Instance = new NoRandomNumberGenerator();
   public double Random() => throw new NotImplementedException();

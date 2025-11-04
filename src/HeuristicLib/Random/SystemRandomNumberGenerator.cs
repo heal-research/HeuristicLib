@@ -1,5 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
+[Obsolete]
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   private static readonly SystemRandomNumberGenerator GlobalInstance = new(new System.Random());
 

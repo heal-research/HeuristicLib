@@ -1,5 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
+[Obsolete]
 public interface IRandomNumberGenerator {
   double Random();
   int Integer(int low, int high, bool endpoint = false);
