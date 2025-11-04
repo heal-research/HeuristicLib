@@ -16,7 +16,7 @@ public class SymbolicRegressionProblem(
   RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeEncoding>(data, objective, a, encoding) {
   protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, Interpreter);
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random) {
+  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution) {
     var rows = ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate();
     var targets = ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training);
     return Evaluate(solution, rows, targets);

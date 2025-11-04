@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 
@@ -7,6 +8,20 @@ namespace HEAL.HeuristicLib.Operators.Interceptor;
 public static class MultiInterceptor {
   public static MultiInterceptor<TGenotype, TIterationResult, TEncoding, TProblem> Build<TGenotype, TIterationResult, TEncoding, TProblem>(IEnumerable<IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>> interceptors) where TIterationResult : IIterationResult where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
     return new MultiInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>(interceptors);
+  }
+  
+  public static MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>? Create<TGenotype, TResult, TEncoding, TProblem>(
+    IInterceptor<TGenotype, TResult, TEncoding, TProblem>? interceptor,
+    IAnalyzer<TGenotype, TResult, TEncoding, TProblem>[] analyzers)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding>
+    where TResult : IIterationResult {
+    var list = new List<IInterceptor<TGenotype, TResult, TEncoding, TProblem>>();
+    if (interceptor != null)
+      list.Add(interceptor);
+    if (analyzers.Length != 0)
+      list.Add(new AnalysisInterceptor<TGenotype, TResult, TEncoding, TProblem>(analyzers));
+    return list.Count == 0 ? null : new MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>(list);
   }
 }
 

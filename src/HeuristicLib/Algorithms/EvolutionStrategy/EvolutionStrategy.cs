@@ -46,7 +46,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
   public override EvolutionStrategyIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, EvolutionStrategyIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       var pop = Creator.Create(PopulationSize, random, searchSpace, problem);
-      var fitnesses1 = Evaluator.Evaluate(pop, searchSpace, problem);
+      var fitnesses1 = Evaluator.Evaluate(pop, random, searchSpace, problem);
       return new EvolutionStrategyIterationResult<TGenotype>(Population.From(pop, fitnesses1), InitialMutationStrength);
     }
 
@@ -64,7 +64,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
     }
 
     var children = Mutator.Mutate(parents, random, searchSpace, problem);
-    var fitnesses = Evaluator.Evaluate(children, searchSpace, problem);
+    var fitnesses = Evaluator.Evaluate(children, random, searchSpace, problem);
 
     double newMutationStrength = previousIterationResult.MutationStrength;
     if (Mutator is IVariableStrengthMutator<TGenotype, TEncoding, TProblem> vm) {

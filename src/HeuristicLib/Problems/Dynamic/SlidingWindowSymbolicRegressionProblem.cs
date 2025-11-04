@@ -29,7 +29,7 @@ public class SlidingWindowSymbolicRegressionProblem(
 
   public override RegressionProblemData ProblemData => CurrentState;
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random) {
+  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution) {
     var dataPartition = ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
     var rows = RoundRobinRange(CurrentState.StartIndex, CurrentState.EndIndex, dataPartition);
     var targets = ProblemData.Dataset.GetDoubleValues(ProblemData.TargetVariable,

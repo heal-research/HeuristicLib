@@ -14,7 +14,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.ALPS;
 
-public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
+public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
   : IterativeAlgorithm<TGenotype, TEncoding, TProblem, ALPSResult<TGenotype>, ALPSIterationResult<TGenotype>>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
@@ -43,7 +43,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   public OperatorMetric SelectionMetric { get; protected set; } = OperatorMetric.Zero;
   public OperatorMetric ReplacementMetric { get; protected set; } = OperatorMetric.Zero;
 
-  public GeneticAlgorithm(
+  public ALPSGeneticAlgorithm(
     int populationSize,
     ICreator<TGenotype, TEncoding, TProblem> creator,
     ICrossover<TGenotype, TEncoding, TProblem> crossover,
@@ -80,7 +80,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   public override ALPSIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, ALPSIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     var agedProblem = new AgedProblem<TGenotype, TEncoding, TProblem>(problem);
     var agedEncoding = new AgedEncoding<TGenotype, TEncoding>(searchSpace);
-    var iterationRandom = random.Fork(CurrentIteration);
+    var iterationRandom = random.Spawn();
     return previousIterationResult switch {
       null => ExecuteInitialization(agedProblem, agedEncoding, iterationRandom),
       _ => ExecuteGeneration(agedProblem, agedEncoding, previousIterationResult, iterationRandom)
@@ -94,7 +94,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
 
     var startEvaluating = Stopwatch.GetTimestamp();
-    var fitnesses = Evaluator.Evaluate(initialLayerPopulation.Select(x => x.InnerGenotype).ToArray(), searchSpace.InnerEncoding, problem.InnerProblem);
+    var fitnesses = Evaluator.Evaluate(initialLayerPopulation.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerEncoding, problem.InnerProblem);
     var endEvaluating = Stopwatch.GetTimestamp();
     EvaluationsMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating));
 
@@ -131,7 +131,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
     MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
 
     var startEvaluation = Stopwatch.GetTimestamp();
-    var fitnesses = Evaluator.Evaluate(population.Select(x => x.InnerGenotype).ToArray(), searchSpace.InnerEncoding, problem.InnerProblem);
+    var fitnesses = Evaluator.Evaluate(population.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerEncoding, problem.InnerProblem);
     var endEvaluation = Stopwatch.GetTimestamp();
     EvaluationsMetric += new OperatorMetric(fitnesses.Count, Stopwatch.GetElapsedTime(startEvaluation, endEvaluation));
 

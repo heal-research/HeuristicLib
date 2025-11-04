@@ -13,7 +13,7 @@ public class ClassificationProblem<TProblemData, TSolution, TEncoding>(TProblemD
 
   private double[]? trainingTargetCache;
 
-  public override ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random) {
+  public override ObjectiveVector Evaluate(TSolution solution) {
     trainingTargetCache ??= ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ToArray();
     var predictions = solution.Predict(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
     if (Evaluators.Count == 1)

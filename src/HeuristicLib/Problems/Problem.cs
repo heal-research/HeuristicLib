@@ -77,8 +77,10 @@ namespace HEAL.HeuristicLib.Problems;
 //   public abstract ObjectiveVector Evaluate(TSolution solution);
 // }
 
-public abstract class Problem<TSolution>(Objective objective)
-  : Problem<TSolution, IEncoding<TSolution>>(objective, AnyEncoding<TSolution>.Instance);
+// public abstract class Problem<TSolution>(Objective objective)
+//   : Problem<TSolution, IEncoding<TSolution>>(objective, null!) 
+// {
+// }
 
 public abstract class Problem<TSolution, TEncoding>(Objective objective, TEncoding searchSpace) : IProblem<TSolution, TEncoding>
   where TEncoding : class, IEncoding<TSolution> {
@@ -86,5 +88,4 @@ public abstract class Problem<TSolution, TEncoding>(Objective objective, TEncodi
   public TEncoding SearchSpace { get; } = searchSpace;
 
   public abstract ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random);
-  public virtual ObjectiveVector Evaluate(TSolution solution) => Evaluate(solution, NoRandomNumberGenerator.Instance);
 }

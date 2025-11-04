@@ -14,7 +14,7 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
   where TIterationResult : IIterationResult {
   public int CurrentIteration { get; protected set; }
 
-  protected readonly IRandomNumberGenerator AlgorithmRandom = new SystemRandomNumberGenerator(randomSeed ?? SystemRandomNumberGenerator.RandomSeed());
+  protected readonly IRandomNumberGenerator AlgorithmRandom = SystemRandomNumberGenerator.Default(randomSeed);
 
   public ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> Terminator { get; } = terminator;
   public IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; } = interceptor;

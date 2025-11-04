@@ -83,6 +83,6 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
     var minArity = encoding.Grammar.GetMinimumSubtreeCount(node.Symbol);
     var maxArity = encoding.Grammar.GetMaximumSubtreeCount(node.Symbol);
 
-    return random.Next(minArity, maxArity + 1);
+    return random.Integer(minArity, maxArity + 1);
   }
 }

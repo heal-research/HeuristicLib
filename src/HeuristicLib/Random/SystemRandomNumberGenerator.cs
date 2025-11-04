@@ -1,36 +1,42 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
-[Obsolete]
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
-  private static readonly SystemRandomNumberGenerator GlobalInstance = new(new System.Random());
+  
+  private static readonly System.Random GlobalSeedGenerator = new();
+  public static SystemRandomNumberGenerator Default(int? seed) {
+    if (seed.HasValue) {
+      return new SystemRandomNumberGenerator(seed.Value);
+    }
+    lock (GlobalSeedGenerator) {
+      return new SystemRandomNumberGenerator(GlobalSeedGenerator.Next());
+    }
+  }
 
+
+  private readonly SeedSequence seedSequence;
   private readonly System.Random random;
-
-  private SystemRandomNumberGenerator(System.Random random) => this.random = random;
-
-  public SystemRandomNumberGenerator(int? seed = null) => random = new System.Random(seed ?? RandomSeed());
-
-  public double Random() => random.NextDouble();
-
-  public int Integer(int low, int high, bool endpoint = false) => random.Next(low, endpoint ? high + 1 : high);
-
-  public int Integer() => random.Next();
-
-  public byte[] Bytes(int length) {
-    byte[] bytes = new byte[length];
-    random.NextBytes(bytes);
-    return bytes;
+  public SystemRandomNumberGenerator(SeedSequence seedSequence) {
+    this.seedSequence = seedSequence;
+    random = new System.Random(seedSequence.GenerateSeed());
+  }
+  public SystemRandomNumberGenerator(int seed)
+    : this(new SeedSequence(seed)) {
+  }
+  
+  public byte[] RandomBytes(int length) {
+    byte[] data = new byte[length];
+    random.NextBytes(data);
+    return data;
   }
 
-  public IRandomNumberGenerator Fork(params int[] keys) => new SystemRandomNumberGenerator(keys.Aggregate(random.Next(), (current, key) => current ^ key));
-
-  public IReadOnlyList<IRandomNumberGenerator> Spawn(int count) => Enumerable
-                                                                   .Range(0, count)
-                                                                   .Select(_ => new SystemRandomNumberGenerator(Integer()))
-                                                                   .ToArray();
-
-  public static int RandomSeed() {
-    lock (GlobalInstance)
-      return GlobalInstance.Integer();
+  public int Integer(int minValue, int maxValue, bool inclusiveHigh = false) {
+    return random.Next(minValue, maxValue + (inclusiveHigh ? 1 : 0));
   }
+
+  public double Random() {
+    return random.NextDouble();
+  }
+
+  public IReadOnlyList<SystemRandomNumberGenerator> Spawn(int count) => seedSequence.Spawn(count).Select(childSequence => new SystemRandomNumberGenerator(childSequence)).ToArray();
+  IReadOnlyList<IRandomNumberGenerator> IRandomNumberGenerator.Spawn(int count) => Spawn(count);
 }

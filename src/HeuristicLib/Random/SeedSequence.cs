@@ -22,6 +22,11 @@ public class SeedSequence {
     numberOfSpawnedChildren += numberOfChildren;
     return children;
   }
+
+  [Obsolete("Not sure if this will clash with the Spawn method.")]
+  public SeedSequence Fork(int forkKey) {
+    return new SeedSequence(rootSeed, forkKey);
+  }
   
   public int GenerateSeed() {
     //return HashCode.Combine(rootSeed, Hash(spawnKey));

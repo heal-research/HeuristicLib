@@ -243,6 +243,6 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     var defaultArity = node.Symbol.DefaultArity;
     if (minArity <= defaultArity && defaultArity <= maxArity) return defaultArity;
 
-    return random.Next(minArity, maxArity + 1);
+    return random.Integer(minArity, maxArity + 1);
   }
 }

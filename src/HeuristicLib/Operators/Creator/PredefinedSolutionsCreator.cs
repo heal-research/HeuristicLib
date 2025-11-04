@@ -25,7 +25,7 @@ public class PredefinedSolutionsCreator<TGenotype, TEncoding, TProblem>(IReadOnl
     var countRemaining = count - countPredefined;
     if (countRemaining <= 0)
       return offspring;
-    var remainingRandom = random.Fork(1); //random.Fork("remaining");
+    var remainingRandom = random.Spawn(); //random.Fork("remaining");
     var remaining = creatorForRemainingSolutions.Create(countRemaining, remainingRandom, encoding, problem);
     for (var i = 0; i < remaining.Count; i++) {
       offspring[countPredefined + i] = remaining[i];

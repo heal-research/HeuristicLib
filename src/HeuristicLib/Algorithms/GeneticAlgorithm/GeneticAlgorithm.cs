@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
@@ -45,7 +46,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>(
 
   protected virtual PopulationIterationResult<TGenotype> ExecuteInitialization(TProblem problem, TEncoding searchSpace, IRandomNumberGenerator random) {
     var population = Creator.Create(PopulationSize, random, searchSpace, problem);
-    var objectives = Evaluator.Evaluate(population, searchSpace, problem);
+    var objectives = Evaluator.Evaluate(population, random, searchSpace, problem);
     return new PopulationIterationResult<TGenotype>(Population.From(population, objectives));
   }
 
@@ -56,7 +57,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>(
     var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
     var population = Crossover.Cross(parents, random, searchSpace, problem);
     population = internalMutator.Mutate(population, random, searchSpace, problem);
-    var fitnesses = Evaluator.Evaluate(population, searchSpace, problem);
+    var fitnesses = Evaluator.Evaluate(population, random, searchSpace, problem);
     var newPopulation = internalReplacer.Replace(oldPopulation, Population.From(population, fitnesses).Solutions, problem.Objective, random);
 
     return new PopulationIterationResult<TGenotype>(Population.From(newPopulation));
@@ -81,3 +82,23 @@ public class GeneticAlgorithm<TGenotype, TEncoding>(
   : GeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>(populationSize, creator, crossover, mutator,
     mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor)
   where TEncoding : class, IEncoding<TGenotype>;
+
+public static class GeneticAlgorithm {
+  public static GeneticAlgorithm<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(
+    int populationSize,
+    ICreator<TGenotype, TEncoding, TProblem> creator,
+    ICrossover<TGenotype, TEncoding, TProblem> crossover,
+    IMutator<TGenotype, TEncoding, TProblem> mutator,
+    double mutationRate,
+    ISelector<TGenotype, TEncoding, TProblem> selector,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+    int elites,
+    int? randomSeed,
+    ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null,
+    params IAnalyzer<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding> {
+    return new GeneticAlgorithm<TGenotype, TEncoding, TProblem>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, MultiInterceptor.Create(interceptor, analyzers));
+  }
+}

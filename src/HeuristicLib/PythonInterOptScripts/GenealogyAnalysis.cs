@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Creators;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Crossovers;
@@ -71,7 +72,7 @@ public class GenealogyAnalysis {
     var graphCrossover = graph.WrapCrossover(new SubtreeCrossover());
     var graphMutator = graph.WrapMutator(CreateSymRegAllMutator());
 
-    var evaluator = new Evaluator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, SymbolicRegressionProblem>();
+    var evaluator = new ProblemEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, SymbolicRegressionProblem>();
 
     var ranks = new List<List<double>>();
     var rankExtractor = FuncAnalyzer.Build<SymbolicExpressionTree, PopulationIterationResult<SymbolicExpressionTree>>(
@@ -81,7 +82,7 @@ public class GenealogyAnalysis {
 
     var random = new SystemRandomNumberGenerator(seed);
 
-    var ga = AlgorithmFactory.GeneticAlgorithm(populationSize,
+    var ga = GeneticAlgorithm.Create(populationSize,
       new ProbabilisticTreeCreator(),
       graphCrossover,
       graphMutator,

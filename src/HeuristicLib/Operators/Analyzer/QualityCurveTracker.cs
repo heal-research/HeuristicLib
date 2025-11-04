@@ -22,5 +22,5 @@ public class QualityCurveTracker<TGenotype> {
   }
 
   public QualityCurveEvaluationWrapper<TGenotype, TEncoding, TProblem> WrapEvaluator<TEncoding, TProblem>(IEvaluator<TGenotype, TEncoding, TProblem> problem)
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : IProblem<TGenotype, TEncoding> => new(problem, this);
+    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> => new(problem, this);
 }

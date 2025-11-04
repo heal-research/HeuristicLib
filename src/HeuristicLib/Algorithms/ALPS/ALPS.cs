@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Algorithms.ALPS;
 
-public class GeneticAlgorithm<TGenotype, TEncoding>(
+public class ALPSGeneticAlgorithm<TGenotype, TEncoding>(
   int populationSize,
   ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> creator,
   ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> crossover,
@@ -22,10 +22,10 @@ public class GeneticAlgorithm<TGenotype, TEncoding>(
   int randomSeed,
   ITerminator<TGenotype, ALPSIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>> terminator,
   IInterceptor<TGenotype, ALPSIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>>? interceptor = null)
-  : GeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor)
+  : ALPSGeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor)
   where TEncoding : class, IEncoding<TGenotype>;
 
-public class GeneticAlgorithm<TGenotype>(
+public class AlpsGeneticAlgorithm<TGenotype>(
   int populationSize,
   ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> creator,
   ICrossover<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> crossover,
@@ -37,4 +37,4 @@ public class GeneticAlgorithm<TGenotype>(
   int randomSeed,
   ITerminator<TGenotype, ALPSIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> terminator,
   IInterceptor<TGenotype, ALPSIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>? interceptor = null)
-  : GeneticAlgorithm<TGenotype, IEncoding<TGenotype>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor);
+  : ALPSGeneticAlgorithm<TGenotype, IEncoding<TGenotype>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor);

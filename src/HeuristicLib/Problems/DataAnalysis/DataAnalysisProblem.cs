@@ -1,4 +1,6 @@
+using System.Data;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
@@ -9,4 +11,8 @@ public abstract class DataAnalysisProblem<TProblemData, TSolution, TEncoding>(TP
   public virtual TProblemData ProblemData {
     get;
   } = problemData;
+
+  // Maybe earlier in the hierarchy for general deterministic problems?
+  public sealed override ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random) => Evaluate(solution);
+  public abstract ObjectiveVector Evaluate(TSolution solution);
 }

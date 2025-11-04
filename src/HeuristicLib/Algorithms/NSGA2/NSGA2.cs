@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
@@ -38,7 +39,7 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
   public override NSGA2IterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, NSGA2IterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       var genotypes = Creator.Create(PopulationSize, random, searchSpace, problem);
-      var objectiveValues = Evaluator.Evaluate(genotypes, searchSpace, problem);
+      var objectiveValues = Evaluator.Evaluate(genotypes, random, searchSpace, problem);
       return new NSGA2IterationResult<TGenotype>(Population.From(genotypes, objectiveValues));
     }
 
@@ -46,7 +47,7 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
     var parents = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
     var children = Crossover.Cross(parents, random, searchSpace, problem);
     var mutants = Mutator.Mutate(children, random, searchSpace, problem);
-    var newPop = Population.From(children, Evaluator.Evaluate(mutants, searchSpace, problem));
+    var newPop = Population.From(children, Evaluator.Evaluate(mutants, random, searchSpace, problem));
     var nextPop = Replacer.Replace(previousIterationResult.Population.Solutions, newPop.Solutions, problem.Objective, random, searchSpace, problem);
     return new NSGA2IterationResult<TGenotype>(Population.From(nextPop));
   }
@@ -54,4 +55,23 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
   protected override NSGA2Result<TGenotype> FinalizeResult(NSGA2IterationResult<TGenotype> iterationResult, TProblem problem) {
     return new NSGA2Result<TGenotype>(iterationResult.Population);
   }
+}
+
+public static class NSGA2 {
+  public static NSGA2<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(
+    ICreator<TGenotype, TEncoding, TProblem> creator,
+    ICrossover<TGenotype, TEncoding, TProblem> crossover,
+    IMutator<TGenotype, TEncoding, TProblem> mutator,
+    ISelector<TGenotype, TEncoding, TProblem> selector,
+    ITerminator<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+    int? randomSeed,
+    int populationSize,
+    double mutationRate,
+    bool dominateOnEquals,
+    IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null,
+    params IAnalyzer<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding>
+    => new(terminator, MultiInterceptor.Create(interceptor, analyzers), populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, randomSeed, dominateOnEquals);
 }

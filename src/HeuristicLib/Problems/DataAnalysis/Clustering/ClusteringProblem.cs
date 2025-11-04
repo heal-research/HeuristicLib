@@ -10,7 +10,7 @@ public class ClusteringProblem<TProblemData, TSolution, TEncoding>(TProblemData 
   where TSolution : IClusteringModel {
   public List<IClusteringEvaluator> Evaluators { get; set; } = objective.ToList();
 
-  public override ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random) {
+  public override ObjectiveVector Evaluate(TSolution solution) {
     var predictions = solution.GetClusterValues(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
     if (Evaluators.Count == 1)
       return new ObjectiveVector(Evaluators[0].Evaluate(ProblemData, DataAnalysisProblemData.PartitionType.Training, predictions));

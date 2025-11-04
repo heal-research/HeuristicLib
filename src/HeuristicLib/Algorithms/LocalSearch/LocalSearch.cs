@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
@@ -39,7 +40,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
     IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       var ind = Creator.Create(1, random, searchSpace, problem);
-      var obj = Evaluator.Evaluate(ind, searchSpace, problem);
+      var obj = Evaluator.Evaluate(ind, random, searchSpace, problem);
       return new SingleSolutionIterationResult<TGenotype>(new Solution<TGenotype>(ind[0], obj[0]));
     }
 
@@ -48,7 +49,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
 
     for (int i = 0; i < MaxNeighbors; i += BatchSize) {
       var child = Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, searchSpace, problem);
-      var res = Evaluator.Evaluate(child, searchSpace, problem);
+      var res = Evaluator.Evaluate(child, random, searchSpace, problem);
       var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1, random)[0];
       if (best == BatchSize)
         continue;
@@ -62,4 +63,21 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
 
   protected override SingleSolutionResult<TGenotype> FinalizeResult(SingleSolutionIterationResult<TGenotype> iterationResult, TProblem problem) =>
     new(iterationResult.Solution);
+}
+
+public static class LocalSearch {
+  public static LocalSearch<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(
+    ICreator<TGenotype, TEncoding, TProblem> creator,
+    IMutator<TGenotype, TEncoding, TProblem> mutator,
+    ITerminator<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+    int? randomSeed,
+    int maxNeighbors,
+    int batchSize,
+    LocalSearchDirection direction,
+    IInterceptor<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null,
+    params IAnalyzer<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding>
+    => new(terminator, MultiInterceptor.Create(interceptor, analyzers), creator, mutator, evaluator, randomSeed, maxNeighbors, batchSize, direction);
 }

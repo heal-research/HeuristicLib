@@ -7,9 +7,20 @@ using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Replacer;
 using HEAL.HeuristicLib.Operators.Selector;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests;
+
+public class DummyEvaluator<TGenotype, TEncoding, TProblem> : Evaluator<TGenotype, TEncoding, TProblem>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding> 
+{
+  public override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+    return new ObjectiveVector(new double[] { 0.0 });
+  }
+}
 
 public class GeneticAlgorithmTests {
   [Fact]
@@ -29,7 +40,7 @@ public class GeneticAlgorithmTests {
       populationSize: 200,
       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
       //Decoder = decoder,
-      evaluator: new Evaluator<RealVector, RealVectorEncoding, IProblem<RealVector, RealVectorEncoding>>(),
+      evaluator: new DummyEvaluator<RealVector, RealVectorEncoding, IProblem<RealVector, RealVectorEncoding>>(),
       //Objective = SingleObjective.Minimize,
       selector: selector, elites: 1, //replacer: replacement,
       randomSeed: 42,

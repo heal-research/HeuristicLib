@@ -4,22 +4,26 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Evaluator;
 
-public class Evaluator<TGenotype, TEncoding, TProblem>(IRandomNumberGenerator randomNumberGenerator) : IEvaluator<TGenotype, TEncoding, TProblem>
+public abstract class Evaluator<TGenotype, TEncoding, TProblem> : IEvaluator<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding> {
-  public Evaluator() : this(NoRandomNumberGenerator.Instance) { }
+  where TProblem : IProblem<TGenotype, TEncoding> 
+{
+  public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 
-  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TEncoding encoding, TProblem problem) {
-    return genotypes.ParallelSelect(randomNumberGenerator, (i, genotype, random) => problem.Evaluate(genotype, random));
+  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, TEncoding, TProblem>.Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+    return solutions.ParallelSelect(random, (_, x, r) => Evaluate(x, r, encoding, problem));
   }
 }
 
-public static class Evaluator {
-  public static Evaluator<TGenotype> CreateEvaluator<TGenotype>(this IProblem<TGenotype, IEncoding<TGenotype>> problem) => new();
-  public static Evaluator<TGenotype> CreateEvaluator<TGenotype>(this IStochasticProblem<TGenotype, IEncoding<TGenotype>> problem) => new(new SystemRandomNumberGenerator(0));
-}
+public abstract class Evaluator<TGenotype, TEncoding> : IEvaluator<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype> {
+  public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding);
 
-public class Evaluator<TGenotype> : Evaluator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> {
-  public Evaluator() { }
-  public Evaluator(IRandomNumberGenerator randomNumberGenerator) : base(randomNumberGenerator) { }
+  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TEncoding encoding) {
+    return parents.ParallelSelect(random, (_, x, r) => Evaluate(x, r, encoding));
+  }
+
+  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Evaluate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
+    return Evaluate(parents, random, encoding);
+  }
 }

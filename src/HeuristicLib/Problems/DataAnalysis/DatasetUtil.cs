@@ -13,7 +13,7 @@ public static class DatasetUtil {
   /// <param name="values">The value lists to be shuffled.</param>
   /// <param name="random">The random number generator</param>
   /// <returns>A new list containing shuffled copies of the original value lists.</returns>
-  public static List<IList> ShuffleLists(this List<IList> values, IRandom random) {
+  public static List<IList> ShuffleLists(this List<IList> values, IRandomNumberGenerator random) {
     var count = values[0].Count;
     var indices = Enumerable.Range(0, count).Shuffle(random).ToArray();
     var shuffled = new List<IList>(values.Count);

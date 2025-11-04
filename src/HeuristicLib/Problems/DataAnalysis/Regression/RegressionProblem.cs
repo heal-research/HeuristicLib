@@ -27,7 +27,7 @@ public abstract class RegressionProblem<TProblemData, TSolution, TEncoding> : Da
 
   public double LowerPredictionBound { get; set; }
 
-  public override ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random) {
+  public override ObjectiveVector Evaluate(TSolution solution) {
     IRegressionModel solution1 = Decode(solution);
     var predictions = solution1.Predict(ProblemData.Dataset, rowIndicesCache).LimitToRange(LowerPredictionBound, UpperPredictionBound);
     if (Evaluators.Count == 1)

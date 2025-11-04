@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using MoreLinq;
 
 namespace HEAL.HeuristicLib.Operators.Evaluator;
@@ -31,12 +32,34 @@ namespace HEAL.HeuristicLib.Operators.Evaluator;
 //   }
 // }
 
-public class RepeatingEvaluator<TGenotype, TEncoding, TProblem>(IEvaluator<TGenotype, TEncoding, TProblem> evaluator, int count, Func<IEnumerable<ObjectiveVector>, ObjectiveVector> aggregator) : IEvaluator<TGenotype, TEncoding, TProblem> where TEncoding : class, IEncoding<TGenotype> where TProblem : IProblem<TGenotype, TEncoding> {
-  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TEncoding encoding, TProblem problem) {
-    var tests = genotypes.Repeat(count).ToArray();
-    var subResults = evaluator.Evaluate(tests, encoding, problem); //avoid calling evaluator multiple times
-    return Enumerable.Range(0, genotypes.Count)
-                     .Select(localI => aggregator(Enumerable.Range(0, count).Select(j => subResults[j * genotypes.Count + localI])))
-                     .ToArray();
+public class RepeatingEvaluator<TGenotype, TEncoding, TProblem> : BatchEvaluator<TGenotype, TEncoding, TProblem> 
+  where TEncoding : class, IEncoding<TGenotype> 
+  where TProblem : class, IProblem<TGenotype, TEncoding> 
+{
+  private readonly IEvaluator<TGenotype, TEncoding, TProblem> evaluator;
+  private readonly int repeats;
+  private readonly Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator;
+  
+  public RepeatingEvaluator(IEvaluator<TGenotype, TEncoding, TProblem> evaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator) {
+    this.evaluator = evaluator;
+    this.repeats = repeats;
+    this.aggregator = aggregator;
+  }
+  
+  public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+    ObjectiveVector[]? results = null;
+
+    for (int i = 0; i < repeats; i++) {
+      var singleResult = evaluator.Evaluate(solutions, random, encoding, problem);
+      if (results is null) {
+        results = singleResult.ToArray();
+      } else {
+        for (int j = 0; j < results.Length; j++) {
+          results[j] = aggregator(results[j], singleResult[j]);
+        }
+      }
+    }
+
+    return results;
   }
 }
