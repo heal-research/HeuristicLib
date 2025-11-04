@@ -1,4 +1,10 @@
 ﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Creator;
+using HEAL.HeuristicLib.Operators.Crossover;
+using HEAL.HeuristicLib.Operators.Evaluator;
+using HEAL.HeuristicLib.Operators.Interceptor;
+using HEAL.HeuristicLib.Operators.Mutator;
+using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 

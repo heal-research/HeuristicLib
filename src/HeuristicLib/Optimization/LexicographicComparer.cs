@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes;
+﻿using HEAL.HeuristicLib.Encodings.Permutation;
 
 namespace HEAL.HeuristicLib.Optimization;
 

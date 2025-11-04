@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpression;
+﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 

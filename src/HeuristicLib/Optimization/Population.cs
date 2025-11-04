@@ -1,5 +1,5 @@
 ﻿using System.Collections;
-using HEAL.HeuristicLib.Core;
+using HEAL.HeuristicLib.Collections;
 
 namespace HEAL.HeuristicLib.Optimization;
 

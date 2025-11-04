@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression;
-using HEAL.HeuristicLib.Encodings.SymbolicExpression.Symbols.Math;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
 using static HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic.BatchOperations;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;

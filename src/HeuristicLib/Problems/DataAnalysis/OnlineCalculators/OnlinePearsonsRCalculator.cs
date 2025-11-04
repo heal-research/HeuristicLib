@@ -1,4 +1,6 @@
-﻿#pragma warning disable S2178
+﻿using HEAL.HeuristicLib.Optimization;
+
+#pragma warning disable S2178
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public class OnlinePearsonsRCalculator {
