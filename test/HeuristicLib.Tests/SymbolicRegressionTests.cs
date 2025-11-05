@@ -248,7 +248,7 @@ public class SymbolicRegressionTests {
   public void TestPlayground() {
     const int iterations = 4;
     var i = 0;
-    GenealogyAnalysis.GenealogyGraphGeneticAlgorithm("TestData\\192_vineyard.tsv", _ => i++, AlgorithmRandomSeed, 10, iterations);
+    GenealogyAnalysis.GeneticAlgorithmOnSymbolicRegression("TestData\\192_vineyard.tsv", _ => i++, AlgorithmRandomSeed, 10, iterations);
     Assert.Equal(iterations, i);
   }
 

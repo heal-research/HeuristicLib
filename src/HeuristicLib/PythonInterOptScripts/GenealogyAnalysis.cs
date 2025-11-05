@@ -1,4 +1,9 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.NSGA2;
+using HEAL.HeuristicLib.Encodings.RealVector;
+using HEAL.HeuristicLib.Encodings.RealVector.Creators;
+using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
+using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Creators;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Crossovers;
@@ -15,7 +20,9 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
+using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
+using System.Text;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
@@ -24,7 +31,7 @@ public static class GenealogyAnalysis {
 
   public delegate void GenerationCallback(PopulationIterationResult<SymbolicExpressionTree> current);
 
-  public static (string graph, double[][] childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) GenealogyGraphGeneticAlgorithm(
+  public static (string graph, double[][] childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) GeneticAlgorithmOnSymbolicRegression(
     string file,
     GenerationCallback callback,
     int seed = 0,
@@ -43,7 +50,7 @@ public static class GenealogyAnalysis {
 
     //analysis
     var bestMedianWorstAnalyzer = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
-    var graph = GenealogyGraph.AddGenealogyAnalysis(crossover, mutator, ReferenceEqualityComparer.Instance, out var graphAnalyzer, out var graphCrossover, out var graphMutator);
+    var graph = GenealogyGraph.AddGenealogyAnalysis(crossover, mutator, out var graphAnalyzer, out var graphCrossover, out var graphMutator);
     graphAnalyzer.SaveSpace = true;
     var ranks = new List<List<double>>();
     var rankExtractor = FuncAnalyzer.Build<SymbolicExpressionTree, PopulationIterationResult<SymbolicExpressionTree>>(
@@ -112,5 +119,30 @@ public static class GenealogyAnalysis {
       new RemoveBranchManipulation(),
       new ReplaceBranchManipulation());
     return symRegAllMutator;
+  }
+}
+
+public static class NeighborhoodVisualization {
+  public static (MultiObjectiveTestFunctionProblem, RealVectorEncoding) TestProblem(int dim = 10, double min = -10, double max = 10) {
+    return (new MultiObjectiveTestFunctionProblem(new CombinedTestFunction(new RastriginFunction(dim), new SphereFunction(dim))),
+      new RealVectorEncoding(dim, min, max));
+  }
+
+  public delegate void GenerationCallback(PopulationIterationResult<RealVector> current);
+
+  public static void NSGA2OnCombined(GenerationCallback callback,
+                                     MultiObjectiveTestFunctionProblem problem,
+                                     RealVectorEncoding encoding,
+                                     int seed = 0,
+                                     int populationSize = 10,
+                                     int iterations = 30) {
+    var creator = new UniformDistributedCreator(encoding);
+    var crossover = new SinglePointCrossover();
+    var mutator = new GaussianMutator(0.5, 0.1);
+    var selector = new RandomSelector<RealVector>();
+    var terminator = new AfterIterationsTerminator<RealVector>(iterations);
+    var evaluator = problem.CreateEvaluator();
+    var analyzer = FuncAnalyzer.Build<RealVector, NSGA2IterationResult<RealVector>>((_, y) => callback(y));
+    AlgorithmFactory.NSGA2(creator, crossover, mutator, selector, terminator, evaluator, seed, populationSize, 0.05, true, null, analyzer);
   }
 }

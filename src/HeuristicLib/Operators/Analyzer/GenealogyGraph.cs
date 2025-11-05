@@ -22,6 +22,20 @@ public static class GenealogyGraph {
     return graph;
   }
 
+  public static GenealogyGraph<T> AddGenealogyAnalysis<T, TE, TP>(ICrossover<T, TE, TP> subtreeCrossover,
+                                                                  IMutator<T, TE, TP> symRegAllMutator,
+                                                                  out GenealogyGraphAnalyzer<T> graphAnalyzer,
+                                                                  out GenealogyGraphCrossover<T, TE, TP> graphCrossover,
+                                                                  out GenealogyGraphMutator<T, TE, TP> graphMutator)
+    where TE : class, IEncoding<T> where TP : class, IProblem<T, TE> where T : notnull {
+    var graph = new GenealogyGraph<T>(EqualityComparer<T>.Default);
+    graphAnalyzer = graph.GetInterceptor();
+    graphAnalyzer.SaveSpace = false;
+    graphCrossover = graph.WrapCrossover(subtreeCrossover);
+    graphMutator = graph.WrapMutator(symRegAllMutator);
+    return graph;
+  }
+
   public static GenealogyGraphAnalyzer<TGenotype> GetInterceptor<TGenotype>(this GenealogyGraph<TGenotype> graph) where TGenotype : notnull => new(graph);
 
   public static GenealogyGraphCrossover<TGenotype, TEncoding, TProblem> WrapCrossover<TGenotype, TEncoding, TProblem>(this GenealogyGraph<TGenotype> graph, ICrossover<TGenotype, TEncoding, TProblem> crossover)
