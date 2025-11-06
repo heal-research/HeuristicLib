@@ -86,10 +86,10 @@
 //   // [Fact]
 //   // public Task GeneticAlgorithmBuilder_UsingProblemFitness() {
 //   //   var problem = TravelingSalesmanProblem.CreateDefault();
-//   //   var ProblemEvaluator = ProblemEvaluator.FromProblem(problem);
+//   //   var DirectEvaluator = DirectEvaluator.FromProblem(problem);
 //   //
 //   //   var builder = new GeneticAlgorithmBuilder<Permutation, Tour, PermutationSearchSpace>()
-//   //     .WithEvaluator(ProblemEvaluator);
+//   //     .WithEvaluator(DirectEvaluator);
 //   //   
 //   //   return Verify(builder);
 //   // }

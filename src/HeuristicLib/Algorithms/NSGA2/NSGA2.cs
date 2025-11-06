@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
 using HEAL.HeuristicLib.Operators.Mutator;
+using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Replacer;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Optimization;
@@ -58,7 +59,7 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
 }
 
 public static class NSGA2 {
-  public static NSGA2<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(
+  public class Prototype<TGenotype, TEncoding, TProblem>(
     ICreator<TGenotype, TEncoding, TProblem> creator,
     ICrossover<TGenotype, TEncoding, TProblem> crossover,
     IMutator<TGenotype, TEncoding, TProblem> mutator,
@@ -69,9 +70,30 @@ public static class NSGA2 {
     int populationSize,
     double mutationRate,
     bool dominateOnEquals,
-    IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null,
-    params IAnalyzer<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
+    IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
+    : PopulationBasedAlgorithmPrototype<TGenotype, TEncoding, TProblem, NSGA2IterationResult<TGenotype>>(populationSize, creator, crossover,
+      mutator, selector, evaluator, randomSeed, terminator, interceptor) where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding> {
+    public double MutationRate { get; set; } = mutationRate;
+    public bool DominateOnEquals { get; set; } = dominateOnEquals;
+  }
+
+  public static Prototype<TGenotype, TEncoding, TProblem> CreatePrototype<TGenotype, TEncoding, TProblem>(ICreator<TGenotype, TEncoding, TProblem> creator,
+                                                                                                          ICrossover<TGenotype, TEncoding, TProblem> crossover,
+                                                                                                          IMutator<TGenotype, TEncoding, TProblem> mutator,
+                                                                                                          ISelector<TGenotype, TEncoding, TProblem> selector,
+                                                                                                          ITerminator<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
+                                                                                                          IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+                                                                                                          int? randomSeed,
+                                                                                                          int populationSize,
+                                                                                                          double mutationRate,
+                                                                                                          bool dominateOnEquals = true,
+                                                                                                          IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
+    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding>
+    => new(creator, crossover, mutator, selector, terminator, evaluator, randomSeed, populationSize, mutationRate, dominateOnEquals, interceptor);
+
+  public static NSGA2<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(this Prototype<TGenotype, TEncoding, TProblem> prototype)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new(terminator, MultiInterceptor.Create(interceptor, analyzers), populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, randomSeed, dominateOnEquals);
+    => new(prototype.Terminator, prototype.Interceptor, prototype.PopulationSize, prototype.Creator, prototype.Crossover, prototype.Mutator, prototype.MutationRate, prototype.Selector, prototype.Evaluator, prototype.RandomSeed, prototype.DominateOnEquals);
 }

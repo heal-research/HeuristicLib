@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Algorithms.ALPS;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.NSGA2;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
@@ -10,6 +9,7 @@ using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Mutators;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Analyzer;
+using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Selector;
@@ -120,23 +120,19 @@ public class SymbolicRegressionTests {
   public void GeneticAlgorithmExecution() {
     var problem = CreateTestSymbolicRegressionProblem();
 
-    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
-
-    var ga = GeneticAlgorithm.Create(100,
+    var ga = GeneticAlgorithm.CreatePrototype(100,
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
       CreateSymRegAllMutator(), //
       0.05,
       new TournamentSelector<SymbolicExpressionTree>(3),
-      new ProblemEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>>(),
+      problem.CreateEvaluator(),
       1,
       AlgorithmRandomSeed,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(100),
-      null,
-      qualities
+      new AfterIterationsTerminator<SymbolicExpressionTree>(100)
     );
-
-    var res = ga.Execute(problem);
+    var qualities = BestMedianWorstAnalysis.Create(ga);
+    var res = ga.CreateAlgorithm().Execute(problem);
 
     Assert.Equal(100, qualities.CurrentState.Count);
     Assert.Equal(100, res.Population.Solutions.Count);
@@ -145,71 +141,52 @@ public class SymbolicRegressionTests {
   [Fact]
   public void GenealogyGraphOnGeneticAlgorithm() {
     var problem = CreateTestSymbolicRegressionProblem();
-    var symRegAllMutator = CreateSymRegAllMutator();
-    var subtreeCrossover = new SubtreeCrossover();
 
-    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
-    var graph = AddGenealogyGraph(subtreeCrossover, symRegAllMutator, out var graphAnalyzer, out var graphCrossover, out var graphMutator);
-    var problemEvaluator = new ProblemEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>>();
-    var evalQualities = AddQualityCurveTracking(problemEvaluator, out var evaluator);
-
-    const int populationSize = 10;
-    const double mutationRate = 0.05;
-    const int maximumIterations = 30;
-    var ga = GeneticAlgorithm.Create(populationSize,
+    var proto = GeneticAlgorithm.CreatePrototype(
+      10,
       new ProbabilisticTreeCreator(),
-      graphCrossover,
-      graphMutator,
-      mutationRate,
+      new SubtreeCrossover(),
+      CreateSymRegAllMutator(),
+      0.05,
       new RandomSelector<SymbolicExpressionTree>(),
-      evaluator,
+      problem.CreateEvaluator(),
       1,
       AlgorithmRandomSeed,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations), null,
-      qualities,
-      graphAnalyzer
-    );
-    var res = ga.Execute(problem);
+      new AfterIterationsTerminator<SymbolicExpressionTree>(30));
 
-    Assert.Equal(maximumIterations, qualities.CurrentState.Count);
-    Assert.Equal(populationSize, res.Population.Solutions.Count);
-    var graphViz = graph.ToGraphViz();
+    var evalQualities = QualityCurveAnalysis.Create(proto);
+    var qualities = BestMedianWorstAnalysis.Create(proto);
+    var genealogy = GenealogyAnalysis.Create(proto);
+    var res = proto.CreateAlgorithm().Execute(problem);
+
+    Assert.Equal(30, qualities.CurrentState.Count);
+    Assert.Equal(10, res.Population.Solutions.Count);
+    var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
     Assert.Equal(qualities.CurrentState[^1].best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
-  }
-
-  private static QualityCurveTracker<T> AddQualityCurveTracking<T, T1, T2>(IEvaluator<T, T1, T2> problem, out QualityCurveEvaluationWrapper<T, T1, T2> trackingProblem) 
-    where T1 : class, IEncoding<T> where T2 : class, IProblem<T, T1> {
-    var evalQualities = new QualityCurveTracker<T>();
-    trackingProblem = evalQualities.WrapEvaluator(problem);
-    return evalQualities;
   }
 
   [Fact]
   public void GenealogyGraphOnLocalSearch() {
     var problem = CreateTestSymbolicRegressionProblem();
     var symRegAllMutator = CreateSymRegAllMutator();
-    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
-
-    var graph = AddGenealogyGraph(new SubtreeCrossover(), symRegAllMutator, out var graphAnalyzer, out _, out var graphMutator);
-    var evalQualities = AddQualityCurveTracking(problem.CreateEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, SymbolicRegressionProblem>(), out var evaluator);
-
-    var ls = LocalSearch.Create(
+    var problemEvaluator = problem.CreateEvaluator();
+    var proto = LocalSearch.GetPrototype(
       new ProbabilisticTreeCreator(),
-      graphMutator,
+      symRegAllMutator,
       new AfterIterationsTerminator<SymbolicExpressionTree>(50),
-      evaluator,
+      problemEvaluator,
       AlgorithmRandomSeed,
       10,
       5,
-      LocalSearchDirection.FirstImprovement,
-      null,
-      qualities,
-      graphAnalyzer);
+      LocalSearchDirection.FirstImprovement);
+
+    var ls = LocalSearch.Create(proto);
+    var genealogy = GenealogyAnalysis.Create(proto);
 
     var res = ls.Execute(problem);
     Assert.Single(res.Population.Solutions);
-    var graphViz = graph.ToGraphViz();
+    var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
   }
 
@@ -217,39 +194,35 @@ public class SymbolicRegressionTests {
   public void GenealogyGraphOnNSGA2() {
     var problem = CreateTestSymbolicRegressionProblem(multiObjective: true);
     var symRegAllMutator = CreateSymRegAllMutator();
-    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
-    var graph = AddGenealogyGraph(new SubtreeCrossover(), symRegAllMutator, out var graphAnalyzer, out var crossover, out var graphMutator);
-    var evalQualities = AddQualityCurveTracking(problem.CreateEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, SymbolicRegressionProblem>(), out var evaluator);
-
     const int populationSize = 10;
     const int maximumIterations = 50;
     const double mutationRate = 0.05;
-    var ls = NSGA2.Create(
+    var nsga2 = NSGA2.CreatePrototype(
       new ProbabilisticTreeCreator(),
-      crossover,
-      graphMutator,
+      new SubtreeCrossover(),
+      symRegAllMutator,
       new RandomSelector<SymbolicExpressionTree>(),
       new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations),
-      evaluator,
+      problem.CreateEvaluator(),
       AlgorithmRandomSeed,
       populationSize,
-      mutationRate,
-      true,
-      null,
-      qualities,
-      graphAnalyzer);
+      mutationRate);
 
-    var res = ls.Execute(problem);
+    QualityCurveAnalysis.Create(nsga2);
+    var genealogy = GenealogyAnalysis.Create(nsga2);
+    var qualities = BestMedianWorstAnalysis.Create(nsga2);
+
+    var res = nsga2.Create().Execute(problem);
     Assert.Equal(maximumIterations, qualities.CurrentState.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Count);
-    var graphViz = graph.ToGraphViz();
+    var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
   }
 
   [Fact]
   public void TestPlayground() {
     const int iterations = 4;
-    var bp = new GenealogyAnalysis();
+    var bp = new PythonGenealogyAnalysis();
     var i = 0;
     bp.GenealogyGraphGeneticAlgorithm("TestData\\192_vineyard.tsv", _ => i++, AlgorithmRandomSeed, 10, iterations);
     Assert.Equal(iterations, i);
@@ -295,15 +268,6 @@ public class SymbolicRegressionTests {
       new Exponential(),
       new Variable { VariableNames = problemData.InputVariables });
     return problem;
-  }
-
-  private static GenealogyGraph<SymbolicExpressionTree> AddGenealogyGraph(SubtreeCrossover subtreeCrossover, MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>> symRegAllMutator, out GenealogyGraphAnalyzer<SymbolicExpressionTree> graphAnalyzer, out GenealogyGraphCrossover<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>> graphCrossover, out GenealogyGraphMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>> graphMutator) {
-    var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
-    graphAnalyzer = graph.GetInterceptor();
-    graphAnalyzer.SaveSpace = false;
-    graphCrossover = graph.WrapCrossover(subtreeCrossover);
-    graphMutator = graph.WrapMutator(symRegAllMutator);
-    return graph;
   }
 
   private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>> CreateSymRegAllMutator() {

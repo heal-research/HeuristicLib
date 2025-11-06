@@ -19,17 +19,17 @@
 //     var crossover = new SinglePointCrossover();
 //     var mutator = new GaussianMutator(0.1, 0.1);
 //     var decoder = Decoder.Identity<RealVector>();
-//     //var ProblemEvaluator = ProblemEvaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
+//     //var DirectEvaluator = DirectEvaluator.FromFitnessFunction<RealVector>(vector => vector.Sum());
 //     var selector = new RandomSelector();
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
 //     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(3);
-//     //var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> { SearchSpace = searchSpace, Decoder = decoder, ProblemEvaluator = ProblemEvaluator, Objective = SingleObjective.Minimize };
+//     //var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> { SearchSpace = searchSpace, Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize };
 //     var problem = new RealVectorMockOptimizable();
 //     
 //     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
 //       //SearchSpace = searchSpace,
 //       populationSize: 2, creator, crossover, mutator, 0.5,
-//       //Decoder = decoder, ProblemEvaluator = ProblemEvaluator, Objective = SingleObjective.Minimize,
+//       //Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize,
 //       selector, replacement, randomSeed: 42, terminator
 //     );
 //

@@ -15,9 +15,7 @@ public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
   public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random) {
     var tour = solution;
     double totalDistance = 0.0;
-    for (int i = 0; i < tour.Count - 1; i++) {
-      totalDistance += ProblemData.GetDistance(tour[i], tour[i + 1]);
-    }
+    for (int i = 0; i < tour.Count - 1; i++) totalDistance += ProblemData.GetDistance(tour[i], tour[i + 1]);
 
     totalDistance += ProblemData.GetDistance(tour[^1], tour[0]); // Return to the starting city
 

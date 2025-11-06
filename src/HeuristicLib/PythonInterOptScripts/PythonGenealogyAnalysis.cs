@@ -17,10 +17,11 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
-public class GenealogyAnalysis {
+public class PythonGenealogyAnalysis {
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
 
   public delegate void GenerationCallback(PopulationIterationResult<SymbolicExpressionTree> current);
@@ -64,42 +65,29 @@ public class GenealogyAnalysis {
       int iterations = 30
     ) {
     var problem = CreateTestSymbolicRegressionProblem(file);
-    var qualities = new BestMedianWorstAnalyzer<SymbolicExpressionTree>();
 
-    var graph = new GenealogyGraph<SymbolicExpressionTree>(ReferenceEqualityComparer.Instance);
-    var graphAnalyzer = graph.GetInterceptor();
-    graphAnalyzer.SaveSpace = true;
-    var graphCrossover = graph.WrapCrossover(new SubtreeCrossover());
-    var graphMutator = graph.WrapMutator(CreateSymRegAllMutator());
-
-    var evaluator = new ProblemEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, SymbolicRegressionProblem>();
-
-    var ranks = new List<List<double>>();
-    var rankExtractor = FuncAnalyzer.Build<SymbolicExpressionTree, PopulationIterationResult<SymbolicExpressionTree>>(
-      (_, _) => RecordRanks(graph, ranks));
-    var pythonCallback = FuncAnalyzer.Build<SymbolicExpressionTree, PopulationIterationResult<SymbolicExpressionTree>>(
-      (_, y) => callback(y));
-
-    var random = new SystemRandomNumberGenerator(seed);
-
-    var ga = GeneticAlgorithm.Create(populationSize,
+    var ga = GeneticAlgorithm.CreatePrototype(populationSize,
       new ProbabilisticTreeCreator(),
-      graphCrossover,
-      graphMutator,
+      new SubtreeCrossover(),
+      CreateSymRegAllMutator(),
       0.05,
-      new TournamentSelector<SymbolicExpressionTree>(2),
-      evaluator,
+      new TournamentSelector<SymbolicExpressionTree>(3),
+      problem.CreateEvaluator(),
       1,
       0,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(iterations),
-      null,
-      qualities,
-      graphAnalyzer,
-      rankExtractor,
-      pythonCallback
+      new AfterIterationsTerminator<SymbolicExpressionTree>(iterations)
     );
-    _ = ga.Execute(problem, random: random);
-    var graphViz = graph.ToGraphViz();
+
+    var genealogyAnalysis = GenealogyAnalysis.Create(ga, saveSpace: true);
+    var qualities = BestMedianWorstAnalysis.Create(ga);
+
+    var ranks = new List<List<double>>();
+    FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
+
+    FuncAnalysis.Create(ga, (_, y) => callback(y));
+
+    _ = ga.CreateAlgorithm().Execute(problem, random: new SystemRandomNumberGenerator(seed));
+    var graphViz = genealogyAnalysis.Graph.ToGraphViz();
 
     return (graphViz, ranks, qualities.CurrentState);
   }

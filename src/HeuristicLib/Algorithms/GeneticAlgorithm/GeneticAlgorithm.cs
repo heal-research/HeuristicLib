@@ -1,10 +1,13 @@
-﻿using HEAL.HeuristicLib.Operators;
+﻿using System.Text;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
 using HEAL.HeuristicLib.Operators.Mutator;
+using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Replacer;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Optimization;
@@ -84,6 +87,44 @@ public class GeneticAlgorithm<TGenotype, TEncoding>(
   where TEncoding : class, IEncoding<TGenotype>;
 
 public static class GeneticAlgorithm {
+  public class Prototype<TGenotype, TEncoding, TProblem>(
+    int populationSize,
+    ICreator<TGenotype, TEncoding, TProblem> creator,
+    ICrossover<TGenotype, TEncoding, TProblem> crossover,
+    IMutator<TGenotype, TEncoding, TProblem> mutator,
+    double mutationRate,
+    ISelector<TGenotype, TEncoding, TProblem> selector,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+    int elites,
+    int? randomSeed,
+    ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
+    : PopulationBasedAlgorithmPrototype<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>>(populationSize, creator, crossover,
+      mutator, selector, evaluator, randomSeed, terminator, interceptor) where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding> {
+    public double MutationRate { get; set; } = mutationRate;
+    public int Elites { get; set; } = elites;
+  }
+
+  public static Prototype<TGenotype, TEncoding, TProblem> CreatePrototype<TGenotype, TEncoding, TProblem>(
+    int populationSize,
+    ICreator<TGenotype, TEncoding, TProblem> creator,
+    ICrossover<TGenotype, TEncoding, TProblem> crossover,
+    IMutator<TGenotype, TEncoding, TProblem> mutator,
+    double mutationRate,
+    ISelector<TGenotype, TEncoding, TProblem> selector,
+    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+    int elites,
+    int? randomSeed,
+    ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
+    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding>
+    => new(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor);
+
+  public static GeneticAlgorithm<TGenotype, TEncoding, TProblem> CreateAlgorithm<TGenotype, TEncoding, TProblem>(this Prototype<TGenotype, TEncoding, TProblem> proto) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
+    return Create(proto.PopulationSize, proto.Creator, proto.Crossover, proto.Mutator, proto.MutationRate, proto.Selector, proto.Evaluator, proto.Elites, proto.RandomSeed, proto.Terminator, proto.Interceptor);
+  }
+
   public static GeneticAlgorithm<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(
     int populationSize,
     ICreator<TGenotype, TEncoding, TProblem> creator,
@@ -95,10 +136,9 @@ public static class GeneticAlgorithm {
     int elites,
     int? randomSeed,
     ITerminator<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-    IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null,
-    params IAnalyzer<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
+    IInterceptor<TGenotype, PopulationIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new GeneticAlgorithm<TGenotype, TEncoding, TProblem>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, MultiInterceptor.Create(interceptor, analyzers));
+    return new GeneticAlgorithm<TGenotype, TEncoding, TProblem>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor);
   }
 }

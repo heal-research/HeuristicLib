@@ -1,24 +1,11 @@
-﻿using System.Text;
+﻿using System.Reflection.Metadata.Ecma335;
+using System.Text;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 
-namespace HEAL.HeuristicLib.Operators.Analyzer;
-
-public static class GenealogyGraph {
-  public static GenealogyGraphAnalyzer<TGenotype> GetInterceptor<TGenotype>(this GenealogyGraph<TGenotype> graph) where TGenotype : notnull => new(graph);
-
-  public static GenealogyGraphCrossover<TGenotype, TEncoding, TProblem> WrapCrossover<TGenotype, TEncoding, TProblem>(this GenealogyGraph<TGenotype> graph, ICrossover<TGenotype, TEncoding, TProblem> crossover)
-    where TEncoding : class, IEncoding<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TEncoding>
-    where TGenotype : notnull => new(crossover, graph);
-
-  public static GenealogyGraphMutator<TGenotype, TEncoding, TProblem> WrapMutator<TGenotype, TEncoding, TProblem>(this GenealogyGraph<TGenotype> graph, IMutator<TGenotype, TEncoding, TProblem> mutator)
-    where TEncoding : class, IEncoding<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TEncoding>
-    where TGenotype : notnull => new(mutator, graph);
-}
+namespace HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
 
 public class GenealogyGraph<TGenotype> where TGenotype : notnull {
   private int nextId;
@@ -51,7 +38,8 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
   }
 
   public void AddConnection(ICollection<TGenotype> parent, TGenotype child) {
-    if (CurrentGeneration.TryGetValue(child, out var cNode) && parent.Any(x => equality.Equals(x, child))) return; //operators sometimes just "give up" and return one of the parents as child
+    if (CurrentGeneration.TryGetValue(child, out var cNode) && parent.Any(x => equality.Equals(x, child)))
+      return; //operators sometimes just "give up" and return one of the parents as child
     var pNodes = parent.Where(x => !equality.Equals(x, child)).Select(x => CurrentGeneration[x]).ToArray();
     cNode = new Node(nextId++, child, Nodes.Count - 1, pNodes.Max(x => x.Layer) + 1, -1);
     CurrentGeneration.Add(child, cNode);
@@ -116,7 +104,7 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
           }
 
           //set invisible edges to help ranked-layout
-          for (int i = 0; i < ranked.Length - 1; i++)
+          for (var i = 0; i < ranked.Length - 1; i++)
             sb.AppendLine($"\"{ranked[i].Id}\"->\"{ranked[i + 1].Id}\" [style=invis]");
         }
 

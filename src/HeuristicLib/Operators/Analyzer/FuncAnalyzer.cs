@@ -1,9 +1,23 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
+using HEAL.HeuristicLib.Operators.Prototypes;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
-public class FuncAnalyzer {
-  public static FuncAnalyzer<TGenotype, TResult> Build<TGenotype, TResult>(Action<TResult?, TResult> action) where TResult : IIterationResult {
-    return new FuncAnalyzer<TGenotype, TResult>(action);
+public class FuncAnalysis<T, TE, TP, TRes>(Action<TRes?, TRes> action) : SimpleAnalysis<T, TE, TP, TRes> where TE : class, IEncoding<T> where TP : class, IProblem<T, TE> where TRes : IIterationResult {
+  protected override void AfterInterception(TRes currentIterationResult, TRes? previousIterationResult, TE encoding, TP problem) => action.Invoke(previousIterationResult, currentIterationResult);
+}
+
+public class FuncAnalysis {
+  public static FuncAnalysis<TGenotype, TE, TP, TRes> Create<TGenotype, TE, TP, TRes>(IPrototype<TGenotype, TE, TP, TRes> prototype, Action<TRes?, TRes> action)
+    where TE : class, IEncoding<TGenotype>
+    where TP : class, IProblem<TGenotype, TE>
+    where TRes : PopulationIterationResult<TGenotype>
+    where TGenotype : class {
+    var t = new FuncAnalysis<TGenotype, TE, TP, TRes>(action);
+    t.AddToProto(prototype);
+    return t;
   }
 }

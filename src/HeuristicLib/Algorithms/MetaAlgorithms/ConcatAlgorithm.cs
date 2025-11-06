@@ -192,7 +192,7 @@
 // }
 // //
 // // public interface IStateTransformer<TSourceState, TTargetState> where TSourceState : class where TTargetState : class {
-// //   TTargetState Analyze(TSourceState sourceState, TTargetState? previousTargetState = null);
+// //   TTargetState AfterInterception(TSourceState sourceState, TTargetState? previousTargetState = null);
 // // }
 // //
 // // public class ConcatAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargetIterationResult> 
@@ -225,7 +225,7 @@
 // //     if (lastSourceIterationResult is null) yield break; // no result -> break concat algorithm
 // //     var lastSourceState = lastSourceIterationResult.GetRestartState();
 // //     
-// //     var initialTargetState = Transformer.Analyze(lastSourceState);
+// //     var initialTargetState = Transformer.AfterInterception(lastSourceState);
 // //     
 // //     foreach (var iterationResult in SecondAlgorithm.ExecuteStreaming(problem, initialTargetState)) {
 // //       yield return iterationResult;
@@ -247,7 +247,7 @@
 // //   //   foreach (var sourceState in sourceStream) {
 // //   //     yield return currentSourceState = sourceState;
 // //   //   }
-// //   //   var initialTargetState = currentSourceState is not null ? Transformer.Analyze(currentSourceState) : null;
+// //   //   var initialTargetState = currentSourceState is not null ? Transformer.AfterInterception(currentSourceState) : null;
 // //   //   var targetStream = SecondAlgorithm.CreateExecutionStream(initialTargetState);
 // //   //   foreach (var targetState in targetStream) {
 // //   //     yield return targetState;
@@ -297,7 +297,7 @@
 // //       if (lastSourceIterationResult is null) yield break;// no result -> break concat algorithm
 // //       sourceState = lastSourceIterationResult.GetRestartState();
 // //
-// //       targetState = Transformer.Analyze(sourceState, targetState);
+// //       targetState = Transformer.AfterInterception(sourceState, targetState);
 // //
 // //       TTargetIterationResult? lastTargetIterationResult = null;
 // //       foreach (var iterationResult in SecondAlgorithm.ExecuteStreaming(problem, targetState)) {
@@ -308,7 +308,7 @@
 // //       if (lastTargetIterationResult is null) yield break; // no result -> break concat algorithm
 // //       targetState = lastTargetIterationResult.GetRestartState();
 // //       
-// //       sourceState = RepetitionTransformer.Analyze(targetState, sourceState);
+// //       sourceState = RepetitionTransformer.AfterInterception(targetState, sourceState);
 // //     }
 // //   }
 // //   //
@@ -332,7 +332,7 @@
 // //   //     }
 // //   //     if (lastSourceState is null) yield break;
 // //   //     
-// //   //     lastTargetState = Transformer.Analyze(lastSourceState, lastTargetState);
+// //   //     lastTargetState = Transformer.AfterInterception(lastSourceState, lastTargetState);
 // //   //     
 // //   //     var targetStream = SecondAlgorithm.CreateExecutionStream(lastTargetState);
 // //   //     foreach (var targetState in targetStream) {
@@ -340,7 +340,7 @@
 // //   //     }
 // //   //     if (lastTargetState is null) yield break;
 // //   //     
-// //   //     lastSourceState = RepetitionTransformer.Analyze(lastTargetState, lastSourceState);
+// //   //     lastSourceState = RepetitionTransformer.AfterInterception(lastTargetState, lastSourceState);
 // //   //   }
 // //   // }
 // //   // #pragma warning restore S2190

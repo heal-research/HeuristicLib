@@ -27,7 +27,7 @@ namespace HEAL.HeuristicLib.Problems;
 
 //
 // public static class EvaluationPipeline {
-//   public static EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult> Create<TGenotype, TPhenotype, TEvaluationResult>(
+//   public static EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult> CreateAlgorithm<TGenotype, TPhenotype, TEvaluationResult>(
 //     IDecoder<TGenotype, TPhenotype> decoder,
 //     IEvaluator<TPhenotype, TEvaluationResult> Evaluator,
 //     IFitnessExtractor<TEvaluationResult> fitnessExtractor
