@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Encodings.RealVector.Creators;
 
 public class UniformDistributedCreator(RealVector? minimum = null, RealVector? maximum = null) : Creator<RealVector, RealVectorEncoding> {
+  public UniformDistributedCreator(RealVectorEncoding encoding) : this(encoding.Minimum, encoding.Maximum) { }
   public RealVector? Minimum { get; set; } = minimum;
   public RealVector? Maximum { get; set; } = maximum;
 

@@ -54,16 +54,13 @@ public class PythonGenealogyAnalysis {
     return symRegAllMutator;
   }
 
-  public (string graph,
-    List<List<double>> childRanks,
-    List<(Solution<SymbolicExpressionTree> best, Solution<SymbolicExpressionTree> median, Solution<SymbolicExpressionTree> worst)>
-    ) GenealogyGraphGeneticAlgorithm(
-      string file,
-      GenerationCallback callback,
-      int seed,
-      int populationSize = 10,
-      int iterations = 30
-    ) {
+  public (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) GenealogyGraphGeneticAlgorithm(
+    string file,
+    GenerationCallback callback,
+    int seed,
+    int populationSize = 10,
+    int iterations = 30
+  ) {
     var problem = CreateTestSymbolicRegressionProblem(file);
 
     var ga = GeneticAlgorithm.CreatePrototype(populationSize,

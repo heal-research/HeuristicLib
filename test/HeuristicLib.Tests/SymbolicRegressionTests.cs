@@ -163,7 +163,7 @@ public class SymbolicRegressionTests {
     Assert.Equal(10, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
-    Assert.Equal(qualities.CurrentState[^1].best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
+    Assert.Equal(qualities.CurrentState[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
   }
 
   [Fact]
