@@ -1,5 +1,4 @@
-﻿using System.Net.Mime;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 

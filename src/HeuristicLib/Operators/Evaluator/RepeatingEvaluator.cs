@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using MoreLinq;
 
 namespace HEAL.HeuristicLib.Operators.Evaluator;
 
@@ -32,20 +31,19 @@ namespace HEAL.HeuristicLib.Operators.Evaluator;
 //   }
 // }
 
-public class RepeatingEvaluator<TGenotype, TEncoding, TProblem> : BatchEvaluator<TGenotype, TEncoding, TProblem> 
-  where TEncoding : class, IEncoding<TGenotype> 
-  where TProblem : class, IProblem<TGenotype, TEncoding> 
-{
+public class RepeatingEvaluator<TGenotype, TEncoding, TProblem> : BatchEvaluator<TGenotype, TEncoding, TProblem>
+  where TEncoding : class, IEncoding<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TEncoding> {
   private readonly IEvaluator<TGenotype, TEncoding, TProblem> evaluator;
   private readonly int repeats;
   private readonly Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator;
-  
+
   public RepeatingEvaluator(IEvaluator<TGenotype, TEncoding, TProblem> evaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator) {
     this.evaluator = evaluator;
     this.repeats = repeats;
     this.aggregator = aggregator;
   }
-  
+
   public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
     ObjectiveVector[]? results = null;
 

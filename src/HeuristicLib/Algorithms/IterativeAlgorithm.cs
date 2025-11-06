@@ -6,11 +6,11 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult, TIterationResult>(ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> terminator, int? randomSeed, IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? interceptor)
-  : Algorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult>, IIterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgorithmResult, TIterationResult>
+public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>(ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> terminator, int? randomSeed, IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? interceptor)
+  : Algorithm<TGenotype, TEncoding, TProblem, TIterationResult>,
+    IIterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
-  where TAlgorithmResult : IAlgorithmResult
   where TIterationResult : IIterationResult {
   public int CurrentIteration { get; protected set; }
 
@@ -21,20 +21,18 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TAlgori
 
   public abstract TIterationResult ExecuteStep(TProblem problem, TEncoding searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
 
-  protected abstract TAlgorithmResult FinalizeResult(TIterationResult iterationResult, TProblem problem);
-
-  public override TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) {
+  public override TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) {
     return Execute(problem, searchSpace, previousIterationResult: default, random);
   }
 
-  public virtual TAlgorithmResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+  public virtual TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
     TIterationResult? lastResult = ExecuteStreaming(problem, searchSpace, previousIterationResult, random).LastOrDefault();
 
     if (lastResult is null) {
       throw new InvalidOperationException("The algorithm did not produce any iteration result.");
     }
 
-    return FinalizeResult(lastResult, problem);
+    return lastResult;
   }
 
   public IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {

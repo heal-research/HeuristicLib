@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
 

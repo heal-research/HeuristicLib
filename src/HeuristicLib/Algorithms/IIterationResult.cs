@@ -1,3 +1,3 @@
 ﻿namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IIterationResult;
+public interface IIterationResult : IAlgorithmResult;

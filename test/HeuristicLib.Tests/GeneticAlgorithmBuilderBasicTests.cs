@@ -23,7 +23,7 @@
 //       Creator = new NormalDistributedCreator(0, 0.5),
 //       Crossover = new SinglePointCrossover(),
 //       Mutator = new GaussianMutator(0.1, 0.1),
-//       MutationRate = 0.05,
+//       InitialMutationStrength = 0.05,
 //       // Decoder = Decoder.Identity<RealVector>(),
 //       // DirectEvaluator = new MockEvaluator(),
 //       // Objective = SingleObjective.Minimize,
@@ -44,7 +44,7 @@
 //   //   GeneticAlgorithmConfiguration untypedConfig = new GeneticAlgorithmConfiguration() {
 //   //     RandomSource = randomSource,
 //   //     PopulationSize = 200,
-//   //     MutationRate = 0.05
+//   //     InitialMutationStrength = 0.05
 //   //   };
 //   //
 //   //
@@ -101,7 +101,7 @@
 //   //     Creator = new NormalDistributedCreator(1.5, 1.0),
 //   //     Crossover = new SinglePointCrossover(),
 //   //     Mutator = new GaussianMutator(0.1, 0.1),
-//   //     MutationRate = 0.05,
+//   //     InitialMutationStrength = 0.05,
 //   //     Selector = new TournamentSelector(tournamentSize: 4),
 //   //     Replacer = new ElitismReplacer(2)
 //   //   };

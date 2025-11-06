@@ -12,6 +12,5 @@ public interface IPrototype<TGenotype, TEncoding, TProblem, TRes>
   public ICreator<TGenotype, TEncoding, TProblem> Creator { get; set; }
   public ITerminator<TGenotype, TRes, TEncoding, TProblem> Terminator { get; set; }
   public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; set; }
-  public int? RandomSeed { get; set; }
   public IInterceptor<TGenotype, TRes, TEncoding, TProblem>? Interceptor { get; set; }
 }

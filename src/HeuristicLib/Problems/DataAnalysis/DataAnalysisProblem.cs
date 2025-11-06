@@ -1,4 +1,3 @@
-using System.Data;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 

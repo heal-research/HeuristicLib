@@ -61,7 +61,7 @@ public class GeneticAlgorithmTests {
   //   
   //   var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding> {
   //     PopulationSize = 200, 
-  //     Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
+  //     Creator = creator, Crossover = crossover, Mutator = mutator, InitialMutationStrength = 0.05,
   //     Selector = selector, Replacer = replacement,
   //     RandomSeed = 42,
   //     Terminator = terminator
@@ -80,7 +80,7 @@ public class GeneticAlgorithmTests {
   //  
   //   var config = new GeneticAlgorithmConfiguration<RealVector, RealVectorEncoding> {
   //     PopulationSize = 200, 
-  //     Creator = creator, Crossover = crossover, Mutator = mutator, MutationRate = 0.05,
+  //     Creator = creator, Crossover = crossover, Mutator = mutator, InitialMutationStrength = 0.05,
   //     Selector = null, Replacer = null, // missing
   //     RandomSeed = 42,
   //   };

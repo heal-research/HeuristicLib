@@ -1,8 +1,4 @@
-﻿using System.Text;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Creators;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Analyzer;
+﻿using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
@@ -25,7 +21,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
   int maxNeighbors,
   int batchSize,
   LocalSearchDirection direction)
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleSolutionResult<TGenotype>, SingleSolutionIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
+  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleSolutionIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
@@ -63,34 +59,36 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
     return new SingleSolutionIterationResult<TGenotype>(newSolution);
   }
 
-  protected override SingleSolutionResult<TGenotype> FinalizeResult(SingleSolutionIterationResult<TGenotype> iterationResult, TProblem problem) =>
-    new(iterationResult.Solution);
+  public class Prototype : Prototype<TGenotype, TEncoding, TProblem, SingleSolutionIterationResult<TGenotype>>, IMutatorPrototype<TGenotype, TEncoding, TProblem> {
+    public Prototype(ICreator<TGenotype, TEncoding, TProblem> creator, IMutator<TGenotype, TEncoding, TProblem> mutator, ITerminator<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator, IEvaluator<TGenotype, TEncoding, TProblem> evaluator, int? randomSeed, int maxNeighbors, int batchSize, LocalSearchDirection direction, IInterceptor<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor) : base(creator, terminator, evaluator, randomSeed, interceptor) {
+      Mutator = mutator;
+      MaxNeighbors = maxNeighbors;
+      BatchSize = batchSize;
+      Direction = direction;
+    }
+
+    public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
+    public int MaxNeighbors { get; set; }
+    public int BatchSize { get; set; }
+    public LocalSearchDirection Direction { get; set; }
+
+    public LocalSearch<TGenotype, TEncoding, TProblem> Create() =>
+      new(Terminator, Interceptor, Creator, Mutator, Evaluator, RandomSeed, MaxNeighbors, BatchSize, Direction);
+
+    public override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleSolutionIterationResult<TGenotype>> BuildAlgorithm() => Create();
+  }
 }
 
 public static class LocalSearch {
-  public class Prototype<TGenotype, TEncoding, TProblem>(ICreator<TGenotype, TEncoding, TProblem> creator, IMutator<TGenotype, TEncoding, TProblem> mutator, ITerminator<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator, IEvaluator<TGenotype, TEncoding, TProblem> evaluator, int? randomSeed, int maxNeighbors, int batchSize, LocalSearchDirection direction, IInterceptor<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor, params IAnalyzer<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>[] analyzers)
-    : Prototype<TGenotype, TEncoding, TProblem, SingleSolutionIterationResult<TGenotype>>(creator, terminator, evaluator, randomSeed, interceptor, analyzers), IMutatorPrototype<TGenotype, TEncoding, TProblem>
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
-    public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; } = mutator;
-    public int MaxNeighbors { get; set; } = maxNeighbors;
-    public int BatchSize { get; set; } = batchSize;
-    public LocalSearchDirection Direction { get; set; } = direction;
-  }
-
-  public static LocalSearch<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(Prototype<TGenotype, TEncoding, TProblem> prototype)
-    where TEncoding : class, IEncoding<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new(prototype.Terminator, prototype.Interceptor, prototype.Creator, prototype.Mutator, prototype.Evaluator, prototype.RandomSeed, prototype.MaxNeighbors, prototype.BatchSize, prototype.Direction);
-
-  public static Prototype<TGenotype, TEncoding, TProblem> GetPrototype<TGenotype, TEncoding, TProblem>(ICreator<TGenotype, TEncoding, TProblem> creator,
-                                                                                                       IMutator<TGenotype, TEncoding, TProblem> mutator,
-                                                                                                       ITerminator<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-                                                                                                       IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
-                                                                                                       int? randomSeed,
-                                                                                                       int maxNeighbors,
-                                                                                                       int batchSize,
-                                                                                                       LocalSearchDirection direction,
-                                                                                                       IInterceptor<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new Prototype<TGenotype, TEncoding, TProblem>(creator, mutator, terminator, evaluator, randomSeed, maxNeighbors, batchSize, direction, interceptor);
+  public static LocalSearch<TGenotype, TEncoding, TProblem>.Prototype GetPrototype<TGenotype, TEncoding, TProblem>(ICreator<TGenotype, TEncoding, TProblem> creator,
+                                                                                                                   IMutator<TGenotype, TEncoding, TProblem> mutator,
+                                                                                                                   ITerminator<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+                                                                                                                   IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+                                                                                                                   int? randomSeed,
+                                                                                                                   int maxNeighbors,
+                                                                                                                   int batchSize,
+                                                                                                                   LocalSearchDirection direction,
+                                                                                                                   IInterceptor<TGenotype, SingleSolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
+    return new LocalSearch<TGenotype, TEncoding, TProblem>.Prototype(creator, mutator, terminator, evaluator, randomSeed, maxNeighbors, batchSize, direction, interceptor);
   }
 }

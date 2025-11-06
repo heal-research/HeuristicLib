@@ -20,7 +20,7 @@
 //   public CreatorConfig<TGenotype, TEncoding, TProblem>? Creator { get; init; }
 //   public CrossoverConfig<TGenotype, TEncoding, TProblem>? Crossover { get; init; }
 //   public MutatorConfig<TGenotype, TEncoding, TProblem>? Mutator { get; init; }
-//   public double? MutationRate { get; init; }
+//   public double? InitialMutationStrength { get; init; }
 //   public SelectorConfig<TGenotype, TEncoding, TProblem>? Selector { get; init; }
 //   public ReplacerConfig<TGenotype, TEncoding, TProblem>? Replacer { get; init; }
 //   public int? RandomSeed { get; init; }
@@ -41,7 +41,7 @@
 //       Creator = overridingConfig.Creator ?? baseConfig.Creator,
 //       Crossover = overridingConfig.Crossover ?? baseConfig.Crossover,
 //       Mutator = overridingConfig.Mutator ?? baseConfig.Mutator,
-//       MutationRate = overridingConfig.MutationRate ?? baseConfig.MutationRate,
+//       InitialMutationStrength = overridingConfig.InitialMutationStrength ?? baseConfig.InitialMutationStrength,
 //       Selector = overridingConfig.Selector ?? baseConfig.Selector,
 //       Replacer = overridingConfig.Replacer ?? baseConfig.Replacer,
 //       RandomSeed = overridingConfig.RandomSeed ?? baseConfig.RandomSeed,
@@ -72,7 +72,7 @@
 //       Creator = algorithm.Creator,
 //       Crossover = algorithm.Crossover,
 //       Mutator = algorithm.Mutator,
-//       MutationRate = algorithm.MutationRate,
+//       InitialMutationStrength = algorithm.InitialMutationStrength,
 //       Selector = algorithm.Selector,
 //       Replacer = algorithm.Replacer,
 //       RandomSeed = algorithm.RandomSeed
@@ -115,7 +115,7 @@
 //       configuration.Creator!,
 //       configuration.Crossover!,
 //       configuration.Mutator!,
-//       configuration.MutationRate!.Value,
+//       configuration.InitialMutationStrength!.Value,
 //       configuration.Selector!,
 //       configuration.Replacer!,
 //       configuration.RandomSeed!.Value,
@@ -133,7 +133,7 @@
 //     RuleFor(x => x.Creator).NotNull().WithMessage("Creator must not be null.");
 //     RuleFor(x => x.Crossover).NotNull().WithMessage("Crossover must not be null.");
 //     RuleFor(x => x.Mutator).NotNull().WithMessage("Mutator must not be null.");
-//     RuleFor(x => x.MutationRate).NotNull().WithMessage("Mutation rate must not be null.");
+//     RuleFor(x => x.InitialMutationStrength).NotNull().WithMessage("Mutation rate must not be null.");
 //     RuleFor(x => x.Selector).NotNull().WithMessage("Selector must not be null.");
 //     RuleFor(x => x.Replacer).NotNull().WithMessage("Replacer must not be null.");
 //     RuleFor(x => x.RandomSeed).NotNull().WithMessage("Random source must not be null.");
@@ -166,4 +166,5 @@
 //     }
 //   }
 // }
+
 

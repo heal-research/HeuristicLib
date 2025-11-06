@@ -12,7 +12,6 @@ using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
@@ -80,7 +79,6 @@ public class PythonGenealogyAnalysis {
 
     var ranks = new List<List<double>>();
     FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
-
     FuncAnalysis.Create(ga, (_, y) => callback(y));
 
     _ = ga.CreateAlgorithm().Execute(problem, random: new SystemRandomNumberGenerator(seed));

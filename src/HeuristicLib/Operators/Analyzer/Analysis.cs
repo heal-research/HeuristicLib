@@ -26,7 +26,7 @@ public abstract class Analysis<T, TE, TP, TProto, TRes> : IAnalysis<T, TE, TP, T
   where TP : class, IProblem<T, TE>
   where TProto : IPrototype<T, TE, TP, TRes>
   where TRes : IIterationResult {
-  public void AddToProto(TProto proto) {
+  public virtual void AddToProto(TProto proto) {
     if (proto is IMutatorPrototype<T, TE, TP> mutatorPrototype)
       mutatorPrototype.Mutator = WrapMutator(mutatorPrototype.Mutator);
     if (proto is ICrossoverPrototype<T, TE, TP> crossoverPrototype)

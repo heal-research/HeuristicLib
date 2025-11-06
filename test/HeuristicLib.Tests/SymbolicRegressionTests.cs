@@ -123,7 +123,7 @@ public class SymbolicRegressionTests {
     var ga = GeneticAlgorithm.CreatePrototype(100,
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
-      CreateSymRegAllMutator(), //
+      CreateSymRegAllMutator(),
       0.05,
       new TournamentSelector<SymbolicExpressionTree>(3),
       problem.CreateEvaluator(),
@@ -132,7 +132,7 @@ public class SymbolicRegressionTests {
       new AfterIterationsTerminator<SymbolicExpressionTree>(100)
     );
     var qualities = BestMedianWorstAnalysis.Create(ga);
-    var res = ga.CreateAlgorithm().Execute(problem);
+    var res = ga.Execute(problem);
 
     Assert.Equal(100, qualities.CurrentState.Count);
     Assert.Equal(100, res.Population.Solutions.Count);
@@ -157,7 +157,7 @@ public class SymbolicRegressionTests {
     var evalQualities = QualityCurveAnalysis.Create(proto);
     var qualities = BestMedianWorstAnalysis.Create(proto);
     var genealogy = GenealogyAnalysis.Create(proto);
-    var res = proto.CreateAlgorithm().Execute(problem);
+    var res = proto.Execute(problem);
 
     Assert.Equal(30, qualities.CurrentState.Count);
     Assert.Equal(10, res.Population.Solutions.Count);
@@ -181,10 +181,8 @@ public class SymbolicRegressionTests {
       5,
       LocalSearchDirection.FirstImprovement);
 
-    var ls = LocalSearch.Create(proto);
     var genealogy = GenealogyAnalysis.Create(proto);
-
-    var res = ls.Execute(problem);
+    var res = proto.Execute(problem);
     Assert.Single(res.Population.Solutions);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
@@ -212,7 +210,7 @@ public class SymbolicRegressionTests {
     var genealogy = GenealogyAnalysis.Create(nsga2);
     var qualities = BestMedianWorstAnalysis.Create(nsga2);
 
-    var res = nsga2.Create().Execute(problem);
+    var res = nsga2.Execute(problem);
     Assert.Equal(maximumIterations, qualities.CurrentState.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();

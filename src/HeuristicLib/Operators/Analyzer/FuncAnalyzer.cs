@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
