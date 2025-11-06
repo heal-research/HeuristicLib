@@ -138,5 +138,6 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
     public ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; set; }
 
     public EvolutionStrategy<TGenotype, TEncoding, TProblem> CreateAlgorithm() => new(PopulationSize, Strategy, Creator, Mutator, InitialMutationStrength, Selector, Evaluator, RandomSeed, Terminator, Crossover, Interceptor);
+    protected override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>> BuildAlgorithm() => CreateAlgorithm();
   }
 }

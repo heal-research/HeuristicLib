@@ -81,7 +81,7 @@ public class PythonGenealogyAnalysis {
     FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
     FuncAnalysis.Create(ga, (_, y) => callback(y));
 
-    _ = ga.CreateAlgorithm().Execute(problem, random: new SystemRandomNumberGenerator(seed));
+    _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
     var graphViz = genealogyAnalysis.Graph.ToGraphViz();
 
     return (graphViz, ranks, qualities.CurrentState);

@@ -81,7 +81,7 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
         Crossover, Mutator, MutationRate, Selector, Evaluator,
         RandomSeed, DominateOnEquals);
 
-    public override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, NSGA2IterationResult<TGenotype>> BuildAlgorithm() => Create();
+    protected override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, NSGA2IterationResult<TGenotype>> BuildAlgorithm() => Create();
   }
 }
 

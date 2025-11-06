@@ -92,7 +92,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>(
       return new GeneticAlgorithm<TGenotype, TEncoding, TProblem>(PopulationSize, Creator, Crossover, Mutator, MutationRate, Selector, Evaluator, Elites, RandomSeed, Terminator, Interceptor);
     }
 
-    public override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>> BuildAlgorithm() => Create();
+    protected override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>> BuildAlgorithm() => Create();
   }
 }
 

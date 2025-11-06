@@ -75,7 +75,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
     public LocalSearch<TGenotype, TEncoding, TProblem> Create() =>
       new(Terminator, Interceptor, Creator, Mutator, Evaluator, RandomSeed, MaxNeighbors, BatchSize, Direction);
 
-    public override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleSolutionIterationResult<TGenotype>> BuildAlgorithm() => Create();
+    protected override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleSolutionIterationResult<TGenotype>> BuildAlgorithm() => Create();
   }
 }
 

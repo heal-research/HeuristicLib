@@ -15,7 +15,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Algorithms.ALPS;
 
 public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, ALPSResult<TGenotype>, ALPSIterationResult<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, ALPSIterationResult<TGenotype>>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public int PopulationSize { get; }
@@ -147,9 +147,5 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     };
 
     return result;
-  }
-
-  protected override ALPSResult<TGenotype> FinalizeResult(ALPSIterationResult<TGenotype> iterationResult, TProblem problem) {
-    return new ALPSResult<TGenotype>() { Population = iterationResult.Population };
   }
 }
