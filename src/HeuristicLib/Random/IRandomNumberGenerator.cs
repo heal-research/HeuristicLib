@@ -5,6 +5,7 @@ public interface IRandomNumberGenerator {
   int Integer(int low, int high, bool inclusiveHigh = false);
 
   double Random();
+  double NextDouble() => Random();
 
   byte[] RandomBytes(int length);
 
@@ -18,6 +19,7 @@ public static class IRandomNumberGeneratorExtensions {
     for (int i = 0; i < length; i++) {
       values[i] = random.Random();
     }
+
     return values;
   }
 
@@ -30,6 +32,7 @@ public static class IRandomNumberGeneratorExtensions {
     for (int i = 0; i < length; i++) {
       values[i] = random.Integer(low, high, inclusiveHigh);
     }
+
     return values;
   }
 }

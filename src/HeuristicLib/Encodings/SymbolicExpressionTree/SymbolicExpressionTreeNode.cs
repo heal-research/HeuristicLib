@@ -166,20 +166,18 @@ public class SymbolicExpressionTreeNode {
       subtrees[i].ForEachNodePrefix(a);
   }
 
-  public IEnumerable<SymbolicExpressionTreeNode?> IterateNodesPostfix() {
-    var list = new List<SymbolicExpressionTreeNode?>();
-    ForEachNodePostfix((n) => list.Add(n));
+  public IEnumerable<SymbolicExpressionTreeNode> IterateNodesPostfix() {
+    var list = new List<SymbolicExpressionTreeNode>();
+    ForEachNodePostfix(list.Add);
     return list;
   }
 
   public void ForEachNodePostfix(Action<SymbolicExpressionTreeNode> a) {
-    if (subtrees != null) {
+    if (subtrees != null)
       //avoid linq to reduce memory pressure
       // ReSharper disable once ForCanBeConvertedToForeach
-      for (var i = 0; i < subtrees.Count; i++) {
+      for (var i = 0; i < subtrees.Count; i++)
         subtrees[i].ForEachNodePostfix(a);
-      }
-    }
 
     a(this);
   }

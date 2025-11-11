@@ -3,9 +3,9 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
 
-public class AlphaBetaBlendCrossover(double alpha = 0.7, double beta = 0.3) : Crossover<RealVector, RealVectorEncoding> {
+public class AlphaBetaBlendCrossover(double alpha = 0.7) : Crossover<RealVector, RealVectorEncoding> {
   public double Alpha { get; set; } = alpha;
-  public double Beta { get; set; } = beta;
+  public double Beta => 1 - Alpha;
 
   public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
     var (parent1, parent2) = parents;

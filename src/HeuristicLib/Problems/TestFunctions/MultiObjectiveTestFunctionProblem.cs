@@ -4,7 +4,18 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public class MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : RealVectorProblem(testFunction.Objective, GetEncoding(testFunction)) {
+public class MultiObjectiveTestFunctionProblem : RealVectorProblem {
+  private readonly IMultiObjectiveTestFunction testFunction;
+
+  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : base(testFunction.Objective, GetEncoding(testFunction)) {
+    this.testFunction = testFunction;
+  }
+
+  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction, RealVectorEncoding searchSpace) : base(testFunction.Objective, searchSpace) {
+    ArgumentOutOfRangeException.ThrowIfNotEqual(searchSpace.Length, testFunction.Dimension);
+    this.testFunction = testFunction;
+  }
+
   public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) {
     return new ObjectiveVector(testFunction.Evaluate(solution));
   }

@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using System.Text;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
@@ -40,5 +41,13 @@ public abstract class Crossover<TGenotype> : ICrossover<TGenotype> {
 
   IReadOnlyList<TGenotype> ICrossover<TGenotype, IEncoding<TGenotype>>.Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
     return Cross(parents, random);
+  }
+}
+
+public class NoCrossOver<TGenotype> : BatchCrossover<TGenotype> {
+  public static readonly NoCrossOver<TGenotype> Instance = new();
+
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random) {
+    return parents.Select(x => x.Item1).ToArray();
   }
 }

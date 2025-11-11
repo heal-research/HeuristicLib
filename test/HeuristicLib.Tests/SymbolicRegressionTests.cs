@@ -220,9 +220,17 @@ public class SymbolicRegressionTests {
   [Fact]
   public void TestPlayground() {
     const int iterations = 4;
-    var bp = new PythonGenealogyAnalysis();
     var i = 0;
-    bp.GenealogyGraphGeneticAlgorithm("TestData\\192_vineyard.tsv", _ => i++, AlgorithmRandomSeed, 10, iterations);
+    var file = @"TestData\\192_vineyard.tsv";
+    PythonGenealogyAnalysis.RunSymbolicRegressionGeneticAlgorithm(file, _ => i++, AlgorithmRandomSeed, 10, iterations, true, 1);
+    Assert.Equal(iterations, i);
+  }
+
+  [Fact]
+  public void TestPlayground2() {
+    const int iterations = 4;
+    var i = 0;
+    PythonCorrelationAnalysis.RunCorrelationNSGA2((current, problem) => { i++; }, iterations, 100);
     Assert.Equal(iterations, i);
   }
 

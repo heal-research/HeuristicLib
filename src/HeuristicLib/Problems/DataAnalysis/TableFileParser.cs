@@ -379,7 +379,7 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     //            => if commas are followed by space => English format
     // no points no commas => English format (only integer numbers) use the other frequently occuring char as separator
     // in all cases only treat ' ' as separator if no other separator is possible (spaces can also occur additionally to separators)
-    if (OccurrencesOf(charCounts, '.') > 10 && OccurrencesOf(charCounts, ',') <= 10) {
+    if (OccurrencesOf(charCounts, '.') > 10 || OccurrencesOf(charCounts, ',') <= 10) {
       numberFormat = NumberFormatInfo.InvariantInfo;
       dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
       separator = PossibleSeparators

@@ -25,8 +25,10 @@ public class PythonGenealogyAnalysis {
 
   public delegate void GenerationCallback(PopulationIterationResult<SymbolicExpressionTree> current);
 
-  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(string? file) {
-    var problemData = file is null ? new RegressionProblemData(new ModifiableDataset(["x", "y"], Data), ["x"], "y") : RegressionCsvInstanceProvider.ImportData(file);
+  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(string? file, double trainingSplit = 0.66) {
+    var problemData = file is null
+      ? new RegressionProblemData(new ModifiableDataset(["x", "y"], Data), ["x"], "y")
+      : RegressionCsvInstanceProvider.ImportData(file, trainingSplit);
     var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator()) {
       SearchSpace = {
         TreeDepth = 40,
@@ -53,14 +55,16 @@ public class PythonGenealogyAnalysis {
     return symRegAllMutator;
   }
 
-  public (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) GenealogyGraphGeneticAlgorithm(
+  public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) RunSymbolicRegressionGeneticAlgorithm(
     string file,
     GenerationCallback callback,
     int seed,
     int populationSize = 10,
-    int iterations = 30
+    int iterations = 30,
+    bool withGenealogy = true,
+    double trainingSplit = 0.66
   ) {
-    var problem = CreateTestSymbolicRegressionProblem(file);
+    var problem = CreateTestSymbolicRegressionProblem(file, trainingSplit);
 
     var ga = GeneticAlgorithm.CreatePrototype(populationSize,
       new ProbabilisticTreeCreator(),
@@ -74,17 +78,20 @@ public class PythonGenealogyAnalysis {
       new AfterIterationsTerminator<SymbolicExpressionTree>(iterations)
     );
 
-    var genealogyAnalysis = GenealogyAnalysis.Create(ga, saveSpace: true);
+    FuncAnalysis.Create(ga, (_, y) => callback(y));
     var qualities = BestMedianWorstAnalysis.Create(ga);
 
-    var ranks = new List<List<double>>();
-    FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
-    FuncAnalysis.Create(ga, (_, y) => callback(y));
+    if (withGenealogy) {
+      var genealogyAnalysis = GenealogyAnalysis.Create(ga, saveSpace: true);
+      var ranks = new List<List<double>>();
+      FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
+      _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
+      var graphViz = genealogyAnalysis.Graph.ToGraphViz();
+      return (graphViz, ranks, qualities.CurrentState);
+    }
 
     _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
-    var graphViz = genealogyAnalysis.Graph.ToGraphViz();
-
-    return (graphViz, ranks, qualities.CurrentState);
+    return (string.Empty, [], qualities.CurrentState);
   }
 
   private static void RecordRanks<TGenotype>(GenealogyGraph<TGenotype> graph, List<List<double>> ranks) where TGenotype : notnull {

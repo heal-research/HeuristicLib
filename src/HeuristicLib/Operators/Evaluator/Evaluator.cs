@@ -6,11 +6,10 @@ namespace HEAL.HeuristicLib.Operators.Evaluator;
 
 public abstract class Evaluator<TGenotype, TEncoding, TProblem> : IEvaluator<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding> 
-{
-  public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+  where TProblem : IProblem<TGenotype, TEncoding> {
+  protected abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
 
-  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, TEncoding, TProblem>.Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
     return solutions.ParallelSelect(random, (_, x, r) => Evaluate(x, r, encoding, problem));
   }
 }

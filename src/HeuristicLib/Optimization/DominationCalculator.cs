@@ -35,10 +35,10 @@ public static class DominationCalculator {
   /// <param name="rank">The rank of each of the solutions, corresponds to the front it is put in.</param>
   /// <param name="dominateOnEqualQualities">Whether solutions of exactly equal quality should dominate one another.</param>
   /// <returns>A sorted list of the pareto fronts from best to worst.</returns>
-  public static List<List<Solution<T>>> CalculateAllParetoFronts<T>(Solution<T>[] solutions, Objective objective, out int[] rank, bool dominateOnEqualQualities = true) {
-    var populationSize = solutions.Length;
+  public static List<List<Solution<T>>> CalculateAllParetoFronts<T>(IReadOnlyList<Solution<T>> solutions, Objective objective, out int[] rank, bool dominateOnEqualQualities = true) {
+    var populationSize = solutions.Count;
     var fronts = new List<List<Solution<T>>>();
-    if (solutions.Length == 0) {
+    if (solutions.Count == 0) {
       rank = [];
       return fronts;
     }
@@ -65,7 +65,7 @@ public static class DominationCalculator {
     return fronts;
   }
 
-  private static List<Solution<T>> CalculateBestFront<T>(Solution<T>[] solutions, Objective objective, int populationSize, bool dominateOnEquals, out Dictionary<Solution<T>, List<int>> dominatedIndividuals, out int[] dominationCounter, out int[] rank) {
+  private static List<Solution<T>> CalculateBestFront<T>(IReadOnlyList<Solution<T>> solutions, Objective objective, int populationSize, bool dominateOnEquals, out Dictionary<Solution<T>, List<int>> dominatedIndividuals, out int[] dominationCounter, out int[] rank) {
     var front = new List<Solution<T>>();
     dominatedIndividuals = new Dictionary<Solution<T>, List<int>>();
     dominationCounter = new int[populationSize];

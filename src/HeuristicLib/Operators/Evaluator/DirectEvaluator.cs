@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Operators.Evaluator;
 
 public class DirectEvaluator<TGenotype> : Evaluator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> {
-  public override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  protected override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
     return problem.Evaluate(solution, random);
   }
 }

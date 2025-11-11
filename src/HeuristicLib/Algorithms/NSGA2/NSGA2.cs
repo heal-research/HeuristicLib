@@ -47,8 +47,9 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
     var parents = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
     var children = Crossover.Cross(parents, random, searchSpace, problem);
     var mutants = Mutator.Mutate(children, random, searchSpace, problem);
-    var newPop = Population.From(children, Evaluator.Evaluate(mutants, random, searchSpace, problem));
+    var newPop = Population.From(mutants, Evaluator.Evaluate(mutants, random, searchSpace, problem));
     var nextPop = Replacer.Replace(previousIterationResult.Population.Solutions, newPop.Solutions, problem.Objective, random, searchSpace, problem);
+
     return new NSGA2IterationResult<TGenotype>(Population.From(nextPop));
   }
 

@@ -13,11 +13,15 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests;
 
+public class DummyEvaluator {
+  public static readonly ObjectiveVector DummyObjectives = new(0.0);
+}
+
 public class DummyEvaluator<TGenotype, TEncoding, TProblem> : Evaluator<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    return new ObjectiveVector(new double[] { 0.0 });
+  protected override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+    return DummyEvaluator.DummyObjectives;
   }
 }
 

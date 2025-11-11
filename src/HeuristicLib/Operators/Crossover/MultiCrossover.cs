@@ -1,9 +1,14 @@
-﻿using HEAL.HeuristicLib.Operators.Crossover;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators;
+namespace HEAL.HeuristicLib.Operators.Crossover;
+
+public static class MultiCrossover {
+  public static ICrossover<TGenotype, TEncoding, TProblem> WithProbability<TGenotype, TEncoding, TProblem>(this ICrossover<TGenotype, TEncoding, TProblem> crossover, double probability) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
+    return new MultiCrossover<TGenotype, TEncoding, TProblem>([crossover, NoCrossOver<TGenotype>.Instance], [probability, 1 - probability]);
+  }
+}
 
 public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
