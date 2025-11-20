@@ -2,6 +2,4 @@
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public class SingleSolutionIterationResult<T>(Solution<T> solution) : PopulationIterationResult<T>(new Population<T>([solution])) {
-  public Solution<T> Solution => Population.Solutions[0];
-}
+public record SingleSolutionIterationResult<T>(Solution<T> Solution) : PopulationIterationResult<T>(new Population<T>([Solution]));

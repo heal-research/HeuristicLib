@@ -2,6 +2,7 @@
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public class PopulationIterationResult<TGenotype>(Population<TGenotype> population) : IIterationResult {
-  public Population<TGenotype> Population { get; } = population;
+public record PopulationIterationResult<TGenotype>(Population<TGenotype> Population) : IIterationResult {
+  public PopulationIterationResult(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses)
+    : this(new Population<TGenotype>(genotypes, fitnesses)) { }
 }

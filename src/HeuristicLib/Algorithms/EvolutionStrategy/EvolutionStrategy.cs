@@ -14,7 +14,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
-public class EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> population, double mutationStrength) : PopulationIterationResult<TGenotype>(population) {
+public record EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> population, double mutationStrength) : PopulationIterationResult<TGenotype>(population) {
   public double MutationStrength { get; } = mutationStrength;
 }
 

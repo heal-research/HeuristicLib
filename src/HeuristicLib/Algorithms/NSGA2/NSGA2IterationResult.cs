@@ -2,4 +2,4 @@
 
 namespace HEAL.HeuristicLib.Algorithms.NSGA2;
 
-public class NSGA2IterationResult<TGenotype>(Population<TGenotype> population) : PopulationIterationResult<TGenotype>(population);
+public record NSGA2IterationResult<TGenotype>(Population<TGenotype> Population) : PopulationIterationResult<TGenotype>(Population);
