@@ -5,9 +5,7 @@ namespace HEAL.HeuristicLib.Optimization;
 
 public static class Population {
   public static Population<TGenotype> From<TGenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) {
-    if (genotypes.Count != fitnesses.Count) throw new ArgumentException("Genotypes and fitnesses must have the same length.");
-    var solutions = Enumerable.Zip(genotypes, fitnesses).Select(x => Solution.From(x.First, x.Second));
-    return new Population<TGenotype>(new ImmutableList<Solution<TGenotype>>(solutions));
+    return new Population<TGenotype>(genotypes, fitnesses);
   }
 
   public static Population<TGenotype> From<TGenotype>(IEnumerable<Solution<TGenotype>> solutions) {
@@ -16,7 +14,16 @@ public static class Population {
 }
 
 public record Population<TGenotype>(ImmutableList<Solution<TGenotype>> Solutions) : ISolutionLayout<TGenotype> {
+  public Population(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) : this(ToSolutions(genotypes, fitnesses)) { }
+
+  private static ImmutableList<Solution<TGenotype>> ToSolutions(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) {
+    if (genotypes.Count != fitnesses.Count) throw new ArgumentException("Genotypes and fitnesses must have the same length.");
+    var solutions = Enumerable.Zip(genotypes, fitnesses).Select(x => Solution.From(x.First, x.Second));
+    return new ImmutableList<Solution<TGenotype>>(solutions);
+  }
+
   public IEnumerator<Solution<TGenotype>> GetEnumerator() => Solutions.GetEnumerator();
 
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+  public IEnumerable<TGenotype> Genotypes => Solutions.Select(x => x.Genotype);
 }

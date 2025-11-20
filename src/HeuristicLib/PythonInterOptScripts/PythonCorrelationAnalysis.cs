@@ -20,25 +20,24 @@ namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public static class PythonCorrelationAnalysis {
   public static double[] GetCorrelations(IReadOnlyList<RealVector> solutions, RealVectorProblem problem, double[] delta, int count, int seed = 0) {
-    var random = new SystemRandomNumberGenerator(0);
+    var random = new SystemRandomNumberGenerator(seed);
     var evaluator = problem.CreateEvaluator();
     return solutions.ParallelSelect(random, (i, solution, r) => {
-      var n = SampleNeighborhood(solution, r, count, delta);
+      var n = Enumerable.Range(0, count).Select(x =>
+        NormalDistributedRandomPolar.NextSphere(r, solution.ToArray(), delta, solution.Count, false)).ToArray();
       var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
-      var d = OnlinePearsonsRCalculator.Calculate(objectives.Select(x => x[0]), objectives.Select(x => x[1]), out _);
+      var d = OnlinePearsonsRCalculator.Calculate(
+        objectives.Select(x => x[0]),
+        objectives.Select(x => x[1]),
+        out _);
       return d;
     }).ToArray();
   }
 
   public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem) {
-    var random = new SystemRandomNumberGenerator(0);
+    var random = new SystemRandomNumberGenerator();
     var evaluator = problem.CreateEvaluator();
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
-  }
-
-  private static RealVector[] SampleNeighborhood(RealVector seed, IRandomNumberGenerator random, int count, double[] delta) {
-    return Enumerable.Range(0, count).Select(x =>
-      new RealVector(NormalDistributedRandomPolar.NextSphere(random, [0], delta, seed.Count)) + seed).ToArray();
   }
 
   public delegate void GenerationCallback(PopulationIterationResult<RealVector> current, RealVectorProblem problem);
@@ -48,7 +47,7 @@ public static class PythonCorrelationAnalysis {
     var prob = SphereRastriginProblem(dimensions, min, max);
 
     var proto = NSGA2.CreatePrototype(new UniformDistributedCreator(),
-      new SelfAdaptiveSimulatedBinaryCrossover() { Eta = 15 }.WithProbability(0.9),
+      new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
       new PolynomialMutator().WithRate(0.9),
       new ParetoCrowdingTournamentSelector<RealVector>(false, 2), // missing the crowdingpart in the tournament
       new AfterIterationsTerminator<RealVector>(generations),

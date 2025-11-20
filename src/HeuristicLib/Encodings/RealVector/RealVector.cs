@@ -339,4 +339,14 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   public override string ToString() {
     return $"[{string.Join(", ", elements)}]";
   }
+
+  public double Norm() {
+    var sumSquares = 0.0;
+    for (int i = 0; i < elements.Length; i++) {
+      var d1 = elements[i];
+      sumSquares += d1;
+    }
+
+    return Math.Sqrt(sumSquares);
+  }
 }

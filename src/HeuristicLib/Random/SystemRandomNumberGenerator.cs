@@ -1,28 +1,33 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
-  
   private static readonly System.Random GlobalSeedGenerator = new();
-  public static SystemRandomNumberGenerator Default(int? seed) {
-    if (seed.HasValue) {
-      return new SystemRandomNumberGenerator(seed.Value);
-    }
-    lock (GlobalSeedGenerator) {
-      return new SystemRandomNumberGenerator(GlobalSeedGenerator.Next());
-    }
-  }
 
+  public static SystemRandomNumberGenerator Default(int? seed) {
+    if (seed.HasValue)
+      return new SystemRandomNumberGenerator(seed.Value);
+    lock (GlobalSeedGenerator)
+      return new SystemRandomNumberGenerator(NextGlobal());
+  }
 
   private readonly SeedSequence seedSequence;
   private readonly System.Random random;
+
   public SystemRandomNumberGenerator(SeedSequence seedSequence) {
     this.seedSequence = seedSequence;
     random = new System.Random(seedSequence.GenerateSeed());
   }
-  public SystemRandomNumberGenerator(int seed)
-    : this(new SeedSequence(seed)) {
+
+  public SystemRandomNumberGenerator(int seed) : this(new SeedSequence(seed)) { }
+
+  private static int NextGlobal() {
+    lock (GlobalSeedGenerator) {
+      return GlobalSeedGenerator.Next();
+    }
   }
-  
+
+  public SystemRandomNumberGenerator() : this(NextGlobal()) { }
+
   public byte[] RandomBytes(int length) {
     byte[] data = new byte[length];
     random.NextBytes(data);

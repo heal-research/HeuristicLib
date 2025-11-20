@@ -1,11 +1,13 @@
-﻿namespace HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Encodings.RealVector;
+
+namespace HEAL.HeuristicLib.Random;
 
 /// <summary>
 /// Normally distributed random variable.
 /// Uses Marsaglia's polar method
 /// </summary>
 public sealed class NormalDistributedRandomPolar {
-  public static double NextDouble(IRandomNumberGenerator uniformRandom, double mu, double sigma) {
+  public static double NextDouble(IRandomNumberGenerator uniformRandom, double mu = 0, double sigma = 1) {
     // we don't use spare numbers (efficiency loss but easier for multithreaded code)
     double u;
     double s;
@@ -19,11 +21,12 @@ public sealed class NormalDistributedRandomPolar {
     return mu + sigma * u * s;
   }
 
-  public static double[] NextSphere(IRandomNumberGenerator uniformRandom, double[] mu, double[] sigma, int dim, bool surface = true) {
-    var d = Enumerable.Range(0, dim).Select(x => NextDouble(uniformRandom, mu[x % mu.Length], sigma[x % sigma.Length])).ToArray();
-    if (!surface)
-      return d;
-    var norm = Math.Sqrt(d.Select(x => x * x).Sum());
-    return d.Select(x => x / norm).ToArray();
+  public static RealVector NextSphere(IRandomNumberGenerator uniformRandom, double[] mu, double[] sigma, int dim, bool surface = true) {
+    var d = new RealVector(Enumerable.Range(0, dim).Select(_ => NextDouble(uniformRandom)));
+    if (surface)
+      d /= d.Norm();
+    d *= sigma;
+    d += mu;
+    return d.ToArray();
   }
 }
