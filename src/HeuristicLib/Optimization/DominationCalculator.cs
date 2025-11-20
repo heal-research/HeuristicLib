@@ -8,15 +8,15 @@ public static class DominationCalculator {
   /// IEEE Transactions on Evolutionary Computation, 6(2), 182-197.
   /// </summary>
   /// <remarks>
-  /// When there are plateaus in the fitness landscape several solutions might have exactly
+  /// When there are plateaus in the fitness landscape several ISolutions might have exactly
   /// the same fitness vector. In this case parameter <paramref name="dominateOnEqualQualities"/>
   /// can be set to true to avoid plateaus becoming too attractive for the search process.
   /// </remarks>
-  /// <param name="solutions">The solutions of the population.</param>
+  /// <param name="solutions">The ISolutions of the population.</param>
   /// <param name="objective"></param>
-  /// <param name="dominateOnEqualQualities">Whether solutions of exactly equal quality should dominate one another.</param>
-  /// <returns>The pareto front containing the best solutions and their associated quality resp. fitness.</returns>
-  public static List<Solution<T>> CalculateBestParetoFront<T>(Solution<T>[] solutions, Objective objective, bool dominateOnEqualQualities = true) => CalculateBestFront(solutions, objective, solutions.Length, dominateOnEqualQualities, out _, out _, out _);
+  /// <param name="dominateOnEqualQualities">Whether ISolutions of exactly equal quality should dominate one another.</param>
+  /// <returns>The pareto front containing the best ISolutions and their associated quality resp. fitness.</returns>
+  public static List<ISolution<T>> CalculateBestParetoFront<T>(IReadOnlyList<ISolution<T>> solutions, Objective objective, bool dominateOnEqualQualities = true) => CalculateBestFront(solutions, objective, solutions.Count, dominateOnEqualQualities, out _, out _, out _);
 
   /// <summary>
   /// Calculates all pareto fronts. The first in the list is the best front.
@@ -26,26 +26,26 @@ public static class DominationCalculator {
   /// IEEE Transactions on Evolutionary Computation, 6(2), 182-197.
   /// </summary>
   /// <remarks>
-  /// When there are plateaus in the fitness landscape several solutions might have exactly
+  /// When there are plateaus in the fitness landscape several ISolutions might have exactly
   /// the same fitness vector. In this case parameter <paramref name="dominateOnEqualQualities"/>
   /// can be set to true to avoid plateaus becoming too attractive for the search process.
   /// </remarks>
-  /// <param name="solutions">The solutions of the population.</param>
+  /// <param name="solutions">The ISolutions of the population.</param>
   /// <param name="objective"></param>
-  /// <param name="rank">The rank of each of the solutions, corresponds to the front it is put in.</param>
-  /// <param name="dominateOnEqualQualities">Whether solutions of exactly equal quality should dominate one another.</param>
+  /// <param name="rank">The rank of each of the ISolutions, corresponds to the front it is put in.</param>
+  /// <param name="dominateOnEqualQualities">Whether ISolutions of exactly equal quality should dominate one another.</param>
   /// <returns>A sorted list of the pareto fronts from best to worst.</returns>
-  public static List<List<Solution<T>>> CalculateAllParetoFronts<T>(IReadOnlyList<Solution<T>> solutions, Objective objective, out int[] rank, bool dominateOnEqualQualities = true) {
+  public static List<List<ISolution<T>>> CalculateAllParetoFronts<T>(IReadOnlyList<ISolution<T>> solutions, Objective objective, out int[] rank, bool dominateOnEqualQualities = true) {
     var populationSize = solutions.Count;
-    var fronts = new List<List<Solution<T>>>();
+    var fronts = new List<List<ISolution<T>>>();
     if (solutions.Count == 0) {
       rank = [];
       return fronts;
     }
 
-    fronts.Add(CalculateBestFront(solutions, objective, populationSize, dominateOnEqualQualities, out Dictionary<Solution<T>, List<int>> dominatedIndividuals, out int[] dominationCounter, out rank));
+    fronts.Add(CalculateBestFront(solutions, objective, populationSize, dominateOnEqualQualities, out Dictionary<ISolution<T>, List<int>> dominatedIndividuals, out int[] dominationCounter, out rank));
     while (fronts[^1].Count > 0) {
-      var nextFront = new List<Solution<T>>();
+      var nextFront = new List<ISolution<T>>();
       foreach (var p in fronts[^1]) {
         if (!dominatedIndividuals.TryGetValue(p, out var dominatedIndividualsByp))
           continue;
@@ -65,9 +65,9 @@ public static class DominationCalculator {
     return fronts;
   }
 
-  private static List<Solution<T>> CalculateBestFront<T>(IReadOnlyList<Solution<T>> solutions, Objective objective, int populationSize, bool dominateOnEquals, out Dictionary<Solution<T>, List<int>> dominatedIndividuals, out int[] dominationCounter, out int[] rank) {
-    var front = new List<Solution<T>>();
-    dominatedIndividuals = new Dictionary<Solution<T>, List<int>>();
+  private static List<ISolution<T>> CalculateBestFront<T>(IReadOnlyList<ISolution<T>> solutions, Objective objective, int populationSize, bool dominateOnEquals, out Dictionary<ISolution<T>, List<int>> dominatedIndividuals, out int[] dominationCounter, out int[] rank) {
+    var front = new List<ISolution<T>>();
+    dominatedIndividuals = new Dictionary<ISolution<T>, List<int>>();
     dominationCounter = new int[populationSize];
     rank = new int[populationSize];
     for (var pI = 0; pI < populationSize - 1; pI++) {

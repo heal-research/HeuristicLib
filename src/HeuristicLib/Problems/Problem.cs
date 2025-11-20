@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Problems;
 
 // public interface IDeterministicProblem<in TGenotype> : IProblem<TGenotype>
 // {
-//   double Evaluate(TGenotype solution);
+//   double Evaluate(TGenotype Solution);
 //   
 //   // IEvaluator<TGenotype> GetEvaluator()
 //   // {
@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Problems;
 // }
 // public interface IStochasticProblem<in TGenotype> : IProblem<TGenotype>
 // {
-//   double Evaluate(TGenotype solution, IRandomNumberGenerator random);
+//   double Evaluate(TGenotype Solution, IRandomNumberGenerator random);
 // }
 
 //
@@ -46,45 +46,45 @@ namespace HEAL.HeuristicLib.Problems;
 //   public IFitnessExtractor<TEvaluationResult> FitnessExtractor { get; }
 // }
 
-// public interface IEncodedProblem<TSolution, in TGenotype, out TSearchSpace> : IProblem<TSolution>, IOptimizable<TGenotype, TSearchSpace> 
+// public interface IEncodedProblem<TISolution, in TGenotype, out TSearchSpace> : IProblem<TISolution>, IOptimizable<TGenotype, TSearchSpace> 
 //   where TSearchSpace : ISearchSpace<TGenotype> 
 // {
-//   TSolution Decode(TGenotype genotype);
+//   TISolution Decode(TGenotype genotype);
 //   //TSearchSpace SearchSpace { get; }
-//   //IDecoder<TGenotype, TSolution> Decoder { get; }
+//   //IDecoder<TGenotype, TISolution> Decoder { get; }
 // }
 
-// public interface IProblem<TSolution, TGenotype, out TSearchSpace> : IProblem<TSolution>, //ISearchSpaceProvider<TGenotype, TSearchSpace>
+// public interface IProblem<TISolution, TGenotype, out TSearchSpace> : IProblem<TISolution>, //ISearchSpaceProvider<TGenotype, TSearchSpace>
 //  where TSearchSpace : ISearchSpace<TGenotype> {
-//   //TSolution Decode(TGenotype genotype);
+//   //TISolution Decode(TGenotype genotype);
 // }
 
-// public abstract class ProblemBase<TSolution> : IProblem<TSolution>
+// public abstract class ProblemBase<TISolution> : IProblem<TISolution>
 // {
-//   // public IEvaluator<TSolution> Evaluator { get; }
+//   // public IEvaluator<TISolution> Evaluator { get; }
 //   // public TSearchSpace ProblemContext { get; }
 //   public Objective Objective { get; }
 //   // public TProblemData ProblemData { get; }
 //   
 //   protected ProblemBase(/*TSearchSpace searchSpace,*/ Objective objective/*, TProblemData problemData*/) {
-//     // Evaluator = Operators.Evaluator.FromFitnessFunction<TSolution>(Evaluate);
+//     // Evaluator = Operators.Evaluator.FromFitnessFunction<TISolution>(Evaluate);
 //     // ProblemContext = searchSpace;
 //     Objective = objective;
 //     // ProblemData = problemData;
 //   }
 //   
-//   public abstract ObjectiveVector Evaluate(TSolution solution);
+//   public abstract ObjectiveVector Evaluate(TISolution Solution);
 // }
 
-// public abstract class Problem<TSolution>(Objective objective)
-//   : Problem<TSolution, IEncoding<TSolution>>(objective, null!) 
+// public abstract class Problem<TISolution>(Objective objective)
+//   : Problem<TISolution, IEncoding<TISolution>>(objective, null!) 
 // {
 // }
 
-public abstract class Problem<TSolution, TEncoding>(Objective objective, TEncoding searchSpace) : IProblem<TSolution, TEncoding>
-  where TEncoding : class, IEncoding<TSolution> {
+public abstract class Problem<TISolution, TEncoding>(Objective objective, TEncoding searchSpace) : IProblem<TISolution, TEncoding>
+  where TEncoding : class, IEncoding<TISolution> {
   public Objective Objective { get; } = objective;
   public TEncoding SearchSpace { get; } = searchSpace;
 
-  public abstract ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random);
+  public abstract ObjectiveVector Evaluate(TISolution solution, IRandomNumberGenerator random);
 }

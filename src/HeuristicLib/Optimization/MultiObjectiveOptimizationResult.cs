@@ -1,12 +1,12 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public record MultiObjectiveOptimizationResult<TGenotype, TSolutionLayout> : OptimizationResult<TGenotype, TSolutionLayout>, IMultiObjectiveResult<TGenotype>
+public record MultiObjectiveOptimizationResult<TGenotype, TISolutionLayout> : OptimizationResult<TGenotype, TISolutionLayout>, IMultiObjectiveResult<TGenotype>
   where TGenotype : IEquatable<TGenotype>
-  where TSolutionLayout : ISolutionLayout<TGenotype> {
-  public IReadOnlyList<Solution<TGenotype>> ParetoFront { get; init; }
+  where TISolutionLayout : IISolutionLayout<TGenotype> {
+  public IReadOnlyList<ISolution<TGenotype>> ParetoFront { get; init; }
 
-  public MultiObjectiveOptimizationResult(TSolutionLayout solutions, IReadOnlyList<Solution<TGenotype>> paretoFront)
-    : base(solutions) {
+  public MultiObjectiveOptimizationResult(TISolutionLayout Solutions, IReadOnlyList<ISolution<TGenotype>> paretoFront)
+    : base(Solutions) {
     ParetoFront = paretoFront;
   }
 }

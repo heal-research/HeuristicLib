@@ -1,8 +1,13 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public record Solution<TGenotype>(TGenotype Genotype, ObjectiveVector ObjectiveVector);
+public interface ISolution<out TGenotype> {
+  TGenotype Genotype { get; }
+  ObjectiveVector ObjectiveVector { get; }
+}
+
+public record Solution<TGenotype>(TGenotype Genotype, ObjectiveVector ObjectiveVector) : ISolution<TGenotype>;
 
 public static class Solution {
-  public static Solution<TGenotype> From<TGenotype>(TGenotype genotype, ObjectiveVector objectiveVector) =>
-    new(genotype, objectiveVector);
+  public static ISolution<TGenotype> From<TGenotype>(TGenotype genotype, ObjectiveVector objectiveVector) =>
+    new Solution<TGenotype>(genotype, objectiveVector);
 }

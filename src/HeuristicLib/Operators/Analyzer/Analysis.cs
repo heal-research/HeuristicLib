@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
@@ -13,44 +14,82 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
-public interface IAnalysis<T, TE, TP, in TProto, TRes>
+public interface IAnalysis<in T, in TE, in TP, in TRes>
   where TE : class, IEncoding<T>
   where TP : class, IProblem<T, TE>
-  where TProto : IPrototype<T, TE, TP, TRes>
   where TRes : IIterationResult {
-  public void AddToProto(TProto proto);
+  public void AddToProto<T1, TRes1, TE1, TP1>(IPrototype<T1, TE1, TP1, TRes1> proto) where T1 : class, T
+    where TRes1 : IIterationResult, TRes
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP;
 }
 
-public abstract class Analysis<T, TE, TP, TProto, TRes> : IAnalysis<T, TE, TP, TProto, TRes>
+public interface IAnalysis<T, in TE, in TRes> : IAnalysis<T, TE, IProblem<T, TE>, TRes> where TE : class, IEncoding<T> where TRes : IIterationResult { }
+
+public interface IAnalysis<T, in TRes> : IAnalysis<T, IEncoding<T>, IProblem<T, IEncoding<T>>, TRes> where TRes : IIterationResult { }
+
+public interface IAnalysis<T> : IAnalysis<T, IEncoding<T>, IProblem<T, IEncoding<T>>, IIterationResult> { }
+
+public interface IAnalysis : IAnalysis<object, IEncoding<object>, IProblem<object, IEncoding<object>>, IIterationResult> { }
+
+public abstract class Analysis<T, TE, TP, TRes> : IAnalysis<T, TE, TP, TRes>
+  where T : class
   where TE : class, IEncoding<T>
   where TP : class, IProblem<T, TE>
-  where TProto : IPrototype<T, TE, TP, TRes>
   where TRes : IIterationResult {
-  public virtual void AddToProto(TProto proto) {
-    if (proto is IMutatorPrototype<T, TE, TP> mutatorPrototype)
+  public void AddToProto<T1, TRes1, TE1, TP1>(IPrototype<T1, TE1, TP1, TRes1> proto) where T1 : class, T
+    where TRes1 : IIterationResult, TRes
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP {
+    if (proto is IMutatorPrototype<T1, TE1, TP1> mutatorPrototype)
       mutatorPrototype.Mutator = WrapMutator(mutatorPrototype.Mutator);
-    if (proto is ICrossoverPrototype<T, TE, TP> crossoverPrototype)
+    if (proto is ICrossoverPrototype<T1, TE1, TP1> crossoverPrototype)
       crossoverPrototype.Crossover = WrapCrossover(crossoverPrototype.Crossover);
-    if (proto is ISelectorPrototype<T, TE, TP> selectorPrototype)
+    if (proto is ISelectorPrototype<T1, TE1, TP1> selectorPrototype)
       selectorPrototype.Selector = WrapSelector(selectorPrototype.Selector);
     proto.Evaluator = WrapEvaluator(proto.Evaluator);
     proto.Terminator = WrapTerminator(proto.Terminator);
     proto.Interceptor = WrapInterceptor(proto.Interceptor);
+    proto.Creator = WrapCreator(proto.Creator);
   }
 
-  public virtual IInterceptor<T, TRes, TE, TP>? WrapInterceptor(IInterceptor<T, TRes, TE, TP>? interceptor) => interceptor;
-  public virtual ITerminator<T, TRes, TE, TP> WrapTerminator(ITerminator<T, TRes, TE, TP> terminator) => terminator;
-  public virtual IEvaluator<T, TE, TP> WrapEvaluator(IEvaluator<T, TE, TP> evaluator) => evaluator;
-  public virtual IMutator<T, TE, TP> WrapMutator(IMutator<T, TE, TP> mutator) => mutator;
-  public virtual ICrossover<T, TE, TP> WrapCrossover(ICrossover<T, TE, TP> crossover) => crossover;
-  public virtual ISelector<T, TE, TP> WrapSelector(ISelector<T, TE, TP> selector) => selector;
+  public virtual IInterceptor<T1, TRes1, TE1, TP1>? WrapInterceptor<T1, TRes1, TE1, TP1>(IInterceptor<T1, TRes1, TE1, TP1>? interceptor) where T1 : T
+    where TRes1 : IIterationResult, TRes
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP => interceptor;
+
+  public virtual ITerminator<T1, TRes1, TE1, TP1> WrapTerminator<T1, TRes1, TE1, TP1>(ITerminator<T1, TRes1, TE1, TP1> terminator) where T1 : T
+    where TRes1 : IIterationResult, TRes
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP => terminator;
+
+  public virtual IEvaluator<T1, TE1, TP1> WrapEvaluator<T1, TE1, TP1>(IEvaluator<T1, TE1, TP1> evaluator) where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP => evaluator;
+
+  public virtual IMutator<T1, TE1, TP1> WrapMutator<T1, TE1, TP1>(IMutator<T1, TE1, TP1> mutator) where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP => mutator;
+
+  public virtual ICrossover<T1, TE1, TP1> WrapCrossover<T1, TE1, TP1>(ICrossover<T1, TE1, TP1> crossover) where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP => crossover;
+
+  public virtual ISelector<T1, TE1, TP1> WrapSelector<T1, TE1, TP1>(ISelector<T1, TE1, TP1> selector) where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP => selector;
+
+  public virtual ICreator<T1, TE1, TP1> WrapCreator<T1, TE1, TP1>(ICreator<T1, TE1, TP1> creator) where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP => creator;
 }
 
 public abstract class SimpleAnalysis<T, TE, TP, TRes>
-  : Analysis<T, TE, TP, IPrototype<T, TE, TP, TRes>, TRes>
+  : Analysis<T, TE, TP, TRes>
   where TE : class, IEncoding<T>
   where TP : class, IProblem<T, TE>
-  where TRes : IIterationResult {
+  where TRes : IIterationResult
+  where T : class {
   #region Reflection Magic to avoid unnecessary wrapping
   // cache which hooks are actually overridden
   private readonly bool hasAfterEval;
@@ -59,6 +98,7 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
   private readonly bool hasAfterMutate;
   private readonly bool hasAfterCross;
   private readonly bool hasAfterSelect;
+  private readonly bool hasAfterCreate;
 
   // ---- helper to detect overrides once ----
   private bool IsOverridden(string name, Type[] parameters) {
@@ -81,36 +121,47 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
     hasAfterIntercept = IsOverridden(nameof(AfterInterception), [typeof(TRes), typeof(TRes), typeof(TE), typeof(TP)]);
     hasAfterTerminate = IsOverridden(nameof(AfterTermination), [typeof(bool), typeof(TRes), typeof(TRes), typeof(TE), typeof(TP)]);
     hasAfterMutate = IsOverridden(nameof(AfterMutation), [typeof(IReadOnlyList<T>), typeof(IReadOnlyList<T>), typeof(IRandomNumberGenerator), typeof(TE), typeof(TP)]);
-    hasAfterCross = IsOverridden(nameof(AfterCrossover), [typeof(IReadOnlyList<T>), typeof(IReadOnlyList<ValueTuple<T, T>>), typeof(IRandomNumberGenerator), typeof(TE), typeof(TP)]);
-    hasAfterSelect = IsOverridden(nameof(AfterSelection), [typeof(IReadOnlyList<Solution<T>>), typeof(IReadOnlyList<Solution<T>>), typeof(Objective), typeof(int), typeof(IRandomNumberGenerator), typeof(TE), typeof(TP)]);
+    hasAfterCross = IsOverridden(nameof(AfterCrossover), [typeof(IReadOnlyList<T>), typeof(IReadOnlyList<IParents<T>>), typeof(IRandomNumberGenerator), typeof(TE), typeof(TP)]);
+    hasAfterSelect = IsOverridden(nameof(AfterSelection), [typeof(IReadOnlyList<ISolution<T>>), typeof(IReadOnlyList<ISolution<T>>), typeof(Objective), typeof(int), typeof(IRandomNumberGenerator), typeof(TE), typeof(TP)]);
+    hasAfterCreate = IsOverridden(nameof(AfterCreation), [typeof(IReadOnlyList<T>), typeof(int), typeof(IRandomNumberGenerator), typeof(TE), typeof(TP)]);
   }
+  //IReadOnlyList<T> res, int count, IRandomNumberGenerator random, TE encoding, TP problem
 
-  // only wrap when needed
-  public sealed override IInterceptor<T, TRes, TE, TP>? WrapInterceptor(IInterceptor<T, TRes, TE, TP>? interceptor)
-    => hasAfterIntercept ? new AnalysisInterceptor(this, interceptor) : interceptor;
+  public override IInterceptor<T1, TRes1, TE1, TP1>?
+    WrapInterceptor<T1, TRes1, TE1, TP1>(IInterceptor<T1, TRes1, TE1, TP1>? interceptor) => hasAfterIntercept
+    ? new AnalysisInterceptor<T1, TRes1, TE1, TP1>(this, interceptor)
+    : interceptor;
 
-  public sealed override ITerminator<T, TRes, TE, TP> WrapTerminator(ITerminator<T, TRes, TE, TP> terminator)
-    => hasAfterTerminate ? new AnalysisTerminator(this, terminator) : terminator;
+  public override ITerminator<T1, TRes1, TE1, TP1>
+    WrapTerminator<T1, TRes1, TE1, TP1>(ITerminator<T1, TRes1, TE1, TP1> terminator) => hasAfterTerminate
+    ? new AnalysisTerminator<T1, TRes1, TE1, TP1>(this, terminator)
+    : terminator;
 
-  public sealed override IEvaluator<T, TE, TP> WrapEvaluator(IEvaluator<T, TE, TP> evaluator)
-    => hasAfterEval ? new AnalysisEvaluator(this, evaluator) : evaluator;
+  public override IEvaluator<T1, TE1, TP1> WrapEvaluator<T1, TE1, TP1>(IEvaluator<T1, TE1, TP1> evaluator) =>
+    hasAfterEval ? new AnalysisEvaluator<T1, TE1, TP1>(this, evaluator) : evaluator;
 
-  public sealed override IMutator<T, TE, TP> WrapMutator(IMutator<T, TE, TP> mutator)
-    => hasAfterMutate ? new AnalysisMutator(this, mutator) : mutator;
+  public override ICrossover<T1, TE1, TP1> WrapCrossover<T1, TE1, TP1>(ICrossover<T1, TE1, TP1> crossover) =>
+    hasAfterCross ? new AnalysisCrossOver<T1, TE1, TP1>(this, crossover) : crossover;
 
-  public sealed override ICrossover<T, TE, TP> WrapCrossover(ICrossover<T, TE, TP> crossover)
-    => hasAfterCross ? new AnalysisCrossOver(this, crossover) : crossover;
+  public override IMutator<T1, TE1, TP1> WrapMutator<T1, TE1, TP1>(IMutator<T1, TE1, TP1> mutator) =>
+    hasAfterMutate ? new AnalysisMutator<T1, TE1, TP1>(this, mutator) : mutator;
 
-  public sealed override ISelector<T, TE, TP> WrapSelector(ISelector<T, TE, TP> selector)
-    => hasAfterSelect ? new AnalysisSelector(this, selector) : selector;
+  public override ISelector<T1, TE1, TP1> WrapSelector<T1, TE1, TP1>(ISelector<T1, TE1, TP1> selector) =>
+    hasAfterSelect ? new AnalysisSelector<T1, TE1, TP1>(this, selector) : selector;
+
+  public override ICreator<T1, TE1, TP1> WrapCreator<T1, TE1, TP1>(ICreator<T1, TE1, TP1> creator) =>
+    hasAfterCreate ? new AnalysisCreator<T1, TE1, TP1>(this, creator) : creator;
   #endregion
 
   #region wrappers (unchanged behavior)
-  private sealed class AnalysisInterceptor(
+  private sealed class AnalysisInterceptor<T1, TRes1, TE1, TP1>(
     SimpleAnalysis<T, TE, TP, TRes> analysis,
-    IInterceptor<T, TRes, TE, TP>? interceptor) : IInterceptor<T, TRes, TE, TP> {
+    IInterceptor<T1, TRes1, TE1, TP1>? interceptor) : IInterceptor<T1, TRes1, TE1, TP1>
+    where TRes1 : IIterationResult, TRes
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public TRes Transform(TRes currentIterationResult, TRes? previousIterationResult, TE encoding, TP problem) {
+    public TRes1 Transform(TRes1 currentIterationResult, TRes1? previousIterationResult, TE1 encoding, TP1 problem) {
       var res = interceptor != null
         ? interceptor.Transform(currentIterationResult, previousIterationResult, encoding, problem)
         : currentIterationResult;
@@ -119,63 +170,103 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
     }
   }
 
-  private sealed class AnalysisTerminator(
+  private sealed class AnalysisTerminator<T1, TRes1, TE1, TP1>(
     SimpleAnalysis<T, TE, TP, TRes> analysis,
-    ITerminator<T, TRes, TE, TP> terminator) : ITerminator<T, TRes, TE, TP> {
+    ITerminator<T1, TRes1, TE1, TP1> terminator) : ITerminator<T1, TRes1, TE1, TP1>
+    where TRes1 : IIterationResult, TRes
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool ShouldTerminate(TRes currentIterationState, TRes? previousIterationState, TE encoding, TP problem) {
+    public bool ShouldTerminate(TRes1 currentIterationState, TRes1? previousIterationState, TE1 encoding, TP1 problem) {
       var res = terminator.ShouldTerminate(currentIterationState, previousIterationState, encoding, problem);
       analysis.AfterTermination(res, currentIterationState, previousIterationState, encoding, problem);
       return res;
     }
   }
 
-  private sealed class AnalysisEvaluator(
+  private sealed class AnalysisEvaluator<T1, TE1, TP1>(
     SimpleAnalysis<T, TE, TP, TRes> analysis,
-    IEvaluator<T, TE, TP> evaluator) : IEvaluator<T, TE, TP> {
+    IEvaluator<T1, TE1, TP1> evaluator) : IEvaluator<T1, TE1, TP1>
+    where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T> genotypes, IRandomNumberGenerator random, TE encoding, TP problem) {
+    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> genotypes, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
       var q = evaluator.Evaluate(genotypes, random, encoding, problem);
       analysis.AfterEvaluation(genotypes, q, encoding, problem);
       return q;
     }
   }
 
-  private sealed class AnalysisMutator(SimpleAnalysis<T, TE, TP, TRes> analysis, IMutator<T, TE, TP> mutator) : IMutator<T, TE, TP> {
+  private sealed class AnalysisMutator<T1, TE1, TP1>(
+    SimpleAnalysis<T, TE, TP, TRes> analysis,
+    IMutator<T1, TE1, TP1> mutator) : IMutator<T1, TE1, TP1>
+    where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IReadOnlyList<T> Mutate(IReadOnlyList<T> parent, IRandomNumberGenerator random, TE encoding, TP problem) {
+    public IReadOnlyList<T1> Mutate(IReadOnlyList<T1> parent, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
       var res = mutator.Mutate(parent, random, encoding, problem);
       analysis.AfterMutation(res, parent, random, encoding, problem);
       return res;
     }
   }
 
-  private sealed class AnalysisCrossOver(SimpleAnalysis<T, TE, TP, TRes> analysis, ICrossover<T, TE, TP> crossover)
-    : ICrossover<T, TE, TP> {
+  private sealed class AnalysisCrossOver<T1, TE1, TP1>(SimpleAnalysis<T, TE, TP, TRes> analysis, ICrossover<T1, TE1, TP1> crossover)
+    : ICrossover<T1, TE1, TP1>
+    where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IReadOnlyList<T> Cross(IReadOnlyList<(T, T)> parents, IRandomNumberGenerator random, TE encoding, TP problem) {
+    public IReadOnlyList<T1> Cross(IReadOnlyList<IParents<T1>> parents, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
       var res = crossover.Cross(parents, random, encoding, problem);
       analysis.AfterCrossover(res, parents, random, encoding, problem);
       return res;
     }
   }
 
-  private sealed class AnalysisSelector(SimpleAnalysis<T, TE, TP, TRes> analysis, ISelector<T, TE, TP> selector)
-    : ISelector<T, TE, TP> {
+  private sealed class AnalysisSelector<T1, TE1, TP1>(SimpleAnalysis<T, TE, TP, TRes> analysis, ISelector<T1, TE1, TP1> selector)
+    : ISelector<T1, TE1, TP1>
+    where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IReadOnlyList<Solution<T>> Select(IReadOnlyList<Solution<T>> population, Objective objective, int count, IRandomNumberGenerator random, TE encoding, TP problem) {
+    public IReadOnlyList<ISolution<T1>> Select(IReadOnlyList<ISolution<T1>> population, Objective objective, int count, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
       var res = selector.Select(population, objective, count, random, encoding, problem);
       analysis.AfterSelection(res, population, objective, count, random, encoding, problem);
+      return res;
+    }
+  }
+
+  private sealed class AnalysisCreator<T1, TE1, TP1>(SimpleAnalysis<T, TE, TP, TRes> analysis, ICreator<T1, TE1, TP1> selector)
+    : ICreator<T1, TE1, TP1>
+    where T1 : class, T
+    where TE1 : class, IEncoding<T1>, TE
+    where TP1 : class, IProblem<T1, TE1>, TP {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public IReadOnlyList<T1> Create(int count, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
+      var res = selector.Create(count, random, encoding, problem);
+      analysis.AfterCreation(res, count, random, encoding, problem);
       return res;
     }
   }
   #endregion
 
   // ---- default hooks (optionally overridden by users) ----
-  protected virtual void AfterEvaluation(IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> values, TE encoding, TP problem) { }
-  protected virtual void AfterInterception(TRes currentIterationResult, TRes? previousIterationResult, TE encoding, TP problem) { }
-  protected virtual void AfterTermination(bool res, TRes currentIterationState, TRes? previousIterationState, TE encoding, TP problem) { }
-  protected virtual void AfterMutation(IReadOnlyList<T> res, IReadOnlyList<T> parent, IRandomNumberGenerator random, TE encoding, TP problem) { }
-  protected virtual void AfterCrossover(IReadOnlyList<T> res, IReadOnlyList<(T, T)> parents, IRandomNumberGenerator random, TE encoding, TP problem) { }
-  protected virtual void AfterSelection(IReadOnlyList<Solution<T>> res, IReadOnlyList<Solution<T>> population, Objective objective, int count, IRandomNumberGenerator random, TE encoding, TP problem) { }
+  public virtual void AfterEvaluation(IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> values, TE encoding, TP problem) { }
+  public virtual void AfterInterception(TRes currentIterationResult, TRes? previousIterationResult, TE encoding, TP problem) { }
+  public virtual void AfterTermination(bool res, TRes currentIterationState, TRes? previousIterationState, TE encoding, TP problem) { }
+  public virtual void AfterMutation(IReadOnlyList<T> res, IReadOnlyList<T> parent, IRandomNumberGenerator random, TE encoding, TP problem) { }
+  public virtual void AfterCrossover(IReadOnlyList<T> res, IReadOnlyList<IParents<T>> parents, IRandomNumberGenerator random, TE encoding, TP problem) { }
+  public virtual void AfterSelection(IReadOnlyList<ISolution<T>> res, IReadOnlyList<ISolution<T>> population, Objective objective, int count, IRandomNumberGenerator random, TE encoding, TP problem) { }
+  public virtual void AfterCreation(IReadOnlyList<T> res, int count, IRandomNumberGenerator random, TE encoding, TP problem) { }
 }
+
+public abstract class SimpleAnalysis<T, TE, TRes> : SimpleAnalysis<T, TE, IProblem<T, TE>, TRes> where TE : class, IEncoding<T> where T : class where TRes : IIterationResult;
+
+public abstract class SimpleAnalysis<T, TRes> : SimpleAnalysis<T, IEncoding<T>, TRes>
+  where TRes : IIterationResult
+  where T : class;
+
+public abstract class SimpleAnalysis<T> : SimpleAnalysis<T, IIterationResult>
+  where T : class;

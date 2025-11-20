@@ -55,7 +55,7 @@
 //   }
 //   
 //   private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorEncoding> {
-//     public ObjectiveVector Evaluate(RealVector solution) => solution.Sum();
+//     public ObjectiveVector Evaluate(RealVector Solution) => Solution.Sum();
 //     public Objective Objective => SingleObjective.Minimize;
 //     public RealVectorEncoding ProblemContext => new RealVectorEncoding(2, -5, +5);
 //   }

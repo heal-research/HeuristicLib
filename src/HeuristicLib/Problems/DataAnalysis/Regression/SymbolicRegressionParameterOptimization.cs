@@ -151,9 +151,9 @@ public static class SymbolicRegressionParameterOptimization {
     };
   }
 
-  private static alglib.ndimensional_pgrad CreatePGrad(TreeToAutoDiffTermConverter.ParametricFunctionGradient func_grad) {
+  private static alglib.ndimensional_pgrad CreatePGrad(TreeToAutoDiffTermConverter.ParametricFunctionGradient funcGrad) {
     return (double[] c, double[] x, ref double fx, double[] grad, object o) => {
-      var tuple = func_grad(c, x);
+      var tuple = funcGrad(c, x);
       fx = tuple.Item2;
       Array.Copy(tuple.Item1, grad, grad.Length);
       var counter = (EvaluationsCounter)o;

@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Selector;
 public class ProportionalSelector<TGenotype>(bool windowing = true) : BatchSelector<TGenotype> { // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
   public bool Windowing { get; set; } = windowing;
 
-  public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
+  public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     var fitnesses = population.Select(s => s.ObjectiveVector.Count == 1 ? s.ObjectiveVector[0] : throw new InvalidOperationException("Proportional selection requires a single objective.")).ToList();
 
@@ -40,7 +40,7 @@ public class ProportionalSelector<TGenotype>(bool windowing = true) : BatchSelec
     var list = qualities.ToArray();
     var qualitySum = list.Sum();
 
-    var selected = new Solution<TGenotype>[count];
+    var selected = new ISolution<TGenotype>[count];
     for (var i = 0; i < selected.Length; i++) {
       var selectedQuality = random.Random() * qualitySum;
       var index = 0;

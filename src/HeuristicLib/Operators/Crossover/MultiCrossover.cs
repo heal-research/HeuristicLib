@@ -34,7 +34,7 @@ public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGe
     }
   }
 
-  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
     int offspringCount = parents.Count;
 
     // determine which crossover to use for each offspring
@@ -49,9 +49,9 @@ public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGe
     }
 
     // batch parents by operator
-    var parentBatches = new List<(TGenotype, TGenotype)>[Crossovers.Count];
+    var parentBatches = new List<IParents<TGenotype>>[Crossovers.Count];
     for (int i = 0; i < Crossovers.Count; i++) {
-      parentBatches[i] = new List<(TGenotype, TGenotype)>(operatorCounts[i]);
+      parentBatches[i] = new List<IParents<TGenotype>>(operatorCounts[i]);
     }
 
     for (int i = 0; i < offspringCount; i++) {

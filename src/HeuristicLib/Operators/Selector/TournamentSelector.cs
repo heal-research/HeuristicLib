@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Operators.Selector;
 
 public class TournamentSelector<TGenotype>(int tournamentSize) : BatchSelector<TGenotype> {
-  public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
+  public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     return Enumerable
            .Range(0, count)
            .Select(_ => random.Integers(tournamentSize, population.Count)

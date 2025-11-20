@@ -5,8 +5,8 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
-public class FuncAnalysis<T, TE, TP, TRes>(Action<TRes?, TRes> action) : SimpleAnalysis<T, TE, TP, TRes> where TE : class, IEncoding<T> where TP : class, IProblem<T, TE> where TRes : IIterationResult {
-  protected override void AfterInterception(TRes currentIterationResult, TRes? previousIterationResult, TE encoding, TP problem) => action.Invoke(previousIterationResult, currentIterationResult);
+public class FuncAnalysis<T, TE, TP, TRes>(Action<TRes?, TRes> action) : SimpleAnalysis<T, TE, TP, TRes> where TE : class, IEncoding<T> where TP : class, IProblem<T, TE> where TRes : IIterationResult where T : class {
+  public override void AfterInterception(TRes currentIterationResult, TRes? previousIterationResult, TE encoding, TP problem) => action.Invoke(previousIterationResult, currentIterationResult);
 }
 
 public class FuncAnalysis {

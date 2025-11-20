@@ -57,7 +57,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -79,7 +79,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         -3.9958536843749943,
         -0.8178857917980693
@@ -88,7 +88,7 @@
         -4.813739476173064
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         -3.9958536843749943,
         -0.8178857917980693
@@ -156,7 +156,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -178,7 +178,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         -3.9958536843749943,
         -0.8178857917980693
@@ -187,7 +187,7 @@
         -4.813739476173064
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         -3.9958536843749943,
         -0.8178857917980693
@@ -255,7 +255,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -277,7 +277,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         -3.9958536843749943,
         -3.8727416130121526
@@ -286,7 +286,7 @@
         -7.868595297387147
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         -3.9958536843749943,
         -3.8727416130121526
@@ -354,7 +354,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -376,7 +376,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         -4.015033718089123,
         -0.8178857917980693
@@ -385,7 +385,7 @@
         -4.832919509887192
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         -3.9958536843749943,
         -3.8727416130121526

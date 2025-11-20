@@ -4,14 +4,14 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Encodings.Permutation.Crossovers;
 
 public class PartiallyMatchedCrossover : BatchCrossover<Permutation, PermutationEncoding> {
-  public override IReadOnlyList<Permutation> Cross(IReadOnlyList<(Permutation, Permutation)> parents, IRandomNumberGenerator random, PermutationEncoding encoding) {
+  public override IReadOnlyList<Permutation> Cross(IReadOnlyList<IParents<Permutation>> parents, IRandomNumberGenerator random, PermutationEncoding encoding) {
     return Cross(parents, random);
   }
 
-  public static IReadOnlyList<Permutation> Cross(IReadOnlyList<(Permutation, Permutation)> parents, IRandomNumberGenerator rng, Memory<int>? memory = null) {
+  public static IReadOnlyList<Permutation> Cross(IReadOnlyList<IParents<Permutation>> parents, IRandomNumberGenerator rng, Memory<int>? memory = null) {
     Span<int> lengths = stackalloc int[parents.Count];
     for (int i = 0; i < lengths.Length; i++) {
-      lengths[i] = Math.Max(parents[i].Item1.Count, parents[i].Item2.Count);
+      lengths[i] = Math.Max(parents[i].Parent1.Count, parents[i].Parent2.Count);
     }
 
     // ToDo: use random spawn for parallelizing breakpoint generation for each individual?
@@ -21,7 +21,7 @@ public class PartiallyMatchedCrossover : BatchCrossover<Permutation, Permutation
     return Cross(parents, breakpoints, memory);
   }
 
-  public static IReadOnlyList<Permutation> Cross(IReadOnlyList<(Permutation, Permutation)> parents, IReadOnlyList<(int, int)> breakpoints, Memory<int>? memory = null) {
+  public static IReadOnlyList<Permutation> Cross(IReadOnlyList<IParents<Permutation>> parents, IReadOnlyList<(int, int)> breakpoints, Memory<int>? memory = null) {
     if (parents.Count != breakpoints.Count) throw new ArgumentException("Number of parents must match the number of breakpoints.");
 
     Span<int> lengths = stackalloc int[parents.Count];
@@ -44,7 +44,9 @@ public class PartiallyMatchedCrossover : BatchCrossover<Permutation, Permutation
       var offspring = allOffspringMemory.Slice(currentOffset, lengths[i]);
       currentOffset += lengths[i];
 
-      var (parent1, parent2) = parents[i];
+      var p = parents[i];
+      var parent1 = p.Parent1;
+      var parent2 = p.Parent2;
       var (start, end) = breakpoints[i];
 
       Cross(parent1.Span, parent2.Span, start, end, offspring.Span);

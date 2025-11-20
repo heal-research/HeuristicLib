@@ -12,7 +12,7 @@ public class ElitismReplacer<TGenotype> : Replacer<TGenotype> {
     Elites = elites;
   }
 
-  public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
+  public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     if (Elites < 0)
       throw new ArgumentOutOfRangeException(nameof(Elites), "Elites must be non-negative.");
 

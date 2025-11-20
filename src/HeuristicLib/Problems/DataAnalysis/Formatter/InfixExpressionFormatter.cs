@@ -274,7 +274,7 @@ public static class BaseInfixExpressionFormatter {
   }
 
   private static string GetToken(Symbol symbol) {
-    var tok = InfixExpressionParser.knownSymbols.GetBySecond(symbol).FirstOrDefault();
+    var tok = InfixExpressionParser.KnownSymbols.GetBySecond(symbol).FirstOrDefault();
     if (tok == null)
       throw new ArgumentException($"Unknown symbol {symbol} found.");
     return tok;

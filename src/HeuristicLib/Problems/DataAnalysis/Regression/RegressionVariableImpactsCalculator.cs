@@ -78,7 +78,7 @@ public sealed class RegressionVariableImpactsCalculator(
                                        IReadOnlyList<double>? targetValues = null,
                                        double quality = double.NaN) {
     if (!problemData.InputVariables.Contains(variableName))
-      throw new InvalidOperationException($"Can not calculate variable impact, because the solution uses inputs missing in the dataset ({variableName})");
+      throw new InvalidOperationException($"Can not calculate variable impact, because the Solution uses inputs missing in the dataset ({variableName})");
 
     targetValues ??= problemData.Dataset.GetDoubleValues(problemData.TargetVariable, rows).ToArray();
 

@@ -1,12 +1,12 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public record SingleObjectiveOptimizationResult<TGenotype, TSolutionLayout> : OptimizationResult<TGenotype, TSolutionLayout>, ISingleObjectiveResult<TGenotype>
+public record SingleObjectiveOptimizationResult<TGenotype, TISolutionLayout> : OptimizationResult<TGenotype, TISolutionLayout>, ISingleObjectiveResult<TGenotype>
   where TGenotype : IEquatable<TGenotype>
-  where TSolutionLayout : ISolutionLayout<TGenotype> {
-  public Solution<TGenotype> BestSolution { get; init; }
+  where TISolutionLayout : IISolutionLayout<TGenotype> {
+  public ISolution<TGenotype> BestSolution { get; init; }
 
-  public SingleObjectiveOptimizationResult(TSolutionLayout solutions, Solution<TGenotype> bestSolution)
-    : base(solutions) {
+  public SingleObjectiveOptimizationResult(TISolutionLayout Solutions, ISolution<TGenotype> bestSolution)
+    : base(Solutions) {
     BestSolution = bestSolution;
   }
 }

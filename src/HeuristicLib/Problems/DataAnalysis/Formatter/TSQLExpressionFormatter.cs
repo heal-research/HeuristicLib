@@ -19,7 +19,7 @@ internal static class StringBuilderExtensions {
   }
 }
 
-public sealed class TSQLExpressionFormatter : ISymbolicExpressionTreeStringFormatter {
+public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringFormatter {
   public string Format(SymbolicExpressionTree symbolicExpressionTree) {
     // skip root and start symbols
     StringBuilder strBuilder = new StringBuilder();

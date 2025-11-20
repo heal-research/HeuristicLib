@@ -9,10 +9,10 @@ public class AgedCrossover<TGenotype, TEncoding, TProblem>(ICrossover<TGenotype,
   : ICrossover<AgedGenotype<TGenotype>, AgedEncoding<TGenotype, TEncoding>, AgedProblem<TGenotype, TEncoding, TProblem>>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public IReadOnlyList<AgedGenotype<TGenotype>> Cross(IReadOnlyList<(AgedGenotype<TGenotype>, AgedGenotype<TGenotype>)> parents, IRandomNumberGenerator random, AgedEncoding<TGenotype, TEncoding> encoding, AgedProblem<TGenotype, TEncoding, TProblem> problem) {
-    var innerParents = new (TGenotype, TGenotype)[parents.Count];
+  public IReadOnlyList<AgedGenotype<TGenotype>> Cross(IReadOnlyList<IParents<AgedGenotype<TGenotype>>> parents, IRandomNumberGenerator random, AgedEncoding<TGenotype, TEncoding> encoding, AgedProblem<TGenotype, TEncoding, TProblem> problem) {
+    var innerParents = new IParents<TGenotype>[parents.Count];
     for (int i = 0; i < parents.Count; i++) {
-      innerParents[i] = (parents[i].Item1.InnerGenotype, parents[i].Item2.InnerGenotype);
+      innerParents[i] = new Parents<TGenotype>(parents[i].Item1.InnerGenotype, parents[i].Item2.InnerGenotype);
     }
 
     var offspring = internalCrossover.Cross(innerParents, random, encoding.InnerEncoding, problem.InnerProblem);

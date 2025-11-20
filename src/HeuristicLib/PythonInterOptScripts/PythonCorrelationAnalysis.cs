@@ -42,11 +42,11 @@ public static class PythonCorrelationAnalysis {
 
   public delegate void GenerationCallback(PopulationIterationResult<RealVector> current, RealVectorProblem problem);
 
-  public static void RunCorrelationNSGA2(GenerationCallback callback, int generations, int populationSize,
+  public static void RunCorrelationNsga2(GenerationCallback callback, int generations, int populationSize,
                                          int dimensions = 10, double min = -5, double max = 5, int seed = 0) {
     var prob = SphereRastriginProblem(dimensions, min, max);
 
-    var proto = NSGA2.CreatePrototype(new UniformDistributedCreator(),
+    var proto = Nsga2.CreatePrototype(new UniformDistributedCreator(),
       new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
       new PolynomialMutator().WithRate(0.9),
       new ParetoCrowdingTournamentSelector<RealVector>(false, 2), // missing the crowdingpart in the tournament

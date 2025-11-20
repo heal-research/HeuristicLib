@@ -13,9 +13,9 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.NSGA2;
 
-public class NSGA2<TGenotype, TEncoding, TProblem>(
-  ITerminator<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
-  IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor,
+public class Nsga2<TGenotype, TEncoding, TProblem>(
+  ITerminator<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
+  IInterceptor<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor,
   int populationSize,
   ICreator<TGenotype, TEncoding, TProblem> creator,
   ICrossover<TGenotype, TEncoding, TProblem> crossover,
@@ -25,7 +25,7 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
   IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
   int? randomSeed,
   bool dominateOnEquals) :
-  IterativeAlgorithm<TGenotype, TEncoding, TProblem, NSGA2IterationResult<TGenotype>>(terminator, randomSeed, interceptor)
+  IterativeAlgorithm<TGenotype, TEncoding, TProblem, Nsga2IterationResult<TGenotype>>(terminator, randomSeed, interceptor)
   where TProblem : class, IProblem<TGenotype, TEncoding>
   where TEncoding : class, IEncoding<TGenotype> {
   public int PopulationSize { get; } = populationSize;
@@ -36,11 +36,11 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
   public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; } = evaluator;
   public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; } = new ParetoCrowdingReplacer<TGenotype>(dominateOnEquals);
 
-  public override NSGA2IterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, NSGA2IterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
+  public override Nsga2IterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, Nsga2IterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       var genotypes = Creator.Create(PopulationSize, random, searchSpace, problem);
       var objectiveValues = Evaluator.Evaluate(genotypes, random, searchSpace, problem);
-      return new NSGA2IterationResult<TGenotype>(Population.From(genotypes, objectiveValues));
+      return new Nsga2IterationResult<TGenotype>(Population.From(genotypes, objectiveValues));
     }
 
     var offspringCount = Replacer.GetOffspringCount(PopulationSize);
@@ -50,22 +50,22 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
     var newPop = Population.From(mutants, Evaluator.Evaluate(mutants, random, searchSpace, problem));
     var nextPop = Replacer.Replace(previousIterationResult.Population.Solutions, newPop.Solutions, problem.Objective, random, searchSpace, problem);
 
-    return new NSGA2IterationResult<TGenotype>(Population.From(nextPop));
+    return new Nsga2IterationResult<TGenotype>(Population.From(nextPop));
   }
 
-  public class Prototype : PopulationBasedAlgorithmPrototype<TGenotype, TEncoding, TProblem, NSGA2IterationResult<TGenotype>>,
+  public class Prototype : PopulationBasedAlgorithmPrototype<TGenotype, TEncoding, TProblem, Nsga2IterationResult<TGenotype>>,
                            IMutatorPrototype<TGenotype, TEncoding, TProblem>, ICrossoverPrototype<TGenotype, TEncoding, TProblem> {
     public Prototype(ICreator<TGenotype, TEncoding, TProblem> creator,
                      ICrossover<TGenotype, TEncoding, TProblem> crossover,
                      IMutator<TGenotype, TEncoding, TProblem> mutator,
                      ISelector<TGenotype, TEncoding, TProblem> selector,
-                     ITerminator<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
+                     ITerminator<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
                      IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
                      int? randomSeed,
                      int populationSize,
                      double mutationRate,
                      bool dominateOnEquals,
-                     IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null) : base(populationSize, creator, selector, evaluator, randomSeed, terminator, interceptor) {
+                     IInterceptor<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null) : base(populationSize, creator, selector, evaluator, randomSeed, terminator, interceptor) {
       MutationRate = mutationRate;
       DominateOnEquals = dominateOnEquals;
       Mutator = mutator;
@@ -77,27 +77,27 @@ public class NSGA2<TGenotype, TEncoding, TProblem>(
     public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
     public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
 
-    public NSGA2<TGenotype, TEncoding, TProblem> Create()
+    public Nsga2<TGenotype, TEncoding, TProblem> Create()
       => new(Terminator, Interceptor, PopulationSize, Creator,
         Crossover, Mutator, MutationRate, Selector, Evaluator,
         RandomSeed, DominateOnEquals);
 
-    protected override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, NSGA2IterationResult<TGenotype>> BuildAlgorithm() => Create();
+    protected override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, Nsga2IterationResult<TGenotype>> BuildAlgorithm() => Create();
   }
 }
 
-public static class NSGA2 {
-  public static NSGA2<TGenotype, TEncoding, TProblem>.Prototype CreatePrototype<TGenotype, TEncoding, TProblem>(ICreator<TGenotype, TEncoding, TProblem> creator,
+public static class Nsga2 {
+  public static Nsga2<TGenotype, TEncoding, TProblem>.Prototype CreatePrototype<TGenotype, TEncoding, TProblem>(ICreator<TGenotype, TEncoding, TProblem> creator,
                                                                                                                 ICrossover<TGenotype, TEncoding, TProblem> crossover,
                                                                                                                 IMutator<TGenotype, TEncoding, TProblem> mutator,
                                                                                                                 ISelector<TGenotype, TEncoding, TProblem> selector,
-                                                                                                                ITerminator<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
+                                                                                                                ITerminator<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
                                                                                                                 IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
                                                                                                                 int? randomSeed,
                                                                                                                 int populationSize,
                                                                                                                 double mutationRate,
                                                                                                                 bool dominateOnEquals = true,
-                                                                                                                IInterceptor<TGenotype, NSGA2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
+                                                                                                                IInterceptor<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
     where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding>
     => new(creator, crossover, mutator, selector, terminator, evaluator, randomSeed, populationSize, mutationRate, dominateOnEquals, interceptor);
 }

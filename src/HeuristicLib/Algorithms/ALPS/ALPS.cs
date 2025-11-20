@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Algorithms.ALPS;
 
-public class ALPSGeneticAlgorithm<TGenotype, TEncoding>(
+public class AlpsGeneticAlgorithm<TGenotype, TEncoding>(
   int populationSize,
   ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> creator,
   ICrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> crossover,
@@ -20,9 +20,9 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding>(
   IEvaluator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> evaluator,
   int elites,
   int randomSeed,
-  ITerminator<TGenotype, ALPSIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>> terminator,
-  IInterceptor<TGenotype, ALPSIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>>? interceptor = null)
-  : ALPSGeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor)
+  ITerminator<TGenotype, AlpsIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>> terminator,
+  IInterceptor<TGenotype, AlpsIterationResult<TGenotype>, TEncoding, IProblem<TGenotype, TEncoding>>? interceptor = null)
+  : AlpsGeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor)
   where TEncoding : class, IEncoding<TGenotype>;
 
 public class AlpsGeneticAlgorithm<TGenotype>(
@@ -35,6 +35,6 @@ public class AlpsGeneticAlgorithm<TGenotype>(
   IEvaluator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> evaluator,
   int elites,
   int randomSeed,
-  ITerminator<TGenotype, ALPSIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> terminator,
-  IInterceptor<TGenotype, ALPSIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>? interceptor = null)
-  : ALPSGeneticAlgorithm<TGenotype, IEncoding<TGenotype>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor);
+  ITerminator<TGenotype, AlpsIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> terminator,
+  IInterceptor<TGenotype, AlpsIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>? interceptor = null)
+  : AlpsGeneticAlgorithm<TGenotype, IEncoding<TGenotype>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor);

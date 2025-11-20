@@ -7,8 +7,9 @@ public class AlphaBetaBlendCrossover(double alpha = 0.7) : Crossover<RealVector,
   public double Alpha { get; set; } = alpha;
   public double Beta => 1 - Alpha;
 
-  public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
-    var (parent1, parent2) = parents;
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+    var parent1 = parents.Parent1;
+    var parent2 = parents.Parent2;
     var result = Alpha * parent1 + Beta * parent2;
     return RealVector.Clamp(result, encoding.Minimum, encoding.Maximum);
   }

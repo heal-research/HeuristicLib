@@ -16,11 +16,11 @@ public static class OpCodes {
   public const byte Log = (byte)OpCode.Log;
   public const byte Exp = (byte)OpCode.Exp;
   public const byte IfThenElse = (byte)OpCode.IfThenElse;
-  public const byte GT = (byte)OpCode.GT;
-  public const byte LT = (byte)OpCode.LT;
-  public const byte AND = (byte)OpCode.AND;
-  public const byte OR = (byte)OpCode.OR;
-  public const byte NOT = (byte)OpCode.NOT;
+  public const byte Gt = (byte)OpCode.Gt;
+  public const byte Lt = (byte)OpCode.Lt;
+  public const byte And = (byte)OpCode.And;
+  public const byte Or = (byte)OpCode.Or;
+  public const byte Not = (byte)OpCode.Not;
   public const byte Average = (byte)OpCode.Average;
   public const byte Call = (byte)OpCode.Call;
   public const byte Variable = (byte)OpCode.Variable;
@@ -51,7 +51,7 @@ public static class OpCodes {
   public const byte Norm = (byte)OpCode.Norm;
   public const byte Erf = (byte)OpCode.Erf;
   public const byte Bessel = (byte)OpCode.Bessel;
-  public const byte XOR = (byte)OpCode.XOR;
+  public const byte Xor = (byte)OpCode.Xor;
   public const byte FactorVariable = (byte)OpCode.FactorVariable;
   public const byte BinaryFactorVariable = (byte)OpCode.BinaryFactorVariable;
   public const byte Absolute = (byte)OpCode.Absolute;
@@ -73,12 +73,12 @@ public static class OpCodes {
     { typeof(Logarithm), Log },
     { typeof(Exponential), Exp },
     { typeof(IfThenElse), IfThenElse },
-    { typeof(GreaterThan), GT },
-    { typeof(LessThan), LT },
-    { typeof(And), AND },
-    { typeof(Or), OR },
-    { typeof(Not), NOT },
-    { typeof(Xor), XOR },
+    { typeof(GreaterThan), Gt },
+    { typeof(LessThan), Lt },
+    { typeof(And), And },
+    { typeof(Or), Or },
+    { typeof(Not), Not },
+    { typeof(Xor), Xor },
     { typeof(Average), Average },
     { typeof(InvokeFunction), Call },
     { typeof(Variable), Variable },

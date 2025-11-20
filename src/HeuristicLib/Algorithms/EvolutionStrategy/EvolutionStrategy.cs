@@ -14,8 +14,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
-public record EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> population, double mutationStrength) : PopulationIterationResult<TGenotype>(population) {
-  public double MutationStrength { get; } = mutationStrength;
+public record EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> Population, double MutationStrength) : PopulationIterationResult<TGenotype>(Population) {
+  public double MutationStrength { get; } = MutationStrength;
 }
 
 public static class EvolutionStrategy {
@@ -70,13 +70,13 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
     IReadOnlyList<ObjectiveVector> parentQualities;
 
     if (Crossover == null) {
-      var parentSolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
-      parents = parentSolutions.Select(x => x.Genotype).ToArray();
-      parentQualities = parentSolutions.Select(x => x.ObjectiveVector).ToArray();
+      var parentISolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
+      parents = parentISolutions.Select(x => x.Genotype).ToArray();
+      parentQualities = parentISolutions.Select(x => x.ObjectiveVector).ToArray();
     } else {
-      var parentSolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, PopulationSize * 2, random, problem.SearchSpace, problem);
-      parents = Crossover!.Cross(parentSolutions.ToGenotypePairs(), random, searchSpace, problem);
-      parentQualities = parentSolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
+      var parentISolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, PopulationSize * 2, random, problem.SearchSpace, problem);
+      parents = Crossover!.Cross(parentISolutions.ToGenotypePairs(), random, searchSpace, problem);
+      parentQualities = parentISolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
     }
 
     var children = Mutator.Mutate(parents, random, searchSpace, problem);

@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public interface ISingleObjectiveResult<TGenotype> : IOptimizationResult
+public interface ISingleObjectiveResult<out TGenotype> : IOptimizationResult
   where TGenotype : IEquatable<TGenotype> {
-  Solution<TGenotype> BestSolution { get; }
+  ISolution<TGenotype> BestSolution { get; }
 }

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
@@ -141,5 +142,5 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     return allowedInternalBranches.Count == 0 ? null : allowedInternalBranches.SampleRandom(random);
   }
 
-  public override SymbolicExpressionTree Cross((SymbolicExpressionTree, SymbolicExpressionTree) parents, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, encoding);
+  public override SymbolicExpressionTree Cross(IParents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, encoding);
 }

@@ -56,7 +56,7 @@
     }
   },
   CurrentPopulation: {
-    $type: Solution<Permutation>[],
+    $type: ISolution<Permutation>[],
     $values: [
       {
         Genotype: [
@@ -175,7 +175,7 @@
       }
     ]
   },
-  CurrentBestSolution: {
+  CurrentBestISolution: {
     Genotype: [
       0,
       1,
@@ -198,7 +198,7 @@
       3173.1818974490016
     ]
   },
-  BestSolution: {
+  BestISolution: {
     Genotype: [
       0,
       1,

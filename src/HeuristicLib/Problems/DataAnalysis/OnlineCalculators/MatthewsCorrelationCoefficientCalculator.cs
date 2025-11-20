@@ -3,10 +3,10 @@
 public class MatthewsCorrelationCoefficientCalculator {
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
     var confusionMatrix = ConfusionMatrixCalculator.Calculate(originalValues, estimatedValues, out errorState);
-    return !errorState.Equals(OnlineCalculatorError.None) ? double.NaN : CalculateMCC(confusionMatrix);
+    return !errorState.Equals(OnlineCalculatorError.None) ? double.NaN : CalculateMcc(confusionMatrix);
   }
 
-  private static double CalculateMCC(double[,] confusionMatrix) {
+  private static double CalculateMcc(double[,] confusionMatrix) {
     if (confusionMatrix.GetLength(0) != confusionMatrix.GetLength(1)) {
       throw new ArgumentException("Confusion matrix is not a square matrix.");
     }

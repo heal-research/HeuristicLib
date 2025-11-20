@@ -13,7 +13,7 @@ public interface IRandomNumberGenerator {
   IRandomNumberGenerator Spawn() => Spawn(1)[0];
 }
 
-public static class IRandomNumberGeneratorExtensions {
+public static class RandomNumberGeneratorExtensions {
   public static double[] Random(this IRandomNumberGenerator random, int length) {
     double[] values = new double[length];
     for (int i = 0; i < length; i++) {

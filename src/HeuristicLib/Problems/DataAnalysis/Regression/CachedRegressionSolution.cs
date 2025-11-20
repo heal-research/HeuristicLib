@@ -1,9 +1,9 @@
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 /// <summary>
-/// Represents a regression data analysis solution
+/// Represents a regression data analysis Solution
 /// </summary>
-public class CachedRegressionSolution(IRegressionModel solution) : IRegressionModel {
+public class CachedRegressionISolution(IRegressionModel solution) : IRegressionModel {
   protected readonly Dictionary<int, double> EvaluationCache = new();
   protected readonly IRegressionModel Solution = solution;
 

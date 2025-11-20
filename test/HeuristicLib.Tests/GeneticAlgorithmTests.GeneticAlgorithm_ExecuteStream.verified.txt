@@ -57,7 +57,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -111,7 +111,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         0.3448517272923386,
         -3.8727416130121526,
@@ -121,7 +121,7 @@
         -7.523743570094808
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         0.3448517272923386,
         -3.8727416130121526,
@@ -190,7 +190,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -244,7 +244,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         -0.8178857917980693,
         -3.652526206640772,
@@ -254,7 +254,7 @@
         -8.081202634182388
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         -0.8178857917980693,
         -3.652526206640772,
@@ -323,7 +323,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -377,7 +377,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         -0.785001999109519,
         -3.7022188057900496,
@@ -387,7 +387,7 @@
         -8.08259712854987
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         -0.785001999109519,
         -3.7022188057900496,
@@ -456,7 +456,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -510,7 +510,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         0.3448517272923386,
         -3.652526206640772,
@@ -520,7 +520,7 @@
         -7.303528163723428
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         -0.785001999109519,
         -3.7022188057900496,
@@ -589,7 +589,7 @@
       }
     },
     CurrentPopulation: {
-      $type: Solution<RealVector>[],
+      $type: ISolution<RealVector>[],
       $values: [
         {
           Genotype: [
@@ -643,7 +643,7 @@
         }
       ]
     },
-    CurrentBestSolution: {
+    CurrentBestISolution: {
       Genotype: [
         -0.7356535335237412,
         -3.652526206640772,
@@ -653,7 +653,7 @@
         -8.384033424539506
       ]
     },
-    BestSolution: {
+    BestISolution: {
       Genotype: [
         -0.7356535335237412,
         -3.652526206640772,

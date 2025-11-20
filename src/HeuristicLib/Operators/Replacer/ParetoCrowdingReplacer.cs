@@ -61,10 +61,10 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
     this.tournamentSize = tournamentSize;
   }
 
-  public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
+  public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
     var lookup = new Dictionary<ObjectiveVector, double>();
-    var res = new Solution<TGenotype>[count];
+    var res = new ISolution<TGenotype>[count];
     for (int i = 0; i < count; i++) {
       var bestIdx = random.Integer(population.Count);
       var bestRank = rank[bestIdx];
@@ -99,11 +99,11 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
 }
 
 public class ParetoCrowdingReplacer<TGenotype>(bool dominateOnEqualities) : Replacer<TGenotype> {
-  public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
+  public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var all = previousPopulation.Concat(offspringPopulation).ToArray();
     var fronts = DominationCalculator.CalculateAllParetoFronts(all, objective, out var rank, dominateOnEqualities);
 
-    var l = new List<Solution<TGenotype>>();
+    var l = new List<ISolution<TGenotype>>();
     var size = previousPopulation.Count;
     foreach (var front in fronts) {
       if (front.Count < size) {

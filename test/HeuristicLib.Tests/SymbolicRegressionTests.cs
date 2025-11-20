@@ -134,7 +134,7 @@ public class SymbolicRegressionTests {
     var qualities = BestMedianWorstAnalysis.Create(ga);
     var res = ga.Execute(problem);
 
-    Assert.Equal(100, qualities.BestSolutions.Count);
+    Assert.Equal(100, qualities.BestISolutions.Count);
     Assert.Equal(100, res.Population.Solutions.Count);
   }
 
@@ -159,11 +159,11 @@ public class SymbolicRegressionTests {
     var genealogy = GenealogyAnalysis.Create(proto);
     var res = proto.Execute(problem);
 
-    Assert.Equal(30, qualities.BestSolutions.Count);
+    Assert.Equal(30, qualities.BestISolutions.Count);
     Assert.Equal(10, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
-    Assert.Equal(qualities.BestSolutions[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
+    Assert.Equal(qualities.BestISolutions[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
   }
 
   [Fact]
@@ -195,7 +195,7 @@ public class SymbolicRegressionTests {
     const int populationSize = 10;
     const int maximumIterations = 50;
     const double mutationRate = 0.05;
-    var nsga2 = NSGA2.CreatePrototype(
+    var nsga2 = Nsga2.CreatePrototype(
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
       symRegAllMutator,
@@ -211,7 +211,7 @@ public class SymbolicRegressionTests {
     var qualities = BestMedianWorstAnalysis.Create(nsga2);
 
     var res = nsga2.Execute(problem);
-    Assert.Equal(maximumIterations, qualities.BestSolutions.Count);
+    Assert.Equal(maximumIterations, qualities.BestISolutions.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
@@ -230,7 +230,7 @@ public class SymbolicRegressionTests {
   public void TestPlayground2() {
     const int iterations = 4;
     var i = 0;
-    PythonCorrelationAnalysis.RunCorrelationNSGA2((current, problem) => { i++; }, iterations, 100);
+    PythonCorrelationAnalysis.RunCorrelationNsga2((current, problem) => { i++; }, iterations, 100);
     Assert.Equal(iterations, i);
   }
 

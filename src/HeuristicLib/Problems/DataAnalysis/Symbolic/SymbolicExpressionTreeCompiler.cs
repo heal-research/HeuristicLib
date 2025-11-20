@@ -27,11 +27,11 @@ public static class SymbolicExpressionTreeCompiler {
     // address of all functions is fixed now
     // iterate through code again and fill in the jump locations
     foreach (var instr in code) {
-      if (instr.dynamicNode.Symbol is not InvokeFunction)
+      if (instr.DynamicNode.Symbol is not InvokeFunction)
         continue;
-      var invokeNode = instr.dynamicNode;
+      var invokeNode = instr.DynamicNode;
       var functionName = ((InvokeFunctionSymbol)invokeNode.Symbol).FunctionName;
-      instr.data = entryPoint[functionName];
+      instr.Data = entryPoint[functionName];
     }
 
     return code.ToArray();

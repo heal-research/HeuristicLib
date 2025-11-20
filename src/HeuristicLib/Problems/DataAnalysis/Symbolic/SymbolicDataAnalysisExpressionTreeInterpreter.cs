@@ -31,34 +31,34 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
     var code = SymbolicExpressionTreeCompiler.Compile(tree, OpCodes.MapSymbolToOpCode);
     var necessaryArgStackSize = 0;
     foreach (var instr in code) {
-      switch (instr.opCode) {
+      switch (instr.OpCode) {
         case OpCodes.Variable: {
-          var variableTreeNode = (VariableTreeNode)instr.dynamicNode;
-          instr.data = dataset.GetDoubleValues(variableTreeNode.VariableName);
+          var variableTreeNode = (VariableTreeNode)instr.DynamicNode;
+          instr.Data = dataset.GetDoubleValues(variableTreeNode.VariableName);
           break;
         }
         case OpCodes.FactorVariable: {
-          var factorTreeNode = (FactorVariableTreeNode)instr.dynamicNode;
-          instr.data = dataset.GetStringValues(factorTreeNode.VariableName);
+          var factorTreeNode = (FactorVariableTreeNode)instr.DynamicNode;
+          instr.Data = dataset.GetStringValues(factorTreeNode.VariableName);
           break;
         }
         case OpCodes.BinaryFactorVariable: {
-          var factorTreeNode = (BinaryFactorVariableTreeNode)instr.dynamicNode;
-          instr.data = dataset.GetStringValues(factorTreeNode.VariableName);
+          var factorTreeNode = (BinaryFactorVariableTreeNode)instr.DynamicNode;
+          instr.Data = dataset.GetStringValues(factorTreeNode.VariableName);
           break;
         }
         case OpCodes.LagVariable: {
-          var laggedVariableTreeNode = (LaggedVariableTreeNode)instr.dynamicNode;
-          instr.data = dataset.GetDoubleValues(laggedVariableTreeNode.VariableName);
+          var laggedVariableTreeNode = (LaggedVariableTreeNode)instr.DynamicNode;
+          instr.Data = dataset.GetDoubleValues(laggedVariableTreeNode.VariableName);
           break;
         }
         case OpCodes.VariableCondition: {
-          var variableConditionTreeNode = (VariableConditionTreeNode)instr.dynamicNode;
-          instr.data = dataset.GetDoubleValues(variableConditionTreeNode.VariableName);
+          var variableConditionTreeNode = (VariableConditionTreeNode)instr.DynamicNode;
+          instr.Data = dataset.GetDoubleValues(variableConditionTreeNode.VariableName);
           break;
         }
         case OpCodes.Call:
-          necessaryArgStackSize += instr.nArguments + 1;
+          necessaryArgStackSize += instr.NArguments + 1;
           break;
       }
     }
@@ -68,10 +68,10 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
   public virtual double Evaluate(Dataset dataset, ref int row, InterpreterState state) {
     var currentInstr = state.NextInstruction();
-    switch (currentInstr.opCode) {
+    switch (currentInstr.OpCode) {
       case OpCodes.Add: {
         var s = Evaluate(dataset, ref row, state);
-        for (var i = 1; i < currentInstr.nArguments; i++) {
+        for (var i = 1; i < currentInstr.NArguments; i++) {
           s += Evaluate(dataset, ref row, state);
         }
 
@@ -79,17 +79,17 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.Sub: {
         var s = Evaluate(dataset, ref row, state);
-        for (var i = 1; i < currentInstr.nArguments; i++) {
+        for (var i = 1; i < currentInstr.NArguments; i++) {
           s -= Evaluate(dataset, ref row, state);
         }
 
-        if (currentInstr.nArguments == 1) { s = -s; }
+        if (currentInstr.NArguments == 1) { s = -s; }
 
         return s;
       }
       case OpCodes.Mul: {
         var p = Evaluate(dataset, ref row, state);
-        for (var i = 1; i < currentInstr.nArguments; i++) {
+        for (var i = 1; i < currentInstr.NArguments; i++) {
           p *= Evaluate(dataset, ref row, state);
         }
 
@@ -97,21 +97,21 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.Div: {
         var p = Evaluate(dataset, ref row, state);
-        for (var i = 1; i < currentInstr.nArguments; i++) {
+        for (var i = 1; i < currentInstr.NArguments; i++) {
           p /= Evaluate(dataset, ref row, state);
         }
 
-        if (currentInstr.nArguments == 1) { p = 1.0 / p; }
+        if (currentInstr.NArguments == 1) { p = 1.0 / p; }
 
         return p;
       }
       case OpCodes.Average: {
         var sum = Evaluate(dataset, ref row, state);
-        for (var i = 1; i < currentInstr.nArguments; i++) {
+        for (var i = 1; i < currentInstr.NArguments; i++) {
           sum += Evaluate(dataset, ref row, state);
         }
 
-        return sum / currentInstr.nArguments;
+        return sum / currentInstr.NArguments;
       }
       case OpCodes.Absolute: {
         return Math.Abs(Evaluate(dataset, ref row, state));
@@ -260,9 +260,9 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
         return result;
       }
-      case OpCodes.AND: {
+      case OpCodes.And: {
         var result = Evaluate(dataset, ref row, state);
-        for (var i = 1; i < currentInstr.nArguments; i++) {
+        for (var i = 1; i < currentInstr.NArguments; i++) {
           if (result > 0.0) result = Evaluate(dataset, ref row, state);
           else {
             state.SkipInstructions();
@@ -271,9 +271,9 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
         return result > 0.0 ? 1.0 : -1.0;
       }
-      case OpCodes.OR: {
+      case OpCodes.Or: {
         var result = Evaluate(dataset, ref row, state);
-        for (var i = 1; i < currentInstr.nArguments; i++) {
+        for (var i = 1; i < currentInstr.NArguments; i++) {
           if (result <= 0.0) result = Evaluate(dataset, ref row, state);
           else {
             state.SkipInstructions();
@@ -282,27 +282,27 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
         return result > 0.0 ? 1.0 : -1.0;
       }
-      case OpCodes.NOT: {
+      case OpCodes.Not: {
         return Evaluate(dataset, ref row, state) > 0.0 ? -1.0 : 1.0;
       }
-      case OpCodes.XOR: {
+      case OpCodes.Xor: {
         //mkommend: XOR on multiple inputs is defined as true if the number of positive signals is odd
         // this is equal to a consecutive execution of binary XOR operations.
         var positiveSignals = 0;
-        for (var i = 0; i < currentInstr.nArguments; i++) {
+        for (var i = 0; i < currentInstr.NArguments; i++) {
           if (Evaluate(dataset, ref row, state) > 0.0) { positiveSignals++; }
         }
 
         return positiveSignals % 2 != 0 ? 1.0 : -1.0;
       }
-      case OpCodes.GT: {
+      case OpCodes.Gt: {
         var x = Evaluate(dataset, ref row, state);
         var y = Evaluate(dataset, ref row, state);
         if (x > y) { return 1.0; }
 
         return -1.0;
       }
-      case OpCodes.LT: {
+      case OpCodes.Lt: {
         var x = Evaluate(dataset, ref row, state);
         var y = Evaluate(dataset, ref row, state);
         if (x < y) { return 1.0; }
@@ -310,7 +310,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         return -1.0;
       }
       case OpCodes.TimeLag: {
-        var timeLagTreeNode = (LaggedTreeNode)currentInstr.dynamicNode;
+        var timeLagTreeNode = (LaggedTreeNode)currentInstr.DynamicNode;
         row += timeLagTreeNode.Lag;
         var result = Evaluate(dataset, ref row, state);
         row -= timeLagTreeNode.Lag;
@@ -318,7 +318,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.Integral: {
         var savedPc = state.ProgramCounter;
-        var timeLagTreeNode = (LaggedTreeNode)currentInstr.dynamicNode;
+        var timeLagTreeNode = (LaggedTreeNode)currentInstr.DynamicNode;
         var sum = 0.0;
         for (var i = 0; i < Math.Abs(timeLagTreeNode.Lag); i++) {
           row += Math.Sign(timeLagTreeNode.Lag);
@@ -353,8 +353,8 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.Call: {
         // evaluate sub-trees
-        var argValues = new double[currentInstr.nArguments];
-        for (var i = 0; i < currentInstr.nArguments; i++) {
+        var argValues = new double[currentInstr.NArguments];
+        for (var i = 0; i < currentInstr.NArguments; i++) {
           argValues[i] = Evaluate(dataset, ref row, state);
         }
 
@@ -364,7 +364,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         // save the pc
         var savedPc = state.ProgramCounter;
         // set pc to start of function  
-        state.ProgramCounter = (ushort)currentInstr.data;
+        state.ProgramCounter = (ushort)currentInstr.Data;
         // evaluate the function
         var v = Evaluate(dataset, ref row, state);
 
@@ -376,33 +376,33 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         return v;
       }
       case OpCodes.Arg: {
-        return state.GetStackFrameValue((ushort)currentInstr.data);
+        return state.GetStackFrameValue((ushort)currentInstr.Data);
       }
       case OpCodes.Variable: {
         if (row < 0 || row >= dataset.Rows) return double.NaN;
-        var variableTreeNode = (VariableTreeNode)currentInstr.dynamicNode;
-        return ((IList<double>)currentInstr.data)[row] * variableTreeNode.Weight;
+        var variableTreeNode = (VariableTreeNode)currentInstr.DynamicNode;
+        return ((IList<double>)currentInstr.Data)[row] * variableTreeNode.Weight;
       }
       case OpCodes.BinaryFactorVariable: {
         if (row < 0 || row >= dataset.Rows) return double.NaN;
-        var factorVarTreeNode = (BinaryFactorVariableTreeNode)currentInstr.dynamicNode;
-        return ((IList<string>)currentInstr.data)[row] == factorVarTreeNode.VariableValue ? factorVarTreeNode.Weight : 0;
+        var factorVarTreeNode = (BinaryFactorVariableTreeNode)currentInstr.DynamicNode;
+        return ((IList<string>)currentInstr.Data)[row] == factorVarTreeNode.VariableValue ? factorVarTreeNode.Weight : 0;
       }
       case OpCodes.FactorVariable: {
         if (row < 0 || row >= dataset.Rows) return double.NaN;
-        var factorVarTreeNode = (FactorVariableTreeNode)currentInstr.dynamicNode;
-        return factorVarTreeNode.GetValue(((IList<string>)currentInstr.data)[row]);
+        var factorVarTreeNode = (FactorVariableTreeNode)currentInstr.DynamicNode;
+        return factorVarTreeNode.GetValue(((IList<string>)currentInstr.Data)[row]);
       }
       case OpCodes.LagVariable: {
-        var laggedVariableTreeNode = (LaggedVariableTreeNode)currentInstr.dynamicNode;
+        var laggedVariableTreeNode = (LaggedVariableTreeNode)currentInstr.DynamicNode;
         var actualRow = row + laggedVariableTreeNode.Lag;
         if (actualRow < 0 || actualRow >= dataset.Rows) { return double.NaN; }
 
-        return ((IList<double>)currentInstr.data)[actualRow] * laggedVariableTreeNode.Weight;
+        return ((IList<double>)currentInstr.Data)[actualRow] * laggedVariableTreeNode.Weight;
       }
       case OpCodes.Constant: // fall through
       case OpCodes.Number: {
-        var numericTreeNode = (NumberTreeNode)currentInstr.dynamicNode;
+        var numericTreeNode = (NumberTreeNode)currentInstr.DynamicNode;
         return numericTreeNode.Value;
       }
 
@@ -410,9 +410,9 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       //to determine the relative amounts of the true and false branch see http://en.wikipedia.org/wiki/Logistic_function
       case OpCodes.VariableCondition: {
         if (row < 0 || row >= dataset.Rows) return double.NaN;
-        var variableConditionTreeNode = (VariableConditionTreeNode)currentInstr.dynamicNode;
+        var variableConditionTreeNode = (VariableConditionTreeNode)currentInstr.DynamicNode;
         if (!variableConditionTreeNode.Symbol.IgnoreSlope) {
-          var variableValue = ((IList<double>)currentInstr.data)[row];
+          var variableValue = ((IList<double>)currentInstr.Data)[row];
           var x = variableValue - variableConditionTreeNode.Threshold;
           var p = 1 / (1 + Math.Exp(-variableConditionTreeNode.Slope * x));
 
@@ -422,7 +422,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
           return trueBranch * p + falseBranch * (1 - p);
         } else {
           // strict threshold
-          var variableValue = ((IList<double>)currentInstr.data)[row];
+          var variableValue = ((IList<double>)currentInstr.Data)[row];
           if (variableValue <= variableConditionTreeNode.Threshold) {
             var left = Evaluate(dataset, ref row, state);
             state.SkipInstructions();

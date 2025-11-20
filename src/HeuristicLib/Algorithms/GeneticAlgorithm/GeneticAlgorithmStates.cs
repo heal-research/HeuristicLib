@@ -6,7 +6,7 @@
 //
 // // public record GeneticAlgorithmState<TGenotype> : IAlgorithmState {
 // //   public required int Generation { get; init; }
-// //   public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
+// //   public required IReadOnlyList<ISolution<TGenotype>> Population { get; init; }
 // // }
 //
 // public record GeneticAlgorithmOperatorMetrics {
@@ -39,7 +39,7 @@
 //   public required TimeSpan Duration { get; init; }
 //   public required GeneticAlgorithmOperatorMetrics OperatorMetrics { get; init; }
 //   public required Objective Objective { get; init; }
-//   public required IReadOnlyList<Solution<TGenotype>> Population { get; init; }
+//   public required IReadOnlyList<ISolution<TGenotype>> Population { get; init; }
 // }
 //
 // public record PopulationResult<TGenotype> : ISingleObjectiveAlgorithmResult<TGenotype>, IContinuableAlgorithmResult<GeneticAlgorithmState<TGenotype>> {
@@ -57,22 +57,22 @@
 //
 //   public required Objective Objective { get; init; }
 //   
-//   public required IReadOnlyList<Solution<TGenotype>> CurrentPopulation { get; init; }
+//   public required IReadOnlyList<ISolution<TGenotype>> CurrentPopulation { get; init; }
 //   
 //   // public PopulationResult() {
-//   //   currentBestSolution = new Lazy<EvaluatedIndividual<TGenotype>>(() => {
+//   //   currentBestISolution = new Lazy<EvaluatedIndividual<TGenotype>>(() => {
 //   //     if (CurrentPopulation!.Count == 0) throw new InvalidOperationException("Population is empty");
 //   //     return CurrentPopulation.MinBy(x => x.Fitness, Objective!.TotalOrderComparer)!;
 //   //   });
 //   // }
 //   
-//   // private readonly Lazy<EvaluatedIndividual<TGenotype>> currentBestSolution;
-//   // public EvaluatedIndividual<TGenotype> CurrentBestSolution => currentBestSolution.Value;
+//   // private readonly Lazy<EvaluatedIndividual<TGenotype>> currentBestISolution;
+//   // public EvaluatedIndividual<TGenotype> CurrentBestISolution => currentBestISolution.Value;
 //
-//   //private readonly Lazy<EvaluatedIndividual<TGenotype>> bestSolution;
-//   // public EvaluatedIndividual<TGenotype> BestSolution => bestSolution.Value;
-//   public required Solution<TGenotype>? CurrentBestSolution { get; init; }
-//   public required Solution<TGenotype>? BestSolution { get; init; }
+//   //private readonly Lazy<EvaluatedIndividual<TGenotype>> bestISolution;
+//   // public EvaluatedIndividual<TGenotype> BestISolution => bestISolution.Value;
+//   public required Solution<TGenotype>? CurrentBestISolution { get; init; }
+//   public required Solution<TGenotype>? BestISolution { get; init; }
 //   
 //   public GeneticAlgorithmState<TGenotype> GetContinuationState() => new() {
 //     Generation = CurrentGeneration,
@@ -86,5 +86,7 @@
 // //   public required TimeSpan TotalDuration { get; init; }
 // //   public required int TotalGenerations { get; init; }
 // //   public required GeneticAlgorithmOperatorMetrics OperatorMetrics { get; init; }
-// //   public required EvaluatedIndividual<TGenotype>? BestSolution { get; init; }
+// //   public required EvaluatedIndividual<TGenotype>? BestISolution { get; init; }
 // // }
+
+

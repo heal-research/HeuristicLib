@@ -4,8 +4,9 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
 
 public class SinglePointCrossover : Crossover<RealVector, RealVectorEncoding> {
-  public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
-    var (parent1, parent2) = parents;
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+    var parent1 = parents.Parent1;
+    var parent2 = parents.Parent2;
     int crossoverPoint = random.Integer(1, parent1.Count);
     double[] offspringValues = new double[parent1.Count];
     for (int i = 0; i < crossoverPoint; i++) {

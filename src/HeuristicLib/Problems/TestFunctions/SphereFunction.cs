@@ -34,7 +34,7 @@ public class ShiftedTestFunction(RealVector shiftVector, ITestFunction inner) : 
   public ObjectiveDirection Objective => inner.Objective;
 
   public double Evaluate(RealVector solution) {
-    var shiftedSolution = solution + shiftVector;
-    return inner.Evaluate(shiftedSolution);
+    var shiftedISolution = solution + shiftVector;
+    return inner.Evaluate(shiftedISolution);
   }
 }

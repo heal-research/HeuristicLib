@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Optimization;
@@ -37,11 +38,11 @@ public static class Extensions {
       throw new DebugException(text);
   }
 
-  public static (TGenotype p1, TGenotype p2)[] ToGenotypePairs<TGenotype>(this IReadOnlyList<Solution<TGenotype>> parents) {
+  public static IParents<TGenotype>[] ToGenotypePairs<TGenotype>(this IReadOnlyList<ISolution<TGenotype>> parents) {
     var offspringCount = parents.Count / 2;
-    var parentPairs = new (TGenotype p1, TGenotype p2)[offspringCount];
+    var parentPairs = new IParents<TGenotype>[offspringCount];
     for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
-      parentPairs[i] = (parents[j].Genotype, parents[j + 1].Genotype);
+      parentPairs[i] = new Parents<TGenotype>(parents[j].Genotype, parents[j + 1].Genotype);
     return parentPairs;
   }
 

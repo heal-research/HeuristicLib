@@ -90,11 +90,11 @@ public class PythonGenealogyAnalysis {
       FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
       _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
       var graphViz = genealogyAnalysis.Graph.ToGraphViz();
-      return (graphViz, ranks, qualities.BestSolutions);
+      return (graphViz, ranks, qualities.BestISolutions);
     }
 
     _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
-    return (string.Empty, [], qualities.BestSolutions);
+    return (string.Empty, [], qualities.BestISolutions);
   }
 
   public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) RunSymbolicRegressionGeneticAlgorithmConfigurable(
@@ -141,11 +141,11 @@ public class PythonGenealogyAnalysis {
       FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
       _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
       var graphViz = genealogyAnalysis.Graph.ToGraphViz();
-      return (graphViz, ranks, qualities.BestSolutions);
+      return (graphViz, ranks, qualities.BestISolutions);
     }
 
     _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
-    return (string.Empty, [], qualities.BestSolutions);
+    return (string.Empty, [], qualities.BestISolutions);
   }
 
   private static void RecordRanks<TGenotype>(GenealogyGraph<TGenotype> graph, List<List<double>> ranks) where TGenotype : notnull {

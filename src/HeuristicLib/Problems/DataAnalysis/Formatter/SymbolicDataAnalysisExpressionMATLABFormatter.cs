@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
-public sealed class SymbolicDataAnalysisExpressionMATLABFormatter : ISymbolicExpressionTreeStringFormatter {
+public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExpressionTreeStringFormatter {
   private int currentLag;
 
   private int currentIndexNumber;

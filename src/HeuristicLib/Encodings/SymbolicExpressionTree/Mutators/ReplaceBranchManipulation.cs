@@ -46,7 +46,7 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
 
       parent.RemoveSubtree(childIndex);
       parent.InsertSubtree(childIndex, seedNode);
-      ProbabilisticTreeCreator.PTC2(random, seedNode, maxDepth, maxLength, encoding);
+      ProbabilisticTreeCreator.Ptc2(random, seedNode, maxDepth, maxLength, encoding);
       return childTree;
     }
 

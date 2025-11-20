@@ -2,8 +2,8 @@
 
 namespace HEAL.HeuristicLib.Optimization;
 
-public record SingleSolution<TGenotype>(Solution<TGenotype> Solution) : ISolutionLayout<TGenotype> {
-  public IEnumerator<Solution<TGenotype>> GetEnumerator() {
+public record SingleISolution<TGenotype>(ISolution<TGenotype> Solution) : IISolutionLayout<TGenotype> {
+  public IEnumerator<ISolution<TGenotype>> GetEnumerator() {
     yield return Solution;
   }
 

@@ -14,8 +14,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.ALPS;
 
-public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, ALPSIterationResult<TGenotype>>
+public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
+  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, AlpsIterationResult<TGenotype>>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public int PopulationSize { get; }
@@ -43,7 +43,7 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
   public OperatorMetric SelectionMetric { get; protected set; } = OperatorMetric.Zero;
   public OperatorMetric ReplacementMetric { get; protected set; } = OperatorMetric.Zero;
 
-  public ALPSGeneticAlgorithm(
+  public AlpsGeneticAlgorithm(
     int populationSize,
     ICreator<TGenotype, TEncoding, TProblem> creator,
     ICrossover<TGenotype, TEncoding, TProblem> crossover,
@@ -54,8 +54,8 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     // IReplacer<TGenotype, TEncoding, TProblem> replacer,
     int elites,
     int? randomSeed,
-    ITerminator<TGenotype, ALPSIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-    IInterceptor<TGenotype, ALPSIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
+    ITerminator<TGenotype, AlpsIterationResult<TGenotype>, TEncoding, TProblem> terminator,
+    IInterceptor<TGenotype, AlpsIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
   ) : base(terminator, randomSeed, interceptor) {
     PopulationSize = populationSize;
     Creator = creator;
@@ -77,7 +77,7 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     agedReplacer = new AgedReplacer<TGenotype, TEncoding, TProblem>(internalReplacer);
   }
 
-  public override ALPSIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, ALPSIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
+  public override AlpsIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, AlpsIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     var agedProblem = new AgedProblem<TGenotype, TEncoding, TProblem>(problem);
     var agedEncoding = new AgedEncoding<TGenotype, TEncoding>(searchSpace);
     var iterationRandom = random.Spawn();
@@ -87,7 +87,7 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     };
   }
 
-  protected virtual ALPSIterationResult<TGenotype> ExecuteInitialization(AgedProblem<TGenotype, TEncoding, TProblem> problem, AgedEncoding<TGenotype, TEncoding> searchSpace, IRandomNumberGenerator iterationRandom) {
+  protected virtual AlpsIterationResult<TGenotype> ExecuteInitialization(AgedProblem<TGenotype, TEncoding, TProblem> problem, AgedEncoding<TGenotype, TEncoding> searchSpace, IRandomNumberGenerator iterationRandom) {
     var startCreating = Stopwatch.GetTimestamp();
     var initialLayerPopulation = agedCreator.Create(PopulationSize, iterationRandom, searchSpace, problem);
     var endCreating = Stopwatch.GetTimestamp();
@@ -98,12 +98,12 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var endEvaluating = Stopwatch.GetTimestamp();
     EvaluationsMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating));
 
-    var result = new ALPSIterationResult<TGenotype>() { Population = [Population.From(initialLayerPopulation, fitnesses)] };
+    var result = new AlpsIterationResult<TGenotype>() { Population = [Population.From(initialLayerPopulation, fitnesses)] };
 
     return result;
   }
 
-  protected virtual ALPSIterationResult<TGenotype> ExecuteGeneration(AgedProblem<TGenotype, TEncoding, TProblem> problem, AgedEncoding<TGenotype, TEncoding> searchSpace, ALPSIterationResult<TGenotype> previousGenerationResult, IRandomNumberGenerator iterationRandom) {
+  protected virtual AlpsIterationResult<TGenotype> ExecuteGeneration(AgedProblem<TGenotype, TEncoding, TProblem> problem, AgedEncoding<TGenotype, TEncoding> searchSpace, AlpsIterationResult<TGenotype> previousGenerationResult, IRandomNumberGenerator iterationRandom) {
     int offspringCount = internalReplacer.GetOffspringCount(PopulationSize);
 
     var oldPopulation = previousGenerationResult.Population[0].ToArray();
@@ -113,9 +113,9 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var endSelection = Stopwatch.GetTimestamp();
     SelectionMetric += new OperatorMetric(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection));
 
-    var parentPairs = new ValueTuple<AgedGenotype<TGenotype>, AgedGenotype<TGenotype>>[offspringCount];
+    var parentPairs = new IParents<AgedGenotype<TGenotype>>[offspringCount];
     for (int i = 0, j = 0; i < offspringCount; i++, j += 2) {
-      parentPairs[i] = (parents[j].Genotype, parents[j + 1].Genotype);
+      parentPairs[i] = new Parents<AgedGenotype<TGenotype>>(parents[j].Genotype, parents[j + 1].Genotype);
     }
 
     var startCrossover = Stopwatch.GetTimestamp();
@@ -142,8 +142,8 @@ public class ALPSGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var endReplacement = Stopwatch.GetTimestamp();
     ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
 
-    var result = new ALPSIterationResult<TGenotype>() {
-      Population = [new Population<AgedGenotype<TGenotype>>(new ImmutableList<Solution<AgedGenotype<TGenotype>>>(newPopulation))],
+    var result = new AlpsIterationResult<TGenotype>() {
+      Population = [new Population<AgedGenotype<TGenotype>>(new ImmutableList<ISolution<AgedGenotype<TGenotype>>>(newPopulation))],
     };
 
     return result;

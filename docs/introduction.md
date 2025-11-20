@@ -347,11 +347,11 @@ Termination can be done by stop pulling.
 **Example (C#):**
 
 ```csharp
-// Regular execution: returns the best solution after the algorithm finishes
+// Regular execution: returns the best ISolution after the algorithm finishes
 var ga = new GeneticAlgorithm { /* ... */ };
 var result = ga.Execute(problem);
-var best = result.BestSolution;
-Console.WriteLine($"Best solution: {best}");
+var best = result.BestISolution;
+Console.WriteLine($"Best ISolution: {best}");
 
 // Streaming execution: yields results for each iteration
 IEnumerable<GeneticAlgorithmResult> stream = ga.Stream(problem);
@@ -370,6 +370,6 @@ Algorithm returns `AlgorithmResult` or `IterationResult`, which contains alg-spe
 
 Solver returns a problem-dependent `Phenotype`.
 
-Solver can return a single solution or multiple, "Solve Pareto."
+Solver can return a single ISolution or multiple, "Solve Pareto."
 
 Solve methods are built using extension methods on the `Algorithms`.

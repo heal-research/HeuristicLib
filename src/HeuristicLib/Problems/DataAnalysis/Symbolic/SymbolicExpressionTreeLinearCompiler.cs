@@ -19,7 +19,7 @@ public static class SymbolicExpressionTreeLinearCompiler {
         code[c + j] = new LinearInstruction(s, (ushort)s.SubtreeCount, opCodeMapper(s), 0);
       }
 
-      code[i].childIndex = c;
+      code[i].ChildIndex = c;
       c += node.SubtreeCount;
       ++i;
     }

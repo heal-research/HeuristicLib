@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Tests;
 public class MultiObjectiveTests {
   [Fact]
   public void EmptyInput_ReturnsNoFronts_AndEmptyRank() {
-    var solutions = Array.Empty<Solution<object>>();
+    var solutions = Array.Empty<ISolution<object>>();
     var objective = MinimizeAll(2);
 
     var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, dominateOnEqualQualities: true);
@@ -77,9 +77,9 @@ public class MultiObjectiveTests {
     Assert.Equal(["C"], ids[2]);
   }
 
-  private static string[][] FrontIds(List<List<Solution<string>>> fronts)
+  private static string[][] FrontIds(List<List<ISolution<string>>> fronts)
     => fronts.Select(f => f.Select(s => s.Genotype).OrderBy(x => x).ToArray()).ToArray();
 
-  private static Solution<string> Sol(string id, params double[] values) => new(id, values);
+  private static Solution<string> Sol(string id, params double[] values) => new Solution<string>(id, values);
   private static Objective MinimizeAll(int i) => new(Enumerable.Repeat(ObjectiveDirection.Minimize, i).ToArray(), new NoTotalOrderComparer());
 }

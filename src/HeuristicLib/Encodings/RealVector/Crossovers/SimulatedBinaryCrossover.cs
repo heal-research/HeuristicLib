@@ -62,19 +62,19 @@ public class SimulatedBinaryCrossover : Crossover<RealVector, RealVectorEncoding
 
   public double Contiguity { get; } = 2;
 
-  public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
-    throw new NotImplementedException();
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+    return Apply(random, parents.Parent1, parents.Parent2, Contiguity);
   }
 }
 
-public static class SBX {
+public static class Sbx {
   /// <summary>
   /// Simulated Binary Crossover (SBX) for two parents p1, p2.
   /// - RealVector length is nVar and must match encoding.Minimum/Maximum length.
   /// - Scalar eta, probVar, probBin to mirror the Python source.
   /// Returns (child1, child2).
   /// </summary>
-  public static (RealVector child1, RealVector child2) CrossSBX(
+  public static (RealVector child1, RealVector child2) CrossSbx(
     RealVector p1,
     RealVector p2,
     RealVectorEncoding encoding,
@@ -178,11 +178,11 @@ public class SelfAdaptiveSimulatedBinaryCrossover : Crossover<RealVector, RealVe
     if (rng.Random() > ProbExch)
       pb = 0.0;
 
-    var (c1, c2) = SBX.CrossSBX(p1, p2, encoding, e, pv, pb, rng);
+    var (c1, c2) = Sbx.CrossSbx(p1, p2, encoding, e, pv, pb, rng);
     return (c1, c2);
   }
 
-  public override RealVector Cross((RealVector, RealVector) parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
     return Do(parents.Item1, parents.Item2, encoding, random).child1;
   }
 }

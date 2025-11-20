@@ -2,4 +2,4 @@
 
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IStochasticProblem<in TSolution, out TEncoding> : IProblem<TSolution, TEncoding> where TEncoding : class, IEncoding<TSolution>;
+public interface IStochasticProblem<in TISolution, out TEncoding> : IProblem<TISolution, TEncoding> where TEncoding : class, IEncoding<TISolution>;

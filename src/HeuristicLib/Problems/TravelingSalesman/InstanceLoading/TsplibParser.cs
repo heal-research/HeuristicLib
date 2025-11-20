@@ -79,7 +79,7 @@ public class TsplibParser {
   private TsplibParser() {
     Name = Empty;
     Comment = Empty;
-    Type = TSPLIBTypes.UNKNOWN;
+    Type = TSPLIBTypes.Unknown;
     EdgeWeightType = TSPLIBEdgeWeightTypes.Unknown;
 
     edgeWeightFormat = TSPLIBEdgeWeightFormats.Unknown;
@@ -205,7 +205,7 @@ public class TsplibParser {
   }
 
   private void ReadType(string value) {
-    Type = Enum.TryParse(value.Trim().ToUpper(), out TSPLIBTypes t) ? t : TSPLIBTypes.UNKNOWN;
+    Type = Enum.TryParse(value.Trim().ToUpper(), out TSPLIBTypes t) ? t : TSPLIBTypes.Unknown;
   }
 
   private void ReadComment(string value) {

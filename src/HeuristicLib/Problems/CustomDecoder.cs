@@ -1,5 +1,5 @@
 ﻿namespace HEAL.HeuristicLib.Problems;
 
-public class CustomDecoder<TGenotype, TSolution>(Func<TGenotype, TSolution> decoder) : IDecoder<TGenotype, TSolution> {
-  public TSolution Decode(TGenotype genotype) => decoder(genotype);
+public class CustomDecoder<TGenotype, TISolution>(Func<TGenotype, TISolution> decoder) : IDecoder<TGenotype, TISolution> {
+  public TISolution Decode(TGenotype genotype) => decoder(genotype);
 }

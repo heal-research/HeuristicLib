@@ -17,9 +17,9 @@ public class AgedMutator<TGenotype, TEncoding, TProblem>(IMutator<TGenotype, TEn
     var mutated = internalMutator.Mutate(innerPopulation, random, encoding.InnerEncoding, problem.InnerProblem);
     var result = new AgedGenotype<TGenotype>[mutated.Count];
     for (int i = 0; i < mutated.Count; i++) {
-      // Find the original solution to get the age
-      var originalSolution = population.Single(s => Equals(s.InnerGenotype, mutated[i]));
-      result[i] = originalSolution;
+      // Find the original Solution to get the age
+      var originalISolution = population.Single(s => Equals(s.InnerGenotype, mutated[i]));
+      result[i] = originalISolution;
     }
 
     return result;

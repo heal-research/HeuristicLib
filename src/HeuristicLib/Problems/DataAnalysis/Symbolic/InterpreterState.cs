@@ -21,7 +21,7 @@ public class InterpreterState(Instruction[] code, int argumentStackSize) {
   public void SkipInstructions() {
     var i = 1;
     while (i > 0) {
-      i += NextInstruction().nArguments;
+      i += NextInstruction().NArguments;
       i--;
     }
   }

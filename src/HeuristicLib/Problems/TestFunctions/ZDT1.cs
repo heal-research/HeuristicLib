@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public class ZDT1(int dimension) : IMultiObjectiveTestFunction {
+public class Zdt1(int dimension) : IMultiObjectiveTestFunction {
   public int Dimension { get; } = dimension;
   public double Min => 0;
   public double Max => 1;

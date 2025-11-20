@@ -2,6 +2,6 @@
 
 namespace HEAL.HeuristicLib.Algorithms.ALPS;
 
-public record ALPSIterationResult<TGenotype> : IIterationResult {
+public record AlpsIterationResult<TGenotype> : IIterationResult {
   public required IReadOnlyList<Population<AgedGenotype<TGenotype>>> Population { get; init; }
 }

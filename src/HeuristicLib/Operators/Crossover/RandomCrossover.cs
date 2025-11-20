@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossover;
 
@@ -11,15 +12,7 @@ public class RandomCrossover<TGenotype> : BatchCrossover<TGenotype> {
     Bias = bias;
   }
 
-  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<(TGenotype, TGenotype)> parents, IRandomNumberGenerator random) {
-    var randoms = random.Random(parents.Count);
-    var offspring = new TGenotype[parents.Count];
-
-    Parallel.For(0, parents.Count, i => {
-      var (parent1, parent2) = parents[i];
-      offspring[i] = randoms[i] < Bias ? parent1 : parent2;
-    });
-
-    return offspring;
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) {
+    return parents.ParallelSelect(random, (_, parents1, random) => random.Random() < Bias ? parents1.Parent1 : parents1.Parent2);
   }
 }

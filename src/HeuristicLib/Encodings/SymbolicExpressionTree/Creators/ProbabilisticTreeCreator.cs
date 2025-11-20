@@ -8,7 +8,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
 
   public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var tree = encoding.Grammar.MakeStump(random);
-    PTC2(random, tree.Root[0], encoding.TreeDepth - 2, encoding.TreeLength - 2, encoding);
+    Ptc2(random, tree.Root[0], encoding.TreeDepth - 2, encoding.TreeLength - 2, encoding);
     return tree;
   }
 
@@ -34,7 +34,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     public int MinimumExtensionLength { get; set; }
   }
 
-  public static void PTC2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, int maxLength, SymbolicExpressionTreeEncoding encoding) {
+  public static void Ptc2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, int maxLength, SymbolicExpressionTreeEncoding encoding) {
     // make sure it is possible to create a trees smaller than maxLength and maxDepth
     if (encoding.Grammar.GetMinimumExpressionLength(seedNode.Symbol) > maxLength)
       throw new ArgumentException("Cannot create trees of length " + maxLength + " or shorter because of grammar constraints.", "maxLength");

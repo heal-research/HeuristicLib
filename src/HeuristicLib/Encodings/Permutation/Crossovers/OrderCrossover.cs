@@ -56,8 +56,8 @@ public class OrderCrossover : Crossover<Permutation, PermutationEncoding> {
     }
   }
 
-  public override Permutation Cross((Permutation, Permutation) parents, IRandomNumberGenerator random, PermutationEncoding encoding) {
-    var (parent1, parent2) = parents;
+  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationEncoding encoding) {
+    var (parent1, parent2) = (parents.Parent1, parents.Parent2);
     return Cross(parent1, parent2, random);
   }
 
