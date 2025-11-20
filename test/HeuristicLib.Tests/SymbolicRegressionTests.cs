@@ -134,7 +134,7 @@ public class SymbolicRegressionTests {
     var qualities = BestMedianWorstAnalysis.Create(ga);
     var res = ga.Execute(problem);
 
-    Assert.Equal(100, qualities.CurrentState.Count);
+    Assert.Equal(100, qualities.BestSolutions.Count);
     Assert.Equal(100, res.Population.Solutions.Count);
   }
 
@@ -159,11 +159,11 @@ public class SymbolicRegressionTests {
     var genealogy = GenealogyAnalysis.Create(proto);
     var res = proto.Execute(problem);
 
-    Assert.Equal(30, qualities.CurrentState.Count);
+    Assert.Equal(30, qualities.BestSolutions.Count);
     Assert.Equal(10, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
-    Assert.Equal(qualities.CurrentState[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
+    Assert.Equal(qualities.BestSolutions[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
   }
 
   [Fact]
@@ -211,7 +211,7 @@ public class SymbolicRegressionTests {
     var qualities = BestMedianWorstAnalysis.Create(nsga2);
 
     var res = nsga2.Execute(problem);
-    Assert.Equal(maximumIterations, qualities.CurrentState.Count);
+    Assert.Equal(maximumIterations, qualities.BestSolutions.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);

@@ -17,11 +17,11 @@ public static class BestMedianWorstAnalysis {
 }
 
 public class BestMedianWorstAnalysis<TGenotype, TE, TP, TRes> : SimpleAnalysis<TGenotype, TE, TP, TRes> where TE : class, IEncoding<TGenotype> where TP : class, IProblem<TGenotype, TE> where TRes : PopulationIterationResult<TGenotype> {
-  public readonly List<BestMedianWorstEntry<TGenotype>> CurrentState = [];
+  public readonly List<BestMedianWorstEntry<TGenotype>> BestSolutions = [];
 
   protected override void AfterInterception(TRes currentIterationResult, TRes? previousIterationResult, TE encoding, TP problem) {
     var ordered = currentIterationResult.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
-    CurrentState.Add(new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
+    BestSolutions.Add(new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
   }
 }
 

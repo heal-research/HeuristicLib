@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Creators;
@@ -17,6 +18,8 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
+using HEAL.HeuristicLib.Operators.Creator;
+using HEAL.HeuristicLib.Operators.Crossover;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
@@ -45,7 +48,7 @@ public class PythonGenealogyAnalysis {
     return problem;
   }
 
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>> CreateSymRegAllMutator() {
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> CreateSymRegAllMutator() {
     var symRegAllMutator = MultiMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
@@ -87,11 +90,62 @@ public class PythonGenealogyAnalysis {
       FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
       _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
       var graphViz = genealogyAnalysis.Graph.ToGraphViz();
-      return (graphViz, ranks, qualities.CurrentState);
+      return (graphViz, ranks, qualities.BestSolutions);
     }
 
     _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
-    return (string.Empty, [], qualities.CurrentState);
+    return (string.Empty, [], qualities.BestSolutions);
+  }
+
+  public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) RunSymbolicRegressionGeneticAlgorithmConfigurable(
+    string file,
+    GenerationCallback? callback = null,
+    int seed = 0,
+    int elites = 1,
+    int populationSize = 10,
+    int iterations = 30,
+    bool withGenealogy = true,
+    double trainingSplit = 0.66,
+    double mutationRate = 0.05,
+    int noChildren = 0,
+    bool withCrossover = false,
+    EvolutionStrategyType strategy = EvolutionStrategyType.Plus,
+    ICreator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? creator = null,
+    ICrossover<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? crossover = null,
+    IMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? mutator = null,
+    ISelector<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? selector = null) {
+    creator ??= new ProbabilisticTreeCreator();
+    crossover ??= new SubtreeCrossover();
+    mutator ??= CreateSymRegAllMutator();
+    selector ??= new TournamentSelector<SymbolicExpressionTree>(3);
+
+    var problem = CreateTestSymbolicRegressionProblem(file, trainingSplit);
+    var evaluator = problem.CreateEvaluator();
+    var terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(iterations);
+
+    var ga = GeneticAlgorithm.CreatePrototype(populationSize, creator, crossover, mutator, mutationRate, selector,
+      evaluator, elites, seed, terminator);
+
+    var es = EvolutionStrategy.CreatePrototype(populationSize, noChildren, strategy, creator, mutator, mutationRate,
+      selector, evaluator, seed, terminator, withCrossover ? crossover : null);
+
+    if (callback != null) {
+      FuncAnalysis.Create(es, (_, y) => callback(y));
+    }
+
+    var qualities = BestMedianWorstAnalysis.Create(ga);
+
+    if (withGenealogy) {
+      var genealogyAnalysis = GenealogyAnalysis.Create(ga, saveSpace: true);
+      var ranks = new List<List<double>>();
+      FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
+      _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
+      var graphViz = genealogyAnalysis.Graph.ToGraphViz();
+      return (graphViz, ranks, qualities.BestSolutions);
+    }
+
+    _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
+    return (string.Empty, [], qualities.BestSolutions);
   }
 
   private static void RecordRanks<TGenotype>(GenealogyGraph<TGenotype> graph, List<List<double>> ranks) where TGenotype : notnull {

@@ -1,0 +1,43 @@
+﻿namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
+
+public static class TsplibTspInstanceProvider {
+  public const string FileExtension = "tsp";
+
+  public static TspData LoadData(string tspFile, string? tourFile = null, double? bestQuality = null) {
+    TsplibParser parser = new TsplibParser(tspFile);
+    parser.Parse();
+    if (parser.FixedEdges != null) throw new InvalidDataException("TSP instance " + parser.Name + " contains fixed edges which are not supported by HeuristicLab.");
+    var data = new TspData {
+      Dimension = parser.Dimension,
+      Coordinates = parser.Vertices ?? parser.DisplayVertices,
+      Distances = parser.Distances,
+      DistanceMeasure = parser.EdgeWeightType switch {
+        TSPLIBEdgeWeightTypes.Att => DistanceMeasure.Att,
+        TSPLIBEdgeWeightTypes.Ceil2D => DistanceMeasure.UpperEuclidean,
+        TSPLIBEdgeWeightTypes.Euc2D => DistanceMeasure.RoundedEuclidean,
+        TSPLIBEdgeWeightTypes.Euc3D => throw new InvalidDataException("3D coordinates are not supported."),
+        TSPLIBEdgeWeightTypes.Explicit => DistanceMeasure.Direct,
+        TSPLIBEdgeWeightTypes.Geo => DistanceMeasure.Geo,
+        TSPLIBEdgeWeightTypes.Man2D => DistanceMeasure.Manhattan,
+        TSPLIBEdgeWeightTypes.Man3D => throw new InvalidDataException("3D coordinates are not supported."),
+        TSPLIBEdgeWeightTypes.Max2D => DistanceMeasure.Maximum,
+        TSPLIBEdgeWeightTypes.Max3D => throw new InvalidDataException("3D coordinates are not supported."),
+        TSPLIBEdgeWeightTypes.Unknown => throw new InvalidDataException("The given edge weight is not supported by HeuristicLab."),
+        TSPLIBEdgeWeightTypes.Xray1 => throw new InvalidDataException("The given edge weight is not supported by HeuristicLab."),
+        TSPLIBEdgeWeightTypes.Xray2 => throw new InvalidDataException("The given edge weight is not supported by HeuristicLab."),
+        TSPLIBEdgeWeightTypes.Special => throw new InvalidDataException("The given edge weight is not supported by HeuristicLab."),
+        _ => throw new InvalidDataException("The given edge weight is not supported by HeuristicLab.")
+      },
+      Name = parser.Name
+    };
+    if (!string.IsNullOrEmpty(tourFile)) {
+      var tourParser = new TsplibParser(tourFile);
+      tourParser.Parse();
+      data.BestKnownTour = tourParser.Tour.FirstOrDefault();
+    }
+
+    if (bestQuality.HasValue)
+      data.BestKnownQuality = bestQuality.Value;
+    return data;
+  }
+}
