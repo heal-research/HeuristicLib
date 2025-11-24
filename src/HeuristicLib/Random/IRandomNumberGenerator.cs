@@ -7,6 +7,8 @@ public interface IRandomNumberGenerator {
   double Random();
   double NextDouble() => Random();
 
+  bool Boolean(double probability = 0.5) => Random() < probability;
+
   byte[] RandomBytes(int length);
 
   IReadOnlyList<IRandomNumberGenerator> Spawn(int count);

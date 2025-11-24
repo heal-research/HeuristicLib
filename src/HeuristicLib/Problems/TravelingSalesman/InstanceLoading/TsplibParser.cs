@@ -197,7 +197,7 @@ public class TsplibParser {
     if (sectionNameEnd + 1 < line.Length)
       value = line[(sectionNameEnd + 1)..];
 
-    return Enum.TryParse(sectionName, out TSPLIBSections section) ? section : TSPLIBSections.Unknown;
+    return Enum.TryParse(sectionName.Replace("_", ""), true, out TSPLIBSections section) ? section : TSPLIBSections.Unknown;
   }
 
   private void ReadName(string value) {
@@ -205,7 +205,7 @@ public class TsplibParser {
   }
 
   private void ReadType(string value) {
-    Type = Enum.TryParse(value.Trim().ToUpper(), out TSPLIBTypes t) ? t : TSPLIBTypes.Unknown;
+    Type = Enum.TryParse(value.Trim(), true, out TSPLIBTypes t) ? t : TSPLIBTypes.Unknown;
   }
 
   private void ReadComment(string value) {
@@ -225,13 +225,13 @@ public class TsplibParser {
   }
 
   private void ReadEdgeWeightType(string value) {
-    if (Enum.TryParse(value.Trim().ToUpper(), out TSPLIBEdgeWeightTypes e))
+    if (Enum.TryParse(value.Trim().Replace("_", ""), true, out TSPLIBEdgeWeightTypes e))
       EdgeWeightType = e;
     else throw new InvalidDataException("Input file contains an unsupported edge weight type (" + value + ") in line " + currentLineNumber + ".");
   }
 
   private void ReadEdgeWeightFormat(string value) {
-    if (Enum.TryParse(value.Trim().ToUpper(), out TSPLIBEdgeWeightFormats e))
+    if (Enum.TryParse(value.Trim(), true, out TSPLIBEdgeWeightFormats e))
       edgeWeightFormat = e;
     else throw new InvalidDataException("Input file contains an unsupported edge weight format (" + value + ") in line " + currentLineNumber + ".");
   }
@@ -242,13 +242,13 @@ public class TsplibParser {
   }
 
   private void ReadNodeCoordType(string value) {
-    if (Enum.TryParse(value.Trim().ToUpper(), out TslplibNodeCoordTypes n))
+    if (Enum.TryParse(value.Trim(), true, out TslplibNodeCoordTypes n))
       nodeCoordType = n;
     else throw new InvalidDataException("Input file contains an unsupported node coordinates type (" + value + ") in line " + currentLineNumber + ".");
   }
 
   private void ReadDisplayDataType(string value) {
-    if (Enum.TryParse(value.Trim().ToUpper(), out TSPLIBDisplayDataTypes d))
+    if (Enum.TryParse(value.Trim(), true, out TSPLIBDisplayDataTypes d))
       displayDataType = d;
     else throw new InvalidDataException("Input file contains an unsupported display data type (" + value + ") in line " + currentLineNumber + ".");
   }

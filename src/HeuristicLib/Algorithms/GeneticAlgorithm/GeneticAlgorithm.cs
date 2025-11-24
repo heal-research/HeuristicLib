@@ -113,7 +113,7 @@ public class GeneticAlgorithm<TGenotype, TEncoding>(
   where TEncoding : class, IEncoding<TGenotype>;
 
 public static class GeneticAlgorithm {
-  public static GeneticAlgorithm<TGenotype, TEncoding, TProblem>.Prototype CreatePrototype<TGenotype, TEncoding, TProblem>(
+  public static GeneticAlgorithm<TGenotype, TEncoding, TProblem>.Prototype GetPrototype<TGenotype, TEncoding, TProblem>(
     int populationSize,
     ICreator<TGenotype, TEncoding, TProblem> creator,
     ICrossover<TGenotype, TEncoding, TProblem> crossover,

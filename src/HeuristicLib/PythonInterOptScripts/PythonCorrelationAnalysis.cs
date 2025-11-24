@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Encodings.RealVector;
 using HEAL.HeuristicLib.Encodings.RealVector.Creators;
 using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
 using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Crossover;
@@ -46,7 +47,7 @@ public static class PythonCorrelationAnalysis {
                                          int dimensions = 10, double min = -5, double max = 5, int seed = 0) {
     var prob = SphereRastriginProblem(dimensions, min, max);
 
-    var proto = Nsga2.CreatePrototype(new UniformDistributedCreator(),
+    var proto = Nsga2.CreatePrototype<RealVector, RealVectorEncoding, IProblem<RealVector, RealVectorEncoding>>(new UniformDistributedCreator(),
       new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
       new PolynomialMutator().WithRate(0.9),
       new ParetoCrowdingTournamentSelector<RealVector>(false, 2), // missing the crowdingpart in the tournament

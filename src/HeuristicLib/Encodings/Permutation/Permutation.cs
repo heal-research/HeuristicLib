@@ -2,11 +2,11 @@
 
 namespace HEAL.HeuristicLib.Encodings.Permutation;
 
-public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation> {
+public sealed record Permutation : IReadOnlyList<int> {
   private readonly ReadOnlyMemory<int> memory;
 
   public Permutation(IEnumerable<int> elements) {
-    this.memory = elements.ToArray();
+    memory = elements.ToArray();
     if (!IsValidPermutation(memory.Span)) throw new ArgumentException("The provided elements do not form a valid permutation.");
   }
 
@@ -36,7 +36,9 @@ public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
     return true;
   }
 
-  public static implicit operator Permutation(int[] elements) => new(elements);
+  public static implicit operator Permutation(int[] elements) {
+    return new Permutation((IEnumerable<int>)elements);
+  }
 
   public int this[int index] => Span[index];
 
@@ -85,28 +87,11 @@ public readonly struct Permutation : IReadOnlyList<int>, IEquatable<Permutation>
 
   public bool Contains(int value) => Span.Contains(value);
 
-  public bool Equals(Permutation other) {
-    return memory.Equals(other.memory) && memory.Span.SequenceEqual(other.memory.Span);
-  }
-
   public bool Equals(Permutation? other) {
-    return other is not null && Equals(other.Value);
-  }
-
-  public override bool Equals(object? obj) {
-    return obj is Permutation other && Equals(other);
+    return other != null && memory.Equals(other.memory) && memory.Span.SequenceEqual(other.memory.Span);
   }
 
   public override int GetHashCode() {
     return memory.GetHashCode();
-  }
-
-  public static bool operator ==(Permutation? left, Permutation? right) {
-    if (left is null) return right is null;
-    return left.Equals(right);
-  }
-
-  public static bool operator !=(Permutation? left, Permutation? right) {
-    return !(left == right);
   }
 }

@@ -12,7 +12,6 @@ using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Selector;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
@@ -20,6 +19,8 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
+using HEAL.HeuristicLib.Operators.Prototypes;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
@@ -69,7 +70,7 @@ public class PythonGenealogyAnalysis {
   ) {
     var problem = CreateTestSymbolicRegressionProblem(file, trainingSplit);
 
-    var ga = GeneticAlgorithm.CreatePrototype(populationSize,
+    var ga = GeneticAlgorithm.GetPrototype(populationSize,
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
       CreateSymRegAllMutator(),
@@ -81,20 +82,7 @@ public class PythonGenealogyAnalysis {
       new AfterIterationsTerminator<SymbolicExpressionTree>(iterations)
     );
 
-    FuncAnalysis.Create(ga, (_, y) => callback(y));
-    var qualities = BestMedianWorstAnalysis.Create(ga);
-
-    if (withGenealogy) {
-      var genealogyAnalysis = GenealogyAnalysis.Create(ga, saveSpace: true);
-      var ranks = new List<List<double>>();
-      FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
-      _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
-      var graphViz = genealogyAnalysis.Graph.ToGraphViz();
-      return (graphViz, ranks, qualities.BestISolutions);
-    }
-
-    _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
-    return (string.Empty, [], qualities.BestISolutions);
+    return AttachAnalysisAndRun(callback, seed, withGenealogy, ga, problem);
   }
 
   public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) RunSymbolicRegressionGeneticAlgorithmConfigurable(
@@ -113,7 +101,8 @@ public class PythonGenealogyAnalysis {
     ICreator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? creator = null,
     ICrossover<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? crossover = null,
     IMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? mutator = null,
-    ISelector<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? selector = null) {
+    ISelector<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? selector = null,
+    string algorithm = "ga") {
     creator ??= new ProbabilisticTreeCreator();
     crossover ??= new SubtreeCrossover();
     mutator ??= CreateSymRegAllMutator();
@@ -123,29 +112,48 @@ public class PythonGenealogyAnalysis {
     var evaluator = problem.CreateEvaluator();
     var terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(iterations);
 
-    var ga = GeneticAlgorithm.CreatePrototype(populationSize, creator, crossover, mutator, mutationRate, selector,
-      evaluator, elites, seed, terminator);
+    switch (algorithm.ToLower()) {
+      case "ga":
+        var ga = GeneticAlgorithm.GetPrototype(
+          populationSize, creator, crossover, mutator, mutationRate, selector,
+          evaluator, elites, seed, terminator);
+        return AttachAnalysisAndRun(callback, seed, withGenealogy, ga, problem);
 
-    var es = EvolutionStrategy.CreatePrototype(populationSize, noChildren, strategy, creator, mutator, mutationRate,
-      selector, evaluator, seed, terminator, withCrossover ? crossover : null);
-
-    if (callback != null) {
-      FuncAnalysis.Create(es, (_, y) => callback(y));
+      case "es":
+        var es = EvolutionStrategy.CreatePrototype(
+          populationSize, noChildren, strategy, creator, mutator, mutationRate,
+          selector, evaluator, seed, terminator, withCrossover ? crossover : null);
+        return AttachAnalysisAndRun(callback, seed, withGenealogy, es, problem);
+      //case "es": 
+      //  proto = EvolutionStrategy.CreatePrototype(populationSize, noChildren, strategy, creator, mutator, mutationRate,
+      //    selector, evaluator, seed, terminator, withCrossover ? crossover : null);
+      //  break;
+      default:
+        throw new ArgumentException($"Algorithm '{algorithm}' is not supported.");
     }
+  }
 
-    var qualities = BestMedianWorstAnalysis.Create(ga);
+  private static (string graphViz, List<List<double>> ranks, List<BestMedianWorstEntry<SymbolicExpressionTree>> BestISolutions)
+    AttachAnalysisAndRun<TRes>(GenerationCallback? callback, int seed, bool withGenealogy,
+                               Prototype<SymbolicExpressionTree, SymbolicExpressionTreeEncoding,
+                                 IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>, TRes> ga, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> problem)
+    where TRes : PopulationIterationResult<SymbolicExpressionTree> {
+    var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree>();
+    qualities.AddToProto(ga);
+    if (callback != null)
+      FuncAnalysis.Create(ga, (_, y) => callback(y));
 
+    var ranks = new List<List<double>>();
+    var graphViz = string.Empty;
     if (withGenealogy) {
       var genealogyAnalysis = GenealogyAnalysis.Create(ga, saveSpace: true);
-      var ranks = new List<List<double>>();
       FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
       _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
-      var graphViz = genealogyAnalysis.Graph.ToGraphViz();
-      return (graphViz, ranks, qualities.BestISolutions);
+      graphViz = genealogyAnalysis.Graph.ToGraphViz();
     }
 
     _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
-    return (string.Empty, [], qualities.BestISolutions);
+    return (graphViz, ranks, qualities.BestISolutions);
   }
 
   private static void RecordRanks<TGenotype>(GenealogyGraph<TGenotype> graph, List<List<double>> ranks) where TGenotype : notnull {

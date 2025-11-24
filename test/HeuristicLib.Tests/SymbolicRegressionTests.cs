@@ -120,7 +120,7 @@ public class SymbolicRegressionTests {
   public void GeneticAlgorithmExecution() {
     var problem = CreateTestSymbolicRegressionProblem();
 
-    var ga = GeneticAlgorithm.CreatePrototype(100,
+    var ga = GeneticAlgorithm.GetPrototype(100,
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
       CreateSymRegAllMutator(),
@@ -142,7 +142,7 @@ public class SymbolicRegressionTests {
   public void GenealogyGraphOnGeneticAlgorithm() {
     var problem = CreateTestSymbolicRegressionProblem();
 
-    var proto = GeneticAlgorithm.CreatePrototype(
+    var proto = GeneticAlgorithm.GetPrototype(
       10,
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
@@ -223,7 +223,7 @@ public class SymbolicRegressionTests {
     var i = 0;
     var file = @"TestData\\192_vineyard.tsv";
     PythonGenealogyAnalysis.RunSymbolicRegressionGeneticAlgorithm(file, _ => i++, AlgorithmRandomSeed, 10, iterations, true, 1);
-    Assert.Equal(iterations, i);
+    Assert.Equal(iterations + 1, i);
   }
 
   [Fact]
