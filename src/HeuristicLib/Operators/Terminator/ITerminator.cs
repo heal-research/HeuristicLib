@@ -2,7 +2,7 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 
-namespace HEAL.HeuristicLib.Operators;
+namespace HEAL.HeuristicLib.Operators.Terminator;
 
 public interface ITerminator<TGenotype, in TIterationResult, in TEncoding, in TProblem>
   where TIterationResult : IIterationResult

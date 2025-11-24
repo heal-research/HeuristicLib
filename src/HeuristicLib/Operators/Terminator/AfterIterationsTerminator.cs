@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿namespace HEAL.HeuristicLib.Operators.Terminator;
 
 public class AfterIterationsTerminator<TGenotype>(int maximumIterations) : Terminator<TGenotype> {
   public int MaximumIterations { get; } = maximumIterations;

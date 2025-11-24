@@ -9,7 +9,7 @@ public class FuncAnalysis<T, TE, TP, TRes>(Action<TRes?, TRes> action) : SimpleA
   public override void AfterInterception(TRes currentIterationResult, TRes? previousIterationResult, TE encoding, TP problem) => action.Invoke(previousIterationResult, currentIterationResult);
 }
 
-public class FuncAnalysis {
+public static class FuncAnalysis {
   public static FuncAnalysis<TGenotype, TE, TP, TRes> Create<TGenotype, TE, TP, TRes>(IPrototype<TGenotype, TE, TP, TRes> prototype, Action<TRes?, TRes> action)
     where TE : class, IEncoding<TGenotype>
     where TP : class, IProblem<TGenotype, TE>

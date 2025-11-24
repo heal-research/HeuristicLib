@@ -20,6 +20,7 @@ using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Prototypes;
+using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;

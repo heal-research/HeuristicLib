@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+﻿namespace HEAL.HeuristicLib.Operators.Terminator;
 
 public class PauseToken {
   public bool IsPaused { get; private set; }
