@@ -10,13 +10,13 @@ public class FuncAnalysis<T, TE, TP, TRes>(Action<TRes?, TRes> action) : SimpleA
 }
 
 public static class FuncAnalysis {
-  public static FuncAnalysis<TGenotype, TE, TP, TRes> Create<TGenotype, TE, TP, TRes>(IPrototype<TGenotype, TE, TP, TRes> prototype, Action<TRes?, TRes> action)
+  public static FuncAnalysis<TGenotype, TE, TP, TRes> Create<TGenotype, TE, TP, TRes>(IAlgorithmBuilder<TGenotype, TE, TP, TRes> prototype, Action<TRes?, TRes> action)
     where TE : class, IEncoding<TGenotype>
     where TP : class, IProblem<TGenotype, TE>
     where TRes : PopulationIterationResult<TGenotype>
     where TGenotype : class {
     var t = new FuncAnalysis<TGenotype, TE, TP, TRes>(action);
-    t.AddToProto(prototype);
+    t.AttachTo(prototype);
     return t;
   }
 }

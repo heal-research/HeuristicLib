@@ -71,17 +71,14 @@ public class PythonGenealogyAnalysis {
   ) {
     var problem = CreateTestSymbolicRegressionProblem(file, trainingSplit);
 
-    var ga = GeneticAlgorithm.GetPrototype(populationSize,
+    var ga = GeneticAlgorithm.GetBuilder(
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
-      CreateSymRegAllMutator(),
-      0.05,
-      new TournamentSelector<SymbolicExpressionTree>(3),
-      problem.CreateEvaluator(),
-      1,
-      0,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(iterations)
+      CreateSymRegAllMutator()
     );
+    ga.PopulationSize = populationSize;
+    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(iterations);
+    ga.RandomSeed = seed;
 
     return AttachAnalysisAndRun(callback, seed, withGenealogy, ga, problem);
   }
@@ -110,20 +107,30 @@ public class PythonGenealogyAnalysis {
     selector ??= new TournamentSelector<SymbolicExpressionTree>(3);
 
     var problem = CreateTestSymbolicRegressionProblem(file, trainingSplit);
-    var evaluator = problem.CreateEvaluator();
     var terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(iterations);
 
     switch (algorithm.ToLower()) {
       case "ga":
-        var ga = GeneticAlgorithm.GetPrototype(
-          populationSize, creator, crossover, mutator, mutationRate, selector,
-          evaluator, elites, seed, terminator);
+        var ga = GeneticAlgorithm.GetBuilder(creator, crossover, mutator);
+        ga.PopulationSize = populationSize;
+        ga.MutationRate = mutationRate;
+        ga.Elites = elites;
+        ga.Selector = selector;
+        ga.RandomSeed = seed;
+        ga.Terminator = terminator;
+
         return AttachAnalysisAndRun(callback, seed, withGenealogy, ga, problem);
 
       case "es":
-        var es = EvolutionStrategy.CreatePrototype(
-          populationSize, noChildren, strategy, creator, mutator, mutationRate,
-          selector, evaluator, seed, terminator, withCrossover ? crossover : null);
+        var es = EvolutionStrategy.CreatePrototype(creator, mutator);
+        es.PopulationSize = populationSize;
+        es.NoChildren = noChildren;
+        es.Strategy = strategy;
+        es.Terminator = terminator;
+        es.RandomSeed = seed;
+        es.Selector = selector;
+        if (withCrossover) es.Crossover = crossover;
+
         return AttachAnalysisAndRun(callback, seed, withGenealogy, es, problem);
       //case "es": 
       //  proto = EvolutionStrategy.CreatePrototype(populationSize, noChildren, strategy, creator, mutator, mutationRate,
@@ -136,11 +143,11 @@ public class PythonGenealogyAnalysis {
 
   private static (string graphViz, List<List<double>> ranks, List<BestMedianWorstEntry<SymbolicExpressionTree>> BestISolutions)
     AttachAnalysisAndRun<TRes>(GenerationCallback? callback, int seed, bool withGenealogy,
-                               Prototype<SymbolicExpressionTree, SymbolicExpressionTreeEncoding,
-                                 IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>, TRes> ga, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> problem)
+                               IAlgorithmBuilder<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>, TRes> ga,
+                               IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> problem)
     where TRes : PopulationIterationResult<SymbolicExpressionTree> {
     var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree>();
-    qualities.AddToProto(ga);
+    qualities.AttachTo(ga);
     if (callback != null)
       FuncAnalysis.Create(ga, (_, y) => callback(y));
 
@@ -149,11 +156,12 @@ public class PythonGenealogyAnalysis {
     if (withGenealogy) {
       var genealogyAnalysis = GenealogyAnalysis.Create(ga, saveSpace: true);
       FuncAnalysis.Create(ga, (_, _) => RecordRanks(genealogyAnalysis.Graph, ranks));
-      _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
+      _ = ga.BuildAlgorithm().Execute(problem, random: new SystemRandomNumberGenerator(seed));
       graphViz = genealogyAnalysis.Graph.ToGraphViz();
+    } else {
+      _ = ga.BuildAlgorithm().Execute(problem, random: new SystemRandomNumberGenerator(seed));
     }
 
-    _ = ga.Execute(problem, random: new SystemRandomNumberGenerator(seed));
     return (graphViz, ranks, qualities.BestISolutions);
   }
 

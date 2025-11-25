@@ -23,7 +23,7 @@ namespace HEAL.HeuristicLib.PythonInterOptScripts;
 public static class PythonCorrelationAnalysis {
   public static double[] GetCorrelations(IReadOnlyList<RealVector> solutions, RealVectorProblem problem, double[] delta, int count, int seed = 0) {
     var random = new SystemRandomNumberGenerator(seed);
-    var evaluator = problem.CreateEvaluator();
+    var evaluator = new DirectEvaluator<RealVector>();
     return solutions.ParallelSelect(random, (i, solution, r) => {
       var n = Enumerable.Range(0, count).Select(x =>
         NormalDistributedRandomPolar.NextSphere(r, solution.ToArray(), delta, solution.Count, false)).ToArray();
@@ -38,7 +38,7 @@ public static class PythonCorrelationAnalysis {
 
   public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem) {
     var random = new SystemRandomNumberGenerator();
-    var evaluator = problem.CreateEvaluator();
+    var evaluator = new DirectEvaluator<RealVector>();
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
   }
 
@@ -48,16 +48,15 @@ public static class PythonCorrelationAnalysis {
                                          int dimensions = 10, double min = -5, double max = 5, int seed = 0) {
     var prob = SphereRastriginProblem(dimensions, min, max);
 
-    var proto = Nsga2.CreatePrototype<RealVector, RealVectorEncoding, IProblem<RealVector, RealVectorEncoding>>(new UniformDistributedCreator(),
+    var proto = Nsga2.CreatePrototype(
+      new UniformDistributedCreator(),
       new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
-      new PolynomialMutator().WithRate(0.9),
-      new ParetoCrowdingTournamentSelector<RealVector>(false, 2), // missing the crowdingpart in the tournament
-      new AfterIterationsTerminator<RealVector>(generations),
-      prob.CreateEvaluator(),
-      seed,
-      populationSize,
-      mutationRate: 1,
-      dominateOnEquals: false);
+      new PolynomialMutator().WithRate(0.9));
+
+    proto.Terminator = new AfterIterationsTerminator<RealVector>(generations);
+    proto.RandomSeed = seed;
+    proto.PopulationSize = populationSize;
+    proto.MutationRate = 1;
 
     var f = FuncAnalysis.Create(proto, (_, iterationResult) => callback(iterationResult, prob));
     proto.Execute(prob, prob.SearchSpace, new SystemRandomNumberGenerator(seed));

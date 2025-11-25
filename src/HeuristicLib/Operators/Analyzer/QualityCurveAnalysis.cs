@@ -6,13 +6,13 @@ using HEAL.HeuristicLib.Problems;
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
 public static class QualityCurveAnalysis {
-  public static QualityCurveAnalysis<TGenotype> Create<TGenotype, TE, TP, TRes>(IPrototype<TGenotype, TE, TP, TRes> prototype)
+  public static QualityCurveAnalysis<TGenotype> Create<TGenotype, TE, TP, TRes>(IAlgorithmBuilder<TGenotype, TE, TP, TRes> prototype)
     where TE : class, IEncoding<TGenotype>
     where TP : class, IProblem<TGenotype, TE>
     where TRes : IIterationResult
     where TGenotype : class {
     var t = new QualityCurveAnalysis<TGenotype>();
-    t.AddToProto(prototype);
+    t.AttachTo(prototype);
     return t;
   }
 }

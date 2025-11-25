@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems;
+﻿namespace HEAL.HeuristicLib.Problems.Decoder;
 
 public class IdentityDecoder<T> : IDecoder<T, T> {
   public T Decode(T genotype) => genotype;

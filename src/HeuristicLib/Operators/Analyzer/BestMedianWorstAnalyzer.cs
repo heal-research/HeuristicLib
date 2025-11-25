@@ -1,4 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -6,14 +8,15 @@ using HEAL.HeuristicLib.Problems;
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
 public static class BestMedianWorstAnalysis {
-  public static BestMedianWorstAnalysis<TGenotype> Create<TGenotype, TE, TP, TRes>(IPrototype<TGenotype, TE, TP, TRes> prototype)
+  public static BestMedianWorstAnalysis<TGenotype> Create<TGenotype, TE, TP, TR>(
+    IAlgorithmBuilder<TGenotype, TE, TP, TR> ga)
     where TE : class, IEncoding<TGenotype>
     where TP : class, IProblem<TGenotype, TE>
-    where TRes : PopulationIterationResult<TGenotype>
+    where TR : PopulationIterationResult<TGenotype>
     where TGenotype : class {
-    var t = new BestMedianWorstAnalysis<TGenotype>();
-    t.AddToProto(prototype);
-    return t;
+    var r = new BestMedianWorstAnalysis<TGenotype>();
+    ga.AddAnalysis(r);
+    return r;
   }
 }
 

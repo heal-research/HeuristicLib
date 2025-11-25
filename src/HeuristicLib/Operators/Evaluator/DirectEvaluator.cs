@@ -9,9 +9,3 @@ public class DirectEvaluator<TGenotype> : Evaluator<TGenotype, IEncoding<TGenoty
     return problem.Evaluate(solution, random);
   }
 }
-
-public static class ProblemEvaluator {
-  public static DirectEvaluator<TGenotype> CreateEvaluator<TGenotype, TEncoding>(this IProblem<TGenotype, TEncoding> problem) where TEncoding : class, IEncoding<TGenotype> {
-    return new DirectEvaluator<TGenotype>();
-  }
-}

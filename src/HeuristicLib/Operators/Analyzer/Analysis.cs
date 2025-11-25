@@ -15,30 +15,37 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
+public static class BuilderExtensions {
+  public static void
+    AddAnalysis<T1, TE1, TP1, TRes1, T, TE, TP, TRes>(this IAlgorithmBuilder<T1, TE1, TP1, TRes1> proto,
+                                                      IAnalysis<T, TE, TP, TRes> analysis)
+    where TE1 : class, TE
+    where TP1 : class, TP, IProblem<T1, TE1>
+    where TRes1 : TRes
+    where TE : class, IEncoding<T>
+    where TP : class, IProblem<T, TE>
+    where TRes : IIterationResult
+    where T1 : class, T {
+    analysis.AttachTo(proto);
+  }
+}
+
 public interface IAnalysis<in T, in TE, in TP, in TRes>
   where TE : class, IEncoding<T>
   where TP : class, IProblem<T, TE>
   where TRes : IIterationResult {
-  public void AddToProto<T1, TRes1, TE1, TP1>(IPrototype<T1, TE1, TP1, TRes1> proto) where T1 : class, T
+  public void AttachTo<T1, TRes1, TE1, TP1>(IAlgorithmBuilder<T1, TE1, TP1, TRes1> proto) where T1 : class, T
     where TRes1 : IIterationResult, TRes
     where TE1 : class, IEncoding<T1>, TE
     where TP1 : class, IProblem<T1, TE1>, TP;
 }
-
-public interface IAnalysis<T, in TE, in TRes> : IAnalysis<T, TE, IProblem<T, TE>, TRes> where TE : class, IEncoding<T> where TRes : IIterationResult { }
-
-public interface IAnalysis<T, in TRes> : IAnalysis<T, IEncoding<T>, IProblem<T, IEncoding<T>>, TRes> where TRes : IIterationResult { }
-
-public interface IAnalysis<T> : IAnalysis<T, IEncoding<T>, IProblem<T, IEncoding<T>>, IIterationResult> { }
-
-public interface IAnalysis : IAnalysis<object, IEncoding<object>, IProblem<object, IEncoding<object>>, IIterationResult> { }
 
 public abstract class Analysis<T, TE, TP, TRes> : IAnalysis<T, TE, TP, TRes>
   where T : class
   where TE : class, IEncoding<T>
   where TP : class, IProblem<T, TE>
   where TRes : IIterationResult {
-  public void AddToProto<T1, TRes1, TE1, TP1>(IPrototype<T1, TE1, TP1, TRes1> proto) where T1 : class, T
+  public void AttachTo<T1, TRes1, TE1, TP1>(IAlgorithmBuilder<T1, TE1, TP1, TRes1> proto) where T1 : class, T
     where TRes1 : IIterationResult, TRes
     where TE1 : class, IEncoding<T1>, TE
     where TP1 : class, IProblem<T1, TE1>, TP {

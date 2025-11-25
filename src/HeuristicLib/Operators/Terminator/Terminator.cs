@@ -11,7 +11,7 @@ public abstract class Terminator<TGenotype, TIterationResult, TEncoding, TProble
   public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem);
 }
 
-public abstract class Terminator<TGenotype, TIterationResult, TEncoding> : ITerminator<TGenotype, TIterationResult, TEncoding, IProblem<TGenotype, TEncoding>>
+public abstract class Terminator<TGenotype, TIterationResult, TEncoding> : ITerminator<TGenotype, TIterationResult, TEncoding>
   where TIterationResult : IIterationResult
   where TEncoding : class, IEncoding<TGenotype> {
   public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding);
@@ -21,7 +21,7 @@ public abstract class Terminator<TGenotype, TIterationResult, TEncoding> : ITerm
   }
 }
 
-public abstract class Terminator<TGenotype, TIterationResult> : ITerminator<TGenotype, TIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>
+public abstract class Terminator<TGenotype, TIterationResult> : ITerminator<TGenotype, TIterationResult>
   where TIterationResult : IIterationResult {
   public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState);
 
@@ -30,7 +30,7 @@ public abstract class Terminator<TGenotype, TIterationResult> : ITerminator<TGen
   }
 }
 
-public abstract class Terminator<TGenotype> : ITerminator<TGenotype, IIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> {
+public abstract class Terminator<TGenotype> : ITerminator<TGenotype> {
   public abstract bool ShouldTerminate();
 
   bool ITerminator<TGenotype, IIterationResult, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.ShouldTerminate(IIterationResult currentIterationState, IIterationResult? previousIterationState, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {

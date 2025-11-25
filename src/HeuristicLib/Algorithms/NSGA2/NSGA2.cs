@@ -54,51 +54,29 @@ public class Nsga2<TGenotype, TEncoding, TProblem>(
     return new Nsga2IterationResult<TGenotype>(Population.From(nextPop));
   }
 
-  public class Prototype : PopulationBasedAlgorithmPrototype<TGenotype, TEncoding, TProblem, Nsga2IterationResult<TGenotype>>,
-                           IMutatorPrototype<TGenotype, TEncoding, TProblem>, ICrossoverPrototype<TGenotype, TEncoding, TProblem> {
-    public Prototype(ICreator<TGenotype, TEncoding, TProblem> creator,
-                     ICrossover<TGenotype, TEncoding, TProblem> crossover,
-                     IMutator<TGenotype, TEncoding, TProblem> mutator,
-                     ISelector<TGenotype, TEncoding, TProblem> selector,
-                     ITerminator<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
-                     IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
-                     int? randomSeed,
-                     int populationSize,
-                     double mutationRate,
-                     bool dominateOnEquals,
-                     IInterceptor<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null) : base(populationSize, creator, selector, evaluator, randomSeed, terminator, interceptor) {
-      MutationRate = mutationRate;
-      DominateOnEquals = dominateOnEquals;
-      Mutator = mutator;
-      Crossover = crossover;
-    }
+  public class Builder : PopulationBasedAlgorithmBuilder<TGenotype, TEncoding, TProblem, Nsga2IterationResult<TGenotype>, Nsga2<TGenotype, TEncoding, TProblem>>,
+                         IMutatorPrototype<TGenotype, TEncoding, TProblem>, ICrossoverPrototype<TGenotype, TEncoding, TProblem> {
+    public double MutationRate { get; set; } = 0.05;
+    public bool DominateOnEquals { get; set; } = false;
+    public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
+    public required ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
 
-    public double MutationRate { get; set; }
-    public bool DominateOnEquals { get; set; }
-    public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
-    public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
-
-    public Nsga2<TGenotype, TEncoding, TProblem> Create()
-      => new(Terminator, Interceptor, PopulationSize, Creator,
-        Crossover, Mutator, MutationRate, Selector, Evaluator,
-        RandomSeed, DominateOnEquals);
-
-    protected override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, Nsga2IterationResult<TGenotype>> BuildAlgorithm() => Create();
+    public override Nsga2<TGenotype, TEncoding, TProblem> BuildAlgorithm() => new(Terminator, Interceptor, PopulationSize, Creator,
+      Crossover, Mutator, MutationRate, Selector, Evaluator,
+      RandomSeed, DominateOnEquals);
   }
 }
 
 public static class Nsga2 {
-  public static Nsga2<TGenotype, TEncoding, TProblem>.Prototype CreatePrototype<TGenotype, TEncoding, TProblem>(ICreator<TGenotype, TEncoding, TProblem> creator,
-                                                                                                                ICrossover<TGenotype, TEncoding, TProblem> crossover,
-                                                                                                                IMutator<TGenotype, TEncoding, TProblem> mutator,
-                                                                                                                ISelector<TGenotype, TEncoding, TProblem> selector,
-                                                                                                                ITerminator<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
-                                                                                                                IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
-                                                                                                                int? randomSeed,
-                                                                                                                int populationSize,
-                                                                                                                double mutationRate,
-                                                                                                                bool dominateOnEquals = true,
-                                                                                                                IInterceptor<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
+  public static Nsga2<TGenotype, TEncoding, TProblem>.Builder CreatePrototype<TGenotype, TEncoding, TProblem>(
+    ICreator<TGenotype, TEncoding, TProblem> creator,
+    ICrossover<TGenotype, TEncoding, TProblem> crossover,
+    IMutator<TGenotype, TEncoding, TProblem> mutator, bool dominateOnEquals = true)
     where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new(creator, crossover, mutator, selector, terminator, evaluator, randomSeed, populationSize, mutationRate, dominateOnEquals, interceptor);
+    => new() {
+      Mutator = mutator,
+      Crossover = crossover,
+      Creator = creator,
+      Selector = new ParetoCrowdingTournamentSelector<TGenotype>(dominateOnEquals)
+    };
 }

@@ -21,7 +21,7 @@ public class SymbolicRegressionProblem(
     return Evaluate(solution, rows, targets);
   }
 
-  protected ObjectiveVector Evaluate(SymbolicExpressionTree solution, IEnumerable<int> rows, IReadOnlyList<double> targets) {
+  public ObjectiveVector Evaluate(SymbolicExpressionTree solution, IEnumerable<int> rows, IReadOnlyList<double> targets) {
     var predictions = solution
                       .PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets)
                       .LimitToRange(LowerPredictionBound, UpperPredictionBound)

@@ -10,6 +10,7 @@ using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.Decoder;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests;

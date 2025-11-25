@@ -2,46 +2,47 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class SlidingWindowSymbolicRegressionProblem(
-  SlidingWindowRegressionProblemData data,
-  ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
-  IComparer<ObjectiveVector> a,
-  SymbolicExpressionTreeEncoding encoding,
-  ISymbolicDataAnalysisExpressionTreeInterpreter interpreter,
-  int parameterOptimizationIterations = -1)
-  : SymbolicRegressionProblem(data, objective, a, encoding, interpreter, parameterOptimizationIterations),
-    IStatefulProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, SlidingWindowUpdate, SlidingWindowRegressionProblemData> {
-  public SlidingWindowRegressionProblemData CurrentState { get; set; } = data;
-
-  public void UpdateState(SlidingWindowUpdate update) {
-    CurrentState = new SlidingWindowRegressionProblemData(
-      CurrentState.Dataset,
-      CurrentState.InputVariables,
-      CurrentState.TargetVariable,
-      CurrentState.StartIndex + update.StepSize,
-      CurrentState.EndIndex + update.StepSize);
+public class SlidingWindowSymbolicRegressionProblem : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
+  public SlidingWindowSymbolicRegressionProblem(SymbolicRegressionProblem problem,
+                                                int windowStart = 0,
+                                                int windowLength = 100,
+                                                int stepSize = 10,
+                                                UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+                                                int epochLength = int.MaxValue) : base(updatePolicy, epochLength) {
+    ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowLength);
+    innerProblem = problem;
+    CurrentState = (windowStart, windowStart + windowLength);
+    StepSize = stepSize;
   }
 
-  public override RegressionProblemData ProblemData => CurrentState;
+  private readonly SymbolicRegressionProblem innerProblem;
+  private int StepSize { get; }
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution) {
-    var dataPartition = ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
-    var rows = RoundRobinRange(CurrentState.StartIndex, CurrentState.EndIndex, dataPartition);
-    var targets = ProblemData.Dataset.GetDoubleValues(ProblemData.TargetVariable,
-                               RoundRobinRange(CurrentState.StartIndex, CurrentState.EndIndex, dataPartition))
-                             .ToArray();
-    return Evaluate(solution, rows, targets);
+  public (int StartIndex, int EndIndex) CurrentState { get; set; }
+
+  public override SymbolicExpressionTreeEncoding SearchSpace => innerProblem.SearchSpace;
+  public override Objective Objective => innerProblem.Objective;
+
+  public override ObjectiveVector EvaluateInner(SymbolicExpressionTree solution, IRandomNumberGenerator random) {
+    var dataPartition = innerProblem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
+    var targets = innerProblem.ProblemData.Dataset.GetDoubleValues(innerProblem.ProblemData.TargetVariable, RoundRobinRange(dataPartition)).ToArray();
+    return innerProblem.Evaluate(solution, RoundRobinRange(dataPartition), targets);
   }
 
-  public static IEnumerable<int> RoundRobinRange(int min, int max, Range range) {
+  protected override void Update() {
+    CurrentState = (CurrentState.StartIndex + StepSize, CurrentState.EndIndex + StepSize);
+  }
+
+  private IEnumerable<int> RoundRobinRange(Range range) {
+    var min = CurrentState.StartIndex;
+    var max = CurrentState.EndIndex;
     // Extract start and end from the Range
     var (rangeStart, rangeEnd) = GetRangeBounds(range, max); // using max as array length fallback
     ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(rangeStart, rangeEnd);
-    ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(min, max);
 
     var rangeLength = rangeEnd - rangeStart;
     for (var i = min; i < max; i++) {

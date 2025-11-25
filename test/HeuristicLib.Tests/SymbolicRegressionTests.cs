@@ -121,17 +121,14 @@ public class SymbolicRegressionTests {
   public void GeneticAlgorithmExecution() {
     var problem = CreateTestSymbolicRegressionProblem();
 
-    var ga = GeneticAlgorithm.GetPrototype(100,
-      new ProbabilisticTreeCreator(),
-      new SubtreeCrossover(),
-      CreateSymRegAllMutator(),
-      0.05,
-      new TournamentSelector<SymbolicExpressionTree>(3),
-      problem.CreateEvaluator(),
-      1,
-      AlgorithmRandomSeed,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(100)
-    );
+    var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
+    ga.PopulationSize = 100;
+    ga.MutationRate = 0.05;
+    ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+    ga.Elites = 1;
+    ga.RandomSeed = AlgorithmRandomSeed;
+    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
+
     var qualities = BestMedianWorstAnalysis.Create(ga);
     var res = ga.Execute(problem);
 
@@ -143,17 +140,14 @@ public class SymbolicRegressionTests {
   public void GenealogyGraphOnGeneticAlgorithm() {
     var problem = CreateTestSymbolicRegressionProblem();
 
-    var proto = GeneticAlgorithm.GetPrototype(
-      10,
-      new ProbabilisticTreeCreator(),
-      new SubtreeCrossover(),
-      CreateSymRegAllMutator(),
-      0.05,
-      new RandomSelector<SymbolicExpressionTree>(),
-      problem.CreateEvaluator(),
-      1,
-      AlgorithmRandomSeed,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(30));
+    var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
+    ga.PopulationSize = 100;
+    ga.MutationRate = 0.05;
+    ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+    ga.Elites = 1;
+    ga.RandomSeed = AlgorithmRandomSeed;
+    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
+    var proto = ga;
 
     var evalQualities = QualityCurveAnalysis.Create(proto);
     var qualities = BestMedianWorstAnalysis.Create(proto);
@@ -171,16 +165,15 @@ public class SymbolicRegressionTests {
   public void GenealogyGraphOnLocalSearch() {
     var problem = CreateTestSymbolicRegressionProblem();
     var symRegAllMutator = CreateSymRegAllMutator();
-    var problemEvaluator = problem.CreateEvaluator();
-    var proto = LocalSearch.GetPrototype(
-      new ProbabilisticTreeCreator(),
-      symRegAllMutator,
-      new AfterIterationsTerminator<SymbolicExpressionTree>(50),
-      problemEvaluator,
-      AlgorithmRandomSeed,
-      10,
-      5,
-      LocalSearchDirection.FirstImprovement);
+
+    var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
+    ga.PopulationSize = 100;
+    ga.MutationRate = 0.05;
+    ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+    ga.Elites = 1;
+    ga.RandomSeed = AlgorithmRandomSeed;
+    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
+    var proto = ga;
 
     var genealogy = GenealogyAnalysis.Create(proto);
     var res = proto.Execute(problem);
@@ -199,13 +192,10 @@ public class SymbolicRegressionTests {
     var nsga2 = Nsga2.CreatePrototype(
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
-      symRegAllMutator,
-      new RandomSelector<SymbolicExpressionTree>(),
-      new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations),
-      problem.CreateEvaluator(),
-      AlgorithmRandomSeed,
-      populationSize,
-      mutationRate);
+      symRegAllMutator);
+    nsga2.PopulationSize = populationSize;
+    nsga2.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations);
+    nsga2.MutationRate = mutationRate;
 
     QualityCurveAnalysis.Create(nsga2);
     var genealogy = GenealogyAnalysis.Create(nsga2);

@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.Permutation.Mutators;
 
-public class SwapMutator : Mutator<Permutation, PermutationEncoding> {
-  public override Permutation Mutate(Permutation solution, IRandomNumberGenerator random, PermutationEncoding encoding) {
+public class SwapMutator : Mutator<Permutation> {
+  public override Permutation Mutate(Permutation solution, IRandomNumberGenerator random) {
     return Permutation.SwapRandomElements(solution, random);
   }
 }

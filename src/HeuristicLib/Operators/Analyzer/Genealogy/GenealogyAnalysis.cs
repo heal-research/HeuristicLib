@@ -8,13 +8,13 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
 
 public static class GenealogyAnalysis {
-  public static GenealogyAnalysis<TGenotype> Create<TGenotype, TE, TP, TRes>(IPrototype<TGenotype, TE, TP, TRes> prototype, IEqualityComparer<TGenotype>? equality = null, bool saveSpace = false)
+  public static GenealogyAnalysis<TGenotype> Create<TGenotype, TE, TP, TRes>(IAlgorithmBuilder<TGenotype, TE, TP, TRes> prototype, IEqualityComparer<TGenotype>? equality = null, bool saveSpace = false)
     where TE : class, IEncoding<TGenotype>
     where TP : class, IProblem<TGenotype, TE>
     where TRes : PopulationIterationResult<TGenotype>
     where TGenotype : class {
     var t = new GenealogyAnalysis<TGenotype>(equality, saveSpace);
-    t.AddToProto(prototype);
+    t.AttachTo(prototype);
     return t;
   }
 }

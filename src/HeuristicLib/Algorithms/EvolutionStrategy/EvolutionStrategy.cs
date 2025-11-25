@@ -20,20 +20,15 @@ public record EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> 
 }
 
 public static class EvolutionStrategy {
-  public static EvolutionStrategy<TGenotype, TEncoding, TProblem>.Prototype CreatePrototype<TGenotype, TEncoding, TProblem>(int populationSize,
-                                                                                                                            int noChildren,
-                                                                                                                            EvolutionStrategyType strategy,
-                                                                                                                            ICreator<TGenotype, TEncoding, TProblem> creator,
-                                                                                                                            IMutator<TGenotype, TEncoding, TProblem> mutator,
-                                                                                                                            double initialMutationStrength,
-                                                                                                                            ISelector<TGenotype, TEncoding, TProblem> selector,
-                                                                                                                            IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
-                                                                                                                            int? randomSeed,
-                                                                                                                            ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-                                                                                                                            ICrossover<TGenotype, TEncoding, TProblem>? crossover = null,
-                                                                                                                            IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
+  public static EvolutionStrategy<TGenotype, TEncoding, TProblem>.Builder CreatePrototype<TGenotype, TEncoding, TProblem>(
+    ICreator<TGenotype, TEncoding, TProblem> creator,
+    IMutator<TGenotype, TEncoding, TProblem> mutator)
     where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new(populationSize, noChildren, strategy, creator, mutator, initialMutationStrength, selector, evaluator, randomSeed, terminator, crossover, interceptor);
+    => new() {
+      Mutator = mutator,
+      InitialMutationStrength = (mutator as IVariableStrengthMutator<TGenotype, TEncoding, TProblem>)?.MutationStrength ?? 0,
+      Creator = creator
+    };
 }
 
 public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
@@ -106,39 +101,17 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
     return new EvolutionStrategyIterationResult<TGenotype>(Population.From(newPopulation), newMutationStrength);
   }
 
-  public class Prototype : PopulationBasedAlgorithmPrototype<TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>>,
-                           IMutatorPrototype<TGenotype, TEncoding, TProblem>,
-                           IOptionalCrossoverPrototype<TGenotype, TEncoding, TProblem> {
-    public Prototype(
-      int populationSize,
-      int noChildren,
-      EvolutionStrategyType strategy,
-      ICreator<TGenotype, TEncoding, TProblem> creator,
-      IMutator<TGenotype, TEncoding, TProblem> mutator,
-      double initialInitialMutationStrength,
-      ISelector<TGenotype, TEncoding, TProblem> selector,
-      IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
-      int? randomSeed,
-      ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-      ICrossover<TGenotype, TEncoding, TProblem>? crossover = null,
-      IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null) : base(
-      populationSize,
-      creator,
-      selector, evaluator, randomSeed, terminator, interceptor) {
-      NoChildren = noChildren;
-      Strategy = strategy;
-      Mutator = mutator;
-      InitialMutationStrength = initialInitialMutationStrength;
-      Crossover = crossover;
-    }
-
-    public int NoChildren { get; set; }
-    public EvolutionStrategyType Strategy { get; set; }
-    public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
-    public double InitialMutationStrength { get; set; }
+  public class Builder : PopulationBasedAlgorithmBuilder<
+                           TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>,
+                           EvolutionStrategy<TGenotype, TEncoding, TProblem>>,
+                         IMutatorPrototype<TGenotype, TEncoding, TProblem>,
+                         IOptionalCrossoverPrototype<TGenotype, TEncoding, TProblem> {
+    public int NoChildren { get; set; } = 100;
+    public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
+    public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
+    public required double InitialMutationStrength { get; set; }
     public ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; set; }
 
-    public EvolutionStrategy<TGenotype, TEncoding, TProblem> CreateAlgorithm() => new(PopulationSize, Strategy, Creator, Mutator, InitialMutationStrength, Selector, Evaluator, RandomSeed, Terminator, Crossover, Interceptor);
-    protected override IIterativeAlgorithm<TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>> BuildAlgorithm() => CreateAlgorithm();
+    public override EvolutionStrategy<TGenotype, TEncoding, TProblem> BuildAlgorithm() => new(PopulationSize, Strategy, Creator, Mutator, InitialMutationStrength, Selector, Evaluator, RandomSeed, Terminator, Crossover, Interceptor);
   }
 }
