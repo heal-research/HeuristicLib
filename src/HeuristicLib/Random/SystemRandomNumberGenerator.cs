@@ -15,7 +15,8 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
 
   public SystemRandomNumberGenerator(SeedSequence seedSequence) {
     this.seedSequence = seedSequence;
-    random = new System.Random(seedSequence.GenerateSeed());
+    var seed = seedSequence.GenerateSeed();
+    random = new System.Random(seed);
   }
 
   public SystemRandomNumberGenerator(int seed) : this(new SeedSequence(seed)) { }

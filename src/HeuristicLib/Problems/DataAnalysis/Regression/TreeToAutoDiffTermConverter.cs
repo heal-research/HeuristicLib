@@ -52,11 +52,11 @@ public class TreeToAutoDiffTermConverter {
     eval: Math.Tanh,
     diff: x => 1 - Math.Tanh(x) * Math.Tanh(x));
   private static readonly Func<Term, UnaryFunc> Erf = UnaryFunc.Factory(
-    eval: alglib.errorfunction,
+    eval: _ => throw new NotImplementedException("Error function is currently not implemented"), //errorfunction,
     diff: x => 2.0 * Math.Exp(-(x * x)) / Math.Sqrt(Math.PI));
 
   private static readonly Func<Term, UnaryFunc> Norm = UnaryFunc.Factory(
-    eval: alglib.normaldistribution,
+    eval: _ => throw new NotImplementedException("Normal distribution function is currently not implemented"), //normaldistribution,
     diff: x => -(Math.Exp(-(x * x)) * Math.Sqrt(Math.Exp(x * x)) * x) / Math.Sqrt(2 * Math.PI));
 
   private static readonly Func<Term, UnaryFunc> Abs = UnaryFunc.Factory(

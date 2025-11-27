@@ -3,8 +3,6 @@ using HEAL.HeuristicLib.Encodings.Permutation;
 using HEAL.HeuristicLib.Encodings.Permutation.Creators;
 using HEAL.HeuristicLib.Encodings.Permutation.Crossovers;
 using HEAL.HeuristicLib.Encodings.Permutation.Mutators;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Problems.Dynamic;

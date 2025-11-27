@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Creator;
+﻿using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
 using HEAL.HeuristicLib.Operators.Mutator;
@@ -61,7 +60,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
     return new SingleISolutionIterationResult<TGenotype>(newISolution);
   }
 
-  public class Prototype : AlgorithmBuilder<TGenotype, TEncoding, TProblem, SingleISolutionIterationResult<TGenotype>, LocalSearch<TGenotype, TEncoding, TProblem>>, IMutatorPrototype<TGenotype, TEncoding, TProblem> {
+  public class Builder : AlgorithmBuilder<TGenotype, TEncoding, TProblem, SingleISolutionIterationResult<TGenotype>, LocalSearch<TGenotype, TEncoding, TProblem>>, IMutatorPrototype<TGenotype, TEncoding, TProblem> {
     public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
     public int MaxNeighbors { get; set; } = 100;
     public int BatchSize { get; set; } = 100;
@@ -75,12 +74,12 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
 }
 
 public static class LocalSearch {
-  public static LocalSearch<TGenotype, TEncoding, TProblem>.Prototype GetPrototype<TGenotype, TEncoding, TProblem>(
+  public static LocalSearch<TGenotype, TEncoding, TProblem>.Builder GetBuilder<TGenotype, TEncoding, TProblem>(
     ICreator<TGenotype, TEncoding, TProblem> creator, IMutator<TGenotype, TEncoding, TProblem> mutator)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding>
     where TGenotype : class {
-    return new LocalSearch<TGenotype, TEncoding, TProblem>.Prototype {
+    return new LocalSearch<TGenotype, TEncoding, TProblem>.Builder {
       Mutator = mutator,
       Creator = creator
     };

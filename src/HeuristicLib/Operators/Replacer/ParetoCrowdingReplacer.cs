@@ -1,9 +1,6 @@
-﻿using System.Linq;
-using HEAL.HeuristicLib.Operators.Selector;
+﻿using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using LanguageExt.ClassInstances;
 
 namespace HEAL.HeuristicLib.Operators.Replacer;
 
@@ -61,13 +58,22 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
     this.tournamentSize = tournamentSize;
   }
 
-  public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
-    var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
-    var lookup = new Dictionary<ObjectiveVector, double>();
+  public override IReadOnlyList<ISolution<TGenotype>> Select(
+    IReadOnlyList<ISolution<TGenotype>> population,
+    Objective objective,
+    int count,
+    IRandomNumberGenerator random) {
+    var fronts = DominationCalculator.CalculateAllParetoFronts(
+      population, objective, out var rank, dominateOnEqualities);
+
+    // Key by solution instead of ObjectiveVector
+    var crowdingBySolution = new Dictionary<ISolution<TGenotype>, double>();
     var res = new ISolution<TGenotype>[count];
+
     for (int i = 0; i < count; i++) {
       var bestIdx = random.Integer(population.Count);
       var bestRank = rank[bestIdx];
+
       for (int j = 1; j < tournamentSize; j++) {
         var idx = random.Integer(population.Count);
         var idxRank = rank[idx];
@@ -77,18 +83,27 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
           continue;
         }
 
-        if (idxRank > bestRank) continue;
-        if (!lookup.TryGetValue(population[bestIdx].ObjectiveVector, out var dist)) {
-          var frontObjectives = fronts[bestRank].Select(x => x.ObjectiveVector).ToArray();
-          foreach (var (key, value) in frontObjectives.Zip(CrowdingDistance.CalculateCrowdingDistances(frontObjectives)))
-            lookup[key] = value;
-          dist = lookup[population[bestIdx].ObjectiveVector];
+        if (idxRank > bestRank) continue; // worse rank
+
+        // equal rank -> compare crowding
+        // ensure we have distances for this front
+        if (!crowdingBySolution.ContainsKey(population[bestIdx])) {
+          var frontSolutions = fronts[bestRank];
+          var frontObjectives = frontSolutions.Select(x => x.ObjectiveVector).ToArray();
+          var distances = CrowdingDistance.CalculateCrowdingDistances(frontObjectives);
+
+          for (int k = 0; k < frontSolutions.Count; k++) {
+            crowdingBySolution[frontSolutions[k]] = distances[k];
+          }
         }
 
-        var dist2 = lookup[population[idx].ObjectiveVector];
-        if (dist >= dist2) continue;
-        bestIdx = idx;
-        bestRank = rank[bestIdx];
+        var distBest = crowdingBySolution[population[bestIdx]];
+        var distIdx = crowdingBySolution[population[idx]];
+
+        if (distIdx > distBest) {
+          bestIdx = idx;
+          bestRank = idxRank;
+        }
       }
 
       res[i] = population[bestIdx];

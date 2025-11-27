@@ -3,7 +3,6 @@ using HEAL.HeuristicLib.Encodings.RealVector;
 using HEAL.HeuristicLib.Encodings.RealVector.Creators;
 using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
 using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Replacer;
 using HEAL.HeuristicLib.Operators.Selector;

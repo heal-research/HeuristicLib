@@ -5,20 +5,20 @@ public class SeedSequence {
   //private readonly int[] spawnKey;
   private readonly int spawnKey;
   private int numberOfSpawnedChildren;
-  
+
   //public SeedSequence(int rootSeed, params int[] spawnKey) {
   public SeedSequence(int rootSeed, int spawnKey = 0) {
     this.rootSeed = rootSeed;
     this.spawnKey = spawnKey;
     this.numberOfSpawnedChildren = 0;
   }
-  
+
   public SeedSequence[] Spawn(int numberOfChildren) {
     var children = Enumerable
-      .Range(numberOfSpawnedChildren, numberOfChildren)
-      //.Select(index => new SeedSequence(rootSeed, Hash(spawnKey, index)))
-      .Select(index => new SeedSequence(rootSeed, HashCode.Combine(spawnKey, index)))
-      .ToArray();
+                   .Range(numberOfSpawnedChildren, numberOfChildren)
+                   //.Select(index => new SeedSequence(rootSeed, Hash(spawnKey, index)))
+                   .Select(index => new SeedSequence(rootSeed, HashCode.Combine(spawnKey, index)))
+                   .ToArray();
     numberOfSpawnedChildren += numberOfChildren;
     return children;
   }
@@ -27,16 +27,15 @@ public class SeedSequence {
   public SeedSequence Fork(int forkKey) {
     return new SeedSequence(rootSeed, forkKey);
   }
-  
+
   public int GenerateSeed() {
-    //return HashCode.Combine(rootSeed, Hash(spawnKey));
-    return HashCode.Combine(rootSeed, spawnKey);
+    return (int)Hash(rootSeed, spawnKey);
   }
-  
+
   private const uint FnvPrime = 16777619;
   private const uint OffsetBasis = 2166136261;
 
-  private static uint Hash(params ReadOnlySpan<int> values) {
+  private static uint Hash(params IEnumerable<int> values) {
     uint hash = OffsetBasis;
 
     foreach (int value in values) {

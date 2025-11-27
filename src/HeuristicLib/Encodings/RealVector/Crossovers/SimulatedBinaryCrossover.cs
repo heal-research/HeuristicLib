@@ -1,6 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
-using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
-using HEAL.HeuristicLib.Operators.Crossover;
+﻿using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.RealVector.Crossovers;

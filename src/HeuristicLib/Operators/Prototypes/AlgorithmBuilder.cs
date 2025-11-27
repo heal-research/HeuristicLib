@@ -1,6 +1,4 @@
-﻿using System.Text;
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Operators.Analyzer;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;

@@ -159,7 +159,8 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.Gamma: {
         var x = Evaluate(dataset, ref row, state);
-        return double.IsNaN(x) ? double.NaN : alglib.gammafunction(x);
+        return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Gamma function is currently not implemented");
+        ;
       }
       case OpCodes.Psi: {
         var x = Evaluate(dataset, ref row, state);
@@ -168,78 +169,76 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
           case <= 0 when (Math.Floor(x) - x).IsAlmost(0):
             return double.NaN;
           default:
-            return alglib.psi(x);
+            throw new NotImplementedException("Psi function is currently not implemented");
+            ;
         }
       }
       case OpCodes.Dawson: {
         var x = Evaluate(dataset, ref row, state);
-        return double.IsNaN(x) ? double.NaN : alglib.dawsonintegral(x);
+        return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Dawson Integral is currently not implemented");
+        ;
       }
       case OpCodes.ExponentialIntegralEi: {
         var x = Evaluate(dataset, ref row, state);
-        return double.IsNaN(x) ? double.NaN : alglib.exponentialintegralei(x);
+        return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Exponential Integral EI is currently not implemented");
+        ;
       }
       case OpCodes.SineIntegral: {
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
-        alglib.sinecosineintegrals(x, out var si, out _);
-        return si;
+        throw new NotImplementedException("Sine integral is currently not implemented");
       }
       case OpCodes.CosineIntegral: {
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
-        alglib.sinecosineintegrals(x, out _, out var ci);
-        return ci;
+        throw new NotImplementedException("Cosine Integral is currently not implemented");
       }
       case OpCodes.HyperbolicSineIntegral: {
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
-        alglib.hyperbolicsinecosineintegrals(x, out var shi, out _);
-        return shi;
+        throw new NotImplementedException("Hyperbolic Sine Integral is currently not implemented");
       }
       case OpCodes.HyperbolicCosineIntegral: {
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
-        alglib.hyperbolicsinecosineintegrals(x, out _, out var chi);
-        return chi;
+        throw new NotImplementedException("Hyperbolic Cosine Integral is currently not implemented");
       }
       case OpCodes.FresnelCosineIntegral: {
         double c = 0, s = 0;
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
-        alglib.fresnelintegral(x, ref c, ref s);
-        return c;
+        throw new NotImplementedException("Fresnel Cosine Integral is currently not implemented");
       }
       case OpCodes.FresnelSineIntegral: {
         double c = 0, s = 0;
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
-        alglib.fresnelintegral(x, ref c, ref s);
-        return s;
+        throw new NotImplementedException("Fresnel Sine Integral is currently not implemented");
       }
       case OpCodes.AiryA: {
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
-        alglib.airy(x, out var ai, out _, out _, out _);
-        return ai;
+        throw new NotImplementedException("AiryA is currently not implemented");
       }
       case OpCodes.AiryB: {
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
-        alglib.airy(x, out _, out _, out var bi, out _);
-        return bi;
+        throw new NotImplementedException("AiryB is currently not implemented");
       }
       case OpCodes.Norm: {
         var x = Evaluate(dataset, ref row, state);
-        return double.IsNaN(x) ? double.NaN : alglib.normaldistribution(x);
+        return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Norm is currently not implemented");
+        ;
       }
       case OpCodes.Erf: {
         var x = Evaluate(dataset, ref row, state);
-        return double.IsNaN(x) ? double.NaN : alglib.errorfunction(x);
+        return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Error function is currently not implemented");
+        ;
       }
       case OpCodes.Bessel: {
         var x = Evaluate(dataset, ref row, state);
-        return double.IsNaN(x) ? double.NaN : alglib.besseli0(x);
+        return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Bessel function is currently not implemented");
+        ;
       }
 
       case OpCodes.AnalyticQuotient: {

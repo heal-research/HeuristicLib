@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Encodings.IntegerVector;
-using HEAL.HeuristicLib.Encodings.Permutation.Mutators;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Encodings.Permutation;

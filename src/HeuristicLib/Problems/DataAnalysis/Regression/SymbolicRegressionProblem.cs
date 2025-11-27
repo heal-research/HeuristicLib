@@ -1,18 +1,15 @@
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Formatters;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
-public class SymbolicRegressionProblem(
-  RegressionProblemData data,
-  ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
-  IComparer<ObjectiveVector> a,
-  SymbolicExpressionTreeEncoding encoding,
-  ISymbolicDataAnalysisExpressionTreeInterpreter interpreter,
-  int parameterOptimizationIterations = -1) :
-  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeEncoding>(data, objective, a, encoding) {
+public class SymbolicRegressionProblem :
+  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
+  public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
+  public int ParameterOptimizationIterations { get; init; } = -1;
   protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, Interpreter);
 
   public override ObjectiveVector Evaluate(SymbolicExpressionTree solution) {
@@ -22,20 +19,41 @@ public class SymbolicRegressionProblem(
   }
 
   public ObjectiveVector Evaluate(SymbolicExpressionTree solution, IEnumerable<int> rows, IReadOnlyList<double> targets) {
+    var debug = new SymbolicExpressionTreeGraphvizFormatter().Format(solution);
+
+    if (ParameterOptimizationIterations > 0) {
+      var materialRows = rows as IReadOnlyList<int> ?? rows.ToArray();
+      rows = materialRows;
+      _ = SymbolicRegressionParameterOptimization.OptimizeParameters(
+        Interpreter,
+        solution,
+        ProblemData,
+        materialRows,
+        ParameterOptimizationIterations,
+        true,
+        LowerPredictionBound,
+        UpperPredictionBound);
+    }
+
     var predictions = solution
                       .PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets)
                       .LimitToRange(LowerPredictionBound, UpperPredictionBound)
                       .ToArray();
-    if (parameterOptimizationIterations > 0)
-      _ = SymbolicRegressionParameterOptimization.OptimizeParameters(Interpreter, solution, ProblemData, DataAnalysisProblemData.PartitionType.Training, parameterOptimizationIterations, true, LowerPredictionBound, UpperPredictionBound);
     return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(solution, targets, predictions)));
   }
 
-  public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get { return interpreter; } }
-
   public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
     this(data, objective,
-      objective.Count == 1 ? new SingleObjectiveComparer(objective.Single().Direction) : new LexicographicComparer(objective.Select(x => x.Direction).ToArray()),
-      new SymbolicExpressionTreeEncoding(new SimpleSymbolicExpressionGrammar()),
-      new SymbolicDataAnalysisExpressionTreeInterpreter()) { }
+      GetDefaultComparer(objective),
+      new SymbolicExpressionTreeEncoding(new SimpleSymbolicExpressionGrammar())) { }
+
+  public SymbolicRegressionProblem(RegressionProblemData data,
+                                   ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
+                                   IComparer<ObjectiveVector> a,
+                                   SymbolicExpressionTreeEncoding encoding) : base(data, objective, a, encoding) { }
+
+  private static IComparer<ObjectiveVector>
+    GetDefaultComparer(ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) => objective.Count == 1
+    ? new SingleObjectiveComparer(objective.Single().Direction)
+    : new LexicographicComparer(objective.Select(x => x.Direction).ToArray());
 }

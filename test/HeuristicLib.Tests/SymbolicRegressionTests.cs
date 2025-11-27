@@ -7,10 +7,8 @@ using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Crossovers;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Mutators;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
-using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Operators.Terminator;
@@ -44,7 +42,7 @@ public class SymbolicRegressionTests {
 
   [Fact]
   public void Constant() {
-    var problem = CreateTestSymbolicRegressionProblem();
+    var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
     var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var startNode = tree.Root[0];
@@ -63,7 +61,7 @@ public class SymbolicRegressionTests {
 
   [Fact]
   public void Variable() {
-    var problem = CreateTestSymbolicRegressionProblem();
+    var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
     var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     tree.Root[0].AddSubtree(new Variable().CreateTreeNode("x", 1));
@@ -73,7 +71,7 @@ public class SymbolicRegressionTests {
 
   [Fact]
   public void Add() {
-    var problem = CreateTestSymbolicRegressionProblem();
+    var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
     var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var variableTreeNode = new Variable().CreateTreeNode("x", 1);
@@ -98,7 +96,8 @@ public class SymbolicRegressionTests {
     add.AddSubtree(variableTreeNode);
     add.AddSubtree(numberTreeNode);
     tree.Root[0].AddSubtree(add);
-    SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData, DataAnalysisProblemData.PartitionType.Training, 10);
+    SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData,
+      problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(), 10);
     var y = problem.Evaluate(tree)[0];
     Assert.Equal(0, y, 1.0e-15);
   }
@@ -110,8 +109,9 @@ public class SymbolicRegressionTests {
     //TODO these creators often create invalid trees (ignore tree length)
     //new FullTreeCreator()
     //new RampedHalfAndHalfTreeCreator() 
+    var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
     foreach (var c in creators) {
-      var tree = c.Create(new SystemRandomNumberGenerator(AlgorithmRandomSeed), problem.SearchSpace);
+      var tree = c.Create(r, problem.SearchSpace);
       Assert.True(problem.SearchSpace.Contains(tree));
       _ = problem.Evaluate(tree);
     }
@@ -140,22 +140,23 @@ public class SymbolicRegressionTests {
   public void GenealogyGraphOnGeneticAlgorithm() {
     var problem = CreateTestSymbolicRegressionProblem();
 
+    var gens = 100;
+    var popsize = 10;
     var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
-    ga.PopulationSize = 100;
+    ga.PopulationSize = popsize;
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
     ga.Elites = 1;
     ga.RandomSeed = AlgorithmRandomSeed;
-    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
-    var proto = ga;
+    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
 
-    var evalQualities = QualityCurveAnalysis.Create(proto);
-    var qualities = BestMedianWorstAnalysis.Create(proto);
-    var genealogy = GenealogyAnalysis.Create(proto);
-    var res = proto.Execute(problem);
+    var evalQualities = QualityCurveAnalysis.Create(ga);
+    var qualities = BestMedianWorstAnalysis.Create(ga);
+    var genealogy = GenealogyAnalysis.Create(ga);
+    var res = ga.Execute(problem);
 
-    Assert.Equal(30, qualities.BestISolutions.Count);
-    Assert.Equal(10, res.Population.Solutions.Count);
+    Assert.Equal(gens, qualities.BestISolutions.Count);
+    Assert.Equal(popsize, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
     Assert.Equal(qualities.BestISolutions[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
@@ -164,19 +165,12 @@ public class SymbolicRegressionTests {
   [Fact]
   public void GenealogyGraphOnLocalSearch() {
     var problem = CreateTestSymbolicRegressionProblem();
-    var symRegAllMutator = CreateSymRegAllMutator();
-
-    var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
-    ga.PopulationSize = 100;
-    ga.MutationRate = 0.05;
-    ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
-    ga.Elites = 1;
+    var ga = LocalSearch.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
     ga.RandomSeed = AlgorithmRandomSeed;
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
-    var proto = ga;
 
-    var genealogy = GenealogyAnalysis.Create(proto);
-    var res = proto.Execute(problem);
+    var genealogy = GenealogyAnalysis.Create(ga);
+    var res = ga.Execute(problem);
     Assert.Single(res.Population.Solutions);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
@@ -214,18 +208,18 @@ public class SymbolicRegressionTests {
     var i = 0;
     var file = @"TestData\\192_vineyard.tsv";
     PythonGenealogyAnalysis.RunSymbolicRegressionGeneticAlgorithm(file, _ => i++, AlgorithmRandomSeed, 10, iterations, true, 1);
-    Assert.Equal(iterations + 1, i);
+    Assert.Equal(iterations, i);
   }
 
   [Fact]
   public void TestPlayground2() {
     const int iterations = 4;
     var i = 0;
-    PythonCorrelationAnalysis.RunCorrelationNsga2((current, problem) => { i++; }, iterations, 100);
+    PythonCorrelationAnalysis.RunCorrelationNsga2((_, _) => { i++; }, iterations, 100);
     Assert.Equal(iterations, i);
   }
 
-  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false) {
+  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false, int constOptIteration = 5) {
     var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
 
     IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
@@ -249,7 +243,8 @@ public class SymbolicRegressionTests {
       SearchSpace = {
         TreeDepth = treeLength,
         TreeLength = treeLength
-      }
+      },
+      ParameterOptimizationIterations = constOptIteration
     };
 
     var linearScalingRoot = problem.SearchSpace.Grammar.AddLinearScaling();
