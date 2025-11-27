@@ -11,15 +11,16 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
   }
 
   public static SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding, double irregularityBias) {
-    var targetLength = random.Integer(3, encoding.TreeLength); // because we have 2 extra nodes for the root and start symbols, and the end is exclusive
-    return CreateExpressionTree(random, encoding, targetLength, irregularityBias);
+    return CreateExpressionTree(random, encoding, irregularityBias);
   }
 
-  public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding, int targetLength, double irregularityBias = 1) {
+  public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding, double irregularityBias = 1) {
     // even lengths cannot be achieved without symbols of odd arity
     // therefore we randomly pick a neighbouring odd length value
     var tree = encoding.Grammar.MakeStump(random); // create a stump consisting of just a ProgramRootSymbol and a StartSymbol
-    CreateExpression(random, tree.Root[0], encoding, targetLength - tree.Length, encoding.TreeDepth - 2, irregularityBias); // -2 because the stump has length 2 and depth 2
+
+    var targetLength = random.Integer(encoding.Grammar.GetMinimumExpressionLength(tree.Root[0].Symbol), encoding.TreeLength);
+    CreateExpression(random, tree.Root[0], encoding, targetLength - tree.Length, encoding.TreeDepth - tree.Depth, irregularityBias); // -2 because the stump has length 2 and depth 2
     return tree;
   }
 
@@ -37,7 +38,9 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
       weights.Add(s.InitialFrequency);
     }
 
-    var symbol = candidates.SampleProportional(random, 1, weights).First();
+    if (candidates.Count == 0) { }
+
+    var symbol = candidates.Count == 1 ? candidates[0] : candidates.SampleProportional(random, 1, weights).First();
     var node = symbol.CreateTreeNode();
     if (node.HasLocalParameters)
       node.ResetLocalParameters(random);

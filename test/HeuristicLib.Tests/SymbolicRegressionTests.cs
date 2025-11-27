@@ -104,15 +104,21 @@ public class SymbolicRegressionTests {
 
   [Fact]
   public void Creators() {
-    var problem = CreateTestSymbolicRegressionProblem();
-    var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new GrowTreeCreator(), new ProbabilisticTreeCreator(), };
-    //TODO these creators often create invalid trees (ignore tree length)
-    //new FullTreeCreator()
-    //new RampedHalfAndHalfTreeCreator() 
+    var problem = CreateTestSymbolicRegressionProblem(treeLength: 12);
+    var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator(), };
     var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
+
     foreach (var c in creators) {
       var tree = c.Create(r, problem.SearchSpace);
       Assert.True(problem.SearchSpace.Contains(tree));
+      _ = problem.Evaluate(tree);
+    }
+
+    //these creators often create invalid trees (ignore tree length)
+    var invalidCreators = new SymbolicExpressionTreeCreator[] { new FullTreeCreator(), new RampedHalfAndHalfTreeCreator(), new GrowTreeCreator() };
+    foreach (var c in invalidCreators) {
+      var tree = c.Create(r, problem.SearchSpace);
+      Assert.True(problem.SearchSpace.TreeDepth >= tree.Depth);
       _ = problem.Evaluate(tree);
     }
   }

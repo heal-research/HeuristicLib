@@ -1,4 +1,8 @@
-﻿using HEAL.HeuristicLib.Random;
+﻿using System.Collections.Generic;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Creators;
 
@@ -19,7 +23,7 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
 
   public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
     var tree = encoding.Grammar.MakeStump(random);
-    Create(random, tree.Root[0], encoding, encoding.TreeDepth - 1);
+    Create(random, tree.Root[0], encoding, encoding.TreeDepth - tree.Depth);
     return tree;
   }
 
@@ -30,59 +34,39 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
 
     var arity = encoding.Grammar.GetMaximumSubtreeCount(seedNode.Symbol);
     // Throw an exception if the seedNode happens to be a terminal, since in this case we cannot grow a tree.
-    if (arity <= 0)
-      throw new ArgumentException("Cannot grow tree. Seed node shouldn't have arity zero.");
+    if (arity <= 0) throw new ArgumentException("Cannot grow tree. Seed node shouldn't have arity zero.");
 
     var allowedSymbols = encoding.Grammar.AllowedSymbols
                                  .Where(s => s.InitialFrequency > 0.0 && encoding.Grammar.GetMaximumSubtreeCount(s) > 0)
                                  .ToList();
 
     for (var i = 0; i < arity; i++) {
-      var possibleSymbols = allowedSymbols
-                            .Where(s => encoding.Grammar.IsAllowedChildSymbol(seedNode.Symbol, s, i)
-                                        && encoding.Grammar.GetMinimumExpressionDepth(s) <= maxDepth
-                                        && encoding.Grammar.GetMaximumExpressionDepth(s) >= maxDepth)
-                            .ToList();
-      var weights = possibleSymbols.Select(s => s.InitialFrequency).ToList();
-
-      var selectedSymbol = possibleSymbols.SampleProportional(random, weights);
-
+      var selectedSymbol = SelectSymbol(random, seedNode, maxDepth, allowedSymbols, encoding.Grammar, i);
       var tree = selectedSymbol.CreateTreeNode();
       if (tree.HasLocalParameters)
         tree.ResetLocalParameters(random);
       seedNode.AddSubtree(tree);
     }
 
+    var allowedSymbols1 = encoding.Grammar.AllowedSymbols.Where(s => s.InitialFrequency > 0.0).ToList();
     // Only iterate over the non-terminal nodes (those which have arity > 0)
     // Start from depth 2 since the first two levels are formed by the rootNode and the seedNode
     foreach (var subTree in seedNode.Subtrees)
       if (encoding.Grammar.GetMaximumSubtreeCount(subTree.Symbol) > 0)
-        RecursiveCreate(random, subTree, encoding, 2, maxDepth);
+        RecursiveCreate(random, subTree, encoding, 2, maxDepth, allowedSymbols1);
   }
 
-  private static void RecursiveCreate(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeEncoding encoding, int currentDepth, int maxDepth) {
-    var arity = encoding.Grammar.GetMaximumSubtreeCount(root.Symbol);
+  private static void RecursiveCreate(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeEncoding encoding, int currentDepth, int maxDepth, List<Symbol> allowedSymbols) {
+    var grammar = encoding.Grammar;
+    var arity = grammar.GetMaximumSubtreeCount(root.Symbol);
     // In the 'Full' grow method, we cannot have terminals on the intermediate tree levels.
     if (arity <= 0)
       throw new ArgumentException("Cannot grow node of arity zero. Expected a function node.");
 
-    var allowedSymbols = encoding.Grammar.AllowedSymbols
-                                 .Where(s => s.InitialFrequency > 0.0)
-                                 .ToList();
-
     for (var i = 0; i < arity; i++) {
-      var possibleSymbols = allowedSymbols
-                            .Where(s => encoding.Grammar.IsAllowedChildSymbol(root.Symbol, s, i) &&
-                                        encoding.Grammar.GetMinimumExpressionDepth(s) - 1 <= maxDepth - currentDepth &&
-                                        encoding.Grammar.GetMaximumExpressionDepth(s) > maxDepth - currentDepth)
-                            .ToList();
-      if (possibleSymbols.Count == 0)
-        throw new InvalidOperationException("No symbols are available for the tree.");
-      var weights = possibleSymbols.Select(s => s.InitialFrequency).ToList();
-      var selectedSymbol = possibleSymbols.SampleProportional(random, weights);
+      var selectedSymbol = SelectSymbol(random, root, maxDepth - currentDepth, allowedSymbols, grammar, i);
       var tree = selectedSymbol.CreateTreeNode();
-      if (tree.HasLocalParameters)
-        tree.ResetLocalParameters(random);
+      tree.ResetLocalParameters(random);
       root.AddSubtree(tree);
     }
 
@@ -92,7 +76,24 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
     }
 
     foreach (var subTree in root.Subtrees)
-      if (encoding.Grammar.GetMaximumSubtreeCount(subTree.Symbol) > 0)
-        RecursiveCreate(random, subTree, encoding, currentDepth + 1, maxDepth);
+      if (grammar.GetMaximumSubtreeCount(subTree.Symbol) > 0)
+        RecursiveCreate(random, subTree, encoding, currentDepth + 1, maxDepth, allowedSymbols);
+  }
+
+  private static Symbol SelectSymbol(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, int remainingDepth, List<Symbol> allowedSymbols, ISymbolicExpressionGrammar grammar, int position) {
+    var suballowed = allowedSymbols.Where(s => grammar.IsAllowedChildSymbol(root.Symbol, s, position));
+    var possibleSymbols = suballowed.Where(s => grammar.GetMinimumExpressionDepth(s) - 1 <= remainingDepth);
+    //prefer symbols that can fill the remaining depth
+    var preferredSymbols = possibleSymbols.GroupBy(x => grammar.GetMaximumExpressionDepth(x) > remainingDepth ? 0 : 1).OrderBy(g => g.Key).First().ToList();
+    switch (preferredSymbols.Count) {
+      case 0:
+        throw new InvalidOperationException("No symbols are available for the tree.");
+      case 1:
+        return preferredSymbols[0];
+      default:
+        var weights = preferredSymbols.Select(s => s.InitialFrequency).ToList();
+        var selectedSymbol = preferredSymbols.SampleProportional(random, weights);
+        return selectedSymbol;
+    }
   }
 }
