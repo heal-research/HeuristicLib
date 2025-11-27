@@ -63,12 +63,13 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
     Objective objective,
     int count,
     IRandomNumberGenerator random) {
-    var fronts = DominationCalculator.CalculateAllParetoFronts(
-      population, objective, out var rank, dominateOnEqualities);
+    var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
 
     // Key by solution instead of ObjectiveVector
     var crowdingBySolution = new Dictionary<ISolution<TGenotype>, double>();
     var res = new ISolution<TGenotype>[count];
+
+    var calculatedFront = new HashSet<int>();
 
     for (int i = 0; i < count; i++) {
       var bestIdx = random.Integer(population.Count);
@@ -86,24 +87,22 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
         if (idxRank > bestRank) continue; // worse rank
 
         // equal rank -> compare crowding
+
         // ensure we have distances for this front
-        if (!crowdingBySolution.ContainsKey(population[bestIdx])) {
+        if (!calculatedFront.Contains(bestRank)) {
           var frontSolutions = fronts[bestRank];
           var frontObjectives = frontSolutions.Select(x => x.ObjectiveVector).ToArray();
           var distances = CrowdingDistance.CalculateCrowdingDistances(frontObjectives);
-
-          for (int k = 0; k < frontSolutions.Count; k++) {
+          for (int k = 0; k < frontSolutions.Count; k++)
             crowdingBySolution[frontSolutions[k]] = distances[k];
-          }
+          calculatedFront.Add(bestRank);
         }
 
-        var distBest = crowdingBySolution[population[bestIdx]];
-        var distIdx = crowdingBySolution[population[idx]];
+        if (crowdingBySolution[population[idx]] <= crowdingBySolution[population[bestIdx]])
+          continue;
 
-        if (distIdx > distBest) {
-          bestIdx = idx;
-          bestRank = idxRank;
-        }
+        bestIdx = idx;
+        bestRank = idxRank;
       }
 
       res[i] = population[bestIdx];
