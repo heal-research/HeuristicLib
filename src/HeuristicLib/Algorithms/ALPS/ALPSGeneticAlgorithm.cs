@@ -57,7 +57,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     int? randomSeed,
     ITerminator<TGenotype, AlpsIterationResult<TGenotype>, TEncoding, TProblem> terminator,
     IInterceptor<TGenotype, AlpsIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null
-  ) : base(terminator, randomSeed, interceptor) {
+  ) : base() {
     PopulationSize = populationSize;
     Creator = creator;
     Crossover = crossover;

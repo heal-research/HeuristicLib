@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Encodings.RealVector.Creators;
 using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
 using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
 using HEAL.HeuristicLib.Operators.Evaluator;
+using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Replacer;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Operators.Terminator;
@@ -39,18 +40,20 @@ public class GeneticAlgorithmTests {
     var replacement = new PlusSelectionReplacer<RealVector>();
     var terminator = new AfterIterationsTerminator<RealVector>(5);
 
-    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
-      //SearchSpace = searchSpace,
-      populationSize: 200,
-      creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05,
-      //Decoder = decoder,
-      evaluator: new DummyEvaluator<RealVector, RealVectorEncoding, IProblem<RealVector, RealVectorEncoding>>(),
-      //Objective = SingleObjective.Minimize,
-      selector: selector, elites: 1, //replacer: replacement,
-      randomSeed: 42,
-      terminator: terminator
-      //RandomSource = randomSource, Terminator = terminator
-    );
+    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>() {
+      PopulationSize = 200,
+      Creator = creator,
+      Crossover = crossover,
+      Mutator = mutator.WithRate(0.05),
+      Evaluator = new DummyEvaluator<RealVector, RealVectorEncoding, IProblem<RealVector, RealVectorEncoding>>(),
+      Selector = selector,
+      Replacer = replacement,
+      AlgorithmRandom = SystemRandomNumberGenerator.Default(42),
+      Terminator = terminator
+    };
+    //SearchSpace = searchSpace,
+
+    //RandomSource = randomSource, Terminator = terminator
 
     //return Verify(ga);
   }

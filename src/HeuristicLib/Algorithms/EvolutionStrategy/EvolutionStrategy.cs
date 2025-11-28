@@ -30,29 +30,18 @@ public static class EvolutionStrategy {
     };
 }
 
-public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
-  int populationSize,
-  EvolutionStrategyType strategy,
-  ICreator<TGenotype, TEncoding, TProblem> creator,
-  IMutator<TGenotype, TEncoding, TProblem> mutator,
-  double initialMutationStrength,
-  ISelector<TGenotype, TEncoding, TProblem> selector,
-  IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
-  int? randomSeed,
-  ITerminator<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-  ICrossover<TGenotype, TEncoding, TProblem>? crossover = null,
-  IInterceptor<TGenotype, EvolutionStrategyIterationResult<TGenotype>, TEncoding, TProblem>? interceptor = null)
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
+public class EvolutionStrategy<TGenotype, TEncoding, TProblem>
+  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public int PopulationSize { get; } = populationSize;
-  public EvolutionStrategyType Strategy { get; } = strategy;
-  public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
-  public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator;
-  public ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; } = crossover;
-  public double InitialMutationStrength { get; } = initialMutationStrength;
-  public ISelector<TGenotype, TEncoding, TProblem> Selector { get; } = selector;
-  public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; } = evaluator;
+  public required int PopulationSize { get; init; }
+  public required EvolutionStrategyType Strategy { get; init; }
+  public required ICreator<TGenotype, TEncoding, TProblem> Creator { get; init; }
+  public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
+  public required ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; init; }
+  public double InitialMutationStrength { get; init; } = 1.0;
+  public required ISelector<TGenotype, TEncoding, TProblem> Selector { get; init; }
+  public required IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; init; }
 
   public override EvolutionStrategyIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, EvolutionStrategyIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
@@ -111,6 +100,20 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>(
     public required double InitialMutationStrength { get; set; }
     public ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; set; }
 
-    public override EvolutionStrategy<TGenotype, TEncoding, TProblem> BuildAlgorithm() => new(PopulationSize, Strategy, Creator, Mutator, InitialMutationStrength, Selector, Evaluator, RandomSeed, Terminator, Crossover, Interceptor);
+    public override EvolutionStrategy<TGenotype, TEncoding, TProblem> BuildAlgorithm() {
+      return new EvolutionStrategy<TGenotype, TEncoding, TProblem> {
+        PopulationSize = 0,
+        Strategy = Strategy,
+        Creator = Creator,
+        Mutator = Mutator,
+        Crossover = Crossover,
+        Selector = Selector,
+        Evaluator = Evaluator,
+        AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
+        Terminator = Terminator,
+        InitialMutationStrength = InitialMutationStrength,
+        Interceptor = Interceptor
+      };
+    }
   }
 }

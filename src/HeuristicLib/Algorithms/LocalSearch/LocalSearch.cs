@@ -11,26 +11,17 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
-public class LocalSearch<TGenotype, TEncoding, TProblem>(
-  ITerminator<TGenotype, SingleISolutionIterationResult<TGenotype>, TEncoding, TProblem> terminator,
-  IInterceptor<TGenotype, SingleISolutionIterationResult<TGenotype>, TEncoding, TProblem>? interceptor,
-  ICreator<TGenotype, TEncoding, TProblem> creator,
-  IMutator<TGenotype, TEncoding, TProblem> mutator,
-  IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
-  int? randomSeed,
-  int maxNeighbors,
-  int batchSize,
-  LocalSearchDirection direction)
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleISolutionIterationResult<TGenotype>>(terminator, randomSeed, interceptor)
+public class LocalSearch<TGenotype, TEncoding, TProblem>
+  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleISolutionIterationResult<TGenotype>>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
   where TGenotype : class {
-  public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
-  public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator;
-  public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; } = evaluator;
-  public LocalSearchDirection Direction { get; } = direction;
-  public int MaxNeighbors { get; } = maxNeighbors;
-  public int BatchSize { get; } = batchSize;
+  public required ICreator<TGenotype, TEncoding, TProblem> Creator { get; init; }
+  public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
+  public required IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; init; }
+  public required LocalSearchDirection Direction { get; init; }
+  public required int MaxNeighbors { get; init; }
+  public required int BatchSize { get; init; }
 
   public override SingleISolutionIterationResult<TGenotype> ExecuteStep(
     TProblem problem,
@@ -67,7 +58,17 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>(
     public LocalSearchDirection Direction { get; set; } = LocalSearchDirection.FirstImprovement;
 
     public LocalSearch<TGenotype, TEncoding, TProblem> Create() =>
-      new(Terminator, Interceptor, Creator, Mutator, Evaluator, RandomSeed, MaxNeighbors, BatchSize, Direction);
+      new() {
+        Terminator = Terminator,
+        Interceptor = Interceptor,
+        Creator = Creator,
+        Mutator = Mutator,
+        Evaluator = Evaluator,
+        AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
+        MaxNeighbors = MaxNeighbors,
+        BatchSize = BatchSize,
+        Direction = Direction
+      };
 
     public override LocalSearch<TGenotype, TEncoding, TProblem> BuildAlgorithm() => Create();
   }

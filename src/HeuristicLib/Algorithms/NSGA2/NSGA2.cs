@@ -13,28 +13,17 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms.NSGA2;
 
-public class Nsga2<TGenotype, TEncoding, TProblem>(
-  ITerminator<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem> terminator,
-  IInterceptor<TGenotype, Nsga2IterationResult<TGenotype>, TEncoding, TProblem>? interceptor,
-  int populationSize,
-  ICreator<TGenotype, TEncoding, TProblem> creator,
-  ICrossover<TGenotype, TEncoding, TProblem> crossover,
-  IMutator<TGenotype, TEncoding, TProblem> mutator,
-  double mutationRate,
-  ISelector<TGenotype, TEncoding, TProblem> selector,
-  IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
-  int? randomSeed,
-  bool dominateOnEquals) :
-  IterativeAlgorithm<TGenotype, TEncoding, TProblem, Nsga2IterationResult<TGenotype>>(terminator, randomSeed, interceptor)
+public class Nsga2<TGenotype, TEncoding, TProblem> :
+  IterativeAlgorithm<TGenotype, TEncoding, TProblem, Nsga2IterationResult<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TEncoding>
   where TEncoding : class, IEncoding<TGenotype> {
-  public int PopulationSize { get; } = populationSize;
-  public ICreator<TGenotype, TEncoding, TProblem> Creator { get; } = creator;
-  public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; } = crossover;
-  public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; } = mutator.WithRate(mutationRate);
-  public ISelector<TGenotype, TEncoding, TProblem> Selector { get; } = selector;
-  public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; } = evaluator;
-  public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; } = new ParetoCrowdingReplacer<TGenotype>(dominateOnEquals);
+  public required int PopulationSize { get; init; }
+  public required ICreator<TGenotype, TEncoding, TProblem> Creator { get; init; }
+  public required ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; init; }
+  public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
+  public required ISelector<TGenotype, TEncoding, TProblem> Selector { get; init; }
+  public required IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; init; }
+  public required IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; init; }
 
   public override Nsga2IterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, Nsga2IterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
@@ -60,9 +49,18 @@ public class Nsga2<TGenotype, TEncoding, TProblem>(
     public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
     public required ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
 
-    public override Nsga2<TGenotype, TEncoding, TProblem> BuildAlgorithm() => new(Terminator, Interceptor, PopulationSize, Creator,
-      Crossover, Mutator, MutationRate, Selector, Evaluator,
-      RandomSeed, DominateOnEquals);
+    public override Nsga2<TGenotype, TEncoding, TProblem> BuildAlgorithm() => new() {
+      Terminator = Terminator,
+      Interceptor = Interceptor,
+      PopulationSize = PopulationSize,
+      Creator = Creator,
+      Crossover = Crossover,
+      Mutator = Mutator.WithRate(MutationRate),
+      Selector = Selector,
+      Evaluator = Evaluator,
+      AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
+      Replacer = new ParetoCrowdingReplacer<TGenotype>(DominateOnEquals)
+    };
   }
 }
 

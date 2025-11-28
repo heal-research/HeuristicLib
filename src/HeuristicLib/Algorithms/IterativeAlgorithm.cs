@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>(ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> terminator, int? randomSeed, IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? interceptor)
+public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>
   : Algorithm<TGenotype, TEncoding, TProblem, TIterationResult>,
     IIterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>
   where TEncoding : class, IEncoding<TGenotype>
@@ -14,31 +14,21 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterat
   where TIterationResult : IIterationResult {
   public int CurrentIteration { get; protected set; }
 
-  protected readonly IRandomNumberGenerator AlgorithmRandom = SystemRandomNumberGenerator.Default(randomSeed);
-
-  public ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> Terminator { get; } = terminator;
-  public IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; } = interceptor;
+  public required IRandomNumberGenerator AlgorithmRandom { get; init; }
+  public required ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> Terminator { get; init; }
+  public IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; init; }
 
   public abstract TIterationResult ExecuteStep(TProblem problem, TEncoding searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
 
-  public override TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) {
-    return Execute(problem, searchSpace, previousIterationResult: default, random);
-  }
+  public override TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => Execute(problem, searchSpace, previousIterationResult: default, random);
 
   public virtual TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
-    TIterationResult? lastResult = ExecuteStreaming(problem, searchSpace, previousIterationResult, random).LastOrDefault();
-
-    if (lastResult is null) {
-      throw new InvalidOperationException("The algorithm did not produce any iteration result.");
-    }
-
-    return lastResult;
+    return ExecuteStreaming(problem, searchSpace, previousIterationResult, random).LastOrDefault() ?? throw new InvalidOperationException("The algorithm did not produce any iteration result.");
   }
 
   public IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
     CheckSearchSpaceCompatible(problem, searchSpace);
-    bool shouldContinue = previousIterationResult is null ||
-                          Terminator.ShouldContinue(previousIterationResult, previousIterationState: default, searchSpace ?? problem.SearchSpace, problem);
+    bool shouldContinue = previousIterationResult is null || Terminator.ShouldContinue(previousIterationResult, previousIterationState: default, searchSpace ?? problem.SearchSpace, problem);
 
     while (shouldContinue) {
       var newIterationResult = ExecuteStep(problem, searchSpace ?? problem.SearchSpace, previousIterationResult, random ?? AlgorithmRandom);
