@@ -27,7 +27,7 @@ public class SlidingWindowSymbolicRegressionProblem : DynamicProblem<SymbolicExp
   public override SymbolicExpressionTreeEncoding SearchSpace => innerProblem.SearchSpace;
   public override Objective Objective => innerProblem.Objective;
 
-  public override ObjectiveVector EvaluateInner(SymbolicExpressionTree solution, IRandomNumberGenerator random) {
+  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) {
     var dataPartition = innerProblem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
     var targets = innerProblem.ProblemData.Dataset.GetDoubleValues(innerProblem.ProblemData.TargetVariable, RoundRobinRange(dataPartition)).ToArray();
     return innerProblem.Evaluate(solution, RoundRobinRange(dataPartition), targets);

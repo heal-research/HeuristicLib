@@ -28,7 +28,7 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
   public override PermutationEncoding SearchSpace { get; }
   public override Objective Objective { get; }
 
-  public override ObjectiveVector EvaluateInner(Permutation solution, IRandomNumberGenerator random) {
+  public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing) {
     return solution
            .Where(x => CurrentState[x])
            .PairwiseRoundRobin(ProblemData.GetDistance)

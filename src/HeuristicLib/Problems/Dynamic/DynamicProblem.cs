@@ -1,23 +1,55 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿using System.Collections.Concurrent;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
+public class EvaluationClock : IEpochClock {
+  private readonly Lock epochLocker = new();
+
+  public int PendingEpochs { get; private set; }
+  public int EpochCount { get; private set; }
+  public required int EpochLength { get; init; }
+  public int CurrentEpoch => EpochCount / EpochLength;
+
+  //returns whether no unresolved epoch changes are pending
+  public EvaluationTiming IncreaseCount() {
+    lock (epochLocker) {
+      EpochCount++;
+      var valid = PendingEpochs == 0;
+      if (EpochCount % EpochLength == 0)
+        PendingEpochs++;
+      return new EvaluationTiming(EpochCount, CurrentEpoch, valid);
+    }
+  }
+
+  public void ResolvePendingEpochs(Action update) {
+    lock (epochLocker) {
+      var changed = PendingEpochs > 0;
+      while (PendingEpochs > 0) {
+        update();
+        PendingEpochs--;
+      }
+
+      if (changed)
+        OnEpochChange?.Invoke(this, CurrentEpoch);
+    }
+  }
+
+  public event EventHandler<int>? OnEpochChange;
+}
+
 public abstract class DynamicProblem<TGenotype, TEncoding> : SimpleAnalysis<TGenotype>,
                                                              IDynamicProblem<TGenotype, TEncoding>,
                                                              IDisposable
   where TEncoding : class, IEncoding<TGenotype>
   where TGenotype : class {
-  private readonly Lock epochLocker = new();
   private readonly ReaderWriterLockSlim rwLock = new();
 
-  private int pendingEpochs;
-  public int EpochCount { get; private set; }
-  public int EpochLength { get; }
-  public int CurrentEpoch => EpochCount / EpochLength;
   public readonly UpdatePolicy UpdatePolicy;
+  public EvaluationClock EpochClock { get; }
 
   public abstract TEncoding SearchSpace { get; }
   public abstract Objective Objective { get; }
@@ -25,26 +57,24 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : SimpleAnalysis<TGen
   protected DynamicProblem(UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) {
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochLength);
     UpdatePolicy = updatePolicy;
-    EpochLength = epochLength;
+    EpochClock = new EvaluationClock { EpochLength = epochLength };
   }
+
+  private readonly ConcurrentBag<(TGenotype solution, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
 
   //this method will be called in parallel
   public ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random) {
     //Evaluate in parallel read lock
+    var timing = EpochClock.IncreaseCount();
+
     rwLock.EnterReadLock();
     ObjectiveVector r;
     try {
-      r = EvaluateInner(solution, random);
+      r = Evaluate(solution, random, timing);
     }
     finally { rwLock.ExitReadLock(); }
 
-    //Update epoch count
-    lock (epochLocker) {
-      EpochCount++;
-      if (EpochCount % EpochLength == 0) {
-        pendingEpochs++;
-      }
-    }
+    evaluationLog.Add((solution, r, timing));
 
     if (UpdatePolicy == UpdatePolicy.Asynchronous)
       ResolvePendingUpdates();
@@ -52,12 +82,14 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : SimpleAnalysis<TGen
     return r;
   }
 
-  public abstract ObjectiveVector EvaluateInner(TGenotype solution, IRandomNumberGenerator random);
+  public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing);
 
-  protected abstract void Update();
+  public event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
 
   public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values,
                                        IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+    OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
+    evaluationLog.Clear();
     if (UpdatePolicy == UpdatePolicy.AfterEvaluation)
       ResolvePendingUpdates();
   }
@@ -80,18 +112,14 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : SimpleAnalysis<TGen
     rwLock.Dispose();
   }
 
+  protected abstract void Update();
+
   private void ResolvePendingUpdates() {
-    if (pendingEpochs == 0)
+    if (EpochClock.PendingEpochs == 0)
       return; //pre-check
     rwLock.EnterWriteLock();
-
     try {
-      lock (epochLocker) {
-        while (pendingEpochs > 0) {
-          Update();
-          pendingEpochs--;
-        }
-      }
+      EpochClock.ResolvePendingEpochs(Update);
     }
     finally { rwLock.ExitWriteLock(); }
   }
