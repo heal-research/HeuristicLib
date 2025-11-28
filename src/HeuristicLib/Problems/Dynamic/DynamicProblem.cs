@@ -39,6 +39,13 @@ public class EvaluationClock : IEpochClock {
   }
 
   public event EventHandler<int>? OnEpochChange;
+
+  public void AdvanceEpoch() {
+    lock (epochLocker) {
+      EpochCount = (CurrentEpoch + 1) * EpochLength;
+      PendingEpochs++;
+    }
+  }
 }
 
 public abstract class DynamicProblem<TGenotype, TEncoding> : SimpleAnalysis<TGenotype>,
