@@ -1,8 +1,8 @@
-﻿using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.Dynamic;
+﻿using HEAL.HeuristicLib.Operators.Evaluator;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators.Evaluator;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public class DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
   : CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
