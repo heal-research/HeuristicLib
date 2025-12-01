@@ -1,12 +1,10 @@
 ﻿using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
-using HEAL.HeuristicLib.Operators.Interceptor;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Replacer;
 using HEAL.HeuristicLib.Operators.Selector;
-using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -65,7 +63,7 @@ public class Nsga2<TGenotype, TEncoding, TProblem> :
 }
 
 public static class Nsga2 {
-  public static Nsga2<TGenotype, TEncoding, TProblem>.Builder CreatePrototype<TGenotype, TEncoding, TProblem>(
+  public static Nsga2<TGenotype, TEncoding, TProblem>.Builder CreateBuilder<TGenotype, TEncoding, TProblem>(
     ICreator<TGenotype, TEncoding, TProblem> creator,
     ICrossover<TGenotype, TEncoding, TProblem> crossover,
     IMutator<TGenotype, TEncoding, TProblem> mutator, bool dominateOnEquals = true)

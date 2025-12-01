@@ -2,12 +2,10 @@
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
-using HEAL.HeuristicLib.Operators.Interceptor;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Replacer;
 using HEAL.HeuristicLib.Operators.Selector;
-using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -19,7 +17,7 @@ public record EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> 
 }
 
 public static class EvolutionStrategy {
-  public static EvolutionStrategy<TGenotype, TEncoding, TProblem>.Builder CreatePrototype<TGenotype, TEncoding, TProblem>(
+  public static EvolutionStrategy<TGenotype, TEncoding, TProblem>.Builder CreateBuilder<TGenotype, TEncoding, TProblem>(
     ICreator<TGenotype, TEncoding, TProblem> creator,
     IMutator<TGenotype, TEncoding, TProblem> mutator)
     where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding>
