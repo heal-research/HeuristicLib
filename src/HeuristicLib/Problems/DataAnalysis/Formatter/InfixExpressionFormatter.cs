@@ -28,7 +28,7 @@ public static class BaseInfixExpressionFormatter {
     // recurse post-order
     foreach (var subtree in n.Subtrees.ToArray()) ConvertToBinaryLeftAssocRec(n, subtree); // ToArray required as n.Subtrees is changed in method
 
-    if (n is VariableTreeNode varTreeNode && varTreeNode.Weight != 1.0) {
+    if (n is VariableTreeNode varTreeNode && !varTreeNode.Weight.IsAlmost(1.0)) {
       var mul = new Multiplication().CreateTreeNode();
       var num = (NumberTreeNode)new Number().CreateTreeNode();
       num.Value = varTreeNode.Weight;
@@ -38,55 +38,62 @@ public static class BaseInfixExpressionFormatter {
       mul.AddSubtree(varTreeNode);
     } else if (n.Symbol is SubFunctionSymbol) {
       parent.ReplaceSubtree(n, n.GetSubtree(0));
-    } else if (n.SubtreeCount == 1 && (n.Symbol is Addition || n.Symbol is Multiplication || n.Symbol is And || n.Symbol is Or || n.Symbol is Xor)) {
-      // single-argument addition or multiplication has no effect -> remove
-      parent.ReplaceSubtree(n, n.GetSubtree(0));
-    } else if (n.SubtreeCount == 1 && (n.Symbol is Division)) {
-      // single-argument division is 1/f(x)
-      n.InsertSubtree(0, new Constant() { Value = 1.0 }.CreateTreeNode());
-    } else if (n.SubtreeCount > 2 && IsLeftAssocOp(n.Symbol)) {
-      // multi-argument +, -, *, / are the same as multiple binary operations (left-associative)
-      var sy = n.Symbol;
+    } else
+      switch (n.SubtreeCount) {
+        case 1 when n.Symbol is Addition or Multiplication or And or Or or Xor:
+          // single-argument addition or multiplication has no effect -> remove
+          parent.ReplaceSubtree(n, n.GetSubtree(0));
+          break;
+        case 1 when (n.Symbol is Division):
+          // single-argument division is 1/f(x)
+          n.InsertSubtree(0, new Constant() { Value = 1.0 }.CreateTreeNode());
+          break;
+        case > 2 when IsLeftAssocOp(n.Symbol): {
+          // multi-argument +, -, *, / are the same as multiple binary operations (left-associative)
+          var sy = n.Symbol;
 
-      var additionalTrees = n.Subtrees.Skip(2).ToArray();
-      while (n.SubtreeCount > 2) n.RemoveSubtree(2); // keep only the first two arguments
+          var additionalTrees = n.Subtrees.Skip(2).ToArray();
+          while (n.SubtreeCount > 2) n.RemoveSubtree(2); // keep only the first two arguments
 
-      var childIdx = parent.IndexOfSubtree(n);
-      parent.RemoveSubtree(childIdx);
-      var newChild = n;
-      // build a tree bottom to top, each time adding a subtree on the right
-      for (int i = 0; i < additionalTrees.Length; i++) {
-        var newOp = sy.CreateTreeNode();
-        newOp.AddSubtree(newChild);
-        newOp.AddSubtree(additionalTrees[i]);
-        newChild = newOp;
+          var childIdx = parent.IndexOfSubtree(n);
+          parent.RemoveSubtree(childIdx);
+          var newChild = n;
+          // build a tree bottom to top, each time adding a subtree on the right
+          for (int i = 0; i < additionalTrees.Length; i++) {
+            var newOp = sy.CreateTreeNode();
+            newOp.AddSubtree(newChild);
+            newOp.AddSubtree(additionalTrees[i]);
+            newChild = newOp;
+          }
+
+          parent.InsertSubtree(childIdx, newChild);
+          break;
+        }
+        case 2 when n.GetSubtree(1).SubtreeCount == 2 &&
+                    IsAssocOp(n.Symbol) && IsOperator(n.GetSubtree(1).Symbol) &&
+                    Priority(n.Symbol) == Priority(n.GetSubtree(1).Symbol): {
+          // f(x) <op> (g(x) <op> h(x))) is the same as  (f(x) <op> g(x)) <op> h(x) for associative <op>
+          // which is the same as f(x) <op> g(x) <op> h(x) for left-associative <op>
+          // The latter version is preferred because we do not need to write the parentheses.
+          // rotation:
+          //     (op1)              (op2)
+          //     /   \              /  \
+          //    a    (op2)       (op1)  c 
+          //         /  \        /  \
+          //        b    c      a    b      
+          var op2 = n.GetSubtree(1);
+          var b = op2.GetSubtree(0);
+          op2.RemoveSubtree(0);
+          n.ReplaceSubtree(op2, b);
+          parent.ReplaceSubtree(n, op2);
+          op2.InsertSubtree(0, n);
+          break;
+        }
       }
-
-      parent.InsertSubtree(childIdx, newChild);
-    } else if (n.SubtreeCount == 2 && n.GetSubtree(1).SubtreeCount == 2 &&
-               IsAssocOp(n.Symbol) && IsOperator(n.GetSubtree(1).Symbol) &&
-               Priority(n.Symbol) == Priority(n.GetSubtree(1).Symbol)) {
-      // f(x) <op> (g(x) <op> h(x))) is the same as  (f(x) <op> g(x)) <op> h(x) for associative <op>
-      // which is the same as f(x) <op> g(x) <op> h(x) for left-associative <op>
-      // The latter version is preferred because we do not need to write the parentheses.
-      // rotation:
-      //     (op1)              (op2)
-      //     /   \              /  \
-      //    a    (op2)       (op1)  c 
-      //         /  \        /  \
-      //        b    c      a    b      
-      var op1 = n;
-      var op2 = n.GetSubtree(1);
-      var b = op2.GetSubtree(0);
-      op2.RemoveSubtree(0);
-      op1.ReplaceSubtree(op2, b);
-      parent.ReplaceSubtree(op1, op2);
-      op2.InsertSubtree(0, op1);
-    }
   }
 
   public static void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder,
-                                       NumberFormatInfo numberFormat, string formatString, List<KeyValuePair<string, double>> parameters = null) {
+                                       NumberFormatInfo numberFormat, string formatString, List<KeyValuePair<string, double>>? parameters = null) {
     switch (node.SubtreeCount) {
       // This method assumes that the tree has been converted to binary and left-assoc form (see ConvertToBinaryLeftAssocRec). 
       // no subtrees
@@ -204,17 +211,19 @@ public static class BaseInfixExpressionFormatter {
   }
 
   private static int Priority(Symbol symbol) {
-    if (symbol is Addition || symbol is Subtraction || symbol is Or || symbol is Xor) return 1;
-    if (symbol is Division || symbol is Multiplication || symbol is And) return 2;
-    if (symbol is Power || symbol is Not) return 3;
-    throw new NotSupportedException();
+    return symbol switch {
+      Addition or Subtraction or Or or Xor => 1,
+      Division or Multiplication or And => 2,
+      Power or Not => 3,
+      _ => throw new NotSupportedException()
+    };
   }
 
-  private static bool RequiresParenthesis(SymbolicExpressionTreeNode parent, SymbolicExpressionTreeNode child) {
+  private static bool RequiresParenthesis(SymbolicExpressionTreeNode? parent, SymbolicExpressionTreeNode child) {
     if (child.SubtreeCount > 2 && IsOperator(child.Symbol)) throw new NotSupportedException("Infix formatter does not support operators with more than two children.");
 
     // Basically: We need a parenthesis for child if the parent symbol binds stronger than child symbol.
-    if (parent.Symbol is null or ProgramRootSymbol or StartSymbol) return false;
+    if (parent?.Symbol is null or ProgramRootSymbol or StartSymbol) return false;
     if (IsFunction(parent.Symbol)) return false;
     if (parent is { SubtreeCount: 1, Symbol: Subtraction }) return true;
     if (child.SubtreeCount == 0) return false;
@@ -259,7 +268,7 @@ public static class BaseInfixExpressionFormatter {
            symbol is Power; // x^y^z = x^(y^z) (as in Fortran or Mathematica)
   }
 
-  private static void AppendNumber(StringBuilder strBuilder, List<KeyValuePair<string, double>> parameters, double value, string formatString, NumberFormatInfo numberFormat) {
+  private static void AppendNumber(StringBuilder strBuilder, List<KeyValuePair<string, double>>? parameters, double value, string formatString, NumberFormatInfo numberFormat) {
     if (parameters != null) {
       string paramKey = $"c_{parameters.Count}";
       strBuilder.Append(CultureInfo.InvariantCulture, $"{paramKey}");

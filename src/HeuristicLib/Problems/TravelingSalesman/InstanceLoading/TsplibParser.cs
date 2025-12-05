@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using static System.String;
 
@@ -45,27 +46,29 @@ public class TsplibParser {
     EdgeWeightSection = 19
   }
 
+  [SuppressMessage("ReSharper", "IdentifierTypo")]
+  [SuppressMessage("ReSharper", "InconsistentNaming")]
   private enum TSPLIBEdgeWeightFormats {
     Unknown = 0,
     Function = 1,
-    FullMatrix = 2,
-    UpperRow = 3,
-    LowerRow = 4,
-    UpperDiagonalRow = 5,
-    LowerDiagonalRow = 6,
-    UpperColumn = 7,
+    FULL_MATRIX = 2,
+    UPPER_ROW = 3,
+    LOWER_ROW = 4,
+    UPPER_DIAG_ROW = 5,
+    LOWER_DIAG_ROW = 6,
+    UPPER_COLUMN = 7,
     //LowerColumn = 8,
-    UpperDiagonalColumn = 9,
-    LowerDiagonalColumn = 10
+    Upper_Diag_Column = 9,
+    Lower_Diag_Column = 10
   }
 
   private enum TSPLIBEdgeWeightDataFormats { }
 
   private enum TslplibNodeCoordTypes {
     Unknown = 0,
-    TwodCoords = 1,
-    ThreedCoords = 2,
-    NoCoords = 3
+    Twod_Coords = 1,
+    Threed_Coords = 2,
+    NO_COORDS = 3
   }
   #endregion
 
@@ -225,7 +228,7 @@ public class TsplibParser {
   }
 
   private void ReadEdgeWeightType(string value) {
-    if (Enum.TryParse(value.Trim().Replace("_", ""), true, out TSPLIBEdgeWeightTypes e))
+    if (Enum.TryParse(value.Trim(), true, out TSPLIBEdgeWeightTypes e))
       EdgeWeightType = e;
     else throw new InvalidDataException("Input file contains an unsupported edge weight type (" + value + ") in line " + currentLineNumber + ".");
   }
@@ -257,13 +260,13 @@ public class TsplibParser {
     if (Dimension == 0)
       throw new InvalidDataException("Input file does not contain dimension information.");
     switch (nodeCoordType) {
-      case TslplibNodeCoordTypes.NoCoords:
+      case TslplibNodeCoordTypes.NO_COORDS:
         return;
       case TslplibNodeCoordTypes.Unknown: // It's a pity that there is a documented standard which is ignored in most files.
-      case TslplibNodeCoordTypes.TwodCoords:
+      case TslplibNodeCoordTypes.Twod_Coords:
         Vertices = new double[Dimension, 2];
         break;
-      case TslplibNodeCoordTypes.ThreedCoords:
+      case TslplibNodeCoordTypes.Threed_Coords:
         Vertices = new double[Dimension, 3];
         break;
       default:
@@ -348,10 +351,10 @@ public class TsplibParser {
       throw new InvalidDataException("Input file does not contain dimension information.");
 
     switch (displayDataType) {
-      case TSPLIBDisplayDataTypes.NoDisplay:
-      case TSPLIBDisplayDataTypes.CoordinatesDisplay:
+      case TSPLIBDisplayDataTypes.NO_DISPLAY:
+      case TSPLIBDisplayDataTypes.COORD_DISPLAY:
         return;
-      case TSPLIBDisplayDataTypes.TwoDimensionalDisplay:
+      case TSPLIBDisplayDataTypes.TWOD_DISPLAY:
         DisplayVertices = new double[Dimension, 2];
         break;
       case TSPLIBDisplayDataTypes.Unknown:
@@ -432,10 +435,10 @@ public class TsplibParser {
 
     Distances = new double[Dimension, Dimension];
 
-    var triangular = edgeWeightFormat != TSPLIBEdgeWeightFormats.FullMatrix;
-    var upperTriangular = edgeWeightFormat is TSPLIBEdgeWeightFormats.UpperColumn or TSPLIBEdgeWeightFormats.UpperDiagonalColumn or TSPLIBEdgeWeightFormats.UpperDiagonalRow or TSPLIBEdgeWeightFormats.UpperRow;
-    var diagonal = edgeWeightFormat is TSPLIBEdgeWeightFormats.LowerDiagonalColumn or TSPLIBEdgeWeightFormats.LowerDiagonalRow or TSPLIBEdgeWeightFormats.UpperDiagonalColumn or TSPLIBEdgeWeightFormats.UpperDiagonalRow;
-    var rowWise = edgeWeightFormat is TSPLIBEdgeWeightFormats.LowerDiagonalRow or TSPLIBEdgeWeightFormats.LowerRow or TSPLIBEdgeWeightFormats.UpperDiagonalRow or TSPLIBEdgeWeightFormats.UpperRow;
+    var triangular = edgeWeightFormat != TSPLIBEdgeWeightFormats.FULL_MATRIX;
+    var upperTriangular = edgeWeightFormat is TSPLIBEdgeWeightFormats.UPPER_COLUMN or TSPLIBEdgeWeightFormats.Upper_Diag_Column or TSPLIBEdgeWeightFormats.UPPER_DIAG_ROW or TSPLIBEdgeWeightFormats.UPPER_ROW;
+    var diagonal = edgeWeightFormat is TSPLIBEdgeWeightFormats.Lower_Diag_Column or TSPLIBEdgeWeightFormats.LOWER_DIAG_ROW or TSPLIBEdgeWeightFormats.Upper_Diag_Column or TSPLIBEdgeWeightFormats.UPPER_DIAG_ROW;
+    var rowWise = edgeWeightFormat is TSPLIBEdgeWeightFormats.LOWER_DIAG_ROW or TSPLIBEdgeWeightFormats.LOWER_ROW or TSPLIBEdgeWeightFormats.UPPER_DIAG_ROW or TSPLIBEdgeWeightFormats.UPPER_ROW;
 
     var diagonalInt = diagonal ? 0 : 1;
     var dim1 = triangular && !upperTriangular ? diagonalInt : 0;

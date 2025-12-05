@@ -17,94 +17,122 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
 
   private void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
     if (node.Subtrees.Any()) {
-      if (node.Symbol is Addition) {
-        FormatFunction(node, "Plus", strBuilder);
-      } else if (node.Symbol is Absolute) {
-        FormatFunction(node, "Abs", strBuilder);
-      } else if (node.Symbol is AnalyticQuotient) {
-        strBuilder.Append("[");
-        FormatRecursively(node.GetSubtree(0), strBuilder);
-        strBuilder.Append("]/Sqrt[ 1 + Power[");
-        FormatRecursively(node.GetSubtree(1), strBuilder);
-        strBuilder.Append(", 2]]");
-      } else if (node.Symbol is Average) {
-        FormatAverage(node, strBuilder);
-      } else if (node.Symbol is Multiplication) {
-        FormatFunction(node, "Times", strBuilder);
-      } else if (node.Symbol is Subtraction) {
-        FormatSubtraction(node, strBuilder);
-      } else if (node.Symbol is Division) {
-        FormatDivision(node, strBuilder);
-      } else if (node.Symbol is Sine) {
-        FormatFunction(node, "Sin", strBuilder);
-      } else if (node.Symbol is Cosine) {
-        FormatFunction(node, "Cos", strBuilder);
-      } else if (node.Symbol is Tangent) {
-        FormatFunction(node, "Tan", strBuilder);
-      } else if (node.Symbol is HyperbolicTangent) {
-        FormatFunction(node, "Tanh", strBuilder);
-      } else if (node.Symbol is Exponential) {
-        FormatFunction(node, "Exp", strBuilder);
-      } else if (node.Symbol is Logarithm) {
-        FormatFunction(node, "Log", strBuilder);
-      } else if (node.Symbol is IfThenElse) {
-        FormatIf(node, strBuilder);
-      } else if (node.Symbol is GreaterThan) {
-        strBuilder.Append("If[Greater[");
-        FormatRecursively(node.GetSubtree(0), strBuilder);
-        strBuilder.Append(",");
-        FormatRecursively(node.GetSubtree(1), strBuilder);
-        strBuilder.Append("], 1, -1]");
-      } else if (node.Symbol is LessThan) {
-        strBuilder.Append("If[Less[");
-        FormatRecursively(node.GetSubtree(0), strBuilder);
-        strBuilder.Append(",");
-        FormatRecursively(node.GetSubtree(1), strBuilder);
-        strBuilder.Append("], 1, -1]");
-      } else if (node.Symbol is And) {
-        FormatAnd(node, strBuilder);
-      } else if (node.Symbol is Not) {
-        strBuilder.Append("If[Greater[");
-        FormatRecursively(node.GetSubtree(0), strBuilder);
-        strBuilder.Append(", 0], -1, 1]");
-      } else if (node.Symbol is Or) {
-        FormatOr(node, strBuilder);
-      } else if (node.Symbol is Xor) {
-        FormatXor(node, strBuilder);
-      } else if (node.Symbol is Square) {
-        FormatSquare(node, strBuilder);
-      } else if (node.Symbol is SquareRoot) {
-        FormatFunction(node, "Sqrt", strBuilder);
-      } else if (node.Symbol is Cube) {
-        FormatPower(node, strBuilder, "3");
-      } else if (node.Symbol is CubeRoot) {
-        strBuilder.Append("CubeRoot[");
-        FormatRecursively(node.GetSubtree(0), strBuilder);
-        strBuilder.Append("]");
-      } else if (node.Symbol is Power) {
-        FormatFunction(node, "Power", strBuilder);
-      } else if (node.Symbol is Root) {
-        FormatRoot(node, strBuilder);
-      } else if (node.Symbol is SubFunctionSymbol) {
-        FormatRecursively(node.GetSubtree(0), strBuilder);
-      } else {
-        throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " is not supported.");
+      switch (node.Symbol) {
+        case Addition:
+          FormatFunction(node, "Plus", strBuilder);
+          break;
+        case Absolute:
+          FormatFunction(node, "Abs", strBuilder);
+          break;
+        case AnalyticQuotient:
+          strBuilder.Append('[');
+          FormatRecursively(node.GetSubtree(0), strBuilder);
+          strBuilder.Append("]/Sqrt[ 1 + Power[");
+          FormatRecursively(node.GetSubtree(1), strBuilder);
+          strBuilder.Append(", 2]]");
+          break;
+        case Average:
+          FormatAverage(node, strBuilder);
+          break;
+        case Multiplication:
+          FormatFunction(node, "Times", strBuilder);
+          break;
+        case Subtraction:
+          FormatSubtraction(node, strBuilder);
+          break;
+        case Division:
+          FormatDivision(node, strBuilder);
+          break;
+        case Sine:
+          FormatFunction(node, "Sin", strBuilder);
+          break;
+        case Cosine:
+          FormatFunction(node, "Cos", strBuilder);
+          break;
+        case Tangent:
+          FormatFunction(node, "Tan", strBuilder);
+          break;
+        case HyperbolicTangent:
+          FormatFunction(node, "Tanh", strBuilder);
+          break;
+        case Exponential:
+          FormatFunction(node, "Exp", strBuilder);
+          break;
+        case Logarithm:
+          FormatFunction(node, "Log", strBuilder);
+          break;
+        case IfThenElse:
+          FormatIf(node, strBuilder);
+          break;
+        case GreaterThan:
+          strBuilder.Append("If[Greater[");
+          FormatRecursively(node.GetSubtree(0), strBuilder);
+          strBuilder.Append(',');
+          FormatRecursively(node.GetSubtree(1), strBuilder);
+          strBuilder.Append("], 1, -1]");
+          break;
+        case LessThan:
+          strBuilder.Append("If[Less[");
+          FormatRecursively(node.GetSubtree(0), strBuilder);
+          strBuilder.Append(',');
+          FormatRecursively(node.GetSubtree(1), strBuilder);
+          strBuilder.Append("], 1, -1]");
+          break;
+        case And:
+          FormatAnd(node, strBuilder);
+          break;
+        case Not:
+          strBuilder.Append("If[Greater[");
+          FormatRecursively(node.GetSubtree(0), strBuilder);
+          strBuilder.Append(", 0], -1, 1]");
+          break;
+        case Or:
+          FormatOr(node, strBuilder);
+          break;
+        case Xor:
+          FormatXor(node, strBuilder);
+          break;
+        case Square:
+          FormatSquare(node, strBuilder);
+          break;
+        case SquareRoot:
+          FormatFunction(node, "Sqrt", strBuilder);
+          break;
+        case Cube:
+          FormatPower(node, strBuilder, "3");
+          break;
+        case CubeRoot:
+          strBuilder.Append("CubeRoot[");
+          FormatRecursively(node.GetSubtree(0), strBuilder);
+          strBuilder.Append(']');
+          break;
+        case Power:
+          FormatFunction(node, "Power", strBuilder);
+          break;
+        case Root:
+          FormatRoot(node, strBuilder);
+          break;
+        case SubFunctionSymbol:
+          FormatRecursively(node.GetSubtree(0), strBuilder);
+          break;
+        default:
+          throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " is not supported.");
       }
     } else {
       switch (node.Symbol) {
         // terminals
         case Variable: {
-          var varNode = node as VariableTreeNode;
+          var varNode = (VariableTreeNode)node;
           strBuilder.Append($"Times[{varNode.VariableName}, {varNode.Weight.ToString("G17", CultureInfo.InvariantCulture)}]");
           break;
         }
         case Number: {
-          var numNode = node as NumberTreeNode;
+          var numNode = (NumberTreeNode)node;
           strBuilder.Append(numNode.Value.ToString("G17", CultureInfo.InvariantCulture));
           break;
         }
         case FactorVariable: {
-          var factorNode = node as FactorVariableTreeNode;
+          var factorNode = (FactorVariableTreeNode)node;
           strBuilder.Append($"Switch[{factorNode.VariableName},");
           var varValues = factorNode.Symbol.GetVariableValues(factorNode.VariableName).ToArray();
           var weights = varValues.Select(factorNode.GetValue).ToArray();
@@ -112,11 +140,11 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
           var weightStr = string.Join(", ",
             varValues.Zip(weights, (s, d) => string.Format(CultureInfo.InvariantCulture, "\"{0}\", {1:G17}", s, d)));
           strBuilder.Append(weightStr);
-          strBuilder.Append("]");
+          strBuilder.Append(']');
           break;
         }
         case BinaryFactorVariable: {
-          var factorNode = node as BinaryFactorVariableTreeNode;
+          var factorNode = (BinaryFactorVariableTreeNode)node;
           strBuilder.Append(CultureInfo.InvariantCulture, $"If[{factorNode.VariableName}==\"{factorNode.VariableValue}\",{factorNode.Weight:G17},0.0]");
           break;
         }

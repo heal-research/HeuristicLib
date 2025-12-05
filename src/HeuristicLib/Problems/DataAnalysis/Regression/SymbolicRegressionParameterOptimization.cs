@@ -1,7 +1,6 @@
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 using MathNet.Numerics;

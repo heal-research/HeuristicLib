@@ -6,7 +6,6 @@ using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
 using HEAL.HeuristicLib.Operators.Mutator;
-using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
@@ -15,85 +14,18 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
-public static class BuilderExtensions {
-  public static void
-    AddAnalysis<T1, TE1, TP1, TRes1, T, TE, TP, TRes>(this IAlgorithmBuilder<T1, TE1, TP1, TRes1> proto,
-                                                      IAnalysis<T, TE, TP, TRes> analysis)
-    where TE1 : class, TE
-    where TP1 : class, TP, IProblem<T1, TE1>
-    where TRes1 : TRes
-    where TE : class, IEncoding<T>
-    where TP : class, IProblem<T, TE>
-    where TRes : IIterationResult
-    where T1 : class, T {
-    analysis.AttachTo(proto);
-  }
-}
+public abstract class AttachedAnalysis<T> : AttachedAnalysis<T, IIterationResult>
+  where T : class;
 
-public interface IAnalysis<in T, in TE, in TP, in TRes>
-  where TE : class, IEncoding<T>
-  where TP : class, IProblem<T, TE>
-  where TRes : IIterationResult {
-  public void AttachTo<T1, TRes1, TE1, TP1>(IAlgorithmBuilder<T1, TE1, TP1, TRes1> proto) where T1 : class, T
-    where TRes1 : IIterationResult, TRes
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP;
-}
+public abstract class AttachedAnalysis<T, TRes> : AttachedAnalysis<T, IEncoding<T>, TRes>
+  where TRes : IIterationResult
+  where T : class;
 
-public abstract class Analysis<T, TE, TP, TRes> : IAnalysis<T, TE, TP, TRes>
-  where T : class
-  where TE : class, IEncoding<T>
-  where TP : class, IProblem<T, TE>
-  where TRes : IIterationResult {
-  public void AttachTo<T1, TRes1, TE1, TP1>(IAlgorithmBuilder<T1, TE1, TP1, TRes1> proto) where T1 : class, T
-    where TRes1 : IIterationResult, TRes
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP {
-    if (proto is IMutatorPrototype<T1, TE1, TP1> mutatorPrototype)
-      mutatorPrototype.Mutator = WrapMutator(mutatorPrototype.Mutator);
-    if (proto is ICrossoverPrototype<T1, TE1, TP1> crossoverPrototype)
-      crossoverPrototype.Crossover = WrapCrossover(crossoverPrototype.Crossover);
-    if (proto is ISelectorPrototype<T1, TE1, TP1> selectorPrototype)
-      selectorPrototype.Selector = WrapSelector(selectorPrototype.Selector);
-    proto.Evaluator = WrapEvaluator(proto.Evaluator);
-    proto.Terminator = WrapTerminator(proto.Terminator);
-    proto.Interceptor = WrapInterceptor(proto.Interceptor);
-    proto.Creator = WrapCreator(proto.Creator);
-  }
+public abstract class AttachedAnalysis<T, TE, TRes> : AttachedAnalysis<T, TE, IProblem<T, TE>, TRes>
+  where TE : class, IEncoding<T> where T : class where TRes : IIterationResult;
 
-  public virtual IInterceptor<T1, TRes1, TE1, TP1>? WrapInterceptor<T1, TRes1, TE1, TP1>(IInterceptor<T1, TRes1, TE1, TP1>? interceptor) where T1 : T
-    where TRes1 : IIterationResult, TRes
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP => interceptor;
-
-  public virtual ITerminator<T1, TRes1, TE1, TP1> WrapTerminator<T1, TRes1, TE1, TP1>(ITerminator<T1, TRes1, TE1, TP1> terminator) where T1 : T
-    where TRes1 : IIterationResult, TRes
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP => terminator;
-
-  public virtual IEvaluator<T1, TE1, TP1> WrapEvaluator<T1, TE1, TP1>(IEvaluator<T1, TE1, TP1> evaluator) where T1 : class, T
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP => evaluator;
-
-  public virtual IMutator<T1, TE1, TP1> WrapMutator<T1, TE1, TP1>(IMutator<T1, TE1, TP1> mutator) where T1 : class, T
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP => mutator;
-
-  public virtual ICrossover<T1, TE1, TP1> WrapCrossover<T1, TE1, TP1>(ICrossover<T1, TE1, TP1> crossover) where T1 : class, T
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP => crossover;
-
-  public virtual ISelector<T1, TE1, TP1> WrapSelector<T1, TE1, TP1>(ISelector<T1, TE1, TP1> selector) where T1 : class, T
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP => selector;
-
-  public virtual ICreator<T1, TE1, TP1> WrapCreator<T1, TE1, TP1>(ICreator<T1, TE1, TP1> creator) where T1 : class, T
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP => creator;
-}
-
-public abstract class SimpleAnalysis<T, TE, TP, TRes>
-  : Analysis<T, TE, TP, TRes>
+public abstract class AttachedAnalysis<T, TE, TP, TRes>
+  : AlgorithmAttachment<T, TE, TP, TRes>
   where TE : class, IEncoding<T>
   where TP : class, IProblem<T, TE>
   where TRes : IIterationResult
@@ -110,21 +42,23 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
 
   // ---- helper to detect overrides once ----
   private bool IsOverridden(string name, Type[] parameters) {
+#pragma warning disable S3011
     const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+#pragma warning restore S3011
     var m = GetType().GetMethod(name, flags, binder: null, types: parameters, modifiers: null);
     if (m == null)
       return false;
 
-    // If the method is declared on SimpleAnalysis<,,,>, it wasn't overridden.
+    // If the method is declared on AttachedAnalysis<,,,>, it wasn't overridden.
     var decl = m.DeclaringType;
     if (decl == null)
       return false;
 
-    var isBase = decl.IsGenericType && decl.GetGenericTypeDefinition() == typeof(SimpleAnalysis<,,,>);
+    var isBase = decl.IsGenericType && decl.GetGenericTypeDefinition() == typeof(AttachedAnalysis<,,,>);
     return !isBase;
   }
 
-  protected SimpleAnalysis() {
+  protected AttachedAnalysis() {
     hasAfterEval = IsOverridden(nameof(AfterEvaluation), [typeof(IReadOnlyList<T>), typeof(IReadOnlyList<ObjectiveVector>), typeof(TE), typeof(TP)]);
     hasAfterIntercept = IsOverridden(nameof(AfterInterception), [typeof(TRes), typeof(TRes), typeof(TE), typeof(TP)]);
     hasAfterTerminate = IsOverridden(nameof(AfterTermination), [typeof(bool), typeof(TRes), typeof(TRes), typeof(TE), typeof(TP)]);
@@ -163,7 +97,7 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
 
   #region wrappers (unchanged behavior)
   private sealed class AnalysisInterceptor<T1, TRes1, TE1, TP1>(
-    SimpleAnalysis<T, TE, TP, TRes> analysis,
+    AttachedAnalysis<T, TE, TP, TRes> analysis,
     IInterceptor<T1, TRes1, TE1, TP1>? interceptor) : IInterceptor<T1, TRes1, TE1, TP1>
     where TRes1 : IIterationResult, TRes
     where TE1 : class, IEncoding<T1>, TE
@@ -179,7 +113,7 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
   }
 
   private sealed class AnalysisTerminator<T1, TRes1, TE1, TP1>(
-    SimpleAnalysis<T, TE, TP, TRes> analysis,
+    AttachedAnalysis<T, TE, TP, TRes> analysis,
     ITerminator<T1, TRes1, TE1, TP1> terminator) : ITerminator<T1, TRes1, TE1, TP1>
     where TRes1 : IIterationResult, TRes
     where TE1 : class, IEncoding<T1>, TE
@@ -193,7 +127,7 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
   }
 
   private sealed class AnalysisEvaluator<T1, TE1, TP1>(
-    SimpleAnalysis<T, TE, TP, TRes> analysis,
+    AttachedAnalysis<T, TE, TP, TRes> analysis,
     IEvaluator<T1, TE1, TP1> evaluator) : IEvaluator<T1, TE1, TP1>
     where T1 : class, T
     where TE1 : class, IEncoding<T1>, TE
@@ -207,7 +141,7 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
   }
 
   private sealed class AnalysisMutator<T1, TE1, TP1>(
-    SimpleAnalysis<T, TE, TP, TRes> analysis,
+    AttachedAnalysis<T, TE, TP, TRes> analysis,
     IMutator<T1, TE1, TP1> mutator) : IMutator<T1, TE1, TP1>
     where T1 : class, T
     where TE1 : class, IEncoding<T1>, TE
@@ -220,7 +154,7 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
     }
   }
 
-  private sealed class AnalysisCrossOver<T1, TE1, TP1>(SimpleAnalysis<T, TE, TP, TRes> analysis, ICrossover<T1, TE1, TP1> crossover)
+  private sealed class AnalysisCrossOver<T1, TE1, TP1>(AttachedAnalysis<T, TE, TP, TRes> analysis, ICrossover<T1, TE1, TP1> crossover)
     : ICrossover<T1, TE1, TP1>
     where T1 : class, T
     where TE1 : class, IEncoding<T1>, TE
@@ -233,7 +167,7 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
     }
   }
 
-  private sealed class AnalysisSelector<T1, TE1, TP1>(SimpleAnalysis<T, TE, TP, TRes> analysis, ISelector<T1, TE1, TP1> selector)
+  private sealed class AnalysisSelector<T1, TE1, TP1>(AttachedAnalysis<T, TE, TP, TRes> analysis, ISelector<T1, TE1, TP1> selector)
     : ISelector<T1, TE1, TP1>
     where T1 : class, T
     where TE1 : class, IEncoding<T1>, TE
@@ -246,7 +180,7 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
     }
   }
 
-  private sealed class AnalysisCreator<T1, TE1, TP1>(SimpleAnalysis<T, TE, TP, TRes> analysis, ICreator<T1, TE1, TP1> selector)
+  private sealed class AnalysisCreator<T1, TE1, TP1>(AttachedAnalysis<T, TE, TP, TRes> analysis, ICreator<T1, TE1, TP1> selector)
     : ICreator<T1, TE1, TP1>
     where T1 : class, T
     where TE1 : class, IEncoding<T1>, TE
@@ -269,12 +203,3 @@ public abstract class SimpleAnalysis<T, TE, TP, TRes>
   public virtual void AfterSelection(IReadOnlyList<ISolution<T>> res, IReadOnlyList<ISolution<T>> population, Objective objective, int count, IRandomNumberGenerator random, TE encoding, TP problem) { }
   public virtual void AfterCreation(IReadOnlyList<T> res, int count, IRandomNumberGenerator random, TE encoding, TP problem) { }
 }
-
-public abstract class SimpleAnalysis<T, TE, TRes> : SimpleAnalysis<T, TE, IProblem<T, TE>, TRes> where TE : class, IEncoding<T> where T : class where TRes : IIterationResult;
-
-public abstract class SimpleAnalysis<T, TRes> : SimpleAnalysis<T, IEncoding<T>, TRes>
-  where TRes : IIterationResult
-  where T : class;
-
-public abstract class SimpleAnalysis<T> : SimpleAnalysis<T, IIterationResult>
-  where T : class;

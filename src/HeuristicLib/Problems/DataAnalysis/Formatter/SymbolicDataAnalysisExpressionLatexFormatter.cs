@@ -198,7 +198,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
             parameters.Add(new KeyValuePair<string, double>(numName, numericNode.Value));
           }
         } else if (node.Symbol is FactorVariable) {
-          var factorNode = node as FactorVariableTreeNode;
+          var factorNode = (FactorVariableTreeNode)node;
           var paramName = "c_{" + paramIdx + "}";
           strBuilder.Append(paramName + " ");
           foreach (var e in factorNode.Symbol.GetVariableValues(factorNode.VariableName)
@@ -207,83 +207,103 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
           }
 
           paramIdx++;
-        } else if (node is BinaryFactorVariableTreeNode binFactorNode) {
-          if (!binFactorNode.Weight.IsAlmost((1.0))) {
-            var paramName = "c_{" + paramIdx + "}";
-            strBuilder.Append(paramName + "  \\cdot");
-            parameters.Add(new KeyValuePair<string, double>(paramName, binFactorNode.Weight));
-            paramIdx++;
-          }
+        } else
+          switch (node) {
+            case BinaryFactorVariableTreeNode binFactorNode: {
+              if (!binFactorNode.Weight.IsAlmost((1.0))) {
+                var paramName = "c_{" + paramIdx + "}";
+                strBuilder.Append(paramName + "  \\cdot");
+                parameters.Add(new KeyValuePair<string, double>(paramName, binFactorNode.Weight));
+                paramIdx++;
+              }
 
-          strBuilder.Append("(" + EscapeLatexString(binFactorNode.VariableName));
-          strBuilder.Append(LagToString(currentLag));
-          strBuilder.Append(" = " + EscapeLatexString(binFactorNode.VariableValue) + " )");
-        } else if (node is LaggedVariableTreeNode laggedVarNode) {
-          if (!laggedVarNode.Weight.IsAlmost(1.0)) {
-            var paramName = "c_{" + paramIdx + "}";
-            strBuilder.Append(paramName + "  \\cdot");
-            parameters.Add(new KeyValuePair<string, double>(paramName, laggedVarNode.Weight));
-            paramIdx++;
-          }
+              strBuilder.Append("(" + EscapeLatexString(binFactorNode.VariableName));
+              strBuilder.Append(LagToString(currentLag));
+              strBuilder.Append(" = " + EscapeLatexString(binFactorNode.VariableValue) + " )");
+              break;
+            }
+            case LaggedVariableTreeNode laggedVarNode: {
+              if (!laggedVarNode.Weight.IsAlmost(1.0)) {
+                var paramName = "c_{" + paramIdx + "}";
+                strBuilder.Append(paramName + "  \\cdot");
+                parameters.Add(new KeyValuePair<string, double>(paramName, laggedVarNode.Weight));
+                paramIdx++;
+              }
 
-          strBuilder.Append(EscapeLatexString(laggedVarNode.VariableName));
-          strBuilder.Append(LagToString(currentLag + laggedVarNode.Lag));
-        } else if (node is VariableTreeNode varNode) {
-          if (!varNode.Weight.IsAlmost(1.0)) {
-            var paramName = "c_{" + paramIdx + "}";
-            strBuilder.Append(paramName + "  \\cdot");
-            parameters.Add(new KeyValuePair<string, double>(paramName, varNode.Weight));
-            paramIdx++;
-          }
+              strBuilder.Append(EscapeLatexString(laggedVarNode.VariableName));
+              strBuilder.Append(LagToString(currentLag + laggedVarNode.Lag));
+              break;
+            }
+            case VariableTreeNode varNode: {
+              if (!varNode.Weight.IsAlmost(1.0)) {
+                var paramName = "c_{" + paramIdx + "}";
+                strBuilder.Append(paramName + "  \\cdot");
+                parameters.Add(new KeyValuePair<string, double>(paramName, varNode.Weight));
+                paramIdx++;
+              }
 
-          strBuilder.Append(EscapeLatexString(varNode.VariableName));
-          strBuilder.Append(LagToString(currentLag));
-        } else if (node.Symbol is ProgramRootSymbol) {
-          strBuilder
-            .AppendLine("\\begin{align*}")
-            .AppendLine("\\nonumber");
-        }
-        //else if (node.Symbol is Defun) {
-        //  var defunNode = node as DefunTreeNode;
-        //  strBuilder.Append(defunNode.FunctionName + " & = ");
-        //} else if (node.Symbol is InvokeFunction) {
-        //  var invokeNode = node as InvokeFunctionTreeNode;
-        //  strBuilder.Append(invokeNode.Symbol.FunctionName + @" \left( ");
-        //} else if (node.Symbol is StartSymbol) {
-        //  FormatStartSymbol(strBuilder);
-        //} else if (node.Symbol is Argument) {
-        //  var argSym = node.Symbol as Argument;
-        //  strBuilder.Append(" ARG+" + argSym.ArgumentIndex + " ");
-        //} 
-        else if (node.Symbol is Derivative) {
-          strBuilder.Append(@" \cfrac{d \left( ");
-        } else if (node.Symbol is TimeLag) {
-          var laggedNode = node as LaggedTreeNode;
-          currentLag += laggedNode.Lag;
-        } else if (node.Symbol is Power) {
-          strBuilder.Append(@" \left( ");
-        } else if (node.Symbol is Root) {
-          strBuilder.Append(@" \left( ");
-        } else if (node.Symbol is Integral) {
-          // actually a new variable for t is needed in all subtrees (TODO)
-          var laggedTreeNode = node as LaggedTreeNode;
-          strBuilder.Append(@"\sum_{t=" + (laggedTreeNode.Lag + currentLag) + @"}^0 \left( ");
-        } else if (node.Symbol is VariableCondition) {
-          var conditionTreeNode = node as VariableConditionTreeNode;
-          var paramName = "c_{" + parameters.Count + "}";
-          string p = @"1 /  1 + \exp  - " + paramName + " ";
-          parameters.Add(new KeyValuePair<string, double>(paramName, conditionTreeNode.Slope));
-          paramIdx++;
-          var const2Name = "c_{" + parameters.Count + @"}";
-          p += @" \cdot " + EscapeLatexString(conditionTreeNode.VariableName) + LagToString(currentLag) + " - " + const2Name + "   ";
-          parameters.Add(new KeyValuePair<string, double>(const2Name, conditionTreeNode.Threshold));
-          paramIdx++;
-          strBuilder.Append(@" \left( " + p + @"\cdot ");
-        } else if (node.Symbol is SubFunctionSymbol) {
-          // to nothing, skip symbol
-        } else {
-          throw new NotImplementedException("Export of " + node.Symbol + " is not implemented.");
-        }
+              strBuilder.Append(EscapeLatexString(varNode.VariableName));
+              strBuilder.Append(LagToString(currentLag));
+              break;
+            }
+            default:
+              switch (node.Symbol) {
+                case ProgramRootSymbol:
+                  strBuilder
+                    .AppendLine("\\begin{align*}")
+                    .AppendLine("\\nonumber");
+                  break;
+                //else if (node.Symbol is Defun) {
+                //  var defunNode = node as DefunTreeNode;
+                //  strBuilder.Append(defunNode.FunctionName + " & = ");
+                //} else if (node.Symbol is InvokeFunction) {
+                //  var invokeNode = node as InvokeFunctionTreeNode;
+                //  strBuilder.Append(invokeNode.Symbol.FunctionName + @" \left( ");
+                //} else if (node.Symbol is StartSymbol) {
+                //  FormatStartSymbol(strBuilder);
+                //} else if (node.Symbol is Argument) {
+                //  var argSym = node.Symbol as Argument;
+                //  strBuilder.Append(" ARG+" + argSym.ArgumentIndex + " ");
+                //} 
+                case Derivative:
+                  strBuilder.Append(@" \cfrac{d \left( ");
+                  break;
+                case TimeLag: {
+                  var laggedNode = (LaggedTreeNode)node;
+                  currentLag += laggedNode.Lag;
+                  break;
+                }
+                case Power or Root:
+                  strBuilder.Append(@" \left( ");
+                  break;
+                case Integral: {
+                  // actually a new variable for t is needed in all subtrees (TODO)
+                  var laggedTreeNode = (LaggedTreeNode)node;
+                  strBuilder.Append(@"\sum_{t=" + (laggedTreeNode.Lag + currentLag) + @"}^0 \left( ");
+                  break;
+                }
+                case VariableCondition: {
+                  var conditionTreeNode = (VariableConditionTreeNode)node;
+                  var paramName = "c_{" + parameters.Count + "}";
+                  string p = @"1 /  1 + \exp  - " + paramName + " ";
+                  parameters.Add(new KeyValuePair<string, double>(paramName, conditionTreeNode.Slope));
+                  paramIdx++;
+                  var const2Name = "c_{" + parameters.Count + @"}";
+                  p += @" \cdot " + EscapeLatexString(conditionTreeNode.VariableName) + LagToString(currentLag) + " - " + const2Name + "   ";
+                  parameters.Add(new KeyValuePair<string, double>(const2Name, conditionTreeNode.Threshold));
+                  paramIdx++;
+                  strBuilder.Append(@" \left( " + p + @"\cdot ");
+                  break;
+                }
+                case SubFunctionSymbol:
+                  // to nothing, skip symbol
+                  break;
+                default:
+                  throw new NotImplementedException("Export of " + node.Symbol + " is not implemented.");
+              }
+
+              break;
+          }
 
         break;
       }
@@ -378,7 +398,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
             strBuilder.Append(@"\right) ^ {  \cfrac{1}{ \operatorname{round} \left(");
             break;
           case VariableCondition: {
-            var conditionTreeNode = node as VariableConditionTreeNode;
+            var conditionTreeNode = (VariableConditionTreeNode)node;
             var const1Name = "c_{" + parameters.Count + "}";
             string p = @"1 / \left( 1 + \exp \left( - " + const1Name + " ";
             parameters.Add(new KeyValuePair<string, double>(const1Name, conditionTreeNode.Slope));
@@ -545,7 +565,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
     strBuilder.Append(" & = ");
   }
 
-  private string LagToString(int lag) {
+  private static string LagToString(int lag) {
     return lag switch {
       < 0 => "(t" + lag + ")",
       > 0 => "(t+" + lag + ")",
@@ -553,7 +573,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
     };
   }
 
-  private string EscapeLatexString(string s) {
+  private static string EscapeLatexString(string s) {
     return "\\text{" +
            s
              .Replace("\\", @"\\")
