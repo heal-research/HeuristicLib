@@ -10,7 +10,8 @@ public abstract class PopulationBasedAlgorithmBuilder<TGenotype, TEncoding, TPro
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
   where TRes : PopulationIterationResult<TGenotype>
-  where TAlg : IAlgorithm<TGenotype, TEncoding, TProblem, TRes> {
+  where TAlg : IAlgorithm<TGenotype, TEncoding, TProblem, TRes>
+  where TGenotype : class {
   public int PopulationSize { get; set; } = 100;
   public ISelector<TGenotype, TEncoding, TProblem> Selector { get; set; } = new TournamentSelector<TGenotype>(2);
 }

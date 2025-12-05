@@ -17,7 +17,7 @@ public static class QualityCurveAnalysis {
   }
 }
 
-public class QualityCurveAnalysis<TGenotype> : SimpleAnalysis<TGenotype> where TGenotype : class {
+public class QualityCurveAnalysis<TGenotype> : AttachedAnalysis<TGenotype> where TGenotype : class {
   public readonly List<(ISolution<TGenotype> best, int evalCount)> CurrentState = [];
   private ISolution<TGenotype>? best;
   private int evalCount;

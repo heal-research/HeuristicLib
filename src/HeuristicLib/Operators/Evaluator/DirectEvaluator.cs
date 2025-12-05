@@ -1,6 +1,5 @@
 ﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Evaluator;

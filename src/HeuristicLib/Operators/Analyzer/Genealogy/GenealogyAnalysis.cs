@@ -19,7 +19,7 @@ public static class GenealogyAnalysis {
   }
 }
 
-public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool saveSpace = false) : SimpleAnalysis<T, PopulationIterationResult<T>>
+public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool saveSpace = false) : AttachedAnalysis<T, PopulationIterationResult<T>>
   where T : class {
   public readonly GenealogyGraph<T> Graph = new(equality ?? EqualityComparer<T>.Default);
 
@@ -36,5 +36,27 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
   public override void AfterInterception(PopulationIterationResult<T> currentIterationResult, PopulationIterationResult<T>? previousIterationResult, IEncoding<T> encoding, IProblem<T, IEncoding<T>> problem) {
     var ordered = currentIterationResult.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
     Graph.SetAsNewGeneration(ordered.Select(x => x.Genotype), saveSpace);
+  }
+}
+
+public class RankAnalysis<T>(IEqualityComparer<T>? equality = null) : GenealogyAnalysis<T>(equality) where T : class {
+  public List<List<double>> Ranks { get; } = [];
+
+  public override void AfterInterception(PopulationIterationResult<T> currentIterationResult, PopulationIterationResult<T>? previousIterationResult, IEncoding<T> encoding, IProblem<T, IEncoding<T>> problem) {
+    base.AfterInterception(currentIterationResult, previousIterationResult, encoding, problem);
+    RecordRanks(Graph, Ranks);
+  }
+
+  private static void RecordRanks<TGenotype>(GenealogyGraph<TGenotype> graph, List<List<double>> ranks) where TGenotype : notnull {
+    if (graph.Nodes.Count < 2)
+      return;
+    var line = graph.Nodes[^2].Values
+                    .Where(x => x.Layer == 0)
+                    .OrderBy(x => x.Rank)
+                    .Select(node => node.GetAllDescendants().Where(x => x.Rank >= 0).AverageOrNaN(x => x.Rank))
+                    .ToList();
+    if (line.Count > 0) {
+      ranks.Add(line);
+    }
   }
 }

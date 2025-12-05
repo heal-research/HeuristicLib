@@ -48,7 +48,7 @@ public class EvaluationClock : IEpochClock {
   }
 }
 
-public abstract class DynamicProblem<TGenotype, TEncoding> : SimpleAnalysis<TGenotype>,
+public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TGenotype>,
                                                              IDynamicProblem<TGenotype, TEncoding>,
                                                              IDisposable
   where TEncoding : class, IEncoding<TGenotype>
