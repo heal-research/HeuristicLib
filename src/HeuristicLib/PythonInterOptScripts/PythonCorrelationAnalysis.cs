@@ -45,7 +45,7 @@ public static class PythonCorrelationAnalysis {
                                          int dimensions = 10, double min = -5, double max = 5, int seed = 0) {
     var prob = SphereRastriginProblem(dimensions, min, max);
 
-    var proto = Nsga2.CreatePrototype(
+    var proto = Nsga2.GetBuilder(
       new UniformDistributedCreator(),
       new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
       new PolynomialMutator().WithRate(0.9));
@@ -55,7 +55,7 @@ public static class PythonCorrelationAnalysis {
     proto.PopulationSize = populationSize;
     proto.MutationRate = 1;
 
-    var f = FuncAnalysis.Create(proto, (_, iterationResult) => callback(iterationResult, prob));
+    _ = FuncAnalysis.Create(proto, (_, iterationResult) => callback(iterationResult, prob));
     proto.Execute(prob, prob.SearchSpace, new SystemRandomNumberGenerator(seed));
   }
 

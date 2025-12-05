@@ -12,7 +12,5 @@ public class PlusSelectionReplacer<TGenotype> : Replacer<TGenotype> {
            .ToArray();
   }
 
-  public override int GetOffspringCount(int populationSize) {
-    return populationSize;
-  }
+  public override int GetOffspringCount(int populationSize) => populationSize;
 }

@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators.Terminator;
 
-public class AllTerminator<TGenotype, TIterationResult, TEncoding, TProblem>(IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators)
+public class AllTerminator<TGenotype, TIterationResult, TEncoding, TProblem>(params IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators)
   : Terminator<TGenotype, TIterationResult, TEncoding, TProblem>
   where TIterationResult : IIterationResult
   where TEncoding : class, IEncoding<TGenotype>

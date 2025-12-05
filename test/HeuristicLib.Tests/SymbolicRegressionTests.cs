@@ -135,7 +135,7 @@ public class SymbolicRegressionTests {
     ga.RandomSeed = AlgorithmRandomSeed;
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
-    var qualities = BestMedianWorstAnalysis.Create(ga);
+    var qualities = BestMedianWorstAnalysis.Analyze(ga);
     var res = ga.Execute(problem);
 
     Assert.Equal(100, qualities.BestISolutions.Count);
@@ -157,7 +157,7 @@ public class SymbolicRegressionTests {
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
 
     var evalQualities = QualityCurveAnalysis.Create(ga);
-    var qualities = BestMedianWorstAnalysis.Create(ga);
+    var qualities = BestMedianWorstAnalysis.Analyze(ga);
     var genealogy = GenealogyAnalysis.Create(ga);
     var res = ga.Execute(problem);
 
@@ -189,7 +189,7 @@ public class SymbolicRegressionTests {
     const int populationSize = 10;
     const int maximumIterations = 50;
     const double mutationRate = 0.05;
-    var nsga2 = Nsga2.CreatePrototype(
+    var nsga2 = Nsga2.GetBuilder(
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
       symRegAllMutator);
@@ -199,7 +199,7 @@ public class SymbolicRegressionTests {
 
     QualityCurveAnalysis.Create(nsga2);
     var genealogy = GenealogyAnalysis.Create(nsga2);
-    var qualities = BestMedianWorstAnalysis.Create(nsga2);
+    var qualities = BestMedianWorstAnalysis.Analyze(nsga2);
 
     var res = nsga2.Execute(problem);
     Assert.Equal(maximumIterations, qualities.BestISolutions.Count);
@@ -210,10 +210,12 @@ public class SymbolicRegressionTests {
 
   [Fact]
   public void TestPlayground() {
-    const int iterations = 4;
+    const int iterations = 200;
     var i = 0;
     var file = @"TestData\\192_vineyard.tsv";
-    PythonGenealogyAnalysis.RunSymbolicRegressionGeneticAlgorithm(file, _ => i++, AlgorithmRandomSeed, 10, iterations, true, 1);
+    var res = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
+      new PythonGenealogyAnalysis.SymRegExperimentParameters(Seed: AlgorithmRandomSeed, Elites: 1, PopulationSize: 50, Iterations: iterations, AlgorithmName: "es"),
+      callback: _ => i++);
     Assert.Equal(iterations, i);
   }
 
