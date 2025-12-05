@@ -26,15 +26,3 @@ public static class TestFunctionExtensions {
   //  return new ShiftedTestFunction(new RealVector(d), inner);
   //}
 }
-
-public class ShiftedTestFunction(RealVector shiftVector, ITestFunction inner) : ITestFunction {
-  public int Dimension { get; } = inner.Dimension;
-  public double Min => inner.Min;
-  public double Max => inner.Max;
-  public ObjectiveDirection Objective => inner.Objective;
-
-  public double Evaluate(RealVector solution) {
-    var shiftedISolution = solution + shiftVector;
-    return inner.Evaluate(shiftedISolution);
-  }
-}
