@@ -1,6 +1,4 @@
-﻿using System.Security.AccessControl;
-
-namespace HEAL.HeuristicLib.Optimization;
+﻿namespace HEAL.HeuristicLib.Optimization;
 
 public static class SingleObjective {
   public static readonly Objective Minimize = new Objective([ObjectiveDirection.Minimize], FitnessTotalOrderComparer.CreateSingleObjectiveComparer(ObjectiveDirection.Minimize));

@@ -57,7 +57,7 @@ public static class EnumerableStatisticExtensions {
     double a;
     var l = 0;
     var ir = n - 1;
-    for (;;) {
+    while (true) {
       if (ir <= l + 1) {
         // Active partition contains 1 or 2 elements.
         if (ir == l + 1 && arr[ir] < arr[l]) {
@@ -209,8 +209,7 @@ public static class EnumerableStatisticExtensions {
   }
 
   public static IEnumerable<double> LimitToRange(this IEnumerable<double> values, double min, double max) {
-    if (min > max)
-      throw new ArgumentException($"Minimum {min} is larger than maximum {max}.");
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(min, max);
     foreach (var x in values) {
       if (double.IsNaN(x))
         yield return (max + min) / 2.0;

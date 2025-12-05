@@ -1,6 +1,5 @@
 ﻿using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
-using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Replacer;
@@ -14,31 +13,19 @@ namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   : IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>>
   where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
+  where TProblem : class, IProblem<TGenotype, TEncoding>
+  where TGenotype : class {
   public required int PopulationSize { get; init; }
-  public required ICreator<TGenotype, TEncoding, TProblem> Creator { get; init; }
   public required ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; init; }
   public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
   public required ISelector<TGenotype, TEncoding, TProblem> Selector { get; init; }
-  public required IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; init; }
   public required IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; init; }
 
   public override PopulationIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, PopulationIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
-    return previousIterationResult switch {
-      null => ExecuteInitialization(problem, searchSpace, random),
-      _ => ExecuteGeneration(problem, searchSpace, previousIterationResult, random)
-    };
-  }
-
-  protected virtual PopulationIterationResult<TGenotype> ExecuteInitialization(TProblem problem, TEncoding searchSpace, IRandomNumberGenerator random) {
-    var population = Creator.Create(PopulationSize, random, searchSpace, problem);
-    var objectives = Evaluator.Evaluate(population, random, searchSpace, problem);
-    return new PopulationIterationResult<TGenotype>(Population.From(population, objectives));
-  }
-
-  protected virtual PopulationIterationResult<TGenotype> ExecuteGeneration(TProblem problem, TEncoding searchSpace, PopulationIterationResult<TGenotype> previousGenerationResult, IRandomNumberGenerator random) {
+    if (previousIterationResult == null)
+      return new PopulationIterationResult<TGenotype>(CreateInitialPopulation(problem, searchSpace, random, PopulationSize));
     var offspringCount = Replacer.GetOffspringCount(PopulationSize);
-    var oldPopulation = previousGenerationResult.Population.Solutions;
+    var oldPopulation = previousIterationResult.Population.Solutions;
     var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
     var population = Crossover.Cross(parents, random, searchSpace, problem);
     population = Mutator.Mutate(population, random, searchSpace, problem);
@@ -80,19 +67,18 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
   }
 }
 
-public class GeneticAlgorithm<TGenotype, TEncoding> : GeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> where TEncoding : class, IEncoding<TGenotype>;
+public class GeneticAlgorithm<TGenotype, TEncoding> : GeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> where TEncoding : class, IEncoding<TGenotype> where TGenotype : class;
 
-public class GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, IEncoding<TGenotype>>;
+public class GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, IEncoding<TGenotype>> where TGenotype : class;
 
 public static class GeneticAlgorithm {
   public static GeneticAlgorithm<TGenotype, TEncoding, TProblem>.Builder GetBuilder<TGenotype, TEncoding, TProblem>(
     ICreator<TGenotype, TEncoding, TProblem> creator,
     ICrossover<TGenotype, TEncoding, TProblem> crossover,
     IMutator<TGenotype, TEncoding, TProblem> mutator)
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new() {
-      Mutator = mutator,
-      Crossover = crossover,
-      Creator = creator
-    };
+    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> where TGenotype : class => new() {
+    Mutator = mutator,
+    Crossover = crossover,
+    Creator = creator
+  };
 }

@@ -8,7 +8,7 @@ public interface IIterativeAlgorithm<TGenotype, in TEncoding, in TProblem, TIter
   : IAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
-  where TIterationResult : IIterationResult, IAlgorithmResult {
+  where TIterationResult : IIterationResult {
   TIterationResult ExecuteStep(TProblem problem, TEncoding searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
   IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
 }

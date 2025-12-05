@@ -1,74 +1,74 @@
 ﻿namespace HEAL.HeuristicLib;
 
 public static class EnumerableExtensions {
-  /// <summary>
-  /// Selects all elements in the sequence that are maximal with respect to the given value.
-  /// </summary>
-  /// <remarks>
-  /// Runtime complexity of the operation is O(N).
-  /// </remarks>
-  /// <typeparam name="T">The type of the elements.</typeparam>
   /// <param name="source">The enumeration in which the items with a maximal value should be found.</param>
-  /// <param name="valueSelector">The function that selects the value to compare.</param>
-  /// <returns>All elements in the enumeration where the selected value is the maximum.</returns>
-  public static IEnumerable<T> MaxItems<T>(this IEnumerable<T> source, Func<T, IComparable> valueSelector) {
-    using var enumerator = source.GetEnumerator();
-    if (!enumerator.MoveNext())
-      return [];
-    var max = valueSelector(enumerator.Current);
-    var result = new List<T> { enumerator.Current };
-
-    while (enumerator.MoveNext()) {
-      var item = enumerator.Current;
-      var comparison = valueSelector(item);
-      switch (comparison.CompareTo(max)) {
-        case > 0:
-          result.Clear();
-          result.Add(item);
-          max = comparison;
-          break;
-        case 0:
-          result.Add(item);
-          break;
-      }
-    }
-
-    return result;
-  }
-
-  /// <summary>
-  /// Selects all elements in the sequence that are minimal with respect to the given value.
-  /// </summary>
-  /// <remarks>
-  /// Runtime complexity of the operation is O(N).
-  /// </remarks>
   /// <typeparam name="T">The type of the elements.</typeparam>
-  /// <param name="source">The enumeration in which items with a minimal value should be found.</param>
-  /// <param name="valueSelector">The function that selects the value.</param>
-  /// <returns>All elements in the enumeration where the selected value is the minimum.</returns>
-  public static IEnumerable<T> MinItems<T>(this IEnumerable<T> source, Func<T, IComparable> valueSelector) {
-    using var enumerator = source.GetEnumerator();
-    if (!enumerator.MoveNext())
-      return [];
-    var min = valueSelector(enumerator.Current);
-    var result = new List<T> { enumerator.Current };
+  extension<T>(IEnumerable<T> source) {
+    /// <summary>
+    /// Selects all elements in the sequence that are maximal with respect to the given value.
+    /// </summary>
+    /// <remarks>
+    /// Runtime complexity of the operation is O(N).
+    /// </remarks>
+    /// <param name="valueSelector">The function that selects the value to compare.</param>
+    /// <returns>All elements in the enumeration where the selected value is the maximum.</returns>
+    public IEnumerable<T> MaxItems(Func<T, IComparable> valueSelector) {
+      using var enumerator = source.GetEnumerator();
+      if (!enumerator.MoveNext())
+        return [];
+      var max = valueSelector(enumerator.Current);
+      var result = new List<T> { enumerator.Current };
 
-    while (enumerator.MoveNext()) {
-      var item = enumerator.Current;
-      var comparison = valueSelector(item);
-      switch (comparison.CompareTo(min)) {
-        case < 0:
-          result.Clear();
-          result.Add(item);
-          min = comparison;
-          break;
-        case 0:
-          result.Add(item);
-          break;
+      while (enumerator.MoveNext()) {
+        var item = enumerator.Current;
+        var comparison = valueSelector(item);
+        switch (comparison.CompareTo(max)) {
+          case > 0:
+            result.Clear();
+            result.Add(item);
+            max = comparison;
+            break;
+          case 0:
+            result.Add(item);
+            break;
+        }
       }
+
+      return result;
     }
 
-    return result;
+    /// <summary>
+    /// Selects all elements in the sequence that are minimal with respect to the given value.
+    /// </summary>
+    /// <remarks>
+    /// Runtime complexity of the operation is O(N).
+    /// </remarks>
+    /// <param name="valueSelector">The function that selects the value.</param>
+    /// <returns>All elements in the enumeration where the selected value is the minimum.</returns>
+    public IEnumerable<T> MinItems(Func<T, IComparable> valueSelector) {
+      using var enumerator = source.GetEnumerator();
+      if (!enumerator.MoveNext())
+        return [];
+      var min = valueSelector(enumerator.Current);
+      var result = new List<T> { enumerator.Current };
+
+      while (enumerator.MoveNext()) {
+        var item = enumerator.Current;
+        var comparison = valueSelector(item);
+        switch (comparison.CompareTo(min)) {
+          case < 0:
+            result.Clear();
+            result.Add(item);
+            min = comparison;
+            break;
+          case 0:
+            result.Add(item);
+            break;
+        }
+      }
+
+      return result;
+    }
   }
 
   /// <summary>
@@ -89,9 +89,7 @@ public static class EnumerableExtensions {
   /// <returns>An enumerable sequence of all the possible k-combinations of elements</returns>
   /// </summary>
   public static IEnumerable<IEnumerable<T>> Combinations<T>(this IList<T> elements, int k) {
-    if (k > elements.Count)
-      throw new ArgumentException("k is larger than the number of elements", nameof(k));
-
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(k, elements.Count);
     if (k == 1) {
       foreach (var element in elements)
         yield return [element];
@@ -120,6 +118,17 @@ public static class EnumerableExtensions {
         range[j] = range[j - 1] + 1;
       }
     }
+  }
+
+  public static double AverageOrNaN<T>(this IEnumerable<T> source, Func<T, double> func) {
+    double sum = 0;
+    long count = 0;
+    foreach (var x in source) {
+      sum += func(x);
+      count++;
+    }
+
+    return count == 0 ? double.NaN : sum / count;
   }
 
   /// <summary>

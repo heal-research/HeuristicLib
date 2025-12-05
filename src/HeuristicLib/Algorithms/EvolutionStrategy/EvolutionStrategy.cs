@@ -17,46 +17,44 @@ public record EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> 
 }
 
 public static class EvolutionStrategy {
-  public static EvolutionStrategy<TGenotype, TEncoding, TProblem>.Builder CreateBuilder<TGenotype, TEncoding, TProblem>(
+  public static EvolutionStrategy<TGenotype, TEncoding, TProblem>.Builder GetBuilder<TGenotype, TEncoding, TProblem>(
     ICreator<TGenotype, TEncoding, TProblem> creator,
     IMutator<TGenotype, TEncoding, TProblem> mutator)
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding>
-    => new() {
-      Mutator = mutator,
-      InitialMutationStrength = (mutator as IVariableStrengthMutator<TGenotype, TEncoding, TProblem>)?.MutationStrength ?? 0,
-      Creator = creator
-    };
+    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> where TGenotype : class => new() {
+    Mutator = mutator,
+    InitialMutationStrength = (mutator as IVariableStrengthMutator<TGenotype, TEncoding, TProblem>)?.MutationStrength ?? 0,
+    Creator = creator
+  };
 }
 
 public class EvolutionStrategy<TGenotype, TEncoding, TProblem>
   : IterativeAlgorithm<TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>>
   where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
+  where TProblem : class, IProblem<TGenotype, TEncoding>
+  where TGenotype : class {
   public required int PopulationSize { get; init; }
+  public required int NumberOfChildren { get; init; }
   public required EvolutionStrategyType Strategy { get; init; }
-  public required ICreator<TGenotype, TEncoding, TProblem> Creator { get; init; }
   public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
   public required ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; init; }
   public double InitialMutationStrength { get; init; } = 1.0;
   public required ISelector<TGenotype, TEncoding, TProblem> Selector { get; init; }
-  public required IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; init; }
 
   public override EvolutionStrategyIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, EvolutionStrategyIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
-      var pop = Creator.Create(PopulationSize, random, searchSpace, problem);
-      var fitnesses1 = Evaluator.Evaluate(pop, random, searchSpace, problem);
-      return new EvolutionStrategyIterationResult<TGenotype>(Population.From(pop, fitnesses1), InitialMutationStrength);
+      return new EvolutionStrategyIterationResult<TGenotype>(
+        CreateInitialPopulation(problem, searchSpace, random, PopulationSize), InitialMutationStrength);
     }
 
     IReadOnlyList<TGenotype> parents;
     IReadOnlyList<ObjectiveVector> parentQualities;
 
     if (Crossover == null) {
-      var parentISolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
+      var parentISolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, NumberOfChildren, random, problem.SearchSpace, problem);
       parents = parentISolutions.Select(x => x.Genotype).ToArray();
       parentQualities = parentISolutions.Select(x => x.ObjectiveVector).ToArray();
     } else {
-      var parentISolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, PopulationSize * 2, random, problem.SearchSpace, problem);
+      var parentISolutions = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, NumberOfChildren * 2, random, problem.SearchSpace, problem);
       parents = Crossover!.Cross(parentISolutions.ToGenotypePairs(), random, searchSpace, problem);
       parentQualities = parentISolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
     }
@@ -100,7 +98,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>
 
     public override EvolutionStrategy<TGenotype, TEncoding, TProblem> BuildAlgorithm() {
       return new EvolutionStrategy<TGenotype, TEncoding, TProblem> {
-        PopulationSize = 0,
+        PopulationSize = PopulationSize,
         Strategy = Strategy,
         Creator = Creator,
         Mutator = Mutator,
@@ -110,7 +108,8 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>
         AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
         Terminator = Terminator,
         InitialMutationStrength = InitialMutationStrength,
-        Interceptor = Interceptor
+        Interceptor = Interceptor,
+        NumberOfChildren = NoChildren
       };
     }
   }

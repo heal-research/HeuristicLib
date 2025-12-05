@@ -38,12 +38,22 @@ public static class Extensions {
       throw new DebugException(text);
   }
 
-  public static IParents<TGenotype>[] ToGenotypePairs<TGenotype>(this IReadOnlyList<ISolution<TGenotype>> parents) {
-    var offspringCount = parents.Count / 2;
-    var parentPairs = new IParents<TGenotype>[offspringCount];
-    for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
-      parentPairs[i] = new Parents<TGenotype>(parents[j].Genotype, parents[j + 1].Genotype);
-    return parentPairs;
+  extension<TGenotype>(IReadOnlyList<ISolution<TGenotype>> parents) {
+    public IParents<TGenotype>[] ToGenotypePairs() {
+      var offspringCount = parents.Count / 2;
+      var parentPairs = new IParents<TGenotype>[offspringCount];
+      for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
+        parentPairs[i] = new Parents<TGenotype>(parents[j].Genotype, parents[j + 1].Genotype);
+      return parentPairs;
+    }
+
+    public (ISolution<TGenotype>, ISolution<TGenotype>)[] ToSolutionPairs() {
+      var offspringCount = parents.Count / 2;
+      var parentPairs = new (ISolution<TGenotype>, ISolution<TGenotype>)[offspringCount];
+      for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
+        parentPairs[i] = (parents[j], parents[j + 1]);
+      return parentPairs;
+    }
   }
 
   public static bool IsAlmost(this double a, double b, double tolerance = 1E-10) {

@@ -5,11 +5,13 @@ public sealed class Objective /*: IReadOnlyList<ObjectiveDirection>, IEquatable<
   //public int Dimensions => Directions.Length;
 
   public IComparer<ObjectiveVector> TotalOrderComparer { get; }
+  public ObjectiveVector Worst { get; }
 
   public Objective(ObjectiveDirection[] directions, IComparer<ObjectiveVector> totalOrderComparer) {
     if (directions.Length == 0) throw new ArgumentException("Direction vector must not be empty");
     Directions = directions;
     TotalOrderComparer = totalOrderComparer;
+    Worst = new ObjectiveVector(directions.Select(d => d == ObjectiveDirection.Minimize ? double.PositiveInfinity : double.NegativeInfinity));
   }
 
   //public bool IsSingleObjective => Directions.Length == 1;

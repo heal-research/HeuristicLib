@@ -14,9 +14,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding>
   where TGenotype : class {
-  public required ICreator<TGenotype, TEncoding, TProblem> Creator { get; init; }
   public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
-  public required IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; init; }
   public required LocalSearchDirection Direction { get; init; }
   public required int MaxNeighbors { get; init; }
   public required int BatchSize { get; init; }
@@ -26,11 +24,8 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>
     TEncoding searchSpace,
     SingleISolutionIterationResult<TGenotype>? previousIterationResult,
     IRandomNumberGenerator random) {
-    if (previousIterationResult == null) {
-      var ind = Creator.Create(1, random, searchSpace, problem);
-      var obj = Evaluator.Evaluate(ind, random, searchSpace, problem);
-      return new SingleISolutionIterationResult<TGenotype>(new Solution<TGenotype>(ind[0], obj[0]));
-    }
+    if (previousIterationResult == null)
+      return new SingleISolutionIterationResult<TGenotype>(CreateInitialPopulation(problem, searchSpace, random, 1).Solutions[0]);
 
     var sol = previousIterationResult.Solution;
     var newISolution = sol;
@@ -73,7 +68,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>
 }
 
 public static class LocalSearch {
-  public static LocalSearch<TGenotype, TEncoding, TProblem>.Builder CreateBuilder<TGenotype, TEncoding, TProblem>(
+  public static LocalSearch<TGenotype, TEncoding, TProblem>.Builder GetBuilder<TGenotype, TEncoding, TProblem>(
     ICreator<TGenotype, TEncoding, TProblem> creator, IMutator<TGenotype, TEncoding, TProblem> mutator)
     where TEncoding : class, IEncoding<TGenotype>
     where TProblem : class, IProblem<TGenotype, TEncoding>

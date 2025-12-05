@@ -20,12 +20,10 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public int PopulationSize { get; }
-  public ICreator<TGenotype, TEncoding, TProblem> Creator { get; }
   public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; }
   public IMutator<TGenotype, TEncoding, TProblem> Mutator { get; }
   public double MutationRate { get; }
   public ISelector<TGenotype, TEncoding, TProblem> Selector { get; }
-  public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; }
   public int Elites { get; }
   // public IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; }
 
@@ -97,7 +95,6 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var startEvaluating = Stopwatch.GetTimestamp();
     var fitnesses = Evaluator.Evaluate(initialLayerPopulation.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerEncoding, problem.InnerProblem);
     var endEvaluating = Stopwatch.GetTimestamp();
-    EvaluationsMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startEvaluating, endEvaluating));
 
     var result = new AlpsIterationResult<TGenotype>() { Population = [Population.From(initialLayerPopulation, fitnesses)] };
 
@@ -131,10 +128,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var endMutation = Stopwatch.GetTimestamp();
     MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
 
-    var startEvaluation = Stopwatch.GetTimestamp();
     var fitnesses = Evaluator.Evaluate(population.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerEncoding, problem.InnerProblem);
-    var endEvaluation = Stopwatch.GetTimestamp();
-    EvaluationsMetric += new OperatorMetric(fitnesses.Count, Stopwatch.GetElapsedTime(startEvaluation, endEvaluation));
 
     var evaluatedPopulation = Population.From(population, fitnesses);
 
