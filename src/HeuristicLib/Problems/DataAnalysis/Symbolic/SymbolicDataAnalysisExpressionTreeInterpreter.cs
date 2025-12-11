@@ -165,7 +165,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       case OpCodes.Psi: {
         var x = Evaluate(dataset, ref row, state);
         switch (x) {
-          case Double.NaN:
+          case double.NaN:
           case <= 0 when (Math.Floor(x) - x).IsAlmost(0):
             return double.NaN;
           default:
@@ -204,13 +204,11 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         throw new NotImplementedException("Hyperbolic Cosine Integral is currently not implemented");
       }
       case OpCodes.FresnelCosineIntegral: {
-        double c = 0, s = 0;
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
         throw new NotImplementedException("Fresnel Cosine Integral is currently not implemented");
       }
       case OpCodes.FresnelSineIntegral: {
-        double c = 0, s = 0;
         var x = Evaluate(dataset, ref row, state);
         if (double.IsNaN(x)) return double.NaN;
         throw new NotImplementedException("Fresnel Sine Integral is currently not implemented");

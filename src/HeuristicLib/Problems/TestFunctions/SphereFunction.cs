@@ -13,16 +13,3 @@ public class SphereFunction(int dimension) : ITestFunction {
     return solution.Sum(x => x * x);
   }
 }
-
-public static class TestFunctionExtensions {
-  public static ITestFunction Shifted(this ITestFunction inner, RealVector shiftVector) {
-    return new ShiftedTestFunction(shiftVector, inner);
-  }
-
-  //public static ITestFunction Shifted(this ITestFunction inner, params double[] shiftVector) {
-  //  var d = new double[inner.Dimension];
-  //  for (int i = 0; i < d.Length; i++)
-  //    d[i] = shiftVector[i % shiftVector.Length];
-  //  return new ShiftedTestFunction(new RealVector(d), inner);
-  //}
-}

@@ -41,6 +41,9 @@
       <None Update="TestData\192_vineyard.tsv">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\berlin52.tsp">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

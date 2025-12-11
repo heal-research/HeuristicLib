@@ -212,9 +212,12 @@ public class SymbolicRegressionTests {
   public void TestPlayground() {
     const int iterations = 200;
     var i = 0;
-    var file = @"TestData\\192_vineyard.tsv";
+    var file = @"TestData\192_vineyard.tsv";
     var res = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
-      new PythonGenealogyAnalysis.SymRegExperimentParameters(Seed: AlgorithmRandomSeed, Elites: 1, PopulationSize: 50, Iterations: iterations, AlgorithmName: "es"),
+      new PythonGenealogyAnalysis.SymRegExperimentParameters {
+        Seed = AlgorithmRandomSeed,
+        Iterations = iterations
+      },
       callback: _ => i++);
     Assert.Equal(iterations, i);
   }

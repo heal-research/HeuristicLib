@@ -15,18 +15,12 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Tests;
 
 public class TspTests {
-  [Fact]
-  public void LoadTSPLIB() {
-    foreach (var f in Directory.EnumerateFiles(@"D:\Projekte\HCAI\HeuristicLib\Python\tsp\", "*.tsp")) {
-      var data = TsplibTspInstanceProvider.LoadData(f);
-      var prob = new TravelingSalesmanProblem((data.Coordinates?.Length ?? 0) <= 1000 ? data.ToDistanceMatrixData() : data.ToCoordinatesData());
-    }
-  }
+  private const string TestDataBerlin52TSP = @"TestData\berlin52.tsp";
 
   [Fact]
   public void GaWithTSP() {
     //Load Problem
-    var data = TsplibTspInstanceProvider.LoadData(@"C:\Users\P41603\Downloads\berlin52.tsp");
+    var data = TsplibTspInstanceProvider.LoadData(TestDataBerlin52TSP);
     var cdata = data.ToCoordinatesData();
     var prob = new TravelingSalesmanProblem(cdata);
 
@@ -58,7 +52,7 @@ public class TspTests {
   [Fact]
   public void GaWithDynamicTSP() {
     //Load Problem
-    var data = TsplibTspInstanceProvider.LoadData(@"C:\Users\P41603\Downloads\berlin52.tsp");
+    var data = TsplibTspInstanceProvider.LoadData(TestDataBerlin52TSP);
     var cdata = data.ToCoordinatesData();
     var prob = new ActivatedTravelingSalesmanProblem(cdata, new SystemRandomNumberGenerator(0), epochLength: 10000);
 
