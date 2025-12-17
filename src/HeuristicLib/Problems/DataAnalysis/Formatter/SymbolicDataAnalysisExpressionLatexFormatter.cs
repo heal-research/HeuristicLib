@@ -23,7 +23,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
 
   public string Format(SymbolicExpressionTree symbolicExpressionTree, string? targetVariable) {
     try {
-      StringBuilder strBuilder = new StringBuilder();
+      var strBuilder = new StringBuilder();
       parameters.Clear();
       paramIdx = 0;
       this.targetVariable = targetVariable;
@@ -41,7 +41,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
   }
 
   private string FormatRecursively(SymbolicExpressionTreeNode node) {
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     currentLag = 0;
     FormatBegin(node, strBuilder);
 
@@ -49,7 +49,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
       strBuilder.Append(FormatRecursively(node.GetSubtree(0)));
     }
 
-    int i = 1;
+    var i = 1;
     foreach (var subTree in node.Subtrees.Skip(1)) {
       FormatSep(node, strBuilder, i);
       // format the whole subtree
@@ -285,7 +285,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
                 case VariableCondition: {
                   var conditionTreeNode = (VariableConditionTreeNode)node;
                   var paramName = "c_{" + parameters.Count + "}";
-                  string p = @"1 /  1 + \exp  - " + paramName + " ";
+                  var p = @"1 /  1 + \exp  - " + paramName + " ";
                   parameters.Add(new KeyValuePair<string, double>(paramName, conditionTreeNode.Slope));
                   paramIdx++;
                   var const2Name = "c_{" + parameters.Count + @"}";
@@ -400,7 +400,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
           case VariableCondition: {
             var conditionTreeNode = (VariableConditionTreeNode)node;
             var const1Name = "c_{" + parameters.Count + "}";
-            string p = @"1 / \left( 1 + \exp \left( - " + const1Name + " ";
+            var p = @"1 / \left( 1 + \exp \left( - " + const1Name + " ";
             parameters.Add(new KeyValuePair<string, double>(const1Name, conditionTreeNode.Slope));
             paramIdx++;
             var const2Name = "c_{" + parameters.Count + "}";
@@ -431,7 +431,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
         break;
       case Division: {
         strBuilder.Append(" } ");
-        for (int i = 2; i < node.SubtreeCount; i++)
+        for (var i = 2; i < node.SubtreeCount; i++)
           strBuilder.Append(" } ");
         break;
       }

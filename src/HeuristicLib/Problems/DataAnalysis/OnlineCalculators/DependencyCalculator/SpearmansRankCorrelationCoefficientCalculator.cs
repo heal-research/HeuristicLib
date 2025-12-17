@@ -31,23 +31,23 @@ public class SpearmansRankCorrelationCoefficientCalculator : IDependencyCalculat
   }
 
   private static double[] GetRanks(double[] values) {
-    int n = values.Length;
+    var n = values.Length;
     var sorted = values
                  .Select((v, i) => (Value: v, Index: i))
                  .OrderBy(x => x.Value)
                  .ToArray();
 
-    double[] ranks = new double[n];
-    int i = 0;
+    var ranks = new double[n];
+    var i = 0;
     while (i < n) {
-      int j = i;
+      var j = i;
       while (j < n && sorted[j].Value.Equals(sorted[i].Value))
         j++;
 
       // average rank for ties
-      double rank = (i + j - 1) / 2.0 + 1.0;
+      var rank = (i + j - 1) / 2.0 + 1.0;
 
-      for (int k = i; k < j; k++)
+      for (var k = i; k < j; k++)
         ranks[sorted[k].Index] = rank;
 
       i = j;
@@ -57,14 +57,14 @@ public class SpearmansRankCorrelationCoefficientCalculator : IDependencyCalculat
   }
 
   private static double Pearson(double[] xs, double[] ys) {
-    int n = xs.Length;
-    double meanX = xs.Average();
-    double meanY = ys.Average();
+    var n = xs.Length;
+    var meanX = xs.Average();
+    var meanY = ys.Average();
 
     double num = 0.0, denX = 0.0, denY = 0.0;
-    for (int i = 0; i < n; i++) {
-      double dx = xs[i] - meanX;
-      double dy = ys[i] - meanY;
+    for (var i = 0; i < n; i++) {
+      var dx = xs[i] - meanX;
+      var dy = ys[i] - meanY;
       num += dx * dy;
       denX += dx * dx;
       denY += dy * dy;

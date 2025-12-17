@@ -28,8 +28,8 @@ public class WeightedSumComparer : IComparer<ObjectiveVector> {
     }));
     var directedWeights = weights * directions;
 
-    double xSum = (xFitness * directedWeights).Sum();
-    double ySum = (yFitness * directedWeights).Sum();
+    var xSum = (xFitness * directedWeights).Sum();
+    var ySum = (yFitness * directedWeights).Sum();
 
     return xSum.CompareTo(ySum);
   }

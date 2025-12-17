@@ -27,8 +27,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       if (variableNames.Count > 0)
         return variableNames;
       else {
-        string[] names = new string[Columns];
-        for (int i = 0; i < names.Length; i++) {
+        var names = new string[Columns];
+        for (var i = 0; i < names.Length; i++) {
           names[i] = "X" + i.ToString("000");
         }
 
@@ -44,9 +44,9 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
   }
 
   public bool AreColumnNamesInFirstLine(Stream stream) {
-    NumberFormatInfo numberFormat = NumberFormatInfo.InvariantInfo;
-    DateTimeFormatInfo dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
-    char separator = ',';
+    var numberFormat = NumberFormatInfo.InvariantInfo;
+    var dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
+    var separator = ',';
     return AreColumnNamesInFirstLine(stream, numberFormat, dateTimeFormatInfo, separator);
   }
 
@@ -58,7 +58,7 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
 
   public bool AreColumnNamesInFirstLine(Stream stream, NumberFormatInfo numberFormat,
                                         DateTimeFormatInfo dateTimeFormatInfo, char separator) {
-    using StreamReader reader = new StreamReader(stream, Encoding);
+    using var reader = new StreamReader(stream, Encoding);
     tokenizer = new Tokenizer(reader, numberFormat, dateTimeFormatInfo, separator);
     return (tokenizer.PeekType() != TokenType.Double);
   }
@@ -97,9 +97,9 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
   /// <param name="columnNamesInFirstLine"></param>
   /// <param name="lineLimit"></param>
   public void Parse(Stream stream, bool columnNamesInFirstLine, int lineLimit = -1) {
-    NumberFormatInfo numberFormat = NumberFormatInfo.InvariantInfo;
-    DateTimeFormatInfo dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
-    char separator = ',';
+    var numberFormat = NumberFormatInfo.InvariantInfo;
+    var dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
+    var separator = ',';
     Parse(stream, numberFormat, dateTimeFormatInfo, separator, columnNamesInFirstLine, lineLimit);
   }
 
@@ -122,8 +122,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       Values = [];
       Prepare(columnNamesInFirstLine, strValues);
 
-      int nLinesParsed = 0;
-      int colIdx = 0;
+      var nLinesParsed = 0;
+      var colIdx = 0;
       while (tokenizer.HasNext() && (lineLimit < 0 || nLinesParsed < lineLimit)) {
         if (tokenizer.PeekType() == TokenType.NewLine) {
           tokenizer.Skip();
@@ -174,7 +174,7 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     Columns = Values.Count;
 
     // replace lists with undefined type (object) with double-lists
-    for (int i = 0; i < Values.Count; i++) {
+    for (var i = 0; i < Values.Count; i++) {
       if (Values[i] is List<object>) {
         Values[i] = Enumerable.Repeat(double.NaN, Rows).ToList();
       }
@@ -210,7 +210,7 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       reader.ReadBlock(buf, 0, buf.Length);
     }
 
-    int numNewLine = 0;
+    var numNewLine = 0;
     int charsInCurrentLine = 0, charsInFirstLine = 0; // the first line (names) and the last line (incomplete) are not representative
     foreach (var ch in buf) {
       charsInCurrentLine++;
@@ -226,8 +226,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     if (numNewLine <= 1) {
       // fail -> keep the default setting
     } else {
-      double charsPerLineFactor = (buf.Length - charsInFirstLine - charsInCurrentLine) / ((double)numNewLine - 1);
-      double estimatedLines = len / charsPerLineFactor;
+      var charsPerLineFactor = (buf.Length - charsInFirstLine - charsInCurrentLine) / ((double)numNewLine - 1);
+      var estimatedLines = len / charsPerLineFactor;
       estimatedNumberOfLines = (int)Math.Round(estimatedLines * 1.1); // pessimistic allocation of 110% to make sure that the list is very likely large enough
     }
   }
@@ -243,7 +243,7 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
 
     // read first line to determine types and allocate specific lists
     // read values... start in first row 
-    int colIdx = 0;
+    var colIdx = 0;
     while (tokenizer.PeekType() != TokenType.NewLine) {
       // read one value
       tokenizer.Next(out var type, out var strVal, out var dblVal, out var dateTimeVal);
@@ -333,8 +333,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
 
   private static IList ConvertList(TokenType type, IList list, int estimatedNumberOfLines) {
     var newList = CreateList(type, estimatedNumberOfLines);
-    object missingValue = GetMissingValue(type);
-    for (int i = 0; i < list.Count; i++)
+    var missingValue = GetMissingValue(type);
+    for (var i = 0; i < list.Count; i++)
       newList.Add(missingValue);
     return newList;
   }
@@ -358,16 +358,16 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
   }
 
   public static void DetermineFileFormat(Stream stream, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator) {
-    using StreamReader reader = new StreamReader(stream);
+    using var reader = new StreamReader(stream);
     // skip first line
     reader.ReadLine();
     // read a block
-    char[] buffer = new char[BufferSize];
-    int charsRead = reader.ReadBlock(buffer, 0, BufferSize);
+    var buffer = new char[BufferSize];
+    var charsRead = reader.ReadBlock(buffer, 0, BufferSize);
     // count frequency of special characters
-    Dictionary<char, int> charCounts = buffer.Take(charsRead)
-                                             .GroupBy(c => c)
-                                             .ToDictionary(g => g.Key, g => g.Count());
+    var charCounts = buffer.Take(charsRead)
+                           .GroupBy(c => c)
+                           .ToDictionary(g => g.Key, g => g.Count());
 
     // depending on the characters occuring in the block 
     // we distinguish a number of different cases based on the following rules:
@@ -390,9 +390,9 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     } else {
       // no points and many commas
       // count the number of tokens (chains of only digits and commas) that contain multiple comma characters
-      int tokensWithMultipleCommas = 0;
-      for (int i = 0; i < charsRead; i++) {
-        int nCommas = 0;
+      var tokensWithMultipleCommas = 0;
+      for (var i = 0; i < charsRead; i++) {
+        var nCommas = 0;
         while (i < charsRead && (buffer[i] == ',' || char.IsDigit(buffer[i]))) {
           if (buffer[i] == ',')
             nCommas++;
@@ -501,7 +501,7 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
         BytesRead += CurrentLine.Length + 2; // guess
       }
 
-      int i = 0;
+      var i = 0;
       if (!string.IsNullOrWhiteSpace(CurrentLine)) {
         foreach (var tok in Split(CurrentLine)) {
           var type = TokenType.String; // default
@@ -543,8 +543,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     }
 
     private static void IncreaseCapacity<T>(ref T[] arr) {
-      int n = (int)Math.Floor(arr.Length * 1.7); // guess
-      T[] arr2 = new T[n];
+      var n = (int)Math.Floor(arr.Length * 1.7); // guess
+      var arr2 = new T[n];
       Array.Copy(arr, arr2, arr.Length);
       arr = arr2;
     }

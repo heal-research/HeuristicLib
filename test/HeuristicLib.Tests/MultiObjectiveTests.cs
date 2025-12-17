@@ -1,8 +1,25 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings.RealVector;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.PythonInterOptScripts;
 
 namespace HEAL.HeuristicLib.Tests;
 
 public class MultiObjectiveTests {
+  [Fact]
+  public void Angle() {
+    var r = new RealVector(1, 2, 3);
+    var r2 = new RealVector(0, 0, 1);
+    var a = r.Angle(r2);
+
+    var zeroes = new RealVector(-1.71235326, -3.13907273, 3.12722378, 1.74460128, 0.77062594, -3.19114179, -4.53671968, -4.0406267, -2.83460651, 4.12024721);
+    var p = PythonCorrelationAnalysis.SphereRastriginProblem(zeroes.Count, -5, 5);
+    var zeroes1 = zeroes + 0.5;
+    var up = new RealVector(0, 1);
+    var down = new RealVector(0, -1);
+    var maxangle = up.Angle(down);
+    var angles = PythonCorrelationAnalysis.GetPseudoCorrelations([zeroes, zeroes1], p, zeroes.ToArray(), 1, 0);
+  }
+
   [Fact]
   public void EmptyInput_ReturnsNoFronts_AndEmptyRank() {
     var solutions = Array.Empty<ISolution<object>>();

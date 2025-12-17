@@ -25,7 +25,7 @@ public class ConfusionMatrixCalculator {
     var classes = classValueIndexMapping.Count;
     var confusionMatrix = new double[classes, classes];
 
-    for (int i = 0; i < originals.Length; i++) {
+    for (var i = 0; i < originals.Length; i++) {
       if (!classValueIndexMapping.TryGetValue(originals[i], out var originalIndex)) {
         errorState = OnlineCalculatorError.InvalidValueAdded;
         return Empty;

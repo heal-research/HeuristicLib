@@ -17,7 +17,7 @@ public class TravelingSalesmanCoordinatesData : ITravelingSalesmanProblemData {
     if (coordinates.GetLength(0) < 1) throw new ArgumentException("The coordinates must have at least one city.");
 
     var data = new (double X, double Y)[coordinates.GetLength(0)];
-    for (int i = 0; i < coordinates.GetLength(0); i++) {
+    for (var i = 0; i < coordinates.GetLength(0); i++) {
       data[i] = (coordinates[i, 0], coordinates[i, 1]);
     }
 
@@ -26,8 +26,8 @@ public class TravelingSalesmanCoordinatesData : ITravelingSalesmanProblemData {
   }
 
   public double GetDistance(int fromCity, int toCity) {
-    (double x1, double y1) = Coordinates[fromCity];
-    (double x2, double y2) = Coordinates[toCity];
+    (var x1, var y1) = Coordinates[fromCity];
+    (var x2, var y2) = Coordinates[toCity];
 
     return DistanceHelper.GetDistance(DistanceMeasure, x1, y1, x2, y2);
   }

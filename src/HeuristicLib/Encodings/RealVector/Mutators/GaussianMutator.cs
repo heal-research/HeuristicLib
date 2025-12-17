@@ -9,8 +9,8 @@ public class GaussianMutator(double mutationRate, double mutationStrength) : Mut
   public double MutationStrength { get; set; } = mutationStrength;
 
   public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorEncoding encoding) {
-    double[] newElements = solution.ToArray();
-    for (int i = 0; i < newElements.Length; i++) {
+    var newElements = solution.ToArray();
+    for (var i = 0; i < newElements.Length; i++) {
       if (random.Random() < MutationRate) {
         newElements[i] += MutationStrength * (random.Random() - 0.5);
       }

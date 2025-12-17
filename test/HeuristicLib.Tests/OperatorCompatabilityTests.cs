@@ -18,7 +18,7 @@ namespace HEAL.HeuristicLib.Tests;
 public class OperatorCompatabilityTests {
   private static string GetCompilableName(Type type) {
     if (type.IsGenericType) {
-      string genericArgs = string.Join(", ", type.GetGenericArguments().Select(t => t.FullName));
+      var genericArgs = string.Join(", ", type.GetGenericArguments().Select(t => t.FullName));
       return $"{type.Namespace}.{type.Name.Split('`')[0]}<{genericArgs}>";
     }
 
@@ -26,7 +26,7 @@ public class OperatorCompatabilityTests {
   }
 
   private static bool AlgorithmUsingProblemDoesCompile(Type algorithmType, Type problemType) {
-    string code = $@"
+    var code = $@"
       var algorithm = new {GetCompilableName(algorithmType)}();
       var problem = new {GetCompilableName(problemType)}();
       algorithm.Execute(problem);
@@ -36,7 +36,7 @@ public class OperatorCompatabilityTests {
   }
 
   private static bool AlgorithmUsingOperatorDoesCompile(Type algorithmType, Type operatorType) {
-    string code = $@"
+    var code = $@"
       var algorithm = new {GetCompilableName(algorithmType)}();
       var @operator = new {GetCompilableName(operatorType)}();
       algorithm.Crossover = @operator;

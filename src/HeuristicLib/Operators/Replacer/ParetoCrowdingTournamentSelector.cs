@@ -26,11 +26,11 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
 
     var calculatedFront = new HashSet<int>();
 
-    for (int i = 0; i < count; i++) {
+    for (var i = 0; i < count; i++) {
       var bestIdx = random.Integer(population.Count);
       var bestRank = rank[bestIdx];
 
-      for (int j = 1; j < tournamentSize; j++) {
+      for (var j = 1; j < tournamentSize; j++) {
         var idx = random.Integer(population.Count);
         var idxRank = rank[idx];
         if (idxRank < bestRank) {
@@ -48,7 +48,7 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
           var frontSolutions = fronts[bestRank];
           var frontObjectives = frontSolutions.Select(x => x.ObjectiveVector).ToArray();
           var distances = CrowdingDistance.CalculateCrowdingDistances(frontObjectives);
-          for (int k = 0; k < frontSolutions.Count; k++)
+          for (var k = 0; k < frontSolutions.Count; k++)
             crowdingBySolution[frontSolutions[k]] = distances[k];
           calculatedFront.Add(bestRank);
         }

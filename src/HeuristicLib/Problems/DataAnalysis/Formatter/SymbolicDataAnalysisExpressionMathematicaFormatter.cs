@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbolicExpressionTreeStringFormatter {
   public string Format(SymbolicExpressionTree symbolicExpressionTree) {
     // skip root and start symbols
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     FormatRecursively(symbolicExpressionTree.Root.GetSubtree(0).GetSubtree(0), strBuilder);
     return strBuilder.ToString();
   }
@@ -204,7 +204,7 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     // mean function needs a list of values
     strBuilder.Append("Mean[{");
     FormatRecursively(node.GetSubtree(0), strBuilder);
-    for (int i = 1; i < node.SubtreeCount; i++) {
+    for (var i = 1; i < node.SubtreeCount; i++) {
       strBuilder.Append(",");
       FormatRecursively(node.GetSubtree(i), strBuilder);
     }
@@ -252,7 +252,7 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
       FormatRecursively(node.GetSubtree(0), strBuilder);
       strBuilder.Append(", Times[");
       FormatRecursively(node.GetSubtree(1), strBuilder);
-      for (int i = 2; i < node.SubtreeCount; i++) {
+      for (var i = 2; i < node.SubtreeCount; i++) {
         strBuilder.Append(",");
         FormatRecursively(node.GetSubtree(i), strBuilder);
       }

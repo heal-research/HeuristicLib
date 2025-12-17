@@ -83,9 +83,9 @@ public abstract class Dataset {
     var vNames = variableNames.ToList();
     var transposed = new List<IList>();
 
-    int rowCount = 0;
+    var rowCount = 0;
     foreach (var row in data) {
-      int colCount = 0;
+      var colCount = 0;
       foreach (var value in row) {
         if (colCount >= vNames.Count)
           throw new ArgumentException("There are more variables in data, than variable names.", nameof(variableNames));

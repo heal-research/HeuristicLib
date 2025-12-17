@@ -26,7 +26,7 @@ public sealed class RepeatList<T> : IReadOnlyList<T> {
   }
 
   public IEnumerator<T> GetEnumerator() {
-    for (int i = 0; i < Count; i++)
+    for (var i = 0; i < Count; i++)
       yield return value;
   }
 

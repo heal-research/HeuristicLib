@@ -4,7 +4,7 @@ public static class TsplibTspInstanceProvider {
   public const string FileExtension = "tsp";
 
   public static TspData LoadData(string tspFile, string? tourFile = null, double? bestQuality = null) {
-    TsplibParser parser = new TsplibParser(tspFile);
+    var parser = new TsplibParser(tspFile);
     parser.Parse();
     if (parser.FixedEdges != null) throw new InvalidDataException("TSP instance " + parser.Name + " contains fixed edges which are not supported by HeuristicLab.");
     var data = new TspData {

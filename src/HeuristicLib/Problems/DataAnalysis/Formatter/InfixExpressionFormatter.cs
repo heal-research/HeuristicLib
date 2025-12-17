@@ -59,7 +59,7 @@ public static class BaseInfixExpressionFormatter {
           parent.RemoveSubtree(childIdx);
           var newChild = n;
           // build a tree bottom to top, each time adding a subtree on the right
-          for (int i = 0; i < additionalTrees.Length; i++) {
+          for (var i = 0; i < additionalTrees.Length; i++) {
             var newOp = sy.CreateTreeNode();
             newOp.AddSubtree(newChild);
             newOp.AddSubtree(additionalTrees[i]);
@@ -128,7 +128,7 @@ public static class BaseInfixExpressionFormatter {
         AppendVariableName(strBuilder, factorNode.VariableName);
 
         strBuilder.Append('[');
-        for (int i = 0; i < factorNode.Weights?.Length; i++) {
+        for (var i = 0; i < factorNode.Weights?.Length; i++) {
           if (i > 0) strBuilder.Append(", ");
           AppendNumber(strBuilder, parameters, factorNode.Weights[i], formatString, numberFormat);
         }
@@ -270,7 +270,7 @@ public static class BaseInfixExpressionFormatter {
 
   private static void AppendNumber(StringBuilder strBuilder, List<KeyValuePair<string, double>>? parameters, double value, string formatString, NumberFormatInfo numberFormat) {
     if (parameters != null) {
-      string paramKey = $"c_{parameters.Count}";
+      var paramKey = $"c_{parameters.Count}";
       strBuilder.Append(CultureInfo.InvariantCulture, $"{paramKey}");
       parameters.Add(new KeyValuePair<string, double>(paramKey, value));
     } else {
@@ -304,7 +304,7 @@ public sealed class InfixExpressionFormatter : SymbolicExpressionTreeStringForma
   public static string Format(SymbolicExpressionTree symbolicExpressionTree, NumberFormatInfo numberFormat,
                               string formatString = "G") {
     // skip root and start symbols
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     var cleanTree = new SymbolicExpressionTree(symbolicExpressionTree);
     BaseInfixExpressionFormatter.ConvertToBinaryLeftAssoc(cleanTree);
     BaseInfixExpressionFormatter.FormatRecursively(cleanTree.Root.GetSubtree(0).GetSubtree(0),
@@ -319,17 +319,17 @@ public sealed class InfixExpressionFormatter : SymbolicExpressionTreeStringForma
 
 public sealed class InfixExpressionStringFormatter : SymbolicExpressionTreeStringFormatter {
   public string Format(SymbolicExpressionTree symbolicExpressionTree) {
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     var parameters = new List<KeyValuePair<string, double>>();
     var cleanTree = new SymbolicExpressionTree(symbolicExpressionTree);
     BaseInfixExpressionFormatter.ConvertToBinaryLeftAssoc(cleanTree);
     BaseInfixExpressionFormatter.FormatRecursively(cleanTree.Root.GetSubtree(0).GetSubtree(0),
       strBuilder, NumberFormatInfo.InvariantInfo, "G", parameters);
     strBuilder.Append($"{Environment.NewLine}{Environment.NewLine}");
-    int maxDigits = GetDigits(parameters.Count);
-    int padding = parameters.Max(x => x.Value.ToString("F12", CultureInfo.InvariantCulture).Length);
+    var maxDigits = GetDigits(parameters.Count);
+    var padding = parameters.Max(x => x.Value.ToString("F12", CultureInfo.InvariantCulture).Length);
     foreach (var param in parameters) {
-      int digits = GetDigits(int.Parse(param.Key[2..]));
+      var digits = GetDigits(int.Parse(param.Key[2..]));
       strBuilder.Append($"{param.Key}{new string(' ', maxDigits - digits)} = " +
                         string.Format($"{{0,{padding}:F12}}", param.Value, CultureInfo.InvariantCulture) +
                         Environment.NewLine);

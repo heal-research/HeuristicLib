@@ -102,7 +102,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
   }
 
   protected virtual AlpsIterationResult<TGenotype> ExecuteGeneration(AgedProblem<TGenotype, TEncoding, TProblem> problem, AgedEncoding<TGenotype, TEncoding> searchSpace, AlpsIterationResult<TGenotype> previousGenerationResult, IRandomNumberGenerator iterationRandom) {
-    int offspringCount = internalReplacer.GetOffspringCount(PopulationSize);
+    var offspringCount = internalReplacer.GetOffspringCount(PopulationSize);
 
     var oldPopulation = previousGenerationResult.Population[0].ToArray();
 
@@ -117,13 +117,13 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     }
 
     var startCrossover = Stopwatch.GetTimestamp();
-    int crossoverCount = 0;
+    var crossoverCount = 0;
     var population = agedCrossover.Cross(parentPairs, iterationRandom, searchSpace, problem);
     var endCrossover = Stopwatch.GetTimestamp();
     CrossoverMetric += new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover));
 
     var startMutation = Stopwatch.GetTimestamp();
-    int mutationCount = 0;
+    var mutationCount = 0;
     population = agedMutator.Mutate(population, iterationRandom, searchSpace, problem);
     var endMutation = Stopwatch.GetTimestamp();
     MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));

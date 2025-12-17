@@ -22,7 +22,7 @@ internal static class StringBuilderExtensions {
 public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringFormatter {
   public string Format(SymbolicExpressionTree symbolicExpressionTree) {
     // skip root and start symbols
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     GenerateHeader(strBuilder, symbolicExpressionTree);
 
     //generate function body
@@ -33,14 +33,14 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
   }
 
   private void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree) {
-    HashSet<string> floatVarNames = new HashSet<string>();
+    var floatVarNames = new HashSet<string>();
     foreach (var node in symbolicExpressionTree.IterateNodesPostfix().Where(x => x is VariableTreeNode || x is VariableConditionTreeNode)) {
       floatVarNames.Add(((VariableTreeNode)node).VariableName);
     }
 
     var sortedFloatIdentifiers = floatVarNames.OrderBy(n => n, new NaturalStringComparer()).Select(n => VariableName2Identifier(n)).ToList();
 
-    HashSet<string> varcharVarNames = new HashSet<string>();
+    var varcharVarNames = new HashSet<string>();
     foreach (var node in symbolicExpressionTree.IterateNodesPostfix().Where(x => x is BinaryFactorVariableTreeNode || x is FactorVariableTreeNode)) {
       varcharVarNames.Add(((VariableTreeNode)node).VariableName);
     }
@@ -240,7 +240,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     } else {
       FormatRecursively(level, node.GetSubtree(0), strBuilder);
       strBuilder.Append("/ (");
-      for (int i = 1; i < node.SubtreeCount; i++) {
+      for (var i = 1; i < node.SubtreeCount; i++) {
         if (i > 1) strBuilder.Append(" * ");
         FormatRecursively(level, node.GetSubtree(i), strBuilder);
       }

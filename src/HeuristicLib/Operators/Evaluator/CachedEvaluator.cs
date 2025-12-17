@@ -24,14 +24,14 @@ public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
       IRandomNumberGenerator random,
       TEncoding encoding,
       TProblem problem) {
-    int n = solutions.Count;
+    var n = solutions.Count;
     if (n == 0)
       return (Array.Empty<ObjectiveVector>(), 0, 0);
 
     var results = new ObjectiveVector[n];
 
     var evalIndexBySolutionIndex = new int[n];
-    for (int i = 0; i < n; i++)
+    for (var i = 0; i < n; i++)
       evalIndexBySolutionIndex[i] = -1;
 
     // For deduplication of uncached keys within this batch:
@@ -39,11 +39,11 @@ public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
     var keyToEvalIndex = new Dictionary<TKey, int>();
     var toEvaluate = new List<TGenotype>();
 
-    int cachedSolutionsCount = 0;
+    var cachedSolutionsCount = 0;
 
     // First pass: fill from cache where possible, and
     // build the de-duplicated list of solutions to evaluate.
-    for (int i = 0; i < n; i++) {
+    for (var i = 0; i < n; i++) {
       var solution = solutions[i];
       var key = KeySelector(solution);
 
@@ -54,7 +54,7 @@ public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
       } else {
         // Not in cache yet: check if we've already
         // scheduled this key for evaluation in this batch
-        if (!keyToEvalIndex.TryGetValue(key, out int evalIndex)) {
+        if (!keyToEvalIndex.TryGetValue(key, out var evalIndex)) {
           evalIndex = toEvaluate.Count;
           toEvaluate.Add(solution);
           keyToEvalIndex[key] = evalIndex;
@@ -65,7 +65,7 @@ public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
       }
     }
 
-    int uniqueEvaluatedCount = toEvaluate.Count;
+    var uniqueEvaluatedCount = toEvaluate.Count;
 
     // If everything was cached, we're done
     if (uniqueEvaluatedCount == 0)
@@ -81,8 +81,8 @@ public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
     }
 
     // Second pass: fill in results for those that were not cached
-    for (int i = 0; i < n; i++) {
-      int evalIndex = evalIndexBySolutionIndex[i];
+    for (var i = 0; i < n; i++) {
+      var evalIndex = evalIndexBySolutionIndex[i];
       if (evalIndex >= 0) {
         results[i] = evaluated[evalIndex];
       }

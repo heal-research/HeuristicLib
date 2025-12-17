@@ -19,10 +19,10 @@ public class TravelingSalesmanDistanceMatrixProblemData : ITravelingSalesmanProb
   }
 
   private static IReadOnlyList<IReadOnlyList<double>> Clone(double[,] array) {
-    double[][] result = new double[array.GetLength(0)][];
-    for (int i = 0; i < array.GetLength(0); i++) {
+    var result = new double[array.GetLength(0)][];
+    for (var i = 0; i < array.GetLength(0); i++) {
       result[i] = new double[array.GetLength(1)];
-      for (int j = 0; j < array.GetLength(1); j++) {
+      for (var j = 0; j < array.GetLength(1); j++) {
         result[i][j] = array[i, j];
       }
     }

@@ -11,13 +11,13 @@ public class AgedCrossover<TGenotype, TEncoding, TProblem>(ICrossover<TGenotype,
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public IReadOnlyList<AgedGenotype<TGenotype>> Cross(IReadOnlyList<IParents<AgedGenotype<TGenotype>>> parents, IRandomNumberGenerator random, AgedEncoding<TGenotype, TEncoding> encoding, AgedProblem<TGenotype, TEncoding, TProblem> problem) {
     var innerParents = new IParents<TGenotype>[parents.Count];
-    for (int i = 0; i < parents.Count; i++)
+    for (var i = 0; i < parents.Count; i++)
       innerParents[i] = new Parents<TGenotype>(parents[i].Item1.InnerGenotype, parents[i].Item2.InnerGenotype);
 
     var offspring = internalCrossover.Cross(innerParents, random, encoding.InnerEncoding, problem.InnerProblem);
     var result = new AgedGenotype<TGenotype>[offspring.Count];
-    for (int i = 0; i < offspring.Count; i++) {
-      int newAge = Math.Max(parents[i].Item1.Age, parents[i].Item2.Age) + 1;
+    for (var i = 0; i < offspring.Count; i++) {
+      var newAge = Math.Max(parents[i].Item1.Age, parents[i].Item2.Age) + 1;
       result[i] = new AgedGenotype<TGenotype>(offspring[i], newAge);
     }
 

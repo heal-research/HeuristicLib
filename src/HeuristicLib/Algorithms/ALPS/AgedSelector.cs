@@ -10,13 +10,13 @@ public class AgedSelector<TGenotype, TEncoding, TProblem>(ISelector<TGenotype, T
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Select(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> population, Objective objective, int count, IRandomNumberGenerator random, AgedEncoding<TGenotype, TEncoding> encoding, AgedProblem<TGenotype, TEncoding, TProblem> problem) {
     var innerPopulation = new ISolution<TGenotype>[population.Count];
-    for (int i = 0; i < population.Count; i++) {
+    for (var i = 0; i < population.Count; i++) {
       innerPopulation[i] = new Solution<TGenotype>(population[i].Genotype.InnerGenotype, population[i].ObjectiveVector);
     }
 
     var selected = internalSelector.Select(innerPopulation, objective, count, random, encoding.InnerEncoding, problem.InnerProblem);
     var result = new ISolution<AgedGenotype<TGenotype>>[selected.Count];
-    for (int i = 0; i < selected.Count; i++) {
+    for (var i = 0; i < selected.Count; i++) {
       // Find the original Solution to get the age
       var originalISolution = population.Single(s => Equals(s.Genotype.InnerGenotype, selected[i].Genotype));
       result[i] = originalISolution;

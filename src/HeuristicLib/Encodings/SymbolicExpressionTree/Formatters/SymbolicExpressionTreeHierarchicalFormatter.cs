@@ -12,7 +12,7 @@ public sealed class SymbolicExpressionTreeHierarchicalFormatter : ISymbolicExpre
   }
 
   public static void RenderNode(TextWriter writer, SymbolicExpressionTreeNode node, string prefix) {
-    string label = node.ToString() ?? "";
+    var label = node.ToString() ?? "";
     writer.Write(label);
     if (node.SubtreeCount <= 0) {
       writer.WriteLine();

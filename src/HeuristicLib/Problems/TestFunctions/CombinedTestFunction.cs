@@ -20,3 +20,15 @@ public class CombinedTestFunction : IMultiObjectiveTestFunction {
 
   public RealVector Evaluate(RealVector solution) => new(Functions.Select(x => x.Evaluate(solution)));
 }
+
+public class CombinedGradientTestFunction : CombinedTestFunction, IMultiObjectiveGradientTestFunction {
+  private readonly IGradientTestFunction[] functions;
+
+  public CombinedGradientTestFunction(params IReadOnlyCollection<IGradientTestFunction> functions) : base(functions) {
+    this.functions = functions.ToArray();
+  }
+
+  public RealVector[] EvaluateGradient(RealVector solution) {
+    return functions.Select(x => x.EvaluateGradient(solution)).ToArray();
+  }
+}

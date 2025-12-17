@@ -2,12 +2,14 @@
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 
-public class ShiftedTestFunction : MetaTestFunction {
-  private readonly RealVector shiftVector;
-  public ShiftedTestFunction(RealVector shiftVector, ITestFunction inner) : base(inner) => this.shiftVector = shiftVector;
+public class ShiftedTestFunction(RealVector shiftVector, ITestFunction inner) : MetaTestFunction(inner) {
+  protected readonly RealVector ShiftVector = shiftVector;
 
   public override double Evaluate(RealVector solution) {
-    var shiftedISolution = solution + shiftVector;
-    return Inner.Evaluate(shiftedISolution);
+    return Inner.Evaluate(solution + ShiftVector);
   }
+}
+
+public class ShiftedGradientTestFunction(RealVector shiftVector, IGradientTestFunction inner) : ShiftedTestFunction(shiftVector, inner), IGradientTestFunction {
+  public RealVector EvaluateGradient(RealVector solution) => inner.EvaluateGradient(solution + ShiftVector);
 }

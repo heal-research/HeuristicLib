@@ -11,7 +11,7 @@ public class NormalDistributedCreator(RealVector means, RealVector sigmas) : Cre
 
   public override RealVector Create(IRandomNumberGenerator random, RealVectorEncoding encoding) {
     if (!RealVector.AreCompatible(encoding.Length, Means, Sigmas, encoding.Minimum, encoding.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
-    RealVector value = RealVector.CreateNormal(encoding.Length, Means, Sigmas, random);
+    var value = RealVector.CreateNormal(encoding.Length, Means, Sigmas, random);
     // Clamp value to min/max bounds
     value = RealVector.Clamp(value, encoding.Minimum, encoding.Maximum);
     return value;

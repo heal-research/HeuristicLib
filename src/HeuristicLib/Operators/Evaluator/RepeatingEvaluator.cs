@@ -47,12 +47,12 @@ public class RepeatingEvaluator<TGenotype, TEncoding, TProblem> : BatchEvaluator
   public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
     ObjectiveVector[]? results = null;
 
-    for (int i = 0; i < repeats; i++) {
+    for (var i = 0; i < repeats; i++) {
       var singleResult = evaluator.Evaluate(solutions, random, encoding, problem);
       if (results is null) {
         results = singleResult.ToArray();
       } else {
-        for (int j = 0; j < results.Length; j++) {
+        for (var j = 0; j < results.Length; j++) {
           results[j] = aggregator(results[j], singleResult[j]);
         }
       }

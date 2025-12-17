@@ -25,7 +25,7 @@ public sealed record Permutation : IReadOnlyList<int> {
     Span<bool> seen = stackalloc bool[values.Length];
     seen.Clear();
 
-    foreach (int value in values) {
+    foreach (var value in values) {
       if (value < 0 || value >= values.Length || seen[value]) {
         return false;
       }
@@ -60,9 +60,9 @@ public sealed record Permutation : IReadOnlyList<int> {
   }
 
   public static Permutation CreateRandom(int length, IRandomNumberGenerator rng) {
-    int[] elements = Enumerable.Range(0, length).ToArray();
-    for (int i = elements.Length - 1; i > 0; i--) {
-      int j = rng.Integer(i + 1);
+    var elements = Enumerable.Range(0, length).ToArray();
+    for (var i = elements.Length - 1; i > 0; i--) {
+      var j = rng.Integer(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
     }
 
@@ -70,11 +70,11 @@ public sealed record Permutation : IReadOnlyList<int> {
   }
 
   public static Permutation SwapRandomElements(Permutation permutation, IRandomNumberGenerator rng) {
-    int length = permutation.Count;
-    int index1 = rng.Integer(length);
-    int index2 = rng.Integer(length);
+    var length = permutation.Count;
+    var index1 = rng.Integer(length);
+    var index2 = rng.Integer(length);
 
-    int[] newElements = permutation.memory.ToArray();
+    var newElements = permutation.memory.ToArray();
     (newElements[index1], newElements[index2]) = (newElements[index2], newElements[index1]);
     return FromMemory(newElements);
   }

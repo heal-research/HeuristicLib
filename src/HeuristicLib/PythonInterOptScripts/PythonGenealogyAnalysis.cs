@@ -8,6 +8,10 @@ using HEAL.HeuristicLib.Encodings.Permutation;
 using HEAL.HeuristicLib.Encodings.Permutation.Creators;
 using HEAL.HeuristicLib.Encodings.Permutation.Crossovers;
 using HEAL.HeuristicLib.Encodings.Permutation.Mutators;
+using HEAL.HeuristicLib.Encodings.RealVector;
+using HEAL.HeuristicLib.Encodings.RealVector.Creators;
+using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
+using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Creators;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Crossovers;
@@ -18,6 +22,7 @@ using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
+using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Selector;
@@ -25,47 +30,47 @@ using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
+using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
-using static HEAL.HeuristicLib.PythonInterOptScripts.PythonGenealogyAnalysis;
+
+#pragma warning disable S1104
+#pragma warning disable S1104
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public class PythonGenealogyAnalysis {
-  public delegate void GenerationCallback(PopulationIterationResult<SymbolicExpressionTree> current);
+  public delegate void GenerationCallback(object current);
 
-  public delegate void PermutationGenerationCallback(PopulationIterationResult<Permutation> current);
-
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> CreateSymRegAllMutator() {
-    var symRegAllMutator = MultiMutator.Create(
-      new ChangeNodeTypeManipulation(),
-      new FullTreeShaker(),
-      new OnePointShaker(),
-      new RemoveBranchManipulation(),
-      new ReplaceBranchManipulation());
-    return symRegAllMutator;
-  }
+  public record ExperimentResult<T>(
+    string Graph,
+    List<List<double>> ChildRanks,
+    List<BestMedianWorstEntry<T>> BestMedianWorst,
+    List<ISolution<T>[]> AllPopulations)
+    where T : class;
 
   #region public methods
-  public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>)[]
+  public static ExperimentResult<SymbolicExpressionTree>[]
     RunSymbolicRegressionConfigurable(string file, SymRegExperimentParameters parameters, int repetitions, double trainingSplit = 0.66) {
     return Enumerable.Range(0, repetitions).ParallelSelect(new SystemRandomNumberGenerator(parameters.Seed),
       (i, _, _) => RunSymbolicRegressionConfigurable(
         file,
-        parameters with { Seed = parameters.Seed + i },
+        new SymRegExperimentParameters(parameters) { Seed = parameters.Seed + i },
         trainingSplit)
     ).ToArray();
   }
 
-  public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>) RunSymbolicRegressionConfigurable(
+  public static ExperimentResult<SymbolicExpressionTree> RunSymbolicRegressionConfigurable(
     string file,
     SymRegExperimentParameters parameters,
     double trainingSplit = 0.66,
     GenerationCallback? callback = null) {
-    parameters = parameters with {
+    parameters = new SymRegExperimentParameters(parameters) {
       Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
       Crossover = parameters.Crossover ?? new SubtreeCrossover(),
       Mutator = parameters.Mutator ?? CreateSymRegAllMutator()
@@ -75,22 +80,21 @@ public class PythonGenealogyAnalysis {
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
 
-  public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<Permutation>>)[]
+  public static ExperimentResult<Permutation>[]
     RunTravelingSalesmanConfigurable(string file, TravelingSalesmanExperimentParameters parameters, int repetitions) {
     return Enumerable.Range(0, repetitions).ParallelSelect(new SystemRandomNumberGenerator(parameters.Seed),
       (i, _, _) => RunTravelingSalesmanConfigurable(
-        file,
-        parameters with { Seed = parameters.Seed + i })
+        file, new TravelingSalesmanExperimentParameters(parameters) { Seed = parameters.Seed + i })
     ).ToArray();
   }
 
-  public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<Permutation>>) RunTravelingSalesmanConfigurable(
+  public static ExperimentResult<Permutation> RunTravelingSalesmanConfigurable(
     string file,
     TravelingSalesmanExperimentParameters parameters,
-    PermutationGenerationCallback? callback = null) {
+    GenerationCallback? callback = null) {
     var problem = CreateTestTravellingSalesmanProblem(file);
 
-    parameters = parameters with {
+    parameters = new TravelingSalesmanExperimentParameters(parameters) {
       Creator = parameters.Creator ?? new RandomPermutationCreator(),
       Crossover = parameters.Crossover ?? new EdgeRecombinationCrossover(),
       Mutator = parameters.Mutator ?? new InversionMutator()
@@ -98,58 +102,85 @@ public class PythonGenealogyAnalysis {
     var actionCallback = callback is null ? null : new Action<PopulationIterationResult<Permutation>>(callback);
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
+
+  public static ExperimentResult<RealVector> RunTestFunctionConfigurable(
+    string file,
+    TestFunctionExperimentParameters parameters,
+    GenerationCallback? callback = null) {
+    parameters = new TestFunctionExperimentParameters(parameters) {
+      Creator = parameters.Creator ?? new UniformDistributedCreator(),
+      Crossover = parameters.Crossover ?? new SimulatedBinaryCrossover(),
+      Mutator = parameters.Mutator ?? new GaussianMutator(1.0 / parameters.dimension, 0.01)
+    };
+    var problem = CreateTestFunctionProblem(parameters.problem, parameters.dimension, parameters.instance);
+    var actionCallback = callback is null ? null : new Action<PopulationIterationResult<RealVector>>(callback);
+    return RunAlgorithmConfigurable(problem, actionCallback, parameters);
+  }
   #endregion
 
   #region Parameters
-  public record ExperimentParameters<T, TE>(
-    int Seed = 0,
-    int Elites = 1,
-    int PopulationSize = 10,
-    int Iterations = 30,
-    double MutationRate = 0.05,
-    int NoChildren = -1,
-    bool WithCrossover = false,
-    EvolutionStrategyType Strategy = EvolutionStrategyType.Plus,
-    ICreator<T, TE>? Creator = null,
-    ICrossover<T, TE>? Crossover = null,
-    IMutator<T, TE>? Mutator = null,
-    ISelector<T>? Selector = null,
-    string AlgorithmName = "ga") where TE : class, IEncoding<T>;
+  public class ExperimentParameters<T, TE> where TE : class, IEncoding<T> {
+    public int Seed;
+    public int Elites = 1;
+    public int PopulationSize = 10;
+    public int Iterations = 30;
+    public double MutationRate = 0.05;
+    public int NoChildren = -1;
+    public bool WithCrossover;
+    public EvolutionStrategyType Strategy = EvolutionStrategyType.Plus;
+    public ICreator<T, TE>? Creator;
+    public ICrossover<T, TE>? Crossover;
+    public IMutator<T, TE>? Mutator;
+    public ISelector<T>? Selector;
+    public bool TrackGenealogy;
+    public bool TrackPopulations;
 
-  public record SymRegExperimentParameters(
-    int Seed = 0,
-    int Elites = 1,
-    int PopulationSize = 10,
-    int Iterations = 30,
-    double MutationRate = 0.05,
-    int NoChildren = -1,
-    bool WithCrossover = false,
-    EvolutionStrategyType Strategy = EvolutionStrategyType.Plus,
-    ICreator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? Creator = null,
-    ICrossover<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? Crossover = null,
-    IMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? Mutator = null,
-    ISelector<SymbolicExpressionTree>? Selector = null,
-    string AlgorithmName = "ga") :
-    ExperimentParameters<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>(Seed, Elites, PopulationSize,
-      Iterations, MutationRate, NoChildren, WithCrossover, Strategy, Creator, Crossover, Mutator, Selector,
-      AlgorithmName);
+    public string AlgorithmName = "ga";
+    public ExperimentParameters() { }
 
-  public record TravelingSalesmanExperimentParameters(
-    int Seed = 0,
-    int Elites = 1,
-    int PopulationSize = 10,
-    int Iterations = 30,
-    double MutationRate = 0.05,
-    int NoChildren = -1,
-    bool WithCrossover = false,
-    EvolutionStrategyType Strategy = EvolutionStrategyType.Plus,
-    ICreator<Permutation, PermutationEncoding>? Creator = null,
-    ICrossover<Permutation, PermutationEncoding>? Crossover = null,
-    IMutator<Permutation, PermutationEncoding>? Mutator = null,
-    ISelector<Permutation>? Selector = null,
-    string AlgorithmName = "ga") : ExperimentParameters<Permutation, PermutationEncoding>(Seed, Elites, PopulationSize,
-    Iterations, MutationRate, NoChildren, WithCrossover, Strategy, Creator, Crossover, Mutator, Selector,
-    AlgorithmName);
+    public ExperimentParameters(ExperimentParameters<T, TE> parameters) {
+      Seed = parameters.Seed;
+      Elites = parameters.Elites;
+      PopulationSize = parameters.PopulationSize;
+      Iterations = parameters.Iterations;
+      MutationRate = parameters.MutationRate;
+      NoChildren = parameters.NoChildren;
+      WithCrossover = parameters.WithCrossover;
+      Strategy = parameters.Strategy;
+      Selector = parameters.Selector;
+      AlgorithmName = parameters.AlgorithmName;
+      Creator = parameters.Creator;
+      Crossover = parameters.Crossover;
+      Mutator = parameters.Mutator;
+      TrackGenealogy = parameters.TrackGenealogy;
+      TrackPopulations = parameters.TrackPopulations;
+    }
+  }
+
+  public class SymRegExperimentParameters : ExperimentParameters<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
+    public double trainingSplit = 0.66;
+
+    public SymRegExperimentParameters() { }
+
+    public SymRegExperimentParameters(SymRegExperimentParameters parameters) : base(parameters) {
+      trainingSplit = parameters.trainingSplit;
+    }
+  }
+
+  public class TravelingSalesmanExperimentParameters : ExperimentParameters<Permutation, PermutationEncoding> {
+    public TravelingSalesmanExperimentParameters() { }
+
+    public TravelingSalesmanExperimentParameters(TravelingSalesmanExperimentParameters parameters) : base(parameters) { }
+  }
+
+  public class TestFunctionExperimentParameters : ExperimentParameters<RealVector, RealVectorEncoding> {
+    public int dimension = 10;
+    public int instance = 1;
+    public int problem = 1;
+    public TestFunctionExperimentParameters() { }
+
+    public TestFunctionExperimentParameters(TestFunctionExperimentParameters parameters) : base(parameters) { }
+  }
   #endregion
 
   #region Problem Generation
@@ -158,7 +189,7 @@ public class PythonGenealogyAnalysis {
   private static TravelingSalesmanProblem CreateTestTravellingSalesmanProblem(string file) {
     var cdata = TSPCache.GetOrAdd(file, s => {
       var t = TsplibTspInstanceProvider.LoadData(s);
-      return (t.Coordinates?.Length ?? 0) <= 1000 ? t.ToDistanceMatrixData() : t.ToCoordinatesData();
+      return t.Distances != null || (t.Coordinates?.Length ?? 0) <= 1000 ? t.ToDistanceMatrixData() : t.ToCoordinatesData();
     });
     return new TravelingSalesmanProblem(cdata);
   }
@@ -167,7 +198,7 @@ public class PythonGenealogyAnalysis {
 
   private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(string file, double trainingSplit = 0.66) {
     var problemData = SymRegCache.GetOrAdd((file, trainingSplit), key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
-    var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator()) {
+    var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator(), new TreeLengthEvaluator()) {
       SearchSpace = {
         TreeDepth = 40,
         TreeLength = 40
@@ -177,16 +208,31 @@ public class PythonGenealogyAnalysis {
     problem.SearchSpace.Grammar.AddFullyConnectedSymbols(root, new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables });
     return problem;
   }
+
+  private static TestFunctionProblem CreateTestFunctionProblem(int function, int dimension, int instance)
+    => new(BBoBSuite.GetProblem(function, dimension, instance));
   #endregion
 
+  public static bool TrackAllPopulations { get; set; } = true;
+
   #region generic helpers
-  private record MyAnalyzers<T>(
+  private sealed record MyAnalyzers<T>(
     BestMedianWorstAnalysis<T> Qualities,
-    RankAnalysis<T> RankAnalysis,
-    QualityCurveAnalysis<T> QualityCurve) where T : class { }
+    RankAnalysis<T>? RankAnalysis,
+    QualityCurveAnalysis<T> QualityCurve,
+    AllPopulationsTracker<T>? AllPopulations) where T : class {
+    public ExperimentResult<T> ToExperimentResult()
+      => new(
+        RankAnalysis?.Graph.ToGraphViz() ?? "",
+        RankAnalysis?.Ranks ?? [],
+        Qualities.BestISolutions,
+        AllPopulations?.AllSolutions ?? []
+      );
+  }
 
   private static MyAnalyzers<T>
-    AddAnalyzers<T, TE, TP, TRes>(Action<TRes>? callback, IAlgorithmBuilder<T, TE, TP, TRes> builder)
+    AddAnalyzers<T, TE, TP, TRes>(Action<TRes>? callback, IAlgorithmBuilder<T, TE, TP, TRes> builder,
+                                  ExperimentParameters<T, TE> parameters)
     where TRes : PopulationIterationResult<T>
     where T : class
     where TE : class, IEncoding<T>
@@ -194,19 +240,24 @@ public class PythonGenealogyAnalysis {
     var qualities = BestMedianWorstAnalysis.Analyze(builder);
     if (callback != null)
       FuncAnalysis.Create(builder, (_, y) => callback(y));
-    var rankAnalysis = new RankAnalysis<T>();
-    rankAnalysis.AttachTo(builder);
+
+    var rankAnalysis = parameters.TrackGenealogy ? new RankAnalysis<T>() : null;
+    rankAnalysis?.AttachTo(builder);
+
     var qc = QualityCurveAnalysis.Create(builder);
-    return new MyAnalyzers<T>(qualities, rankAnalysis, qc);
+
+    var apt = parameters.TrackPopulations ? new AllPopulationsTracker<T>() : null;
+    apt?.AttachTo(builder);
+    return new MyAnalyzers<T>(qualities, rankAnalysis, qc, apt);
   }
 
-  private static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<T>>) RunAlgorithmConfigurable<T, TE>(
+  private static ExperimentResult<T> RunAlgorithmConfigurable<T, TE>(
     IProblem<T, TE> problem,
     Action<PopulationIterationResult<T>>? callback,
     ExperimentParameters<T, TE> parameters) where TE : class, IEncoding<T> where T : class {
     var terminator = new AfterIterationsTerminator<T>(parameters.Iterations);
     if (parameters.NoChildren < 0)
-      parameters = parameters with { NoChildren = parameters.PopulationSize };
+      parameters.NoChildren = parameters.PopulationSize;
 
     IAlgorithm<T, TE, IProblem<T, TE>, PopulationIterationResult<T>> algorithm;
 
@@ -223,7 +274,7 @@ public class PythonGenealogyAnalysis {
         ga.RandomSeed = parameters.Seed;
         ga.Terminator = terminator;
 
-        analyzers = AddAnalyzers(callback, ga);
+        analyzers = AddAnalyzers(callback, ga, parameters);
         algorithm = ga.BuildAlgorithm();
         break;
       case "es":
@@ -238,7 +289,7 @@ public class PythonGenealogyAnalysis {
         if (parameters.WithCrossover)
           es.Crossover = parameters.Crossover;
 
-        analyzers = AddAnalyzers(callback, es);
+        analyzers = AddAnalyzers(callback, es, parameters);
         algorithm = es.BuildAlgorithm();
         break;
       case "ls":
@@ -247,7 +298,7 @@ public class PythonGenealogyAnalysis {
         ls.Terminator = terminator;
         ls.RandomSeed = parameters.Seed;
 
-        analyzers = AddAnalyzers(callback, ls);
+        analyzers = AddAnalyzers(callback, ls, parameters);
         algorithm = ls.BuildAlgorithm();
         break;
       case "nsga2":
@@ -259,7 +310,7 @@ public class PythonGenealogyAnalysis {
         nsga2.RandomSeed = parameters.Seed;
         nsga2.Terminator = terminator;
         nsga2.DominateOnEquals = true; //todo make configurable
-        analyzers = AddAnalyzers(callback, nsga2);
+        analyzers = AddAnalyzers(callback, nsga2, parameters);
         algorithm = nsga2.BuildAlgorithm();
         break;
       default:
@@ -267,7 +318,17 @@ public class PythonGenealogyAnalysis {
     }
 
     _ = algorithm.Execute(problem, random: new SystemRandomNumberGenerator(parameters.Seed));
-    return (analyzers.RankAnalysis.Graph.ToGraphViz(), analyzers.RankAnalysis.Ranks, analyzers.Qualities.BestISolutions);
+    return analyzers.ToExperimentResult();
+  }
+
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> CreateSymRegAllMutator() {
+    var symRegAllMutator = MultiMutator.Create(
+      new ChangeNodeTypeManipulation(),
+      new FullTreeShaker(),
+      new OnePointShaker(),
+      new RemoveBranchManipulation(),
+      new ReplaceBranchManipulation());
+    return symRegAllMutator;
   }
   #endregion
 }

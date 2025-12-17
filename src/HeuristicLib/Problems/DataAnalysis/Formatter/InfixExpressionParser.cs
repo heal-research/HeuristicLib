@@ -124,10 +124,10 @@ public sealed class InfixExpressionParser {
   }
 
   public SymbolicExpressionTree Parse(string str) {
-    SymbolicExpressionTreeNode root = programRootSymbol.CreateTreeNode();
-    SymbolicExpressionTreeNode start = startSymbol.CreateTreeNode();
+    var root = programRootSymbol.CreateTreeNode();
+    var start = startSymbol.CreateTreeNode();
     var allTokens = GetAllTokens(str).ToArray();
-    SymbolicExpressionTreeNode mainBranch = ParseS(new Queue<Token>(allTokens));
+    var mainBranch = ParseS(new Queue<Token>(allTokens));
 
     // only a main branch was given => insert the main branch into the default tree template
     root.AddSubtree(start);
@@ -136,7 +136,7 @@ public sealed class InfixExpressionParser {
   }
 
   private IEnumerable<Token> GetAllTokens(string str) {
-    int pos = 0;
+    var pos = 0;
     while (true) {
       while (pos < str.Length && char.IsWhiteSpace(str[pos])) pos++;
       if (pos >= str.Length) {
@@ -432,7 +432,7 @@ public sealed class InfixExpressionParser {
     }
 
     parent.RemoveSubtree(0);
-    for (int i = 0; i < child.SubtreeCount; i++) {
+    for (var i = 0; i < child.SubtreeCount; i++) {
       parent.InsertSubtree(i, child.GetSubtree(i));
     }
   }
@@ -682,7 +682,7 @@ public sealed class InfixExpressionParser {
     if (varId.TokenType != TokenType.Identifier) throw new ArgumentException("Identifier expected. Format for lagged variables: \"lag(x, -1)\"");
     var comma = tokens.Dequeue();
     if (comma.TokenType != TokenType.Comma) throw new ArgumentException("',' expected, Format for lagged variables: \"lag(x, -1)\"");
-    double sign = 1.0;
+    var sign = 1.0;
     if (tokens.Peek().StrVal == "+" || tokens.Peek().StrVal == "-") {
       // read sign
       var signTok = tokens.Dequeue();

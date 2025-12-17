@@ -10,13 +10,13 @@ public class AgedMutator<TGenotype, TEncoding, TProblem>(IMutator<TGenotype, TEn
   where TProblem : class, IProblem<TGenotype, TEncoding> {
   public IReadOnlyList<AgedGenotype<TGenotype>> Mutate(IReadOnlyList<AgedGenotype<TGenotype>> population, IRandomNumberGenerator random, AgedEncoding<TGenotype, TEncoding> encoding, AgedProblem<TGenotype, TEncoding, TProblem> problem) {
     var innerPopulation = new TGenotype[population.Count];
-    for (int i = 0; i < population.Count; i++) {
+    for (var i = 0; i < population.Count; i++) {
       innerPopulation[i] = population[i].InnerGenotype;
     }
 
     var mutated = internalMutator.Mutate(innerPopulation, random, encoding.InnerEncoding, problem.InnerProblem);
     var result = new AgedGenotype<TGenotype>[mutated.Count];
-    for (int i = 0; i < mutated.Count; i++) {
+    for (var i = 0; i < mutated.Count; i++) {
       // Find the original Solution to get the age
       var originalISolution = population.Single(s => Equals(s.InnerGenotype, mutated[i]));
       result[i] = originalISolution;

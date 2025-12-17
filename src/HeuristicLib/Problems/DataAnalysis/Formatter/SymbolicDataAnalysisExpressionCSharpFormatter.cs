@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : SymbolicExpressionTreeStringFormatter {
   public string Format(SymbolicExpressionTree symbolicExpressionTree) {
     // skip root and start symbols
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     GenerateHeader(strBuilder, symbolicExpressionTree);
     FormatRecursively(symbolicExpressionTree.Root.GetSubtree(0).GetSubtree(0), strBuilder);
     GenerateFooter(strBuilder);
@@ -202,7 +202,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     } else {
       FormatRecursively(node.GetSubtree(0), strBuilder);
       strBuilder.Append("/ (");
-      for (int i = 1; i < node.SubtreeCount; i++) {
+      for (var i = 1; i < node.SubtreeCount; i++) {
         if (i > 1) strBuilder.Append(" * ");
         FormatRecursively(node.GetSubtree(i), strBuilder);
       }
@@ -257,11 +257,11 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.Append(Environment.NewLine + "public static double Evaluate (");
 
     // here we don't have access to problemData to determine the type for each variable (double/string) therefore we must distinguish based on the symbol type
-    HashSet<string> doubleVarNames = new HashSet<string>();
+    var doubleVarNames = new HashSet<string>();
     doubleVarNames.UnionWith(symbolicExpressionTree.IterateNodesPostfix().OfType<VariableTreeNode>().Select(n => n.VariableName));
     doubleVarNames.UnionWith(symbolicExpressionTree.IterateNodesPostfix().OfType<VariableConditionTreeNode>().Select(n => n.VariableName));
 
-    HashSet<string> stringVarNames = new HashSet<string>();
+    var stringVarNames = new HashSet<string>();
 
     stringVarNames.UnionWith(symbolicExpressionTree.IterateNodesPostfix().OfType<BinaryFactorVariableTreeNode>().Select(n => n.VariableName));
     stringVarNames.UnionWith(symbolicExpressionTree.IterateNodesPostfix().OfType<FactorVariableTreeNode>().Select(n => n.VariableName));

@@ -26,41 +26,41 @@ public class MultiMutator<TGenotype, TEncoding, TProblem> : BatchMutator<TGenoty
     Weights = weights ?? Enumerable.Repeat(1.0, mutators.Count).ToArray();
 
     cumulativeSumWeights = new double[Weights.Count];
-    for (int i = 0; i < Weights.Count; i++) {
+    for (var i = 0; i < Weights.Count; i++) {
       sumWeights += Weights[i];
       cumulativeSumWeights[i] = sumWeights;
     }
   }
 
   public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    int offspringCount = parent.Count;
+    var offspringCount = parent.Count;
 
     // determine which crossover to use for each offspring
-    int[] operatorAssignment = new int[offspringCount];
-    int[] operatorCounts = new int[Mutators.Count];
-    double[] randoms = random.Random(offspringCount);
-    for (int i = 0; i < offspringCount; i++) {
-      double r = randoms[i] * sumWeights;
-      int idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
+    var operatorAssignment = new int[offspringCount];
+    var operatorCounts = new int[Mutators.Count];
+    var randoms = random.Random(offspringCount);
+    for (var i = 0; i < offspringCount; i++) {
+      var r = randoms[i] * sumWeights;
+      var idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
       operatorAssignment[i] = idx;
       operatorCounts[idx]++;
     }
 
     // batch parents by operator
     var parentBatches = new List<TGenotype>[Mutators.Count];
-    for (int i = 0; i < Mutators.Count; i++) {
+    for (var i = 0; i < Mutators.Count; i++) {
       parentBatches[i] = new List<TGenotype>(operatorCounts[i]);
     }
 
-    for (int i = 0; i < offspringCount; i++) {
-      int opIdx = operatorAssignment[i];
+    for (var i = 0; i < offspringCount; i++) {
+      var opIdx = operatorAssignment[i];
       parentBatches[opIdx].Add(parent[i]);
     }
 
     // batch-create for each operator and collect
     var offspring = new List<TGenotype>(offspringCount);
 
-    for (int i = 0; i < Mutators.Count; i++) {
+    for (var i = 0; i < Mutators.Count; i++) {
       var batchOffspring = Mutators[i].Mutate(parentBatches[i], random, encoding, problem);
       offspring.AddRange(batchOffspring);
     }

@@ -14,12 +14,12 @@ public class CrowdingDistance {
         return [double.PositiveInfinity, double.PositiveInfinity];
     }
 
-    double[] distances = new double[n];
+    var distances = new double[n];
 
     var m = population[0].Count; // number of objectives
     var indices = Enumerable.Range(0, n).ToArray();
     // Compute for each objective dimension
-    for (int obj = 0; obj < m; obj++) {
+    for (var obj = 0; obj < m; obj++) {
       // Sort indices by objective value
       Array.Sort(indices, new IndexedComparer(population, obj));
       var minVal = population[indices[0]][obj];
@@ -34,9 +34,9 @@ public class CrowdingDistance {
       distances[indices[^1]] = double.PositiveInfinity;
 
       // Internal points
-      for (int j = 1; j < n - 1; j++) {
-        double prev = population[indices[j - 1]][obj];
-        double next = population[indices[j + 1]][obj];
+      for (var j = 1; j < n - 1; j++) {
+        var prev = population[indices[j - 1]][obj];
+        var next = population[indices[j + 1]][obj];
 
         // Normalize difference and add to crowding distance
         distances[indices[j]] += (next - prev) / range;

@@ -20,9 +20,9 @@ public readonly record struct OperatorMetric(int Count, TimeSpan Duration) {
   public static OperatorMetric Zero => new(0, TimeSpan.Zero);
 
   public static OperatorMetric Measure(int count, Action action) {
-    long start = Stopwatch.GetTimestamp();
+    var start = Stopwatch.GetTimestamp();
     action();
-    long end = Stopwatch.GetTimestamp();
+    var end = Stopwatch.GetTimestamp();
 
     return new OperatorMetric(count, Stopwatch.GetElapsedTime(start, end));
   }

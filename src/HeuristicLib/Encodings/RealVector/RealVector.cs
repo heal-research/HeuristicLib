@@ -340,11 +340,27 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     return $"[{string.Join(", ", elements)}]";
   }
 
+  public double Dot(RealVector other) {
+    var sum = 0.0;
+    for (int i = 0; i < elements.Length; i++) {
+      var d1 = elements[i];
+      var d2 = other.elements[i];
+      sum += d1 * d2;
+    }
+
+    return sum;
+  }
+
+  public double Angle(RealVector other) {
+    var r = Dot(other) / (Norm() * other.Norm());
+    return Math.Acos(r);
+  }
+
   public double Norm() {
     var sumSquares = 0.0;
     for (int i = 0; i < elements.Length; i++) {
       var d1 = elements[i];
-      sumSquares += d1;
+      sumSquares += d1 * d1;
     }
 
     return Math.Sqrt(sumSquares);

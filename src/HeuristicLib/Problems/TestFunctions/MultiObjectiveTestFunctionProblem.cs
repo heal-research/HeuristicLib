@@ -5,19 +5,19 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class MultiObjectiveTestFunctionProblem : RealVectorProblem {
-  private readonly IMultiObjectiveTestFunction testFunction;
+  public readonly IMultiObjectiveTestFunction TestFunction;
 
   public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : base(testFunction.Objective, GetEncoding(testFunction)) {
-    this.testFunction = testFunction;
+    TestFunction = testFunction;
   }
 
   public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction, RealVectorEncoding searchSpace) : base(testFunction.Objective, searchSpace) {
     ArgumentOutOfRangeException.ThrowIfNotEqual(searchSpace.Length, testFunction.Dimension);
-    this.testFunction = testFunction;
+    TestFunction = testFunction;
   }
 
   public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) {
-    return new ObjectiveVector(testFunction.Evaluate(solution));
+    return new ObjectiveVector(TestFunction.Evaluate(solution));
   }
 
   private static RealVectorEncoding GetEncoding(IMultiObjectiveTestFunction testFunction) {

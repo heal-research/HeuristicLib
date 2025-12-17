@@ -509,15 +509,15 @@ public static class Functions {
     const double condition = 100.0;
     const double alpha = 10.0;
 
-    int n = x.Count;
+    var n = x.Count;
     if (n <= 1)
       throw new ArgumentException("Step Ellipsoid requires dimension > 1.", nameof(x));
 
-    double penalty = 0.0;
+    var penalty = 0.0;
 
     // Boundary penalty
-    for (int i = 0; i < n; i++) {
-      double tmp = Math.Abs(x[i]) - 5.0;
+    for (var i = 0; i < n; i++) {
+      var tmp = Math.Abs(x[i]) - 5.0;
       if (tmp > 0.0)
         penalty += tmp * tmp;
     }
@@ -527,21 +527,21 @@ public static class Functions {
     var localXx = new double[n];
 
     // First transformation: x -> localX
-    for (int i = 0; i < n; i++) {
-      double c1 = Math.Sqrt(Math.Pow(condition / 10.0, i / (n - 1.0)));
-      double acc = 0.0;
+    for (var i = 0; i < n; i++) {
+      var c1 = Math.Sqrt(Math.Pow(condition / 10.0, i / (n - 1.0)));
+      var acc = 0.0;
 
-      for (int j = 0; j < n; j++) {
+      for (var j = 0; j < n; j++) {
         acc += c1 * data.Rot2[i][j] * (x[j] - data.XOpt[j]);
       }
 
       localX[i] = acc;
     }
 
-    double x1 = localX[0];
+    var x1 = localX[0];
 
     // Step / rounding
-    for (int i = 0; i < n; i++) {
+    for (var i = 0; i < n; i++) {
       if (Math.Abs(localX[i]) > 0.5) {
         localX[i] = CocoDoubleRound(localX[i]);
       } else {
@@ -550,9 +550,9 @@ public static class Functions {
     }
 
     // Second transformation: localX -> localXx
-    for (int i = 0; i < n; i++) {
-      double acc = 0.0;
-      for (int j = 0; j < n; j++) {
+    for (var i = 0; i < n; i++) {
+      var acc = 0.0;
+      for (var j = 0; j < n; j++) {
         acc += data.Rot1[i][j] * localX[j];
       }
 
@@ -560,9 +560,9 @@ public static class Functions {
     }
 
     // Ellipsoid core
-    double result = 0.0;
-    for (int i = 0; i < n; i++) {
-      double exponent = i / (n - 1.0);
+    var result = 0.0;
+    for (var i = 0; i < n; i++) {
+      var exponent = i / (n - 1.0);
       result += Math.Pow(condition, exponent) * localXx[i] * localXx[i];
     }
 

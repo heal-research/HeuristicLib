@@ -3,21 +3,33 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public class RastriginFunction(int dimension) : ITestFunction {
+public class RastriginFunction(int dimension) : IGradientTestFunction {
   public int Dimension { get; } = dimension;
   public double Min => -5.12;
   public double Max => 5.12;
   public ObjectiveDirection Objective => ObjectiveDirection.Minimize;
 
+  private const double A = 10;
+  private const double PiTwo = 2 * Math.PI;
+
   public double Evaluate(RealVector solution) {
     int n = solution.Count;
-    const double a = 10;
-    double sum = a * n;
+    double sum = A * n;
     for (int i = 0; i < n; i++) {
       var d = solution[i];
-      sum += d * d - a * Math.Cos(2 * Math.PI * d);
+      sum += d * d - A * Math.Cos(PiTwo * d);
     }
 
     return sum;
+  }
+
+  public RealVector EvaluateGradient(RealVector solution) {
+    var g = new double[solution.Count];
+    for (int i = 0; i < solution.Count; i++) {
+      var d = solution[i];
+      g[i] = 2 * d + PiTwo * A * Math.Sin(PiTwo * d);
+    }
+
+    return g;
   }
 }

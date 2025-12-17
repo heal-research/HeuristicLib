@@ -29,16 +29,16 @@ public class OrderCrossover : Crossover<Permutation, PermutationEncoding> {
     contains.Clear();
 
     // 1. copy segment from parent1
-    for (int i = start; i <= end; i++) {
-      int value = parent1[i];
+    for (var i = start; i <= end; i++) {
+      var value = parent1[i];
       offspring[i] = value;
       contains[value] = true;
     }
 
     // 2. copy left values from parent2
-    int currentIndex = 0;
-    for (int i = 0; i < start; i++) {
-      int value = parent2[i];
+    var currentIndex = 0;
+    for (var i = 0; i < start; i++) {
+      var value = parent2[i];
       if (!contains[value]) {
         offspring[currentIndex] = value;
         contains[value] = true;
@@ -46,8 +46,8 @@ public class OrderCrossover : Crossover<Permutation, PermutationEncoding> {
       }
     }
 
-    for (int i = end; i < parent1.Length; i++) {
-      int value = parent2[i];
+    for (var i = end; i < parent1.Length; i++) {
+      var value = parent2[i];
       if (!contains[value]) {
         offspring[currentIndex] = value;
         contains[value] = true;
@@ -64,8 +64,8 @@ public class OrderCrossover : Crossover<Permutation, PermutationEncoding> {
   public static (int, int) GetRandomBreakPoints(int length, IRandomNumberGenerator rng) {
     if (length < 2) throw new ArgumentException("Length must be at least 2 to have break points.");
 
-    int start = rng.Integer(0, length - 1);
-    int end = rng.Integer(start + 1, length);
+    var start = rng.Integer(0, length - 1);
+    var end = rng.Integer(start + 1, length);
 
     return (start, end);
   }

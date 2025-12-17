@@ -5,19 +5,7 @@ namespace HEAL.HeuristicLib.Optimization;
 public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<ObjectiveVector> {
   private readonly double[] values;
 
-  public ObjectiveVector(params double[] values) : this(values.AsSpan()) { }
-
-  public ObjectiveVector(params IReadOnlyList<double> values) {
-    if (values.Count == 0) throw new ArgumentException("Fitness vector must not be empty");
-    this.values = values.ToArray();
-  }
-
-  public ObjectiveVector(params ReadOnlySpan<double> values) {
-    if (values.Length == 0) throw new ArgumentException("Fitness vector must not be empty");
-    this.values = values.ToArray();
-  }
-
-  public ObjectiveVector(IEnumerable<double> values) {
+  public ObjectiveVector(params IEnumerable<double> values) {
     this.values = values.ToArray();
     if (this.values.Length == 0) throw new ArgumentException("Fitness vector must not be empty");
   }

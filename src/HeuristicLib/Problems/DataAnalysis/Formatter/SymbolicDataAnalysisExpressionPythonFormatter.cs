@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
 public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExpressionTreeStringFormatter {
   public string Format(SymbolicExpressionTree symbolicExpressionTree) {
-    StringBuilder strBuilderModel = new StringBuilder();
+    var strBuilderModel = new StringBuilder();
     var header = GenerateHeader(symbolicExpressionTree);
     FormatRecursively(symbolicExpressionTree.Root, strBuilderModel);
     return $"{header}{strBuilderModel}";
@@ -21,16 +21,16 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
   }
 
   private static string GenerateHeader(SymbolicExpressionTree symbolicExpressionTree) {
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
 
     var variables = new HashSet<string>();
-    int mathLibCounter = 0;
-    int statisticLibCounter = 0;
-    int evaluateIfCounter = 0;
+    var mathLibCounter = 0;
+    var statisticLibCounter = 0;
+    var evaluateIfCounter = 0;
 
     // iterate tree and search for necessary imports and variable names
     foreach (var node in symbolicExpressionTree.IterateNodesPostfix()) {
-      Symbol symbol = node.Symbol;
+      var symbol = node.Symbol;
       switch (symbol) {
         case Average:
           statisticLibCounter++;
@@ -76,7 +76,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
   }
 
   private static string GenerateNecessaryImports(int mathLibCounter, int statisticLibCounter) {
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     if (mathLibCounter > 0 || statisticLibCounter > 0) {
       strBuilder.AppendLine("# imports");
       if (mathLibCounter > 0)
@@ -90,7 +90,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
   }
 
   private static string GenerateIfThenElseSource(int evaluateIfCounter) {
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     if (evaluateIfCounter > 0) {
       strBuilder.AppendLine("# condition helper function");
       strBuilder.AppendLine("def evaluate_if(condition, then_path, else_path): ");
@@ -104,7 +104,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
   }
 
   private static string GenerateModelEvaluationFunction(ISet<string> variables) {
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     strBuilder.Append("def evaluate(");
     var orderedVariables = variables.OrderBy(n => n, new NaturalStringComparer()).ToArray();
     foreach (var variable in orderedVariables) {
@@ -119,7 +119,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
   }
 
   private static void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
-    Symbol symbol = node.Symbol;
+    var symbol = node.Symbol;
     if (symbol is ProgramRootSymbol)
       FormatRecursively(node.GetSubtree(0), strBuilder);
     else if (symbol is StartSymbol)
@@ -244,7 +244,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
     } else {
       FormatRecursively(node.GetSubtree(0), strBuilder);
       strBuilder.Append(" / (");
-      for (int i = 1; i < node.SubtreeCount; i++) {
+      for (var i = 1; i < node.SubtreeCount; i++) {
         if (i > 1) strBuilder.Append(" * ");
         FormatRecursively(node.GetSubtree(i), strBuilder);
       }

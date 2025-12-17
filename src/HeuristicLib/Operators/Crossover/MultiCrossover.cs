@@ -28,41 +28,41 @@ public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGe
     Weights = weights ?? Enumerable.Repeat(1.0, crossovers.Count).ToArray();
 
     cumulativeSumWeights = new double[Weights.Count];
-    for (int i = 0; i < Weights.Count; i++) {
+    for (var i = 0; i < Weights.Count; i++) {
       sumWeights += Weights[i];
       cumulativeSumWeights[i] = sumWeights;
     }
   }
 
   public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    int offspringCount = parents.Count;
+    var offspringCount = parents.Count;
 
     // determine which crossover to use for each offspring
-    int[] operatorAssignment = new int[offspringCount];
-    int[] operatorCounts = new int[Crossovers.Count];
-    double[] randoms = random.Random(offspringCount);
-    for (int i = 0; i < offspringCount; i++) {
-      double r = randoms[i] * sumWeights;
-      int idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
+    var operatorAssignment = new int[offspringCount];
+    var operatorCounts = new int[Crossovers.Count];
+    var randoms = random.Random(offspringCount);
+    for (var i = 0; i < offspringCount; i++) {
+      var r = randoms[i] * sumWeights;
+      var idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
       operatorAssignment[i] = idx;
       operatorCounts[idx]++;
     }
 
     // batch parents by operator
     var parentBatches = new List<IParents<TGenotype>>[Crossovers.Count];
-    for (int i = 0; i < Crossovers.Count; i++) {
+    for (var i = 0; i < Crossovers.Count; i++) {
       parentBatches[i] = new List<IParents<TGenotype>>(operatorCounts[i]);
     }
 
-    for (int i = 0; i < offspringCount; i++) {
-      int opIdx = operatorAssignment[i];
+    for (var i = 0; i < offspringCount; i++) {
+      var opIdx = operatorAssignment[i];
       parentBatches[opIdx].Add(parents[i]);
     }
 
     // batch-create for each operator and collect
     var offspring = new List<TGenotype>(offspringCount);
 
-    for (int i = 0; i < Crossovers.Count; i++) {
+    for (var i = 0; i < Crossovers.Count; i++) {
       var batchOffspring = Crossovers[i].Cross(parentBatches[i], random, encoding, problem);
       offspring.AddRange(batchOffspring);
     }

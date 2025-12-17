@@ -10,3 +10,7 @@ public interface ITestFunction {
   public ObjectiveDirection Objective { get; }
   double Evaluate(RealVector solution);
 }
+
+public interface IGradientTestFunction : ITestFunction {
+  RealVector EvaluateGradient(RealVector solution);
+}

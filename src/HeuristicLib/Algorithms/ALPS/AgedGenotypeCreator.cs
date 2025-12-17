@@ -11,7 +11,7 @@ public class AgedGenotypeCreator<TGenotype, TEncoding, TProblem>(ICreator<TGenot
   public IReadOnlyList<AgedGenotype<TGenotype>> Create(int count, IRandomNumberGenerator random, AgedEncoding<TGenotype, TEncoding> encoding, AgedProblem<TGenotype, TEncoding, TProblem> problem) {
     var offspring = new AgedGenotype<TGenotype>[count];
     var genotypes = internalCreator.Create(count, random, encoding.InnerEncoding, problem.InnerProblem);
-    for (int i = 0; i < count; i++) {
+    for (var i = 0; i < count; i++) {
       offspring[i] = new AgedGenotype<TGenotype>(genotypes[i], 0);
     }
 

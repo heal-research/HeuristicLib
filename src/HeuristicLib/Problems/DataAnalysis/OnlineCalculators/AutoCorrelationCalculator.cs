@@ -12,14 +12,14 @@ public class AutoCorrelationCalculator {
   }
 
   public static double[] CircularCrossCorrelation(double[] x, double[] y) {
-    int n = Math.Max(x.Length, y.Length);
-    double[] result = new double[n];
+    var n = Math.Max(x.Length, y.Length);
+    var result = new double[n];
 
-    for (int shift = 0; shift < n; shift++) {
-      double sum = 0.0;
-      for (int i = 0; i < n; i++) {
-        double xi = x[i % x.Length];
-        double yi = y[(i + shift) % y.Length];
+    for (var shift = 0; shift < n; shift++) {
+      var sum = 0.0;
+      for (var i = 0; i < n; i++) {
+        var xi = x[i % x.Length];
+        var yi = y[(i + shift) % y.Length];
         sum += xi * yi;
       }
 

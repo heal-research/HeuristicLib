@@ -11,4 +11,9 @@ public static class TestFunctionExtensions {
     public ITestFunction Shifted(RealVector shiftVector) => new ShiftedTestFunction(shiftVector, inner);
     public ITestFunction Rotated(double[,] rotationMatrix) => new RotatedTestFunction(rotationMatrix, inner);
   }
+
+  extension(IGradientTestFunction inner) {
+    public ITestFunction Shifted(RealVector shiftVector) => new ShiftedGradientTestFunction(shiftVector, inner);
+    public ITestFunction Rotated(double[,] rotationMatrix) => new RotatedTestFunction(rotationMatrix, inner);
+  }
 }

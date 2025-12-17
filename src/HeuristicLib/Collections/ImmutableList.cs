@@ -32,7 +32,7 @@ public class ImmutableList<T> : IReadOnlyList<T>, IEquatable<ImmutableList<T>>
       return false;
     if (Count != other.Count)
       return false;
-    for (int i = 0; i < Count; i++)
+    for (var i = 0; i < Count; i++)
       if (!this[i]!.Equals(other[i]))
         return false;
     return true;

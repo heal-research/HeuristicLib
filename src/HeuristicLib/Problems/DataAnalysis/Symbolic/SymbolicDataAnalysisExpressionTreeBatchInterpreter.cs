@@ -11,7 +11,7 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
     var data = instr.Data;
     var dst = instr.Buf;
     var w = instr.Weight;
-    for (int i = 0; i < batchSize; ++i) {
+    for (var i = 0; i < batchSize; ++i) {
       var row = rows[startIndex + i]; // ✅ use the i-th selected row
       dst[i] = w * data[row];
     }

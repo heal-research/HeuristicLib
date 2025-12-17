@@ -11,10 +11,10 @@ public partial class NaturalStringComparer : IComparer<string> {
     if (y == null)
       return 1;
 
-    string[] first = SplitByNumbersRegex().Split(x);
-    string[] second = SplitByNumbersRegex().Split(y);
+    var first = SplitByNumbersRegex().Split(x);
+    var second = SplitByNumbersRegex().Split(y);
 
-    for (int i = 0; i < first.Length && i < second.Length; i++) {
+    for (var i = 0; i < first.Length && i < second.Length; i++) {
       if (first[i] != second[i])
         return CompareWithParsing(first[i], second[i]);
     }
