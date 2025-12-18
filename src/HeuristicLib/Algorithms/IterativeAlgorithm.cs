@@ -24,22 +24,23 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterat
 
   public abstract TIterationResult ExecuteStep(TProblem problem, TEncoding searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
 
-  public override TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => Execute(problem, searchSpace, previousIterationResult: default, random);
+  public override TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => Execute(problem, searchSpace, previousIterationResult: null, random);
 
-  public virtual TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+  public virtual TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = null, IRandomNumberGenerator? random = null) {
     return ExecuteStreaming(problem, searchSpace, previousIterationResult, random).LastOrDefault() ?? throw new InvalidOperationException("The algorithm did not produce any iteration result.");
   }
 
-  public IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+  public IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = null, IRandomNumberGenerator? random = null) {
     CheckSearchSpaceCompatible(problem, searchSpace);
-    bool shouldContinue = previousIterationResult is null || Terminator.ShouldContinue(previousIterationResult, previousIterationState: default, searchSpace ?? problem.SearchSpace, problem);
-
+    var problemSearchSpace = searchSpace ?? problem.SearchSpace;
+    var shouldContinue = previousIterationResult is null || Terminator.ShouldContinue(previousIterationResult, previousIterationState: null, problemSearchSpace, problem);
+    var randomNumberGenerator = random ?? AlgorithmRandom;
     while (shouldContinue) {
-      var newIterationResult = ExecuteStep(problem, searchSpace ?? problem.SearchSpace, previousIterationResult, random ?? AlgorithmRandom);
-      if (Interceptor != null) newIterationResult = Interceptor.Transform(newIterationResult, previousIterationResult, searchSpace ?? problem.SearchSpace, problem);
+      var newIterationResult = ExecuteStep(problem, problemSearchSpace, previousIterationResult, randomNumberGenerator);
+      if (Interceptor != null) newIterationResult = Interceptor.Transform(newIterationResult, previousIterationResult, randomNumberGenerator, problemSearchSpace, problem);
       CurrentIteration += 1;
       yield return newIterationResult;
-      shouldContinue = Terminator.ShouldContinue(newIterationResult, previousIterationResult, searchSpace ?? problem.SearchSpace, problem);
+      shouldContinue = Terminator.ShouldContinue(newIterationResult, previousIterationResult, problemSearchSpace, problem);
       previousIterationResult = newIterationResult;
     }
   }

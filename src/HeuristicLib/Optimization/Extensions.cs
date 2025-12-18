@@ -16,7 +16,7 @@ public static class Extensions {
         selected[i] = action(i, source[i], randoms[i]);
       });
     } else if (parallelOptions.MaxDegreeOfParallelism == 1) { //avoid parallel overhead
-      for (int i = 0; i < source.Count; i++) {
+      for (var i = 0; i < source.Count; i++) {
         selected[i] = action(i, source[i], randoms[i]);
       }
     } else {

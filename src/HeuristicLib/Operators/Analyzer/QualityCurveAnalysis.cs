@@ -23,9 +23,9 @@ public class QualityCurveAnalysis<TGenotype> : AttachedAnalysis<TGenotype> where
   private int evalCount;
 
   public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> res, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
-    for (int i = 0; i < genotypes.Count; i++) {
-      TGenotype genotype = genotypes[i];
-      ObjectiveVector q = res[i];
+    for (var i = 0; i < genotypes.Count; i++) {
+      var genotype = genotypes[i];
+      var q = res[i];
       evalCount++;
       if (best is not null && problem.Objective.TotalOrderComparer.Compare(q, best.ObjectiveVector) >= 0) continue;
       best = new Solution<TGenotype>(genotype, q);

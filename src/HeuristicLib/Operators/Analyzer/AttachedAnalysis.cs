@@ -103,9 +103,9 @@ public abstract class AttachedAnalysis<T, TE, TP, TRes>
     where TE1 : class, IEncoding<T1>, TE
     where TP1 : class, IProblem<T1, TE1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public TRes1 Transform(TRes1 currentIterationResult, TRes1? previousIterationResult, TE1 encoding, TP1 problem) {
+    public TRes1 Transform(TRes1 currentIterationResult, TRes1? previousIterationResult, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
       var res = interceptor != null
-        ? interceptor.Transform(currentIterationResult, previousIterationResult, encoding, problem)
+        ? interceptor.Transform(currentIterationResult, previousIterationResult, random, encoding, problem)
         : currentIterationResult;
       analysis.AfterInterception(res, previousIterationResult, encoding, problem);
       return res;

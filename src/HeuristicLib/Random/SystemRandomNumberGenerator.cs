@@ -30,7 +30,7 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   public SystemRandomNumberGenerator() : this(NextGlobal()) { }
 
   public byte[] RandomBytes(int length) {
-    byte[] data = new byte[length];
+    var data = new byte[length];
     random.NextBytes(data);
     return data;
   }

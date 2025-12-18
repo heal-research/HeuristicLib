@@ -9,7 +9,7 @@ public static class Extensions {
 
   public static IEnumerable<TRes> PairwiseRoundRobin<T, TRes>(this IEnumerable<T> source, Func<T, T, TRes> func) {
     T first = default!;
-    int count = 0;
+    var count = 0;
     T last = default!;
     foreach (var item in source) {
       if (count == 0) {

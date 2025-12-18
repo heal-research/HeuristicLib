@@ -30,7 +30,7 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>
     var sol = previousIterationResult.Solution;
     var newISolution = sol;
 
-    for (int i = 0; i < MaxNeighbors; i += BatchSize) {
+    for (var i = 0; i < MaxNeighbors; i += BatchSize) {
       var child = Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, searchSpace, problem);
       var res = Evaluator.Evaluate(child, random, searchSpace, problem);
       var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1, random)[0];

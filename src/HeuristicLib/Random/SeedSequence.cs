@@ -36,9 +36,9 @@ public class SeedSequence {
   private const uint OffsetBasis = 2166136261;
 
   private static uint Hash(params IEnumerable<int> values) {
-    uint hash = OffsetBasis;
+    var hash = OffsetBasis;
 
-    foreach (int value in values) {
+    foreach (var value in values) {
       unchecked {
         // Break each int into 4 bytes (little endian) and feed each byte
         hash ^= (byte)(value & 0xFF);

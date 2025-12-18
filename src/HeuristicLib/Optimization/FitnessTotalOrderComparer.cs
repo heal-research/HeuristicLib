@@ -14,6 +14,6 @@ public static class FitnessTotalOrderComparer {
   }
 
   public static NoTotalOrderComparer CreateNoTotalOrderComparer(ObjectiveDirection[] objectives) {
-    return new NoTotalOrderComparer();
+    return NoTotalOrderComparer.Instance;
   }
 }

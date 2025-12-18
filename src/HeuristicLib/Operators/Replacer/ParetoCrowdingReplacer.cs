@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Replacer;
 public class ParetoCrowdingReplacer<TGenotype>(bool dominateOnEqualities) : Replacer<TGenotype> {
   public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random) {
     var all = previousPopulation.Concat(offspringPopulation).ToArray();
-    var fronts = DominationCalculator.CalculateAllParetoFronts(all, objective, out var rank, dominateOnEqualities);
+    var fronts = DominationCalculator.CalculateAllParetoFronts(all, objective, out _, dominateOnEqualities);
 
     var l = new List<ISolution<TGenotype>>();
     var size = previousPopulation.Count;
@@ -18,7 +18,7 @@ public class ParetoCrowdingReplacer<TGenotype>(bool dominateOnEqualities) : Repl
       }
 
       var dist = CrowdingDistance.CalculateCrowdingDistances(front.Select(x => x.ObjectiveVector).ToList());
-      l.AddRange(front.Select((x, i) => (x, i)).OrderBy(x => dist[x.i]).Select(x => x.x).Take(size));
+      l.AddRange(front.Select((x, i) => (x, i)).OrderByDescending(x => dist[x.i]).Select(x => x.x).Take(size));
       break;
     }
 

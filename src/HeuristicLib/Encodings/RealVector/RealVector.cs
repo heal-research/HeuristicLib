@@ -39,7 +39,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     }
 
     var result = new double[a.elements.Length];
-    for (int i = 0; i < a.elements.Length; i++) {
+    for (var i = 0; i < a.elements.Length; i++) {
       result[i] = a.elements[i] + b.elements[i];
     }
 
@@ -60,7 +60,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     }
 
     var result = new double[a.elements.Length];
-    for (int i = 0; i < a.elements.Length; i++) {
+    for (var i = 0; i < a.elements.Length; i++) {
       result[i] = a.elements[i] - b.elements[i];
     }
 
@@ -81,7 +81,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     }
 
     var result = new double[a.elements.Length];
-    for (int i = 0; i < a.elements.Length; i++) {
+    for (var i = 0; i < a.elements.Length; i++) {
       result[i] = a.elements[i] * b.elements[i];
     }
 
@@ -102,7 +102,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     }
 
     var result = new double[a.elements.Length];
-    for (int i = 0; i < a.elements.Length; i++) {
+    for (var i = 0; i < a.elements.Length; i++) {
       result[i] = a.elements[i] / b.elements[i];
     }
 
@@ -187,7 +187,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     if (!AreCompatible(length, low, high))
       throw new ArgumentException("Vectors must be compatible for broadcasting");
 
-    RealVector value = new RealVector(random.Random(length));
+    var value = new RealVector(random.Random(length));
     value = low + (high - low) * value;
     return value;
   }
@@ -208,7 +208,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     if (min is null && max is null)
       return input;
 
-    int n = input.Count;
+    var n = input.Count;
     var values = input.elements;
 
     var minIsScalar = min is null || min.Count <= 1;
@@ -223,18 +223,18 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     var minVals = min?.elements;
     var maxVals = max?.elements;
 
-    double minScalarVal = min?.Count == 1 ? min[0] : double.NegativeInfinity;
-    double maxScalarVal = max?.Count == 1 ? max[0] : double.PositiveInfinity;
+    var minScalarVal = min?.Count == 1 ? min[0] : double.NegativeInfinity;
+    var maxScalarVal = max?.Count == 1 ? max[0] : double.PositiveInfinity;
 
     double[]? result = null;
 
-    for (int i = 0; i < n; i++) {
-      double v = values[i];
-      double lo = minIsScalar ? minScalarVal : minVals![i];
-      double hi = maxIsScalar ? maxScalarVal : maxVals![i];
+    for (var i = 0; i < n; i++) {
+      var v = values[i];
+      var lo = minIsScalar ? minScalarVal : minVals![i];
+      var hi = maxIsScalar ? maxScalarVal : maxVals![i];
 
-      double clamped = v;
-      bool changed = false;
+      var clamped = v;
+      var changed = false;
 
       if (v < lo) {
         clamped = lo;
@@ -263,12 +263,12 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     if (!AreCompatible(a, b))
       throw new ArgumentException("Vectors must be compatible for comparison");
 
-    int length = BroadcastLength(a, b);
-    bool[] result = new bool[length];
+    var length = BroadcastLength(a, b);
+    var result = new bool[length];
 
-    for (int i = 0; i < length; i++) {
-      double aValue = a.Count == 1 ? a[0] : a[i];
-      double bValue = b.Count == 1 ? b[0] : b[i];
+    for (var i = 0; i < length; i++) {
+      var aValue = a.Count == 1 ? a[0] : a[i];
+      var bValue = b.Count == 1 ? b[0] : b[i];
       result[i] = aValue > bValue;
     }
 
@@ -279,12 +279,12 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     if (!AreCompatible(a, b))
       throw new ArgumentException("Vectors must be compatible for comparison");
 
-    int length = BroadcastLength(a, b);
-    bool[] result = new bool[length];
+    var length = BroadcastLength(a, b);
+    var result = new bool[length];
 
-    for (int i = 0; i < length; i++) {
-      double aValue = a.Count == 1 ? a[0] : a[i];
-      double bValue = b.Count == 1 ? b[0] : b[i];
+    for (var i = 0; i < length; i++) {
+      var aValue = a.Count == 1 ? a[0] : a[i];
+      var bValue = b.Count == 1 ? b[0] : b[i];
       result[i] = aValue < bValue;
     }
 
@@ -295,12 +295,12 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     if (!AreCompatible(a, b))
       throw new ArgumentException("Vectors must be compatible for comparison");
 
-    int length = BroadcastLength(a, b);
-    bool[] result = new bool[length];
+    var length = BroadcastLength(a, b);
+    var result = new bool[length];
 
-    for (int i = 0; i < length; i++) {
-      double aValue = a.Count == 1 ? a[0] : a[i];
-      double bValue = b.Count == 1 ? b[0] : b[i];
+    for (var i = 0; i < length; i++) {
+      var aValue = a.Count == 1 ? a[0] : a[i];
+      var bValue = b.Count == 1 ? b[0] : b[i];
       result[i] = aValue >= bValue;
     }
 
@@ -311,12 +311,12 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     if (!AreCompatible(a, b))
       throw new ArgumentException("Vectors must be compatible for comparison");
 
-    int length = BroadcastLength(a, b);
-    bool[] result = new bool[length];
+    var length = BroadcastLength(a, b);
+    var result = new bool[length];
 
-    for (int i = 0; i < length; i++) {
-      double aValue = a.Count == 1 ? a[0] : a[i];
-      double bValue = b.Count == 1 ? b[0] : b[i];
+    for (var i = 0; i < length; i++) {
+      var aValue = a.Count == 1 ? a[0] : a[i];
+      var bValue = b.Count == 1 ? b[0] : b[i];
       result[i] = aValue <= bValue;
     }
 
@@ -342,7 +342,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
   public double Dot(RealVector other) {
     var sum = 0.0;
-    for (int i = 0; i < elements.Length; i++) {
+    for (var i = 0; i < elements.Length; i++) {
       var d1 = elements[i];
       var d2 = other.elements[i];
       sum += d1 * d2;
@@ -358,7 +358,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
   public double Norm() {
     var sumSquares = 0.0;
-    for (int i = 0; i < elements.Length; i++) {
+    for (var i = 0; i < elements.Length; i++) {
       var d1 = elements[i];
       sumSquares += d1 * d1;
     }

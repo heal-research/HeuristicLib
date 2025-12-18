@@ -85,7 +85,7 @@ public static class SymbolicRegressionParameterOptimization {
     int retVal;
 
     double[] cOpt = [];
-    ExitCondition status = ExitCondition.None;
+    var status = ExitCondition.None;
 
     try {
       (cOpt1, retVal) = alglibLM(maxIterations, iterationCallback, x, y, n, m, k, functionCx1Func, functionCx1Grad, rowEvaluationsCounter, c.ToArray());
@@ -158,7 +158,7 @@ public static class SymbolicRegressionParameterOptimization {
     alglib.lsfitfit(state,
       new alglib.ndimensional_pfunc(functionCx1Func),
       new alglib.ndimensional_pgrad(functionCx1Grad), Xrep, rowEvaluationsCounter);
-    alglib.lsfitresults(state, out int retVal, out c, out _);
+    alglib.lsfitresults(state, out var retVal, out c, out _);
     return (c, retVal);
     void Xrep(double[] p, double f, object obj) => iterationCallback?.Invoke(p, f, obj);
   }
@@ -174,10 +174,10 @@ public static class SymbolicRegressionParameterOptimization {
       var pred = Vector<double>.Build.Dense(idx.Count);
       var xRow = new double[m];
 
-      for (int j = 0; j < idx.Count; j++) {
-        int i = (int)idx[j]; // observation index
+      for (var j = 0; j < idx.Count; j++) {
+        var i = (int)idx[j]; // observation index
 
-        for (int col = 0; col < m; col++) xRow[col] = x[i, col];
+        for (var col = 0; col < m; col++) xRow[col] = x[i, col];
 
         pred[j] = func(p.ToArray(), xRow);
         rowEvaluationsCounter.FunctionEvaluations++;
@@ -191,14 +191,14 @@ public static class SymbolicRegressionParameterOptimization {
       var J = Matrix<double>.Build.Dense(idx.Count, p.Count);
       var xRow = new double[m];
 
-      for (int j = 0; j < idx.Count; j++) {
-        int i = (int)idx[j];
+      for (var j = 0; j < idx.Count; j++) {
+        var i = (int)idx[j];
 
-        for (int col = 0; col < m; col++) xRow[col] = x[i, col];
+        for (var col = 0; col < m; col++) xRow[col] = x[i, col];
 
         var (gradArr, _) = funcGrad(p.ToArray(), xRow);
 
-        for (int q = 0; q < p.Count; q++) J[j, q] = gradArr[q];
+        for (var q = 0; q < p.Count; q++) J[j, q] = gradArr[q];
 
         rowEvaluationsCounter.GradientEvaluations++;
       }
@@ -216,8 +216,8 @@ public static class SymbolicRegressionParameterOptimization {
       );
 
 // Bounds/scales: “no bounds, all free”
-    double[] scales = Enumerable.Repeat(1.0, k).ToArray();
-    bool[] isFixed = Enumerable.Repeat(false, k).ToArray();
+    var scales = Enumerable.Repeat(1.0, k).ToArray();
+    var isFixed = Enumerable.Repeat(false, k).ToArray();
 
 // Configure LM similarly to your ALGLIB maxIterations limit
     var lm = new LevenbergMarquardtMinimizer(
@@ -234,7 +234,7 @@ public static class SymbolicRegressionParameterOptimization {
       scales: scales,
       isFixed: isFixed);
 
-    double[] cOpt = result.MinimizingPoint.ToArray();
+    var cOpt = result.MinimizingPoint.ToArray();
     var status = result.ReasonForExit; // similar to retVal
     #endregion
 

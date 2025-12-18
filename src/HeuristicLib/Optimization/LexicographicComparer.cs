@@ -11,8 +11,8 @@ public class LexicographicComparer(ObjectiveDirection[] objectives, int[]? order
     if (x is null) return -1;
     if (y is null) return +1;
 
-    foreach (int dimension in order) {
-      int comparison = x[dimension].CompareTo(y[dimension]);
+    foreach (var dimension in order) {
+      var comparison = x[dimension].CompareTo(y[dimension]);
       if (comparison != 0)
         return objectives[dimension] switch {
           ObjectiveDirection.Minimize => +comparison,

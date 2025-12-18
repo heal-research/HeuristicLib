@@ -11,17 +11,17 @@ public class RotatedTestFunction : MetaTestFunction {
   public override double Evaluate(RealVector solution) => Inner.Evaluate(Rotate(rotation, solution));
 
   private static void Rotate(double[,] r, IReadOnlyList<double> v, double[] result) {
-    int nRows = r.GetLength(0);
-    int nCols = r.GetLength(1);
+    var nRows = r.GetLength(0);
+    var nCols = r.GetLength(1);
 
     if (v.Count != nCols)
       throw new ArgumentException("Vector length must match matrix column count.", nameof(v));
     if (result.Length != nRows)
       throw new ArgumentException("Result length must match matrix row count.", nameof(result));
 
-    for (int i = 0; i < nRows; i++) {
-      double sum = 0.0;
-      for (int j = 0; j < nCols; j++) {
+    for (var i = 0; i < nRows; i++) {
+      var sum = 0.0;
+      for (var j = 0; j < nCols; j++) {
         sum += r[i, j] * v[j];
       }
 
@@ -30,7 +30,7 @@ public class RotatedTestFunction : MetaTestFunction {
   }
 
   private static double[] Rotate(double[,] r, IReadOnlyList<double> v) {
-    double[] result = new double[r.GetLength(0)];
+    var result = new double[r.GetLength(0)];
     Rotate(r, v, result);
     return result;
   }

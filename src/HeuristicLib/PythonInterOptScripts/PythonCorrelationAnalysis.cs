@@ -53,7 +53,7 @@ public static class PythonCorrelationAnalysis {
 
   public delegate void GenerationCallback(PopulationIterationResult<RealVector> current, RealVectorProblem problem);
 
-  public static void RunCorrelationNsga2(GenerationCallback callback, int generations, int populationSize, MultiObjectiveTestFunctionProblem problem, int seed = 0) {
+  public static void RunCorrelationNsga2(GenerationCallback callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0) {
     //var prob = SphereRastriginProblem(dimensions, min, max);
 
     var proto = Nsga2.GetBuilder(
@@ -70,9 +70,16 @@ public static class PythonCorrelationAnalysis {
     proto.Execute(problem, problem.SearchSpace, new SystemRandomNumberGenerator(seed));
   }
 
-  public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max) {
+  public delegate double[] CustomFunc(RealVector solution);
+
+  public class PythonProblem(CustomFunc cfunc, int dimensions, double min, double max, bool[] maximization)
+    : RealVectorProblem(MultiObjective.Create(maximization), new RealVectorEncoding(dimensions, min, max)) {
+    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => cfunc(solution);
+  }
+
+  public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max, double shift) {
     var testFunction = new CombinedGradientTestFunction(
-      new ShiftedGradientTestFunction(-0.5, new SphereFunction(dimensions)),
+      new ShiftedGradientTestFunction(-shift, new SphereFunction(dimensions)),
       new RastriginFunction(dimensions));
     var encoding = new RealVectorEncoding(dimensions, min, max);
     var prob = new MultiObjectiveTestFunctionProblem(testFunction, encoding);

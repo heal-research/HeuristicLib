@@ -75,11 +75,11 @@ public class AfterEvaluationsTermination<TGenotype>(int maximumEvaluations, bool
   public class EvaluationLimitEvaluator<T1, TE1, TP1>(AfterEvaluationsTermination<TGenotype> termination, IEvaluator<T1, TE1, TP1> evaluator)
     : BatchEvaluator<T1, TE1, TP1> where TE1 : class, IEncoding<T1> where TP1 : class, IProblem<T1, TE1> {
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> solutions, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
-      int count = solutions.Count;
-      int n = count;
+      var count = solutions.Count;
+      var n = count;
 
       if (termination.PreventOverBudget) {
-        int remaining = termination.MaximumEvaluations - termination.CurrentCount;
+        var remaining = termination.MaximumEvaluations - termination.CurrentCount;
         if (remaining <= 0) return Enumerable.Repeat(problem.Objective.Worst, count).ToArray();
         if (n > remaining) n = remaining;
       }

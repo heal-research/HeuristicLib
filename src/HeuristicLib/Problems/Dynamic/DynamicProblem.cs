@@ -1,52 +1,12 @@
 ﻿using System.Collections.Concurrent;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators.Analyzer;
+using HEAL.HeuristicLib.Operators.Evaluator;
+using HEAL.HeuristicLib.Operators.Interceptor;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
-
-public class EvaluationClock : IEpochClock {
-  private readonly Lock epochLocker = new();
-
-  public int PendingEpochs { get; private set; }
-  public int EpochCount { get; private set; }
-  public required int EpochLength { get; init; }
-  public int CurrentEpoch => EpochCount / EpochLength;
-
-  //returns whether no unresolved epoch changes are pending
-  public EvaluationTiming IncreaseCount() {
-    lock (epochLocker) {
-      EpochCount++;
-      var valid = PendingEpochs == 0;
-      if (EpochCount % EpochLength == 0)
-        PendingEpochs++;
-      return new EvaluationTiming(EpochCount, CurrentEpoch, valid);
-    }
-  }
-
-  public void ResolvePendingEpochs(Action update) {
-    lock (epochLocker) {
-      var changed = PendingEpochs > 0;
-      while (PendingEpochs > 0) {
-        update();
-        PendingEpochs--;
-      }
-
-      if (changed)
-        OnEpochChange?.Invoke(this, CurrentEpoch);
-    }
-  }
-
-  public event EventHandler<int>? OnEpochChange;
-
-  public void AdvanceEpoch() {
-    lock (epochLocker) {
-      EpochCount = (CurrentEpoch + 1) * EpochLength;
-      PendingEpochs++;
-    }
-  }
-}
 
 public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TGenotype>,
                                                              IDynamicProblem<TGenotype, TEncoding>,
@@ -61,13 +21,15 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TG
   public abstract TEncoding SearchSpace { get; }
   public abstract Objective Objective { get; }
 
+  private readonly ConcurrentBag<(TGenotype solution, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
+
+  public event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
+
   protected DynamicProblem(UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) {
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochLength);
     UpdatePolicy = updatePolicy;
     EpochClock = new EvaluationClock { EpochLength = epochLength };
   }
-
-  private readonly ConcurrentBag<(TGenotype solution, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
 
   //this method will be called in parallel
   public ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random) {
@@ -90,8 +52,6 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TG
   }
 
   public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing);
-
-  public event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
 
   public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values,
                                        IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {

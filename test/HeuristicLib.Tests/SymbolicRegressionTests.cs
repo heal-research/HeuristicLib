@@ -226,7 +226,7 @@ public class SymbolicRegressionTests {
   public void TestPlayground2() {
     const int iterations = 4;
     var i = 0;
-    PythonCorrelationAnalysis.RunCorrelationNsga2((_, _) => { i++; }, iterations, 100);
+    PythonCorrelationAnalysis.RunCorrelationNsga2((_, _) => { i++; }, iterations, 100, PythonCorrelationAnalysis.SphereRastriginProblem(10, -5, 5, 0.5));
     Assert.Equal(iterations, i);
   }
 

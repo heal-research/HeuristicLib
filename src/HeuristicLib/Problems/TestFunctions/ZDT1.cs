@@ -12,27 +12,27 @@ public class Zdt1(int dimension) : IMultiObjectiveGradientTestFunction {
   public RealVector Evaluate(RealVector solution) {
     var count = solution.Count;
     double g = 0;
-    for (int i = 1; i < count; i++)
+    for (var i = 1; i < count; i++)
       g += solution[i];
     g = 1.0 + 9.0 * g / (count - 1.0);
 
-    double f0 = solution[0];
-    double f1 = g * (1.0 - Math.Sqrt(solution[0] / g));
+    var f0 = solution[0];
+    var f1 = g * (1.0 - Math.Sqrt(solution[0] / g));
     return new RealVector(f0, f1);
   }
 
   public RealVector[] EvaluateGradient(RealVector solution) => Zdt1Gradient(solution);
 
   public static RealVector[] Zdt1Gradient(RealVector x) {
-    int n = x.Count;
-    double a = 9.0 / (n - 1);
+    var n = x.Count;
+    var a = 9.0 / (n - 1);
 
     // Compute g(x)
-    double sum = 0.0;
-    for (int i = 1; i < n; i++)
+    var sum = 0.0;
+    for (var i = 1; i < n; i++)
       sum += x[i];
 
-    double g = 1.0 + a * sum;
+    var g = 1.0 + a * sum;
 
     // Allocate gradients
     var gradF1 = new double[n];
@@ -40,22 +40,22 @@ public class Zdt1(int dimension) : IMultiObjectiveGradientTestFunction {
 
     // ---- f1 gradient ----
     gradF1[0] = 1.0;
-    for (int i = 1; i < n; i++)
+    for (var i = 1; i < n; i++)
       gradF1[i] = 0.0;
 
     // ---- f2 gradient ----
-    double x1 = x[0];
+    var x1 = x[0];
 
     // Guard against division by zero at x1 = 0
-    double eps = 1e-12;
-    double sqrtGX1 = Math.Sqrt(g * Math.Max(x1, eps));
+    var eps = 1e-12;
+    var sqrtGX1 = Math.Sqrt(g * Math.Max(x1, eps));
 
     // ∂f2 / ∂x1
     gradF2[0] = -g / (2.0 * sqrtGX1);
 
     // ∂f2 / ∂xi  (i >= 2)
-    double factor = a * (1.0 - 0.5 * Math.Sqrt(x1 / g));
-    for (int i = 1; i < n; i++)
+    var factor = a * (1.0 - 0.5 * Math.Sqrt(x1 / g));
+    for (var i = 1; i < n; i++)
       gradF2[i] = factor;
 
     return [gradF1, gradF2];

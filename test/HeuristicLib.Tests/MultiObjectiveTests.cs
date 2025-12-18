@@ -12,7 +12,7 @@ public class MultiObjectiveTests {
     var a = r.Angle(r2);
 
     var zeroes = new RealVector(-1.71235326, -3.13907273, 3.12722378, 1.74460128, 0.77062594, -3.19114179, -4.53671968, -4.0406267, -2.83460651, 4.12024721);
-    var p = PythonCorrelationAnalysis.SphereRastriginProblem(zeroes.Count, -5, 5);
+    var p = PythonCorrelationAnalysis.SphereRastriginProblem(zeroes.Count, -5, 5, 0.5);
     var zeroes1 = zeroes + 0.5;
     var up = new RealVector(0, 1);
     var down = new RealVector(0, -1);
@@ -98,5 +98,5 @@ public class MultiObjectiveTests {
     => fronts.Select(f => f.Select(s => s.Genotype).OrderBy(x => x).ToArray()).ToArray();
 
   private static Solution<string> Sol(string id, params double[] values) => new Solution<string>(id, values);
-  private static Objective MinimizeAll(int i) => new(Enumerable.Repeat(ObjectiveDirection.Minimize, i).ToArray(), new NoTotalOrderComparer());
+  private static Objective MinimizeAll(int i) => new(Enumerable.Repeat(ObjectiveDirection.Minimize, i).ToArray(), NoTotalOrderComparer.Instance);
 }

@@ -13,9 +13,9 @@ public class RastriginFunction(int dimension) : IGradientTestFunction {
   private const double PiTwo = 2 * Math.PI;
 
   public double Evaluate(RealVector solution) {
-    int n = solution.Count;
-    double sum = A * n;
-    for (int i = 0; i < n; i++) {
+    var n = solution.Count;
+    var sum = A * n;
+    for (var i = 0; i < n; i++) {
       var d = solution[i];
       sum += d * d - A * Math.Cos(PiTwo * d);
     }
@@ -25,7 +25,7 @@ public class RastriginFunction(int dimension) : IGradientTestFunction {
 
   public RealVector EvaluateGradient(RealVector solution) {
     var g = new double[solution.Count];
-    for (int i = 0; i < solution.Count; i++) {
+    for (var i = 0; i < solution.Count; i++) {
       var d = solution[i];
       g[i] = 2 * d + PiTwo * A * Math.Sin(PiTwo * d);
     }

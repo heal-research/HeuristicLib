@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
 
 public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, PermutationEncoding> {
   public ActivatedTravelingSalesmanProblem(ITravelingSalesmanProblemData tspData,
@@ -23,7 +23,7 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
 
   public IReadOnlyList<bool> CurrentState { get; private set; }
   private IRandomNumberGenerator EnvironmentRandom { get; }
-  public double SwitchProbability { get; }
+  public double SwitchProbability { get; init; }
   public ITravelingSalesmanProblemData ProblemData { get; }
   public override PermutationEncoding SearchSpace { get; }
   public override Objective Objective { get; }

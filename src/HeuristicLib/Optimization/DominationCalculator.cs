@@ -43,7 +43,7 @@ public static class DominationCalculator {
       return fronts;
     }
 
-    fronts.Add(CalculateBestFront(solutions, objective, populationSize, dominateOnEqualQualities, out Dictionary<ISolution<T>, List<int>> dominatedIndividuals, out int[] dominationCounter, out rank));
+    fronts.Add(CalculateBestFront(solutions, objective, populationSize, dominateOnEqualQualities, out var dominatedIndividuals, out var dominationCounter, out rank));
     while (fronts[^1].Count > 0) {
       var nextFront = new List<ISolution<T>>();
       foreach (var p in fronts[^1]) {

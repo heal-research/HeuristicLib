@@ -62,7 +62,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>
     var children = Mutator.Mutate(parents, random, searchSpace, problem);
     var fitnesses = Evaluator.Evaluate(children, random, searchSpace, problem);
 
-    double newMutationStrength = previousIterationResult.MutationStrength;
+    var newMutationStrength = previousIterationResult.MutationStrength;
     if (Mutator is IVariableStrengthMutator<TGenotype, TEncoding, TProblem> vm) {
       //adapt Mutation Strength based on 1/5th rule
       var successes = parentQualities.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1, problem.Objective) == DominanceRelation.Dominates);

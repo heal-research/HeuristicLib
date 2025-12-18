@@ -62,7 +62,7 @@ public static class LinearScaling {
     }
 
     //reuse unscaled array
-    for (int i = 0; i < unscaled.Length; i++)
+    for (var i = 0; i < unscaled.Length; i++)
       unscaled[i] = unscaled[i] * bNew + oNew;
 
     return unscaled;
@@ -85,7 +85,7 @@ public static class LinearScaling {
     }
 
     //reuse unscaled array
-    for (int i = 0; i < unscaled.Length; i++)
+    for (var i = 0; i < unscaled.Length; i++)
       unscaled[i] = unscaled[i] * bNew + oNew;
 
     return unscaled;

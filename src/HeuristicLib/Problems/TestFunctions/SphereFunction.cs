@@ -15,7 +15,7 @@ public class SphereFunction(int dimension) : IGradientTestFunction {
 
   public RealVector EvaluateGradient(RealVector solution) {
     var g = new double[solution.Count];
-    for (int i = 0; i < solution.Count; i++) {
+    for (var i = 0; i < solution.Count; i++) {
       g[i] = 2 * solution[i];
     }
 

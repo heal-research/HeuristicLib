@@ -17,8 +17,8 @@ public interface IRandomNumberGenerator {
 
 public static class RandomNumberGeneratorExtensions {
   public static double[] Random(this IRandomNumberGenerator random, int length) {
-    double[] values = new double[length];
-    for (int i = 0; i < length; i++) {
+    var values = new double[length];
+    for (var i = 0; i < length; i++) {
       values[i] = random.Random();
     }
 
@@ -30,8 +30,8 @@ public static class RandomNumberGeneratorExtensions {
   }
 
   public static int[] Integers(this IRandomNumberGenerator random, int length, int low, int high, bool inclusiveHigh = false) {
-    int[] values = new int[length];
-    for (int i = 0; i < length; i++) {
+    var values = new int[length];
+    for (var i = 0; i < length; i++) {
       values[i] = random.Integer(low, high, inclusiveHigh);
     }
 

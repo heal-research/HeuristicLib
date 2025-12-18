@@ -44,14 +44,14 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
     if (Count != other.Count) throw new ArgumentException("Fitness vectors must have the same length");
     if (Count != objective.Directions.Length) throw new ArgumentException("Fitness vectors and directions must have the same length");
 
-    int[] comparisons = new int[Count];
-    for (int i = 0; i < Count; i++) {
+    var comparisons = new int[Count];
+    for (var i = 0; i < Count; i++) {
       comparisons[i] = this[i].CompareTo(other[i]);
       comparisons[i] *= objective.Directions[i] switch { ObjectiveDirection.Minimize => +1, ObjectiveDirection.Maximize => -1, _ => throw new NotImplementedException() };
     }
 
-    bool thisNotWorse = comparisons.All(c => c <= 0);
-    bool otherNotWorse = comparisons.All(c => c >= 0);
+    var thisNotWorse = comparisons.All(c => c <= 0);
+    var otherNotWorse = comparisons.All(c => c >= 0);
 
     return (thisNotWorse, otherNotWorse) switch {
       (true, true) => DominanceRelation.Equivalent,
