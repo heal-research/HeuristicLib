@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using static HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic.BatchOperations;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;

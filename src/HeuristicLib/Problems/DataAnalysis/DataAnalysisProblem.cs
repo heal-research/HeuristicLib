@@ -1,13 +1,13 @@
-using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public abstract class DataAnalysisProblem<TProblemData, TISolution, TEncoding>(TProblemData problemData, Objective objective, TEncoding encoding)
-  : Problem<TISolution, TEncoding>(objective, encoding)
+public abstract class DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>(TProblemData problemData, Objective objective, TSearchSpace searchSpace)
+  : Problem<TISolution, TSearchSpace>(objective, searchSpace)
   where TProblemData : DataAnalysisProblemData
-  where TEncoding : class, IEncoding<TISolution> {
+  where TSearchSpace : class, ISearchSpace<TISolution> {
   public virtual TProblemData ProblemData {
     get;
   } = problemData;

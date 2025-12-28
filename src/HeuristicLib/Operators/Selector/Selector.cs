@@ -1,30 +1,30 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selector;
 
-public abstract class Selector<TGenotype, TEncoding, TProblem> : ISelector<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public abstract ISolution<TGenotype> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+public abstract class Selector<TGenotype, TSearchSpace, TProblem> : ISelector<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  public abstract ISolution<TGenotype> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem);
 
-  public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Select(population, objective, r, encoding, problem));
+  public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
+    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Select(population, objective, r, searchSpace, problem));
   }
 }
 
-public abstract class Selector<TGenotype, TEncoding> : ISelector<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype> {
-  public abstract ISolution<TGenotype> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, IRandomNumberGenerator random, TEncoding encoding);
+public abstract class Selector<TGenotype, TSearchSpace> : ISelector<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
+  public abstract ISolution<TGenotype> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, IRandomNumberGenerator random, TSearchSpace encoding);
 
-  public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding) {
-    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Select(population, objective, r, encoding));
+  public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace) {
+    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Select(population, objective, r, searchSpace));
   }
 
-  IReadOnlyList<ISolution<TGenotype>> ISelector<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
-    return Select(population, objective, count, random, encoding);
+  IReadOnlyList<ISolution<TGenotype>> ISelector<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) {
+    return Select(population, objective, count, random, searchSpace);
   }
 }
 
@@ -35,11 +35,11 @@ public abstract class Selector<TGenotype> : ISelector<TGenotype> {
     return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Select(population, objective, r));
   }
 
-  IReadOnlyList<ISolution<TGenotype>> ISelector<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  IReadOnlyList<ISolution<TGenotype>> ISelector<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     return Select(population, objective, count, random);
   }
 
-  IReadOnlyList<ISolution<TGenotype>> ISelector<TGenotype, IEncoding<TGenotype>>.Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
+  IReadOnlyList<ISolution<TGenotype>> ISelector<TGenotype, ISearchSpace<TGenotype>>.Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace) {
     return Select(population, objective, count, random);
   }
 }

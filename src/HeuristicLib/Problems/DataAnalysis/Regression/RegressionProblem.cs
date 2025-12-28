@@ -1,19 +1,19 @@
 using HEAL.HeuristicLib.Collections;
-using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
-public abstract class RegressionProblem<TProblemData, TISolution, TEncoding> : DataAnalysisProblem<TProblemData, TISolution, TEncoding>
+public abstract class RegressionProblem<TProblemData, TISolution, TSearchSpace> : DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>
   where TProblemData : RegressionProblemData
-  where TEncoding : class, IEncoding<TISolution> {
+  where TSearchSpace : class, ISearchSpace<TISolution> {
   public const double PunishmentFactor = 10.0;
   public IReadOnlyList<IRegressionEvaluator<TISolution>> Evaluators { get; set; }
 
   private readonly double[] trainingTargetCache;
   private readonly int[] rowIndicesCache; //unsure if this is faster than using the enumerable directly
 
-  protected RegressionProblem(TProblemData problemData, ICollection<IRegressionEvaluator<TISolution>> objective, IComparer<ObjectiveVector> a, TEncoding encoding) : base(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), encoding) {
+  protected RegressionProblem(TProblemData problemData, ICollection<IRegressionEvaluator<TISolution>> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace) : base(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), searchSpace) {
     Evaluators = objective.ToList();
     trainingTargetCache = problemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ToArray();
     rowIndicesCache = problemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray();

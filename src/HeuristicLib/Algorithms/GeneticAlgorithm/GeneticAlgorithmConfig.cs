@@ -6,23 +6,23 @@
 //
 // namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-// public abstract record IterativeAlgorithmConfig<TGenotype, TEncoding, TProblem, TIterationResult>
+// public abstract record IterativeAlgorithmConfig<TGenotype, TSearchSpace, TProblem, TIterationResult>
 // {
-//   public TerminatorConfig<TGenotype, TIterationResult, TEncoding, TProblem>? Terminator { get; }
-//   public InterceptorConfig<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; }
+//   public TerminatorConfig<TGenotype, TIterationResult, TSearchSpace, TProblem>? Terminator { get; }
+//   public InterceptorConfig<TGenotype, TIterationResult, TSearchSpace, TProblem>? Interceptor { get; }
 // }
 //
-// public record GeneticAlgorithmConfig<TGenotype, TEncoding, TProblem> : IterativeAlgorithmConfig<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>>
-//   where TEncoding : class, IEncoding<TGenotype>
+// public record GeneticAlgorithmConfig<TGenotype, TSearchSpace, TProblem> : IterativeAlgorithmConfig<TGenotype, TSearchSpace, TProblem, PopulationIterationResult<TGenotype>>
+//   where TSearchSpace : class, IEncoding<TGenotype>
 //   where TProblem : IProblem<TGenotype>
 // {
 //   public int? PopulationSize { get; init; }
-//   public CreatorConfig<TGenotype, TEncoding, TProblem>? Creator { get; init; }
-//   public CrossoverConfig<TGenotype, TEncoding, TProblem>? Crossover { get; init; }
-//   public MutatorConfig<TGenotype, TEncoding, TProblem>? Mutator { get; init; }
+//   public CreatorConfig<TGenotype, TSearchSpace, TProblem>? Creator { get; init; }
+//   public CrossoverConfig<TGenotype, TSearchSpace, TProblem>? Crossover { get; init; }
+//   public MutatorConfig<TGenotype, TSearchSpace, TProblem>? Mutator { get; init; }
 //   public double? InitialMutationStrength { get; init; }
-//   public SelectorConfig<TGenotype, TEncoding, TProblem>? Selector { get; init; }
-//   public ReplacerConfig<TGenotype, TEncoding, TProblem>? Replacer { get; init; }
+//   public SelectorConfig<TGenotype, TSearchSpace, TProblem>? Selector { get; init; }
+//   public ReplacerConfig<TGenotype, TSearchSpace, TProblem>? Replacer { get; init; }
 //   public int? RandomSeed { get; init; }
 // }
 

@@ -1,12 +1,12 @@
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossover.Permutations;
 
-public class PartiallyMatchedCrossover : BatchCrossover<Permutation, PermutationEncoding> {
-  public override IReadOnlyList<Permutation> Cross(IReadOnlyList<IParents<Permutation>> parents, IRandomNumberGenerator random, PermutationEncoding encoding) {
+public class PartiallyMatchedCrossover : BatchCrossover<Permutation, PermutationSearchSpace> {
+  public override IReadOnlyList<Permutation> Cross(IReadOnlyList<IParents<Permutation>> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) {
     return Cross(parents, random);
   }
 

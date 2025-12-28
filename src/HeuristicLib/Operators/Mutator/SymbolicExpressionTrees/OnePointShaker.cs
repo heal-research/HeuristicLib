@@ -1,6 +1,6 @@
-using HEAL.HeuristicLib.Encodings.Trees;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.SymbolicExpressionTrees;
 
@@ -24,7 +24,7 @@ public sealed class OnePointShaker : SymbolicExpressionTreeManipulator {
     return tree;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
     return Shake(random, parent, ShakingFactor);
   }
 }

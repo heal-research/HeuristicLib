@@ -1,15 +1,15 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creator;
 
-public interface ICreator<out TGenotype> : ICreator<TGenotype, IEncoding<TGenotype>> {
+public interface ICreator<out TGenotype> : ICreator<TGenotype, ISearchSpace<TGenotype>> {
   IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random);
 }
 
-public interface ICreator<out TGenotype, in TEncoding> : ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : class, IEncoding<TGenotype> {
-  IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding);
+public interface ICreator<out TGenotype, in TSearchSpace> : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
+  IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 }
 

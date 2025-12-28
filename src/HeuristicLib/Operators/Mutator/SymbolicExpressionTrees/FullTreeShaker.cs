@@ -1,7 +1,7 @@
-using HEAL.HeuristicLib.Encodings.Trees;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.SymbolicExpressionTrees;
 
@@ -23,9 +23,9 @@ public sealed class FullTreeShaker : SymbolicExpressionTreeManipulator {
   }
 
   public override SymbolicExpressionTree Mutate(
-    SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
+    SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
     var t = Apply(random, parent, ShakingFactor);
-    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
+    Extensions.CheckDebug(searchSpace.Contains(t), "Upps destroyed tree");
     return t;
   }
 }

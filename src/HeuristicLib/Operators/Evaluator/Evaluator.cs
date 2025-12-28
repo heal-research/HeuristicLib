@@ -1,29 +1,29 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluator;
 
-public abstract class Evaluator<TGenotype, TEncoding, TProblem> : IEvaluator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : IProblem<TGenotype, TEncoding> {
-  protected abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+public abstract class Evaluator<TGenotype, TSearchSpace, TProblem> : IEvaluator<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : IProblem<TGenotype, TSearchSpace> {
+  protected abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    return genotypes.ParallelSelect(random, (_, x, r) => Evaluate(x, r, encoding, problem));
+  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
+    return genotypes.ParallelSelect(random, (_, x, r) => Evaluate(x, r, searchSpace, problem));
   }
 }
 
-public abstract class Evaluator<TGenotype, TEncoding> : IEvaluator<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype> {
-  public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding);
+public abstract class Evaluator<TGenotype, TSearchSpace> : IEvaluator<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
+  public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TEncoding encoding) {
-    return genotypes.ParallelSelect(random, (_, x, r) => Evaluate(x, r, encoding));
+  public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace) {
+    return genotypes.ParallelSelect(random, (_, x, r) => Evaluate(x, r, searchSpace));
   }
 
-  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
-    return Evaluate(genotypes, random, encoding);
+  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) {
+    return Evaluate(genotypes, random, searchSpace);
   }
 }

@@ -1,7 +1,6 @@
-using HEAL.HeuristicLib.Encodings.Trees;
 using HEAL.HeuristicLib.Genotypes.Trees;
-using HEAL.HeuristicLib.Operators.Mutator;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.SymbolicExpressionTrees;
 
-public abstract class SymbolicExpressionTreeManipulator : Mutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>;
+public abstract class SymbolicExpressionTreeManipulator : Mutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>;

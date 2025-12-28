@@ -1,19 +1,19 @@
 ﻿using System.Diagnostics;
-using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.OperatorExtensions.MeasuredOperators;
 
-public class MeasuredMutator<TGenotype, TEncoding, TProblem>(IMutator<TGenotype, TEncoding, TProblem> mutator) : IMutator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
+public class MeasuredMutator<TGenotype, TSearchSpace, TProblem>(IMutator<TGenotype, TSearchSpace, TProblem> mutator) : IMutator<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   public OperatorMetric Metric { get; private set; } = new();
 
-  public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+  public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
     var start = Stopwatch.GetTimestamp();
-    var offspring = mutator.Mutate(parent, random, encoding, problem);
+    var offspring = mutator.Mutate(parent, random, searchSpace, problem);
     var end = Stopwatch.GetTimestamp();
 
     Metric += new OperatorMetric(offspring.Count, Stopwatch.GetElapsedTime(start, end));

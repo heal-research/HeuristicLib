@@ -1,6 +1,4 @@
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creator.RealVectors;
 using HEAL.HeuristicLib.Operators.Crossover.RealVectors;
@@ -14,6 +12,8 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Decoder;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -21,10 +21,10 @@ public class DummyEvaluator {
   public static readonly ObjectiveVector DummyObjectives = new(0.0);
 }
 
-public class DummyEvaluator<TGenotype, TEncoding, TProblem> : Evaluator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  protected override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+public class DummyEvaluator<TGenotype, TSearchSpace, TProblem> : Evaluator<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  protected override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
     return DummyEvaluator.DummyObjectives;
   }
 }
@@ -32,7 +32,7 @@ public class DummyEvaluator<TGenotype, TEncoding, TProblem> : Evaluator<TGenotyp
 public class GeneticAlgorithmTests {
   [Fact]
   public void GeneticAlgorithm_Create_WithConstructor() {
-    var searchSpace = new RealVectorEncoding(10, -5, +5);
+    var searchSpace = new RealVectorSearchSpace(10, -5, +5);
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
@@ -42,12 +42,12 @@ public class GeneticAlgorithmTests {
     var replacement = new PlusSelectionReplacer<RealVector>();
     var terminator = new AfterIterationsTerminator<RealVector>(5);
 
-    var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>() {
+    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>() {
       PopulationSize = 200,
       Creator = creator,
       Crossover = crossover,
       Mutator = mutator.WithRate(0.05),
-      Evaluator = new DummyEvaluator<RealVector, RealVectorEncoding, IProblem<RealVector, RealVectorEncoding>>(),
+      Evaluator = new DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>(),
       Selector = selector,
       Replacer = replacement,
       AlgorithmRandom = SystemRandomNumberGenerator.Default(42),

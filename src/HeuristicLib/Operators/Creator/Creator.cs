@@ -1,30 +1,30 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creator;
 
-public abstract class Creator<TGenotype, TEncoding, TProblem> : ICreator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public abstract TGenotype Create(IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+public abstract class Creator<TGenotype, TSearchSpace, TProblem> : ICreator<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r, encoding, problem)).ToArray();
+  public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
+    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r, searchSpace, problem)).ToArray();
   }
 }
 
-public abstract class Creator<TGenotype, TEncoding> : ICreator<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype> {
-  public abstract TGenotype Create(IRandomNumberGenerator random, TEncoding encoding);
+public abstract class Creator<TGenotype, TSearchSpace> : ICreator<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace encoding);
 
-  public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding) {
-    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r, encoding)).ToArray();
+  public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) {
+    return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r, searchSpace)).ToArray();
   }
 
-  IReadOnlyList<TGenotype> ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Create(int count, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
-    return Create(count, random, encoding);
+  IReadOnlyList<TGenotype> ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) {
+    return Create(count, random, searchSpace);
   }
 }
 
@@ -35,11 +35,11 @@ public abstract class Creator<TGenotype> : ICreator<TGenotype> {
     return Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r)).ToArray();
   }
 
-  IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Create(int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  IReadOnlyList<TGenotype> ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Create(int count, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     return Create(count, random);
   }
 
-  IReadOnlyList<TGenotype> ICreator<TGenotype, IEncoding<TGenotype>>.Create(int count, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
+  IReadOnlyList<TGenotype> ICreator<TGenotype, ISearchSpace<TGenotype>>.Create(int count, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace) {
     return Create(count, random);
   }
 }

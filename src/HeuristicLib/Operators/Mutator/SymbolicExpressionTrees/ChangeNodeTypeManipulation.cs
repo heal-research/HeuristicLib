@@ -1,15 +1,15 @@
-using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.SymbolicExpressionTrees;
 
 public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
+  public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
     var allowedSymbols = new List<Symbol>();
     var mutant = new SymbolicExpressionTree(symbolicExpressionTree);
 
@@ -18,7 +18,7 @@ public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
     SymbolicExpressionTreeNode child;
     // repeat until a fitting parent and child are found (MAX_TRIES times)
     var tries = 0;
-    var grammar = encoding.Grammar;
+    var grammar = searchSpace.Grammar;
     do {
       parent = mutant.Root.IterateNodesPrefix().Skip(1).Where(n => n.SubtreeCount > 0).SampleRandom(random, 1).First();
 
@@ -69,9 +69,9 @@ public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
     return mutant;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var t = ChangeNodeType(parent, random, encoding);
-    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+    var t = ChangeNodeType(parent, random, searchSpace);
+    Extensions.CheckDebug(searchSpace.Contains(t), "Upps destroyed tree");
     return t;
   }
 }

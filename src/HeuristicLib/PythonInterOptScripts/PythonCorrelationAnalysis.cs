@@ -1,6 +1,4 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.NSGA2;
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Creator.RealVectors;
@@ -16,6 +14,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Random.Distributions;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
@@ -65,8 +64,8 @@ public static class PythonCorrelationAnalysis {
     var testFunction = new CombinedTestFunction(
       new SphereFunction(dimensions).Shifted(-0.1),
       new RastriginFunction(dimensions));
-    var encoding = new RealVectorEncoding(dimensions, min, max);
-    var prob = new MultiObjectiveTestFunctionProblem(testFunction, encoding);
+    var searchSpace = new RealVectorSearchSpace(dimensions, min, max);
+    var prob = new MultiObjectiveTestFunctionProblem(testFunction, searchSpace);
     return prob;
   }
 }

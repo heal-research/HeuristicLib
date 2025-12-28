@@ -1,9 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.NSGA2;
-using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Analyzer.Genealogy;
@@ -20,6 +17,9 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.PythonInterOptScripts;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
 namespace HEAL.HeuristicLib.Tests;
 
@@ -274,7 +274,7 @@ public class SymbolicRegressionTests {
     return problem;
   }
 
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>> CreateSymRegAllMutator() {
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator() {
     return MultiMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),

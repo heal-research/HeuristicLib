@@ -1,33 +1,33 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluator;
 
-public abstract class BatchEvaluator<TGenotype, TEncoding, TProblem> : IEvaluator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+public abstract class BatchEvaluator<TGenotype, TSearchSpace, TProblem> : IEvaluator<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class BatchEvaluator<TGenotype, TEncoding> : IEvaluator<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype> {
-  public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding);
+public abstract class BatchEvaluator<TGenotype, TSearchSpace> : IEvaluator<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
+  public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>.Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, IProblem<TGenotype, TEncoding> problem) {
-    return Evaluate(solutions, random, encoding);
+  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) {
+    return Evaluate(solutions, random, searchSpace);
   }
 }
 
 public abstract class BatchEvaluator<TGenotype> : IEvaluator<TGenotype> {
   public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random);
 
-  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>>.Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     return Evaluate(solutions, random);
   }
 
-  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, IEncoding<TGenotype>>.Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, IEncoding<TGenotype> encoding) {
+  IReadOnlyList<ObjectiveVector> IEvaluator<TGenotype, ISearchSpace<TGenotype>>.Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace) {
     return Evaluate(solutions, random);
   }
 }

@@ -1,6 +1,6 @@
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 

@@ -1,22 +1,22 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
 public class FuncProblem {
-  public static FuncProblem<TGenotype, TEncoding> Create<TGenotype, TEncoding>(
+  public static FuncProblem<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(
     Func<TGenotype, double> evaluateFunc,
-    TEncoding encoding,
+    TSearchSpace searchSpace,
     Objective objective
-  ) where TEncoding : class, IEncoding<TGenotype> {
-    return new FuncProblem<TGenotype, TEncoding>(evaluateFunc, encoding, objective);
+  ) where TSearchSpace : class, ISearchSpace<TGenotype> {
+    return new FuncProblem<TGenotype, TSearchSpace>(evaluateFunc, searchSpace, objective);
   }
 }
 
-public class FuncProblem<TGenotype, TEncoding>(Func<TGenotype, double> evaluateFunc, TEncoding searchSpace, Objective objective)
-  : Problem<TGenotype, TEncoding>(objective, searchSpace) /*, IDeterministicProblem<TGenotype>*/
-  where TEncoding : class, IEncoding<TGenotype> {
+public class FuncProblem<TGenotype, TSearchSpace>(Func<TGenotype, double> evaluateFunc, TSearchSpace searchSpace, Objective objective)
+  : Problem<TGenotype, TSearchSpace>(objective, searchSpace) /*, IDeterministicProblem<TGenotype>*/
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
   public Func<TGenotype, double> EvaluateFunc { get; } = evaluateFunc;
   // public IEvaluator<TGenotype> GetEvaluator() {
   //   return new DeterministicProblemEvaluator<TGenotype>(this);

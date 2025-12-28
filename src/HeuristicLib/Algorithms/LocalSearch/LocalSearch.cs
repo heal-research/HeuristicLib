@@ -1,27 +1,27 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Creator;
+﻿using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
-public class LocalSearch<TGenotype, TEncoding, TProblem>
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, SingleISolutionIterationResult<TGenotype>>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
+public class LocalSearch<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleISolutionIterationResult<TGenotype>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class {
-  public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
+  public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
   public required LocalSearchDirection Direction { get; init; }
   public required int MaxNeighbors { get; init; }
   public required int BatchSize { get; init; }
 
   public override SingleISolutionIterationResult<TGenotype> ExecuteStep(
     TProblem problem,
-    TEncoding searchSpace,
+    TSearchSpace searchSpace,
     SingleISolutionIterationResult<TGenotype>? previousIterationResult,
     IRandomNumberGenerator random) {
     if (previousIterationResult == null)
@@ -44,13 +44,13 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>
     return new SingleISolutionIterationResult<TGenotype>(newISolution);
   }
 
-  public class Builder : AlgorithmBuilder<TGenotype, TEncoding, TProblem, SingleISolutionIterationResult<TGenotype>, LocalSearch<TGenotype, TEncoding, TProblem>>, IMutatorPrototype<TGenotype, TEncoding, TProblem> {
-    public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
+  public class Builder : AlgorithmBuilder<TGenotype, TSearchSpace, TProblem, SingleISolutionIterationResult<TGenotype>, LocalSearch<TGenotype, TSearchSpace, TProblem>>, IMutatorPrototype<TGenotype, TSearchSpace, TProblem> {
+    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
     public int MaxNeighbors { get; set; } = 100;
     public int BatchSize { get; set; } = 100;
     public LocalSearchDirection Direction { get; set; } = LocalSearchDirection.FirstImprovement;
 
-    public LocalSearch<TGenotype, TEncoding, TProblem> Create() =>
+    public LocalSearch<TGenotype, TSearchSpace, TProblem> Create() =>
       new() {
         Terminator = Terminator,
         Interceptor = Interceptor,
@@ -63,17 +63,17 @@ public class LocalSearch<TGenotype, TEncoding, TProblem>
         Direction = Direction
       };
 
-    public override LocalSearch<TGenotype, TEncoding, TProblem> BuildAlgorithm() => Create();
+    public override LocalSearch<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() => Create();
   }
 }
 
 public static class LocalSearch {
-  public static LocalSearch<TGenotype, TEncoding, TProblem>.Builder GetBuilder<TGenotype, TEncoding, TProblem>(
-    ICreator<TGenotype, TEncoding, TProblem> creator, IMutator<TGenotype, TEncoding, TProblem> mutator)
-    where TEncoding : class, IEncoding<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TEncoding>
+  public static LocalSearch<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+    ICreator<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator)
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TGenotype : class {
-    return new LocalSearch<TGenotype, TEncoding, TProblem>.Builder {
+    return new LocalSearch<TGenotype, TSearchSpace, TProblem>.Builder {
       Mutator = mutator,
       Creator = creator
     };

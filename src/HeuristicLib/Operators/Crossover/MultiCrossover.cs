@@ -1,25 +1,25 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossover;
 
 public static class MultiCrossover {
-  public static ICrossover<TGenotype, TEncoding, TProblem> WithProbability<TGenotype, TEncoding, TProblem>(this ICrossover<TGenotype, TEncoding, TProblem> crossover, double probability) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new MultiCrossover<TGenotype, TEncoding, TProblem>([crossover, NoCrossOver<TGenotype>.Instance], [probability, 1 - probability]);
+  public static ICrossover<TGenotype, TSearchSpace, TProblem> WithProbability<TGenotype, TSearchSpace, TProblem>(this ICrossover<TGenotype, TSearchSpace, TProblem> crossover, double probability) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+    return new MultiCrossover<TGenotype, TSearchSpace, TProblem>([crossover, NoCrossOver<TGenotype>.Instance], [probability, 1 - probability]);
   }
 }
 
-public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public IReadOnlyList<ICrossover<TGenotype, TEncoding, TProblem>> Crossovers { get; }
+public class MultiCrossover<TGenotype, TSearchSpace, TProblem> : BatchCrossover<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  public IReadOnlyList<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers { get; }
   public IReadOnlyList<double> Weights { get; }
   private readonly double sumWeights;
   private readonly double[] cumulativeSumWeights;
 
-  public MultiCrossover(IReadOnlyList<ICrossover<TGenotype, TEncoding, TProblem>> crossovers, IReadOnlyList<double>? weights = null) {
+  public MultiCrossover(IReadOnlyList<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, IReadOnlyList<double>? weights = null) {
     if (crossovers.Count == 0) throw new ArgumentException("At least one crossover must be provided.", nameof(crossovers));
     if (weights != null && weights.Count != crossovers.Count) throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
     if (weights != null && weights.Any(p => p < 0)) throw new ArgumentException("Weights must be non-negative.", nameof(weights));
@@ -35,7 +35,7 @@ public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGe
     }
   }
 
-  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
     int offspringCount = parents.Count;
 
     // determine which crossover to use for each offspring
@@ -64,14 +64,14 @@ public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGe
     var offspring = new List<TGenotype>(offspringCount);
 
     for (int i = 0; i < Crossovers.Count; i++) {
-      var batchOffspring = Crossovers[i].Cross(parentBatches[i], random, encoding, problem);
+      var batchOffspring = Crossovers[i].Cross(parentBatches[i], random, searchSpace, problem);
       offspring.AddRange(batchOffspring);
     }
 
     return offspring;
   }
 
-  // public override void Cross(ReadOnlySpan<TGenotype> parent1, ReadOnlySpan<TGenotype> parent2, IRandomNumberGenerator random, TEncoding encoding, TProblem problem, Span<TGenotype> offspring) {
+  // public override void Cross(ReadOnlySpan<TGenotype> parent1, ReadOnlySpan<TGenotype> parent2, IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem, Span<TGenotype> offspring) {
   //   if (parent1.Length != parent2.Length || offspring.Length != parent1.Length) throw new ArgumentException("Parent arrays and offspring array must have the same length.", nameof(parent1));
   //
   //   // Compute cumulative weights for roulette wheel selection

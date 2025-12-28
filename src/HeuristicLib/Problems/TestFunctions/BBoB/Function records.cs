@@ -109,7 +109,7 @@ public static partial class BBoBSuite {
   }
 
   private static BBoBFunction CreateRosenbrockRotatedProblem(int function, int dimension, int instance, long randomSeed) {
-    // NOTE: BBOB has a rotated Rosenbrock variant.
+    // NOTS: BBOB has a rotated Rosenbrock variant.
     //var M = CreateRotationMatrix(dimension, randomSeed);
     return new RosenbrockFunction { Dimension = dimension };
   }

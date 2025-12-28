@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Creator;
+﻿using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Mutator.RealVectors;
@@ -9,6 +8,7 @@ using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 
@@ -17,30 +17,30 @@ public record EvolutionStrategyIterationResult<TGenotype>(Population<TGenotype> 
 }
 
 public static class EvolutionStrategy {
-  public static EvolutionStrategy<TGenotype, TEncoding, TProblem>.Builder GetBuilder<TGenotype, TEncoding, TProblem>(
-    ICreator<TGenotype, TEncoding, TProblem> creator,
-    IMutator<TGenotype, TEncoding, TProblem> mutator)
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> where TGenotype : class => new() {
+  public static EvolutionStrategy<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+    ICreator<TGenotype, TSearchSpace, TProblem> creator,
+    IMutator<TGenotype, TSearchSpace, TProblem> mutator)
+    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class => new() {
     Mutator = mutator,
-    InitialMutationStrength = (mutator as IVariableStrengthMutator<TGenotype, TEncoding, TProblem>)?.MutationStrength ?? 0,
+    InitialMutationStrength = (mutator as IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem>)?.MutationStrength ?? 0,
     Creator = creator
   };
 }
 
-public class EvolutionStrategy<TGenotype, TEncoding, TProblem>
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
+public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationResult<TGenotype>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class {
   public required int PopulationSize { get; init; }
   public required int NumberOfChildren { get; init; }
   public required EvolutionStrategyType Strategy { get; init; }
-  public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
-  public required ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; init; }
+  public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
+  public required ICrossover<TGenotype, TSearchSpace, TProblem>? Crossover { get; init; }
   public double InitialMutationStrength { get; init; } = 1.0;
-  public required ISelector<TGenotype, TEncoding, TProblem> Selector { get; init; }
+  public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
-  public override EvolutionStrategyIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, EvolutionStrategyIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
+  public override EvolutionStrategyIterationResult<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, EvolutionStrategyIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null) {
       return new EvolutionStrategyIterationResult<TGenotype>(
         CreateInitialPopulation(problem, searchSpace, random, PopulationSize), InitialMutationStrength);
@@ -63,7 +63,7 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>
     var fitnesses = Evaluator.Evaluate(children, random, searchSpace, problem);
 
     double newMutationStrength = previousIterationResult.MutationStrength;
-    if (Mutator is IVariableStrengthMutator<TGenotype, TEncoding, TProblem> vm) {
+    if (Mutator is IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem> vm) {
       //adapt Mutation Strength based on 1/5th rule
       var successes = parentQualities.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1, problem.Objective) == DominanceRelation.Dominates);
       var successRate = successes / (double)PopulationSize;
@@ -86,18 +86,18 @@ public class EvolutionStrategy<TGenotype, TEncoding, TProblem>
   }
 
   public class Builder : PopulationBasedAlgorithmBuilder<
-                           TGenotype, TEncoding, TProblem, EvolutionStrategyIterationResult<TGenotype>,
-                           EvolutionStrategy<TGenotype, TEncoding, TProblem>>,
-                         IMutatorPrototype<TGenotype, TEncoding, TProblem>,
-                         IOptionalCrossoverPrototype<TGenotype, TEncoding, TProblem> {
+                           TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationResult<TGenotype>,
+                           EvolutionStrategy<TGenotype, TSearchSpace, TProblem>>,
+                         IMutatorPrototype<TGenotype, TSearchSpace, TProblem>,
+                         IOptionalCrossoverPrototype<TGenotype, TSearchSpace, TProblem> {
     public int NoChildren { get; set; } = 100;
     public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
-    public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
+    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
     public required double InitialMutationStrength { get; set; }
-    public ICrossover<TGenotype, TEncoding, TProblem>? Crossover { get; set; }
+    public ICrossover<TGenotype, TSearchSpace, TProblem>? Crossover { get; set; }
 
-    public override EvolutionStrategy<TGenotype, TEncoding, TProblem> BuildAlgorithm() {
-      return new EvolutionStrategy<TGenotype, TEncoding, TProblem> {
+    public override EvolutionStrategy<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() {
+      return new EvolutionStrategy<TGenotype, TSearchSpace, TProblem> {
         PopulationSize = PopulationSize,
         Strategy = Strategy,
         Creator = Creator,

@@ -1,14 +1,14 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutator;
 
-public interface IMutator<TGenotype> : IMutator<TGenotype, IEncoding<TGenotype>> {
+public interface IMutator<TGenotype> : IMutator<TGenotype, ISearchSpace<TGenotype>> {
   IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random);
 }
 
-public interface IMutator<TGenotype, in TEncoding> : IMutator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : class, IEncoding<TGenotype> {
-  IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding);
+public interface IMutator<TGenotype, in TSearchSpace> : IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
+  IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TSearchSpace searchSpace);
 }

@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.Permutations;

@@ -1,8 +1,8 @@
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.Optimization;

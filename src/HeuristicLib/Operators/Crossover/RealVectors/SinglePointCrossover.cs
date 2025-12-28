@@ -1,12 +1,12 @@
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossover.RealVectors;
 
-public class SinglePointCrossover : Crossover<RealVector, RealVectorEncoding> {
-  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+public class SinglePointCrossover : Crossover<RealVector, RealVectorSearchSpace> {
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
     var parent1 = parents.Parent1;
     var parent2 = parents.Parent2;
     int crossoverPoint = random.Integer(1, parent1.Count);
@@ -19,6 +19,6 @@ public class SinglePointCrossover : Crossover<RealVector, RealVectorEncoding> {
       offspringValues[i] = parent2[i];
     }
 
-    return RealVector.Clamp(new RealVector(offspringValues), encoding.Minimum, encoding.Maximum);
+    return RealVector.Clamp(new RealVector(offspringValues), searchSpace.Minimum, searchSpace.Maximum);
   }
 }

@@ -1,5 +1,5 @@
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 // ReSharper disable ForCanBeConvertedToForeach
 // ReSharper disable LoopCanBeConvertedToQuery

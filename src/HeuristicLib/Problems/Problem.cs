@@ -1,6 +1,6 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -19,32 +19,32 @@ namespace HEAL.HeuristicLib.Problems;
 // }
 
 //
-// public interface IEncodingProvider<out TEncoding> 
-//   where TEncoding : IEncoding 
+// public interface IEncodingProvider<out TSearchSpace> 
+//   where TSearchSpace : IEncoding 
 // {
-//   TEncoding Encoding { get; }
+//   TSearchSpace Encoding { get; }
 // } 
 
 //
 // public static class EvaluationPipeline {
-//   public static EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult> CreateAlgorithm<TGenotype, TPhenotype, TEvaluationResult>(
+//   public static EvaluationPipeline<TGenotype, TPhenotype, TSvaluationResult> CreateAlgorithm<TGenotype, TPhenotype, TSvaluationResult>(
 //     IDecoder<TGenotype, TPhenotype> decoder,
-//     IEvaluator<TPhenotype, TEvaluationResult> Evaluator,
-//     IFitnessExtractor<TEvaluationResult> fitnessExtractor
+//     IEvaluator<TPhenotype, TSvaluationResult> Evaluator,
+//     IFitnessExtractor<TSvaluationResult> fitnessExtractor
 //   ) {
-//     return new EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult>(decoder, Evaluator, fitnessExtractor);
+//     return new EvaluationPipeline<TGenotype, TPhenotype, TSvaluationResult>(decoder, Evaluator, fitnessExtractor);
 //   }
 // }
 //
-// public class EvaluationPipeline<TGenotype, TPhenotype, TEvaluationResult> {
-//   public EvaluationPipeline(IDecoder<TGenotype, TPhenotype> decoder, IEvaluator<TPhenotype, TEvaluationResult> Evaluator, IFitnessExtractor<TEvaluationResult> fitnessExtractor) {
+// public class EvaluationPipeline<TGenotype, TPhenotype, TSvaluationResult> {
+//   public EvaluationPipeline(IDecoder<TGenotype, TPhenotype> decoder, IEvaluator<TPhenotype, TSvaluationResult> Evaluator, IFitnessExtractor<TSvaluationResult> fitnessExtractor) {
 //     Decoder = decoder;
 //     Evaluator = Evaluator;
 //     FitnessExtractor = fitnessExtractor;
 //   }
 //   public IDecoder<TGenotype, TPhenotype> Decoder { get; }
-//   public IEvaluator<TPhenotype, TEvaluationResult> Evaluator { get; }
-//   public IFitnessExtractor<TEvaluationResult> FitnessExtractor { get; }
+//   public IEvaluator<TPhenotype, TSvaluationResult> Evaluator { get; }
+//   public IFitnessExtractor<TSvaluationResult> FitnessExtractor { get; }
 // }
 
 // public interface IEncodedProblem<TISolution, in TGenotype, out TSearchSpace> : IProblem<TISolution>, IOptimizable<TGenotype, TSearchSpace> 
@@ -82,10 +82,10 @@ namespace HEAL.HeuristicLib.Problems;
 // {
 // }
 
-public abstract class Problem<TISolution, TEncoding>(Objective objective, TEncoding searchSpace) : IProblem<TISolution, TEncoding>
-  where TEncoding : class, IEncoding<TISolution> {
+public abstract class Problem<TISolution, TSearchSpace>(Objective objective, TSearchSpace searchSpace) : IProblem<TISolution, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TISolution> {
   public Objective Objective { get; } = objective;
-  public TEncoding SearchSpace { get; } = searchSpace;
+  public TSearchSpace SearchSpace { get; } = searchSpace;
 
   public abstract ObjectiveVector Evaluate(TISolution solution, IRandomNumberGenerator random);
 }

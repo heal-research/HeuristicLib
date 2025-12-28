@@ -1,8 +1,7 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Prototypes;
+﻿using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
@@ -11,7 +10,7 @@ public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, IS
 public class BestMedianWorstAnalysis<TGenotype> : AttachedAnalysis<TGenotype, PopulationIterationResult<TGenotype>> where TGenotype : class {
   public readonly List<BestMedianWorstEntry<TGenotype>> BestISolutions = [];
 
-  public override void AfterInterception(PopulationIterationResult<TGenotype> currentIterationResult, PopulationIterationResult<TGenotype>? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  public override void AfterInterception(PopulationIterationResult<TGenotype> currentIterationResult, PopulationIterationResult<TGenotype>? previousIterationResult, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     var ordered = currentIterationResult.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
     if (ordered.Length == 0) {
       BestISolutions.Add(default);
@@ -23,10 +22,10 @@ public class BestMedianWorstAnalysis<TGenotype> : AttachedAnalysis<TGenotype, Po
 }
 
 public static class BestMedianWorstAnalysis {
-  public static BestMedianWorstAnalysis<TGenotype> Analyze<TGenotype, TE, TP, TR>(
-    IAlgorithmBuilder<TGenotype, TE, TP, TR> ga)
-    where TE : class, IEncoding<TGenotype>
-    where TP : class, IProblem<TGenotype, TE>
+  public static BestMedianWorstAnalysis<TGenotype> Analyze<TGenotype, TS, TP, TR>(
+    IAlgorithmBuilder<TGenotype, TS, TP, TR> ga)
+    where TS : class, ISearchSpace<TGenotype>
+    where TP : class, IProblem<TGenotype, TS>
     where TR : PopulationIterationResult<TGenotype>
     where TGenotype : class {
     var r = new BestMedianWorstAnalysis<TGenotype>();

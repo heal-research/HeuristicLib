@@ -1,7 +1,5 @@
 ﻿using System.Reflection;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Optimization;
@@ -9,6 +7,8 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -74,18 +74,18 @@ public class OperatorCompatabilityTests {
   [InlineData(typeof(IndependentAlgorithm<Permutation>), typeof(TestFunctionProblem), false)] // incompatible problem (wrong encoding)
   [InlineData(typeof(IndependentAlgorithm<RealVector>), typeof(TravelingSalesmanProblem), false)] // incompatible problem (wrong encoding)
   [InlineData(typeof(IndependentAlgorithm<RealVector>), typeof(TestFunctionProblem), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding>), typeof(TravelingSalesmanProblem), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding>), typeof(TestFunctionProblem), false)] // incompatible problem (wrong encoding)
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, PermutationProblem>), typeof(TravelingSalesmanProblem), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, PermutationProblem>), typeof(TestFunctionProblem), false)] // incompatible problem (wrong encoding)
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem>), typeof(TravelingSalesmanProblem), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem>), typeof(TestFunctionProblem), false)] // incompatible problem (wrong encoding)
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding>), typeof(TravelingSalesmanProblem), false)] // incompatible problem (wrong encoding)
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding>), typeof(TestFunctionProblem), true)]
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, RealVectorProblem>), typeof(TravelingSalesmanProblem), false)] // incompatible problem (wrong encoding)
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, RealVectorProblem>), typeof(TestFunctionProblem), true)]
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, TestFunctionProblem>), typeof(TravelingSalesmanProblem), false)] // incompatible problem (wrong encoding)
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, TestFunctionProblem>), typeof(TestFunctionProblem), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace>), typeof(TravelingSalesmanProblem), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace>), typeof(TestFunctionProblem), false)] // incompatible problem (wrong encoding)
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, PermutationProblem>), typeof(TravelingSalesmanProblem), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, PermutationProblem>), typeof(TestFunctionProblem), false)] // incompatible problem (wrong encoding)
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>), typeof(TravelingSalesmanProblem), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>), typeof(TestFunctionProblem), false)] // incompatible problem (wrong encoding)
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace>), typeof(TravelingSalesmanProblem), false)] // incompatible problem (wrong encoding)
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace>), typeof(TestFunctionProblem), true)]
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, RealVectorProblem>), typeof(TravelingSalesmanProblem), false)] // incompatible problem (wrong encoding)
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, RealVectorProblem>), typeof(TestFunctionProblem), true)]
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>), typeof(TravelingSalesmanProblem), false)] // incompatible problem (wrong encoding)
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>), typeof(TestFunctionProblem), true)]
   [InlineData(typeof(PermutationEncodingSpecificAlgorithm), typeof(TravelingSalesmanProblem), true)]
   [InlineData(typeof(PermutationEncodingSpecificAlgorithm), typeof(TestFunctionProblem), false)] // incompatible problem (wrong encoding)
   [InlineData(typeof(PermutationEncodingSpecificAlgorithm<PermutationProblem>), typeof(TravelingSalesmanProblem), true)]
@@ -119,42 +119,42 @@ public class OperatorCompatabilityTests {
   [InlineData(typeof(IndependentAlgorithm<RealVector>), typeof(TspSpecificCrossover), false)] // incompatible encoding and incompatible problem
   [InlineData(typeof(IndependentAlgorithm<RealVector>), typeof(RealVectorSpecificCrossover), false)] // incompatible encoding
   [InlineData(typeof(IndependentAlgorithm<RealVector>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible encoding and incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding>), typeof(IndependentCrossover<Permutation>), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding>), typeof(IndependentCrossover<RealVector>), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding>), typeof(PermutationSpecificCrossover), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding>), typeof(TspSpecificCrossover), false)] // incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding>), typeof(RealVectorSpecificCrossover), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible encoding and incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, PermutationProblem>), typeof(IndependentCrossover<Permutation>), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, PermutationProblem>), typeof(IndependentCrossover<RealVector>), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, PermutationProblem>), typeof(PermutationSpecificCrossover), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, PermutationProblem>), typeof(TspSpecificCrossover), false)] // incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, PermutationProblem>), typeof(RealVectorSpecificCrossover), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, PermutationProblem>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible encoding and incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem>), typeof(IndependentCrossover<Permutation>), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem>), typeof(IndependentCrossover<RealVector>), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem>), typeof(PermutationSpecificCrossover), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem>), typeof(TspSpecificCrossover), true)]
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem>), typeof(RealVectorSpecificCrossover), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible encoding and incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding>), typeof(IndependentCrossover<Permutation>), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding>), typeof(IndependentCrossover<RealVector>), true)]
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding>), typeof(PermutationSpecificCrossover), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding>), typeof(TspSpecificCrossover), false)] // incompatible encoding and incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding>), typeof(RealVectorSpecificCrossover), true)]
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, RealVectorProblem>), typeof(IndependentCrossover<Permutation>), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, RealVectorProblem>), typeof(IndependentCrossover<RealVector>), true)]
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, RealVectorProblem>), typeof(PermutationSpecificCrossover), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, RealVectorProblem>), typeof(TspSpecificCrossover), false)] // incompatible encoding and incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, RealVectorProblem>), typeof(RealVectorSpecificCrossover), true)]
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, RealVectorProblem>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, TestFunctionProblem>), typeof(IndependentCrossover<Permutation>), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, TestFunctionProblem>), typeof(IndependentCrossover<RealVector>), true)]
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, TestFunctionProblem>), typeof(PermutationSpecificCrossover), false)] // incompatible encoding
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, TestFunctionProblem>), typeof(TspSpecificCrossover), false)] // incompatible encoding and incompatible problem
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, TestFunctionProblem>), typeof(RealVectorSpecificCrossover), true)]
-  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorEncoding, TestFunctionProblem>), typeof(TestFunctionProblemSpecificCrossover), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace>), typeof(IndependentCrossover<Permutation>), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace>), typeof(IndependentCrossover<RealVector>), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace>), typeof(PermutationSpecificCrossover), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace>), typeof(TspSpecificCrossover), false)] // incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace>), typeof(RealVectorSpecificCrossover), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible encoding and incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, PermutationProblem>), typeof(IndependentCrossover<Permutation>), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, PermutationProblem>), typeof(IndependentCrossover<RealVector>), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, PermutationProblem>), typeof(PermutationSpecificCrossover), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, PermutationProblem>), typeof(TspSpecificCrossover), false)] // incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, PermutationProblem>), typeof(RealVectorSpecificCrossover), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, PermutationProblem>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible encoding and incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>), typeof(IndependentCrossover<Permutation>), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>), typeof(IndependentCrossover<RealVector>), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>), typeof(PermutationSpecificCrossover), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>), typeof(TspSpecificCrossover), true)]
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>), typeof(RealVectorSpecificCrossover), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible encoding and incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace>), typeof(IndependentCrossover<Permutation>), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace>), typeof(IndependentCrossover<RealVector>), true)]
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace>), typeof(PermutationSpecificCrossover), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace>), typeof(TspSpecificCrossover), false)] // incompatible encoding and incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace>), typeof(RealVectorSpecificCrossover), true)]
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, RealVectorProblem>), typeof(IndependentCrossover<Permutation>), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, RealVectorProblem>), typeof(IndependentCrossover<RealVector>), true)]
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, RealVectorProblem>), typeof(PermutationSpecificCrossover), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, RealVectorProblem>), typeof(TspSpecificCrossover), false)] // incompatible encoding and incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, RealVectorProblem>), typeof(RealVectorSpecificCrossover), true)]
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, RealVectorProblem>), typeof(TestFunctionProblemSpecificCrossover), false)] // incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>), typeof(IndependentCrossover<Permutation>), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>), typeof(IndependentCrossover<RealVector>), true)]
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>), typeof(PermutationSpecificCrossover), false)] // incompatible encoding
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>), typeof(TspSpecificCrossover), false)] // incompatible encoding and incompatible problem
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>), typeof(RealVectorSpecificCrossover), true)]
+  [InlineData(typeof(IndependentAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>), typeof(TestFunctionProblemSpecificCrossover), true)]
   [InlineData(typeof(PermutationEncodingSpecificAlgorithm), typeof(IndependentCrossover<Permutation>), true)]
   [InlineData(typeof(PermutationEncodingSpecificAlgorithm), typeof(IndependentCrossover<RealVector>), false)] // incompatible encoding
   [InlineData(typeof(PermutationEncodingSpecificAlgorithm), typeof(PermutationSpecificCrossover), true)]
@@ -210,65 +210,65 @@ public class OperatorCompatabilityTests {
 
 public abstract record AlgorithmResult<TGenotype> : IIterationResult;
 
-public class IndependentAlgorithm<TGenotype, TEncoding, TProblem> : Algorithm<TGenotype, TEncoding, TProblem, AlgorithmResult<TGenotype>>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
+public class IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : Algorithm<TGenotype, TSearchSpace, TProblem, AlgorithmResult<TGenotype>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<TGenotype> Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmResult<TGenotype> Execute(TProblem problem, TSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
-public class IndependentAlgorithm<TGenotype, TEncoding> : IndependentAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : class, IEncoding<TGenotype> { }
+public class IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TSearchSpace : class, ISearchSpace<TGenotype> { }
 
-public class IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> { }
+public class IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> { }
 
-public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutation, PermutationEncoding, TProblem, AlgorithmResult<Permutation>>
-  where TProblem : class, IProblem<Permutation, PermutationEncoding> {
-  public ICrossover<Permutation, PermutationEncoding, TProblem> Crossover { get; set; }
+public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutation, PermutationSearchSpace, TProblem, AlgorithmResult<Permutation>>
+  where TProblem : class, IProblem<Permutation, PermutationSearchSpace> {
+  public ICrossover<Permutation, PermutationSearchSpace, TProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<Permutation> Execute(TProblem problem, PermutationEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmResult<Permutation> Execute(TProblem problem, PermutationSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
-public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationEncoding>> { }
+public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>> { }
 
-public class TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, PermutationEncoding, TravelingSalesmanProblem, AlgorithmResult<Permutation>> {
-  public ICrossover<Permutation, PermutationEncoding, TravelingSalesmanProblem> Crossover { get; set; }
+public class TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, AlgorithmResult<Permutation>> {
+  public ICrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<Permutation> Execute(TravelingSalesmanProblem problem, PermutationEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmResult<Permutation> Execute(TravelingSalesmanProblem problem, PermutationSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
-public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorEncoding, TProblem, AlgorithmResult<RealVector>>
-  where TProblem : class, IProblem<RealVector, RealVectorEncoding> {
-  public ICrossover<RealVector, RealVectorEncoding, TProblem> Crossover { get; set; }
+public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorSearchSpace, TProblem, AlgorithmResult<RealVector>>
+  where TProblem : class, IProblem<RealVector, RealVectorSearchSpace> {
+  public ICrossover<RealVector, RealVectorSearchSpace, TProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<RealVector> Execute(TProblem problem, RealVectorEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmResult<RealVector> Execute(TProblem problem, RealVectorSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
-public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorEncoding>> { }
+public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorSearchSpace>> { }
 
-public class TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVectorEncoding, TestFunctionProblem, AlgorithmResult<RealVector>> {
-  public ICrossover<RealVector, RealVectorEncoding, TestFunctionProblem> Crossover { get; set; }
+public class TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, AlgorithmResult<RealVector>> {
+  public ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Crossover { get; set; }
 
-  public override AlgorithmResult<RealVector> Execute(TestFunctionProblem problem, RealVectorEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmResult<RealVector> Execute(TestFunctionProblem problem, RealVectorSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
 }
 
 public class IndependentCrossover<TGenotype> : Crossover<TGenotype> {
   public override TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
-public class PermutationSpecificCrossover : Crossover<Permutation, PermutationEncoding> {
-  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationEncoding encoding) => throw new NotImplementedException();
+public class PermutationSpecificCrossover : Crossover<Permutation, PermutationSearchSpace> {
+  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) => throw new NotImplementedException();
 }
 
-public class TspSpecificCrossover : Crossover<Permutation, PermutationEncoding, TravelingSalesmanProblem> {
-  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationEncoding encoding, TravelingSalesmanProblem problem) => throw new NotImplementedException();
+public class TspSpecificCrossover : Crossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
+  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace, TravelingSalesmanProblem problem) => throw new NotImplementedException();
 }
 
-public class RealVectorSpecificCrossover : Crossover<RealVector, RealVectorEncoding> {
-  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding) => throw new NotImplementedException();
+public class RealVectorSpecificCrossover : Crossover<RealVector, RealVectorSearchSpace> {
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => throw new NotImplementedException();
 }
 
-public class TestFunctionProblemSpecificCrossover : Crossover<RealVector, RealVectorEncoding, TestFunctionProblem> {
-  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding, TestFunctionProblem problem) => throw new NotImplementedException();
+public class TestFunctionProblemSpecificCrossover : Crossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> {
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) => throw new NotImplementedException();
 }

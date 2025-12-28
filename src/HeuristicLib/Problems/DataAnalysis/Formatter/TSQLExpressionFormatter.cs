@@ -1,9 +1,9 @@
 ﻿using System.Globalization;
 using System.Text;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Formatters;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
@@ -57,7 +57,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.AppendLine("-- use the expression after the RETURN statement if you want to incorporate the model in a query without creating a function.");
 
     //Generate function header
-    strBuilder.Append("CREATE FUNCTION dbo.REGRESSIONMODEL(");
+    strBuilder.Append("CREATS FUNCTION dbo.REGRESSIONMODEL(");
     strBuilder.Append(string.Join(", ", sortedVarcharIdentifiers.Select(n => $"{n} NVARCHAR(max)")));
     if (varcharVarNames.Any() && floatVarNames.Any())
       strBuilder.Append(",");

@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Creator;
+﻿using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Prototypes;
@@ -8,21 +7,22 @@ using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms.NSGA2;
 
-public class Nsga2<TGenotype, TEncoding, TProblem> :
-  IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype>
+public class Nsga2<TGenotype, TSearchSpace, TProblem> :
+  IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationResult<TGenotype>>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
   where TGenotype : class {
   public required int PopulationSize { get; init; }
-  public required ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; init; }
-  public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
-  public required ISelector<TGenotype, TEncoding, TProblem> Selector { get; init; }
-  public required IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; init; }
+  public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
+  public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
+  public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+  public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
 
-  public override PopulationIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, PopulationIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
+  public override PopulationIterationResult<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, PopulationIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null)
       return new PopulationIterationResult<TGenotype>(CreateInitialPopulation(problem, searchSpace, random, PopulationSize));
 
@@ -36,14 +36,14 @@ public class Nsga2<TGenotype, TEncoding, TProblem> :
     return new PopulationIterationResult<TGenotype>(Population.From(nextPop));
   }
 
-  public class Builder : PopulationBasedAlgorithmBuilder<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>, Nsga2<TGenotype, TEncoding, TProblem>>,
-                         IMutatorPrototype<TGenotype, TEncoding, TProblem>, ICrossoverPrototype<TGenotype, TEncoding, TProblem> {
+  public class Builder : PopulationBasedAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, PopulationIterationResult<TGenotype>, Nsga2<TGenotype, TSearchSpace, TProblem>>,
+                         IMutatorPrototype<TGenotype, TSearchSpace, TProblem>, ICrossoverPrototype<TGenotype, TSearchSpace, TProblem> {
     public double MutationRate { get; set; } = 0.05;
     public bool DominateOnEquals { get; set; } = false;
-    public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
-    public required ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
+    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
+    public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
 
-    public override Nsga2<TGenotype, TEncoding, TProblem> BuildAlgorithm() => new() {
+    public override Nsga2<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() => new() {
       Terminator = Terminator,
       Interceptor = Interceptor,
       PopulationSize = PopulationSize,
@@ -59,11 +59,11 @@ public class Nsga2<TGenotype, TEncoding, TProblem> :
 }
 
 public static class Nsga2 {
-  public static Nsga2<TGenotype, TEncoding, TProblem>.Builder GetBuilder<TGenotype, TEncoding, TProblem>(
-    ICreator<TGenotype, TEncoding, TProblem> creator,
-    ICrossover<TGenotype, TEncoding, TProblem> crossover,
-    IMutator<TGenotype, TEncoding, TProblem> mutator, bool dominateOnEquals = true)
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> where TGenotype : class => new() {
+  public static Nsga2<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+    ICreator<TGenotype, TSearchSpace, TProblem> creator,
+    ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
+    IMutator<TGenotype, TSearchSpace, TProblem> mutator, bool dominateOnEquals = true)
+    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class => new() {
     Mutator = mutator,
     Crossover = crossover,
     Creator = creator,

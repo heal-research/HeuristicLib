@@ -1,14 +1,14 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminator;
 
-public interface ITerminator<TGenotype, in TIterationResult, in TEncoding> : ITerminator<TGenotype, TIterationResult, TEncoding, IProblem<TGenotype, TEncoding>>
+public interface ITerminator<TGenotype, in TIterationResult, in TSearchSpace> : ITerminator<TGenotype, TIterationResult, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TIterationResult : IIterationResult
-  where TEncoding : class, IEncoding<TGenotype>;
+  where TSearchSpace : class, ISearchSpace<TGenotype>;
 
-public interface ITerminator<TGenotype, in TIterationResult> : ITerminator<TGenotype, TIterationResult, IEncoding<TGenotype>>
+public interface ITerminator<TGenotype, in TIterationResult> : ITerminator<TGenotype, TIterationResult, ISearchSpace<TGenotype>>
   where TIterationResult : IIterationResult;
 
 public interface ITerminator<TGenotype> : ITerminator<TGenotype, IIterationResult>;

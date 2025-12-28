@@ -1,5 +1,5 @@
-﻿using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.Genotypes.Trees;
+﻿using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 

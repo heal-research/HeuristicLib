@@ -1,11 +1,11 @@
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossover.Permutations;
 
-public class OrderCrossover : Crossover<Permutation, PermutationEncoding> {
+public class OrderCrossover : Crossover<Permutation, PermutationSearchSpace> {
   public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng, Memory<int>? memory = null) {
     if (parent1.Count != parent2.Count) throw new ArgumentException("Parent permutations must have the same length.");
     if (memory.HasValue && memory.Value.Length < parent1.Count) throw new ArgumentException("Provided memory length is less than parent permutations length.");
@@ -58,7 +58,7 @@ public class OrderCrossover : Crossover<Permutation, PermutationEncoding> {
     }
   }
 
-  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationEncoding encoding) {
+  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) {
     var (parent1, parent2) = (parents.Parent1, parents.Parent2);
     return Cross(parent1, parent2, random);
   }

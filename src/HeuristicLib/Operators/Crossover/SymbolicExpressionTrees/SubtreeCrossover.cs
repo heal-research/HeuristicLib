@@ -1,7 +1,7 @@
-using HEAL.HeuristicLib.Encodings.Trees;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Crossover.SymbolicExpressionTrees;
 
@@ -16,15 +16,15 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
 
   public static SymbolicExpressionTree Cross(IRandomNumberGenerator random,
                                              SymbolicExpressionTree parent0, SymbolicExpressionTree parent1,
-                                             double internalCrossoverPointProbability, SymbolicExpressionTreeEncoding encoding) {
+                                             double internalCrossoverPointProbability, SymbolicExpressionTreeSearchSpace searchSpace) {
     // select a random crossover point in the first parent 
     parent0 = new SymbolicExpressionTree(parent0.Root.Clone());
-    SelectCrossoverPoint(random, parent0, internalCrossoverPointProbability, encoding, out var crossoverPoint0);
+    SelectCrossoverPoint(random, parent0, internalCrossoverPointProbability, searchSpace, out var crossoverPoint0);
 
     var childLength = crossoverPoint0.Child?.GetLength() ?? 0;
     // calculate the max length and depth that the inserted branch can have 
-    var maxInsertedBranchLength = Math.Max(0, encoding.TreeLength - (parent0.Length - childLength));
-    var maxInsertedBranchDepth = Math.Max(0, encoding.TreeDepth - parent0.Root.GetBranchLevel(crossoverPoint0.Parent));
+    var maxInsertedBranchLength = Math.Max(0, searchSpace.TreeLength - (parent0.Length - childLength));
+    var maxInsertedBranchDepth = Math.Max(0, searchSpace.TreeDepth - parent0.Root.GetBranchLevel(crossoverPoint0.Parent));
 
     var allowedBranches = new List<SymbolicExpressionTreeNode?>();
     parent1.Root.ForEachNodePostfix((n) => {
@@ -57,15 +57,15 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
       }
     }
 
-    Extensions.CheckDebug(encoding.Contains(parent0), "Generated Invalid Child");
+    Extensions.CheckDebug(searchSpace.Contains(parent0), "Generated Invalid Child");
     return parent0;
   }
 
-  private static void SelectCrossoverPoint(IRandomNumberGenerator random, SymbolicExpressionTree parent0, double internalNodeProbability, SymbolicExpressionTreeEncoding encoding, out CutPoint crossoverPoint) {
+  private static void SelectCrossoverPoint(IRandomNumberGenerator random, SymbolicExpressionTree parent0, double internalNodeProbability, SymbolicExpressionTreeSearchSpace searchSpace, out CutPoint crossoverPoint) {
     ArgumentOutOfRangeException.ThrowIfLessThan(internalNodeProbability, 0);
     ArgumentOutOfRangeException.ThrowIfGreaterThan(internalNodeProbability, 1);
-    var maxBranchLength = encoding.TreeLength;
-    var maxBranchDepth = encoding.TreeDepth;
+    var maxBranchLength = searchSpace.TreeLength;
+    var maxBranchDepth = searchSpace.TreeDepth;
     var internalCrossoverPoints = new List<CutPoint>();
     var leafCrossoverPoints = new List<CutPoint>();
     parent0.Root.ForEachNodePostfix(n => {
@@ -81,15 +81,15 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
           }
 
           if (child.SubtreeCount > 0)
-            internalCrossoverPoints.Add(new CutPoint(n, child, encoding));
+            internalCrossoverPoints.Add(new CutPoint(n, child, searchSpace));
           else
-            leafCrossoverPoints.Add(new CutPoint(n, child, encoding));
+            leafCrossoverPoints.Add(new CutPoint(n, child, searchSpace));
         }
 
         // add one additional extension point if the number of subtrees for the symbol is not full
-        if (n.SubtreeCount < encoding.Grammar.GetMaximumSubtreeCount(n.Symbol)) {
+        if (n.SubtreeCount < searchSpace.Grammar.GetMaximumSubtreeCount(n.Symbol)) {
           // empty extension point
-          internalCrossoverPoints.Add(new CutPoint(n, n.SubtreeCount, encoding));
+          internalCrossoverPoints.Add(new CutPoint(n, n.SubtreeCount, searchSpace));
         }
       }
     );
@@ -143,5 +143,5 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     return allowedInternalBranches.Count == 0 ? null : allowedInternalBranches.SampleRandom(random);
   }
 
-  public override SymbolicExpressionTree Cross(IParents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, encoding);
+  public override SymbolicExpressionTree Cross(IParents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, searchSpace);
 }

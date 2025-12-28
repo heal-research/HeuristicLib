@@ -1,18 +1,18 @@
-﻿using HEAL.HeuristicLib.Encodings.Vectors;
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class MultiObjectiveTestFunctionProblem : RealVectorProblem {
   private readonly IMultiObjectiveTestFunction testFunction;
 
-  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : base(testFunction.Objective, GetEncoding(testFunction)) {
+  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : base(testFunction.Objective, GeTSearchSpace(testFunction)) {
     this.testFunction = testFunction;
   }
 
-  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction, RealVectorEncoding searchSpace) : base(testFunction.Objective, searchSpace) {
+  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction, RealVectorSearchSpace searchSpace) : base(testFunction.Objective, searchSpace) {
     ArgumentOutOfRangeException.ThrowIfNotEqual(searchSpace.Length, testFunction.Dimension);
     this.testFunction = testFunction;
   }
@@ -21,8 +21,8 @@ public class MultiObjectiveTestFunctionProblem : RealVectorProblem {
     return new ObjectiveVector(testFunction.Evaluate(solution));
   }
 
-  private static RealVectorEncoding GetEncoding(IMultiObjectiveTestFunction testFunction) {
-    return new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
+  private static RealVectorSearchSpace GeTSearchSpace(IMultiObjectiveTestFunction testFunction) {
+    return new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);
   }
 
   // public override RealVector Decode(RealVector genotype) => genotype;

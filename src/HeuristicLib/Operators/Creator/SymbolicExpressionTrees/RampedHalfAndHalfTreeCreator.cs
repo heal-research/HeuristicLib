@@ -1,7 +1,6 @@
-using HEAL.HeuristicLib.Encodings.Trees;
 using HEAL.HeuristicLib.Genotypes.Trees;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Creator.SymbolicExpressionTrees;
 
@@ -11,19 +10,19 @@ public class RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator {
   /// Half the trees are created with the 'Grow' method, and the other half are created with the 'Full' method.
   /// </summary>
   /// <param name="random">Random generator</param>
-  /// <param name="encoding"></param>
+  /// <param name="searchSpace"></param>
   /// <returns></returns>
-  public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var tree = encoding.Grammar.MakeStump(random);
+  public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+    var tree = searchSpace.Grammar.MakeStump(random);
     var startNode = tree.Root[0];
 
     if (random.Random() < 0.5)
-      GrowTreeCreator.Create(random, startNode, encoding.TreeDepth - 2, encoding);
+      GrowTreeCreator.Create(random, startNode, searchSpace.TreeDepth - 2, searchSpace);
     else
-      FullTreeCreator.Create(random, startNode, encoding, encoding.TreeDepth - 2);
+      FullTreeCreator.Create(random, startNode, searchSpace, searchSpace.TreeDepth - 2);
 
     return tree;
   }
 
-  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) => CreateTree(random, encoding);
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => CreateTree(random, searchSpace);
 }

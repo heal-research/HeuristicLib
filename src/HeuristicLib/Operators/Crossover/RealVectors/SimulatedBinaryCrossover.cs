@@ -1,11 +1,11 @@
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossover.RealVectors;
 
-public class SimulatedBinaryCrossover : Crossover<RealVector, RealVectorEncoding> {
+public class SimulatedBinaryCrossover : Crossover<RealVector, RealVectorSearchSpace> {
   /// <summary>
   /// Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if crossed either a contracting crossover or an expanding crossover is performed, again with equal probability.
   /// For more details refer to the paper by Deb and Agrawal.
@@ -62,7 +62,7 @@ public class SimulatedBinaryCrossover : Crossover<RealVector, RealVectorEncoding
 
   public double Contiguity { get; } = 2;
 
-  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
     return Apply(random, parents.Parent1, parents.Parent2, Contiguity);
   }
 }
@@ -77,7 +77,7 @@ public static class Sbx {
   public static (RealVector child1, RealVector child2) CrossSbx(
     RealVector p1,
     RealVector p2,
-    RealVectorEncoding encoding,
+    RealVectorSearchSpace searchSpace,
     double eta,
     double probVar,
     double probBin,
@@ -87,8 +87,8 @@ public static class Sbx {
     if (p2.Count != nVar)
       throw new ArgumentException("p1 and p2 must have the same length.");
 
-    var xl = encoding.Minimum; // IReadOnlyList<double>
-    var xu = encoding.Maximum;
+    var xl = searchSpace.Minimum; // IReadOnlyList<double>
+    var xu = searchSpace.Maximum;
 
     // Children start as copies (preserve parents where crossover does not apply)
     var c1 = p1.ToArray();
@@ -144,8 +144,8 @@ public static class Sbx {
       c2[v] = ch2;
     }
 
-    return (RealVector.Clamp(c1, encoding.Minimum, encoding.Maximum),
-      RealVector.Clamp(c2, encoding.Minimum, encoding.Maximum));
+    return (RealVector.Clamp(c1, searchSpace.Minimum, searchSpace.Maximum),
+      RealVector.Clamp(c2, searchSpace.Minimum, searchSpace.Maximum));
   }
 
   public static double CalcBetaQ(double beta, double d, double rv) {
@@ -156,7 +156,7 @@ public static class Sbx {
   }
 }
 
-public class SelfAdaptiveSimulatedBinaryCrossover : Crossover<RealVector, RealVectorEncoding> {
+public class SelfAdaptiveSimulatedBinaryCrossover : Crossover<RealVector, RealVectorSearchSpace> {
   public double ProbVar { get; set; } = 0.5;
   public double Eta { get; set; } = 15.0;
   public double ProbExch { get; set; } = 1.0; // single draw gating probBin (whole call)
@@ -165,7 +165,7 @@ public class SelfAdaptiveSimulatedBinaryCrossover : Crossover<RealVector, RealVe
   public (RealVector child1, RealVector child2) Do(
     RealVector p1,
     RealVector p2,
-    RealVectorEncoding encoding,
+    RealVectorSearchSpace searchSpace,
     IRandomNumberGenerator rng,
     double? eta = null,
     double? probVar = null,
@@ -178,11 +178,11 @@ public class SelfAdaptiveSimulatedBinaryCrossover : Crossover<RealVector, RealVe
     if (rng.Random() > ProbExch)
       pb = 0.0;
 
-    var (c1, c2) = Sbx.CrossSbx(p1, p2, encoding, e, pv, pb, rng);
+    var (c1, c2) = Sbx.CrossSbx(p1, p2, searchSpace, e, pv, pb, rng);
     return (c1, c2);
   }
 
-  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorEncoding encoding) {
-    return Do(parents.Item1, parents.Item2, encoding, random).child1;
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
+    return Do(parents.Item1, parents.Item2, searchSpace, random).child1;
   }
 }

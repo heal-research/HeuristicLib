@@ -1,26 +1,26 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptor;
 
 public static class MultiInterceptor {
-  public static MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>? Create<TGenotype, TResult, TEncoding, TProblem>(
-    IInterceptor<TGenotype, TResult, TEncoding, TProblem>? interceptor)
-    where TEncoding : class, IEncoding<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TEncoding>
+  public static MultiInterceptor<TGenotype, TResult, TSearchSpace, TProblem>? Create<TGenotype, TResult, TSearchSpace, TProblem>(
+    IInterceptor<TGenotype, TResult, TSearchSpace, TProblem>? interceptor)
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TResult : IIterationResult {
-    var list = new List<IInterceptor<TGenotype, TResult, TEncoding, TProblem>>();
+    var list = new List<IInterceptor<TGenotype, TResult, TSearchSpace, TProblem>>();
     if (interceptor != null)
       list.Add(interceptor);
-    return list.Count == 0 ? null : new MultiInterceptor<TGenotype, TResult, TEncoding, TProblem>(list);
+    return list.Count == 0 ? null : new MultiInterceptor<TGenotype, TResult, TSearchSpace, TProblem>(list);
   }
 }
 
-public class MultiInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>(IEnumerable<IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>> interceptors) : Interceptor<TGenotype, TIterationResult, TEncoding, TProblem> where TIterationResult : IIterationResult where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public List<IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>> Interceptors { get; } = interceptors.ToList();
+public class MultiInterceptor<TGenotype, TIterationResult, TSearchSpace, TProblem>(IEnumerable<IInterceptor<TGenotype, TIterationResult, TSearchSpace, TProblem>> interceptors) : Interceptor<TGenotype, TIterationResult, TSearchSpace, TProblem> where TIterationResult : IIterationResult where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  public List<IInterceptor<TGenotype, TIterationResult, TSearchSpace, TProblem>> Interceptors { get; } = interceptors.ToList();
 
-  public override TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TEncoding encoding, TProblem problem) {
-    return Interceptors.Aggregate(currentIterationResult, (current, interceptor) => interceptor.Transform(current, previousIterationResult, encoding, problem));
+  public override TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TSearchSpace searchSpace, TProblem problem) {
+    return Interceptors.Aggregate(currentIterationResult, (current, interceptor) => interceptor.Transform(current, previousIterationResult, searchSpace, problem));
   }
 }

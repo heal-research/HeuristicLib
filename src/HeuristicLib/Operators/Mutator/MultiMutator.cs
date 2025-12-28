@@ -1,18 +1,18 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutator;
 
-public class MultiMutator<TGenotype, TEncoding, TProblem> : BatchMutator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public IReadOnlyList<IMutator<TGenotype, TEncoding, TProblem>> Mutators { get; }
+public class MultiMutator<TGenotype, TSearchSpace, TProblem> : BatchMutator<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  public IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> Mutators { get; }
   public IReadOnlyList<double> Weights { get; }
   private readonly double sumWeights;
   private readonly double[] cumulativeSumWeights;
 
-  public MultiMutator(IReadOnlyList<IMutator<TGenotype, TEncoding, TProblem>> mutators, IReadOnlyList<double>? weights = null) {
+  public MultiMutator(IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null) {
     if (mutators.Count == 0)
       throw new ArgumentException("At least one crossover must be provided.", nameof(mutators));
     if (weights != null && weights.Count != mutators.Count)
@@ -32,7 +32,7 @@ public class MultiMutator<TGenotype, TEncoding, TProblem> : BatchMutator<TGenoty
     }
   }
 
-  public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+  public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
     int offspringCount = parent.Count;
 
     // determine which crossover to use for each offspring
@@ -61,7 +61,7 @@ public class MultiMutator<TGenotype, TEncoding, TProblem> : BatchMutator<TGenoty
     var offspring = new List<TGenotype>(offspringCount);
 
     for (int i = 0; i < Mutators.Count; i++) {
-      var batchOffspring = Mutators[i].Mutate(parentBatches[i], random, encoding, problem);
+      var batchOffspring = Mutators[i].Mutate(parentBatches[i], random, searchSpace, problem);
       offspring.AddRange(batchOffspring);
     }
 
@@ -69,28 +69,28 @@ public class MultiMutator<TGenotype, TEncoding, TProblem> : BatchMutator<TGenoty
   }
 }
 
-public class MultiMutator<TGenotype, TEncoding> : MultiMutator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>, IMutator<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype> {
-  public MultiMutator(IReadOnlyList<IMutator<TGenotype, TEncoding>> mutators, IReadOnlyList<double>? weights = null) : base(mutators, weights) { }
-  public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TEncoding encoding) => base.Mutate(parent, random, encoding, null!);
+public class MultiMutator<TGenotype, TSearchSpace> : MultiMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>, IMutator<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
+  public MultiMutator(IReadOnlyList<IMutator<TGenotype, TSearchSpace>> mutators, IReadOnlyList<double>? weights = null) : base(mutators, weights) { }
+  public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TSearchSpace searchSpace) => base.Mutate(parent, random, searchSpace, null!);
 }
 
-public class MultiMutator<TGenotype> : MultiMutator<TGenotype, IEncoding<TGenotype>>, IMutator<TGenotype> {
+public class MultiMutator<TGenotype> : MultiMutator<TGenotype, ISearchSpace<TGenotype>>, IMutator<TGenotype> {
   public MultiMutator(IReadOnlyList<IMutator<TGenotype>> mutators, IReadOnlyList<double>? weights = null) : base(mutators, weights) { }
   public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random) => base.Mutate(parent, random, null!, null!);
 }
 
 public static class MultiMutator {
-  public static MultiMutator<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(
-    IReadOnlyList<IMutator<TGenotype, TEncoding, TProblem>> mutators, IReadOnlyList<double>? weights = null)
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new MultiMutator<TGenotype, TEncoding, TProblem>(mutators, weights);
+  public static MultiMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(
+    IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null)
+    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+    return new MultiMutator<TGenotype, TSearchSpace, TProblem>(mutators, weights);
   }
 
-  public static MultiMutator<TGenotype, TEncoding> Create<TGenotype, TEncoding>(
-    IReadOnlyList<IMutator<TGenotype, TEncoding>> mutators, IReadOnlyList<double>? weights = null)
-    where TEncoding : class, IEncoding<TGenotype> {
-    return new MultiMutator<TGenotype, TEncoding>(mutators, weights);
+  public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(
+    IReadOnlyList<IMutator<TGenotype, TSearchSpace>> mutators, IReadOnlyList<double>? weights = null)
+    where TSearchSpace : class, ISearchSpace<TGenotype> {
+    return new MultiMutator<TGenotype, TSearchSpace>(mutators, weights);
   }
 
   public static MultiMutator<TGenotype> Create<TGenotype>(
@@ -98,22 +98,22 @@ public static class MultiMutator {
     return new MultiMutator<TGenotype>(mutators, weights);
   }
 
-  public static MultiMutator<TGenotype, TEncoding, TProblem> Create<TGenotype, TEncoding, TProblem>(
-    params IReadOnlyList<IMutator<TGenotype, TEncoding, TProblem>> mutators)
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new MultiMutator<TGenotype, TEncoding, TProblem>(mutators);
+  public static MultiMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(
+    params IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators)
+    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+    return new MultiMutator<TGenotype, TSearchSpace, TProblem>(mutators);
   }
 
-  public static MultiMutator<TGenotype, TEncoding> Create<TGenotype, TEncoding>(params IReadOnlyList<IMutator<TGenotype, TEncoding>> mutators)
-    where TEncoding : class, IEncoding<TGenotype> {
-    return new MultiMutator<TGenotype, TEncoding>(mutators);
+  public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace>> mutators)
+    where TSearchSpace : class, ISearchSpace<TGenotype> {
+    return new MultiMutator<TGenotype, TSearchSpace>(mutators);
   }
 
   public static MultiMutator<TGenotype> Create<TGenotype>(params IReadOnlyList<IMutator<TGenotype>> mutators) {
     return new MultiMutator<TGenotype>(mutators);
   }
 
-  public static MultiMutator<TGenotype, TEncoding, TProblem> WithRate<TGenotype, TEncoding, TProblem>(this IMutator<TGenotype, TEncoding, TProblem> mutator, double mutationRate) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
+  public static MultiMutator<TGenotype, TSearchSpace, TProblem> WithRate<TGenotype, TSearchSpace, TProblem>(this IMutator<TGenotype, TSearchSpace, TProblem> mutator, double mutationRate) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> {
     return Create([mutator, NoChangeMutator<TGenotype>.Instance], [mutationRate, 1 - mutationRate]);
   }
 }

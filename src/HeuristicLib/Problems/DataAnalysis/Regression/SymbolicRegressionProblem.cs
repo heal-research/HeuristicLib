@@ -1,14 +1,14 @@
-using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Formatters;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public class SymbolicRegressionProblem :
-  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
+  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> {
   public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
   public int ParameterOptimizationIterations { get; init; } = -1;
   protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, Interpreter);
@@ -46,12 +46,12 @@ public class SymbolicRegressionProblem :
   public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
     this(data, objective,
       GetDefaultComparer(objective),
-      new SymbolicExpressionTreeEncoding(new SimpleSymbolicExpressionGrammar())) { }
+      new SymbolicExpressionTreeSearchSpace(new SimpleSymbolicExpressionGrammar())) { }
 
   public SymbolicRegressionProblem(RegressionProblemData data,
                                    ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
                                    IComparer<ObjectiveVector> a,
-                                   SymbolicExpressionTreeEncoding encoding) : base(data, objective, a, encoding) { }
+                                   SymbolicExpressionTreeSearchSpace searchSpace) : base(data, objective, a, searchSpace) { }
 
   private static IComparer<ObjectiveVector>
     GetDefaultComparer(ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) => objective.Count == 1

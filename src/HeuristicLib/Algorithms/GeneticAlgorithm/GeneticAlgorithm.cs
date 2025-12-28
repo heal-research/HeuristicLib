@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Creator;
+﻿using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Prototypes;
@@ -8,21 +7,22 @@ using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 
-public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
-  : IterativeAlgorithm<TGenotype, TEncoding, TProblem, PopulationIterationResult<TGenotype>>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
+public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationResult<TGenotype>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class {
   public required int PopulationSize { get; init; }
-  public required ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; init; }
-  public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; init; }
-  public required ISelector<TGenotype, TEncoding, TProblem> Selector { get; init; }
-  public required IReplacer<TGenotype, TEncoding, TProblem> Replacer { get; init; }
+  public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
+  public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
+  public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+  public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
 
-  public override PopulationIterationResult<TGenotype> ExecuteStep(TProblem problem, TEncoding searchSpace, PopulationIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
+  public override PopulationIterationResult<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, PopulationIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
     if (previousIterationResult == null)
       return new PopulationIterationResult<TGenotype>(CreateInitialPopulation(problem, searchSpace, random, PopulationSize));
     var offspringCount = Replacer.GetOffspringCount(PopulationSize);
@@ -38,19 +38,19 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
 
   public class Builder : PopulationBasedAlgorithmBuilder<
                            TGenotype,
-                           TEncoding,
+                           TSearchSpace,
                            TProblem,
                            PopulationIterationResult<TGenotype>,
-                           GeneticAlgorithm<TGenotype, TEncoding, TProblem>>,
-                         IMutatorPrototype<TGenotype, TEncoding, TProblem>,
-                         ICrossoverPrototype<TGenotype, TEncoding, TProblem> {
+                           GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>>,
+                         IMutatorPrototype<TGenotype, TSearchSpace, TProblem>,
+                         ICrossoverPrototype<TGenotype, TSearchSpace, TProblem> {
     public double MutationRate { get; set; } = 0.05;
     public int Elites { get; set; } = 1;
-    public required IMutator<TGenotype, TEncoding, TProblem> Mutator { get; set; }
-    public required ICrossover<TGenotype, TEncoding, TProblem> Crossover { get; set; }
+    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
+    public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
 
-    public GeneticAlgorithm<TGenotype, TEncoding, TProblem> Create() {
-      return new GeneticAlgorithm<TGenotype, TEncoding, TProblem> {
+    public GeneticAlgorithm<TGenotype, TSearchSpace, TProblem> Create() {
+      return new GeneticAlgorithm<TGenotype, TSearchSpace, TProblem> {
         AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
         PopulationSize = PopulationSize,
         Creator = Creator,
@@ -64,20 +64,20 @@ public class GeneticAlgorithm<TGenotype, TEncoding, TProblem>
       };
     }
 
-    public override GeneticAlgorithm<TGenotype, TEncoding, TProblem> BuildAlgorithm() => Create();
+    public override GeneticAlgorithm<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() => Create();
   }
 }
 
-public class GeneticAlgorithm<TGenotype, TEncoding> : GeneticAlgorithm<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>> where TEncoding : class, IEncoding<TGenotype> where TGenotype : class;
+public class GeneticAlgorithm<TGenotype, TSearchSpace> : GeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> where TSearchSpace : class, ISearchSpace<TGenotype> where TGenotype : class;
 
-public class GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, IEncoding<TGenotype>> where TGenotype : class;
+public class GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>> where TGenotype : class;
 
 public static class GeneticAlgorithm {
-  public static GeneticAlgorithm<TGenotype, TEncoding, TProblem>.Builder GetBuilder<TGenotype, TEncoding, TProblem>(
-    ICreator<TGenotype, TEncoding, TProblem> creator,
-    ICrossover<TGenotype, TEncoding, TProblem> crossover,
-    IMutator<TGenotype, TEncoding, TProblem> mutator)
-    where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> where TGenotype : class => new() {
+  public static GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+    ICreator<TGenotype, TSearchSpace, TProblem> creator,
+    ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
+    IMutator<TGenotype, TSearchSpace, TProblem> mutator)
+    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class => new() {
     Mutator = mutator,
     Crossover = crossover,
     Creator = creator

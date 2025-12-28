@@ -1,13 +1,13 @@
-using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
 
-public class ClassificationProblem<TProblemData, TISolution, TEncoding>(TProblemData problemData, ICollection<IClassificationEvaluator> objective, IComparer<ObjectiveVector> a, TEncoding encoding)
-  : DataAnalysisProblem<TProblemData, TISolution, TEncoding>(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), encoding)
+public class ClassificationProblem<TProblemData, TISolution, TSearchSpace>(TProblemData problemData, ICollection<IClassificationEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace)
+  : DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), searchSpace)
   where TProblemData : ClassificationProblemData
-  where TEncoding : class, IEncoding<TISolution>
+  where TSearchSpace : class, ISearchSpace<TISolution>
   where TISolution : IRegressionModel {
   public List<IClassificationEvaluator> Evaluators { get; set; } = objective.ToList();
 

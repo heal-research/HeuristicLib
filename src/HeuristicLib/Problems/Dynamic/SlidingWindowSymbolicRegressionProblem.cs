@@ -1,13 +1,13 @@
-﻿using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Genotypes.Trees;
+﻿using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class SlidingWindowSymbolicRegressionProblem : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
+public class SlidingWindowSymbolicRegressionProblem : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> {
   public SlidingWindowSymbolicRegressionProblem(SymbolicRegressionProblem problem,
                                                 int windowStart = 0,
                                                 int windowLength = 100,
@@ -25,7 +25,7 @@ public class SlidingWindowSymbolicRegressionProblem : DynamicProblem<SymbolicExp
 
   public (int StartIndex, int EndIndex) CurrentState { get; set; }
 
-  public override SymbolicExpressionTreeEncoding SearchSpace => innerProblem.SearchSpace;
+  public override SymbolicExpressionTreeSearchSpace SearchSpace => innerProblem.SearchSpace;
   public override Objective Objective => innerProblem.Objective;
 
   public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) {

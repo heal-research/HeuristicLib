@@ -1,9 +1,8 @@
-using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.Genotypes.Trees;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Creator.SymbolicExpressionTrees;
 
@@ -18,47 +17,47 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
   /// <param name="maxTreeDepth">Maximum tree depth</param>
   /// <param name="maxTreeLength">Maximum tree length. This parameter is not used.</param>
   /// <returns></returns>
-  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    return CreateTree(random, encoding);
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+    return CreateTree(random, searchSpace);
   }
 
-  public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var tree = encoding.Grammar.MakeStump(random);
-    Create(random, tree.Root[0], encoding, encoding.TreeDepth - tree.Depth);
+  public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+    var tree = searchSpace.Grammar.MakeStump(random);
+    Create(random, tree.Root[0], searchSpace, searchSpace.TreeDepth - tree.Depth);
     return tree;
   }
 
-  public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeEncoding encoding, int maxDepth) {
+  public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeSearchSpace searchSpace, int maxDepth) {
     // make sure it is possible to create a trees smaller than maxDepth
-    if (encoding.Grammar.GetMinimumExpressionDepth(seedNode.Symbol) > maxDepth)
+    if (searchSpace.Grammar.GetMinimumExpressionDepth(seedNode.Symbol) > maxDepth)
       throw new ArgumentException("Cannot create trees of depth " + maxDepth + " or smaller because of grammar constraints.", nameof(maxDepth));
 
-    var arity = encoding.Grammar.GetMaximumSubtreeCount(seedNode.Symbol);
+    var arity = searchSpace.Grammar.GetMaximumSubtreeCount(seedNode.Symbol);
     // Throw an exception if the seedNode happens to be a terminal, since in this case we cannot grow a tree.
     if (arity <= 0) throw new ArgumentException("Cannot grow tree. Seed node shouldn't have arity zero.");
 
-    var allowedSymbols = encoding.Grammar.AllowedSymbols
-                                 .Where(s => s.InitialFrequency > 0.0 && encoding.Grammar.GetMaximumSubtreeCount(s) > 0)
+    var allowedSymbols = searchSpace.Grammar.AllowedSymbols
+                                 .Where(s => s.InitialFrequency > 0.0 && searchSpace.Grammar.GetMaximumSubtreeCount(s) > 0)
                                  .ToList();
 
     for (var i = 0; i < arity; i++) {
-      var selectedSymbol = SelectSymbol(random, seedNode, maxDepth, allowedSymbols, encoding.Grammar, i);
+      var selectedSymbol = SelectSymbol(random, seedNode, maxDepth, allowedSymbols, searchSpace.Grammar, i);
       var tree = selectedSymbol.CreateTreeNode();
       if (tree.HasLocalParameters)
         tree.ResetLocalParameters(random);
       seedNode.AddSubtree(tree);
     }
 
-    var allowedSymbols1 = encoding.Grammar.AllowedSymbols.Where(s => s.InitialFrequency > 0.0).ToList();
+    var allowedSymbols1 = searchSpace.Grammar.AllowedSymbols.Where(s => s.InitialFrequency > 0.0).ToList();
     // Only iterate over the non-terminal nodes (those which have arity > 0)
     // Start from depth 2 since the first two levels are formed by the rootNode and the seedNode
     foreach (var subTree in seedNode.Subtrees)
-      if (encoding.Grammar.GetMaximumSubtreeCount(subTree.Symbol) > 0)
-        RecursiveCreate(random, subTree, encoding, 2, maxDepth, allowedSymbols1);
+      if (searchSpace.Grammar.GetMaximumSubtreeCount(subTree.Symbol) > 0)
+        RecursiveCreate(random, subTree, searchSpace, 2, maxDepth, allowedSymbols1);
   }
 
-  private static void RecursiveCreate(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeEncoding encoding, int currentDepth, int maxDepth, List<Symbol> allowedSymbols) {
-    var grammar = encoding.Grammar;
+  private static void RecursiveCreate(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeSearchSpace searchSpace, int currentDepth, int maxDepth, List<Symbol> allowedSymbols) {
+    var grammar = searchSpace.Grammar;
     var arity = grammar.GetMaximumSubtreeCount(root.Symbol);
     // In the 'Full' grow method, we cannot have terminals on the intermediate tree levels.
     if (arity <= 0)
@@ -78,7 +77,7 @@ public class FullTreeCreator : SymbolicExpressionTreeCreator {
 
     foreach (var subTree in root.Subtrees)
       if (grammar.GetMaximumSubtreeCount(subTree.Symbol) > 0)
-        RecursiveCreate(random, subTree, encoding, currentDepth + 1, maxDepth, allowedSymbols);
+        RecursiveCreate(random, subTree, searchSpace, currentDepth + 1, maxDepth, allowedSymbols);
   }
 
   private static Symbol SelectSymbol(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, int remainingDepth, List<Symbol> allowedSymbols, ISymbolicExpressionGrammar grammar, int position) {

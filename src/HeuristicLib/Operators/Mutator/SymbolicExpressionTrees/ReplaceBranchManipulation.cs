@@ -1,16 +1,16 @@
-using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Operators.Creator.SymbolicExpressionTrees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.SymbolicExpressionTrees;
 
 public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulator {
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree ReplaceRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeEncoding encoding) {
+  public static SymbolicExpressionTree ReplaceRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace) {
     var allowedSymbols = new List<Symbol>();
     SymbolicExpressionTreeNode parent;
     int childIndex;
@@ -24,15 +24,15 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
       parent = childTree.Root.IterateNodesPrefix().Skip(1).Where(n => n.SubtreeCount > 0).SampleRandom(random);
       childIndex = random.Integer(parent.SubtreeCount);
       var child = parent[childIndex];
-      maxLength = encoding.TreeLength - childTree.Length + child.GetLength();
-      maxDepth = encoding.TreeDepth - childTree.Depth + child.GetDepth();
+      maxLength = searchSpace.TreeLength - childTree.Length + child.GetLength();
+      maxDepth = searchSpace.TreeDepth - childTree.Depth + child.GetDepth();
 
       allowedSymbols.Clear();
-      allowedSymbols.AddRange(encoding.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
+      allowedSymbols.AddRange(searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
                                       .Where(symbol => symbol != child.Symbol
                                                        && symbol.InitialFrequency > 0
-                                                       && encoding.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
-                                                       && encoding.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
+                                                       && searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
+                                                       && searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
 
       tries++;
     } while (tries < MaxTries && allowedSymbols.Count == 0);
@@ -48,16 +48,16 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
 
       parent.RemoveSubtree(childIndex);
       parent.InsertSubtree(childIndex, seedNode);
-      ProbabilisticTreeCreator.Ptc2(random, seedNode, maxDepth, maxLength, encoding);
+      ProbabilisticTreeCreator.Ptc2(random, seedNode, maxDepth, maxLength, searchSpace);
       return childTree;
     }
 
     return symbolicExpressionTree;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var t = ReplaceRandomBranch(random, parent, encoding);
-    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+    var t = ReplaceRandomBranch(random, parent, searchSpace);
+    Extensions.CheckDebug(searchSpace.Contains(t), "Upps destroyed tree");
     return t;
   }
 }

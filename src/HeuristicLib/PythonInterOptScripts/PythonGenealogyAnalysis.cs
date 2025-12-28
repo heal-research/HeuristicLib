@@ -4,11 +4,6 @@ using HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
 using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.NSGA2;
-using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Analyzer;
@@ -33,6 +28,11 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
@@ -41,7 +41,7 @@ public class PythonGenealogyAnalysis {
 
   public delegate void PermutationGenerationCallback(PopulationIterationResult<Permutation> current);
 
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> CreateSymRegAllMutator() {
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> CreateSymRegAllMutator() {
     var symRegAllMutator = MultiMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
@@ -103,7 +103,7 @@ public class PythonGenealogyAnalysis {
   #endregion
 
   #region Parameters
-  public record ExperimentParameters<T, TE>(
+  public record ExperimentParameters<T, TS>(
     int Seed = 0,
     int Elites = 1,
     int PopulationSize = 10,
@@ -112,11 +112,11 @@ public class PythonGenealogyAnalysis {
     int NoChildren = -1,
     bool WithCrossover = false,
     EvolutionStrategyType Strategy = EvolutionStrategyType.Plus,
-    ICreator<T, TE>? Creator = null,
-    ICrossover<T, TE>? Crossover = null,
-    IMutator<T, TE>? Mutator = null,
+    ICreator<T, TS>? Creator = null,
+    ICrossover<T, TS>? Crossover = null,
+    IMutator<T, TS>? Mutator = null,
     ISelector<T>? Selector = null,
-    string AlgorithmName = "ga") where TE : class, IEncoding<T>;
+    string AlgorithmName = "ga") where TS : class, ISearchSpace<T>;
 
   public record SymRegExperimentParameters(
     int Seed = 0,
@@ -127,12 +127,12 @@ public class PythonGenealogyAnalysis {
     int NoChildren = -1,
     bool WithCrossover = false,
     EvolutionStrategyType Strategy = EvolutionStrategyType.Plus,
-    ICreator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? Creator = null,
-    ICrossover<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? Crossover = null,
-    IMutator<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>? Mutator = null,
+    ICreator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>? Creator = null,
+    ICrossover<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>? Crossover = null,
+    IMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>? Mutator = null,
     ISelector<SymbolicExpressionTree>? Selector = null,
     string AlgorithmName = "ga") :
-    ExperimentParameters<SymbolicExpressionTree, SymbolicExpressionTreeEncoding>(Seed, Elites, PopulationSize,
+    ExperimentParameters<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>(Seed, Elites, PopulationSize,
       Iterations, MutationRate, NoChildren, WithCrossover, Strategy, Creator, Crossover, Mutator, Selector,
       AlgorithmName);
 
@@ -145,11 +145,11 @@ public class PythonGenealogyAnalysis {
     int NoChildren = -1,
     bool WithCrossover = false,
     EvolutionStrategyType Strategy = EvolutionStrategyType.Plus,
-    ICreator<Permutation, PermutationEncoding>? Creator = null,
-    ICrossover<Permutation, PermutationEncoding>? Crossover = null,
-    IMutator<Permutation, PermutationEncoding>? Mutator = null,
+    ICreator<Permutation, PermutationSearchSpace>? Creator = null,
+    ICrossover<Permutation, PermutationSearchSpace>? Crossover = null,
+    IMutator<Permutation, PermutationSearchSpace>? Mutator = null,
     ISelector<Permutation>? Selector = null,
-    string AlgorithmName = "ga") : ExperimentParameters<Permutation, PermutationEncoding>(Seed, Elites, PopulationSize,
+    string AlgorithmName = "ga") : ExperimentParameters<Permutation, PermutationSearchSpace>(Seed, Elites, PopulationSize,
     Iterations, MutationRate, NoChildren, WithCrossover, Strategy, Creator, Crossover, Mutator, Selector,
     AlgorithmName);
   #endregion
@@ -188,11 +188,11 @@ public class PythonGenealogyAnalysis {
     QualityCurveAnalysis<T> QualityCurve) where T : class { }
 
   private static MyAnalyzers<T>
-    AddAnalyzers<T, TE, TP, TRes>(Action<TRes>? callback, IAlgorithmBuilder<T, TE, TP, TRes> builder)
+    AddAnalyzers<T, TS, TP, TRes>(Action<TRes>? callback, IAlgorithmBuilder<T, TS, TP, TRes> builder)
     where TRes : PopulationIterationResult<T>
     where T : class
-    where TE : class, IEncoding<T>
-    where TP : class, IProblem<T, TE> {
+    where TS : class, ISearchSpace<T>
+    where TP : class, IProblem<T, TS> {
     var qualities = BestMedianWorstAnalysis.Analyze(builder);
     if (callback != null)
       FuncAnalysis.Create(builder, (_, y) => callback(y));
@@ -202,15 +202,15 @@ public class PythonGenealogyAnalysis {
     return new MyAnalyzers<T>(qualities, rankAnalysis, qc);
   }
 
-  private static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<T>>) RunAlgorithmConfigurable<T, TE>(
-    IProblem<T, TE> problem,
+  private static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<T>>) RunAlgorithmConfigurable<T, TS>(
+    IProblem<T, TS> problem,
     Action<PopulationIterationResult<T>>? callback,
-    ExperimentParameters<T, TE> parameters) where TE : class, IEncoding<T> where T : class {
+    ExperimentParameters<T, TS> parameters) where TS : class, ISearchSpace<T> where T : class {
     var terminator = new AfterIterationsTerminator<T>(parameters.Iterations);
     if (parameters.NoChildren < 0)
       parameters = parameters with { NoChildren = parameters.PopulationSize };
 
-    IAlgorithm<T, TE, IProblem<T, TE>, PopulationIterationResult<T>> algorithm;
+    IAlgorithm<T, TS, IProblem<T, TS>, PopulationIterationResult<T>> algorithm;
 
     MyAnalyzers<T> analyzers;
 

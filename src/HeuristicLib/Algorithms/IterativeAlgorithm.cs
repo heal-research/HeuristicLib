@@ -1,38 +1,38 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Creator;
+﻿using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
 using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>
-  : Algorithm<TGenotype, TEncoding, TProblem, TIterationResult>,
-    IIterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
+public abstract class IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TIterationResult>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, TIterationResult>,
+    IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TIterationResult>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TIterationResult : class, IIterationResult {
   public int CurrentIteration { get; protected set; }
 
   public required IRandomNumberGenerator AlgorithmRandom { get; init; }
-  public required ITerminator<TGenotype, TIterationResult, TEncoding, TProblem> Terminator { get; init; }
-  public IInterceptor<TGenotype, TIterationResult, TEncoding, TProblem>? Interceptor { get; init; }
-  public required IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; init; }
-  public required ICreator<TGenotype, TEncoding, TProblem> Creator { get; init; }
+  public required ITerminator<TGenotype, TIterationResult, TSearchSpace, TProblem> Terminator { get; init; }
+  public IInterceptor<TGenotype, TIterationResult, TSearchSpace, TProblem>? Interceptor { get; init; }
+  public required IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; }
+  public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
 
-  public abstract TIterationResult ExecuteStep(TProblem problem, TEncoding searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
+  public abstract TIterationResult ExecuteStep(TProblem problem, TSearchSpace searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
 
-  public override TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, IRandomNumberGenerator? random = null) => Execute(problem, searchSpace, previousIterationResult: default, random);
+  public override TIterationResult Execute(TProblem problem, TSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => Execute(problem, searchSpace, previousIterationResult: default, random);
 
-  public virtual TIterationResult Execute(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+  public virtual TIterationResult Execute(TProblem problem, TSearchSpace? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
     return ExecuteStreaming(problem, searchSpace, previousIterationResult, random).LastOrDefault() ?? throw new InvalidOperationException("The algorithm did not produce any iteration result.");
   }
 
-  public IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
+  public IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TSearchSpace? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null) {
     CheckSearchSpaceCompatible(problem, searchSpace);
     bool shouldContinue = previousIterationResult is null || Terminator.ShouldContinue(previousIterationResult, previousIterationState: default, searchSpace ?? problem.SearchSpace, problem);
 
@@ -46,12 +46,12 @@ public abstract class IterativeAlgorithm<TGenotype, TEncoding, TProblem, TIterat
     }
   }
 
-  private static void CheckSearchSpaceCompatible(TProblem problem, TEncoding? searchSpace) {
-    if (searchSpace is ISubencodingComparable<TEncoding> s && !s.IsSubspaceOf(problem.SearchSpace))
+  private static void CheckSearchSpaceCompatible(TProblem problem, TSearchSpace? searchSpace) {
+    if (searchSpace is ISubSearchSpaceComparable<TSearchSpace> s && !s.IsSubspaceOf(problem.SearchSpace))
       throw new ArgumentException("The provided search space is not a subspace of the problem's search space.");
   }
 
-  public Population<TGenotype> CreateInitialPopulation(TProblem problem, TEncoding searchSpace, IRandomNumberGenerator random, int populationSize) {
+  public Population<TGenotype> CreateInitialPopulation(TProblem problem, TSearchSpace searchSpace, IRandomNumberGenerator random, int populationSize) {
     var population = Creator.Create(populationSize, random, searchSpace, problem);
     var objectives = Evaluator.Evaluate(population, random, searchSpace, problem);
     return Population.From(population, objectives);

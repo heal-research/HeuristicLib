@@ -1,12 +1,11 @@
-﻿using HEAL.HeuristicLib.Encodings.Vectors;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Mutator;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.Permutations;
 
-public class InversionMutator : Mutator<Permutation, PermutationEncoding> {
-  public override Permutation Mutate(Permutation parent, IRandomNumberGenerator random, PermutationEncoding encoding) {
+public class InversionMutator : Mutator<Permutation, PermutationSearchSpace> {
+  public override Permutation Mutate(Permutation parent, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) {
     int start = random.Integer(parent.Count);
     int end = random.Integer(start, parent.Count);
     int[] newElements = parent.ToArray();

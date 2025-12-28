@@ -1,8 +1,8 @@
 ﻿using System.Collections.Concurrent;
-using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
@@ -49,17 +49,17 @@ public class EvaluationClock : IEpochClock {
   }
 }
 
-public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TGenotype>,
-                                                             IDynamicProblem<TGenotype, TEncoding>,
+public abstract class DynamicProblem<TGenotype, TSearchSpace> : AttachedAnalysis<TGenotype>,
+                                                             IDynamicProblem<TGenotype, TSearchSpace>,
                                                              IDisposable
-  where TEncoding : class, IEncoding<TGenotype>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
   where TGenotype : class {
   private readonly ReaderWriterLockSlim rwLock = new();
 
   public readonly UpdatePolicy UpdatePolicy;
   public EvaluationClock EpochClock { get; }
 
-  public abstract TEncoding SearchSpace { get; }
+  public abstract TSearchSpace SearchSpace { get; }
   public abstract Objective Objective { get; }
 
   protected DynamicProblem(UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) {
@@ -95,14 +95,14 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TG
   public event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
 
   public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values,
-                                       IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+                                       ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
     evaluationLog.Clear();
     if (UpdatePolicy == UpdatePolicy.AfterEvaluation)
       ResolvePendingUpdates();
   }
 
-  public override void AfterInterception(IIterationResult currentIterationResult, IIterationResult? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  public override void AfterInterception(IIterationResult currentIterationResult, IIterationResult? previousIterationResult, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     if (UpdatePolicy == UpdatePolicy.AfterInterception)
       ResolvePendingUpdates();
   }

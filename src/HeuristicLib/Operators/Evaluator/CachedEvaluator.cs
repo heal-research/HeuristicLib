@@ -1,20 +1,20 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluator;
 
-public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
+public class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(
   Func<TGenotype, TKey> keySelector,
-  IEvaluator<TGenotype, TEncoding, TProblem> evaluator)
-  : BatchEvaluator<TGenotype, TEncoding, TProblem>
+  IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
+  : BatchEvaluator<TGenotype, TSearchSpace, TProblem>
   where TKey : notnull
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   public Func<TGenotype, TKey> KeySelector { get; } = keySelector;
 
-  public IEvaluator<TGenotype, TEncoding, TProblem> Evaluator { get; } = evaluator;
+  public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; } = evaluator;
 
   protected readonly Dictionary<TKey, ObjectiveVector> Cache = [];
 
@@ -23,7 +23,7 @@ public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
     EvaluateWithCache(
       IReadOnlyList<TGenotype> solutions,
       IRandomNumberGenerator random,
-      TEncoding encoding,
+      TSearchSpace encoding,
       TProblem problem) {
     int n = solutions.Count;
     if (n == 0)
@@ -95,9 +95,9 @@ public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
   public override IReadOnlyList<ObjectiveVector> Evaluate(
     IReadOnlyList<TGenotype> solutions,
     IRandomNumberGenerator random,
-    TEncoding encoding,
+    TSearchSpace searchSpace,
     TProblem problem) {
-    var (results, _, _) = EvaluateWithCache(solutions, random, encoding, problem);
+    var (results, _, _) = EvaluateWithCache(solutions, random, searchSpace, problem);
     return results;
   }
 

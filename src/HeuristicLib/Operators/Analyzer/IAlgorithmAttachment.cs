@@ -1,16 +1,16 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Prototypes;
+﻿using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
-public interface IAlgorithmAttachment<in T, in TE, in TP, in TRes>
-  where TE : class, IEncoding<T>
-  where TP : class, IProblem<T, TE>
+public interface IAlgorithmAttachment<in T, in TS, in TP, in TRes>
+  where TS : class, ISearchSpace<T>
+  where TP : class, IProblem<T, TS>
   where TRes : IIterationResult {
-  public void AttachTo<T1, TRes1, TE1, TP1>(IAlgorithmBuilder<T1, TE1, TP1, TRes1> proto) where T1 : class, T
+  public void AttachTo<T1, TRes1, TS1, TP1>(IAlgorithmBuilder<T1, TS1, TP1, TRes1> proto) where T1 : class, T
     where TRes1 : IIterationResult, TRes
-    where TE1 : class, IEncoding<T1>, TE
-    where TP1 : class, IProblem<T1, TE1>, TP;
+    where TS1 : class, ISearchSpace<T1>, TS
+    where TP1 : class, IProblem<T1, TS1>, TP;
 }

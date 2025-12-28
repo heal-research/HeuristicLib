@@ -1,9 +1,9 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public interface IDynamicProblem<TGenotype, out TEncoding> : IProblem<TGenotype, TEncoding>
-  where TEncoding : class, IEncoding<TGenotype> {
+public interface IDynamicProblem<TGenotype, out TSearchSpace> : IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TGenotype> {
   event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
 }

@@ -1,13 +1,13 @@
-﻿using HEAL.HeuristicLib.Encodings.Vectors;
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, PermutationEncoding> {
+public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, PermutationSearchSpace> {
   public ActivatedTravelingSalesmanProblem(ITravelingSalesmanProblemData tspData,
                                            IRandomNumberGenerator environmentRandom,
                                            double activationProb = 0.9,
@@ -17,7 +17,7 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
     EnvironmentRandom = environmentRandom;
     SwitchProbability = switchProbability;
     CurrentState = Generate(tspData, activationProb, EnvironmentRandom);
-    SearchSpace = new PermutationEncoding(tspData.NumberOfCities);
+    SearchSpace = new PermutationSearchSpace(tspData.NumberOfCities);
     Objective = SingleObjective.Minimize;
     ProblemData = tspData;
   }
@@ -26,7 +26,7 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
   private IRandomNumberGenerator EnvironmentRandom { get; }
   public double SwitchProbability { get; }
   public ITravelingSalesmanProblemData ProblemData { get; }
-  public override PermutationEncoding SearchSpace { get; }
+  public override PermutationSearchSpace SearchSpace { get; }
   public override Objective Objective { get; }
 
   public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing) {

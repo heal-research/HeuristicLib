@@ -1,14 +1,13 @@
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.RealVectors;
 
-public class PolynomialMutator : Mutator<RealVector, RealVectorEncoding> {
+public class PolynomialMutator : Mutator<RealVector, RealVectorSearchSpace> {
   private readonly bool atLeastOnce;
   private readonly double eta;
-  public double GetVarProb(RealVectorEncoding encoding) => Math.Min(0.5, 1.0 / encoding.Length);
+  public double GetVarProb(RealVectorSearchSpace searchSpace) => Math.Min(0.5, 1.0 / searchSpace.Length);
 
   public PolynomialMutator(double eta = 20, bool atLeastOnce = false) {
     this.atLeastOnce = atLeastOnce;
@@ -53,12 +52,12 @@ public class PolynomialMutator : Mutator<RealVector, RealVectorEncoding> {
     return matrix;
   }
 
-  public override RealVector Mutate(RealVector parent, IRandomNumberGenerator random, RealVectorEncoding encoding) {
-    double probVar = GetVarProb(encoding);
+  public override RealVector Mutate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
+    double probVar = GetVarProb(searchSpace);
     // Current vector and bounds
     var x = parent.ToArray(); // assume double[] (or expose as such)
-    var xl = encoding.Minimum;
-    var xu = encoding.Maximum;
+    var xl = searchSpace.Minimum;
+    var xu = searchSpace.Maximum;
     int nVar = x.Length;
 
     var xp = new double[nVar];

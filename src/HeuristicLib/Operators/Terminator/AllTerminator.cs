@@ -1,17 +1,17 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminator;
 
-public class AllTerminator<TGenotype, TIterationResult, TEncoding, TProblem>(params IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> terminators)
-  : Terminator<TGenotype, TIterationResult, TEncoding, TProblem>
+public class AllTerminator<TGenotype, TIterationResult, TSearchSpace, TProblem>(params IReadOnlyList<ITerminator<TGenotype, TIterationResult, TSearchSpace, TProblem>> terminators)
+  : Terminator<TGenotype, TIterationResult, TSearchSpace, TProblem>
   where TIterationResult : IIterationResult
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TEncoding, TProblem>> Terminators { get; } = terminators;
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TSearchSpace, TProblem>> Terminators { get; } = terminators;
 
-  public override bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TEncoding encoding, TProblem problem) {
-    return Terminators.All(criterion => criterion.ShouldTerminate(currentIterationState, previousIterationState, encoding, problem));
+  public override bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TSearchSpace searchSpace, TProblem problem) {
+    return Terminators.All(criterion => criterion.ShouldTerminate(currentIterationState, previousIterationState, searchSpace, problem));
   }
 }

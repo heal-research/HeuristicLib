@@ -1,15 +1,15 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Prototypes;
+﻿using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 
 public static class QualityCurveAnalysis {
-  public static QualityCurveAnalysis<TGenotype> Create<TGenotype, TE, TP, TRes>(IAlgorithmBuilder<TGenotype, TE, TP, TRes> prototype)
-    where TE : class, IEncoding<TGenotype>
-    where TP : class, IProblem<TGenotype, TE>
+  public static QualityCurveAnalysis<TGenotype> Create<TGenotype, TS, TP, TRes>(IAlgorithmBuilder<TGenotype, TS, TP, TRes> prototype)
+    where TS : class, ISearchSpace<TGenotype>
+    where TP : class, IProblem<TGenotype, TS>
     where TRes : IIterationResult
     where TGenotype : class {
     var t = new QualityCurveAnalysis<TGenotype>();
@@ -23,7 +23,7 @@ public class QualityCurveAnalysis<TGenotype> : AttachedAnalysis<TGenotype> where
   private ISolution<TGenotype>? best;
   private int evalCount;
 
-  public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> res, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> res, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     for (int i = 0; i < genotypes.Count; i++) {
       TGenotype genotype = genotypes[i];
       ObjectiveVector q = res[i];

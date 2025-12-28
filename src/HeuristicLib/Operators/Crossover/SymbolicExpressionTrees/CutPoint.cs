@@ -1,6 +1,6 @@
-using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
 namespace HEAL.HeuristicLib.Operators.Crossover.SymbolicExpressionTrees;
 
@@ -11,18 +11,18 @@ public class CutPoint {
 
   public int ChildIndex { get; }
 
-  public CutPoint(SymbolicExpressionTreeNode parent, SymbolicExpressionTreeNode child, SymbolicExpressionTreeEncoding encoding) {
+  public CutPoint(SymbolicExpressionTreeNode parent, SymbolicExpressionTreeNode child, SymbolicExpressionTreeSearchSpace searchSpace) {
     Parent = parent;
     Child = child;
     ChildIndex = parent.IndexOfSubtree(child);
-    grammar = encoding.Grammar;
+    grammar = searchSpace.Grammar;
   }
 
-  public CutPoint(SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeEncoding encoding) {
+  public CutPoint(SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeSearchSpace searchSpace) {
     Parent = parent;
     ChildIndex = childIndex;
     Child = null;
-    grammar = encoding.Grammar;
+    grammar = searchSpace.Grammar;
   }
 
   public bool IsMatchingPointType(SymbolicExpressionTreeNode? newChild) {

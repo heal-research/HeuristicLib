@@ -1,12 +1,12 @@
-﻿using HEAL.HeuristicLib.Encodings.Vectors;
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 // This is an example problem that uses a permutation search spaces to get access to the standard operators, but also offers custom TSP-specific operators.
-public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : PermutationProblem(SingleObjective.Minimize, GetEncoding(problemData)) /*, IDeterministicProblem<Permutation>*/ {
+public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : PermutationProblem(SingleObjective.Minimize, GeTSearchSpace(problemData)) /*, IDeterministicProblem<Permutation>*/ {
   //public int? Seed { get; init; }
 
   public ITravelingSalesmanProblemData ProblemData { get; } = problemData;
@@ -22,8 +22,8 @@ public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
     return totalDistance;
   }
 
-  private static PermutationEncoding GetEncoding(ITravelingSalesmanProblemData problemData) {
-    return new PermutationEncoding(problemData.NumberOfCities);
+  private static PermutationSearchSpace GeTSearchSpace(ITravelingSalesmanProblemData problemData) {
+    return new PermutationSearchSpace(problemData.NumberOfCities);
   }
 
   // public IEvaluator<Permutation> CreateEvaluator() {

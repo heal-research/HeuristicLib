@@ -1,15 +1,15 @@
-using HEAL.HeuristicLib.Encodings.Trees;
-using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.SymbolicExpressionTrees;
 
 public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator {
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree RemoveRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeEncoding encoding) {
+  public static SymbolicExpressionTree RemoveRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace) {
     SymbolicExpressionTree childTree = new(symbolicExpressionTree);
     var allowedSymbols = new List<Symbol>();
     SymbolicExpressionTreeNode parent;
@@ -25,16 +25,16 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
 
       childIndex = random.Integer(parent.SubtreeCount);
       var child = parent[childIndex];
-      maxLength = encoding.TreeLength - childTree.Length + child.GetLength();
-      maxDepth = encoding.TreeDepth - childTree.Depth + child.GetDepth();
+      maxLength = searchSpace.TreeLength - childTree.Length + child.GetLength();
+      maxDepth = searchSpace.TreeDepth - childTree.Depth + child.GetDepth();
 
       allowedSymbols.Clear();
-      foreach (var symbol in encoding.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)) {
+      foreach (var symbol in searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)) {
         // check basic properties that the new symbol must have
         if (symbol != child.Symbol &&
             symbol.InitialFrequency > 0 &&
-            encoding.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth &&
-            encoding.Grammar.GetMinimumExpressionLength(symbol) <= maxLength) {
+            searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth &&
+            searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength) {
           allowedSymbols.Add(symbol);
         }
       }
@@ -43,15 +43,15 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
     } while (tries < MaxTries && allowedSymbols.Count == 0);
 
     if (tries >= MaxTries) return symbolicExpressionTree;
-    ReplaceWithMinimalTree(random, childTree.Root, parent, childIndex, encoding);
+    ReplaceWithMinimalTree(random, childTree.Root, parent, childIndex, searchSpace);
     return childTree;
   }
 
-  private static void ReplaceWithMinimalTree(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeEncoding encoding) {
+  private static void ReplaceWithMinimalTree(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeSearchSpace searchSpace) {
     // determine possible symbols that will lead to the smallest possible tree
-    var possibleSymbols = (from s in encoding.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
+    var possibleSymbols = (from s in searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
                            where s.InitialFrequency > 0.0
-                           group s by encoding.Grammar.GetMinimumExpressionLength(s)
+                           group s by searchSpace.Grammar.GetMinimumExpressionLength(s)
                            into g
                            orderby g.Key
                            select g).First().ToList();
@@ -64,18 +64,18 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
     parent.RemoveSubtree(childIndex);
     parent.InsertSubtree(childIndex, newTreeNode);
 
-    for (var i = 0; i < encoding.Grammar.GetMinimumSubtreeCount(newTreeNode.Symbol); i++) {
+    for (var i = 0; i < searchSpace.Grammar.GetMinimumSubtreeCount(newTreeNode.Symbol); i++) {
       // insert a dummy sub-tree and add the pending extension to the list
       var dummy = new SymbolicExpressionTreeNode();
       newTreeNode.AddSubtree(dummy);
       // replace the just inserted dummy by recursive application
-      ReplaceWithMinimalTree(random, root, newTreeNode, i, encoding);
+      ReplaceWithMinimalTree(random, root, newTreeNode, i, searchSpace);
     }
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeEncoding encoding) {
-    var t = RemoveRandomBranch(random, parent, encoding);
-    Extensions.CheckDebug(encoding.Contains(t), "Upps destroyed tree");
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+    var t = RemoveRandomBranch(random, parent, searchSpace);
+    Extensions.CheckDebug(searchSpace.Contains(t), "Upps destroyed tree");
     return t;
   }
 }

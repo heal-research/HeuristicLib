@@ -1,16 +1,15 @@
-using HEAL.HeuristicLib.Encodings.Vectors;
 using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutator.RealVectors;
 
-public class GaussianMutator(double mutationRate, double mutationStrength) : Mutator<RealVector, RealVectorEncoding>, IVariableStrengthMutator<RealVector, RealVectorEncoding, IProblem<RealVector, RealVectorEncoding>> {
+public class GaussianMutator(double mutationRate, double mutationStrength) : Mutator<RealVector, RealVectorSearchSpace>, IVariableStrengthMutator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> {
   public double MutationRate { get; set; } = mutationRate;
   public double MutationStrength { get; set; } = mutationStrength;
 
-  public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorEncoding encoding) {
+  public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
     double[] newElements = solution.ToArray();
     for (int i = 0; i < newElements.Length; i++) {
       if (random.Random() < MutationRate) {
@@ -18,6 +17,6 @@ public class GaussianMutator(double mutationRate, double mutationStrength) : Mut
       }
     }
 
-    return RealVector.Clamp(new RealVector(newElements), encoding.Minimum, encoding.Maximum);
+    return RealVector.Clamp(new RealVector(newElements), searchSpace.Minimum, searchSpace.Maximum);
   }
 }

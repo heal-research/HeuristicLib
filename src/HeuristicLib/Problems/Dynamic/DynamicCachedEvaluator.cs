@@ -1,14 +1,14 @@
-﻿using HEAL.HeuristicLib.Encodings;
-using HEAL.HeuristicLib.Operators.Evaluator;
+﻿using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
-  : CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : DynamicProblem<TGenotype, TEncoding>
+public class DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
+  : CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : DynamicProblem<TGenotype, TSearchSpace>
   where TKey : notnull
   where TGenotype : class {
   public int GraceCount { get; init; } = int.MaxValue;
@@ -16,7 +16,7 @@ public class DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
 
   public DynamicCachedEvaluator(
     Func<TGenotype, TKey> keySelector,
-    IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
     TProblem problem)
     : base(keySelector, evaluator) {
     problem.EpochClock.OnEpochChange += (_, _) => ClearCache();
@@ -25,10 +25,10 @@ public class DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
   public override IReadOnlyList<ObjectiveVector> Evaluate(
     IReadOnlyList<TGenotype> solutions,
     IRandomNumberGenerator random,
-    TEncoding encoding,
+    TSearchSpace searchSpace,
     TProblem problem) {
     var (results, uniqueEvaluatedCount, cachedSolutionsCount)
-      = EvaluateWithCache(solutions, random, encoding, problem);
+      = EvaluateWithCache(solutions, random, searchSpace, problem);
 
     if (solutions.Count == 0)
       return results;

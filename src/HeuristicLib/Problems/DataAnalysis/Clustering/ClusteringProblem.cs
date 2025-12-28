@@ -1,12 +1,12 @@
-using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering;
 
-public class ClusteringProblem<TProblemData, TISolution, TEncoding>(TProblemData problemData, ICollection<IClusteringEvaluator> objective, IComparer<ObjectiveVector> a, TEncoding encoding)
-  : DataAnalysisProblem<TProblemData, TISolution, TEncoding>(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), encoding)
+public class ClusteringProblem<TProblemData, TISolution, TSearchSpace>(TProblemData problemData, ICollection<IClusteringEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace encoding)
+  : DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), encoding)
   where TProblemData : ClusteringProblemData
-  where TEncoding : class, IEncoding<TISolution>
+  where TSearchSpace : class, ISearchSpace<TISolution>
   where TISolution : IClusteringModel {
   public List<IClusteringEvaluator> Evaluators { get; set; } = objective.ToList();
 
