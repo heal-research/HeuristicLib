@@ -1,13 +1,15 @@
 ﻿using System.Reflection;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Encodings.Permutation;
-using HEAL.HeuristicLib.Encodings.RealVector;
+using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Encodings.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.States;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 

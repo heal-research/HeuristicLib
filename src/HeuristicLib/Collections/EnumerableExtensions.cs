@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib;
+﻿namespace HEAL.HeuristicLib.Collections;
 
 public static class EnumerableExtensions {
   /// <param name="source">The enumeration in which the items with a maximal value should be found.</param>

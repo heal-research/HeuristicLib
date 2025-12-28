@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+﻿using HEAL.HeuristicLib.Encodings.Trees;
+using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;

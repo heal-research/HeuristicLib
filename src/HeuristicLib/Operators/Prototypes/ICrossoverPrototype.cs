@@ -1,5 +1,5 @@
-﻿using HEAL.HeuristicLib.Operators.Crossover;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Operators.Prototypes;

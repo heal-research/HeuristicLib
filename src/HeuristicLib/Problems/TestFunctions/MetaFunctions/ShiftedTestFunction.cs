@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 

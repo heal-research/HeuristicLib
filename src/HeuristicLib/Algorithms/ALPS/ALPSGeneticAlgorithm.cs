@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using HEAL.HeuristicLib.Collections;
+using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.OperatorExtensions.MeasuredOperators;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;

@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Operators.Evaluator;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 

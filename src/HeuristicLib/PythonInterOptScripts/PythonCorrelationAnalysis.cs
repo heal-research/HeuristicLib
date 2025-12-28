@@ -1,19 +1,21 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.NSGA2;
-using HEAL.HeuristicLib.Encodings.RealVector;
-using HEAL.HeuristicLib.Encodings.RealVector.Creators;
-using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
-using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
+using HEAL.HeuristicLib.Encodings.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Analyzer;
+using HEAL.HeuristicLib.Operators.Creator.RealVectors;
 using HEAL.HeuristicLib.Operators.Crossover;
+using HEAL.HeuristicLib.Operators.Crossover.RealVectors;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Mutator;
+using HEAL.HeuristicLib.Operators.Mutator.RealVectors;
 using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 

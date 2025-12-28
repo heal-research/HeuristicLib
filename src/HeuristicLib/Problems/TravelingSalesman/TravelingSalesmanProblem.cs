@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Encodings.Permutation;
+﻿using HEAL.HeuristicLib.Encodings.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 

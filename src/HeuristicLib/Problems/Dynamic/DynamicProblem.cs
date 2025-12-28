@@ -1,8 +1,9 @@
 ﻿using System.Collections.Concurrent;
-using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 

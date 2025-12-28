@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings;
 
 namespace HEAL.HeuristicLib.Algorithms.ALPS;
 

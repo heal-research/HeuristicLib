@@ -1,5 +1,5 @@
-﻿using HEAL.HeuristicLib.Operators.Creator;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 

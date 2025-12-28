@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.Analysis;
 

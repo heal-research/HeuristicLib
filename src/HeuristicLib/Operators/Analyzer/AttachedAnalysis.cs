@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
@@ -11,6 +11,7 @@ using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Analyzer;
 

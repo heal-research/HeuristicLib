@@ -1,10 +1,10 @@
 ﻿using System.Diagnostics;
+using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Operators.Mutator;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators;
+namespace HEAL.HeuristicLib.OperatorExtensions.MeasuredOperators;
 
 public class MeasuredMutator<TGenotype, TEncoding, TProblem>(IMutator<TGenotype, TEncoding, TProblem> mutator) : IMutator<TGenotype, TEncoding, TProblem>
   where TEncoding : class, IEncoding<TGenotype>

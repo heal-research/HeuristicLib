@@ -1,8 +1,8 @@
 ﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Encodings.Permutation;
-using HEAL.HeuristicLib.Encodings.Permutation.Creators;
-using HEAL.HeuristicLib.Encodings.Permutation.Crossovers;
-using HEAL.HeuristicLib.Encodings.Permutation.Mutators;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creator.Permutations;
+using HEAL.HeuristicLib.Operators.Crossover.Permutations;
+using HEAL.HeuristicLib.Operators.Mutator.Permutations;
 using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Problems.Dynamic;

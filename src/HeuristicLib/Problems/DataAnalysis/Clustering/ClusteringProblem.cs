@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering;

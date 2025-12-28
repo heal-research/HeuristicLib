@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Optimization;

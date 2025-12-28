@@ -1,9 +1,9 @@
 using AutoDiff;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
-using Variable = HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variable;
+using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols;
+using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
+using HEAL.HeuristicLib.Genotypes.Trees;
+using Variable = HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Symbols.Math.Variable;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
@@ -248,10 +248,10 @@ public class TreeToAutoDiffTermConverter {
       case HyperbolicTangent:
         return Tanh(
           ConvertToAutoDiff(node[0]));
-      case Encodings.SymbolicExpressionTree.Symbols.Math.Erf:
+      case Encodings.Trees.SymbolicExpressionTree.Symbols.Math.Erf:
         return Erf(
           ConvertToAutoDiff(node[0]));
-      case Encodings.SymbolicExpressionTree.Symbols.Math.Norm:
+      case Encodings.Trees.SymbolicExpressionTree.Symbols.Math.Norm:
         return Norm(
           ConvertToAutoDiff(node[0]));
       case StartSymbol:
@@ -298,8 +298,8 @@ public class TreeToAutoDiffTermConverter {
         n.Symbol is not Cosine &&
         n.Symbol is not Tangent &&
         n.Symbol is not HyperbolicTangent &&
-        n.Symbol is not Encodings.SymbolicExpressionTree.Symbols.Math.Erf &&
-        n.Symbol is not Encodings.SymbolicExpressionTree.Symbols.Math.Norm &&
+        n.Symbol is not Encodings.Trees.SymbolicExpressionTree.Symbols.Math.Erf &&
+        n.Symbol is not Encodings.Trees.SymbolicExpressionTree.Symbols.Math.Norm &&
         n.Symbol is not StartSymbol &&
         n.Symbol is not Absolute &&
         n.Symbol is not AnalyticQuotient &&

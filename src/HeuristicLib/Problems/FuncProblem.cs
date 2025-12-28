@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems;

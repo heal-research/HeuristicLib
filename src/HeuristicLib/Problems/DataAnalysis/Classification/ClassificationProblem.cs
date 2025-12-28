@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 

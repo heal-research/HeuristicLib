@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings;
+
+namespace HEAL.HeuristicLib.Optimization;
 
 public interface ISubencodingComparable<in TSearchSpace> where TSearchSpace : IEncoding {
   bool IsSubspaceOf(TSearchSpace other);

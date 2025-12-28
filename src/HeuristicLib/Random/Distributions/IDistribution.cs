@@ -1,3 +1,3 @@
-﻿namespace HEAL.HeuristicLib.Random;
+﻿namespace HEAL.HeuristicLib.Random.Distributions;
 
 public interface IDistribution { }

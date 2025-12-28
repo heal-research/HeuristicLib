@@ -1,6 +1,7 @@
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Formatters;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.Encodings.Trees;
+using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Formatters;
+using HEAL.HeuristicLib.Encodings.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 

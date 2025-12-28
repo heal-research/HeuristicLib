@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings;
+
+namespace HEAL.HeuristicLib.Optimization;
 
 public static class SubencodingComparableExtensions {
   public static bool IsSuperspaceOf<TSearchSpace>(this TSearchSpace searchSpace, TSearchSpace other) where TSearchSpace : ISubencodingComparable<TSearchSpace>, IEncoding {

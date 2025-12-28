@@ -1,8 +1,7 @@
-﻿using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Analyzer;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Encodings;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
