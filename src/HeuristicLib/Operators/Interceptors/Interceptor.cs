@@ -4,36 +4,36 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public abstract class Interceptor<TGenotype, TIterationState, TSearchSpace, TProblem> : IInterceptor<TGenotype, TIterationState, TSearchSpace, TProblem>
-  where TIterationState : IIterationState
+public abstract class Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> : IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+  where TAlgorithmState : IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
-  public abstract TIterationState Transform(TIterationState currenTIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace, TProblem problem);
+  public abstract TAlgorithmState Transform(TAlgorithmState currentState, TAlgorithmState? previousState, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class Interceptor<TGenotype, TIterationState, TSearchSpace> : IInterceptor<TGenotype, TIterationState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TIterationState : IIterationState
+public abstract class Interceptor<TGenotype, TAlgorithmState, TSearchSpace> : IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TAlgorithmState : IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype> {
-  public abstract TIterationState Transform(TIterationState currenTIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace);
+  public abstract TAlgorithmState Transform(TAlgorithmState currentState, TAlgorithmState? previousState, TSearchSpace searchSpace);
 
-  TIterationState IInterceptor<TGenotype, TIterationState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Transform(TIterationState currenTIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) {
-    return Transform(currenTIterationState, previousIterationState, searchSpace);
+  TAlgorithmState IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Transform(TAlgorithmState currentState, TAlgorithmState? previousState, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) {
+    return Transform(currentState, previousState, searchSpace);
   }
 }
 
-public abstract class Interceptor<TGenotype, TIterationState> : IInterceptor<TGenotype, TIterationState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TIterationState : IIterationState {
-  public abstract TIterationState Transform(TIterationState currenTIterationState, TIterationState? previousIterationState);
+public abstract class Interceptor<TGenotype, TAlgorithmState> : IInterceptor<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  where TAlgorithmState : IAlgorithmState {
+  public abstract TAlgorithmState Transform(TAlgorithmState currentState, TAlgorithmState? previousState);
 
-  TIterationState IInterceptor<TGenotype, TIterationState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Transform(TIterationState currenTIterationState, TIterationState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
-    return Transform(currenTIterationState, previousIterationState);
+  TAlgorithmState IInterceptor<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Transform(TAlgorithmState currentState, TAlgorithmState? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
+    return Transform(currentState, previousState);
   }
 }
 
-public abstract class Interceptor<TGenotype> : IInterceptor<TGenotype, IIterationState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> {
-  public abstract IIterationState Transform(IIterationState currentIterationState, IIterationState? previousIterationState);
+public abstract class Interceptor<TGenotype> : IInterceptor<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> {
+  public abstract IAlgorithmState Transform(IAlgorithmState currentState, IAlgorithmState? previousState);
 
-  IIterationState IInterceptor<TGenotype, IIterationState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Transform(IIterationState currentIterationState, IIterationState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
-    return Transform(currentIterationState, previousIterationState);
+  IAlgorithmState IInterceptor<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Transform(IAlgorithmState currentState, IAlgorithmState? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
+    return Transform(currentState, previousState);
   }
 }

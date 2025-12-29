@@ -1,5 +1,5 @@
-﻿using HEAL.HeuristicLib.Analyzers;
-using HEAL.HeuristicLib.OperatorPrototypes;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -28,11 +28,13 @@ public class TargetTerminator<TGenotype>(ObjectiveVector target) : Terminator<TG
 }
 
 public static class TerminationExtensions {
-  extension<TG, TS, TP, TR>(IAlgorithmBuilder<TG, TS, TP, TR> builder)
+  extension<TG, TS, TP, TR, TA>(AlgorithmBuilder<TG, TS, TP, TR, TA> builder)
     where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
-    where TR : class, IIterationState {
+    where TR : class, IAlgorithmState 
+    where TA : Algorithm<TG, TS, TP, TR>
+  {
     public void SetMaxEvaluations(int maxEvaluations, bool preventOverBudget = false) {
       builder.AddAttachment(new AfterEvaluationsTermination<TG>(maxEvaluations, preventOverBudget));
     }
@@ -42,11 +44,13 @@ public static class TerminationExtensions {
     }
   }
 
-  extension<TG, TS, TP, TR>(IAlgorithmBuilder<TG, TS, TP, TR> builder)
+  extension<TG, TS, TP, TR, TA>(AlgorithmBuilder<TG, TS, TP, TR, TA> builder)
     where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
-    where TR : PopulationIterationState<TG> {
+    where TR : PopulationIterationState<TG>
+    where TA : IAlgorithm<TG, TS, TP, TR>
+  {
     public void SetTargetObjective(ObjectiveVector target) {
       builder.Terminator = new AnyTerminator<TG, TR, TS, TP>(builder.Terminator, new TargetTerminator<TG>(target));
     }
@@ -66,7 +70,7 @@ public class AfterEvaluationsTermination<TGenotype>(int maximumEvaluations, bool
     new AnyTerminator<T1, TRes1, TS1, TP1>(terminator, new AfterEvaluationsTerminator<T1, TRes1, TS1, TP1>(this));
 
   public class AfterEvaluationsTerminator<T1, TRes1, TS1, TP1>(AfterEvaluationsTermination<TGenotype> termination)
-    : Terminator<T1, TRes1, TS1, TP1> where TRes1 : IIterationState
+    : Terminator<T1, TRes1, TS1, TP1> where TRes1 : IAlgorithmState
     where TS1 : class, ISearchSpace<T1>
     where TP1 : class, IProblem<T1, TS1> {
     public override bool ShouldTerminate(TRes1 currentIterationState, TRes1? previousIterationState, TS1 searchSpace, TP1 problem) =>

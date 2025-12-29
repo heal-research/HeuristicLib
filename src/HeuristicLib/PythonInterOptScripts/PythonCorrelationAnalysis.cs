@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Genotypes.Vectors;
@@ -47,7 +48,7 @@ public static class PythonCorrelationAnalysis {
                                          int dimensions = 10, double min = -5, double max = 5, int seed = 0) {
     var prob = SphereRastriginProblem(dimensions, min, max);
 
-    var proto = Nsga2.GetBuilder(
+    var proto = NSGA2.GetBuilder(
       new UniformDistributedCreator(),
       new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
       new PolynomialMutator().WithRate(0.9));
@@ -58,7 +59,7 @@ public static class PythonCorrelationAnalysis {
     proto.MutationRate = 1;
 
     _ = FuncAnalysis.Create(proto, (_, iterationState) => callback(iterationState, prob));
-    proto.Execute(prob, prob.SearchSpace, new SystemRandomNumberGenerator(seed));
+    proto.Build().Execute(prob, prob.SearchSpace, new SystemRandomNumberGenerator(seed));
   }
 
   public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max) {

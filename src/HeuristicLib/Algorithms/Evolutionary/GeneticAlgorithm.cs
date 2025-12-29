@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.OperatorPrototypes;
-using HEAL.HeuristicLib.Operators.Creators;
+﻿using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
@@ -13,11 +12,13 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class {
+  where TGenotype : class 
+{
   public required int PopulationSize { get; init; }
+  public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
   public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
   public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
@@ -46,37 +47,6 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
       CurrentIteration = previousState.CurrentIteration + 1
     };
   }
-
-  public class Builder : PopulationBasedAlgorithmBuilder<
-                           TGenotype,
-                           TSearchSpace,
-                           TProblem,
-                           PopulationIterationState<TGenotype>,
-                           GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>>,
-                         IMutatorPrototype<TGenotype, TSearchSpace, TProblem>,
-                         ICrossoverPrototype<TGenotype, TSearchSpace, TProblem> {
-    public double MutationRate { get; set; } = 0.05;
-    public int Elites { get; set; } = 1;
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
-    public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
-
-    public GeneticAlgorithm<TGenotype, TSearchSpace, TProblem> Create() {
-      return new GeneticAlgorithm<TGenotype, TSearchSpace, TProblem> {
-        AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
-        PopulationSize = PopulationSize,
-        Creator = Creator,
-        Crossover = Crossover,
-        Selector = Selector,
-        Evaluator = Evaluator,
-        Replacer = new ElitismReplacer<TGenotype>(Elites),
-        Terminator = Terminator,
-        Interceptor = Interceptor,
-        Mutator = Mutator.WithRate(MutationRate)
-      };
-    }
-
-    public override GeneticAlgorithm<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() => Create();
-  }
 }
 
 public class GeneticAlgorithm<TGenotype, TSearchSpace> : GeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> where TSearchSpace : class, ISearchSpace<TGenotype> where TGenotype : class;
@@ -84,11 +54,14 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace> : GeneticAlgorithm<TGenot
 public class GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>> where TGenotype : class;
 
 public static class GeneticAlgorithm {
-  public static GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+  public static GeneticAlgorithmBuilder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
     ICreator<TGenotype, TSearchSpace, TProblem> creator,
     ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
     IMutator<TGenotype, TSearchSpace, TProblem> mutator)
-    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class => new() {
+    where TSearchSpace : class, ISearchSpace<TGenotype> 
+    where TProblem : class, IProblem<TGenotype, TSearchSpace> 
+    where TGenotype : class => new() 
+  {
     Mutator = mutator,
     Crossover = crossover,
     Creator = creator

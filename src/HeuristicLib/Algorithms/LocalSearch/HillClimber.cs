@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.OperatorPrototypes;
-using HEAL.HeuristicLib.Operators.Creators;
+﻿using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
@@ -11,10 +10,12 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
 public class HillClimber<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionIterationState<TGenotype>>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionIterationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class {
+  where TGenotype : class 
+{
+  public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
   public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
   public required LocalSearchDirection Direction { get; init; }
   public required int MaxNeighbors { get; init; }
@@ -56,37 +57,15 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
       CurrentIteration = previousState.CurrentIteration + 1
     };
   }
-
-  public class Builder : AlgorithmBuilder<TGenotype, TSearchSpace, TProblem, SingleSolutionIterationState<TGenotype>, HillClimber<TGenotype, TSearchSpace, TProblem>>, IMutatorPrototype<TGenotype, TSearchSpace, TProblem> {
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
-    public int MaxNeighbors { get; set; } = 100;
-    public int BatchSize { get; set; } = 100;
-    public LocalSearchDirection Direction { get; set; } = LocalSearchDirection.FirstImprovement;
-
-    public HillClimber<TGenotype, TSearchSpace, TProblem> Create() =>
-      new() {
-        Terminator = Terminator,
-        Interceptor = Interceptor,
-        Creator = Creator,
-        Mutator = Mutator,
-        Evaluator = Evaluator,
-        AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
-        MaxNeighbors = MaxNeighbors,
-        BatchSize = BatchSize,
-        Direction = Direction
-      };
-
-    public override HillClimber<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() => Create();
-  }
 }
 
 public static class HillClimber {
-  public static HillClimber<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+  public static HillClimberBuilder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
     ICreator<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TGenotype : class {
-    return new HillClimber<TGenotype, TSearchSpace, TProblem>.Builder {
+    return new () {
       Mutator = mutator,
       Creator = creator
     };

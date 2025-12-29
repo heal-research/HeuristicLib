@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms.Evolutionary;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
@@ -39,7 +40,7 @@ public class TspTests {
     ga.Elites = 1;
 
     //execute
-    var resGa = ga.Execute(prob);
+    var resGa = ga.Build().Execute(prob);
 
     //look at results
     var objGa = resGa.Population
@@ -74,7 +75,7 @@ public class TspTests {
     prob.AttachTo(ga);
 
     //execute
-    var resGa = ga.Execute(prob);
+    var resGa = ga.Build().Execute(prob);
 
     //look at results
     var objGa = resGa.Population

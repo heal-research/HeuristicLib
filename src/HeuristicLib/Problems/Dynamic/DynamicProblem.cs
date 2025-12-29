@@ -102,7 +102,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : AttachedAnalysis
       ResolvePendingUpdates();
   }
 
-  public override void AfterInterception(IIterationState currentIterationState, IIterationState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
+  public override void AfterInterception(IAlgorithmState currentIterationState, IAlgorithmState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     if (UpdatePolicy == UpdatePolicy.AfterInterception)
       ResolvePendingUpdates();
   }

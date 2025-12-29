@@ -4,13 +4,13 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public interface ITerminator<in TGenotype, in TIterationState, in TSearchSpace, in TProblem>
-  where TIterationState : IIterationState
+public interface ITerminator<in TGenotype, in TAlgorithmState, in TSearchSpace, in TProblem>
+  where TAlgorithmState : IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : IProblem<TGenotype, TSearchSpace> {
-  bool ShouldTerminate(TIterationState currentIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace, TProblem problem);
+  bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, TProblem problem);
 
-  bool ShouldContinue(TIterationState currentIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace, TProblem problem) {
+  bool ShouldContinue(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, TProblem problem) {
     return !ShouldTerminate(currentIterationState, previousIterationState, searchSpace, problem);
   }
 }

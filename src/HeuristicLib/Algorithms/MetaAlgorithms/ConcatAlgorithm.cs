@@ -8,7 +8,7 @@
 //   where TProblem : IOptimizable<TGenotype>
 //   where TState : class, IAlgorithmState 
 //   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
-//   // where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationState, TAlgorithmResult>
+//   // where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmState, TAlgorithmResult>
 // {
 //   public ImmutableList<StreamableAlgorithm<TGenotype, TProblem, TState, TAlgorithmResult>> Algorithms { get; }
 //   
@@ -17,7 +17,7 @@
 //     Algorithms = algorithms;
 //   }
 //   
-//   //public abstract IEnumerable<TIterationState> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null);
+//   //public abstract IEnumerable<TAlgorithmState> ExecuteStreaming<TPhenotype>(IEncodedProblem<TPhenotype, TGenotype, TSearchSpace> problem, TState? initialState = null);
 // }
 //
 // public abstract class MetaAlgorithmExecution<TGenotype, TProblem, TState, TAlgorithmResult, TAlgorithm>
@@ -39,9 +39,9 @@
 //   : MetaAlgorithm<TGenotype, TProblem, TState, TAlgorithmResult>
 //   where TProblem : IOptimizable<TGenotype>
 //   where TState : class, IAlgorithmState
-//   // where TIterationState : class, IContinuableIterationResult<TState>
+//   // where TAlgorithmState : class, IContinuableIterationResult<TState>
 //   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
-//   //where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TIterationState, TAlgorithmResult>
+//   //where TAlgorithmInstance : IStreamableAlgorithmInstance<TGenotype, TSearchSpace, TState, TAlgorithmState, TAlgorithmResult>
 // {
 //   public ConcatAlgorithm(ImmutableList<StreamableAlgorithm<TGenotype, TProblem, TState, TAlgorithmResult>> algorithms) : base(algorithms) { }
 //
@@ -65,7 +65,7 @@
 //   : MetaAlgorithmExecution<TGenotype, TProblem, TState, TAlgorithmResult, ConcatAlgorithm<TGenotype, TProblem, TState, TAlgorithmResult>>
 //   where TProblem : IOptimizable<TGenotype>
 //   where TState : class, IAlgorithmState
-//   // where TIterationState : class, IContinuableIterationResult<TState>
+//   // where TAlgorithmState : class, IContinuableIterationResult<TState>
 //   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState> 
 // {
 //   public ConcatAlgorithmExecution(ConcatAlgorithm<TGenotype, TProblem, TState, TAlgorithmResult> parameters, TProblem problem) : base(parameters, problem) { }
@@ -77,15 +77,15 @@
 //   public override IEnumerable<TAlgorithmResult> ExecuteStreaming(TState? initialState = null) {
 //     TState? currentState = initialState;
 //     foreach (var algorithm in Algorithms) {
-//       TAlgorithmResult? lasTIterationState = null;
+//       TAlgorithmResult? lasTAlgorithmState = null;
 //       foreach (var iterationResult in algorithm.ExecuteStreaming(currentState)) {
 //         yield return iterationResult;
-//         lasTIterationState = iterationResult;
+//         lasTAlgorithmState = iterationResult;
 //       }
-//       if (lasTIterationState is null) {
+//       if (lasTAlgorithmState is null) {
 //         yield break; // no result -> break concat algorithm
 //       }
-//       currentState = lasTIterationState.GetRestartState();
+//       currentState = lasTAlgorithmState.GetRestartState();
 //     }
 //   }
 //   
@@ -116,7 +116,7 @@
 //   : MetaAlgorithm<TGenotype, TProblem, TState, TAlgorithmResult>
 //   where TProblem : IOptimizable<TGenotype>
 //   where TState : class, IAlgorithmState
-//   // where TIterationState : class, IContinuableIterationResult<TState>
+//   // where TAlgorithmState : class, IContinuableIterationResult<TState>
 //   where TAlgorithmResult : class, IContinuableAlgorithmResult<TState>
 // {
 //   public Terminator<TProblem, TAlgorithmResult> Terminator { get; }
@@ -150,18 +150,18 @@
 //     TState? currentState = initialState;
 //     while (true) {
 //       foreach (var algorithm in Algorithms) {
-//         TAlgorithmResult? lasTIterationState = null;
+//         TAlgorithmResult? lasTAlgorithmState = null;
 //         foreach (var iterationResult in algorithm.ExecuteStreaming(currentState)) {
 //           yield return iterationResult;
-//           lasTIterationState = iterationResult;
+//           lasTAlgorithmState = iterationResult;
 //           if (Terminator.ShouldTerminate(iterationResult)) {
 //             yield break;
 //           }
 //         }
-//         if (lasTIterationState is null) {
+//         if (lasTAlgorithmState is null) {
 //           yield break; // no result -> break concat algorithm
 //         }
-//         currentState = lasTIterationState.GetRestartState();
+//         currentState = lasTAlgorithmState.GetRestartState();
 //       }
 //     }
 //   }
@@ -195,19 +195,19 @@
 // //   TTargetState AfterInterception(TSourceState sourceState, TTargetState? previousTargetState = null);
 // // }
 // //
-// // public class ConcatAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargeTIterationState> 
+// // public class ConcatAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargeTAlgorithmState> 
 // //   : IStreamableAlgorithm<TGenotype, TSearchSpace, object, IContinuableIterationResult<object>>
 // //   where TSearchSpace : ISearchSpace<TGenotype>
 // //   where TSourceState : class
 // //   where TTargetState : class
 // //   where TSourceIterationResult : class, IContinuableIterationResult<TSourceState>
-// //   where TTargeTIterationState : class, IContinuableIterationResult<TTargetState>
+// //   where TTargeTAlgorithmState : class, IContinuableIterationResult<TTargetState>
 // // {
 // //   public IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> FirstAlgorithm { get; }
-// //   public IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargeTIterationState> SecondAlgorithm { get; }
+// //   public IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargeTAlgorithmState> SecondAlgorithm { get; }
 // //   public IStateTransformer<TSourceState, TTargetState> Transformer { get; }
 // //   
-// //   public ConcatAlgorithm(IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> firstAlgorithm, IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargeTIterationState> secondAlgorithm, IStateTransformer<TSourceState, TTargetState> transformer) {
+// //   public ConcatAlgorithm(IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> firstAlgorithm, IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargeTAlgorithmState> secondAlgorithm, IStateTransformer<TSourceState, TTargetState> transformer) {
 // //     FirstAlgorithm = firstAlgorithm;
 // //     SecondAlgorithm = secondAlgorithm;
 // //     Transformer = transformer;
@@ -255,22 +255,22 @@
 // //   // }
 // // }
 // //
-// // public class CyclicAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargeTIterationState> 
+// // public class CyclicAlgorithm<TGenotype, TSearchSpace, TSourceState, TTargetState, TSourceIterationResult, TTargeTAlgorithmState> 
 // //   : IStreamableAlgorithm<TGenotype, TSearchSpace, object, IContinuableIterationResult<object>>
 // //   where TSearchSpace : ISearchSpace<TGenotype>
 // //   where TSourceState : class
 // //   where TTargetState : class
 // //   where TSourceIterationResult : class, IContinuableIterationResult<TSourceState>
-// //   where TTargeTIterationState : class, IContinuableIterationResult<TTargetState>
+// //   where TTargeTAlgorithmState : class, IContinuableIterationResult<TTargetState>
 // // {
 // //   public IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> FirstAlgorithm { get; }
-// //   public IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargeTIterationState> SecondAlgorithm { get; }
+// //   public IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargeTAlgorithmState> SecondAlgorithm { get; }
 // //   public IStateTransformer<TSourceState, TTargetState> Transformer { get; }
 // //   public IStateTransformer<TTargetState, TSourceState> RepetitionTransformer { get; }
 // //   public ITerminator<IContinuableIterationResult<object>> Terminator { get; }
 // //   
 // //   public CyclicAlgorithm(
-// //     IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> firstAlgorithm, IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargeTIterationState> secondAlgorithm,
+// //     IStreamableAlgorithm<TGenotype, TSearchSpace, TSourceState, TSourceIterationResult> firstAlgorithm, IStreamableAlgorithm<TGenotype, TSearchSpace, TTargetState, TTargeTAlgorithmState> secondAlgorithm,
 // //     IStateTransformer<TSourceState, TTargetState> transformer, IStateTransformer<TTargetState, TSourceState> repetitionTransformer, 
 // //     ITerminator<IContinuableIterationResult<object>> terminator) 
 // //   {
@@ -299,14 +299,14 @@
 // //
 // //       targetState = Transformer.AfterInterception(sourceState, targetState);
 // //
-// //       TTargeTIterationState? lastTargeTIterationState = null;
+// //       TTargeTAlgorithmState? lastTargeTAlgorithmState = null;
 // //       foreach (var iterationResult in SecondAlgorithm.ExecuteStreaming(problem, targetState)) {
 // //         yield return iterationResult;
-// //         lastTargeTIterationState = iterationResult;
+// //         lastTargeTAlgorithmState = iterationResult;
 // //       }
 // //       
-// //       if (lastTargeTIterationState is null) yield break; // no result -> break concat algorithm
-// //       targetState = lastTargeTIterationState.GetRestartState();
+// //       if (lastTargeTAlgorithmState is null) yield break; // no result -> break concat algorithm
+// //       targetState = lastTargeTAlgorithmState.GetRestartState();
 // //       
 // //       sourceState = RepetitionTransformer.AfterInterception(targetState, sourceState);
 // //     }

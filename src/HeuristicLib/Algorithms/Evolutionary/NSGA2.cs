@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.OperatorPrototypes;
-using HEAL.HeuristicLib.Operators.Creators;
+﻿using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
@@ -12,12 +11,12 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public class Nsga2<TGenotype, TSearchSpace, TProblem> :
-  IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>>
+public class NSGA2<TGenotype, TSearchSpace, TProblem> : Algorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TGenotype : class {
   public required int PopulationSize { get; init; }
+  public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
   public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
   public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
@@ -45,31 +44,10 @@ public class Nsga2<TGenotype, TSearchSpace, TProblem> :
       CurrentIteration = previousState.CurrentIteration + 1
     };
   }
-
-  public class Builder : PopulationBasedAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>, Nsga2<TGenotype, TSearchSpace, TProblem>>,
-                         IMutatorPrototype<TGenotype, TSearchSpace, TProblem>, ICrossoverPrototype<TGenotype, TSearchSpace, TProblem> {
-    public double MutationRate { get; set; } = 0.05;
-    public bool DominateOnEquals { get; set; } = false;
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
-    public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
-
-    public override Nsga2<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() => new() {
-      Terminator = Terminator,
-      Interceptor = Interceptor,
-      PopulationSize = PopulationSize,
-      Creator = Creator,
-      Crossover = Crossover,
-      Mutator = Mutator.WithRate(MutationRate),
-      Selector = Selector,
-      Evaluator = Evaluator,
-      AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
-      Replacer = new ParetoCrowdingReplacer<TGenotype>(DominateOnEquals)
-    };
-  }
 }
 
-public static class Nsga2 {
-  public static Nsga2<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+public static class NSGA2 {
+  public static NSGA2Builder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
     ICreator<TGenotype, TSearchSpace, TProblem> creator,
     ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
     IMutator<TGenotype, TSearchSpace, TProblem> mutator, bool dominateOnEquals = true)

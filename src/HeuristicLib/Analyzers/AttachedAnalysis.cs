@@ -15,21 +15,21 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analyzers;
 
-public abstract class AttachedAnalysis<T> : AttachedAnalysis<T, IIterationState>
+public abstract class AttachedAnalysis<T> : AttachedAnalysis<T, IAlgorithmState>
   where T : class;
 
 public abstract class AttachedAnalysis<T, TRes> : AttachedAnalysis<T, ISearchSpace<T>, TRes>
-  where TRes : IIterationState
+  where TRes : IAlgorithmState
   where T : class;
 
 public abstract class AttachedAnalysis<T, TS, TRes> : AttachedAnalysis<T, TS, IProblem<T, TS>, TRes>
-  where TS : class, ISearchSpace<T> where T : class where TRes : IIterationState;
+  where TS : class, ISearchSpace<T> where T : class where TRes : IAlgorithmState;
 
 public abstract class AttachedAnalysis<T, TS, TP, TRes>
   : AlgorithmAttachment<T, TS, TP, TRes>
   where TS : class, ISearchSpace<T>
   where TP : class, IProblem<T, TS>
-  where TRes : IIterationState
+  where TRes : IAlgorithmState
   where T : class {
   #region Reflection Magic to avoid unnecessary wrapping
   // cache which hooks are actually overridden
@@ -100,15 +100,15 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
   private sealed class AnalysisInterceptor<T1, TRes1, TS1, TP1>(
     AttachedAnalysis<T, TS, TP, TRes> analysis,
     IInterceptor<T1, TRes1, TS1, TP1>? interceptor) : IInterceptor<T1, TRes1, TS1, TP1>
-    where TRes1 : IIterationState, TRes
+    where TRes1 : IAlgorithmState, TRes
     where TS1 : class, ISearchSpace<T1>, TS
     where TP1 : class, IProblem<T1, TS1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public TRes1 Transform(TRes1 currenTIterationState, TRes1? previousIterationState, TS1 searchSpace, TP1 problem) {
+    public TRes1 Transform(TRes1 currentState, TRes1? previousState, TS1 searchSpace, TP1 problem) {
       var res = interceptor != null
-        ? interceptor.Transform(currenTIterationState, previousIterationState, searchSpace, problem)
-        : currenTIterationState;
-      analysis.AfterInterception(res, previousIterationState, searchSpace, problem);
+        ? interceptor.Transform(currentState, previousState, searchSpace, problem)
+        : currentState;
+      analysis.AfterInterception(res, previousState, searchSpace, problem);
       return res;
     }
   }
@@ -116,7 +116,7 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
   private sealed class AnalysisTerminator<T1, TRes1, TS1, TP1>(
     AttachedAnalysis<T, TS, TP, TRes> analysis,
     ITerminator<T1, TRes1, TS1, TP1> terminator) : ITerminator<T1, TRes1, TS1, TP1>
-    where TRes1 : IIterationState, TRes
+    where TRes1 : IAlgorithmState, TRes
     where TS1 : class, ISearchSpace<T1>, TS
     where TP1 : class, IProblem<T1, TS1>, TP {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -6,7 +6,6 @@ using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Analyzers.Genealogy;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.OperatorPrototypes;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
@@ -182,7 +181,7 @@ public class PythonGenealogyAnalysis {
 
   #region generic helpers
   private record MyAnalyzers<T>(
-    BestMedianWorstAnalysis<T> Qualities,
+    BestMedianWorstQualityAttachedAnalysis<T> Qualities,
     RankAnalysis<T> RankAnalysis,
     QualityCurveAnalysis<T> QualityCurve) where T : class { }
 
@@ -225,12 +224,12 @@ public class PythonGenealogyAnalysis {
         ga.Terminator = terminator;
 
         analyzers = AddAnalyzers(callback, ga);
-        algorithm = ga.BuildAlgorithm();
+        algorithm = ga.Build();
         break;
       case "es":
         var es = EvolutionStrategy.GetBuilder(parameters.Creator!, parameters.Mutator!);
         es.PopulationSize = parameters.PopulationSize;
-        es.NoChildren = parameters.NoChildren;
+        es.NumberOfChildren = parameters.NoChildren;
         es.Strategy = parameters.Strategy;
         es.Terminator = terminator;
         es.RandomSeed = parameters.Seed;
@@ -240,7 +239,7 @@ public class PythonGenealogyAnalysis {
           es.Crossover = parameters.Crossover;
 
         analyzers = AddAnalyzers(callback, es);
-        algorithm = es.BuildAlgorithm();
+        algorithm = es.Build();
         break;
       case "ls":
         var ls = HillClimber.GetBuilder(parameters.Creator!, parameters.Mutator!);
@@ -249,19 +248,19 @@ public class PythonGenealogyAnalysis {
         ls.RandomSeed = parameters.Seed;
         
         analyzers = AddAnalyzers(callback, ls);
-        algorithm = ls.BuildAlgorithm();
+        algorithm = ls.Build();
         break;
       case "nsga2":
-        var nsga2 = Nsga2.GetBuilder(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
+        var nsga2 = NSGA2.GetBuilder(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
         nsga2.PopulationSize = parameters.PopulationSize;
         nsga2.MutationRate = parameters.MutationRate;
         if (parameters.Selector != null)
           nsga2.Selector = parameters.Selector;
         nsga2.RandomSeed = parameters.Seed;
         nsga2.Terminator = terminator;
-        nsga2.DominateOnEquals = true; //todo make configurable
+        //nsga2.DominateOnEquals = true; //todo make configurable
         analyzers = AddAnalyzers(callback, nsga2);
-        algorithm = nsga2.BuildAlgorithm();
+        algorithm = nsga2.Build();
         break;
       default:
         throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");

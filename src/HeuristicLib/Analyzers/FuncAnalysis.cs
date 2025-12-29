@@ -1,11 +1,11 @@
-﻿using HEAL.HeuristicLib.OperatorPrototypes;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analyzers;
 
-public class FuncAnalysis<T, TS, TP, TRes>(Action<TRes?, TRes> action) : AttachedAnalysis<T, TS, TP, TRes> where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS> where TRes : IIterationState where T : class {
+public class FuncAnalysis<T, TS, TP, TRes>(Action<TRes?, TRes> action) : AttachedAnalysis<T, TS, TP, TRes> where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS> where TRes : IAlgorithmState where T : class {
   public override void AfterInterception(TRes currentIterationState, TRes? previousIterationState, TS searchSpace, TP problem) => action.Invoke(previousIterationState, currentIterationState);
 }
 

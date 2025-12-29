@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.OperatorPrototypes;
-using HEAL.HeuristicLib.Operators.Creators;
+﻿using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
@@ -22,25 +21,15 @@ public record EvolutionStrategyIterationState<TGenotype> : PopulationIterationSt
   public required double MutationStrength { get; init; }
 }
 
-public static class EvolutionStrategy {
-  public static EvolutionStrategy<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
-    ICreator<TGenotype, TSearchSpace, TProblem> creator,
-    IMutator<TGenotype, TSearchSpace, TProblem> mutator)
-    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class => new() {
-    Mutator = mutator,
-    InitialMutationStrength = (mutator as IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem>)?.MutationStrength ?? 0,
-    Creator = creator
-  };
-}
-
 public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationState<TGenotype>>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class {
   public required int PopulationSize { get; init; }
   public required int NumberOfChildren { get; init; }
   public required EvolutionStrategyType Strategy { get; init; }
+  public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
   public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
   public required ICrossover<TGenotype, TSearchSpace, TProblem>? Crossover { get; init; }
   public double InitialMutationStrength { get; init; } = 1.0;
@@ -100,33 +89,15 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
       MutationStrength = newMutationStrength
     };
   }
+}
 
-  public class Builder : PopulationBasedAlgorithmBuilder<
-                           TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationState<TGenotype>,
-                           EvolutionStrategy<TGenotype, TSearchSpace, TProblem>>,
-                         IMutatorPrototype<TGenotype, TSearchSpace, TProblem>,
-                         IOptionalCrossoverPrototype<TGenotype, TSearchSpace, TProblem> {
-    public int NoChildren { get; set; } = 100;
-    public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
-    public required double InitialMutationStrength { get; set; }
-    public ICrossover<TGenotype, TSearchSpace, TProblem>? Crossover { get; set; }
-
-    public override EvolutionStrategy<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() {
-      return new EvolutionStrategy<TGenotype, TSearchSpace, TProblem> {
-        PopulationSize = PopulationSize,
-        Strategy = Strategy,
-        Creator = Creator,
-        Mutator = Mutator,
-        Crossover = Crossover,
-        Selector = Selector,
-        Evaluator = Evaluator,
-        AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
-        Terminator = Terminator,
-        InitialMutationStrength = InitialMutationStrength,
-        Interceptor = Interceptor,
-        NumberOfChildren = NoChildren
-      };
-    }
-  }
+public static class EvolutionStrategy {
+  public static EvolutionStrategyBuilder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
+    ICreator<TGenotype, TSearchSpace, TProblem> creator,
+    IMutator<TGenotype, TSearchSpace, TProblem> mutator)
+    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class => new() {
+    Mutator = mutator,
+    InitialMutationStrength = (mutator as IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem>)?.MutationStrength ?? 0,
+    Creator = creator
+  };
 }

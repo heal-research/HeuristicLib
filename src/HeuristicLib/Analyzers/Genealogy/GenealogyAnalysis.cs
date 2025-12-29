@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Collections;
-using HEAL.HeuristicLib.OperatorPrototypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;

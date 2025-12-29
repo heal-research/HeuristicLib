@@ -19,7 +19,7 @@ namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public readonly record struct AgedGenotype<TGenotype>(TGenotype InnerGenotype, int Age);
 
-public record AlpsIterationState<TGenotype> : IterationState {
+public record AlpsIterationState<TGenotype> : AlgorithmState {
   public required IReadOnlyList<Population<AgedGenotype<TGenotype>>> Population { get; init; }
 }
 
@@ -55,10 +55,12 @@ public class AgedProblem<TGenotype, TSearchSpace, TProblem>(TProblem innerProble
 
 
 public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, AlpsIterationState<TGenotype>>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, AlpsIterationState<TGenotype>>
+  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   public int PopulationSize { get; }
+  public ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; }
   public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; }
   public IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; }
   public double MutationRate { get; }
@@ -303,7 +305,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace>(
   ITerminator<TGenotype, AlpsIterationState<TGenotype>, TSearchSpace, IProblem<TGenotype, TSearchSpace>> terminator,
   IInterceptor<TGenotype, AlpsIterationState<TGenotype>, TSearchSpace, IProblem<TGenotype, TSearchSpace>>? interceptor = null)
   : AlpsGeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor)
-  where TSearchSpace : class, ISearchSpace<TGenotype>;
+  where TSearchSpace : class, ISearchSpace<TGenotype> where TGenotype : class;
 
 public class AlpsGeneticAlgorithm<TGenotype>(
   int populationSize,
@@ -317,4 +319,4 @@ public class AlpsGeneticAlgorithm<TGenotype>(
   int randomSeed,
   ITerminator<TGenotype, AlpsIterationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> terminator,
   IInterceptor<TGenotype, AlpsIterationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>? interceptor = null)
-  : AlpsGeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor);
+  : AlpsGeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor) where TGenotype : class;

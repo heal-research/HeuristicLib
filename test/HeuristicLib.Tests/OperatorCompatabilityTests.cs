@@ -208,26 +208,27 @@ public class OperatorCompatabilityTests {
   }
 }
 
-public abstract record AlgorithmState<TGenotype> : IterationState;
+public abstract record AlgorithmState<TGenotype> : AlgorithmState;
 
 public class IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : Algorithm<TGenotype, TSearchSpace, TProblem, AlgorithmState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TGenotype : class {
   public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
 
-  public override AlgorithmState<TGenotype> Execute(TProblem problem, TSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmState<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, AlgorithmState<TGenotype>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TGenotype> { }
+  where TSearchSpace : class, ISearchSpace<TGenotype> where TGenotype : class { }
 
-public class IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> { }
+public class IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> where TGenotype : class { }
 
 public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutation, PermutationSearchSpace, TProblem, AlgorithmState<Permutation>>
   where TProblem : class, IProblem<Permutation, PermutationSearchSpace> {
   public ICrossover<Permutation, PermutationSearchSpace, TProblem> Crossover { get; set; }
 
-  public override AlgorithmState<Permutation> Execute(TProblem problem, PermutationSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmState<Permutation> ExecuteStep(TProblem problem, PermutationSearchSpace searchSpace, AlgorithmState<Permutation>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>> { }
@@ -235,14 +236,14 @@ public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificA
 public class TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, AlgorithmState<Permutation>> {
   public ICrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> Crossover { get; set; }
 
-  public override AlgorithmState<Permutation> Execute(TravelingSalesmanProblem problem, PermutationSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmState<Permutation> ExecuteStep(TravelingSalesmanProblem problem, PermutationSearchSpace searchSpace, AlgorithmState<Permutation>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorSearchSpace, TProblem, AlgorithmState<RealVector>>
   where TProblem : class, IProblem<RealVector, RealVectorSearchSpace> {
   public ICrossover<RealVector, RealVectorSearchSpace, TProblem> Crossover { get; set; }
 
-  public override AlgorithmState<RealVector> Execute(TProblem problem, RealVectorSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+ public override AlgorithmState<RealVector> ExecuteStep(TProblem problem, RealVectorSearchSpace searchSpace, AlgorithmState<RealVector>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorSearchSpace>> { }
@@ -250,7 +251,7 @@ public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlg
 public class TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, AlgorithmState<RealVector>> {
   public ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Crossover { get; set; }
 
-  public override AlgorithmState<RealVector> Execute(TestFunctionProblem problem, RealVectorSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null) => throw new NotImplementedException();
+  public override AlgorithmState<RealVector> ExecuteStep(TestFunctionProblem problem, RealVectorSearchSpace searchSpace, AlgorithmState<RealVector>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class IndependentCrossover<TGenotype> : Crossover<TGenotype> {

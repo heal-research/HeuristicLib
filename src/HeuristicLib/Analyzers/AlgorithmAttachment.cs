@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.OperatorPrototypes;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.OperatorPrototypes;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -21,28 +22,28 @@ public static class AlgorithmAttachment {
     where TRes1 : TRes
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS>
-    where TRes : IIterationState
+    where TRes : IAlgorithmState
     where T1 : class, T {
     analysis.AttachTo(proto);
   }
 }
 
-public abstract class AlgorithmAttachment<T> : AlgorithmAttachment<T, IIterationState>
+public abstract class AlgorithmAttachment<T> : AlgorithmAttachment<T, IAlgorithmState>
   where T : class;
 
 public abstract class AlgorithmAttachment<T, TRes> : AlgorithmAttachment<T, ISearchSpace<T>, TRes>
-  where T : class where TRes : IIterationState;
+  where T : class where TRes : IAlgorithmState;
 
 public abstract class AlgorithmAttachment<T, TS, TRes> : AlgorithmAttachment<T, TS, IProblem<T, TS>, TRes>
-  where T : class where TS : class, ISearchSpace<T> where TRes : IIterationState;
+  where T : class where TS : class, ISearchSpace<T> where TRes : IAlgorithmState;
 
 public abstract class AlgorithmAttachment<T, TS, TP, TRes> : IAlgorithmAttachment<T, TS, TP, TRes>
   where T : class
   where TS : class, ISearchSpace<T>
   where TP : class, IProblem<T, TS>
-  where TRes : IIterationState {
+  where TRes : IAlgorithmState {
   public void AttachTo<T1, TRes1, TS1, TP1>(IAlgorithmBuilder<T1, TS1, TP1, TRes1> proto) where T1 : class, T
-    where TRes1 : IIterationState, TRes
+    where TRes1 : IAlgorithmState, TRes
     where TS1 : class, ISearchSpace<T1>, TS
     where TP1 : class, IProblem<T1, TS1>, TP {
     if (proto is IMutatorPrototype<T1, TS1, TP1> mutatorPrototype)
@@ -58,12 +59,12 @@ public abstract class AlgorithmAttachment<T, TS, TP, TRes> : IAlgorithmAttachmen
   }
 
   public virtual IInterceptor<T1, TRes1, TS1, TP1>? WrapInterceptor<T1, TRes1, TS1, TP1>(IInterceptor<T1, TRes1, TS1, TP1>? interceptor) where T1 : T
-    where TRes1 : IIterationState, TRes
+    where TRes1 : IAlgorithmState, TRes
     where TS1 : class, ISearchSpace<T1>, TS
     where TP1 : class, IProblem<T1, TS1>, TP => interceptor;
 
   public virtual ITerminator<T1, TRes1, TS1, TP1> WrapTerminator<T1, TRes1, TS1, TP1>(ITerminator<T1, TRes1, TS1, TP1> terminator) where T1 : class, T
-    where TRes1 : IIterationState, TRes
+    where TRes1 : IAlgorithmState, TRes
     where TS1 : class, ISearchSpace<T1>, TS
     where TP1 : class, IProblem<T1, TS1>, TP => terminator;
 

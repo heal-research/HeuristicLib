@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.OperatorPrototypes;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
@@ -10,7 +9,7 @@ public static class QualityCurveAnalysis {
   public static QualityCurveAnalysis<TGenotype> Create<TGenotype, TS, TP, TRes>(IAlgorithmBuilder<TGenotype, TS, TP, TRes> prototype)
     where TS : class, ISearchSpace<TGenotype>
     where TP : class, IProblem<TGenotype, TS>
-    where TRes : IIterationState
+    where TRes : IAlgorithmState
     where TGenotype : class {
     var t = new QualityCurveAnalysis<TGenotype>();
     t.AttachTo(prototype);

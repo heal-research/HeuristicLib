@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms.Evolutionary;
+﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Analyzers.Genealogy;
@@ -136,7 +137,7 @@ public class SymbolicRegressionTests {
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
     var qualities = BestMedianWorstAnalysis.Analyze(ga);
-    var res = ga.Execute(problem);
+    var res = ga.Build().Execute(problem);
 
     Assert.Equal(100, qualities.BestISolutions.Count);
     Assert.Equal(100, res.Population.Solutions.Count);
@@ -159,7 +160,7 @@ public class SymbolicRegressionTests {
     var evalQualities = QualityCurveAnalysis.Create(ga);
     var qualities = BestMedianWorstAnalysis.Analyze(ga);
     var genealogy = GenealogyAnalysis.Create(ga);
-    var res = ga.Execute(problem);
+    var res = ga.Build().Execute(problem);
 
     Assert.Equal(gens, qualities.BestISolutions.Count);
     Assert.Equal(popsize, res.Population.Solutions.Count);
@@ -176,7 +177,7 @@ public class SymbolicRegressionTests {
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
     var genealogy = GenealogyAnalysis.Create(ga);
-    var res = ga.Execute(problem);
+    var res = ga.Build().Execute(problem);
     Assert.Single(res.Population.Solutions);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
@@ -189,7 +190,7 @@ public class SymbolicRegressionTests {
     const int populationSize = 10;
     const int maximumIterations = 50;
     const double mutationRate = 0.05;
-    var nsga2 = Nsga2.GetBuilder(
+    var nsga2 = NSGA2.GetBuilder(
       new ProbabilisticTreeCreator(),
       new SubtreeCrossover(),
       symRegAllMutator);
@@ -201,7 +202,7 @@ public class SymbolicRegressionTests {
     var genealogy = GenealogyAnalysis.Create(nsga2);
     var qualities = BestMedianWorstAnalysis.Analyze(nsga2);
 
-    var res = nsga2.Execute(problem);
+    var res = nsga2.Build().Execute(problem);
     Assert.Equal(maximumIterations, qualities.BestISolutions.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();

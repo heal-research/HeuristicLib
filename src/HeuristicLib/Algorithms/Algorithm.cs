@@ -1,14 +1,27 @@
-﻿using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Interceptors;
+using HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TIterationState> : IAlgorithm<TGenotype, TSearchSpace, TProblem, TIterationState>
+public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  where TGenotype : class 
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TIterationState : class, IIterationState {
-  public abstract TIterationState Execute(TProblem problem, TSearchSpace? searchSpace = null, IRandomNumberGenerator? random = null);
-  //IIterationState IAlgorithm<TGenotype, TSearchSpace, TProblem>.Execute(TProblem problem, TSearchSpace? searchSpace, IRandomNumberGenerator? random) => Execute(problem, searchSpace, random);
+  where TAlgorithmState : class, IAlgorithmState
+{
+  public required IRandomNumberGenerator AlgorithmRandom { get; init; }
+
+  public required ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> Terminator { get; init; }
+  public IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; init; }
+
+  public required IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; }
+
+
+  public abstract TAlgorithmState ExecuteStep(TProblem problem, TSearchSpace searchSpace, TAlgorithmState? previousState, IRandomNumberGenerator random);
 }
