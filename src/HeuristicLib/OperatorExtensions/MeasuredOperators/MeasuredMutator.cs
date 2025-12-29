@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using HEAL.HeuristicLib.Operators.Mutator;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;

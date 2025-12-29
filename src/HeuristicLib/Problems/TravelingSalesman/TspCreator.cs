@@ -1,5 +1,5 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creator;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 

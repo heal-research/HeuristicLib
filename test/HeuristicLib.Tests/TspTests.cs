@@ -1,10 +1,10 @@
 ﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creator.Permutations;
-using HEAL.HeuristicLib.Operators.Crossover.Permutations;
-using HEAL.HeuristicLib.Operators.Mutator.Permutations;
-using HEAL.HeuristicLib.Operators.Selector;
-using HEAL.HeuristicLib.Operators.Terminator;
+using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
+using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
+using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;

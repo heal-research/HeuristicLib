@@ -1,7 +1,7 @@
 ﻿using System.Reflection;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Crossover;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;

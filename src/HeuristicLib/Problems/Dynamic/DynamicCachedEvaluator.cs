@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Operators.Evaluator;
+﻿using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;

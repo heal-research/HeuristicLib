@@ -1,9 +1,9 @@
-﻿using HEAL.HeuristicLib.Operators.Creator;
-using HEAL.HeuristicLib.Operators.Crossover;
-using HEAL.HeuristicLib.Operators.Mutator;
-using HEAL.HeuristicLib.Operators.Prototypes;
-using HEAL.HeuristicLib.Operators.Replacer;
-using HEAL.HeuristicLib.Operators.Selector;
+﻿using HEAL.HeuristicLib.OperatorPrototypes;
+using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Replacers;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
