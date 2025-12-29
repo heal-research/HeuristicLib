@@ -90,10 +90,8 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     IMutator<TGenotype, TSearchSpace, TProblem> mutator, double mutationRate,
     ISelector<TGenotype, TSearchSpace, TProblem> selector,
     IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
-
     // IReplacer<TGenotype, TSearchSpace, TProblem> replacer,
     int elites,
-    int? randomSeed,
     ITerminator<TGenotype, AlpsIterationState<TGenotype>, TSearchSpace, TProblem> terminator,
     IInterceptor<TGenotype, AlpsIterationState<TGenotype>, TSearchSpace, TProblem>? interceptor = null
   ) : base() {
@@ -117,9 +115,9 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     agedReplacer = new AgedReplacer(internalReplacer);
   }
 
-  public override AlpsIterationState<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, AlpsIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
+  public override AlpsIterationState<TGenotype> ExecuteStep(TProblem problem, AlpsIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
     var agedProblem = new AgedProblem<TGenotype, TSearchSpace, TProblem>(problem);
-    var agedSearchSpace = new AgedSearchSpace<TGenotype, TSearchSpace>(searchSpace);
+    var agedSearchSpace = new AgedSearchSpace<TGenotype, TSearchSpace>(problem.SearchSpace);
     var iterationRandom = random.Spawn();
     return previousState switch {
       null => ExecuteInitialization(agedProblem, agedSearchSpace, iterationRandom),
@@ -301,10 +299,9 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace>(
   ISelector<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> selector,
   IEvaluator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> evaluator,
   int elites,
-  int randomSeed,
   ITerminator<TGenotype, AlpsIterationState<TGenotype>, TSearchSpace, IProblem<TGenotype, TSearchSpace>> terminator,
   IInterceptor<TGenotype, AlpsIterationState<TGenotype>, TSearchSpace, IProblem<TGenotype, TSearchSpace>>? interceptor = null)
-  : AlpsGeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor)
+  : AlpsGeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, terminator, interceptor)
   where TSearchSpace : class, ISearchSpace<TGenotype> where TGenotype : class;
 
 public class AlpsGeneticAlgorithm<TGenotype>(
@@ -316,7 +313,6 @@ public class AlpsGeneticAlgorithm<TGenotype>(
   ISelector<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> selector,
   IEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> evaluator,
   int elites,
-  int randomSeed,
   ITerminator<TGenotype, AlpsIterationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> terminator,
   IInterceptor<TGenotype, AlpsIterationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>? interceptor = null)
-  : AlpsGeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, randomSeed, terminator, interceptor) where TGenotype : class;
+  : AlpsGeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>>(populationSize, creator, crossover, mutator, mutationRate, selector, evaluator, elites, terminator, interceptor) where TGenotype : class;

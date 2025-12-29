@@ -35,10 +35,10 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   public double InitialMutationStrength { get; init; } = 1.0;
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
-  public override EvolutionStrategyIterationState<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, EvolutionStrategyIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
+  public override EvolutionStrategyIterationState<TGenotype> ExecuteStep(TProblem problem, EvolutionStrategyIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
     if (previousState == null) {
-      var initialPopulation = Creator.Create(PopulationSize, random, searchSpace, problem);
-      var objectives = Evaluator.Evaluate(initialPopulation, random, searchSpace, problem);
+      var initialPopulation = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
+      var objectives = Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
       return new EvolutionStrategyIterationState<TGenotype> {
         Population = Population.From(initialPopulation, objectives), 
         CurrentIteration = 0,
@@ -56,12 +56,12 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
       parentQualities = parentISolutions.Select(x => x.ObjectiveVector).ToArray();
     } else {
       var parentISolutions = Selector.Select(previousState.Population.Solutions, problem.Objective, NumberOfChildren * 2, random, problem.SearchSpace, problem);
-      parents = Crossover!.Cross(parentISolutions.ToGenotypePairs(), random, searchSpace, problem);
+      parents = Crossover!.Cross(parentISolutions.ToGenotypePairs(), random, problem.SearchSpace, problem);
       parentQualities = parentISolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
     }
 
-    var children = Mutator.Mutate(parents, random, searchSpace, problem);
-    var fitnesses = Evaluator.Evaluate(children, random, searchSpace, problem);
+    var children = Mutator.Mutate(parents, random, problem.SearchSpace, problem);
+    var fitnesses = Evaluator.Evaluate(children, random, problem.SearchSpace, problem);
 
     double newMutationStrength = previousState.MutationStrength;
     if (Mutator is IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem> vm) {

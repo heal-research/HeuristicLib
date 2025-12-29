@@ -7,14 +7,16 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.AlgorithmExecutors;
 
 public class EagerExecutor : IAlgorithmExecutor {
-  public TR Execute<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm, TS searchSpace, TP problem, TR? initialState = default, IRandomNumberGenerator? random = null) where TG : class where TS : class, ISearchSpace<TG> where TP : class, IProblem<TG, TS> where TR : IAlgorithmState {
-    return ExecuteAllSteps(algorithm, searchSpace, problem, initialState, random)[^1];
+  public TR Execute<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm, TP problem,  IRandomNumberGenerator random, TR? initialState = default)
+    where TG : class where TS : class, ISearchSpace<TG> where TP : class, IProblem<TG, TS> where TR : IAlgorithmState {
+    return ExecuteAllSteps(algorithm, problem, random, initialState)[^1];
   }
   
-  public IReadOnlyList<TR> ExecuteAllSteps<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm, TS searchSpace, TP problem, TR? initialState = default, IRandomNumberGenerator? random = null) where TG : class where TS : class, ISearchSpace<TG> where TP : class, IProblem<TG, TS> where TR : IAlgorithmState {
+  public IReadOnlyList<TR> ExecuteAllSteps<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm, TP problem, IRandomNumberGenerator random, TR? initialState = default) 
+    where TG : class where TS : class, ISearchSpace<TG> where TP : class, IProblem<TG, TS> where TR : IAlgorithmState {
     var states = new List<TR>();
     var streamingExecutor = new StreamingExecutor();
-    foreach (var state in streamingExecutor.ExecuteStreaming(algorithm, searchSpace, problem, initialState, random)) {
+    foreach (var state in streamingExecutor.ExecuteStreaming(algorithm, problem, random, initialState)) {
       states.Add(state);
     }
     return states;

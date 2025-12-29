@@ -216,7 +216,7 @@ public class IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : Algorithm
   where TGenotype : class {
   public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
 
-  public override AlgorithmState<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, AlgorithmState<TGenotype>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
+  public override AlgorithmState<TGenotype> ExecuteStep(TProblem problem, AlgorithmState<TGenotype>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
@@ -228,7 +228,7 @@ public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutat
   where TProblem : class, IProblem<Permutation, PermutationSearchSpace> {
   public ICrossover<Permutation, PermutationSearchSpace, TProblem> Crossover { get; set; }
 
-  public override AlgorithmState<Permutation> ExecuteStep(TProblem problem, PermutationSearchSpace searchSpace, AlgorithmState<Permutation>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
+  public override AlgorithmState<Permutation> ExecuteStep(TProblem problem, AlgorithmState<Permutation>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>> { }
@@ -236,14 +236,14 @@ public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificA
 public class TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, AlgorithmState<Permutation>> {
   public ICrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> Crossover { get; set; }
 
-  public override AlgorithmState<Permutation> ExecuteStep(TravelingSalesmanProblem problem, PermutationSearchSpace searchSpace, AlgorithmState<Permutation>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
+  public override AlgorithmState<Permutation> ExecuteStep(TravelingSalesmanProblem problem, AlgorithmState<Permutation>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorSearchSpace, TProblem, AlgorithmState<RealVector>>
   where TProblem : class, IProblem<RealVector, RealVectorSearchSpace> {
   public ICrossover<RealVector, RealVectorSearchSpace, TProblem> Crossover { get; set; }
 
- public override AlgorithmState<RealVector> ExecuteStep(TProblem problem, RealVectorSearchSpace searchSpace, AlgorithmState<RealVector>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
+ public override AlgorithmState<RealVector> ExecuteStep(TProblem problem, AlgorithmState<RealVector>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorSearchSpace>> { }
@@ -251,7 +251,7 @@ public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlg
 public class TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, AlgorithmState<RealVector>> {
   public ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Crossover { get; set; }
 
-  public override AlgorithmState<RealVector> ExecuteStep(TestFunctionProblem problem, RealVectorSearchSpace searchSpace, AlgorithmState<RealVector>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
+  public override AlgorithmState<RealVector> ExecuteStep(TestFunctionProblem problem, AlgorithmState<RealVector>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class IndependentCrossover<TGenotype> : Crossover<TGenotype> {

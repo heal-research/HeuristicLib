@@ -16,8 +16,6 @@ public record HillClimberBuilder<TG, TS, TP>
   where TP : class, IProblem<TG, TS>
   where TG : class 
 {
-  public int? RandomSeed { get; set; } = null; 
-  
   public int MaxNeighbors { get; set; } = 100;
   public int BatchSize { get; set; } = 100;
   public LocalSearchDirection Direction { get; set; } = LocalSearchDirection.FirstImprovement;
@@ -30,7 +28,6 @@ public record HillClimberBuilder<TG, TS, TP>
   public IInterceptor<TG, SingleSolutionIterationState<TG>, TS, TP>? Interceptor { get; set; } = null;
 
   public override HillClimber<TG, TS, TP> Build() => new() {
-    AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
     Terminator = Terminator,
     Interceptor = Interceptor,
     Creator = Creator,

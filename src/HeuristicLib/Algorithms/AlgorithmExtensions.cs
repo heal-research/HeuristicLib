@@ -13,12 +13,12 @@ public static class AlgorithmExtensions {
     where TP : class, IProblem<TG, TS>
     where TR : IAlgorithmState
     {
-      public TR Execute(TP problem, TS? searchSpace = null, TR? previousState = default, IRandomNumberGenerator? random = null) {
-        return new StreamingExecutor().Execute(algorithm, searchSpace ?? problem.SearchSpace, problem, previousState, random);
+      public TR Execute(TP problem, IRandomNumberGenerator random, TR? previousState = default) {
+        return new StreamingExecutor().Execute(algorithm, problem, random, previousState);
       }
       
-      public IEnumerable<TR> ExecuteStreaming(TP problem, TS? searchSpace = null, TR? previousState = default, IRandomNumberGenerator? random = null) {
-        return new StreamingExecutor().ExecuteStreaming(algorithm, searchSpace ?? problem.SearchSpace, problem, previousState, random);
+      public IEnumerable<TR> ExecuteStreaming(TP problem, IRandomNumberGenerator random, TR? previousState = default) {
+        return new StreamingExecutor().ExecuteStreaming(algorithm, problem, random, previousState);
       }
     }
 }

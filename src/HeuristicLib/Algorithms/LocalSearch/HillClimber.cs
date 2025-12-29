@@ -21,14 +21,12 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
   public required int MaxNeighbors { get; init; }
   public required int BatchSize { get; init; }
 
-  public override SingleSolutionIterationState<TGenotype> ExecuteStep(
-    TProblem problem,
-    TSearchSpace searchSpace,
+  public override SingleSolutionIterationState<TGenotype> ExecuteStep(TProblem problem,
     SingleSolutionIterationState<TGenotype>? previousState,
     IRandomNumberGenerator random) {
     if (previousState == null) {
-      var initialSolution = Creator.Create(random, searchSpace, problem);
-      var initialFitness = Evaluator.Evaluate([initialSolution], random, searchSpace, problem)[0];
+      var initialSolution = Creator.Create(random, problem.SearchSpace, problem);
+      var initialFitness = Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
       return new SingleSolutionIterationState<TGenotype> {
         Population = Population.From([initialSolution], [initialFitness]),
         CurrentIteration = 0
@@ -39,8 +37,8 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
     var newISolution = sol;
 
     for (int i = 0; i < MaxNeighbors; i += BatchSize) {
-      var child = Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, searchSpace, problem);
-      var res = Evaluator.Evaluate(child, random, searchSpace, problem);
+      var child = Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, problem.SearchSpace, problem);
+      var res = Evaluator.Evaluate(child, random, problem.SearchSpace, problem);
       var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1, random)[0];
       if (best == BatchSize)
         continue;

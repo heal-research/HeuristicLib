@@ -29,7 +29,6 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
   public int Elites { get; set; } = 1;
 
   public override GeneticAlgorithm<TG, TS, TP> Build() => new () {
-    AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
     PopulationSize = PopulationSize,
     Creator = Creator,
     Crossover = Crossover,

@@ -24,10 +24,10 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
   public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
 
-  public override PopulationIterationState<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, PopulationIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
+  public override PopulationIterationState<TGenotype> ExecuteStep(TProblem problem, PopulationIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
     if (previousState == null) {
-      var initialSolutions = Creator.Create(PopulationSize, random, searchSpace, problem);
-      var initialFitnesses = Evaluator.Evaluate(initialSolutions, random, searchSpace, problem);
+      var initialSolutions = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
+      var initialFitnesses = Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
       return new PopulationIterationState<TGenotype> {
         Population = Population.From(initialSolutions, initialFitnesses), 
         CurrentIteration = 0
@@ -36,11 +36,11 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     
     var offspringCount = Replacer.GetOffspringCount(PopulationSize);
     var oldPopulation = previousState.Population.Solutions;
-    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
-    var population = Crossover.Cross(parents, random, searchSpace, problem);
-    population = Mutator.Mutate(population, random, searchSpace, problem);
-    var fitnesses = Evaluator.Evaluate(population, random, searchSpace, problem);
-    var newPopulation = Replacer.Replace(oldPopulation, Population.From(population, fitnesses).Solutions, problem.Objective, random, searchSpace, problem);
+    var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, problem.SearchSpace, problem).ToGenotypePairs();
+    var population = Crossover.Cross(parents, random, problem.SearchSpace, problem);
+    population = Mutator.Mutate(population, random, problem.SearchSpace, problem);
+    var fitnesses = Evaluator.Evaluate(population, random, problem.SearchSpace, problem);
+    var newPopulation = Replacer.Replace(oldPopulation, Population.From(population, fitnesses).Solutions, problem.Objective, random, problem.SearchSpace, problem);
 
     return new PopulationIterationState<TGenotype> {
       Population = Population.From(newPopulation),

@@ -8,8 +8,7 @@ namespace HEAL.HeuristicLib.AlgorithmExecutors;
 
 public interface IAlgorithmExecutor
 {
-  // ToDo: Maybe more parameters?
-  TR Execute<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm, TS searchSpace, TP problem, TR? initialState = default, IRandomNumberGenerator? random = null)
+  TR Execute<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm, TP problem, IRandomNumberGenerator random, TR? initialState = default)
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : IAlgorithmState

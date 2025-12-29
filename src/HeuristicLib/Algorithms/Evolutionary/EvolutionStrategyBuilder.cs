@@ -31,7 +31,6 @@ public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP
     Selector = Selector,
     Evaluator = Evaluator,
     Terminator = Terminator,
-    AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
     InitialMutationStrength = InitialMutationStrength,
     Interceptor = Interceptor,
     NumberOfChildren = NumberOfChildren

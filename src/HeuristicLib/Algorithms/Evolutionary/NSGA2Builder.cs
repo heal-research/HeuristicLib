@@ -26,7 +26,6 @@ public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, Population
   public int Elites { get; set; } = 1;
 
   public override NSGA2<TG, TS, TP> Build() => new() {
-    AlgorithmRandom = SystemRandomNumberGenerator.Default(RandomSeed),
     PopulationSize = PopulationSize,
     Creator = Creator,
     Crossover = Crossover,

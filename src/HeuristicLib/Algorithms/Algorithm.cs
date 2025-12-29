@@ -15,13 +15,11 @@ public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmSta
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  public required IRandomNumberGenerator AlgorithmRandom { get; init; }
-
   public required ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> Terminator { get; init; }
   public IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; init; }
 
   public required IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; }
 
 
-  public abstract TAlgorithmState ExecuteStep(TProblem problem, TSearchSpace searchSpace, TAlgorithmState? previousState, IRandomNumberGenerator random);
+  public abstract TAlgorithmState ExecuteStep(TProblem problem, TAlgorithmState? previousState, IRandomNumberGenerator random);
 }

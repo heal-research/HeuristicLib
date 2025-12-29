@@ -14,8 +14,6 @@ public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg> : IAlgorithmBuilde
   where TR : class, IAlgorithmState
   where TAlg : IAlgorithm<TG, TS, TP, TR> 
 {
-  public int? RandomSeed { get; set; } = null;
-  
   public IEvaluator<TG, TS, TP> Evaluator { get; set; } = new DirectEvaluator<TG>();
   
   public ITerminator<TG, TR, TS, TP> Terminator { get; set; } = new AfterIterationsTerminator<TG>(100);
