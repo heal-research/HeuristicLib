@@ -4,43 +4,44 @@ using HEAL.HeuristicLib.Optimization;
 namespace HEAL.HeuristicLib.Collections;
 
 public static class EnumerableStatisticExtensions {
-  /// <summary>
-  /// Calculates the median element of the enumeration.
-  /// </summary>
   /// <param name="values"></param>
-  /// <returns></returns>
-  public static double Median(this IEnumerable<double> values) {
-    // See unit tests for comparison with naive implementation
-    return Quantile(values, 0.5);
-  }
-
-  /// <summary>
-  /// Calculates the alpha-quantile element of the enumeration.
-  /// </summary>
-  /// <param name="values"></param>
-  /// <param name="alpha"></param>
-  /// <returns></returns>
-  public static double Quantile(this IEnumerable<double> values, double alpha) {
-    // See unit tests for comparison with naive implementation
-    var valuesArr = values.ToArray();
-    var n = valuesArr.Length;
-    if (n == 0)
-      throw new InvalidOperationException("Enumeration contains no elements.");
-
-    // "When N is even, statistics books define the median as the arithmetic mean of the elements k = N/2 
-    // and k = N/2 + 1 (that is, N/2 from the bottom and N/2 from the top). 
-    // If you accept such pedantry, you must perform two separate selections to find these elements."
-
-    // return the element at Math.Ceiling (if n*alpha is fractional) or the average of two elements if n*alpha is integer.
-    var pos = n * alpha;
-    Contract.Assert(pos >= 0);
-    Contract.Assert(pos < n);
-    var isInteger = Math.Round(pos).IsAlmost(pos);
-    if (isInteger) {
-      return 0.5 * (Select((int)pos - 1, valuesArr) + Select((int)pos, valuesArr));
+  extension(IEnumerable<double> values) {
+    /// <summary>
+    /// Calculates the median element of the enumeration.
+    /// </summary>
+    /// <returns></returns>
+    public double Median() {
+      // See unit tests for comparison with naive implementation
+      return Quantile(values, 0.5);
     }
 
-    return Select((int)Math.Ceiling(pos) - 1, valuesArr);
+    /// <summary>
+    /// Calculates the alpha-quantile element of the enumeration.
+    /// </summary>
+    /// <param name="alpha"></param>
+    /// <returns></returns>
+    public double Quantile(double alpha) {
+      // See unit tests for comparison with naive implementation
+      var valuesArr = values.ToArray();
+      var n = valuesArr.Length;
+      if (n == 0)
+        throw new InvalidOperationException("Enumeration contains no elements.");
+
+      // "When N is even, statistics books define the median as the arithmetic mean of the elements k = N/2 
+      // and k = N/2 + 1 (that is, N/2 from the bottom and N/2 from the top). 
+      // If you accept such pedantry, you must perform two separate selections to find these elements."
+
+      // return the element at Math.Ceiling (if n*alpha is fractional) or the average of two elements if n*alpha is integer.
+      var pos = n * alpha;
+      Contract.Assert(pos >= 0);
+      Contract.Assert(pos < n);
+      var isInteger = Math.Round(pos).IsAlmost(pos);
+      if (isInteger) {
+        return 0.5 * (Select((int)pos - 1, valuesArr) + Select((int)pos, valuesArr));
+      }
+
+      return Select((int)Math.Ceiling(pos) - 1, valuesArr);
+    }
   }
 
   // Numerical Recipes in C++, §8.5 Selecting the Mth Largest, O(n)
@@ -117,62 +118,60 @@ public static class EnumerableStatisticExtensions {
     }
   }
 
-  /// <summary>
-  /// Calculates the range (max - min) of the enumeration.
-  /// </summary>
   /// <param name="values"></param>
-  /// <returns></returns>
-  public static double Range(this IEnumerable<double> values) {
-    var min = double.PositiveInfinity;
-    var max = double.NegativeInfinity;
-    var i = 0;
-    foreach (var e in values) {
-      if (min > e)
-        min = e;
-      if (max < e)
-        max = e;
-      i++;
+  extension(IEnumerable<double> values) {
+    /// <summary>
+    /// Calculates the range (max - min) of the enumeration.
+    /// </summary>
+    /// <returns></returns>
+    public double Range() {
+      var min = double.PositiveInfinity;
+      var max = double.NegativeInfinity;
+      var i = 0;
+      foreach (var e in values) {
+        if (min > e)
+          min = e;
+        if (max < e)
+          max = e;
+        i++;
+      }
+
+      if (i < 1)
+        throw new ArgumentException("The enumerable must contain at least two elements", nameof(values));
+      return max - min;
     }
 
-    if (i < 1)
-      throw new ArgumentException("The enumerable must contain at least two elements", nameof(values));
-    return max - min;
-  }
+    /// <summary>
+    /// Calculates the sample standard deviation of values.
+    /// </summary>
+    /// <returns></returns>
+    public double StandardDeviation() {
+      return Math.Sqrt(Variance(values));
+    }
 
-  /// <summary>
-  /// Calculates the sample standard deviation of values.
-  /// </summary>
-  /// <param name="values"></param>
-  /// <returns></returns>
-  public static double StandardDeviation(this IEnumerable<double> values) {
-    return Math.Sqrt(Variance(values));
-  }
+    /// <summary>
+    /// Calculates the population standard deviation of values.
+    /// </summary>
+    /// <returns></returns>
+    public double StandardDeviationPop() {
+      return Math.Sqrt(VariancePop(values));
+    }
 
-  /// <summary>
-  /// Calculates the population standard deviation of values.
-  /// </summary>
-  /// <param name="values"></param>
-  /// <returns></returns>
-  public static double StandardDeviationPop(this IEnumerable<double> values) {
-    return Math.Sqrt(VariancePop(values));
-  }
+    /// <summary>
+    /// Calculates the sample variance of values. (sum (x - x_mean)² / (n-1))
+    /// </summary>
+    /// <returns></returns>
+    public double Variance() {
+      return Variance(values, true);
+    }
 
-  /// <summary>
-  /// Calculates the sample variance of values. (sum (x - x_mean)² / (n-1))
-  /// </summary>
-  /// <param name="values"></param>
-  /// <returns></returns>
-  public static double Variance(this IEnumerable<double> values) {
-    return Variance(values, true);
-  }
-
-  /// <summary>
-  /// Calculates the population variance of values. (sum (x - x_mean)² / n)
-  /// </summary>
-  /// <param name="values"></param>
-  /// <returns></returns>
-  public static double VariancePop(this IEnumerable<double> values) {
-    return Variance(values, false);
+    /// <summary>
+    /// Calculates the population variance of values. (sum (x - x_mean)² / n)
+    /// </summary>
+    /// <returns></returns>
+    public double VariancePop() {
+      return Variance(values, false);
+    }
   }
 
   private static double Variance(IEnumerable<double> values, bool sampleVariance) {
@@ -208,70 +207,72 @@ public static class EnumerableStatisticExtensions {
       return mNewS / mN;
   }
 
-  public static IEnumerable<double> LimitToRange(this IEnumerable<double> values, double min, double max) {
-    ArgumentOutOfRangeException.ThrowIfGreaterThan(min, max);
-    foreach (var x in values) {
-      if (double.IsNaN(x))
-        yield return (max + min) / 2.0;
-      else if (x < min)
-        yield return min;
-      else if (x > max)
-        yield return max;
-      else
-        yield return x;
-    }
-  }
-
-  public static double Kurtosis(this IEnumerable<double> valuesE, bool unbiased = true) {
-    // http://www.ats.ucla.edu/stat/mult_pkg/faq/general/kurtosis.htm
-    var values = valuesE.ToArray();
-    var mean = values.Average();
-    double n = values.Length;
-
-    double s2 = 0;
-    double s4 = 0;
-
-    for (var i = 0; i < values.Length; i++) {
-      var dev = values[i] - mean;
-      s2 += dev * dev;
-      s4 += dev * dev * dev * dev;
+  extension(IEnumerable<double> values) {
+    public IEnumerable<double> LimitToRange(double min, double max) {
+      ArgumentOutOfRangeException.ThrowIfGreaterThan(min, max);
+      foreach (var x in values) {
+        if (double.IsNaN(x))
+          yield return (max + min) / 2.0;
+        else if (x < min)
+          yield return min;
+        else if (x > max)
+          yield return max;
+        else
+          yield return x;
+      }
     }
 
-    var m2 = s2 / n;
-    var m4 = s4 / n;
+    public double Kurtosis(bool unbiased = true) {
+      // http://www.ats.ucla.edu/stat/mult_pkg/faq/general/kurtosis.htm
+      var values1 = values.ToArray();
+      var mean = values1.Average();
+      double n = values1.Length;
 
-    if (!unbiased)
-      return m4 / (m2 * m2) - 3;
-    var v = s2 / (n - 1);
-    var a = n * (n + 1) / ((n - 1) * (n - 2) * (n - 3));
-    var b = s4 / (v * v);
-    var c = (n - 1) * (n - 1) / ((n - 2) * (n - 3));
-    return a * b - 3 * c;
-  }
+      double s2 = 0;
+      double s4 = 0;
 
-  public static double Skewness(this IEnumerable<double> valuesE, bool unbiased = true) {
-    var values = valuesE.ToArray();
-    var mean = values.Average();
-    double n = values.Length;
+      for (var i = 0; i < values1.Length; i++) {
+        var dev = values1[i] - mean;
+        s2 += dev * dev;
+        s4 += dev * dev * dev * dev;
+      }
 
-    double s2 = 0;
-    double s3 = 0;
+      var m2 = s2 / n;
+      var m4 = s4 / n;
 
-    for (var i = 0; i < values.Length; i++) {
-      var dev = values[i] - mean;
-      s2 += dev * dev;
-      s3 += dev * dev * dev;
+      if (!unbiased)
+        return m4 / (m2 * m2) - 3;
+      var v = s2 / (n - 1);
+      var a = n * (n + 1) / ((n - 1) * (n - 2) * (n - 3));
+      var b = s4 / (v * v);
+      var c = (n - 1) * (n - 1) / ((n - 2) * (n - 3));
+      return a * b - 3 * c;
     }
 
-    var m2 = s2 / n;
-    var m3 = s3 / n;
+    public double Skewness(bool unbiased = true) {
+      var values1 = values.ToArray();
+      var mean = values1.Average();
+      double n = values1.Length;
 
-    var g = m3 / Math.Pow(m2, 3 / 2.0);
+      double s2 = 0;
+      double s3 = 0;
 
-    if (!unbiased)
-      return g;
-    var a = Math.Sqrt(n * (n - 1));
-    var b = n - 2;
-    return a / b * g;
+      for (var i = 0; i < values1.Length; i++) {
+        var dev = values1[i] - mean;
+        s2 += dev * dev;
+        s3 += dev * dev * dev;
+      }
+
+      var m2 = s2 / n;
+      var m3 = s3 / n;
+
+      var g = m3 / Math.Pow(m2, 3 / 2.0);
+
+      if (!unbiased)
+        return g;
+      var a = Math.Sqrt(n * (n - 1));
+      var b = n - 2;
+      return a / b * g;
+    }
   }
 }

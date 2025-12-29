@@ -19,9 +19,9 @@ public class AfterIterationsTerminator<TGenotype>(int maximumIterations) : Termi
   }
 }
 
-public class TargetTerminator<TGenotype>(ObjectiveVector target) : Terminator<TGenotype, PopulationIterationResult<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> {
-  public override bool ShouldTerminate(PopulationIterationResult<TGenotype> currentIterationState,
-                                       PopulationIterationResult<TGenotype>? previousIterationState,
+public class TargetTerminator<TGenotype>(ObjectiveVector target) : Terminator<TGenotype, PopulationIterationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> {
+  public override bool ShouldTerminate(PopulationIterationState<TGenotype> currentIterationState,
+                                       PopulationIterationState<TGenotype>? previousIterationState,
                                        ISearchSpace<TGenotype> searchSpace,
                                        IProblem<TGenotype, ISearchSpace<TGenotype>> problem) =>
     currentIterationState.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
@@ -32,7 +32,7 @@ public static class TerminationExtensions {
     where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
-    where TR : class, IIterationResult {
+    where TR : class, IIterationState {
     public void SetMaxEvaluations(int maxEvaluations, bool preventOverBudget = false) {
       builder.AddAttachment(new AfterEvaluationsTermination<TG>(maxEvaluations, preventOverBudget));
     }
@@ -46,7 +46,7 @@ public static class TerminationExtensions {
     where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
-    where TR : PopulationIterationResult<TG> {
+    where TR : PopulationIterationState<TG> {
     public void SetTargetObjective(ObjectiveVector target) {
       builder.Terminator = new AnyTerminator<TG, TR, TS, TP>(builder.Terminator, new TargetTerminator<TG>(target));
     }
@@ -66,7 +66,7 @@ public class AfterEvaluationsTermination<TGenotype>(int maximumEvaluations, bool
     new AnyTerminator<T1, TRes1, TS1, TP1>(terminator, new AfterEvaluationsTerminator<T1, TRes1, TS1, TP1>(this));
 
   public class AfterEvaluationsTerminator<T1, TRes1, TS1, TP1>(AfterEvaluationsTermination<TGenotype> termination)
-    : Terminator<T1, TRes1, TS1, TP1> where TRes1 : IIterationResult
+    : Terminator<T1, TRes1, TS1, TP1> where TRes1 : IIterationState
     where TS1 : class, ISearchSpace<T1>
     where TP1 : class, IProblem<T1, TS1> {
     public override bool ShouldTerminate(TRes1 currentIterationState, TRes1? previousIterationState, TS1 searchSpace, TP1 problem) =>

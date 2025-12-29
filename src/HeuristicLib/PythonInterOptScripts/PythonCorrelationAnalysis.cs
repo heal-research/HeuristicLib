@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Algorithms.NSGA2;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
@@ -15,6 +15,7 @@ using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
@@ -40,7 +41,7 @@ public static class PythonCorrelationAnalysis {
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
   }
 
-  public delegate void GenerationCallback(PopulationIterationResult<RealVector> current, RealVectorProblem problem);
+  public delegate void GenerationCallback(PopulationIterationState<RealVector> current, RealVectorProblem problem);
 
   public static void RunCorrelationNsga2(GenerationCallback callback, int generations, int populationSize,
                                          int dimensions = 10, double min = -5, double max = 5, int seed = 0) {
@@ -56,7 +57,7 @@ public static class PythonCorrelationAnalysis {
     proto.PopulationSize = populationSize;
     proto.MutationRate = 1;
 
-    _ = FuncAnalysis.Create(proto, (_, iterationResult) => callback(iterationResult, prob));
+    _ = FuncAnalysis.Create(proto, (_, iterationState) => callback(iterationState, prob));
     proto.Execute(prob, prob.SearchSpace, new SystemRandomNumberGenerator(seed));
   }
 

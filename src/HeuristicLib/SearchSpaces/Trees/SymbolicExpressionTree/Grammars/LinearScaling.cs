@@ -44,50 +44,52 @@ public static class LinearScaling {
     return Multiplication;
   }
 
-  public static double[] AdjustScalingFactors(this Genotypes.Trees.SymbolicExpressionTree tree, double[] predictions, double[] targets) {
-    var start = tree.Root[0];
-    if (start.SubtreeCount == 0) return predictions;
-    var add = start[0];
-    if (add.Symbol != Add) return predictions; // not a tree with linear scaling
-    var offsetNode = (NumberTreeNode)add[1];
-    var interceptNode = (NumberTreeNode)add[0][1];
+  extension(Genotypes.Trees.SymbolicExpressionTree tree) {
+    public double[] AdjustScalingFactors(double[] predictions, double[] targets) {
+      var start = tree.Root[0];
+      if (start.SubtreeCount == 0) return predictions;
+      var add = start[0];
+      if (add.Symbol != Add) return predictions; // not a tree with linear scaling
+      var offsetNode = (NumberTreeNode)add[1];
+      var interceptNode = (NumberTreeNode)add[0][1];
 
-    var o = offsetNode.Value;
-    var b = interceptNode.Value;
-    var unscaled = predictions.Select(x => (x - o) / b).ToArray();
-    OnlineLinearScalingParameterCalculator.Calculate(unscaled, targets, out var oNew, out var bNew, out var error);
-    if (error == OnlineCalculatorError.None) {
-      offsetNode.Value = oNew;
-      interceptNode.Value = bNew;
+      var o = offsetNode.Value;
+      var b = interceptNode.Value;
+      var unscaled = predictions.Select(x => (x - o) / b).ToArray();
+      OnlineLinearScalingParameterCalculator.Calculate(unscaled, targets, out var oNew, out var bNew, out var error);
+      if (error == OnlineCalculatorError.None) {
+        offsetNode.Value = oNew;
+        interceptNode.Value = bNew;
+      }
+
+      //reuse unscaled array
+      for (int i = 0; i < unscaled.Length; i++)
+        unscaled[i] = unscaled[i] * bNew + oNew;
+
+      return unscaled;
     }
 
-    //reuse unscaled array
-    for (int i = 0; i < unscaled.Length; i++)
-      unscaled[i] = unscaled[i] * bNew + oNew;
+    public IEnumerable<double> PredictAndAdjustScaling(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, Dataset dataset, IEnumerable<int> rows, IEnumerable<double> targets) {
+      var start = tree.Root[0];
+      if (start.SubtreeCount == 0) return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows);
+      var add = start[0];
+      if (add.Symbol != Add) return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows); // not a tree with linear scaling
+      var offsetNode = (NumberTreeNode)add[1];
+      var interceptNode = (NumberTreeNode)add[0][1];
+      offsetNode.Value = 0;
+      interceptNode.Value = 1;
+      var unscaled = interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows).ToArray();
+      OnlineLinearScalingParameterCalculator.Calculate(unscaled, targets, out var oNew, out var bNew, out var error);
+      if (error == OnlineCalculatorError.None) {
+        offsetNode.Value = oNew;
+        interceptNode.Value = bNew;
+      }
 
-    return unscaled;
-  }
+      //reuse unscaled array
+      for (int i = 0; i < unscaled.Length; i++)
+        unscaled[i] = unscaled[i] * bNew + oNew;
 
-  public static IEnumerable<double> PredictAndAdjustScaling(this Genotypes.Trees.SymbolicExpressionTree tree, ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, Dataset dataset, IEnumerable<int> rows, IEnumerable<double> targets) {
-    var start = tree.Root[0];
-    if (start.SubtreeCount == 0) return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows);
-    var add = start[0];
-    if (add.Symbol != Add) return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows); // not a tree with linear scaling
-    var offsetNode = (NumberTreeNode)add[1];
-    var interceptNode = (NumberTreeNode)add[0][1];
-    offsetNode.Value = 0;
-    interceptNode.Value = 1;
-    var unscaled = interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows).ToArray();
-    OnlineLinearScalingParameterCalculator.Calculate(unscaled, targets, out var oNew, out var bNew, out var error);
-    if (error == OnlineCalculatorError.None) {
-      offsetNode.Value = oNew;
-      interceptNode.Value = bNew;
+      return unscaled;
     }
-
-    //reuse unscaled array
-    for (int i = 0; i < unscaled.Length; i++)
-      unscaled[i] = unscaled[i] * bNew + oNew;
-
-    return unscaled;
   }
 }

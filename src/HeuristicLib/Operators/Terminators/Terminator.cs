@@ -4,28 +4,28 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public abstract class Terminator<TGenotype, TIterationResult, TSearchSpace, TProblem> : ITerminator<TGenotype, TIterationResult, TSearchSpace, TProblem>
-  where TIterationResult : IIterationResult
+public abstract class Terminator<TGenotype, TIterationState, TSearchSpace, TProblem> : ITerminator<TGenotype, TIterationState, TSearchSpace, TProblem>
+  where TIterationState : IIterationState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
-  public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TSearchSpace searchSpace, TProblem problem);
+  public abstract bool ShouldTerminate(TIterationState currentIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class Terminator<TGenotype, TIterationResult, TSearchSpace> : ITerminator<TGenotype, TIterationResult, TSearchSpace>
-  where TIterationResult : IIterationResult
+public abstract class Terminator<TGenotype, TIterationState, TSearchSpace> : ITerminator<TGenotype, TIterationState, TSearchSpace>
+  where TIterationState : IIterationState
   where TSearchSpace : class, ISearchSpace<TGenotype> {
-  public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TSearchSpace searchSpace);
+  public abstract bool ShouldTerminate(TIterationState currentIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace);
 
-  bool ITerminator<TGenotype, TIterationResult, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) {
+  bool ITerminator<TGenotype, TIterationState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.ShouldTerminate(TIterationState currentIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) {
     return ShouldTerminate(currentIterationState, previousIterationState, searchSpace);
   }
 }
 
-public abstract class Terminator<TGenotype, TIterationResult> : ITerminator<TGenotype, TIterationResult>
-  where TIterationResult : IIterationResult {
-  public abstract bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState);
+public abstract class Terminator<TGenotype, TIterationState> : ITerminator<TGenotype, TIterationState>
+  where TIterationState : IIterationState {
+  public abstract bool ShouldTerminate(TIterationState currentIterationState, TIterationState? previousIterationState);
 
-  bool ITerminator<TGenotype, TIterationResult, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
+  bool ITerminator<TGenotype, TIterationState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(TIterationState currentIterationState, TIterationState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     return ShouldTerminate(currentIterationState, previousIterationState);
   }
 }
@@ -33,7 +33,7 @@ public abstract class Terminator<TGenotype, TIterationResult> : ITerminator<TGen
 public abstract class Terminator<TGenotype> : ITerminator<TGenotype> {
   public abstract bool ShouldTerminate();
 
-  bool ITerminator<TGenotype, IIterationResult, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(IIterationResult currentIterationState, IIterationResult? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
+  bool ITerminator<TGenotype, IIterationState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(IIterationState currentIterationState, IIterationState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
     return ShouldTerminate();
   }
 }
@@ -61,7 +61,7 @@ public abstract class Terminator<TGenotype> : ITerminator<TGenotype> {
 //   }
 // }
 
-// public class StagnatedFitnessTerminator : IterationStateBasedTerminator<IIterationResult> {
+// public class StagnatedFitnessTerminator : IterationStateBasedTerminator<IIterationState> {
 //   public int NumberOfIterations { get; set; }
 //   public double MinimumImprovement { get; set; }
 //   
@@ -75,7 +75,7 @@ public abstract class Terminator<TGenotype> : ITerminator<TGenotype> {
 //   public List<double> FitnessHistory { get; }
 //   
 //   
-//   public override bool ShouldTerminate(IIterationResult iterationResult) {
+//   public override bool ShouldTerminate(IIterationState iterationResult) {
 //     // drop old values
 //     if (FitnessHistory.Count >= NumberOfIterations) {
 //       FitnessHistory.RemoveAt(0);

@@ -12,7 +12,7 @@ namespace HEAL.HeuristicLib.OperatorPrototypes;
 public interface IAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, TRes>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TRes : IIterationResult {
+  where TRes : IIterationState {
   public ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; set; }
   public ITerminator<TGenotype, TRes, TSearchSpace, TProblem> Terminator { get; set; }
   public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; set; }
@@ -24,7 +24,7 @@ public interface IAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, TRes>
 public interface IAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, TRes, out TAlg> : IAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, TRes>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TRes : IIterationResult
+  where TRes : IIterationState
   where TAlg : IAlgorithm<TGenotype, TSearchSpace, TProblem, TRes> {
   public new TAlg BuildAlgorithm();
 }

@@ -23,7 +23,7 @@
 //   //     selector: new TournamentSelector(2),
 //   //     replacer: new ElitismReplacer(1), 
 //   //     randomSeed: 42,
-//   //     terminator: Terminator.OnGeneration<PopulationIterationResult<RealVector>>(3)
+//   //     terminator: Terminator.OnGeneration<PopulationIterationState<RealVector>>(3)
 //   //   );
 //   //   
 //   //   var ga2 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
@@ -35,7 +35,7 @@
 //   //     selector: new RandomSelector(),
 //   //     replacer: new ElitismReplacer(1), 
 //   //     randomSeed: 42,
-//   //     terminator: Terminator.OnGeneration<PopulationIterationResult<RealVector>>(3)
+//   //     terminator: Terminator.OnGeneration<PopulationIterationState<RealVector>>(3)
 //   //   );
 //   //   
 //   //   var ga3 = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
@@ -47,10 +47,10 @@
 //   //     selector: new TournamentSelector(2),
 //   //     replacer: new ElitismReplacer(1), 
 //   //     randomSeed: 42,
-//   //     terminator: Terminator.OnGeneration<PopulationIterationResult<RealVector>>(4)
+//   //     terminator: Terminator.OnGeneration<PopulationIterationState<RealVector>>(4)
 //   //   );
 //   //
-//   //   var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorSearchSpace, GeneticAlgorithmState<RealVector>, PopulationIterationResult<RealVector>>([ga1, ga2, ga3]);
+//   //   var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorSearchSpace, GeneticAlgorithmState<RealVector>, PopulationIterationState<RealVector>>([ga1, ga2, ga3]);
 //   //
 //   //   var result = concatAlgorithm.Execute(problem);
 //   //   

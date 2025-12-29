@@ -1,3 +1,3 @@
 namespace HEAL.HeuristicLib.States;
 
-public interface IAlgorithmResult;
+public interface IAlgorithmState;

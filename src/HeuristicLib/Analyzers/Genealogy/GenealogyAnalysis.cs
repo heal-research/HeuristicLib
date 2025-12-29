@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analyzers.Genealogy;
 
@@ -11,7 +12,7 @@ public static class GenealogyAnalysis {
   public static GenealogyAnalysis<TGenotype> Create<TGenotype, TS, TP, TRes>(IAlgorithmBuilder<TGenotype, TS, TP, TRes> prototype, IEqualityComparer<TGenotype>? equality = null, bool saveSpace = false)
     where TS : class, ISearchSpace<TGenotype>
     where TP : class, IProblem<TGenotype, TS>
-    where TRes : PopulationIterationResult<TGenotype>
+    where TRes : PopulationIterationState<TGenotype>
     where TGenotype : class {
     var t = new GenealogyAnalysis<TGenotype>(equality, saveSpace);
     t.AttachTo(prototype);
@@ -19,7 +20,7 @@ public static class GenealogyAnalysis {
   }
 }
 
-public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool saveSpace = false) : AttachedAnalysis<T, PopulationIterationResult<T>>
+public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool saveSpace = false) : AttachedAnalysis<T, PopulationIterationState<T>>
   where T : class {
   public readonly GenealogyGraph<T> Graph = new(equality ?? EqualityComparer<T>.Default);
 
@@ -33,8 +34,8 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
       Graph.AddConnection([parents1], child);
   }
 
-  public override void AfterInterception(PopulationIterationResult<T> currentIterationResult, PopulationIterationResult<T>? previousIterationResult, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem) {
-    var ordered = currentIterationResult.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
+  public override void AfterInterception(PopulationIterationState<T> currentIterationState, PopulationIterationState<T>? previousIterationState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem) {
+    var ordered = currentIterationState.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
     Graph.SetAsNewGeneration(ordered.Select(x => x.Genotype), saveSpace);
   }
 }
@@ -42,8 +43,8 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
 public class RankAnalysis<T>(IEqualityComparer<T>? equality = null) : GenealogyAnalysis<T>(equality) where T : class {
   public List<List<double>> Ranks { get; } = [];
 
-  public override void AfterInterception(PopulationIterationResult<T> currentIterationResult, PopulationIterationResult<T>? previousIterationResult, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem) {
-    base.AfterInterception(currentIterationResult, previousIterationResult, searchSpace, problem);
+  public override void AfterInterception(PopulationIterationState<T> currentIterationState, PopulationIterationState<T>? previousIterationState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem) {
+    base.AfterInterception(currentIterationState, previousIterationState, searchSpace, problem);
     RecordRanks(Graph, Ranks);
   }
 

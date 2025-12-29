@@ -1,8 +1,8 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.OperatorPrototypes;
 
@@ -10,7 +10,7 @@ public abstract class PopulationBasedAlgorithmBuilder<TGenotype, TSearchSpace, T
                                                                                                       ISelectorPrototype<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TRes : PopulationIterationResult<TGenotype>
+  where TRes : PopulationIterationState<TGenotype>
   where TAlg : IAlgorithm<TGenotype, TSearchSpace, TProblem, TRes>
   where TGenotype : class {
   public int PopulationSize { get; set; } = 100;

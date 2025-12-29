@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.OperatorPrototypes;
 public abstract class AlgorithmBuilder<TGenotype, TSearchSpace, TProblem, TRes, TAlg> : IAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, TRes, TAlg>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TRes : class, IIterationResult
+  where TRes : class, IIterationState
   where TAlg : IAlgorithm<TGenotype, TSearchSpace, TProblem, TRes>
   where TGenotype : class {
   public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; set; }

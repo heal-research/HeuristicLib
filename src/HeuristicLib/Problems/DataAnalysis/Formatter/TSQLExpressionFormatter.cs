@@ -8,14 +8,16 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
 internal static class StringBuilderExtensions {
-  internal static void AppendIndented(this StringBuilder strBuilder, int level, string text) {
-    strBuilder.Append(new string(' ', level * 2));
-    strBuilder.Append(text);
-  }
+  extension(StringBuilder strBuilder) {
+    internal void AppendIndented(int level, string text) {
+      strBuilder.Append(new string(' ', level * 2));
+      strBuilder.Append(text);
+    }
 
-  internal static void AppendLineIndented(this StringBuilder strBuilder, int level, string text) {
-    strBuilder.Append(new string(' ', level * 2));
-    strBuilder.AppendLine(text);
+    internal void AppendLineIndented(int level, string text) {
+      strBuilder.Append(new string(' ', level * 2));
+      strBuilder.AppendLine(text);
+    }
   }
 }
 

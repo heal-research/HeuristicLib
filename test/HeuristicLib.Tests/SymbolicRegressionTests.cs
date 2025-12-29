@@ -1,6 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+﻿using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
-using HEAL.HeuristicLib.Algorithms.NSGA2;
 using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Analyzers.Genealogy;
 using HEAL.HeuristicLib.Genotypes.Trees;
@@ -172,7 +171,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void GenealogyGraphOnLocalSearch() {
     var problem = CreateTestSymbolicRegressionProblem();
-    var ga = LocalSearch.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
+    var ga = HillClimber.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
     ga.RandomSeed = AlgorithmRandomSeed;
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
 

@@ -4,9 +4,9 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public interface IInterceptor<TGenotype, TIterationResult, in TSearchSpace, in TProblem>
-  where TIterationResult : IIterationResult
+public interface IInterceptor<TGenotype, TIterationState, in TSearchSpace, in TProblem>
+  where TIterationState : IIterationState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
-  TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, TSearchSpace searchSpace, TProblem problem);
+  TIterationState Transform(TIterationState currenTIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace, TProblem problem);
 }

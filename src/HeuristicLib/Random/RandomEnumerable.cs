@@ -152,36 +152,38 @@ public static class RandomEnumerable {
   }
 
   #region Proportional Helpers
-  private static IEnumerable<T> SampleProportional<T>(this IEnumerable<T> source, IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
-    var sourceArray = source.ToArray();
-    var valueArray = PrepareProportional(weights, windowing, inverseProportional);
-    var total = valueArray.Sum();
+  extension<T>(IEnumerable<T> source) {
+    private IEnumerable<T> SampleProportional(IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
+      var sourceArray = source.ToArray();
+      var valueArray = PrepareProportional(weights, windowing, inverseProportional);
+      var total = valueArray.Sum();
 
-    while (true) {
-      var index = 0;
-      double ball = valueArray[index], sum = random.Random() * total;
-      while (ball < sum)
-        ball += valueArray[++index];
-      yield return sourceArray[index];
-    }
-  }
-
-  private static IEnumerable<T> SampleProportionalWithoutRepetition<T>(this IEnumerable<T> source, IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
-    var valueArray = PrepareProportional(weights, windowing, inverseProportional);
-    var list = new LinkedList<Tuple<T, double>>(source.Zip(valueArray, Tuple.Create));
-    var total = valueArray.Sum();
-
-    while (list.Count > 0) {
-      var cur = list.First;
-      double ball = cur!.Value.Item2, sum = random.Random() * total; // assert: sum < total. When there is only one item remaining: sum < ball
-      while (ball < sum && cur.Next != null) {
-        cur = cur.Next;
-        ball += cur.Value.Item2;
+      while (true) {
+        var index = 0;
+        double ball = valueArray[index], sum = random.Random() * total;
+        while (ball < sum)
+          ball += valueArray[++index];
+        yield return sourceArray[index];
       }
+    }
 
-      yield return cur.Value.Item1;
-      list.Remove(cur);
-      total -= cur.Value.Item2;
+    private IEnumerable<T> SampleProportionalWithoutRepetition(IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
+      var valueArray = PrepareProportional(weights, windowing, inverseProportional);
+      var list = new LinkedList<Tuple<T, double>>(source.Zip(valueArray, Tuple.Create));
+      var total = valueArray.Sum();
+
+      while (list.Count > 0) {
+        var cur = list.First;
+        double ball = cur!.Value.Item2, sum = random.Random() * total; // assert: sum < total. When there is only one item remaining: sum < ball
+        while (ball < sum && cur.Next != null) {
+          cur = cur.Next;
+          ball += cur.Value.Item2;
+        }
+
+        yield return cur.Value.Item1;
+        list.Remove(cur);
+        total -= cur.Value.Item2;
+      }
     }
   }
 

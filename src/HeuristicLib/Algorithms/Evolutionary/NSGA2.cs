@@ -8,11 +8,12 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Algorithms.NSGA2;
+namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public class Nsga2<TGenotype, TSearchSpace, TProblem> :
-  IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationResult<TGenotype>>
+  IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TGenotype : class {
@@ -22,21 +23,30 @@ public class Nsga2<TGenotype, TSearchSpace, TProblem> :
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
   public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
 
-  public override PopulationIterationResult<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, PopulationIterationResult<TGenotype>? previousIterationResult, IRandomNumberGenerator random) {
-    if (previousIterationResult == null)
-      return new PopulationIterationResult<TGenotype>(CreateInitialPopulation(problem, searchSpace, random, PopulationSize));
-
+  public override PopulationIterationState<TGenotype> ExecuteStep(TProblem problem, TSearchSpace searchSpace, PopulationIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
+    if (previousState == null) {
+      var initialSolutions = Creator.Create(PopulationSize, random, searchSpace, problem);
+      var initialFitnesses = Evaluator.Evaluate(initialSolutions, random, searchSpace, problem);
+      return new PopulationIterationState<TGenotype> {
+        Population = Population.From(initialSolutions, initialFitnesses), 
+        CurrentIteration = 0
+      };
+    }
+    
     var offspringCount = Replacer.GetOffspringCount(PopulationSize);
-    var parents = Selector.Select(previousIterationResult.Population.Solutions, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
+    var parents = Selector.Select(previousState.Population.Solutions, problem.Objective, offspringCount * 2, random, searchSpace, problem).ToGenotypePairs();
     var children = Crossover.Cross(parents, random, searchSpace, problem);
     var mutants = Mutator.Mutate(children, random, searchSpace, problem);
     var newPop = Population.From(mutants, Evaluator.Evaluate(mutants, random, searchSpace, problem));
-    var nextPop = Replacer.Replace(previousIterationResult.Population.Solutions, newPop.Solutions, problem.Objective, random, searchSpace, problem);
+    var nextPop = Replacer.Replace(previousState.Population.Solutions, newPop.Solutions, problem.Objective, random, searchSpace, problem);
 
-    return new PopulationIterationResult<TGenotype>(Population.From(nextPop));
+    return new PopulationIterationState<TGenotype> {
+      Population = Population.From(nextPop),
+      CurrentIteration = previousState.CurrentIteration + 1
+    };
   }
 
-  public class Builder : PopulationBasedAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, PopulationIterationResult<TGenotype>, Nsga2<TGenotype, TSearchSpace, TProblem>>,
+  public class Builder : PopulationBasedAlgorithmBuilder<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>, Nsga2<TGenotype, TSearchSpace, TProblem>>,
                          IMutatorPrototype<TGenotype, TSearchSpace, TProblem>, ICrossoverPrototype<TGenotype, TSearchSpace, TProblem> {
     public double MutationRate { get; set; } = 0.05;
     public bool DominateOnEquals { get; set; } = false;

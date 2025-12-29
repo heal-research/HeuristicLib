@@ -1,9 +1,7 @@
 using System.Collections.Concurrent;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
-using HEAL.HeuristicLib.Algorithms.NSGA2;
 using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Analyzers.Genealogy;
 using HEAL.HeuristicLib.Genotypes.Trees;
@@ -33,13 +31,14 @@ using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public class PythonGenealogyAnalysis {
-  public delegate void GenerationCallback(PopulationIterationResult<SymbolicExpressionTree> current);
+  public delegate void GenerationCallback(PopulationIterationState<SymbolicExpressionTree> current);
 
-  public delegate void PermutationGenerationCallback(PopulationIterationResult<Permutation> current);
+  public delegate void PermutationGenerationCallback(PopulationIterationState<Permutation> current);
 
   private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> CreateSymRegAllMutator() {
     var symRegAllMutator = MultiMutator.Create(
@@ -73,7 +72,7 @@ public class PythonGenealogyAnalysis {
       Mutator = parameters.Mutator ?? CreateSymRegAllMutator()
     };
     var problem = CreateTestSymbolicRegressionProblem(file, trainingSplit);
-    var actionCallback = callback is null ? null : new Action<PopulationIterationResult<SymbolicExpressionTree>>(callback);
+    var actionCallback = callback is null ? null : new Action<PopulationIterationState<SymbolicExpressionTree>>(callback);
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
 
@@ -97,7 +96,7 @@ public class PythonGenealogyAnalysis {
       Crossover = parameters.Crossover ?? new EdgeRecombinationCrossover(),
       Mutator = parameters.Mutator ?? new InversionMutator()
     };
-    var actionCallback = callback is null ? null : new Action<PopulationIterationResult<Permutation>>(callback);
+    var actionCallback = callback is null ? null : new Action<PopulationIterationState<Permutation>>(callback);
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
   #endregion
@@ -189,7 +188,7 @@ public class PythonGenealogyAnalysis {
 
   private static MyAnalyzers<T>
     AddAnalyzers<T, TS, TP, TRes>(Action<TRes>? callback, IAlgorithmBuilder<T, TS, TP, TRes> builder)
-    where TRes : PopulationIterationResult<T>
+    where TRes : PopulationIterationState<T>
     where T : class
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS> {
@@ -204,13 +203,13 @@ public class PythonGenealogyAnalysis {
 
   private static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<T>>) RunAlgorithmConfigurable<T, TS>(
     IProblem<T, TS> problem,
-    Action<PopulationIterationResult<T>>? callback,
+    Action<PopulationIterationState<T>>? callback,
     ExperimentParameters<T, TS> parameters) where TS : class, ISearchSpace<T> where T : class {
     var terminator = new AfterIterationsTerminator<T>(parameters.Iterations);
     if (parameters.NoChildren < 0)
       parameters = parameters with { NoChildren = parameters.PopulationSize };
 
-    IAlgorithm<T, TS, IProblem<T, TS>, PopulationIterationResult<T>> algorithm;
+    IAlgorithm<T, TS, IProblem<T, TS>, PopulationIterationState<T>> algorithm;
 
     MyAnalyzers<T> analyzers;
 
@@ -244,11 +243,11 @@ public class PythonGenealogyAnalysis {
         algorithm = es.BuildAlgorithm();
         break;
       case "ls":
-        var ls = LocalSearch.GetBuilder(parameters.Creator!, parameters.Mutator!);
+        var ls = HillClimber.GetBuilder(parameters.Creator!, parameters.Mutator!);
         ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
         ls.Terminator = terminator;
         ls.RandomSeed = parameters.Seed;
-
+        
         analyzers = AddAnalyzers(callback, ls);
         algorithm = ls.BuildAlgorithm();
         break;

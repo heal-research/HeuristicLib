@@ -2,16 +2,17 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analyzers;
 
 public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, ISolution<T> Worst);
 
-public class BestMedianWorstAnalysis<TGenotype> : AttachedAnalysis<TGenotype, PopulationIterationResult<TGenotype>> where TGenotype : class {
+public class BestMedianWorstAnalysis<TGenotype> : AttachedAnalysis<TGenotype, PopulationIterationState<TGenotype>> where TGenotype : class {
   public readonly List<BestMedianWorstEntry<TGenotype>> BestISolutions = [];
 
-  public override void AfterInterception(PopulationIterationResult<TGenotype> currentIterationResult, PopulationIterationResult<TGenotype>? previousIterationResult, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
-    var ordered = currentIterationResult.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
+  public override void AfterInterception(PopulationIterationState<TGenotype> currentIterationState, PopulationIterationState<TGenotype>? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
+    var ordered = currentIterationState.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
     if (ordered.Length == 0) {
       BestISolutions.Add(default);
       return;
@@ -26,7 +27,7 @@ public static class BestMedianWorstAnalysis {
     IAlgorithmBuilder<TGenotype, TS, TP, TR> ga)
     where TS : class, ISearchSpace<TGenotype>
     where TP : class, IProblem<TGenotype, TS>
-    where TR : PopulationIterationResult<TGenotype>
+    where TR : PopulationIterationState<TGenotype>
     where TGenotype : class {
     var r = new BestMedianWorstAnalysis<TGenotype>();
     ga.AddAttachment(r);

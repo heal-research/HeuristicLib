@@ -6,11 +6,12 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
-public class LocalSearch<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleISolutionIterationResult<TGenotype>>
+public class HillClimber<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionIterationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class {
@@ -19,15 +20,21 @@ public class LocalSearch<TGenotype, TSearchSpace, TProblem>
   public required int MaxNeighbors { get; init; }
   public required int BatchSize { get; init; }
 
-  public override SingleISolutionIterationResult<TGenotype> ExecuteStep(
+  public override SingleSolutionIterationState<TGenotype> ExecuteStep(
     TProblem problem,
     TSearchSpace searchSpace,
-    SingleISolutionIterationResult<TGenotype>? previousIterationResult,
+    SingleSolutionIterationState<TGenotype>? previousState,
     IRandomNumberGenerator random) {
-    if (previousIterationResult == null)
-      return new SingleISolutionIterationResult<TGenotype>(CreateInitialPopulation(problem, searchSpace, random, 1).Solutions[0]);
+    if (previousState == null) {
+      var initialSolution = Creator.Create(random, searchSpace, problem);
+      var initialFitness = Evaluator.Evaluate([initialSolution], random, searchSpace, problem)[0];
+      return new SingleSolutionIterationState<TGenotype> {
+        Population = Population.From([initialSolution], [initialFitness]),
+        CurrentIteration = 0
+      };
+    }
 
-    var sol = previousIterationResult.Solution;
+    var sol = previousState.Solution;
     var newISolution = sol;
 
     for (int i = 0; i < MaxNeighbors; i += BatchSize) {
@@ -38,19 +45,25 @@ public class LocalSearch<TGenotype, TSearchSpace, TProblem>
         continue;
       newISolution = new Solution<TGenotype>(child[best], res[best]);
       if (Direction == LocalSearchDirection.FirstImprovement)
-        return new SingleISolutionIterationResult<TGenotype>(newISolution);
+        return new SingleSolutionIterationState<TGenotype> {
+          Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector]),
+          CurrentIteration = previousState.CurrentIteration + 1
+        };
     }
 
-    return new SingleISolutionIterationResult<TGenotype>(newISolution);
+    return new SingleSolutionIterationState<TGenotype> {
+      Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector]),
+      CurrentIteration = previousState.CurrentIteration + 1
+    };
   }
 
-  public class Builder : AlgorithmBuilder<TGenotype, TSearchSpace, TProblem, SingleISolutionIterationResult<TGenotype>, LocalSearch<TGenotype, TSearchSpace, TProblem>>, IMutatorPrototype<TGenotype, TSearchSpace, TProblem> {
+  public class Builder : AlgorithmBuilder<TGenotype, TSearchSpace, TProblem, SingleSolutionIterationState<TGenotype>, HillClimber<TGenotype, TSearchSpace, TProblem>>, IMutatorPrototype<TGenotype, TSearchSpace, TProblem> {
     public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
     public int MaxNeighbors { get; set; } = 100;
     public int BatchSize { get; set; } = 100;
     public LocalSearchDirection Direction { get; set; } = LocalSearchDirection.FirstImprovement;
 
-    public LocalSearch<TGenotype, TSearchSpace, TProblem> Create() =>
+    public HillClimber<TGenotype, TSearchSpace, TProblem> Create() =>
       new() {
         Terminator = Terminator,
         Interceptor = Interceptor,
@@ -63,17 +76,17 @@ public class LocalSearch<TGenotype, TSearchSpace, TProblem>
         Direction = Direction
       };
 
-    public override LocalSearch<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() => Create();
+    public override HillClimber<TGenotype, TSearchSpace, TProblem> BuildAlgorithm() => Create();
   }
 }
 
-public static class LocalSearch {
-  public static LocalSearch<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+public static class HillClimber {
+  public static HillClimber<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
     ICreator<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TGenotype : class {
-    return new LocalSearch<TGenotype, TSearchSpace, TProblem>.Builder {
+    return new HillClimber<TGenotype, TSearchSpace, TProblem>.Builder {
       Mutator = mutator,
       Creator = creator
     };

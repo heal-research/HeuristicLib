@@ -3,6 +3,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-public interface IVariableStrengthMutator<T, in T1, in T2> : IMutator<T, T1, T2> where T1 : class, ISearchSpace<T> where T2 : class, IProblem<T, T1> {
-  public double MutationStrength { get; set; }
+public interface IVariableStrengthMutator<TG, in TS, in TP> 
+  : IMutator<TG, TS, TP>
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS> 
+{
+  public double MutationStrength { get; [Obsolete("Should not be mutable")]set; }
 }

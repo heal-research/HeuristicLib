@@ -2,14 +2,6 @@ using System.Diagnostics;
 
 namespace HEAL.HeuristicLib.OperatorExtensions.MeasuredOperators;
 
-// public interface IOperator
-// {
-// }
-//
-// public interface IOperator<TGenotype> : IOperator
-// {
-// }
-
 public readonly record struct OperatorMetric(int Count, TimeSpan Duration) {
   public static OperatorMetric Aggregate(OperatorMetric left, OperatorMetric right) {
     return new OperatorMetric(left.Count + right.Count, left.Duration + right.Duration);

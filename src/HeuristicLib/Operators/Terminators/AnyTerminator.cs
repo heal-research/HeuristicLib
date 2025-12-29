@@ -4,14 +4,14 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public class AnyTerminator<TGenotype, TIterationResult, TSearchSpace, TProblem>(params IReadOnlyList<ITerminator<TGenotype, TIterationResult, TSearchSpace, TProblem>> terminators)
-  : Terminator<TGenotype, TIterationResult, TSearchSpace, TProblem>
-  where TIterationResult : IIterationResult
+public class AnyTerminator<TGenotype, TIterationState, TSearchSpace, TProblem>(params IReadOnlyList<ITerminator<TGenotype, TIterationState, TSearchSpace, TProblem>> terminators)
+  : Terminator<TGenotype, TIterationState, TSearchSpace, TProblem>
+  where TIterationState : IIterationState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
-  public IReadOnlyList<ITerminator<TGenotype, TIterationResult, TSearchSpace, TProblem>> Terminators { get; } = terminators;
+  public IReadOnlyList<ITerminator<TGenotype, TIterationState, TSearchSpace, TProblem>> Terminators { get; } = terminators;
 
-  public override bool ShouldTerminate(TIterationResult currentIterationState, TIterationResult? previousIterationState, TSearchSpace searchSpace, TProblem problem) {
+  public override bool ShouldTerminate(TIterationState currentIterationState, TIterationState? previousIterationState, TSearchSpace searchSpace, TProblem problem) {
     return Terminators.Any(criterion => criterion.ShouldTerminate(currentIterationState, previousIterationState, searchSpace, problem));
   }
 }

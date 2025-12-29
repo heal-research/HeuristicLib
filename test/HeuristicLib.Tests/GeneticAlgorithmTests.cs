@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
@@ -174,7 +174,7 @@ public class GeneticAlgorithmTests {
   //   var selector = new ProportionalSelector();
   //   var replacement = new PlusSelectionReplacer();
   //   var pauseToken = new PauseToken();
-  //   var terminator = new PauseTokenTerminator<PopulationIterationResult<RealVector>>(pauseToken);
+  //   var terminator = new PauseTokenTerminator<PopulationIterationState<RealVector>>(pauseToken);
   //   var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
   //     SearchSpace = searchSpace, Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize
   //   };
