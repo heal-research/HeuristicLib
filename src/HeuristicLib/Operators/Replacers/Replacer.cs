@@ -13,7 +13,7 @@ public abstract class Replacer<TGenotype, TSearchSpace, TProblem> : IReplacer<TG
   public abstract int GetOffspringCount(int populationSize);
 }
 
-public abstract class Replacer<TGenotype, TSearchSpace> : IReplacer<TGenotype, TSearchSpace>
+public abstract class Replacer<TGenotype, TSearchSpace> : IReplacer<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TSearchSpace : class, ISearchSpace<TGenotype> {
   public abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
@@ -24,16 +24,12 @@ public abstract class Replacer<TGenotype, TSearchSpace> : IReplacer<TGenotype, T
   }
 }
 
-public abstract class Replacer<TGenotype> : IReplacer<TGenotype> {
+public abstract class Replacer<TGenotype> : IReplacer<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> {
   public abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random);
 
   public abstract int GetOffspringCount(int populationSize);
 
   IReadOnlyList<ISolution<TGenotype>> IReplacer<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {
-    return Replace(previousPopulation, offspringPopulation, objective, random);
-  }
-
-  IReadOnlyList<ISolution<TGenotype>> IReplacer<TGenotype, ISearchSpace<TGenotype>>.Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace) {
     return Replace(previousPopulation, offspringPopulation, objective, random);
   }
 }

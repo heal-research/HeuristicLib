@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public class AlphaBetaBlendCrossover(double alpha = 0.7) : Crossover<RealVector, RealVectorSearchSpace> {
+public class AlphaBetaBlendCrossover(double alpha = 0.7) : SingleSolutionCrossover<RealVector, RealVectorSearchSpace> {
   public double Alpha { get; set; } = alpha;
   public double Beta => 1 - Alpha;
 

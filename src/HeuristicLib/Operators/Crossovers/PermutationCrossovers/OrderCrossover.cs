@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public class OrderCrossover : Crossover<Permutation, PermutationSearchSpace> {
+public class OrderCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace> {
   public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng, Memory<int>? memory = null) {
     if (parent1.Count != parent2.Count) throw new ArgumentException("Parent permutations must have the same length.");
     if (memory.HasValue && memory.Value.Length < parent1.Count) throw new ArgumentException("Provided memory length is less than parent permutations length.");

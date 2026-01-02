@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
-public class TspCreator : Creator<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
+public class TspSingleSolutionCreator : SingleSolutionCreator<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
   public override Permutation Create(IRandomNumberGenerator random, PermutationSearchSpace searchSpace, TravelingSalesmanProblem problem) {
     var problemData = problem.ProblemData;
     var destinationsSortedToFirstCities = Enumerable

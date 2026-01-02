@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Analysis;
+namespace HEAL.HeuristicLib.Observation;
 
 public interface IIterationObserver<TG, in TS, in TP, in TR> 
   where TG : class

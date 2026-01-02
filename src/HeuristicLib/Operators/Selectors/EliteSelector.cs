@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public class EliteSelector<TGenotype, TSearchSpace, TProblem> : BatchSelector<TGenotype, TSearchSpace, TProblem> where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+public class EliteSelector<TGenotype, TSearchSpace, TProblem> : Selector<TGenotype, TSearchSpace, TProblem> where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   private readonly BestSelector<TGenotype> best = new();
 
   public EliteSelector(ISelector<TGenotype, TSearchSpace, TProblem> selector, int elites = 1) {

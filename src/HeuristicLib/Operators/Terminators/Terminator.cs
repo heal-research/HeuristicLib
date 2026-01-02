@@ -11,7 +11,7 @@ public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProb
   public abstract bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace> : ITerminator<TGenotype, TAlgorithmState, TSearchSpace>
+public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace> : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TAlgorithmState : IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype> {
   public abstract bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace);
@@ -21,7 +21,7 @@ public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace> : ITe
   }
 }
 
-public abstract class Terminator<TGenotype, TAlgorithmState> : ITerminator<TGenotype, TAlgorithmState>
+public abstract class Terminator<TGenotype, TAlgorithmState> : ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   where TAlgorithmState : IAlgorithmState {
   public abstract bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState);
 
@@ -30,7 +30,7 @@ public abstract class Terminator<TGenotype, TAlgorithmState> : ITerminator<TGeno
   }
 }
 
-public abstract class Terminator<TGenotype> : ITerminator<TGenotype> {
+public abstract class Terminator<TGenotype> : ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> {
   public abstract bool ShouldTerminate();
 
   bool ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(IAlgorithmState currentIterationState, IAlgorithmState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) {

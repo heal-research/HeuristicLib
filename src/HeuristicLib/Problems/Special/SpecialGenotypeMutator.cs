@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Special;
 
-public class SpecialGenotypeMutator : Mutator<SpecialGenotype, SpecialSearchSpace, SpecialProblem> {
+public class SpecialGenotypeMutator : SingleSolutionMutator<SpecialGenotype, SpecialSearchSpace, SpecialProblem> {
   public override SpecialGenotype Mutate(SpecialGenotype genotype, IRandomNumberGenerator random, SpecialSearchSpace searchSpace, SpecialProblem problem) {
     int strength = (int)Math.Round(problem.Data);
     int offset = random.Integer(-strength, strength + 1);

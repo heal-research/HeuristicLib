@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 
-public class RandomPermutationCreator : Creator<Permutation, PermutationSearchSpace> {
+public class RandomPermutationCreator : SingleSolutionCreator<Permutation, PermutationSearchSpace> {
   public override Permutation Create(IRandomNumberGenerator random, PermutationSearchSpace searchSpace) {
     int[] elements = Enumerable.Range(0, searchSpace.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {

@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public class NoChangeMutator<TGenotype> : BatchMutator<TGenotype> {
+public class NoChangeMutator<TGenotype> : Mutator<TGenotype> {
   public static NoChangeMutator<TGenotype> Instance { get; } = new();
 
   public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random) {

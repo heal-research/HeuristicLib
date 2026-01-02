@@ -78,7 +78,7 @@ public class AfterEvaluationsTermination<TGenotype>(int maximumEvaluations, bool
   }
 
   public class EvaluationLimitEvaluator<T1, TS1, TP1>(AfterEvaluationsTermination<TGenotype> termination, IEvaluator<T1, TS1, TP1> evaluator)
-    : BatchEvaluator<T1, TS1, TP1> where TS1 : class, ISearchSpace<T1> where TP1 : class, IProblem<T1, TS1> {
+    : Evaluator<T1, TS1, TP1> where TS1 : class, ISearchSpace<T1> where TP1 : class, IProblem<T1, TS1> {
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> solutions, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem) {
       int count = solutions.Count;
       int n = count;

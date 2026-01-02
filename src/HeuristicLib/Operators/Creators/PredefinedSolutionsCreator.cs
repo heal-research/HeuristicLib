@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Creators;
 
 public class PredefinedISolutionsCreator<TGenotype, TSearchSpace, TProblem>(IReadOnlyList<TGenotype> predefinedISolutions, ICreator<TGenotype, TSearchSpace, TProblem> creatorForRemainingISolutions)
-  : BatchCreator<TGenotype, TSearchSpace, TProblem>
+  : Creator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   private int currentISolutionIndex;

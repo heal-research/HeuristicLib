@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public class SimulatedBinaryCrossover : Crossover<RealVector, RealVectorSearchSpace> {
+public class SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace> {
   /// <summary>
   /// Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if crossed either a contracting crossover or an expanding crossover is performed, again with equal probability.
   /// For more details refer to the paper by Deb and Agrawal.
@@ -156,7 +156,7 @@ public static class Sbx {
   }
 }
 
-public class SelfAdaptiveSimulatedBinaryCrossover : Crossover<RealVector, RealVectorSearchSpace> {
+public class SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace> {
   public double ProbVar { get; set; } = 0.5;
   public double Eta { get; set; } = 15.0;
   public double ProbExch { get; set; } = 1.0; // single draw gating probBin (whole call)

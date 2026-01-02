@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-public class PolynomialMutator : Mutator<RealVector, RealVectorSearchSpace> {
+public class PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSearchSpace> {
   private readonly bool atLeastOnce;
   private readonly double eta;
   public double GetVarProb(RealVectorSearchSpace searchSpace) => Math.Min(0.5, 1.0 / searchSpace.Length);

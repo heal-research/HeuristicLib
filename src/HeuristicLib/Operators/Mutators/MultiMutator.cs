@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public class MultiMutator<TGenotype, TSearchSpace, TProblem> : BatchMutator<TGenotype, TSearchSpace, TProblem>
+public class MultiMutator<TGenotype, TSearchSpace, TProblem> : Mutator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   public IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> Mutators { get; }
@@ -69,14 +69,14 @@ public class MultiMutator<TGenotype, TSearchSpace, TProblem> : BatchMutator<TGen
   }
 }
 
-public class MultiMutator<TGenotype, TSearchSpace> : MultiMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>, IMutator<TGenotype, TSearchSpace>
+public class MultiMutator<TGenotype, TSearchSpace> : MultiMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TSearchSpace : class, ISearchSpace<TGenotype> {
-  public MultiMutator(IReadOnlyList<IMutator<TGenotype, TSearchSpace>> mutators, IReadOnlyList<double>? weights = null) : base(mutators, weights) { }
+  public MultiMutator(IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators, IReadOnlyList<double>? weights = null) : base(mutators, weights) { }
   public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TSearchSpace searchSpace) => base.Mutate(parent, random, searchSpace, null!);
 }
 
-public class MultiMutator<TGenotype> : MultiMutator<TGenotype, ISearchSpace<TGenotype>>, IMutator<TGenotype> {
-  public MultiMutator(IReadOnlyList<IMutator<TGenotype>> mutators, IReadOnlyList<double>? weights = null) : base(mutators, weights) { }
+public class MultiMutator<TGenotype> : MultiMutator<TGenotype, ISearchSpace<TGenotype>> {
+  public MultiMutator(IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators, IReadOnlyList<double>? weights = null) : base(mutators, weights) { }
   public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random) => base.Mutate(parent, random, null!, null!);
 }
 
@@ -88,13 +88,13 @@ public static class MultiMutator {
   }
 
   public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(
-    IReadOnlyList<IMutator<TGenotype, TSearchSpace>> mutators, IReadOnlyList<double>? weights = null)
+    IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators, IReadOnlyList<double>? weights = null)
     where TSearchSpace : class, ISearchSpace<TGenotype> {
     return new MultiMutator<TGenotype, TSearchSpace>(mutators, weights);
   }
 
   public static MultiMutator<TGenotype> Create<TGenotype>(
-    IReadOnlyList<IMutator<TGenotype>> mutators, IReadOnlyList<double>? weights = null) {
+    IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators, IReadOnlyList<double>? weights = null) {
     return new MultiMutator<TGenotype>(mutators, weights);
   }
 
@@ -104,12 +104,12 @@ public static class MultiMutator {
     return new MultiMutator<TGenotype, TSearchSpace, TProblem>(mutators);
   }
 
-  public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace>> mutators)
+  public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators)
     where TSearchSpace : class, ISearchSpace<TGenotype> {
     return new MultiMutator<TGenotype, TSearchSpace>(mutators);
   }
 
-  public static MultiMutator<TGenotype> Create<TGenotype>(params IReadOnlyList<IMutator<TGenotype>> mutators) {
+  public static MultiMutator<TGenotype> Create<TGenotype>(params IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators) {
     return new MultiMutator<TGenotype>(mutators);
   }
 

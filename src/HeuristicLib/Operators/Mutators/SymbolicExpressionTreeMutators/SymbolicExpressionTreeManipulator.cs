@@ -3,4 +3,4 @@ using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public abstract class SymbolicExpressionTreeManipulator : Mutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>;
+public abstract class SymbolicExpressionTreeManipulator : SingleSolutionMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>;

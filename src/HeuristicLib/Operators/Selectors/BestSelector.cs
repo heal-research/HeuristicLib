@@ -31,7 +31,7 @@ public static class BestSelector {
   }
 }
 
-public class BestSelector<TGenotype> : BatchSelector<TGenotype> {
+public class BestSelector<TGenotype> : Selector<TGenotype> {
   public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
     return count == 1
       ? [population.MinBy(x => x.ObjectiveVector, objective.TotalOrderComparer)!]

@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public class PartiallyMatchedCrossover : BatchCrossover<Permutation, PermutationSearchSpace> {
+public class PartiallyMatchedCrossover : Crossover<Permutation, PermutationSearchSpace> {
   public override IReadOnlyList<Permutation> Cross(IReadOnlyList<IParents<Permutation>> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) {
     return Cross(parents, random);
   }

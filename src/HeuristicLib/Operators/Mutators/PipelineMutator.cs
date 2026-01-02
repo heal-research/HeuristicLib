@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public class PipelineMutator<TG, TS, TP> : BatchMutator<TG, TS, TP>
+public class PipelineMutator<TG, TS, TP> : Mutator<TG, TS, TP>
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS> 

@@ -32,7 +32,7 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 //   }
 // }
 
-public class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem> : BatchEvaluator<TGenotype, TSearchSpace, TProblem>
+public class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem> : Evaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   private readonly IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator;
@@ -46,16 +46,12 @@ public class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem> : BatchEvalua
   }
 
   public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
-    ObjectiveVector[]? results = null;
+    ObjectiveVector[] results = evaluator.Evaluate(solutions, random, searchSpace, problem).ToArray();
 
     for (int i = 0; i < repeats; i++) {
-      var singleResult = evaluator.Evaluate(solutions, random, searchSpace, problem);
-      if (results is null) {
-        results = singleResult.ToArray();
-      } else {
-        for (int j = 0; j < results.Length; j++) {
-          results[j] = aggregator(results[j], singleResult[j]);
-        }
+      var reevaluationResult = evaluator.Evaluate(solutions, random, searchSpace, problem);
+      for (int j = 0; j < results.Length; j++) {
+          results[j] = aggregator(results[j], reevaluationResult[j]);
       }
     }
 

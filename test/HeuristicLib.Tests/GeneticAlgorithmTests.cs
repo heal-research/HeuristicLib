@@ -21,7 +21,7 @@ public class DummyEvaluator {
   public static readonly ObjectiveVector DummyObjectives = new(0.0);
 }
 
-public class DummyEvaluator<TGenotype, TSearchSpace, TProblem> : Evaluator<TGenotype, TSearchSpace, TProblem>
+public class DummyEvaluator<TGenotype, TSearchSpace, TProblem> : SingleSolutionEvaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   protected override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
@@ -50,7 +50,7 @@ public class GeneticAlgorithmTests {
       Evaluator = new DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>(),
       Selector = selector,
       Replacer = replacement,
-      AlgorithmRandom = SystemRandomNumberGenerator.Default(42),
+      //AlgorithmRandom = SystemRandomNumberGenerator.Default(42),
       Terminator = terminator
     };
     //SearchSpace = searchSpace,

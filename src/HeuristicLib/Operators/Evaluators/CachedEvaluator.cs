@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 public class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(
   Func<TGenotype, TKey> keySelector,
   IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
-  : BatchEvaluator<TGenotype, TSearchSpace, TProblem>
+  : Evaluator<TGenotype, TSearchSpace, TProblem>
   where TKey : notnull
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {

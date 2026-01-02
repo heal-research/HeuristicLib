@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public class SinglePointCrossover : Crossover<RealVector, RealVectorSearchSpace> {
+public class SinglePointCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace> {
   public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
     var parent1 = parents.Parent1;
     var parent2 = parents.Parent2;

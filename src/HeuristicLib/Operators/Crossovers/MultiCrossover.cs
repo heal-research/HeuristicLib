@@ -7,11 +7,11 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 public static class MultiCrossover {
   public static ICrossover<TGenotype, TSearchSpace, TProblem> WithProbability<TGenotype, TSearchSpace, TProblem>(this ICrossover<TGenotype, TSearchSpace, TProblem> crossover, double probability) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> {
-    return new MultiCrossover<TGenotype, TSearchSpace, TProblem>([crossover, NoCrossOver<TGenotype>.Instance], [probability, 1 - probability]);
+    return new MultiCrossover<TGenotype, TSearchSpace, TProblem>([crossover, NoCrossover<TGenotype>.Instance], [probability, 1 - probability]);
   }
 }
 
-public class MultiCrossover<TGenotype, TSearchSpace, TProblem> : BatchCrossover<TGenotype, TSearchSpace, TProblem>
+public class MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
   public IReadOnlyList<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers { get; }

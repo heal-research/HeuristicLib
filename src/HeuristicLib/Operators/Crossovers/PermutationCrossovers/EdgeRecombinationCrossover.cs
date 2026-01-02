@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public class EdgeRecombinationCrossover : Crossover<Permutation> {
+public class EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation> {
   public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random) {
     if (parents.Parent1.Count != parents.Parent2.Count) throw new ArgumentException("EdgeRecombinationCrossover: The parent permutations are of unequal length.");
     int length = parents.Parent1.Count;

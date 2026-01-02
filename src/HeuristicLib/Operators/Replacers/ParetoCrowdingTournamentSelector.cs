@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenotype> {
+public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype> {
   private readonly int tournamentSize;
   private readonly bool dominateOnEqualities;
 

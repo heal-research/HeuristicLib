@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public class ProportionalSelector<TGenotype>(bool windowing = true) : BatchSelector<TGenotype> { // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
+public class ProportionalSelector<TGenotype>(bool windowing = true) : Selector<TGenotype> { // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
   public bool Windowing { get; set; } = windowing;
 
   public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
