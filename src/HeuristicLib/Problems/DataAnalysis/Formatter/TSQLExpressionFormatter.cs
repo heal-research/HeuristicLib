@@ -163,7 +163,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
         default: {
           switch (node.Symbol) {
             case FactorVariable: {
-              var factorNode = node as FactorVariableTreeNode;
+              var factorNode = (FactorVariableTreeNode)node;
               FormatFactor(level, factorNode, strBuilder);
               break;
             }

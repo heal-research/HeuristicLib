@@ -151,16 +151,13 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
           throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for C# symbolic expression tree formatter.");
       }
     } else {
-      if (node is VariableTreeNode) {
-        var varNode = node as VariableTreeNode;
-        strBuilder.AppendFormat("{0} * {1}", VariableName2Identifier(varNode.VariableName), varNode.Weight.ToString("g17", CultureInfo.InvariantCulture));
+      if (node is VariableTreeNode varNode) {
+        strBuilder.Append($"{VariableName2Identifier(varNode.VariableName)} * {varNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
       } else if (node is NumberTreeNode numNode) {
         strBuilder.Append(numNode.Value.ToString("g17", CultureInfo.InvariantCulture));
-      } else if (node.Symbol is FactorVariable) {
-        var factorNode = node as FactorVariableTreeNode;
+      } else if (node is FactorVariableTreeNode factorNode) {
         FormatFactor(factorNode, strBuilder);
-      } else if (node.Symbol is BinaryFactorVariable) {
-        var binFactorNode = node as BinaryFactorVariableTreeNode;
+      } else if (node is BinaryFactorVariableTreeNode binFactorNode) {
         FormatBinaryFactor(binFactorNode, strBuilder);
       } else {
         throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for C# symbolic expression tree formatter.");
@@ -170,7 +167,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
 
   private void FormatFactor(FactorVariableTreeNode node, StringBuilder strBuilder) {
     strBuilder.AppendFormat("EvaluateFactor({0}, new [] {{ {1} }}, new [] {{ {2} }})", VariableName2Identifier(node.VariableName),
-      string.Join(",", node.Symbol.GetVariableValues(node.VariableName).Select(name => "\"" + name + "\"")), string.Join(",", node.Weights.Select(v => v.ToString(CultureInfo.InvariantCulture))));
+      string.Join(",", node.Symbol.GetVariableValues(node.VariableName).Select(name => "\"" + name + "\"")), string.Join(",", (node.Weights ?? []).Select(v => v.ToString(CultureInfo.InvariantCulture))));
   }
 
   private void FormatBinaryFactor(BinaryFactorVariableTreeNode node, StringBuilder strBuilder) {
