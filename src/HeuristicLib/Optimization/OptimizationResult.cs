@@ -1,11 +1,11 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public interface IOptimizationResult<TGenotype, out TISolutionLayout> : IOptimizationResult
+public interface IOptimizationResult<TGenotype, out TSolutionLayout> : IOptimizationResult
   where TGenotype : IEquatable<TGenotype>
-  where TISolutionLayout : IISolutionLayout<TGenotype> {
-  TISolutionLayout Solutions { get; }
+  where TSolutionLayout : IISolutionLayout<TGenotype> {
+  TSolutionLayout Solutions { get; }
 }
 
-public abstract record OptimizationResult<TGenotype, TISolutionLayout>(TISolutionLayout Solutions) : IOptimizationResult<TGenotype, TISolutionLayout>
+public abstract record OptimizationResult<TGenotype, TSolutionLayout>(TSolutionLayout Solutions) : IOptimizationResult<TGenotype, TSolutionLayout>
   where TGenotype : IEquatable<TGenotype>
-  where TISolutionLayout : IISolutionLayout<TGenotype>;
+  where TSolutionLayout : IISolutionLayout<TGenotype>;

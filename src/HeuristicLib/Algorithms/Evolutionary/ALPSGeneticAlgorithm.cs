@@ -17,7 +17,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public readonly record struct AgedGenotype<TGenotype>(TGenotype InnerGenotype, int Age);
+public record AgedGenotype<TGenotype>(TGenotype InnerGenotype, int Age);
 
 public record AlpsIterationState<TGenotype> : AlgorithmState {
   public required IReadOnlyList<Population<AgedGenotype<TGenotype>>> Population { get; init; }

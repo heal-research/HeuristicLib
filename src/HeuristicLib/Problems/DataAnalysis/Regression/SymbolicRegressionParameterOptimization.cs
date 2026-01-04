@@ -245,7 +245,7 @@ public static class SymbolicRegressionParameterOptimization {
     var i = 0;
     foreach (var node in tree.Root.IterateNodesPrefix()) {
       switch (node) {
-        case NumberTreeNode { Parent.Symbol: Power } numberTreeNode when numberTreeNode.Parent[1] == numberTreeNode:
+        case NumberTreeNode { Parent.Symbol: Power } numberTreeNode when numberTreeNode.Parent is not null && numberTreeNode.Parent[1] == numberTreeNode:
           continue; // exponents in powers are not optimized (see TreeToAutoDiffTermConverter)
         case NumberTreeNode numberTreeNode:
           numberTreeNode.Value = parameters[i++];

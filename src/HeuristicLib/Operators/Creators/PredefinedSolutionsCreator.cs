@@ -6,20 +6,21 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 public class PredefinedISolutionsCreator<TGenotype, TSearchSpace, TProblem>(IReadOnlyList<TGenotype> predefinedISolutions, ICreator<TGenotype, TSearchSpace, TProblem> creatorForRemainingISolutions)
   : Creator<TGenotype, TSearchSpace, TProblem>
+  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
-  private int currentISolutionIndex;
+  private int currentSolutionIndex;
 
   public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
     var offspring = new TGenotype[count];
 
-    var countPredefined = Math.Min(predefinedISolutions.Count - currentISolutionIndex, count);
+    var countPredefined = Math.Min(predefinedISolutions.Count - currentSolutionIndex, count);
     if (countPredefined > 0) {
       for (var i = 0; i < countPredefined; i++) {
-        offspring[i] = predefinedISolutions[currentISolutionIndex + i];
+        offspring[i] = predefinedISolutions[currentSolutionIndex + i];
       }
 
-      currentISolutionIndex += countPredefined;
+      currentSolutionIndex += countPredefined;
     }
 
     var countRemaining = count - countPredefined;

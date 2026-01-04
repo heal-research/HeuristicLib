@@ -82,10 +82,10 @@ namespace HEAL.HeuristicLib.Problems;
 // {
 // }
 
-public abstract class Problem<TISolution, TSearchSpace>(Objective objective, TSearchSpace searchSpace) : IProblem<TISolution, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TISolution> {
+public abstract class Problem<TSolution, TSearchSpace>(Objective objective, TSearchSpace searchSpace) : IProblem<TSolution, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TSolution> {
   public Objective Objective { get; } = objective;
   public TSearchSpace SearchSpace { get; } = searchSpace;
 
-  public abstract ObjectiveVector Evaluate(TISolution solution, IRandomNumberGenerator random);
+  public abstract ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random);
 }

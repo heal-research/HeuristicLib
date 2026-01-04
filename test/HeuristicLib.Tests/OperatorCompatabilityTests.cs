@@ -211,18 +211,19 @@ public class OperatorCompatabilityTests {
 public abstract record AlgorithmState<TGenotype> : AlgorithmState;
 
 public class IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : Algorithm<TGenotype, TSearchSpace, TProblem, AlgorithmState<TGenotype>>
+  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class {
+  {
   public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
 
   public override AlgorithmState<TGenotype> ExecuteStep(TProblem problem, AlgorithmState<TGenotype>? previousState, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public class IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TGenotype> where TGenotype : class { }
+  where TGenotype : class where TSearchSpace : class, ISearchSpace<TGenotype>  { }
 
-public class IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> where TGenotype : class { }
+public class IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> where TGenotype : class  { }
 
 public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutation, PermutationSearchSpace, TProblem, AlgorithmState<Permutation>>
   where TProblem : class, IProblem<Permutation, PermutationSearchSpace> {

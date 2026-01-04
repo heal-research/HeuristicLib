@@ -40,7 +40,7 @@ public sealed class InfixExpressionParser {
 
   private class Token {
     internal double DoubleVal;
-    internal string StrVal;
+    internal string StrVal = "";
     internal TokenType TokenType;
   }
 
@@ -374,7 +374,7 @@ public sealed class InfixExpressionParser {
 
   private Symbol GetSymbol(string tok) {
     if (KnownSymbols.ContainsFirst(tok))
-      return KnownSymbols.GetByFirst(tok).FirstOrDefault();
+      return KnownSymbols.GetByFirst(tok).First();
     return SubFunctionSymbol;
   }
 
@@ -539,7 +539,7 @@ public sealed class InfixExpressionParser {
   private SymbolicExpressionTreeNode ParseNumber(Queue<Token> tokens) {
     // we distinguish parameters and constants. The values of parameters can be changed.
     // a parameter is written as '<' 'num' [ '=' ['+'|'-'] number ] '>' with an optional initialization 
-    Token numberTok = null;
+    Token numberTok;
     var leftAngleBracket = tokens.Dequeue();
     if (leftAngleBracket.TokenType != TokenType.LeftAngleBracket)
       throw new ArgumentException("opening bracket < expected");
@@ -649,7 +649,7 @@ public sealed class InfixExpressionParser {
     if (funcNode.Symbol is LaggedVariable) {
       ParseLaggedVariable(tokens, funcNode);
     } else if (funcNode.Symbol is SubFunctionSymbol) { // SubFunction
-      var subFunction = funcNode as SubFunctionTreeNode;
+      var subFunction = (SubFunctionTreeNode)funcNode;
       subFunction.Name = idTok.StrVal;
       // input arguments
       var args = ParseArgList(tokens);
@@ -693,7 +693,7 @@ public sealed class InfixExpressionParser {
     if (lagToken.TokenType != TokenType.Number) throw new ArgumentException("Number expected, Format for lagged variables: \"lag(x, -1)\"");
     if (!lagToken.DoubleVal.IsAlmost(Math.Round(lagToken.DoubleVal)))
       throw new ArgumentException("Time lags must be integer values");
-    var laggedVarNode = funcNode as LaggedVariableTreeNode;
+    var laggedVarNode = (LaggedVariableTreeNode)funcNode;
     laggedVarNode.VariableName = varId.StrVal;
     laggedVarNode.Lag = (int)Math.Round(sign * lagToken.DoubleVal);
     laggedVarNode.Weight = 1.0;

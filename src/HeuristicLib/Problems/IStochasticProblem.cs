@@ -2,4 +2,4 @@
 
 namespace HEAL.HeuristicLib.Problems;
 
-public interface IStochasticProblem<in TISolution, out TSearchSpace> : IProblem<TISolution, TSearchSpace> where TSearchSpace : class, ISearchSpace<TISolution>;
+public interface IStochasticProblem<in TSolution, out TSearchSpace> : IProblem<TSolution, TSearchSpace> where TSearchSpace : class, ISearchSpace<TSolution>;

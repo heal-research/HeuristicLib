@@ -202,7 +202,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
           var paramName = "c_{" + paramIdx + "}";
           strBuilder.Append(paramName + " ");
           foreach (var e in factorNode.Symbol.GetVariableValues(factorNode.VariableName)
-                                      .Zip(factorNode.Weights, Tuple.Create)) {
+                                      .Zip(factorNode.Weights ?? [], Tuple.Create)) {
             parameters.Add(new KeyValuePair<string, double>("c_{" + paramIdx + ", " + EscapeLatexString(factorNode.VariableName) + "=" + EscapeLatexString(e.Item1) + "}", e.Item2));
           }
 
@@ -531,7 +531,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
             strBuilder.Append(@" \right) }{dt} ");
             break;
           case TimeLag: {
-            var laggedNode = node as LaggedTreeNode;
+            var laggedNode = (LaggedTreeNode)node;
             currentLag -= laggedNode.Lag;
             break;
           }

@@ -51,13 +51,13 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
     IReadOnlyList<ObjectiveVector> parentQualities;
 
     if (Crossover == null) {
-      var parentISolutions = Selector.Select(previousState.Population.Solutions, problem.Objective, NumberOfChildren, random, problem.SearchSpace, problem);
-      parents = parentISolutions.Select(x => x.Genotype).ToArray();
-      parentQualities = parentISolutions.Select(x => x.ObjectiveVector).ToArray();
+      var parentSolutions = Selector.Select(previousState.Population.Solutions, problem.Objective, NumberOfChildren, random, problem.SearchSpace, problem);
+      parents = parentSolutions.Select(x => x.Genotype).ToArray();
+      parentQualities = parentSolutions.Select(x => x.ObjectiveVector).ToArray();
     } else {
-      var parentISolutions = Selector.Select(previousState.Population.Solutions, problem.Objective, NumberOfChildren * 2, random, problem.SearchSpace, problem);
-      parents = Crossover!.Cross(parentISolutions.ToGenotypePairs(), random, problem.SearchSpace, problem);
-      parentQualities = parentISolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
+      var parentSolutions = Selector.Select(previousState.Population.Solutions, problem.Objective, NumberOfChildren * 2, random, problem.SearchSpace, problem);
+      parents = Crossover!.Cross(parentSolutions.ToGenotypePairs(), random, problem.SearchSpace, problem);
+      parentQualities = parentSolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
     }
 
     var children = Mutator.Mutate(parents, random, problem.SearchSpace, problem);

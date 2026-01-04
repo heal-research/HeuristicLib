@@ -162,7 +162,7 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
           stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
           stringBuilder.Append(" tanh");
         } else if (symbol is Variable) {
-          VariableTreeNode variableTreeNode = node as VariableTreeNode;
+          VariableTreeNode variableTreeNode = (VariableTreeNode)node;
           stringBuilder.Append(variableTreeNode.Weight.ToString(CultureInfo.InvariantCulture));
           stringBuilder.Append("*");
           stringBuilder.Append(variableTreeNode.VariableName);

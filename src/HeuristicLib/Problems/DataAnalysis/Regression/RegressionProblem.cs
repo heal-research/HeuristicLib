@@ -4,16 +4,16 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
-public abstract class RegressionProblem<TProblemData, TISolution, TSearchSpace> : DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>
+public abstract class RegressionProblem<TProblemData, TSolution, TSearchSpace> : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>
   where TProblemData : RegressionProblemData
-  where TSearchSpace : class, ISearchSpace<TISolution> {
+  where TSearchSpace : class, ISearchSpace<TSolution> {
   public const double PunishmentFactor = 10.0;
-  public IReadOnlyList<IRegressionEvaluator<TISolution>> Evaluators { get; set; }
+  public IReadOnlyList<IRegressionEvaluator<TSolution>> Evaluators { get; set; }
 
   private readonly double[] trainingTargetCache;
   private readonly int[] rowIndicesCache; //unsure if this is faster than using the enumerable directly
 
-  protected RegressionProblem(TProblemData problemData, ICollection<IRegressionEvaluator<TISolution>> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace) : base(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), searchSpace) {
+  protected RegressionProblem(TProblemData problemData, ICollection<IRegressionEvaluator<TSolution>> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace) : base(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), searchSpace) {
     Evaluators = objective.ToList();
     trainingTargetCache = problemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ToArray();
     rowIndicesCache = problemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray();
@@ -28,7 +28,7 @@ public abstract class RegressionProblem<TProblemData, TISolution, TSearchSpace> 
 
   public double LowerPredictionBound { get; set; }
 
-  public override ObjectiveVector Evaluate(TISolution solution) {
+  public override ObjectiveVector Evaluate(TSolution solution) {
     IRegressionModel solution1 = Decode(solution);
     var predictions = solution1.Predict(ProblemData.Dataset, rowIndicesCache).LimitToRange(LowerPredictionBound, UpperPredictionBound);
     if (Evaluators.Count == 1)
@@ -38,5 +38,5 @@ public abstract class RegressionProblem<TProblemData, TISolution, TSearchSpace> 
     return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(solution, materialPredictions, trainingTargetCache)));
   }
 
-  protected abstract IRegressionModel Decode(TISolution solution);
+  protected abstract IRegressionModel Decode(TSolution solution);
 }

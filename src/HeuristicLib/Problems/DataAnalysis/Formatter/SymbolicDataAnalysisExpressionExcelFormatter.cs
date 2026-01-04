@@ -105,7 +105,7 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
 
       stringBuilder.Append("))");
     } else if (symbol is Number numSy) {
-      var numTreeNode = node as NumberTreeNode;
+      var numTreeNode = (NumberTreeNode)node;
       stringBuilder.Append(numTreeNode.Value.ToString(CultureInfo.InvariantCulture));
     } else if (symbol is Cosine) {
       stringBuilder.Append("COS(");
@@ -179,21 +179,21 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
       stringBuilder.Append(")");
     } else if (symbol is Variable) {
-      VariableTreeNode variableTreeNode = node as VariableTreeNode;
+      VariableTreeNode variableTreeNode = (VariableTreeNode)node;
       stringBuilder.Append(variableTreeNode.Weight.ToString(CultureInfo.InvariantCulture));
       stringBuilder.Append("*");
       stringBuilder.Append(GetColumnToVariableName(variableTreeNode.VariableName));
     } else if (symbol is BinaryFactorVariable) {
-      var binFactorNode = node as BinaryFactorVariableTreeNode;
+      var binFactorNode = (BinaryFactorVariableTreeNode)node;
       stringBuilder.AppendFormat("IF({0}=\"{1}\", {2}, 0)",
         GetColumnToVariableName(binFactorNode.VariableName),
         binFactorNode.VariableValue,
         binFactorNode.Weight.ToString(CultureInfo.InvariantCulture)
       );
     } else if (symbol is FactorVariable) {
-      var factorNode = node as FactorVariableTreeNode;
+      var factorNode = (FactorVariableTreeNode)node;
       var values = factorNode.Symbol.GetVariableValues(factorNode.VariableName).ToArray();
-      var w = factorNode.Weights;
+      var w = factorNode.Weights ?? [];
       // create nested if
       for (int i = 0; i < values.Length; i++) {
         stringBuilder.AppendFormat("IF({0}=\"{1}\", {2}, ",
@@ -225,7 +225,7 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       stringBuilder.Append(FormatRecursively(node.GetSubtree(2)));
       stringBuilder.Append(")");
     } else if (symbol is VariableCondition) {
-      VariableConditionTreeNode variableConditionTreeNode = node as VariableConditionTreeNode;
+      VariableConditionTreeNode variableConditionTreeNode = (VariableConditionTreeNode)node;
       if (!variableConditionTreeNode.Symbol.IgnoreSlope) {
         double threshold = variableConditionTreeNode.Threshold;
         double slope = variableConditionTreeNode.Slope;
