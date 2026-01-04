@@ -14,9 +14,9 @@ public class MultiMutator<TGenotype, TSearchSpace, TProblem> : Mutator<TGenotype
 
   public MultiMutator(IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null) {
     if (mutators.Count == 0)
-      throw new ArgumentException("At least one crossover must be provided.", nameof(mutators));
+      throw new ArgumentException("At least one mutator must be provided.", nameof(mutators));
     if (weights != null && weights.Count != mutators.Count)
-      throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
+      throw new ArgumentException("Weights must have the same length as mutators.", nameof(weights));
     if (weights != null && weights.Any(p => p < 0))
       throw new ArgumentException("Weights must be non-negative.", nameof(weights));
     if (weights != null && weights.All(p => p <= 0))
@@ -35,13 +35,14 @@ public class MultiMutator<TGenotype, TSearchSpace, TProblem> : Mutator<TGenotype
   public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) {
     int offspringCount = parent.Count;
 
-    // determine which crossover to use for each offspring
+    // determine which mutator to use for each offspring
     int[] operatorAssignment = new int[offspringCount];
     int[] operatorCounts = new int[Mutators.Count];
     double[] randoms = random.Random(offspringCount);
     for (int i = 0; i < offspringCount; i++) {
       double r = randoms[i] * sumWeights;
       int idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
+      if (idx < 0) idx = Mutators.Count - 1; // defensive fallback
       operatorAssignment[i] = idx;
       operatorCounts[idx]++;
     }
