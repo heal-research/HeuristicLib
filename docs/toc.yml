@@ -1,4 +1,24 @@
-- name: Introduction
-  href: introduction.md
-- name: Getting Started
+- name: Overview
+  href: overview.md
+- name: Getting started
   href: getting-started.md
+- name: Design goals
+  href: design-goals.md
+- name: Fundamentals
+  items:
+    - name: Core concepts
+      href: core-concepts.md
+    - name: Problem
+      href: problem.md
+    - name: Search spaces
+      href: search-space.md
+    - name: Objectives & solutions
+      href: objectives-and-solutions.md
+    - name: Operators
+      href: operators.md
+    - name: Algorithm
+      href: algorithm.md
+    - name: Algorithm state
+      href: algorithm-state.md
+    - name: Execution model
+      href: execution-model.md

@@ -6,4 +6,4 @@ _layout: landing
 
 This is a **proof-of-concept** project for `HeuristicLib`.
 
-Doc link of [Important Concepts](docs/introduction.md)
+Start here: [Documentation overview](docs/overview.md)

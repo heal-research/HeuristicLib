@@ -64,6 +64,10 @@ public static class IIterableExtensions {
         if (iterable.Interceptor is not null) {
           newIterationState = iterable.Interceptor.Transform(newIterationState, previousState, problem.SearchSpace, problem);
         }
+        
+        if (iterable is IObservable<TG, TS, TP, TR> { Observer: not null } observable) {
+          observable.Observer.OnIterationCompleted(newIterationState, previousState, problem.SearchSpace, problem);
+        }
       
         yield return newIterationState;
       
