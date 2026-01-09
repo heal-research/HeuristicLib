@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 
 public class SlidingWindowSymbolicRegressionProblem : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
   public SlidingWindowSymbolicRegressionProblem(SymbolicRegressionProblem problem,

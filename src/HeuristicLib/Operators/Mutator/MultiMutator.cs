@@ -116,4 +116,12 @@ public static class MultiMutator {
   public static MultiMutator<TGenotype, TEncoding, TProblem> WithRate<TGenotype, TEncoding, TProblem>(this IMutator<TGenotype, TEncoding, TProblem> mutator, double mutationRate) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
     return Create([mutator, NoChangeMutator<TGenotype>.Instance], [mutationRate, 1 - mutationRate]);
   }
+
+  public static MultiMutator<TGenotype, TEncoding> WithRate<TGenotype, TEncoding>(this IMutator<TGenotype, TEncoding> mutator, double mutationRate) where TEncoding : class, IEncoding<TGenotype> {
+    return Create([mutator, NoChangeMutator<TGenotype>.Instance], [mutationRate, 1 - mutationRate]);
+  }
+
+  public static MultiMutator<TGenotype> WithRate<TGenotype>(this IMutator<TGenotype> mutator, double mutationRate) {
+    return Create([mutator, NoChangeMutator<TGenotype>.Instance], [mutationRate, 1 - mutationRate]);
+  }
 }

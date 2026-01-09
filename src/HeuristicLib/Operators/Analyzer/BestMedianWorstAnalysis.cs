@@ -11,9 +11,10 @@ public class BestMedianWorstAnalysis<TGenotype> : AttachedAnalysis<TGenotype, Po
   public readonly List<BestMedianWorstEntry<TGenotype>> BestISolutions = [];
 
   public override void AfterInterception(PopulationIterationResult<TGenotype> currentIterationResult, PopulationIterationResult<TGenotype>? previousIterationResult, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
-    var ordered = currentIterationResult.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
+    var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
+    var ordered = currentIterationResult.Population.OrderBy(x => x.ObjectiveVector, comp).ToArray();
     if (ordered.Length == 0) {
-      BestISolutions.Add(default);
+      BestISolutions.Add(null!);
       return;
     }
 

@@ -27,7 +27,13 @@ public class QualityCurveAnalysis<TGenotype> : AttachedAnalysis<TGenotype> where
       var genotype = genotypes[i];
       var q = res[i];
       evalCount++;
-      if (best is not null && problem.Objective.TotalOrderComparer.Compare(q, best.ObjectiveVector) >= 0) continue;
+
+      if (best is not null) {
+        var comp = problem.Objective.TotalOrderComparer;
+        if (NoTotalOrderComparer.Instance.Equals(comp)) comp = new LexicographicComparer(problem.Objective.Directions);
+        if (comp.Compare(q, best.ObjectiveVector) >= 0) continue;
+      }
+
       best = new Solution<TGenotype>(genotype, q);
       CurrentState.Add((best, evalCount));
     }

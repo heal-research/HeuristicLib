@@ -1,13 +1,36 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using System.Text;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossover;
 
 public static class MultiCrossover {
-  public static ICrossover<TGenotype, TEncoding, TProblem> WithProbability<TGenotype, TEncoding, TProblem>(this ICrossover<TGenotype, TEncoding, TProblem> crossover, double probability) where TEncoding : class, IEncoding<TGenotype> where TProblem : class, IProblem<TGenotype, TEncoding> {
+  public static ICrossover<TGenotype, TEncoding, TProblem> WithProbability<TGenotype, TEncoding, TProblem>(this ICrossover<TGenotype, TEncoding, TProblem> crossover, double probability)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TEncoding> {
     return new MultiCrossover<TGenotype, TEncoding, TProblem>([crossover, NoCrossOver<TGenotype>.Instance], [probability, 1 - probability]);
   }
+
+  public static ICrossover<TGenotype, TEncoding> WithProbability<TGenotype, TEncoding>(this ICrossover<TGenotype, TEncoding> crossover, double probability)
+    where TEncoding : class, IEncoding<TGenotype> {
+    return new MultiCrossover<TGenotype, TEncoding>([crossover, NoCrossOver<TGenotype>.Instance], [probability, 1 - probability]);
+  }
+
+  public static ICrossover<TGenotype> WithProbability<TGenotype>(this ICrossover<TGenotype> crossover, double probability) {
+    return new MultiCrossover<TGenotype>([crossover, NoCrossOver<TGenotype>.Instance], [probability, 1 - probability]);
+  }
+}
+
+public class MultiCrossover<TGenotype>(IReadOnlyList<ICrossover<TGenotype>> crossovers, IReadOnlyList<double>? weights = null)
+  : MultiCrossover<TGenotype, IEncoding<TGenotype>>(crossovers, weights), ICrossover<TGenotype> {
+  public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) => Cross(parents, random, null!, null!);
+}
+
+public class MultiCrossover<TGenotype, TEncoding>(IReadOnlyList<ICrossover<TGenotype, TEncoding>> crossovers, IReadOnlyList<double>? weights = null)
+  : MultiCrossover<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>(crossovers, weights), ICrossover<TGenotype, TEncoding>
+  where TEncoding : class, IEncoding<TGenotype> {
+  public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TEncoding encoding) => Cross(parents, random, encoding, null!);
 }
 
 public class MultiCrossover<TGenotype, TEncoding, TProblem> : BatchCrossover<TGenotype, TEncoding, TProblem>

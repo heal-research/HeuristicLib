@@ -1,10 +1,24 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Interceptor;
+using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
+
+public static class ReevaluationInterceptor {
+  public static void AttachTo<T, TRes, TE, TP>(IAlgorithmBuilder<T, TE, TP, TRes> proto, TP problem)
+    where T : class
+    where TRes : PopulationIterationResult<T>
+    where TE : class, IEncoding<T>
+    where TP : DynamicProblem<T, TE> {
+    proto.Interceptor = new ReevaluationInterceptor<T, TRes, TE, TP>(
+      proto.Interceptor,
+      proto.Evaluator,
+      problem);
+  }
+}
 
 public class ReevaluationInterceptor<T, TR, TE, TP> : IInterceptor<T, TR, TE, TP>
   where TR : PopulationIterationResult<T>

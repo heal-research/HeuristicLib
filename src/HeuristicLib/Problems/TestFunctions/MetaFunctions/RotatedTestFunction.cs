@@ -10,7 +10,8 @@ public class RotatedTestFunction : MetaTestFunction {
 
   public override double Evaluate(RealVector solution) => Inner.Evaluate(Rotate(rotation, solution));
 
-  private static void Rotate(double[,] r, IReadOnlyList<double> v, double[] result) {
+  public static double[] Rotate(double[,] r, IReadOnlyList<double> v) {
+    var result = new double[r.GetLength(0)];
     var nRows = r.GetLength(0);
     var nCols = r.GetLength(1);
 
@@ -27,11 +28,7 @@ public class RotatedTestFunction : MetaTestFunction {
 
       result[i] = sum;
     }
-  }
 
-  private static double[] Rotate(double[,] r, IReadOnlyList<double> v) {
-    var result = new double[r.GetLength(0)];
-    Rotate(r, v, result);
     return result;
   }
 }
