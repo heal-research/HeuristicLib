@@ -226,8 +226,27 @@ public class SymbolicRegressionTests {
   public void TestPlayground2() {
     const int iterations = 4;
     var i = 0;
-    PythonCorrelationAnalysis.RunCorrelationNsga2((_, _) => { i++; }, iterations, 100, PythonCorrelationAnalysis.SphereRastriginProblem(10, -5, 5, 0.5));
+    PythonCorrelationAnalysis.RunCorrelationNsga2((_, _) => { i++; }, iterations, 100, ProblemGeneration.SphereRastriginProblem(10, -5, 5, 0.5));
     Assert.Equal(iterations, i);
+  }
+
+  [Fact]
+  public void TestPlayground3() {
+    var t = DateTime.Now;
+    var it = 20;
+    var res = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable("d:\\Projekte\\HCAI\\HeuristicLib\\HCAI-Scripts\\data\\FeynmanICh40Eq1.csv",
+      new PythonGenealogyAnalysis.SymRegExperimentParameters() {
+        PopulationSize = 100,
+        Iterations = it,
+        TrackPopulations = true,
+        TrackGenealogy = false,
+        Seed = 42
+      },
+      5);
+
+    var t2 = DateTime.Now;
+    var speed = (t2 - t) / it;
+    Assert.True(speed < TimeSpan.FromSeconds(10));
   }
 
   private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false, int constOptIteration = 5) {

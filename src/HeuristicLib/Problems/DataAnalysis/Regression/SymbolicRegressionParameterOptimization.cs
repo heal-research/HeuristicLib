@@ -113,9 +113,6 @@ public static class SymbolicRegressionParameterOptimization {
       return originalQuality;
     }
 
-    var debug = cOpt.Zip(cOpt1, (a, b) =>
-      Math.Abs(a - b));
-
     counter.FunctionEvaluations += rowEvaluationsCounter.FunctionEvaluations / n;
     counter.GradientEvaluations += rowEvaluationsCounter.GradientEvaluations / n;
 

@@ -10,17 +10,20 @@ public class OnlinePearsonsRCalculator {
 
   public double R {
     get {
-      var xVar = sxCalculator.PopulationVariance;
-      var yVar = syCalculator.PopulationVariance;
-      if (xVar.IsAlmost(0.0) || yVar.IsAlmost(0.0)) return 0.0;
+      double xVar = sxCalculator.PopulationVariance;
+      double yVar = syCalculator.PopulationVariance;
+
+      if (xVar == 0 || yVar == 0)
+        return 0.0;
 
       var r = covCalculator.Covariance / (Math.Sqrt(xVar) * Math.Sqrt(yVar));
-      r = r switch {
+      if (double.IsNaN(r)) r = 0;
+
+      return r switch {
         < -1.0 => -1.0,
         > 1.0 => 1.0,
         _ => r
       };
-      return r;
     }
   }
 
@@ -52,7 +55,8 @@ public class OnlinePearsonsRCalculator {
       var original = firstEnumerator.Current;
       var estimated = secondEnumerator.Current;
       calculator.Add(original, estimated);
-      if (calculator.ErrorState != OnlineCalculatorError.None) break;
+      if (calculator.ErrorState != OnlineCalculatorError.None)
+        break;
     }
 
     // check if both enumerators are at the end to make sure both enumerations have the same length

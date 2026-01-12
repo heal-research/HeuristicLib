@@ -26,7 +26,7 @@ public class OnlineMeanAndVarianceCalculator {
   }
 
   public void Add(double x) {
-    if (double.IsNaN(x) || double.IsInfinity(x) || x > 1E13 || x < -1E13 || (PopulationVarianceErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
+    if (double.IsNaN(x) || double.IsInfinity(x) || (PopulationVarianceErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       PopulationVarianceErrorState |= OnlineCalculatorError.InvalidValueAdded;
       VarianceErrorState |= OnlineCalculatorError.InvalidValueAdded;
     } else {
