@@ -65,7 +65,7 @@ This example demonstrates the library’s default working style:
 
 - The **algorithm** produces a sequence of **iteration states**.
 - A **terminator** decides whether another iteration should run.
-- All randomness flows through `IRandomNumberGenerator`.
+- All randomness flows through `IRandomNumberGenerator` (see [Randomness (RNG) design](randomness.md) for seeding + forking).
 
 ## 2) Use a minimal custom problem
 

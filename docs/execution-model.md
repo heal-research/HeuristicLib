@@ -9,6 +9,9 @@ At the abstraction level, an algorithm is a function that produces a sequence of
 - `ExecuteStep(problem, previousState, random)` computes the next state.
 - `previousState == null` signals that the algorithm should initialize.
 
+> [!NOTE]
+> The `random` parameter is an `IRandomNumberGenerator`. For deterministic parallel workflows, see [Randomness (RNG) design](randomness.md).
+
 Most algorithms in this repository start with `CurrentIteration = 0` and then increment by 1.
 
 ## Two modes: batch vs streaming

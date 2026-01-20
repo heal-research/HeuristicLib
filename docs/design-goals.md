@@ -33,6 +33,8 @@ HeuristicLib favors straightforward composition in C#:
 
 Randomness is explicit via `IRandomNumberGenerator`.
 
+See [Randomness (RNG) design](randomness.md) for the deterministic forking model used for parallel workflows.
+
 In this repository, `SystemRandomNumberGenerator` is a simple default implementation and supports spawning child generators (`Spawn(...)`) for parallel workflows.
 
 ## Focused scope
@@ -44,4 +46,3 @@ Compared to HeuristicLab, this repository intentionally narrows the scope:
 - No “serialize the whole object graph” model.
 
 The library aims to be easy to embed (services, experiments, notebooks) and easy to test.
-

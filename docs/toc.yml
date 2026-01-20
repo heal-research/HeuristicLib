@@ -22,3 +22,5 @@
       href: algorithm-state.md
     - name: Execution model
       href: execution-model.md
+    - name: Randomness (RNG) design
+      href: randomness.md

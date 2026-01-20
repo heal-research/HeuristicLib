@@ -37,6 +37,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{46DC3720-0
 		docs\execution-model.md = docs\execution-model.md
 		docs\design-goals.md = docs\design-goals.md
 		docs\legacy-introduction-notes.md = docs\legacy-introduction-notes.md
+		docs\randomness.md = docs\randomness.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Tests", "test\HeuristicLib.Tests\HeuristicLib.Tests.csproj", "{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}"

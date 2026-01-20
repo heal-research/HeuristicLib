@@ -11,7 +11,7 @@ This documentation focuses on the mental model and the stable contracts that sha
 ## What you get
 
 - **Composable algorithms** built out of small operator roles (creator, evaluator, selector, crossover, mutator, replacer, terminator).
-- **Explicit randomness** via `IRandomNumberGenerator` for reproducibility and deterministic testing.
+- **Explicit randomness** via `IRandomNumberGenerator` for reproducibility and deterministic testing (see [Randomness (RNG) design](randomness.md)).
 - **Two execution styles**: run to completion, or stream iteration states.
 - **Strong typing**: genotype, search space, and problem fit together through generics.
 
@@ -67,5 +67,3 @@ foreach (PopulationIterationState<Permutation> state in ga.ExecuteStreaming(prob
 - If you want the shortest path to running your own problem: see [Getting started](getting-started.md).
 - If you want the conceptual map first: see [Core concepts](core-concepts.md).
 - If you want to understand iteration/termination/interception precisely: see [Execution model](execution-model.md).
-
-

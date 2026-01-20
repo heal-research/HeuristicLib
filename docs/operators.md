@@ -45,7 +45,7 @@ To keep results reproducible:
 
 - Do not use `System.Random` directly inside operators.
 - Always take randomness from the provided `IRandomNumberGenerator`.
-- If you parallelize internally, prefer the library’s RNG spawning (`random.Spawn(...)`) pattern.
+- If you parallelize internally, fork deterministic child generators (see [Randomness (RNG) design](randomness.md)).
 
 ## Common composition helpers
 
