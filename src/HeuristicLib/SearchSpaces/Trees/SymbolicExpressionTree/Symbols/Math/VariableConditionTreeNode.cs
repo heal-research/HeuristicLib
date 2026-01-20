@@ -29,18 +29,18 @@ public sealed class VariableConditionTreeNode : SymbolicExpressionTreeNode {
 
   public override void ResetLocalParameters(IRandomNumberGenerator random) {
     base.ResetLocalParameters(random);
-    Threshold = NormalDistributedRandomPolar.NextDouble(random, Symbol.ThresholdInitializerMu, Symbol.ThresholdInitializerSigma);
+    Threshold = NormalDistribution.NextDouble(random, Symbol.ThresholdInitializerMu, Symbol.ThresholdInitializerSigma);
     VariableName = Symbol.VariableNames.SampleRandom(random);
-    Slope = NormalDistributedRandomPolar.NextDouble(random, Symbol.SlopeInitializerMu, Symbol.SlopeInitializerSigma);
+    Slope = NormalDistribution.NextDouble(random, Symbol.SlopeInitializerMu, Symbol.SlopeInitializerSigma);
   }
 
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
     base.ShakeLocalParameters(random, shakingFactor);
-    var x = NormalDistributedRandomPolar.NextDouble(random, Symbol.ThresholdManipulatorMu, Symbol.ThresholdManipulatorSigma);
+    var x = NormalDistribution.NextDouble(random, Symbol.ThresholdManipulatorMu, Symbol.ThresholdManipulatorSigma);
     Threshold += x * shakingFactor;
     VariableName = Symbol.VariableNames.SampleRandom(random);
 
-    x = NormalDistributedRandomPolar.NextDouble(random, Symbol.SlopeManipulatorMu, Symbol.SlopeManipulatorSigma);
+    x = NormalDistribution.NextDouble(random, Symbol.SlopeManipulatorMu, Symbol.SlopeManipulatorSigma);
     Slope += x * shakingFactor;
   }
 

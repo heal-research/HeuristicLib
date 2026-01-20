@@ -9,7 +9,7 @@ public static class RandomEnumerable {
   public static IEnumerable<int> SampleRandomNumbers(this IRandomNumberGenerator generator, int start, int end, int count) {
     var remaining = end - start;
     for (var i = start; i < end && count > 0; i++) {
-      var probability = generator.Random();
+      var probability = generator.NextDouble();
       if (probability < (double)count / remaining) {
         count--;
         yield return i;
@@ -52,7 +52,7 @@ public static class RandomEnumerable {
     public IEnumerable<T> SampleRandom(IRandomNumberGenerator random, int count) {
       if (source is IList<T> listSource) {
         while (count > 0) {
-          yield return listSource[random.Integer(listSource.Count)];
+          yield return listSource[random.NextInt(listSource.Count)];
           count--;
         }
       } else {
@@ -63,7 +63,7 @@ public static class RandomEnumerable {
           var counter = 1;
           while (enumerator.MoveNext()) {
             counter++;
-            if (counter * random.Random() < 1.0)
+            if (counter * random.NextDouble() < 1.0)
               selectedItem = enumerator.Current;
           }
 
@@ -91,7 +91,7 @@ public static class RandomEnumerable {
       if (sourceCount == -1) sourceCount = source.Count();
       var remaining = sourceCount;
       foreach (var item in source) {
-        if (random.Random() * remaining < count) {
+        if (random.NextDouble() * remaining < count) {
           count--;
           yield return item;
           if (count <= 0) break;
@@ -160,7 +160,7 @@ public static class RandomEnumerable {
 
       while (true) {
         var index = 0;
-        double ball = valueArray[index], sum = random.Random() * total;
+        double ball = valueArray[index], sum = random.NextDouble() * total;
         while (ball < sum)
           ball += valueArray[++index];
         yield return sourceArray[index];
@@ -174,7 +174,7 @@ public static class RandomEnumerable {
 
       while (list.Count > 0) {
         var cur = list.First;
-        double ball = cur!.Value.Item2, sum = random.Random() * total; // assert: sum < total. When there is only one item remaining: sum < ball
+        double ball = cur!.Value.Item2, sum = random.NextDouble() * total; // assert: sum < total. When there is only one item remaining: sum < ball
         while (ball < sum && cur.Next != null) {
           cur = cur.Next;
           ball += cur.Value.Item2;
@@ -242,7 +242,7 @@ public static class RandomEnumerable {
     var elements = source.ToArray();
     for (var i = elements.Length - 1; i > 0; i--) {
       // Swap element "i" with a random earlier element (including itself)
-      var swapIndex = random.Integer(i + 1);
+      var swapIndex = random.NextInt(i + 1);
       yield return elements[swapIndex];
       elements[swapIndex] = elements[i];
       // we don't actually perform the swap, we can forget about the

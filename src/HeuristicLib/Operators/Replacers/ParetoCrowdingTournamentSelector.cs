@@ -27,11 +27,11 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype> {
     var calculatedFront = new HashSet<int>();
 
     for (int i = 0; i < count; i++) {
-      var bestIdx = random.Integer(population.Count);
+      var bestIdx = random.NextInt(population.Count);
       var bestRank = rank[bestIdx];
 
       for (int j = 1; j < tournamentSize; j++) {
-        var idx = random.Integer(population.Count);
+        var idx = random.NextInt(population.Count);
         var idxRank = rank[idx];
         if (idxRank < bestRank) {
           bestIdx = idx;

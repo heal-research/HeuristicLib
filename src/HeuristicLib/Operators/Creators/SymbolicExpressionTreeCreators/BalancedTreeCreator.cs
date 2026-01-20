@@ -21,7 +21,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
     // therefore we randomly pick a neighbouring odd length value
     var tree = searchSpace.Grammar.MakeStump(random); // create a stump consisting of just a ProgramRootSymbol and a StartSymbol
 
-    var targetLength = random.Integer(searchSpace.Grammar.GetMinimumExpressionLength(tree.Root[0].Symbol), searchSpace.TreeLength);
+    var targetLength = random.NextInt(searchSpace.Grammar.GetMinimumExpressionLength(tree.Root[0].Symbol), searchSpace.TreeLength);
     CreateExpression(random, tree.Root[0], searchSpace, targetLength - tree.Length, searchSpace.TreeDepth - tree.Depth, irregularityBias); // -2 because the stump has length 2 and depth 2
     return tree;
   }
@@ -54,7 +54,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
     var grammar = searchSpace.Grammar;
     var minSubtreeCount = grammar.GetMinimumSubtreeCount(root.Symbol);
     var maxSubtreeCount = grammar.GetMaximumSubtreeCount(root.Symbol);
-    var arity = random.Integer(minSubtreeCount, maxSubtreeCount, true);
+    var arity = random.NextInt(minSubtreeCount, maxSubtreeCount, true);
     var openSlots = arity;
 
     var allowedSymbols = grammar.AllowedSymbols.Where(x => x is not (ProgramRootSymbol or GroupSymbol or DefunSymbol or StartSymbol)).ToList();
@@ -62,7 +62,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
 
     if (!hasUnarySymbols && targetLength % 2 == 0) {
       // without functions of arity 1 some target lengths cannot be reached
-      targetLength = random.Random() < 0.5 ? targetLength - 1 : targetLength + 1;
+      targetLength = random.NextDouble() < 0.5 ? targetLength - 1 : targetLength + 1;
     }
 
     var tuples = new List<NodeInfo>(targetLength) { new(root, 0, arity) };
@@ -86,7 +86,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
           // this should be allowed only when we have enough open expansion points (more than one)
           // the random check against the irregularity bias helps to increase shape variability when the conditions are met
           var minAllowedArity = allowedChildSymbols.Min(grammar.GetMaximumSubtreeCount);
-          if (minAllowedArity == 0 && (openSlots - tuples.Count <= 1 || random.Random() > irregularityBias)) {
+          if (minAllowedArity == 0 && (openSlots - tuples.Count <= 1 || random.NextDouble() > irregularityBias)) {
             minAllowedArity = 1;
           }
 
@@ -105,7 +105,7 @@ public class BalancedTreeCreator : SymbolicExpressionTreeCreator {
         minChildArity = Math.Min(minChildArity, maxChildArity);
 
         // pick a random arity for the new child node
-        var childArity = random.Integer(minChildArity, maxChildArity, true);
+        var childArity = random.NextInt(minChildArity, maxChildArity, true);
         var childDepth = depth + 1;
         node.AddSubtree(child);
         tuples.Add(new NodeInfo(child, childDepth, childArity));

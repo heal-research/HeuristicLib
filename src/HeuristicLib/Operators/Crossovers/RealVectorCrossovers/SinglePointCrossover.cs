@@ -9,7 +9,7 @@ public class SinglePointCrossover : SingleSolutionCrossover<RealVector, RealVect
   public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
     var parent1 = parents.Parent1;
     var parent2 = parents.Parent2;
-    int crossoverPoint = random.Integer(1, parent1.Count);
+    int crossoverPoint = random.NextInt(1, parent1.Count);
     double[] offspringValues = new double[parent1.Count];
     for (int i = 0; i < crossoverPoint; i++) {
       offspringValues[i] = parent1[i];

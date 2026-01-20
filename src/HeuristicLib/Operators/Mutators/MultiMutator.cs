@@ -38,7 +38,7 @@ public class MultiMutator<TGenotype, TSearchSpace, TProblem> : Mutator<TGenotype
     // determine which mutator to use for each offspring
     int[] operatorAssignment = new int[offspringCount];
     int[] operatorCounts = new int[Mutators.Count];
-    double[] randoms = random.Random(offspringCount);
+    double[] randoms = random.NextDoubles(offspringCount);
     for (int i = 0; i < offspringCount; i++) {
       double r = randoms[i] * sumWeights;
       int idx = Array.FindIndex(cumulativeSumWeights, w => r < w);

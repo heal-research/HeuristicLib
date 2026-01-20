@@ -42,7 +42,7 @@ public class ProportionalSelector<TGenotype>(bool windowing = true) : Selector<T
 
     var selected = new ISolution<TGenotype>[count];
     for (var i = 0; i < selected.Length; i++) {
-      var selectedQuality = random.Random() * qualitySum;
+      var selectedQuality = random.NextDouble() * qualitySum;
       var index = 0;
       var currentQuality = list[index];
       while (currentQuality < selectedQuality) {

@@ -7,6 +7,6 @@ public class SpecialGenotypeCreator(int parameter) : SingleSolutionCreator<Speci
   public int Parameter { get; set; } = parameter;
 
   public override SpecialGenotype Create(IRandomNumberGenerator random, SpecialSearchSpace searchSpace, SpecialProblem problem) {
-    return new SpecialGenotype(random.Integer(0, Parameter));
+    return new SpecialGenotype(random.NextInt(0, Parameter));
   }
 }

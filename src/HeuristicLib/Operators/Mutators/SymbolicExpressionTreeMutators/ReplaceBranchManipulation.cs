@@ -22,7 +22,7 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
     var childTree = new SymbolicExpressionTree(symbolicExpressionTree);
     do {
       parent = childTree.Root.IterateNodesPrefix().Skip(1).Where(n => n.SubtreeCount > 0).SampleRandom(random);
-      childIndex = random.Integer(parent.SubtreeCount);
+      childIndex = random.NextInt(parent.SubtreeCount);
       var child = parent[childIndex];
       maxLength = searchSpace.TreeLength - childTree.Length + child.GetLength();
       maxDepth = searchSpace.TreeDepth - childTree.Depth + child.GetDepth();

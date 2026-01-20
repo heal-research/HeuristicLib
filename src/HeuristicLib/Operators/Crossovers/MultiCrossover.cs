@@ -41,7 +41,7 @@ public class MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGeno
     // determine which crossover to use for each offspring
     int[] operatorAssignment = new int[offspringCount];
     int[] operatorCounts = new int[Crossovers.Count];
-    double[] randoms = random.Random(offspringCount);
+    double[] randoms = random.NextDoubles(offspringCount);
     for (int i = 0; i < offspringCount; i++) {
       double r = randoms[i] * sumWeights;
       int idx = Array.FindIndex(cumulativeSumWeights, w => r < w);

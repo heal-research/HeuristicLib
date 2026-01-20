@@ -23,7 +23,7 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
     do {
       parent = nodes.SampleRandom(random);
 
-      childIndex = random.Integer(parent.SubtreeCount);
+      childIndex = random.NextInt(parent.SubtreeCount);
       var child = parent[childIndex];
       maxLength = searchSpace.TreeLength - childTree.Length + child.GetLength();
       maxDepth = searchSpace.TreeDepth - childTree.Depth + child.GetDepth();

@@ -8,7 +8,7 @@ public class RandomPermutationCreator : SingleSolutionCreator<Permutation, Permu
   public override Permutation Create(IRandomNumberGenerator random, PermutationSearchSpace searchSpace) {
     int[] elements = Enumerable.Range(0, searchSpace.Length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
-      int j = random.Integer(i + 1);
+      int j = random.NextInt(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
     }
 

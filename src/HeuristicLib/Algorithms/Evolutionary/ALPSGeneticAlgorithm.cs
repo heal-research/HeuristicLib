@@ -118,7 +118,8 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   public override AlpsIterationState<TGenotype> ExecuteStep(TProblem problem, AlpsIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
     var agedProblem = new AgedProblem<TGenotype, TSearchSpace, TProblem>(problem);
     var agedSearchSpace = new AgedSearchSpace<TGenotype, TSearchSpace>(problem.SearchSpace);
-    var iterationRandom = random.Spawn();
+    int iteration = previousState?.CurrentIteration + 1 ?? 0;
+    var iterationRandom = random.Fork((ulong)iteration);
     return previousState switch {
       null => ExecuteInitialization(agedProblem, agedSearchSpace, iterationRandom),
       _ => ExecuteGeneration(agedProblem, agedSearchSpace, previousState, iterationRandom)

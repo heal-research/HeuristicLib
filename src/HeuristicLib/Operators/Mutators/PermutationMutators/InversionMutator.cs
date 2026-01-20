@@ -6,8 +6,8 @@ namespace HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 
 public class InversionMutator : SingleSolutionMutator<Permutation, PermutationSearchSpace> {
   public override Permutation Mutate(Permutation parent, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) {
-    int start = random.Integer(parent.Count);
-    int end = random.Integer(start, parent.Count);
+    int start = random.NextInt(parent.Count);
+    int end = random.NextInt(start, parent.Count);
     int[] newElements = parent.ToArray();
     Array.Reverse(newElements, start, end - start + 1);
     return new Permutation(newElements);

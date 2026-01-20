@@ -104,8 +104,8 @@ public class PartiallyMatchedCrossover : Crossover<Permutation, PermutationSearc
     // todo: batch create randoms
     for (int i = 0; i < lengths.Length; i++) {
       if (lengths[i] < 2) throw new ArgumentException("Length must be at least 2 to have break points.");
-      int start = rng.Integer(0, lengths[i] - 1);
-      int end = rng.Integer(start + 1, lengths[i]);
+      int start = rng.NextInt(0, lengths[i] - 1);
+      int end = rng.NextInt(start + 1, lengths[i]);
       breakPoints[i] = (start, end);
     }
   }

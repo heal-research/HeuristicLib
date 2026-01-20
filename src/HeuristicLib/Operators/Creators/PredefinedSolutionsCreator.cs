@@ -26,7 +26,7 @@ public class PredefinedISolutionsCreator<TGenotype, TSearchSpace, TProblem>(IRea
     var countRemaining = count - countPredefined;
     if (countRemaining <= 0)
       return offspring;
-    var remainingRandom = random.Spawn(); //random.Fork("remaining");
+    var remainingRandom = random;//random.Fork(); //random.Fork("remaining");
     var remaining = creatorForRemainingISolutions.Create(countRemaining, remainingRandom, searchSpace, problem);
     for (var i = 0; i < remaining.Count; i++) {
       offspring[countPredefined + i] = remaining[i];

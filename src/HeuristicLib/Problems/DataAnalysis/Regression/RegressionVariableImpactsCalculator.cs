@@ -116,8 +116,8 @@ public sealed class RegressionVariableImpactsCalculator(
                                                             IReadOnlyList<int> rows,
                                                             List<double> originalValues,
                                                             ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle) {
-    var random = new System.Random(31475);
-    var r2 = new SystemRandomNumberGenerator(31475);
+    var random = RandomNumberGenerator.Create(31475, RandomProfile.SystemRandom);
+    var r2 = RandomNumberGenerator.Create(31475, RandomProfile.SystemRandom);
     List<double> replacementValues;
     double replacementValue;
 
@@ -150,7 +150,7 @@ public sealed class RegressionVariableImpactsCalculator(
         replacementValues = Enumerable.Repeat(double.NaN, modifiableDataset.Rows).ToList();
         // update column values 
         foreach (var r in rows)
-          replacementValues[r] = NormalDistributedRandomPolar.NextDouble(r2, avg, stdDev);
+          replacementValues[r] = NormalDistribution.NextDouble(r2, avg, stdDev);
 
         break;
 

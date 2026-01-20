@@ -94,20 +94,20 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
       }
     );
 
-    if (random.Random() < internalNodeProbability) {
+    if (random.NextDouble() < internalNodeProbability) {
       // select from internal node if possible
       // select internal crossover point or leaf
       crossoverPoint = internalCrossoverPoints.Count > 0
-        ? internalCrossoverPoints[random.Integer(internalCrossoverPoints.Count)]
+        ? internalCrossoverPoints[random.NextInt(internalCrossoverPoints.Count)]
         :
         // otherwise select external node
-        leafCrossoverPoints[random.Integer(leafCrossoverPoints.Count)];
+        leafCrossoverPoints[random.NextInt(leafCrossoverPoints.Count)];
     } else if (leafCrossoverPoints.Count > 0) {
       // select from leaf crossover point if possible
-      crossoverPoint = leafCrossoverPoints[random.Integer(leafCrossoverPoints.Count)];
+      crossoverPoint = leafCrossoverPoints[random.NextInt(leafCrossoverPoints.Count)];
     } else {
       // otherwise select internal crossover point
-      crossoverPoint = internalCrossoverPoints[random.Integer(internalCrossoverPoints.Count)];
+      crossoverPoint = internalCrossoverPoints[random.NextInt(internalCrossoverPoints.Count)];
     }
   }
 
@@ -115,7 +115,7 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     if (internalNodeProbability is < 0.0 or > 1.0) throw new ArgumentException("internalNodeProbability");
     List<SymbolicExpressionTreeNode> allowedInternalBranches;
     List<SymbolicExpressionTreeNode> allowedLeafBranches;
-    if (random.Random() < internalNodeProbability) {
+    if (random.NextDouble() < internalNodeProbability) {
       // select internal node if possible
       allowedInternalBranches = (from branch in branches
                                  where branch is { SubtreeCount: > 0 }

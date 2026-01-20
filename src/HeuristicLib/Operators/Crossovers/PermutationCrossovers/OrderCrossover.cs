@@ -66,8 +66,8 @@ public class OrderCrossover : SingleSolutionCrossover<Permutation, PermutationSe
   public static (int, int) GetRandomBreakPoints(int length, IRandomNumberGenerator rng) {
     if (length < 2) throw new ArgumentException("Length must be at least 2 to have break points.");
 
-    int start = rng.Integer(0, length - 1);
-    int end = rng.Integer(start + 1, length);
+    int start = rng.NextInt(0, length - 1);
+    int end = rng.NextInt(start + 1, length);
 
     return (start, end);
   }

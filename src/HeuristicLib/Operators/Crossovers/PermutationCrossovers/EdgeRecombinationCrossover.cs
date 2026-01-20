@@ -41,7 +41,7 @@ public class EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation> {
       edgeList[i, 3] = (edgeList[i, 0] != currentEdge) && (edgeList[i, 1] != currentEdge) ? currentEdge : -1; // new edge found ?
     }
 
-    int currentNumber = random.Integer(length); // get number to start
+    int currentNumber = random.NextInt(length); // get number to start
     for (int i = 0; i < length; i++) {
       result[i] = currentNumber;
       remainingNumbers[currentNumber] = false;
@@ -71,7 +71,7 @@ public class EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation> {
         }
 
         if ((currentEdgeCount >= minEdgeCount) &&
-            ((currentEdgeCount != minEdgeCount) || random.Boolean())) {
+            ((currentEdgeCount != minEdgeCount) || random.NextBool())) {
           continue;
         }
 

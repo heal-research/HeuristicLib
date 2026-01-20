@@ -171,10 +171,10 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     // Box-Muller transform to generate normal distributed random values
     RealVector u1, u2;
     do {
-      u1 = new RealVector(random.Random(length));
+      u1 = new RealVector(random.NextDoubles(length));
     } while ((u1 <= 0.0).Any());
 
-    u2 = new RealVector(random.Random(length));
+    u2 = new RealVector(random.NextDoubles(length));
 
     var mag = std * Sqrt(-2.0 * Log(u1));
     //var z0 = mag * Cos(2.0 * Math.PI * u2) + mean;
@@ -187,7 +187,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     if (!AreCompatible(length, low, high))
       throw new ArgumentException("Vectors must be compatible for broadcasting");
 
-    RealVector value = new RealVector(random.Random(length));
+    RealVector value = new RealVector(random.NextDoubles(length));
     value = low + (high - low) * value;
     return value;
   }

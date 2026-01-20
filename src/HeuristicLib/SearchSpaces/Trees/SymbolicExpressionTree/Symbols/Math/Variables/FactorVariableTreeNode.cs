@@ -31,30 +31,30 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode {
     VariableName = Symbol.VariableNames.SampleRandom(random);
     Weights =
       Symbol.GetVariableValues(VariableName)
-            .Select(_ => NormalDistributedRandomPolar.NextDouble(random, 0, 1)).ToArray();
+            .Select(_ => NormalDistribution.NextDouble(random, 0, 1)).ToArray();
   }
 
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
     // mutate only one randomly selected weight
-    var idx = random.Integer(Weights!.Length);
+    var idx = random.NextInt(Weights!.Length);
     // 50% additive & 50% multiplicative
-    if (random.Random() < 0.5) {
-      var x = NormalDistributedRandomPolar.NextDouble(random, Symbol.WeightManipulatorMu,
+    if (random.NextDouble() < 0.5) {
+      var x = NormalDistribution.NextDouble(random, Symbol.WeightManipulatorMu,
         Symbol.WeightManipulatorSigma);
       Weights[idx] += x * shakingFactor;
     } else {
-      var x = NormalDistributedRandomPolar.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
+      var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
       Weights[idx] *= x;
     }
 
-    if (random.Random() >= Symbol.VariableChangeProbability) return;
+    if (random.NextDouble() >= Symbol.VariableChangeProbability) return;
 
     VariableName = Symbol.VariableNames.SampleRandom(random);
     if (Weights.Length != Symbol.GetVariableValues(VariableName).Count()) {
       // if the length of the weight array does not match => re-initialize weights
       Weights =
         Symbol.GetVariableValues(VariableName)
-              .Select(_ => NormalDistributedRandomPolar.NextDouble(random, 0, 1))
+              .Select(_ => NormalDistribution.NextDouble(random, 0, 1))
               .ToArray();
     }
   }

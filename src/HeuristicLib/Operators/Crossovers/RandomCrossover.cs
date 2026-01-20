@@ -13,6 +13,6 @@ public class RandomCrossover<TGenotype> : Crossover<TGenotype> {
   }
 
   public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) {
-    return parents.ParallelSelect(random, (_, parents1, random) => random.Random() < Bias ? parents1.Parent1 : parents1.Parent2);
+    return parents.ParallelSelect(random, (_, parents1, random) => random.NextDouble() < Bias ? parents1.Parent1 : parents1.Parent2);
   }
 }

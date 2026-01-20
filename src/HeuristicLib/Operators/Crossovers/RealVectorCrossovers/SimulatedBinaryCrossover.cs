@@ -27,8 +27,8 @@ public class SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Real
       throw new ArgumentException("SimulatedBinaryCrossover: Contiguity value is smaller than 0", "contiguity");
     var result = new double[length];
     for (var i = 0; i < length; i++) {
-      if (length == 1 || random.Random() < 0.5) { // cross this variable
-        var u = random.Random();
+      if (length == 1 || random.NextDouble() < 0.5) { // cross this variable
+        var u = random.NextDouble();
         var beta = u switch {
           < 0.5 => Math.Pow(2 * u, 1.0 / (contiguity + 1)),
           > 0.5 => Math.Pow(0.5 / (1.0 - u), 1.0 / (contiguity + 1)),
@@ -36,7 +36,7 @@ public class SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Real
           _ => 0
         };
 
-        if (random.Random() < 0.5)
+        if (random.NextDouble() < 0.5)
           result[i] = (parent1[i] + parent2[i]) / 2.0 - beta * 0.5 * Math.Abs(parent1[i] - parent2[i]);
         else
           result[i] = (parent1[i] + parent2[i]) / 2.0 + beta * 0.5 * Math.Abs(parent1[i] - parent2[i]);
@@ -48,7 +48,7 @@ public class SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Real
   }
 
   /// <summary>
-  /// Checks number of parents, availability of the parameters and forwards the call to <see cref="Apply(IRandom, RealVector, RealVector, DoubleValue)"/>.
+  /// Checks number of parents, availability of the parameters and forwards the call to <see cref="Apply(IRandomNumberGenerator, RealVector, RealVector, DoubleValue)"/>.
   /// </summary>
   /// <exception cref="ArgumentException">Thrown when there are not exactly 2 parents or when the contiguity parameter could not be found.</exception>
   /// <param name="random">The random number generator.</param>
@@ -103,7 +103,7 @@ public static class Sbx {
         continue;
 
       // per-variable crossover decision (scalar probVar)
-      var doCross = rng.Random() < probVar;
+      var doCross = rng.NextDouble() < probVar;
 
       // disable if too close
       if (Math.Abs(x1 - x2) <= eps)
@@ -120,7 +120,7 @@ public static class Sbx {
       if (delta <= eps)
         continue;
 
-      var rv = rng.Random(); // one random per locus (as in Python)
+      var rv = rng.NextDouble(); // one random per locus (as in Python)
 
       // lower side
       var beta = 1.0 + 2.0 * (y1 - xl[v % xl.Count]) / delta;
@@ -137,7 +137,7 @@ public static class Sbx {
       var ch2 = x1 < x2 ? cc2 : cc1; // child for parent 2
 
       // exchange with XOR: (rng < probBin) XOR (x1 > x2)
-      if ((rng.Random() < probBin) ^ (x1 > x2))
+      if ((rng.NextDouble() < probBin) ^ (x1 > x2))
         (ch1, ch2) = (ch2, ch1);
 
       c1[v] = ch1;
@@ -175,7 +175,7 @@ public class SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionCrossover<Real
     var pb = probBin ?? ProbBin;
 
     // Gate exchange once per call (like your simplified version)
-    if (rng.Random() > ProbExch)
+    if (rng.NextDouble() > ProbExch)
       pb = 0.0;
 
     var (c1, c2) = Sbx.CrossSbx(p1, p2, searchSpace, e, pv, pb, rng);

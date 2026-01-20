@@ -47,7 +47,7 @@ public class PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSea
 
     if (atLeastOnce)
       return matrix;
-    int j1 = randomState.Integer(n); // inclusive lower, exclusive upper
+    int j1 = randomState.NextInt(n); // inclusive lower, exclusive upper
     matrix[j1] = true;
     return matrix;
   }

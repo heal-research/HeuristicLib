@@ -12,8 +12,8 @@ public class GaussianMutator(double mutationRate, double mutationStrength) : Sin
   public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
     double[] newElements = solution.ToArray();
     for (int i = 0; i < newElements.Length; i++) {
-      if (random.Random() < MutationRate) {
-        newElements[i] += MutationStrength * (random.Random() - 0.5);
+      if (random.NextDouble() < MutationRate) {
+        newElements[i] += MutationStrength * (random.NextDouble() - 0.5);
       }
     }
 

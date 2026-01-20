@@ -22,7 +22,7 @@ public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
     do {
       parent = mutant.Root.IterateNodesPrefix().Skip(1).Where(n => n.SubtreeCount > 0).SampleRandom(random, 1).First();
 
-      childIndex = random.Integer(parent.SubtreeCount);
+      childIndex = random.NextInt(parent.SubtreeCount);
 
       child = parent[childIndex];
       var existingSubtreeCount = child.SubtreeCount;

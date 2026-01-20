@@ -49,7 +49,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     var tries = 0;
     while (tries++ < MaxTries) {
       // select a target tree length uniformly in the possible range (as determined by explicit limits and limits of the grammar)
-      var targetTreeLength = random.Integer(allowedMinLength, allowedMaxLength + 1);
+      var targetTreeLength = random.NextInt(allowedMinLength, allowedMaxLength + 1);
       if (targetTreeLength <= 1 || maxDepth <= 1) return;
 
       var success = TryCreateFullTreeFromSeed(random, seedNode, targetTreeLength - 1, maxDepth - 1, searchSpace);
@@ -89,7 +89,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
 
     // while there are pending extension points and we have not reached the limit of adding new extension points
     while (extensionPoints.Count > 0 && minExtensionPointsLength + currentLength <= targetLength) {
-      var randomIndex = random.Integer(extensionPoints.Count);
+      var randomIndex = random.NextInt(extensionPoints.Count);
       var nextExtension = extensionPoints[randomIndex];
       extensionPoints.RemoveAt(randomIndex);
       var parent = nextExtension.Parent;
@@ -152,7 +152,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
 
     // fill all pending extension points
     while (extensionPoints.Count > 0) {
-      var randomIndex = random.Integer(extensionPoints.Count);
+      var randomIndex = random.NextInt(extensionPoints.Count);
       var nextExtension = extensionPoints[randomIndex];
       extensionPoints.RemoveAt(randomIndex);
       var parent = nextExtension.Parent;
@@ -245,6 +245,6 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     var defaultArity = node.Symbol.DefaultArity;
     if (minArity <= defaultArity && defaultArity <= maxArity) return defaultArity;
 
-    return random.Integer(minArity, maxArity + 1);
+    return random.NextInt(minArity, maxArity + 1);
   }
 }

@@ -62,7 +62,7 @@ public sealed record Permutation : IReadOnlyList<int> {
   public static Permutation CreateRandom(int length, IRandomNumberGenerator rng) {
     int[] elements = Enumerable.Range(0, length).ToArray();
     for (int i = elements.Length - 1; i > 0; i--) {
-      int j = rng.Integer(i + 1);
+      int j = rng.NextInt(i + 1);
       (elements[i], elements[j]) = (elements[j], elements[i]);
     }
 
@@ -71,8 +71,8 @@ public sealed record Permutation : IReadOnlyList<int> {
 
   public static Permutation SwapRandomElements(Permutation permutation, IRandomNumberGenerator rng) {
     int length = permutation.Count;
-    int index1 = rng.Integer(length);
-    int index2 = rng.Integer(length);
+    int index1 = rng.NextInt(length);
+    int index2 = rng.NextInt(length);
 
     int[] newElements = permutation.memory.ToArray();
     (newElements[index1], newElements[index2]) = (newElements[index2], newElements[index1]);

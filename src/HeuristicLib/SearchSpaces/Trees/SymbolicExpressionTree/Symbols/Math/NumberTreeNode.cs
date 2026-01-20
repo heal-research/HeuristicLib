@@ -24,17 +24,17 @@ public sealed class NumberTreeNode : SymbolicExpressionTreeNode {
   public override void ResetLocalParameters(IRandomNumberGenerator random) {
     base.ResetLocalParameters(random);
     var range = Symbol.MaxValue - Symbol.MinValue;
-    Value = random.Random() * range + Symbol.MinValue;
+    Value = random.NextDouble() * range + Symbol.MinValue;
   }
 
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
     base.ShakeLocalParameters(random, shakingFactor);
     // 50% additive & 50% multiplicative
-    if (random.Random() < 0.5) {
-      var x = NormalDistributedRandomPolar.NextDouble(random, Symbol.ManipulatorMu, Symbol.ManipulatorSigma);
+    if (random.NextDouble() < 0.5) {
+      var x = NormalDistribution.NextDouble(random, Symbol.ManipulatorMu, Symbol.ManipulatorSigma);
       Value = Value + x * shakingFactor;
     } else {
-      var x = NormalDistributedRandomPolar.NextDouble(random, 1.0, Symbol.MultiplicativeManipulatorSigma);
+      var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeManipulatorSigma);
       Value = Value * x;
     }
   }

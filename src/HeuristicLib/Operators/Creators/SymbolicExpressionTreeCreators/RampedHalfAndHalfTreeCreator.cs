@@ -16,7 +16,7 @@ public class RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator {
     var tree = searchSpace.Grammar.MakeStump(random);
     var startNode = tree.Root[0];
 
-    if (random.Random() < 0.5)
+    if (random.NextDouble() < 0.5)
       GrowTreeCreator.Create(random, startNode, searchSpace.TreeDepth - 2, searchSpace);
     else
       FullTreeCreator.Create(random, startNode, searchSpace, searchSpace.TreeDepth - 2);

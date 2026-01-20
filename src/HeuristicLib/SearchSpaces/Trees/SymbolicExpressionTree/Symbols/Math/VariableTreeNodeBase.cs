@@ -20,7 +20,7 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode {
 
   public override void ResetLocalParameters(IRandomNumberGenerator random) {
     base.ResetLocalParameters(random);
-    Weight = NormalDistributedRandomPolar.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
+    Weight = NormalDistribution.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
     VariableName = Symbol.VariableNames.SampleRandom(random, 1).Single();
   }
 
@@ -28,22 +28,22 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode {
     base.ShakeLocalParameters(random, shakingFactor);
 
     // 50% additive & 50% multiplicative (TODO: BUG in if statement below -> fix in HL 4.0!)
-    if (random.Random() < 0) {
-      var x = NormalDistributedRandomPolar.NextDouble(random, Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
+    if (random.NextDouble() < 0) {
+      var x = NormalDistribution.NextDouble(random, Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
       Weight += x * shakingFactor;
     } else {
-      var x = NormalDistributedRandomPolar.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
+      var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
       Weight *= x;
     }
 
-    if (random.Random() >= Symbol.VariableChangeProbability)
+    if (random.NextDouble() >= Symbol.VariableChangeProbability)
       return;
 
     var oldName = VariableName;
     VariableName = Symbol.VariableNames.SampleRandom(random);
     if (oldName != VariableName) {
       // re-initialize weight if the variable is changed
-      Weight = NormalDistributedRandomPolar.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
+      Weight = NormalDistribution.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
     }
   }
 

@@ -59,6 +59,6 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator {
   private static int SampleArity(IRandomNumberGenerator random, SymbolicExpressionTreeNode node, SymbolicExpressionTreeSearchSpace searchSpace) {
     var minArity = searchSpace.Grammar.GetMinimumSubtreeCount(node.Symbol);
     var maxArity = searchSpace.Grammar.GetMaximumSubtreeCount(node.Symbol);
-    return random.Integer(minArity, maxArity, true);
+    return random.NextInt(minArity, maxArity, true);
   }
 }

@@ -16,12 +16,12 @@ public class LaggedTreeNode : SymbolicExpressionTreeNode {
 
   public override void ResetLocalParameters(IRandomNumberGenerator random) {
     base.ResetLocalParameters(random);
-    Lag = random.Integer(Symbol.MinLag, Symbol.MaxLag + 1);
+    Lag = random.NextInt(Symbol.MinLag, Symbol.MaxLag + 1);
   }
 
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
     base.ShakeLocalParameters(random, shakingFactor);
-    Lag = System.Math.Min(Symbol.MaxLag, System.Math.Max(Symbol.MinLag, Lag + random.Integer(-1, 2)));
+    Lag = System.Math.Min(Symbol.MaxLag, System.Math.Max(Symbol.MinLag, Lag + random.NextInt(-1, 2)));
   }
 
   public override SymbolicExpressionTreeNode Clone() {
