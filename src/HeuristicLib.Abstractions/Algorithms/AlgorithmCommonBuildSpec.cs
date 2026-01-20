@@ -1,0 +1,65 @@
+using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Interceptors;
+using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
+
+namespace HEAL.HeuristicLib.Algorithms;
+
+public abstract record AlgorithmBuildSpec<TG, TS, TP, TR>
+  where TG : class
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+  where TR : class, IAlgorithmState
+{
+  public IEvaluator<TG, TS, TP> Evaluator { get; set; }
+  public ITerminator<TG, TR, TS, TP> Terminator { get; set; }
+  public IInterceptor<TG, TR, TS, TP>? Interceptor { get; set; }
+
+  protected AlgorithmBuildSpec(
+    IEvaluator<TG, TS, TP> evaluator,
+    ITerminator<TG, TR, TS, TP> terminator,
+    IInterceptor<TG, TR, TS, TP>? interceptor
+  ) {
+    Evaluator = evaluator;
+    Terminator = terminator;
+    Interceptor = interceptor;
+  }
+}
+
+public interface ISpecWithCreator<TG, TS, TP>
+  where TG : class
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+{
+  ICreator<TG, TS, TP> Creator { get; set; }
+}
+
+public interface ISpecWithSelector<TG, TS, TP>
+  where TG : class
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+{
+  ISelector<TG, TS, TP> Selector { get; set; }
+}
+
+public interface ISpecWithCrossover<TG, TS, TP>
+  where TG : class
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+{
+  ICrossover<TG, TS, TP> Crossover { get; set; }
+}
+
+public interface ISpecWithMutator<TG, TS, TP>
+  where TG : class
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+{
+  IMutator<TG, TS, TP> Mutator { get; set; }
+}
