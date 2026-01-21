@@ -7,33 +7,40 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg> : IAlgorithmBuilder<TG, TS, TP, TR, TAlg>
+public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> : IAlgorithmBuilder<TG, TS, TP, TR, TAlg>
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
-  where TAlg : IAlgorithm<TG, TS, TP, TR> 
+  where TAlg : IAlgorithm<TG, TS, TP, TR>
+  where TBuildSpec : IBuildSpec
 {
-  public List<IAlgorithmBuilderRewriter<IAlgorithmBuilder<TG, TS, TP, TR, TAlg>, TG, TS, TP, TR, TAlg>> Rewriters { get; } = [];
+  public List<IAlgorithmBuilderRewriter<TBuildSpec>> Rewriters { get; } = [];
   
   public IEvaluator<TG, TS, TP> Evaluator { get; set; } = new DirectEvaluator<TG>();
   
   public ITerminator<TG, TR, TS, TP> Terminator { get; set; } = new AfterIterationsTerminator<TG>(100);
   
   public IInterceptor<TG, TR, TS, TP>? Interceptor { get; set; }
-
-  public abstract TAlg Build();
-
+  
   public void AddRewriter<TRewriter>(TRewriter rewriter) 
-    where TRewriter : IAlgorithmBuilderRewriter<IAlgorithmBuilder<TG, TS, TP, TR, TAlg>, TG, TS, TP, TR, TAlg>
+    where TRewriter : IAlgorithmBuilderRewriter<TBuildSpec>
   {
     Rewriters.Add(rewriter);
   }
+
+  public TAlg Build() {
+    var spec = CreateBuildSpec();
+    ApplyRewriters(spec);
+    return BuildFromSpec(spec);
+  }
+
+  protected abstract TBuildSpec CreateBuildSpec();
+  protected abstract TAlg BuildFromSpec(TBuildSpec buildSpec);
   
-  protected void ApplyRewriters() {
-    // this needs to be applied to a clone to avoid modifying the current builder during build
+  private void ApplyRewriters(TBuildSpec buildSpec) {
     foreach (var rewriter in Rewriters) {
-      rewriter.Rewrite(this);
+      rewriter.Rewrite(buildSpec);
     }
   }
 }

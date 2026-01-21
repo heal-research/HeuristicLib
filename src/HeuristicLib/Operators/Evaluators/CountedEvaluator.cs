@@ -22,3 +22,15 @@ public class CountedEvaluator<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator)
     return evaluator.Evaluate(solutions, random, searchSpace, problem);
   }
 }
+
+public static class CountedEvaluatorExtensions {
+  extension<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator) 
+    where TG : class
+    where TS : class, ISearchSpace<TG>
+    where TP : class, IProblem<TG, TS>
+  {
+    public CountedEvaluator<TG, TS, TP> AsCountedEvaluator() {
+      return evaluator as CountedEvaluator<TG, TS, TP> ?? new CountedEvaluator<TG, TS, TP>(evaluator);
+    }
+  }
+}

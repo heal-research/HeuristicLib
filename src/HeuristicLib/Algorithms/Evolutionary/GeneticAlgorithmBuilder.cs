@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public record GeneticAlgorithmBuilder<TG, TS, TP>
-  : AlgorithmBuilder<TG, TS, TP, PopulationIterationState<TG>, GeneticAlgorithm<TG, TS, TP>> 
+  : AlgorithmBuilder<TG, TS, TP, PopulationIterationState<TG>, GeneticAlgorithm<TG, TS, TP>, GeneticAlgorithmBuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TG : class
@@ -28,15 +28,22 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
   
   public int Elites { get; set; } = 1;
 
-  public override GeneticAlgorithm<TG, TS, TP> Build() => new () {
-    PopulationSize = PopulationSize,
-    Creator = Creator,
-    Crossover = Crossover,
-    Selector = Selector,
-    Evaluator = Evaluator,
-    Replacer = new ElitismReplacer<TG>(Elites),
-    Terminator = Terminator,
-    Interceptor = Interceptor,
-    Mutator = Mutator.WithRate(MutationRate)
-  };
+  protected override GeneticAlgorithmBuildSpec<TG, TS, TP> CreateBuildSpec() => new GeneticAlgorithmBuildSpec<TG, TS, TP>(
+    Evaluator, Terminator, Interceptor, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites
+  );
+
+  protected override GeneticAlgorithm<TG, TS, TP> BuildFromSpec(GeneticAlgorithmBuildSpec<TG, TS, TP> spec) {
+    // ToDo: how to prevent accidentally reading from the builder instead of the spec here?
+    return new GeneticAlgorithm<TG, TS, TP> {
+      PopulationSize = spec.PopulationSize,
+      Creator = spec.Creator,
+      Crossover = spec.Crossover,
+      Selector = spec.Selector,
+      Evaluator = spec.Evaluator,
+      Replacer = new ElitismReplacer<TG>(spec.Elites),
+      Terminator = spec.Terminator,
+      Interceptor = spec.Interceptor,
+      Mutator = spec.Mutator.WithRate(spec.MutationRate)
+    };
+  }
 }

@@ -19,18 +19,17 @@ public class AfterOperatorCountTerminator<TGenotype>(ICountedOperator @operator,
   }
 }
 
-public class LimitingEvaluatorRewriter<TBuilder, TG, TS, TP, TR, TA>(int maxEvaluations, bool preventOverBudget)
-  : IAlgorithmBuilderRewriter<TBuilder, TG, TS, TP, TR, TA>
+public class LimitingEvaluatorRewriter<TBuildSpec, TG, TS, TP>(int maxEvaluations, bool preventOverBudget)
+  : IAlgorithmBuilderRewriter<TBuildSpec>
+  where TBuildSpec : class, ISpecWithEvaluator<TG, TS, TP>
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
-  where TA : class, IAlgorithm<TG, TS, TP, TR> 
-  where TBuilder : IAlgorithmBuilder<TG, TS, TP, TR, TA>, IBuilderWithEvaluator<TG, TS, TP, TR, TA>
 {
-  public void Rewrite(TBuilder builder) {
-    var countedEvaluator = builder.Evaluator as CountedEvaluator<TG, TS, TP> ?? new CountedEvaluator<TG, TS, TP>(builder.Evaluator);
+  public void Rewrite(TBuildSpec buildSpec) {
+    //var countedEvaluator = buildSpec.Evaluator as CountedEvaluator<TG, TS, TP> ?? new CountedEvaluator<TG, TS, TP>(buildSpec.Evaluator);
+    var countedEvaluator = buildSpec.Evaluator.AsCountedEvaluator();
     var limitEvaluator = new LimitEvaluator<TG, TS, TP>(countedEvaluator, maxEvaluations, preventOverBudget);
-    builder.Evaluator = limitEvaluator;
+    buildSpec.Evaluator = limitEvaluator;
   }
 }

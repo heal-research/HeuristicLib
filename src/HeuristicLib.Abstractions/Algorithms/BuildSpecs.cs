@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record AlgorithmBuildSpec<TG, TS, TP, TR>
+public abstract record AlgorithmBuildSpec<TG, TS, TP, TR> : IBuildSpec, ISpecWithEvaluator<TG, TS, TP>
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -32,7 +32,15 @@ public abstract record AlgorithmBuildSpec<TG, TS, TP, TR>
   }
 }
 
-public interface ISpecWithCreator<TG, TS, TP>
+public interface ISpecWithEvaluator<TG, TS, TP> : IBuildSpec
+  where TG : class
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+{
+  IEvaluator<TG, TS, TP> Evaluator { get; set; }
+}
+
+public interface ISpecWithCreator<TG, TS, TP> : IBuildSpec
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -40,7 +48,7 @@ public interface ISpecWithCreator<TG, TS, TP>
   ICreator<TG, TS, TP> Creator { get; set; }
 }
 
-public interface ISpecWithSelector<TG, TS, TP>
+public interface ISpecWithSelector<TG, TS, TP> : IBuildSpec
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -48,7 +56,7 @@ public interface ISpecWithSelector<TG, TS, TP>
   ISelector<TG, TS, TP> Selector { get; set; }
 }
 
-public interface ISpecWithCrossover<TG, TS, TP>
+public interface ISpecWithCrossover<TG, TS, TP>: IBuildSpec
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -56,7 +64,7 @@ public interface ISpecWithCrossover<TG, TS, TP>
   ICrossover<TG, TS, TP> Crossover { get; set; }
 }
 
-public interface ISpecWithMutator<TG, TS, TP>
+public interface ISpecWithMutator<TG, TS, TP>: IBuildSpec
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>

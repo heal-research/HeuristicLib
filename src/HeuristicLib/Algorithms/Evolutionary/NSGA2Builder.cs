@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, PopulationIterationState<TG>, NSGA2<TG, TS, TP>> 
+public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, PopulationIterationState<TG>, NSGA2<TG, TS, TP>, NSGA2BuildSpec<TG, TS, TP>> 
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TG : class
@@ -25,16 +25,19 @@ public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, Population
   
   public int Elites { get; set; } = 1;
 
-  public override NSGA2<TG, TS, TP> Build() => new() {
-    PopulationSize = PopulationSize,
-    Creator = Creator,
-    Crossover = Crossover,
-    Selector = Selector,
-    Evaluator = Evaluator,
-    Replacer = new ElitismReplacer<TG>(Elites),
-    Terminator = Terminator,
-    Interceptor = Interceptor,
-    Mutator = Mutator.WithRate(MutationRate)
-  };
+  protected override NSGA2BuildSpec<TG, TS, TP> CreateBuildSpec() => new NSGA2BuildSpec<TG, TS, TP>(
+    Evaluator, Terminator, Interceptor, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites
+  );
   
+  protected override NSGA2<TG, TS, TP> BuildFromSpec(NSGA2BuildSpec<TG, TS, TP> spec) => new() {
+    PopulationSize = spec.PopulationSize,
+    Creator = spec.Creator,
+    Crossover = spec.Crossover,
+    Selector = spec.Selector,
+    Evaluator = spec.Evaluator,
+    Replacer = new ElitismReplacer<TG>(spec.Elites),
+    Terminator = spec.Terminator,
+    Interceptor = spec.Interceptor,
+    Mutator = spec.Mutator.WithRate(spec.MutationRate)
+  };
 }
