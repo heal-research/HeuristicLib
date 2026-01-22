@@ -28,7 +28,7 @@ public record HillClimberBuilder<TG, TS, TP>
   public IInterceptor<TG, SingleSolutionIterationState<TG>, TS, TP>? Interceptor { get; set; } = null;
 
   protected override HillClimberBuildSpec<TG, TS, TP> CreateBuildSpec() => new HillClimberBuildSpec<TG, TS, TP>(
-    Evaluator, Terminator, Interceptor, MaxNeighbors, BatchSize, Direction, Mutator, Creator
+    Evaluator, Terminator, Interceptor, Observer, MaxNeighbors, BatchSize, Direction, Mutator, Creator
   );
   
   protected override HillClimber<TG, TS, TP> BuildFromSpec(HillClimberBuildSpec<TG, TS, TP> spec) => new() {

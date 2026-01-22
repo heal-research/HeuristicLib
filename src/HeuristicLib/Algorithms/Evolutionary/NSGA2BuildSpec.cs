@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -33,6 +34,7 @@ public sealed record NSGA2BuildSpec<TG, TS, TP>
     IEvaluator<TG, TS, TP> Evaluator,
     ITerminator<TG, PopulationIterationState<TG>, TS, TP> Terminator,
     IInterceptor<TG, PopulationIterationState<TG>, TS, TP>? Interceptor,
+    IIterationObserver<TG, TS, TP, PopulationIterationState<TG>>? Observer,
     int PopulationSize,
     ISelector<TG, TS, TP> Selector,
     ICreator<TG, TS, TP> Creator,
@@ -40,7 +42,7 @@ public sealed record NSGA2BuildSpec<TG, TS, TP>
     IMutator<TG, TS, TP> Mutator,
     double MutationRate,
     int Elites
-  ) : base(Evaluator, Terminator, Interceptor) {
+  ) : base(Evaluator, Terminator, Interceptor, Observer) {
     this.PopulationSize = PopulationSize;
     this.Selector = Selector;
     this.Creator = Creator;

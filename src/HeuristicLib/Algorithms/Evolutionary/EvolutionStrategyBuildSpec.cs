@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -33,6 +34,7 @@ public sealed record EvolutionStrategyBuildSpec<TG, TS, TP>
     IEvaluator<TG, TS, TP> Evaluator,
     ITerminator<TG, EvolutionStrategyIterationState<TG>, TS, TP> Terminator,
     IInterceptor<TG, EvolutionStrategyIterationState<TG>, TS, TP>? Interceptor,
+    IIterationObserver<TG, TS, TP, EvolutionStrategyIterationState<TG>>? Observer,
     int PopulationSize,
     EvolutionStrategyType Strategy,
     IMutator<TG, TS, TP> Mutator,
@@ -41,7 +43,7 @@ public sealed record EvolutionStrategyBuildSpec<TG, TS, TP>
     ISelector<TG, TS, TP> Selector,
     int NumberOfChildren,
     ICreator<TG, TS, TP> Creator
-  ) : base(Evaluator, Terminator, Interceptor) {
+  ) : base(Evaluator, Terminator, Interceptor, Observer) {
     this.PopulationSize = PopulationSize;
     this.Strategy = Strategy;
     this.Mutator = Mutator;

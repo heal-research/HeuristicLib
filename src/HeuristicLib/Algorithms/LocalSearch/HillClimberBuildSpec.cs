@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
@@ -27,12 +28,13 @@ public sealed record HillClimberBuildSpec<TG, TS, TP>
     IEvaluator<TG, TS, TP> Evaluator,
     ITerminator<TG, SingleSolutionIterationState<TG>, TS, TP> Terminator,
     IInterceptor<TG, SingleSolutionIterationState<TG>, TS, TP>? Interceptor,
+    IIterationObserver<TG, TS, TP, SingleSolutionIterationState<TG>>? Observer, 
     int MaxNeighbors,
     int BatchSize,
     LocalSearchDirection Direction,
     IMutator<TG, TS, TP> Mutator,
     ICreator<TG, TS, TP> Creator
-  ) : base(Evaluator, Terminator, Interceptor) {
+  ) : base(Evaluator, Terminator, Interceptor, Observer) {
     this.MaxNeighbors = MaxNeighbors;
     this.BatchSize = BatchSize;
     this.Direction = Direction;

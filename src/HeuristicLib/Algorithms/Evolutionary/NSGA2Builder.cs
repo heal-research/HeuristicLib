@@ -26,7 +26,7 @@ public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, Population
   public int Elites { get; set; } = 1;
 
   protected override NSGA2BuildSpec<TG, TS, TP> CreateBuildSpec() => new NSGA2BuildSpec<TG, TS, TP>(
-    Evaluator, Terminator, Interceptor, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites
+    Evaluator, Terminator, Interceptor, Observer, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites
   );
   
   protected override NSGA2<TG, TS, TP> BuildFromSpec(NSGA2BuildSpec<TG, TS, TP> spec) => new() {

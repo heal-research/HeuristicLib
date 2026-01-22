@@ -23,7 +23,7 @@ public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP
   public required ICreator<TG, TS, TP> Creator { get; set; }
 
   protected override EvolutionStrategyBuildSpec<TG, TS, TP> CreateBuildSpec() => new EvolutionStrategyBuildSpec<TG, TS, TP>(
-    Evaluator, Terminator, Interceptor, PopulationSize, Strategy, Mutator, InitialMutationStrength, Crossover, Selector, NumberOfChildren, Creator
+    Evaluator, Terminator, Interceptor, Observer, PopulationSize, Strategy, Mutator, InitialMutationStrength, Crossover, Selector, NumberOfChildren, Creator
   );
 
   protected override EvolutionStrategy<TG, TS, TP> BuildFromSpec(EvolutionStrategyBuildSpec<TG, TS, TP> spec) => new() {

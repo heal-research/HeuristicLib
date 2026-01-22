@@ -2,7 +2,6 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
@@ -19,17 +18,4 @@ public class AfterOperatorCountTerminator<TGenotype>(ICountedOperator @operator,
   }
 }
 
-public class LimitingEvaluatorRewriter<TBuildSpec, TG, TS, TP>(int maxEvaluations, bool preventOverBudget)
-  : IAlgorithmBuilderRewriter<TBuildSpec>
-  where TBuildSpec : class, ISpecWithEvaluator<TG, TS, TP>
-  where TG : class
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-{
-  public void Rewrite(TBuildSpec buildSpec) {
-    //var countedEvaluator = buildSpec.Evaluator as CountedEvaluator<TG, TS, TP> ?? new CountedEvaluator<TG, TS, TP>(buildSpec.Evaluator);
-    var countedEvaluator = buildSpec.Evaluator.AsCountedEvaluator();
-    var limitEvaluator = new LimitEvaluator<TG, TS, TP>(countedEvaluator, maxEvaluations, preventOverBudget);
-    buildSpec.Evaluator = limitEvaluator;
-  }
-}
+// After evaluations terminator is not here because it actually a counting operator terminator wrapper. I am not sure if this is good.
