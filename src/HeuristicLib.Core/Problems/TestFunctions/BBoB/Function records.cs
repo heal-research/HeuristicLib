@@ -7,7 +7,8 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 
-public static partial class BBoBSuite {
+public static partial class BBoBSuite
+{
   public static string GetInstancesByYear(int year) => year switch {
     >= 2023 => "1-5,101-110",
     >= 2021 => "1-5,91-100",
@@ -23,16 +24,18 @@ public static partial class BBoBSuite {
   };
 }
 
-public static partial class BBoBSuite {
+public static partial class BBoBSuite
+{
   /// <summary>
-  /// Returns the BBoB problem corresponding to (function, dimension, instance).
-  /// This mirrors coco_get_bbob_problem from COCO.
+  ///   Returns the BBoB problem corresponding to (function, dimension, instance).
+  ///   This mirrors coco_get_bbob_problem from COCO.
   /// </summary>
-  public static BBoBFunction GetProblem(int function, int dimension, int instance) {
+  public static BBoBFunction GetProblem(int function, int dimension, int instance)
+  {
     // Seeds (copied from COCO logic)
-    long randomSeed = function + 10000L * instance;
-    long randomSeed3 = 3 + 10000L * instance;
-    long randomSeed17 = 17 + 10000L * instance;
+    var randomSeed = function + (10000L * instance);
+    var randomSeed3 = 3 + (10000L * instance);
+    var randomSeed17 = 17 + (10000L * instance);
 
     return function switch {
       1 => CreateSphereProblem(function, dimension, instance, randomSeed),
@@ -67,33 +70,26 @@ public static partial class BBoBSuite {
   }
 }
 
-public static partial class BBoBSuite {
-  private static BBoBFunction CreateSphereProblem(int function, int dimension, int instance, long randomSeed) {
-    return new SphereFunction { Dimension = dimension };
-  }
+public static partial class BBoBSuite
+{
+  private static BBoBFunction CreateSphereProblem(int function, int dimension, int instance, long randomSeed) => new SphereFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateEllipsoidProblem(int function, int dimension, int instance, long randomSeed) {
-    return new EllipsoidFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateEllipsoidProblem(int function, int dimension, int instance, long randomSeed) => new EllipsoidFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateRastriginProblem(int function, int dimension, int instance, long randomSeed) {
-    return new RastriginFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateRastriginProblem(int function, int dimension, int instance, long randomSeed) => new RastriginFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateBuecheRastriginProblem(int function, int dimension, int instance, long randomSeed3) {
-    return new BuecheRastriginFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateBuecheRastriginProblem(int function, int dimension, int instance, long randomSeed3) => new BuecheRastriginFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateLinearSlopeProblem(int function, int dimension, int instance, long randomSeed) {
-    return new LinearSlopeFunction(CreateXOpt(dimension, randomSeed)) { Dimension = dimension };
-  }
+  private static BBoBFunction CreateLinearSlopeProblem(int function, int dimension, int instance, long randomSeed) => new LinearSlopeFunction(CreateXOpt(dimension, randomSeed)) { Dimension = dimension };
 
-  private static BBoBFunction CreateAttractiveSectorProblem(int function, int dimension, int instance, long randomSeed) {
+  private static BBoBFunction CreateAttractiveSectorProblem(int function, int dimension, int instance, long randomSeed)
+  {
     var data = new FAttractiveSectorData(CreateXOpt(dimension, randomSeed));
     return new AttractiveSectorFunction(data) { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateStepEllipsoidProblem(int function, int dimension, int instance, long randomSeed) {
+  private static BBoBFunction CreateStepEllipsoidProblem(int function, int dimension, int instance, long randomSeed)
+  {
     var data = new FStepEllipsoidData(
       CreateXOpt(dimension, randomSeed),
       Bbob2009ComputeFOpt(function, instance),
@@ -103,45 +99,42 @@ public static partial class BBoBSuite {
     return new StepEllipsoidFunction(data) { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateRosenbrockProblem(int function, int dimension, int instance, long randomSeed) {
+  private static BBoBFunction CreateRosenbrockProblem(int function, int dimension, int instance, long randomSeed)
+  {
     // Plain Rosenbrock (unrotated)
     return new RosenbrockFunction { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateRosenbrockRotatedProblem(int function, int dimension, int instance, long randomSeed) {
+  private static BBoBFunction CreateRosenbrockRotatedProblem(int function, int dimension, int instance, long randomSeed)
+  {
     // NOTS: BBOB has a rotated Rosenbrock variant.
     //var M = CreateRotationMatrix(dimension, randomSeed);
     return new RosenbrockFunction { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateEllipsoidRotatedProblem(int function, int dimension, int instance, long randomSeed) {
+  private static BBoBFunction CreateEllipsoidRotatedProblem(int function, int dimension, int instance, long randomSeed)
+  {
     // Similar comment as above: BBOB's rotated ellipsoid.
     //var M = CreateRotationMatrix(dimension, randomSeed);
     return new EllipsoidFunction { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateDiscusProblem(int function, int dimension, int instance, long randomSeed) {
-    return new DiscusFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateDiscusProblem(int function, int dimension, int instance, long randomSeed) => new DiscusFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateBentCigarProblem(int function, int dimension, int instance, long randomSeed) {
-    return new BentCigarFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateBentCigarProblem(int function, int dimension, int instance, long randomSeed) => new BentCigarFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateSharpRidgeProblem(int function, int dimension, int instance, long randomSeed) {
-    return new SharpRidgeFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateSharpRidgeProblem(int function, int dimension, int instance, long randomSeed) => new SharpRidgeFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateDifferentPowersProblem(int function, int dimension, int instance, long randomSeed) {
-    return new DifferentPowersFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateDifferentPowersProblem(int function, int dimension, int instance, long randomSeed) => new DifferentPowersFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateRastriginRotatedProblem(int function, int dimension, int instance, long randomSeed) {
+  private static BBoBFunction CreateRastriginRotatedProblem(int function, int dimension, int instance, long randomSeed)
+  {
     // BBOB rotated Rastrigin.
     return new RastriginFunction { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateWeierstrassProblem(int function, int dimension, int instance, long randomSeed) {
+  private static BBoBFunction CreateWeierstrassProblem(int function, int dimension, int instance, long randomSeed)
+  {
     var data = new FWeierstrassData();
     const int fWeierstrassSummands = 12;
     for (var i = 0; i < fWeierstrassSummands; ++i) {
@@ -153,7 +146,8 @@ public static partial class BBoBSuite {
     return new WeierstrassFunction(data) { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateSchaffersProblem(int function, int dimension, int instance, long randomSeed, int condition) {
+  private static BBoBFunction CreateSchaffersProblem(int function, int dimension, int instance, long randomSeed, int condition)
+  {
     // BBOB has two Schaffers F7 variants:
     // - f17 with condition 10
     // - f18 with condition 1000
@@ -164,22 +158,20 @@ public static partial class BBoBSuite {
     return new SchaffersFunction { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateGriewankRosenbrockProblem(int function, int dimension, int instance, long randomSeed) {
-    return new GriewankRosenbrockFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateGriewankRosenbrockProblem(int function, int dimension, int instance, long randomSeed) => new GriewankRosenbrockFunction { Dimension = dimension };
 
-  private static BBoBFunction CreateSchwefelProblem(int function, int dimension, int instance, long randomSeed) {
-    return new SchwefelFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateSchwefelProblem(int function, int dimension, int instance, long randomSeed) => new SchwefelFunction { Dimension = dimension };
 
-  public class FGallagherPermutation {
+  public class FGallagherPermutation
+  {
     public double Value;
     public int Index;
   }
 
-  private static BBoBFunction CreateGallagherProblem(int function, int dimension, int instance, long randomSeed, int numberOfPeaks) {
+  private static BBoBFunction CreateGallagherProblem(int function, int dimension, int instance, long randomSeed, int numberOfPeaks)
+  {
     const double maxCondition = 1000.0;
-    double maxCondition1 = 1000.0;
+    var maxCondition1 = 1000.0;
     double[] fitvalues = { 1.1, 9.1 };
     double b, c;
 
@@ -216,7 +208,7 @@ public static partial class BBoBSuite {
     Bbob2009Unif(randomNumbers, numberOfPeaks - 1, data.RandomSeed);
 
     var rpermPeaks = new FGallagherPermutation[numberOfPeaks - 1];
-    for (int i = 0; i < numberOfPeaks - 1; i++) {
+    for (var i = 0; i < numberOfPeaks - 1; i++) {
       rpermPeaks[i].Value = randomNumbers[i];
       rpermPeaks[i].Index = i;
     }
@@ -227,31 +219,31 @@ public static partial class BBoBSuite {
     arrCondition[0] = maxCondition1;
     data.PeakValues[0] = 10.0;
 
-    for (int i = 1; i < numberOfPeaks; i++) {
+    for (var i = 1; i < numberOfPeaks; i++) {
       arrCondition[i] = Math.Pow(
         maxCondition,
         (double)rpermPeaks[i - 1].Index / (numberOfPeaks - 2));
 
       data.PeakValues[i] =
-        ((double)(i - 1) / (numberOfPeaks - 2)) * (fitvalues[1] - fitvalues[0])
+        ((double)(i - 1) / (numberOfPeaks - 2) * (fitvalues[1] - fitvalues[0]))
         + fitvalues[0];
     }
 
     // 3) For each peak, generate a permutation over dimensions and compute arr_scales
     var rpermDims = new FGallagherPermutation[dimension];
 
-    for (int i = 0; i < numberOfPeaks; i++) {
+    for (var i = 0; i < numberOfPeaks; i++) {
       // fresh uniform numbers for this peak
-      Bbob2009Unif(randomNumbers, dimension, data.RandomSeed + 1000L * i);
+      Bbob2009Unif(randomNumbers, dimension, data.RandomSeed + (1000L * i));
 
-      for (int j = 0; j < dimension; j++) {
+      for (var j = 0; j < dimension; j++) {
         rpermDims[j].Value = randomNumbers[j];
         rpermDims[j].Index = j;
       }
 
       Array.Sort(rpermDims, (a, b2) => a.Value.CompareTo(b2.Value));
 
-      for (int j = 0; j < dimension; j++) {
+      for (var j = 0; j < dimension; j++) {
         data.ArrScales[i][j] =
           Math.Pow(
             arrCondition[i],
@@ -262,18 +254,18 @@ public static partial class BBoBSuite {
     // 4) Generate xopt and local optima x_local
     Bbob2009Unif(randomNumbers, dimension * numberOfPeaks, data.RandomSeed);
 
-    for (int i = 0; i < dimension; i++) {
+    for (var i = 0; i < dimension; i++) {
       // Global optimum location (also used as problem->best_parameter in COCO)
-      double xi = 0.8 * (b * randomNumbers[i] - c);
+      var xi = 0.8 * ((b * randomNumbers[i]) - c);
       data.XOpt[i] = xi;
 
       // Local peaks
-      for (int j = 0; j < numberOfPeaks; j++) {
-        double sum = 0.0;
-        int baseIndex = j * dimension;
+      for (var j = 0; j < numberOfPeaks; j++) {
+        var sum = 0.0;
+        var baseIndex = j * dimension;
 
-        for (int k = 0; k < dimension; k++) {
-          double val = b * randomNumbers[baseIndex + k] - c;
+        for (var k = 0; k < dimension; k++) {
+          var val = (b * randomNumbers[baseIndex + k]) - c;
           sum += data.Rotation[i][k] * val;
         }
 
@@ -289,24 +281,23 @@ public static partial class BBoBSuite {
     return new GallagherFunction(data) { Dimension = dimension };
   }
 
-  private static BBoBFunction CreateKatsuuraProblem(int function, int dimension, int instance, long randomSeed) {
-    return new KatsuuraFunction { Dimension = dimension };
-  }
+  private static BBoBFunction CreateKatsuuraProblem(int function, int dimension, int instance, long randomSeed) => new KatsuuraFunction { Dimension = dimension };
 
   private static BBoBFunction CreateLunacekBiRastriginProblem(
     int function,
     int dimension,
     int instance,
-    long rseed) {
+    long rseed)
+  {
     const double mu0 = 2.5;
 
     // Allocate and fill data (mirrors f_lunacek_bi_rastrigin_bbob_problem_allocate)
     var data = new FLunacekBiRastriginData(
-      XHat: new double[dimension],
-      Z: new double[dimension],
-      XOpt: new double[dimension],
-      Rot1: AllocateMatrix(dimension, dimension),
-      Rot2: AllocateMatrix(dimension, dimension)
+      new double[dimension],
+      new double[dimension],
+      new double[dimension],
+      AllocateMatrix(dimension, dimension),
+      AllocateMatrix(dimension, dimension)
     );
 
     // These two lines are in the original C code.
@@ -319,10 +310,12 @@ public static partial class BBoBSuite {
     var tmpvect = new double[dimension];
     Bbob2009Gauss(tmpvect, dimension, rseed);
 
-    for (int i = 0; i < dimension; i++) {
-      double xi = 0.5 * mu0;
-      if (tmpvect[i] < 0.0)
+    for (var i = 0; i < dimension; i++) {
+      var xi = 0.5 * mu0;
+      if (tmpvect[i] < 0.0) {
         xi *= -1.0;
+      }
+
       data.XOpt[i] = xi;
     }
 
@@ -330,27 +323,32 @@ public static partial class BBoBSuite {
   }
 
   #region Helpers to mimic BBoB creation
-  private static void ComputeXOpt(double[] xopt, long seed) {
-    int dim = xopt.Length;
+
+  private static void ComputeXOpt(double[] xopt, long seed)
+  {
+    var dim = xopt.Length;
 
     // Generate uniform values in [0,1) — you must implement this to match COCO
     Bbob2009Unif(xopt, dim, seed);
 
-    for (int i = 0; i < dim; i++) {
+    for (var i = 0; i < dim; i++) {
       // xopt[i] = 8 * floor(1e4 * xopt[i]) / 1e4 - 4;
-      double v = xopt[i];
-      double floored = Math.Floor(1e4 * v);
-      xopt[i] = 8.0 * (floored / 1e4) - 4.0;
+      var v = xopt[i];
+      var floored = Math.Floor(1e4 * v);
+      xopt[i] = (8.0 * (floored / 1e4)) - 4.0;
 
       // If exactly 0.0 → set to -1e−5
 #pragma warning disable S1244
       if (xopt[i] == 0.0)
 #pragma warning restore S1244
+      {
         xopt[i] = -1e-5;
+      }
     }
   }
 
-  private static double Bbob2009ComputeFOpt(int function, int instance) {
+  private static double Bbob2009ComputeFOpt(int function, int instance)
+  {
     long rseed = function switch {
       // Special seeds for certain functions (copied exactly from COCO)
       4 => 3,
@@ -366,55 +364,62 @@ public static partial class BBoBSuite {
       _ => function
     };
 
-    long rrseed = rseed + 10000L * instance;
+    var rrseed = rseed + (10000L * instance);
 
-    double gval = Bbob2009GaussSingle(rrseed);
-    double gval2 = Bbob2009GaussSingle(rrseed + 1);
+    var gval = Bbob2009GaussSingle(rrseed);
+    var gval2 = Bbob2009GaussSingle(rrseed + 1);
 
     // bbob2009_round(100. * 100. * gval / gval2) / 100.
-    double ratio = 100.0 * 100.0 * gval / gval2;
-    double rounded = Bbob2009Round(ratio) / 100.0;
+    var ratio = 100.0 * 100.0 * gval / gval2;
+    var rounded = Bbob2009Round(ratio) / 100.0;
 
     // clamp to [-1000, 1000]
-    double clamped = Math.Max(-1000.0, Math.Min(1000.0, rounded));
+    var clamped = Math.Max(-1000.0, Math.Min(1000.0, rounded));
 
     return clamped;
   }
 
-  private static void Bbob2009Unif(double[] r, int N, long inseed) {
-    long aktseed = inseed;
+  private static void Bbob2009Unif(double[] r, int N, long inseed)
+  {
+    var aktseed = inseed;
 
-    if (aktseed < 0)
+    if (aktseed < 0) {
       aktseed = -aktseed;
-    if (aktseed < 1)
-      aktseed = 1;
+    }
 
-    long[] rgrand = new long[32];
+    if (aktseed < 1) {
+      aktseed = 1;
+    }
+
+    var rgrand = new long[32];
     long tmp;
 
     // Seed warm-up loop
-    for (int i = 39; i >= 0; i--) {
+    for (var i = 39; i >= 0; i--) {
       tmp = (long)Math.Floor(aktseed / 127773.0);
 
-      aktseed = 16807 * (aktseed - tmp * 127773) - 2836 * tmp;
+      aktseed = (16807 * (aktseed - (tmp * 127773))) - (2836 * tmp);
 
-      if (aktseed < 0)
+      if (aktseed < 0) {
         aktseed += 2147483647;
+      }
 
-      if (i < 32)
+      if (i < 32) {
         rgrand[i] = aktseed;
+      }
     }
 
-    long aktrand = rgrand[0];
+    var aktrand = rgrand[0];
 
     // Generate N uniform values
-    for (int i = 0; i < N; i++) {
+    for (var i = 0; i < N; i++) {
       tmp = (long)Math.Floor(aktseed / 127773.0);
 
-      aktseed = 16807 * (aktseed - tmp * 127773) - 2836 * tmp;
+      aktseed = (16807 * (aktseed - (tmp * 127773))) - (2836 * tmp);
 
-      if (aktseed < 0)
+      if (aktseed < 0) {
         aktseed += 2147483647;
+      }
 
       tmp = (long)Math.Floor(aktrand / 67108865.0);
       aktrand = rgrand[tmp];
@@ -422,65 +427,79 @@ public static partial class BBoBSuite {
 
       r[i] = aktrand / 2.147483647e9; // exactly the same divisor as COCO
 
-      if (r[i] == 0.0)
+      if (r[i] == 0.0) {
         r[i] = 1e-99;
+      }
     }
   }
 
-  private static void Bbob2009Gauss(double[] g, int N, long seed) {
-    if (g == null)
+  private static void Bbob2009Gauss(double[] g, int N, long seed)
+  {
+    if (g == null) {
       throw new ArgumentNullException(nameof(g));
-    if (N < 0 || N > g.Length)
+    }
+
+    if (N < 0 || N > g.Length) {
       throw new ArgumentOutOfRangeException(nameof(N));
-    if (2 * N >= 6000)
+    }
+
+    if (2 * N >= 6000) {
       throw new ArgumentException("2 * N must be < 6000, as in original COCO code.", nameof(N));
+    }
 
     // Generate 2N uniforms using the COCO RNG we translated earlier
-    double[] uniftmp = new double[2 * N];
+    var uniftmp = new double[2 * N];
     Bbob2009Unif(uniftmp, 2 * N, seed);
 
-    for (int i = 0; i < N; i++) {
-      double u1 = uniftmp[i];
-      double u2 = uniftmp[N + i];
+    for (var i = 0; i < N; i++) {
+      var u1 = uniftmp[i];
+      var u2 = uniftmp[N + i];
 
       // Box-Muller transform
-      double val = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
+      var val = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
 
-      if (val == 0.0)
+      if (val == 0.0) {
         val = 1e-99;
+      }
 
       g[i] = val;
     }
   }
 
-  private static double Bbob2009GaussSingle(long seed) {
+  private static double Bbob2009GaussSingle(long seed)
+  {
     var g = new double[1];
     Bbob2009Gauss(g, 1, seed);
     return g[0];
   }
 
-  private static double Bbob2009Round(double x) {
-    return Math.Floor(x + 0.5);
-  }
+  private static double Bbob2009Round(double x) => Math.Floor(x + 0.5);
 
-  private static double[][] AllocateMatrix(int rows, int cols) {
+  private static double[][] AllocateMatrix(int rows, int cols)
+  {
     var m = new double[rows][];
-    for (int r = 0; r < rows; r++)
+    for (var r = 0; r < rows; r++) {
       m[r] = new double[cols];
+    }
+
     return m;
   }
 
-  private static void Reshape(double[][] B, double[] vector, int rows, int cols) {
-    for (int col = 0; col < cols; col++)
-    for (int row = 0; row < rows; row++)
-      B[row][col] = vector[col * rows + row];
+  private static void Reshape(double[][] B, double[] vector, int rows, int cols)
+  {
+    for (var col = 0; col < cols; col++)
+    for (var row = 0; row < rows; row++) {
+      B[row][col] = vector[(col * rows) + row];
+    }
   }
 
-  private static void ComputeRotation(double[][] B, long seed, int dim) {
-    if (dim * dim >= 2000)
+  private static void ComputeRotation(double[][] B, long seed, int dim)
+  {
+    if (dim * dim >= 2000) {
       throw new ArgumentException("DIM * DIM must be < 2000 per COCO constraint.");
+    }
 
-    double[] gvect = new double[dim * dim];
+    var gvect = new double[dim * dim];
 
     // Fill with Gaussians using the COCO RNG
     Bbob2009Gauss(gvect, dim * dim, seed);
@@ -489,45 +508,53 @@ public static partial class BBoBSuite {
     Reshape(B, gvect, dim, dim);
 
     // Gram-Schmidt orthonormalization of columns
-    for (int i = 0; i < dim; i++) {
+    for (var i = 0; i < dim; i++) {
       // Subtract projections onto previous columns
-      for (int j = 0; j < i; j++) {
-        double dot = 0.0;
+      for (var j = 0; j < i; j++) {
+        var dot = 0.0;
 
-        for (int k = 0; k < dim; k++)
+        for (var k = 0; k < dim; k++) {
           dot += B[k][i] * B[k][j];
+        }
 
-        for (int k = 0; k < dim; k++)
+        for (var k = 0; k < dim; k++) {
           B[k][i] -= dot * B[k][j];
+        }
       }
 
       // Normalize column i
-      double norm = 0.0;
-      for (int k = 0; k < dim; k++)
+      var norm = 0.0;
+      for (var k = 0; k < dim; k++) {
         norm += B[k][i] * B[k][i];
+      }
 
       norm = Math.Sqrt(norm);
 
-      for (int k = 0; k < dim; k++)
+      for (var k = 0; k < dim; k++) {
         B[k][i] /= norm;
+      }
     }
   }
 
-  private static double[][] CreateRotationMatrix(int dim, long seed) {
+  private static double[][] CreateRotationMatrix(int dim, long seed)
+  {
     var B = AllocateMatrix(dim, dim);
     ComputeRotation(B, seed, dim);
     return B;
   }
 
-  private static double[] CreateXOpt(int dimension, long randomSeed) {
-    double[] bestParameter = new double[dimension]; // placeholder
+  private static double[] CreateXOpt(int dimension, long randomSeed)
+  {
+    var bestParameter = new double[dimension]; // placeholder
     ComputeXOpt(bestParameter, randomSeed);
     return bestParameter;
   }
+
   #endregion
 }
 
-public abstract record BBoBFunction() : ITestFunction {
+public abstract record BBoBFunction : ITestFunction
+{
   public required int Dimension { get; init; }
   public double Min { get; init; } = -5;
   public double Max { get; init; } = 5;
@@ -535,117 +562,140 @@ public abstract record BBoBFunction() : ITestFunction {
   public abstract double Evaluate(RealVector solution);
 }
 
-public record AttractiveSectorFunction(FAttractiveSectorData Data) : BBoBFunction {
+public record AttractiveSectorFunction(FAttractiveSectorData Data) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FAttractiveSectorRaw(solution, Data);
 }
 
-public record BentCigarFunction : BBoBFunction {
+public record BentCigarFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FBentCigarRaw(solution);
 }
 
-public record BentCigarGeneralizedFunction(FBentCigarGeneralizedVersatileData Data) : BBoBFunction {
+public record BentCigarGeneralizedFunction(FBentCigarGeneralizedVersatileData Data) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FBentCigarGeneralizedRaw(solution, Data);
 }
 
-public record BuecheRastriginFunction : BBoBFunction {
+public record BuecheRastriginFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FBuecheRastriginRaw(solution);
 }
 
-public record DifferentPowersFunction : BBoBFunction {
+public record DifferentPowersFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FDifferentPowersRaw(solution);
 }
 
-public record DiscusFunction : BBoBFunction {
+public record DiscusFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FDiscusRaw(solution);
 }
 
-public record DiscusGeneralizedFunction(FDiscusGeneralizedVersatileData Data) : BBoBFunction {
+public record DiscusGeneralizedFunction(FDiscusGeneralizedVersatileData Data) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FDiscusGeneralizedRaw(solution, Data);
 }
 
-public record EllipsoidFunction : BBoBFunction {
+public record EllipsoidFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FEllipsoidRaw(solution);
 }
 
-public record GallagherFunction(FGallagherData Data) : BBoBFunction {
+public record GallagherFunction(FGallagherData Data) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FGallagherRaw(solution, Data);
 }
 
-public record GriewankRosenbrockFunction : BBoBFunction {
+public record GriewankRosenbrockFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FGriewankRosenbrockRaw(solution);
 }
 
-public record KatsuuraFunction : BBoBFunction {
+public record KatsuuraFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FKatsuuraRaw(solution);
 }
 
-public record LinearSlopeFunction(double[] BestParameter) : BBoBFunction {
+public record LinearSlopeFunction(double[] BestParameter) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FLinearSlopeRaw(solution, BestParameter);
 }
 
-public record LunacekBiRastriginFunction(FLunacekBiRastriginData Data) : BBoBFunction {
+public record LunacekBiRastriginFunction(FLunacekBiRastriginData Data) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FLunacekBiRastriginRaw(solution, Data);
 }
 
-public record RastriginFunction : BBoBFunction {
+public record RastriginFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FRastriginRaw(solution);
 }
 
-public record RosenbrockFunction : BBoBFunction {
+public record RosenbrockFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FRosenbrockRaw(solution);
 }
 
-public record SchaffersFunction : BBoBFunction {
+public record SchaffersFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FSchaffersRaw(solution);
 }
 
-public record SchwefelFunction : BBoBFunction {
+public record SchwefelFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FSchwefelRaw(solution);
 }
 
-public record SchwefelGeneralizedFunction : BBoBFunction {
+public record SchwefelGeneralizedFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FSchwefelGeneralizedRaw(solution);
 }
 
-public record SharpRidgeFunction : BBoBFunction {
+public record SharpRidgeFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FSharpRidgeRaw(solution);
 }
 
-public record SharpRidgeGeneralizedFunction(FSharpRidgeGeneralizedVersatileData Data) : BBoBFunction {
+public record SharpRidgeGeneralizedFunction(FSharpRidgeGeneralizedVersatileData Data) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FSharpRidgeGeneralizedRaw(solution, Data);
 }
 
-public record SphereFunction : BBoBFunction {
+public record SphereFunction : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FSphereRaw(solution);
 }
 
-public record StepEllipsoidFunction(FStepEllipsoidData Data) : BBoBFunction {
+public record StepEllipsoidFunction(FStepEllipsoidData Data) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FStepEllipsoidRaw(solution, Data);
 }
 
-public record WeierstrassFunction(FWeierstrassData Data) : BBoBFunction {
+public record WeierstrassFunction(FWeierstrassData Data) : BBoBFunction
+{
   public override double Evaluate(RealVector solution) =>
     Functions.FWeierstrassRaw(solution, Data);
 }

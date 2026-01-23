@@ -6,8 +6,10 @@ using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public static class TestFunctionExtensions {
-  extension(ITestFunction inner) {
+public static class TestFunctionExtensions
+{
+  extension(ITestFunction inner)
+  {
     public ITestFunction Shifted(RealVector shiftVector) => new ShiftedTestFunction(shiftVector, inner);
     public ITestFunction Rotated(double[,] rotationMatrix) => new RotatedTestFunction(rotationMatrix, inner);
   }

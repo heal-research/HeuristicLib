@@ -7,10 +7,12 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulator {
+public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulator
+{
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree ReplaceRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public static SymbolicExpressionTree ReplaceRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var allowedSymbols = new List<Symbol>();
     SymbolicExpressionTreeNode parent;
     int childIndex;
@@ -29,10 +31,10 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
 
       allowedSymbols.Clear();
       allowedSymbols.AddRange(searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
-                                      .Where(symbol => symbol != child.Symbol
-                                                       && symbol.InitialFrequency > 0
-                                                       && searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
-                                                       && searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
+        .Where(symbol => symbol != child.Symbol
+                         && symbol.InitialFrequency > 0
+                         && searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
+                         && searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
 
       tries++;
     } while (tries < MaxTries && allowedSymbols.Count == 0);
@@ -43,8 +45,9 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
 
       // replace the old node with the new node
       var seedNode = seedSymbol.CreateTreeNode();
-      if (seedNode.HasLocalParameters)
+      if (seedNode.HasLocalParameters) {
         seedNode.ResetLocalParameters(random);
+      }
 
       parent.RemoveSubtree(childIndex);
       parent.InsertSubtree(childIndex, seedNode);
@@ -55,7 +58,8 @@ public sealed class ReplaceBranchManipulation : SymbolicExpressionTreeManipulato
     return symbolicExpressionTree;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var t = ReplaceRandomBranch(random, parent, searchSpace);
     Extensions.CheckDebug(searchSpace.Contains(t), "Upps destroyed tree");
     return t;

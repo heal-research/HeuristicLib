@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public readonly struct BatchInstruction(byte opcode, ushort numberOfArguments, int childIndex, double value, double weight, double[] buf, double[] data) {
+public readonly struct BatchInstruction(byte opcode, ushort numberOfArguments, int childIndex, double value, double weight, double[] buf, double[] data)
+{
   public readonly byte Opcode = opcode;
   public readonly ushort NumberOfArguments = numberOfArguments;
   public readonly int ChildIndex = childIndex;

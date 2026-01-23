@@ -1,6 +1,7 @@
 namespace HEAL.HeuristicLib.Optimization;
 
-public interface IParents<out T> {
+public interface IParents<out T>
+{
   T Parent1 { get; }
   T Parent2 { get; }
 

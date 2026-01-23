@@ -1,5 +1,6 @@
 namespace HEAL.HeuristicLib.Random;
 
-public interface IKeyCombiner {
+public interface IKeyCombiner
+{
   ulong Combine(ulong parentKey, ulong childKey);
 }

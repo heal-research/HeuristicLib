@@ -4,10 +4,9 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 
-public class NumberOfVariablesEvaluator : IRegressionEvaluator<SymbolicExpressionTree> {
+public class NumberOfVariablesEvaluator : IRegressionEvaluator<SymbolicExpressionTree>
+{
   public ObjectiveDirection Direction => ObjectiveDirection.Minimize;
 
-  public double Evaluate(SymbolicExpressionTree solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) {
-    return solution.IterateNodesPostfix().OfType<VariableTreeNode>().Count();
-  }
+  public double Evaluate(SymbolicExpressionTree solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => solution.IterateNodesPostfix().OfType<VariableTreeNode>().Count();
 }

@@ -26,27 +26,29 @@ public class ObserverRewriter<TG, TS, TP, TR, TSpec> : IAlgorithmBuilderRewriter
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
-  where TSpec : AlgorithmBuildSpec<TG, TS, TP, TR> 
+  where TSpec : AlgorithmBuildSpec<TG, TS, TP, TR>
 {
   //private readonly IEvaluatorObserver<TG, TS, TP>? evaluatorObserver;
   private readonly IIterationObserver<TG, TS, TP, TR>? iterationObserver;
   private readonly ICrossoverObserver<TG, TS, TP>? crossoverObserver;
 
-  public ObserverRewriter(IIterationObserver<TG, TS, TP, TR>? iterationObserver = null, ICrossoverObserver<TG, TS, TP>? crossoverObserver = null) {
+  public ObserverRewriter(IIterationObserver<TG, TS, TP, TR>? iterationObserver = null, ICrossoverObserver<TG, TS, TP>? crossoverObserver = null)
+  {
     this.iterationObserver = iterationObserver;
     this.crossoverObserver = crossoverObserver;
   }
-  
 
-  public void Rewrite(TSpec buildSpec) {
-    if (iterationObserver is not null)
+
+  public void Rewrite(TSpec buildSpec)
+  {
+    if (iterationObserver is not null) {
       buildSpec.Observer = buildSpec.Observer is not null ? new ObservationPipeline<TG, TS, TP, TR>(buildSpec.Observer, iterationObserver) : iterationObserver;
+    }
 
-    if (crossoverObserver is not null && buildSpec is ISpecWithCrossover<TG, TS, TP> crossoverSpec)
+    if (crossoverObserver is not null && buildSpec is ISpecWithCrossover<TG, TS, TP> crossoverSpec) {
       crossoverSpec.Crossover = new ObservedCrossover<TG, TS, TP>(crossoverSpec.Crossover, crossoverObserver);
-    
+    }
   }
-  
 }
 //
 // // ToDo: Think about a different name. Maybe UniversalRewriter or something similar. 

@@ -3,18 +3,13 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-public record PermutationSearchSpace(int Length) : SearchSpace<Permutation>, ISubSearchSpaceComparable<PermutationSearchSpace> {
-  public override bool Contains(Permutation genotype) {
-    return genotype.Count == Length;
-  }
+public record PermutationSearchSpace(int Length) : SearchSpace<Permutation>, ISubSearchSpaceComparable<PermutationSearchSpace>
+{
+  public override bool Contains(Permutation genotype) => genotype.Count == Length;
 
-  public virtual bool IsSubspaceOf(PermutationSearchSpace other) {
-    return other.Length == Length;
-  }
+  public virtual bool IsSubspaceOf(PermutationSearchSpace other) => other.Length == Length;
 
-  public static implicit operator IntegerVectorSearchSpace(PermutationSearchSpace permutationSpace) {
-    return new IntegerVectorSearchSpace(permutationSpace.Length, 0, permutationSpace.Length);
-  }
+  public static implicit operator IntegerVectorSearchSpace(PermutationSearchSpace permutationSpace) => new(permutationSpace.Length, 0, permutationSpace.Length);
 }
 
 // public class PermutationSearchSpace<TPhenotype>

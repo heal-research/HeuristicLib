@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public enum ObjectiveDirection {
+public enum ObjectiveDirection
+{
   Minimize,
   Maximize
 }

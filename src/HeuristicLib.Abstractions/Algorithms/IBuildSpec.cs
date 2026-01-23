@@ -1,5 +1,5 @@
 ﻿namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IBuildSpec {
-  
+public interface IBuildSpec
+{
 }

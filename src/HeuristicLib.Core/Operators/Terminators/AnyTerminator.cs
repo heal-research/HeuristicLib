@@ -8,10 +8,11 @@ public class AnyTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>(p
   : Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
   where TAlgorithmState : IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace> {
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
   public IReadOnlyList<ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> Terminators { get; } = terminators;
 
-  public override bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, TProblem problem) {
-    return Terminators.Any(criterion => criterion.ShouldTerminate(currentIterationState, previousIterationState, searchSpace, problem));
-  }
+  public override bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, TProblem problem) => Terminators.Any(criterion => {
+    return criterion.ShouldTerminate(currentIterationState, previousIterationState, searchSpace, problem);
+  });
 }

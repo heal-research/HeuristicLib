@@ -1,25 +1,27 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 #pragma warning disable S2178
-public class OnlineMeanAbsoluteErrorCalculator {
+public class OnlineMeanAbsoluteErrorCalculator
+{
   private double sae;
   private int n;
   public double MeanAbsoluteError => n > 0 ? sae / n : 0.0;
 
-  public OnlineMeanAbsoluteErrorCalculator() {
-    Reset();
-  }
+  public OnlineMeanAbsoluteErrorCalculator() => Reset();
 
   #region IOnlineCalculator Members
+
   public OnlineCalculatorError ErrorState { get; private set; }
   public double Value => MeanAbsoluteError;
 
-  public void Reset() {
+  public void Reset()
+  {
     n = 0;
     sae = 0.0;
     ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
   }
 
-  public void Add(double original, double estimated) {
+  public void Add(double original, double estimated)
+  {
     if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
         double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
@@ -31,9 +33,11 @@ public class OnlineMeanAbsoluteErrorCalculator {
     n++;
     ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
   }
+
   #endregion
 
-  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
+  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
+  {
     using var originalEnumerator = originalValues.GetEnumerator();
     using var estimatedEnumerator = estimatedValues.GetEnumerator();
     var maeCalculator = new OnlineMeanAbsoluteErrorCalculator();
@@ -43,7 +47,9 @@ public class OnlineMeanAbsoluteErrorCalculator {
       var original = originalEnumerator.Current;
       var estimated = estimatedEnumerator.Current;
       maeCalculator.Add(original, estimated);
-      if (maeCalculator.ErrorState != OnlineCalculatorError.None) break;
+      if (maeCalculator.ErrorState != OnlineCalculatorError.None) {
+        break;
+      }
     }
 
     // check if both enumerators are at the end to make sure both enumerations have the same length

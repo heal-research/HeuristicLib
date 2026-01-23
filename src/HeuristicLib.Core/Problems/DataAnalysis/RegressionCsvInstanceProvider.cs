@@ -3,13 +3,15 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public static class RegressionCsvInstanceProvider {
-  public static RegressionProblemData ImportData(string path, double trainingSplit = 0.66) {
-    TableFileParser csvFileParser = new TableFileParser();
+public static class RegressionCsvInstanceProvider
+{
+  public static RegressionProblemData ImportData(string path, double trainingSplit = 0.66)
+  {
+    var csvFileParser = new TableFileParser();
     csvFileParser.Parse(path, csvFileParser.AreColumnNamesInFirstLine(path));
 
     Dataset dataset = new ModifiableDataset(csvFileParser.VariableNames, csvFileParser.Values);
-    string targetVar = dataset.DoubleVariables.Last();
+    var targetVar = dataset.DoubleVariables.Last();
 
     // turn off input variables that are constant in the training partition
     var trainingEnd = (int)(csvFileParser.Rows * trainingSplit);

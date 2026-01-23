@@ -1,20 +1,21 @@
 ﻿#pragma warning disable S2178
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class OnlineCovarianceCalculator {
+public class OnlineCovarianceCalculator
+{
   private double xMean, yMean, cn;
   private int n;
   public double Covariance => n > 0 ? cn / n : 0.0;
 
-  public OnlineCovarianceCalculator() {
-    Reset();
-  }
+  public OnlineCovarianceCalculator() => Reset();
 
   #region IOnlineCalculator Members
+
   public OnlineCalculatorError ErrorState { get; private set; }
   public double Value => Covariance;
 
-  public void Reset() {
+  public void Reset()
+  {
     n = 0;
     cn = 0.0;
     xMean = 0.0;
@@ -22,7 +23,8 @@ public class OnlineCovarianceCalculator {
     ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
   }
 
-  public void Add(double x, double y) {
+  public void Add(double x, double y)
+  {
     if (double.IsNaN(y) || double.IsInfinity(y) || double.IsNaN(x) || double.IsInfinity(x) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
     } else {
@@ -38,9 +40,11 @@ public class OnlineCovarianceCalculator {
       cn += delta * (x - xMean); // C(n) = C(n-1) + (y - yMean(n-1)) (t - tMean(n))       
     }
   }
+
   #endregion
 
-  public static double Calculate(IEnumerable<double> first, IEnumerable<double> second, out OnlineCalculatorError errorState) {
+  public static double Calculate(IEnumerable<double> first, IEnumerable<double> second, out OnlineCalculatorError errorState)
+  {
     using var firstEnumerator = first.GetEnumerator();
     using var secondEnumerator = second.GetEnumerator();
     var covarianceCalculator = new OnlineCovarianceCalculator();
@@ -50,7 +54,9 @@ public class OnlineCovarianceCalculator {
       var x = secondEnumerator.Current;
       var y = firstEnumerator.Current;
       covarianceCalculator.Add(x, y);
-      if (covarianceCalculator.ErrorState != OnlineCalculatorError.None) break;
+      if (covarianceCalculator.ErrorState != OnlineCalculatorError.None) {
+        break;
+      }
     }
 
     // check if both enumerators are at the end to make sure both enumerations have the same length

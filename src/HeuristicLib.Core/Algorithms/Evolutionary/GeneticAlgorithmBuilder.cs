@@ -17,21 +17,22 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
 {
   public int PopulationSize { get; set; } = 100;
   public ISelector<TG, TS, TP> Selector { get; set; } = new TournamentSelector<TG>(2);
-  
+
   public required ICreator<TG, TS, TP> Creator { get; set; }
   public required ICrossover<TG, TS, TP> Crossover { get; set; }
   public required IMutator<TG, TS, TP> Mutator { get; set; }
   public double MutationRate { get; set; } = 0.05;
 
   //public ITerminator<TG, PopulationIterationState<TG>, TS, TP> Terminator { get; set; } = new AfterIterationsTerminator<TG>(100);
-  
+
   public int Elites { get; set; } = 1;
 
-  protected override GeneticAlgorithmBuildSpec<TG, TS, TP> CreateBuildSpec() => new GeneticAlgorithmBuildSpec<TG, TS, TP>(
+  protected override GeneticAlgorithmBuildSpec<TG, TS, TP> CreateBuildSpec() => new(
     Evaluator, Terminator, Interceptor, Observer, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites
   );
 
-  protected override GeneticAlgorithm<TG, TS, TP> BuildFromSpec(GeneticAlgorithmBuildSpec<TG, TS, TP> spec) {
+  protected override GeneticAlgorithm<TG, TS, TP> BuildFromSpec(GeneticAlgorithmBuildSpec<TG, TS, TP> spec)
+  {
     // ToDo: how to prevent accidentally reading from the builder instead of the spec here?
     return new GeneticAlgorithm<TG, TS, TP> {
       PopulationSize = spec.PopulationSize,

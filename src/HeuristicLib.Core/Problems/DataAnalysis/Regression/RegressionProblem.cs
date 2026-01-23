@@ -6,35 +6,46 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public abstract class RegressionProblem<TProblemData, TSolution, TSearchSpace> : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>
   where TProblemData : RegressionProblemData
-  where TSearchSpace : class, ISearchSpace<TSolution> {
+  where TSearchSpace : class, ISearchSpace<TSolution>
+{
   public const double PunishmentFactor = 10.0;
   public IReadOnlyList<IRegressionEvaluator<TSolution>> Evaluators { get; set; }
 
   private readonly double[] trainingTargetCache;
   private readonly int[] rowIndicesCache; //unsure if this is faster than using the enumerable directly
 
-  protected RegressionProblem(TProblemData problemData, ICollection<IRegressionEvaluator<TSolution>> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace) : base(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), searchSpace) {
+  protected RegressionProblem(TProblemData problemData, ICollection<IRegressionEvaluator<TSolution>> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace)
+    : base(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), searchSpace)
+  {
     Evaluators = objective.ToList();
     trainingTargetCache = problemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ToArray();
     rowIndicesCache = problemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray();
-    if (trainingTargetCache.Length == 0) return;
+    if (trainingTargetCache.Length == 0) {
+      return;
+    }
+
     var mean = trainingTargetCache.Average();
     var range = trainingTargetCache.Range();
-    UpperPredictionBound = mean + PunishmentFactor * range;
-    LowerPredictionBound = mean - PunishmentFactor * range;
+    UpperPredictionBound = mean + (PunishmentFactor * range);
+    LowerPredictionBound = mean - (PunishmentFactor * range);
   }
 
   public double UpperPredictionBound { get; set; }
 
   public double LowerPredictionBound { get; set; }
 
-  public override ObjectiveVector Evaluate(TSolution solution) {
-    IRegressionModel solution1 = Decode(solution);
+  public override ObjectiveVector Evaluate(TSolution solution)
+  {
+    var solution1 = Decode(solution);
     var predictions = solution1.Predict(ProblemData.Dataset, rowIndicesCache).LimitToRange(LowerPredictionBound, UpperPredictionBound);
-    if (Evaluators.Count == 1)
+    if (Evaluators.Count == 1) {
       return new ObjectiveVector(Evaluators[0].Evaluate(solution, predictions, trainingTargetCache));
-    if (predictions is not ICollection<double> materialPredictions)
+    }
+
+    if (predictions is not ICollection<double> materialPredictions) {
       materialPredictions = predictions.ToArray();
+    }
+
     return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(solution, materialPredictions, trainingTargetCache)));
   }
 

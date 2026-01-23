@@ -8,17 +8,20 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
-public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : SymbolicExpressionTreeStringFormatter {
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) {
+public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : SymbolicExpressionTreeStringFormatter
+{
+  public string Format(SymbolicExpressionTree symbolicExpressionTree)
+  {
     // skip root and start symbols
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     GenerateHeader(strBuilder, symbolicExpressionTree);
     FormatRecursively(symbolicExpressionTree.Root.GetSubtree(0).GetSubtree(0), strBuilder);
     GenerateFooter(strBuilder);
     return strBuilder.ToString();
   }
 
-  private static string VariableName2Identifier(string name) {
+  private static string VariableName2Identifier(string name)
+  {
     /*
      * identifier-start-character:
      *    letter-character
@@ -56,7 +59,8 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
            invalidIdentifierParts.Replace(name, "_");
   }
 
-  private void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     // TODO: adapt to interpreter semantics. The HL interpreter also allows Boolean operations on reals
     if (node.Subtrees.Any()) {
       switch (node.Symbol) {
@@ -165,26 +169,25 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     }
   }
 
-  private void FormatFactor(FactorVariableTreeNode node, StringBuilder strBuilder) {
+  private void FormatFactor(FactorVariableTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.AppendFormat("EvaluateFactor({0}, new [] {{ {1} }}, new [] {{ {2} }})", VariableName2Identifier(node.VariableName),
       string.Join(",", node.Symbol.GetVariableValues(node.VariableName).Select(name => "\"" + name + "\"")), string.Join(",", (node.Weights ?? []).Select(v => v.ToString(CultureInfo.InvariantCulture))));
   }
 
-  private void FormatBinaryFactor(BinaryFactorVariableTreeNode node, StringBuilder strBuilder) {
-    strBuilder.AppendFormat(CultureInfo.InvariantCulture, "EvaluateBinaryFactor({0}, \"{1}\", {2})", VariableName2Identifier(node.VariableName), node.VariableValue, node.Weight);
-  }
+  private void FormatBinaryFactor(BinaryFactorVariableTreeNode node, StringBuilder strBuilder) => strBuilder.AppendFormat(CultureInfo.InvariantCulture, "EvaluateBinaryFactor({0}, \"{1}\", {2})", VariableName2Identifier(node.VariableName), node.VariableValue, node.Weight);
 
-  private void FormatSquare(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
-    FormatPower(node, strBuilder, "2");
-  }
+  private void FormatSquare(SymbolicExpressionTreeNode node, StringBuilder strBuilder) => FormatPower(node, strBuilder, "2");
 
-  private void FormatPower(SymbolicExpressionTreeNode node, StringBuilder strBuilder, string exponent) {
+  private void FormatPower(SymbolicExpressionTreeNode node, StringBuilder strBuilder, string exponent)
+  {
     strBuilder.Append("Math.Pow(");
     FormatRecursively(node.GetSubtree(0), strBuilder);
     strBuilder.Append($", {exponent})");
   }
 
-  private void FormatRoot(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatRoot(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("Math.Pow(");
     FormatRecursively(node.GetSubtree(0), strBuilder);
     strBuilder.Append(", 1.0 / (");
@@ -192,15 +195,19 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.Append("))");
   }
 
-  private void FormatDivision(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatDivision(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     if (node.SubtreeCount == 1) {
       strBuilder.Append("1.0 / ");
       FormatRecursively(node.GetSubtree(0), strBuilder);
     } else {
       FormatRecursively(node.GetSubtree(0), strBuilder);
       strBuilder.Append("/ (");
-      for (int i = 1; i < node.SubtreeCount; i++) {
-        if (i > 1) strBuilder.Append(" * ");
+      for (var i = 1; i < node.SubtreeCount; i++) {
+        if (i > 1) {
+          strBuilder.Append(" * ");
+        }
+
         FormatRecursively(node.GetSubtree(i), strBuilder);
       }
 
@@ -208,7 +215,8 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     }
   }
 
-  private void FormatSubtraction(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatSubtraction(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     if (node.SubtreeCount == 1) {
       strBuilder.Append("-");
       FormatRecursively(node.GetSubtree(0), strBuilder);
@@ -219,29 +227,34 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     FormatOperator(node, "-", strBuilder);
   }
 
-  private void FormatOperator(SymbolicExpressionTreeNode node, string symbol, StringBuilder strBuilder) {
+  private void FormatOperator(SymbolicExpressionTreeNode node, string symbol, StringBuilder strBuilder)
+  {
     strBuilder.Append("(");
     foreach (var child in node.Subtrees) {
       FormatRecursively(child, strBuilder);
-      if (child != node.Subtrees.Last())
+      if (child != node.Subtrees.Last()) {
         strBuilder.Append(" " + symbol + " ");
+      }
     }
 
     strBuilder.Append(")");
   }
 
-  private void FormatFunction(SymbolicExpressionTreeNode node, string function, StringBuilder strBuilder) {
+  private void FormatFunction(SymbolicExpressionTreeNode node, string function, StringBuilder strBuilder)
+  {
     strBuilder.Append(function + "(");
     foreach (var child in node.Subtrees) {
       FormatRecursively(child, strBuilder);
-      if (child != node.Subtrees.Last())
+      if (child != node.Subtrees.Last()) {
         strBuilder.Append(", ");
+      }
     }
 
     strBuilder.Append(")");
   }
 
-  private void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree) {
+  private void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree)
+  {
     strBuilder.AppendLine("using System;");
     strBuilder.AppendLine("using System.Linq;" + Environment.NewLine);
     strBuilder.AppendLine("namespace HeuristicLab.Models {");
@@ -254,11 +267,11 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.Append(Environment.NewLine + "public static double Evaluate (");
 
     // here we don't have access to problemData to determine the type for each variable (double/string) therefore we must distinguish based on the symbol type
-    HashSet<string> doubleVarNames = new HashSet<string>();
+    var doubleVarNames = new HashSet<string>();
     doubleVarNames.UnionWith(symbolicExpressionTree.IterateNodesPostfix().OfType<VariableTreeNode>().Select(n => n.VariableName));
     doubleVarNames.UnionWith(symbolicExpressionTree.IterateNodesPostfix().OfType<VariableConditionTreeNode>().Select(n => n.VariableName));
 
-    HashSet<string> stringVarNames = new HashSet<string>();
+    var stringVarNames = new HashSet<string>();
 
     stringVarNames.UnionWith(symbolicExpressionTree.IterateNodesPostfix().OfType<BinaryFactorVariableTreeNode>().Select(n => n.VariableName));
     stringVarNames.UnionWith(symbolicExpressionTree.IterateNodesPostfix().OfType<FactorVariableTreeNode>().Select(n => n.VariableName));
@@ -266,8 +279,10 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     var orderedNames = stringVarNames.OrderBy(n => n, new NaturalStringComparer()).Select(n => "string " + VariableName2Identifier(n) + " /* " + n + " */");
     strBuilder.Append(string.Join(", ", orderedNames));
 
-    if (stringVarNames.Any() && doubleVarNames.Any())
+    if (stringVarNames.Any() && doubleVarNames.Any()) {
       strBuilder.AppendLine(",");
+    }
+
     orderedNames = doubleVarNames.OrderBy(n => n, new NaturalStringComparer()).Select(n => "double " + VariableName2Identifier(n) + " /* " + n + " */");
     strBuilder.Append(string.Join(", ", orderedNames));
 
@@ -275,7 +290,8 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.Append("double result = ");
   }
 
-  private void GenerateFooter(StringBuilder strBuilder) {
+  private void GenerateFooter(StringBuilder strBuilder)
+  {
     strBuilder.AppendLine(";");
 
     strBuilder.AppendLine("return result;");
@@ -284,25 +300,29 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.AppendLine("}");
   }
 
-  private void GenerateAverageSource(StringBuilder strBuilder) {
+  private void GenerateAverageSource(StringBuilder strBuilder)
+  {
     strBuilder.AppendLine("private static double Average(params double[] values) {");
     strBuilder.AppendLine("  return values.Average();");
     strBuilder.AppendLine("}");
   }
 
-  private void GenerateCbrtSource(StringBuilder strBuilder) {
+  private void GenerateCbrtSource(StringBuilder strBuilder)
+  {
     strBuilder.AppendLine("private static double Cbrt(double x) {");
     strBuilder.AppendLine("  return x < 0 ? -Math.Pow(-x, 1.0 / 3.0) : Math.Pow(x, 1.0 / 3.0);");
     strBuilder.AppendLine("}");
   }
 
-  private void GenerateIfThenElseSource(StringBuilder strBuilder) {
+  private void GenerateIfThenElseSource(StringBuilder strBuilder)
+  {
     strBuilder.AppendLine("private static double EvaluateIf(bool condition, double then, double @else) {");
     strBuilder.AppendLine("   return condition ? then : @else;");
     strBuilder.AppendLine("}");
   }
 
-  private void GenerateFactorSource(StringBuilder strBuilder) {
+  private void GenerateFactorSource(StringBuilder strBuilder)
+  {
     strBuilder.AppendLine("private static double EvaluateFactor(string factorValue, string[] factorValues, double[] parameters) {");
     strBuilder.AppendLine("   for(int i=0;i<factorValues.Length;i++) " +
                           "      if(factorValues[i] == factorValue) return parameters[i];" +
@@ -310,7 +330,8 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.AppendLine("}");
   }
 
-  private void GenerateBinaryFactorSource(StringBuilder strBuilder) {
+  private void GenerateBinaryFactorSource(StringBuilder strBuilder)
+  {
     strBuilder.AppendLine("private static double EvaluateBinaryFactor(string factorValue, string targetValue, double weight) {");
     strBuilder.AppendLine("  return factorValue == targetValue ? weight : 0.0;");
     strBuilder.AppendLine("}");

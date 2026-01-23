@@ -1,9 +1,8 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public readonly record struct ObjectiveValue(double Value) {
-  public static implicit operator ObjectiveValue(double value) {
-    return new ObjectiveValue(value);
-  }
+public readonly record struct ObjectiveValue(double Value)
+{
+  public static implicit operator ObjectiveValue(double value) => new(value);
 
   public int CompareTo(ObjectiveValue other, ObjectiveDirection objectiveDirection) => objectiveDirection switch {
     ObjectiveDirection.Minimize => Value.CompareTo(other.Value),

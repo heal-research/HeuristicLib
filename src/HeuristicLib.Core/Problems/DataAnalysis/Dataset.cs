@@ -4,7 +4,8 @@ using System.Collections;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public abstract class Dataset {
+public abstract class Dataset
+{
   protected Dictionary<string, IList> VariableValues { get; }
 
   protected List<string> VariableNames { get; }
@@ -15,7 +16,8 @@ public abstract class Dataset {
 
   public int Columns => VariableNames.Count;
 
-  protected Dataset() {
+  protected Dataset()
+  {
     VariableNames = [];
     VariableValues = new Dictionary<string, IList>();
     Rows = 0;
@@ -27,9 +29,12 @@ public abstract class Dataset {
   /// <param name="variableNames">The names of the variables in the dataset</param>
   /// <param name="variableValues">The values for the variables (column-oriented storage). Values are not cloned!</param>
   protected Dataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues)
-    : this(variableNames, variableValues, true) { }
+    : this(variableNames, variableValues, true)
+  {
+  }
 
-  protected Dataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues, bool cloneValues) {
+  protected Dataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues, bool cloneValues)
+  {
     var vNames = variableNames.ToList();
     var vValues = variableValues.ToList();
     VariableNames = vNames.Count > 0 ? vNames : Enumerable.Range(0, vValues.Count).Select(x => "Column " + x).ToList();
@@ -46,7 +51,8 @@ public abstract class Dataset {
     }
   }
 
-  protected Dataset(IEnumerable<string> variableNames, double[,] variableValues) {
+  protected Dataset(IEnumerable<string> variableNames, double[,] variableValues)
+  {
     var vNames = variableNames.ToList();
     if (vNames.Count != variableValues.GetLength(1)) {
       throw new ArgumentException("Number of variable names doesn't match the number of columns of variableValues");
@@ -79,19 +85,22 @@ public abstract class Dataset {
 
   public static Dataset FromRowData(IEnumerable<string> variableNames, double[,] data) => new ModifiableDataset(variableNames, data);
 
-  public static Dataset FromRowData(IEnumerable<string> variableNames, IEnumerable<IEnumerable> data) {
+  public static Dataset FromRowData(IEnumerable<string> variableNames, IEnumerable<IEnumerable> data)
+  {
     var vNames = variableNames.ToList();
     var transposed = new List<IList>();
 
-    int rowCount = 0;
+    var rowCount = 0;
     foreach (var row in data) {
-      int colCount = 0;
+      var colCount = 0;
       foreach (var value in row) {
-        if (colCount >= vNames.Count)
+        if (colCount >= vNames.Count) {
           throw new ArgumentException("There are more variables in data, than variable names.", nameof(variableNames));
+        }
 
-        if (value == null)
+        if (value == null) {
           throw new ArgumentException("Null values are not supported.", nameof(data));
+        }
 
         if (rowCount == 0) {
           switch (value) {
@@ -114,14 +123,16 @@ public abstract class Dataset {
         colCount++;
       }
 
-      if (colCount < vNames.Count)
+      if (colCount < vNames.Count) {
         throw new ArgumentException($"There are less variables in row{rowCount}, than variable names.", nameof(variableNames));
+      }
 
       rowCount++;
     }
 
-    if (rowCount == 0)
+    if (rowCount == 0) {
       throw new ArgumentException("Data does not contain any rows", nameof(data));
+    }
 
     return new ModifiableDataset(vNames, transposed);
   }
@@ -145,9 +156,11 @@ public abstract class Dataset {
 
   private IEnumerable<T> GetValues<T>(string variableName, IEnumerable<int> rows) => rows.Select(x => GetValues<T>(variableName)[x]);
 
-  private List<T> GetValues<T>(string variableName) {
-    if (!VariableValues.TryGetValue(variableName, out var list))
+  private List<T> GetValues<T>(string variableName)
+  {
+    if (!VariableValues.TryGetValue(variableName, out var list)) {
       throw new ArgumentException("The variable " + variableName + " does not exist in the dataset.");
+    }
 
     return list switch {
       List<T> values => values,
@@ -158,7 +171,8 @@ public abstract class Dataset {
 
   public bool VariableHasType<T>(string variableName) => VariableValues[variableName] is IList<T>;
 
-  protected Type GetVariableType(string variableName) {
+  protected Type GetVariableType(string variableName)
+  {
     VariableValues.TryGetValue(variableName, out var list);
     if (list == null) {
       throw new ArgumentException("The variable " + variableName + " does not exist in the dataset.");
@@ -167,19 +181,22 @@ public abstract class Dataset {
     return GetElementType(list);
   }
 
-  protected static Type GetElementType(IList list) {
+  protected static Type GetElementType(IList list)
+  {
     var type = list.GetType();
     return (type.IsGenericType ? type.GetGenericArguments()[0] : type.GetElementType())!;
   }
 
-  protected static bool IsAllowedType(IList list) {
+  protected static bool IsAllowedType(IList list)
+  {
     var type = GetElementType(list);
     return IsAllowedType(type);
   }
 
   protected static bool IsAllowedType(Type type) => type == typeof(double) || type == typeof(string) || type == typeof(DateTime);
 
-  protected static void CheckArguments(ICollection<string> variableNames, ICollection<IList> variableValues) {
+  protected static void CheckArguments(ICollection<string> variableNames, ICollection<IList> variableValues)
+  {
     if (variableNames.Count != variableValues.Count) {
       throw new ArgumentException("Number of variable names doesn't match the number of columns of variableValues");
     }
@@ -209,7 +226,8 @@ public abstract class Dataset {
 
   protected static Dictionary<string, IList> CloneValues(IEnumerable<string> variableNames, IEnumerable<IList> variableValues) => variableNames.Zip(variableValues, Tuple.Create).ToDictionary(x => x.Item1, x => CloneValues(x.Item2));
 
-  protected static IList CloneValues(IList values) {
+  protected static IList CloneValues(IList values)
+  {
     return values switch {
       IList<double> doubleValues => new List<double>(doubleValues),
       IList<string> stringValues => new List<string>(stringValues),

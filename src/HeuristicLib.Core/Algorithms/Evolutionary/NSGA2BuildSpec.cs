@@ -42,7 +42,9 @@ public sealed record NSGA2BuildSpec<TG, TS, TP>
     IMutator<TG, TS, TP> Mutator,
     double MutationRate,
     int Elites
-  ) : base(Evaluator, Terminator, Interceptor, Observer) {
+  )
+    : base(Evaluator, Terminator, Interceptor, Observer)
+  {
     this.PopulationSize = PopulationSize;
     this.Selector = Selector;
     this.Creator = Creator;

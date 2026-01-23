@@ -2,6 +2,7 @@
 
 namespace HEAL.HeuristicLib.States;
 
-public record PopulationIterationState<TGenotype> : AlgorithmState {
+public record PopulationIterationState<TGenotype> : AlgorithmState
+{
   public required Population<TGenotype> Population { get; init; }
 }

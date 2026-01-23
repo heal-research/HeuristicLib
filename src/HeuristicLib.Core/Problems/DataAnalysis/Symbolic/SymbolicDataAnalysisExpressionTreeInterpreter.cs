@@ -5,15 +5,20 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter {
+public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter
+{
   #region properties
-  public bool CheckExpressionsWithIntervalArithmetic {
+
+  public bool CheckExpressionsWithIntervalArithmetic
+  {
     get;
     set;
   }
+
   #endregion
 
-  public IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows) {
+  public IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows)
+  {
     if (CheckExpressionsWithIntervalArithmetic) {
       throw new NotSupportedException("Interval arithmetic is not yet supported in the symbolic data analysis interpreter.");
     }
@@ -27,7 +32,8 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
     }
   }
 
-  private static InterpreterState PrepareInterpreterState(SymbolicExpressionTree tree, Dataset dataset) {
+  private static InterpreterState PrepareInterpreterState(SymbolicExpressionTree tree, Dataset dataset)
+  {
     var code = SymbolicExpressionTreeCompiler.Compile(tree, OpCodes.MapSymbolToOpCode);
     var necessaryArgStackSize = 0;
     foreach (var instr in code) {
@@ -66,7 +72,8 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
     return new InterpreterState(code, necessaryArgStackSize);
   }
 
-  public virtual double Evaluate(Dataset dataset, ref int row, InterpreterState state) {
+  public virtual double Evaluate(Dataset dataset, ref int row, InterpreterState state)
+  {
     var currentInstr = state.NextInstruction();
     switch (currentInstr.OpCode) {
       case OpCodes.Add: {
@@ -185,42 +192,66 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.SineIntegral: {
         var x = Evaluate(dataset, ref row, state);
-        if (double.IsNaN(x)) return double.NaN;
+        if (double.IsNaN(x)) {
+          return double.NaN;
+        }
+
         throw new NotImplementedException("Sine integral is currently not implemented");
       }
       case OpCodes.CosineIntegral: {
         var x = Evaluate(dataset, ref row, state);
-        if (double.IsNaN(x)) return double.NaN;
+        if (double.IsNaN(x)) {
+          return double.NaN;
+        }
+
         throw new NotImplementedException("Cosine Integral is currently not implemented");
       }
       case OpCodes.HyperbolicSineIntegral: {
         var x = Evaluate(dataset, ref row, state);
-        if (double.IsNaN(x)) return double.NaN;
+        if (double.IsNaN(x)) {
+          return double.NaN;
+        }
+
         throw new NotImplementedException("Hyperbolic Sine Integral is currently not implemented");
       }
       case OpCodes.HyperbolicCosineIntegral: {
         var x = Evaluate(dataset, ref row, state);
-        if (double.IsNaN(x)) return double.NaN;
+        if (double.IsNaN(x)) {
+          return double.NaN;
+        }
+
         throw new NotImplementedException("Hyperbolic Cosine Integral is currently not implemented");
       }
       case OpCodes.FresnelCosineIntegral: {
         var x = Evaluate(dataset, ref row, state);
-        if (double.IsNaN(x)) return double.NaN;
+        if (double.IsNaN(x)) {
+          return double.NaN;
+        }
+
         throw new NotImplementedException("Fresnel Cosine Integral is currently not implemented");
       }
       case OpCodes.FresnelSineIntegral: {
         var x = Evaluate(dataset, ref row, state);
-        if (double.IsNaN(x)) return double.NaN;
+        if (double.IsNaN(x)) {
+          return double.NaN;
+        }
+
         throw new NotImplementedException("Fresnel Sine Integral is currently not implemented");
       }
       case OpCodes.AiryA: {
         var x = Evaluate(dataset, ref row, state);
-        if (double.IsNaN(x)) return double.NaN;
+        if (double.IsNaN(x)) {
+          return double.NaN;
+        }
+
         throw new NotImplementedException("AiryA is currently not implemented");
       }
       case OpCodes.AiryB: {
         var x = Evaluate(dataset, ref row, state);
-        if (double.IsNaN(x)) return double.NaN;
+        if (double.IsNaN(x)) {
+          return double.NaN;
+        }
+
         throw new NotImplementedException("AiryB is currently not implemented");
       }
       case OpCodes.Norm: {
@@ -242,7 +273,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       case OpCodes.AnalyticQuotient: {
         var x1 = Evaluate(dataset, ref row, state);
         var x2 = Evaluate(dataset, ref row, state);
-        return x1 / Math.Pow(1 + x2 * x2, 0.5);
+        return x1 / Math.Pow(1 + (x2 * x2), 0.5);
       }
       case OpCodes.IfThenElse: {
         var condition = Evaluate(dataset, ref row, state);
@@ -260,8 +291,9 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       case OpCodes.And: {
         var result = Evaluate(dataset, ref row, state);
         for (var i = 1; i < currentInstr.NArguments; i++) {
-          if (result > 0.0) result = Evaluate(dataset, ref row, state);
-          else {
+          if (result > 0.0) {
+            result = Evaluate(dataset, ref row, state);
+          } else {
             state.SkipInstructions();
           }
         }
@@ -271,8 +303,9 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       case OpCodes.Or: {
         var result = Evaluate(dataset, ref row, state);
         for (var i = 1; i < currentInstr.NArguments; i++) {
-          if (result <= 0.0) result = Evaluate(dataset, ref row, state);
-          else {
+          if (result <= 0.0) {
+            result = Evaluate(dataset, ref row, state);
+          } else {
             state.SkipInstructions();
           }
         }
@@ -346,7 +379,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         var f4 = Evaluate(dataset, ref row, state);
         row += 4;
 
-        return (f0 + 2 * f1 - 2 * f3 - f4) / 8; // h = 1
+        return (f0 + (2 * f1) - (2 * f3) - f4) / 8; // h = 1
       }
       case OpCodes.Call: {
         // evaluate sub-trees
@@ -376,17 +409,26 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         return state.GetStackFrameValue((ushort)currentInstr.Data);
       }
       case OpCodes.Variable: {
-        if (row < 0 || row >= dataset.Rows) return double.NaN;
+        if (row < 0 || row >= dataset.Rows) {
+          return double.NaN;
+        }
+
         var variableTreeNode = (VariableTreeNode)currentInstr.DynamicNode;
         return ((IList<double>)currentInstr.Data)[row] * variableTreeNode.Weight;
       }
       case OpCodes.BinaryFactorVariable: {
-        if (row < 0 || row >= dataset.Rows) return double.NaN;
+        if (row < 0 || row >= dataset.Rows) {
+          return double.NaN;
+        }
+
         var factorVarTreeNode = (BinaryFactorVariableTreeNode)currentInstr.DynamicNode;
         return ((IList<string>)currentInstr.Data)[row] == factorVarTreeNode.VariableValue ? factorVarTreeNode.Weight : 0;
       }
       case OpCodes.FactorVariable: {
-        if (row < 0 || row >= dataset.Rows) return double.NaN;
+        if (row < 0 || row >= dataset.Rows) {
+          return double.NaN;
+        }
+
         var factorVarTreeNode = (FactorVariableTreeNode)currentInstr.DynamicNode;
         return factorVarTreeNode.GetValue(((IList<string>)currentInstr.Data)[row]);
       }
@@ -406,7 +448,10 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       //mkommend: this symbol uses the logistic function f(x) = 1 / (1 + e^(-alpha * x) ) 
       //to determine the relative amounts of the true and false branch see http://en.wikipedia.org/wiki/Logistic_function
       case OpCodes.VariableCondition: {
-        if (row < 0 || row >= dataset.Rows) return double.NaN;
+        if (row < 0 || row >= dataset.Rows) {
+          return double.NaN;
+        }
+
         var variableConditionTreeNode = (VariableConditionTreeNode)currentInstr.DynamicNode;
         if (!variableConditionTreeNode.Symbol.IgnoreSlope) {
           var variableValue = ((IList<double>)currentInstr.Data)[row];
@@ -416,7 +461,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
           var trueBranch = Evaluate(dataset, ref row, state);
           var falseBranch = Evaluate(dataset, ref row, state);
 
-          return trueBranch * p + falseBranch * (1 - p);
+          return (trueBranch * p) + (falseBranch * (1 - p));
         } else {
           // strict threshold
           var variableValue = ((IList<double>)currentInstr.Data)[row];

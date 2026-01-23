@@ -2,21 +2,32 @@
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
-public sealed class SimpleSymbolicExpressionGrammar() : SymbolicExpressionGrammar() {
-  public void AddSymbol(SimpleSymbol symbol) {
+public sealed class SimpleSymbolicExpressionGrammar : SymbolicExpressionGrammar
+{
+  public void AddSymbol(SimpleSymbol symbol)
+  {
     SetSubtreeCount(symbol, symbol.MinimumArity, symbol.MaximumArity);
 
     foreach (var s in Symbols) {
-      if (s == ProgramRootSymbol)
+      if (s == ProgramRootSymbol) {
         continue;
-      if (s.MaximumArity > 0)
+      }
+
+      if (s.MaximumArity > 0) {
         AddAllowedChildSymbol(s, symbol);
-      if (s == DefunSymbol)
+      }
+
+      if (s == DefunSymbol) {
         continue;
-      if (s == StartSymbol)
+      }
+
+      if (s == StartSymbol) {
         continue;
-      if (symbol.MaximumArity > 0)
+      }
+
+      if (symbol.MaximumArity > 0) {
         AddAllowedChildSymbol(symbol, s);
+      }
     }
   }
 }

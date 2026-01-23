@@ -1,6 +1,7 @@
 namespace HEAL.HeuristicLib.Random;
 
-public interface IRandomEngine {
+public interface IRandomEngine
+{
   double NextDouble();
   int NextInt();
 }

@@ -1,12 +1,17 @@
 ﻿namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 
-public static class TsplibTspInstanceProvider {
+public static class TsplibTspInstanceProvider
+{
   public const string FileExtension = "tsp";
 
-  public static TspData LoadData(string tspFile, string? tourFile = null, double? bestQuality = null) {
-    TsplibParser parser = new TsplibParser(tspFile);
+  public static TspData LoadData(string tspFile, string? tourFile = null, double? bestQuality = null)
+  {
+    var parser = new TsplibParser(tspFile);
     parser.Parse();
-    if (parser.FixedEdges != null) throw new InvalidDataException("TSP instance " + parser.Name + " contains fixed edges which are not supported by HeuristicLab.");
+    if (parser.FixedEdges != null) {
+      throw new InvalidDataException("TSP instance " + parser.Name + " contains fixed edges which are not supported by HeuristicLab.");
+    }
+
     var data = new TspData {
       Dimension = parser.Dimension,
       Coordinates = parser.Vertices ?? parser.DisplayVertices,
@@ -36,8 +41,10 @@ public static class TsplibTspInstanceProvider {
       data.BestKnownTour = tourParser.Tour.FirstOrDefault();
     }
 
-    if (bestQuality.HasValue)
+    if (bestQuality.HasValue) {
       data.BestKnownQuality = bestQuality.Value;
+    }
+
     return data;
   }
 }

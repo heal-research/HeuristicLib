@@ -5,36 +5,44 @@ using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public sealed class VariableConditionTreeNode : SymbolicExpressionTreeNode {
+public sealed class VariableConditionTreeNode : SymbolicExpressionTreeNode
+{
   #region properties
+
   public new VariableCondition Symbol => (VariableCondition)base.Symbol;
   public double Threshold { get; set; }
   public string VariableName { get; set; } = "";
   public double Slope { get; set; }
+
   #endregion
 
   private VariableConditionTreeNode(VariableConditionTreeNode original)
-    : base(original) {
+    : base(original)
+  {
     Threshold = original.Threshold;
     VariableName = original.VariableName;
     Slope = original.Slope;
   }
 
-  public override SymbolicExpressionTreeNode Clone() {
-    return new VariableConditionTreeNode(this);
+  public override SymbolicExpressionTreeNode Clone() => new VariableConditionTreeNode(this);
+
+  public VariableConditionTreeNode(VariableCondition variableConditionSymbol)
+    : base(variableConditionSymbol)
+  {
   }
 
-  public VariableConditionTreeNode(VariableCondition variableConditionSymbol) : base(variableConditionSymbol) { }
   public override bool HasLocalParameters => true;
 
-  public override void ResetLocalParameters(IRandomNumberGenerator random) {
+  public override void ResetLocalParameters(IRandomNumberGenerator random)
+  {
     base.ResetLocalParameters(random);
     Threshold = NormalDistribution.NextDouble(random, Symbol.ThresholdInitializerMu, Symbol.ThresholdInitializerSigma);
     VariableName = Symbol.VariableNames.SampleRandom(random);
     Slope = NormalDistribution.NextDouble(random, Symbol.SlopeInitializerMu, Symbol.SlopeInitializerSigma);
   }
 
-  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
+  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
+  {
     base.ShakeLocalParameters(random, shakingFactor);
     var x = NormalDistribution.NextDouble(random, Symbol.ThresholdManipulatorMu, Symbol.ThresholdManipulatorSigma);
     Threshold += x * shakingFactor;
@@ -44,7 +52,8 @@ public sealed class VariableConditionTreeNode : SymbolicExpressionTreeNode {
     Slope += x * shakingFactor;
   }
 
-  public override string ToString() {
+  public override string ToString()
+  {
     if (Slope.IsAlmost(0.0) || Symbol.IgnoreSlope) {
       return VariableName + " < " + Threshold.ToString("E4");
     }

@@ -1,7 +1,9 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class NormalizedGiniCalculator {
-  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
+public class NormalizedGiniCalculator
+{
+  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
+  {
     var originalValuesArr = originalValues.ToArray();
     var estimatedValuesArr = estimatedValues.ToArray();
     if (originalValuesArr.Length != estimatedValuesArr.Length) {
@@ -9,18 +11,21 @@ public class NormalizedGiniCalculator {
     }
 
     var oe = Gini(originalValuesArr, estimatedValuesArr, out errorState);
-    if (errorState != OnlineCalculatorError.None) return double.NaN;
+    if (errorState != OnlineCalculatorError.None) {
+      return double.NaN;
+    }
 
     return oe / Gini(originalValuesArr, originalValuesArr, out errorState);
   }
 
-  private static double Gini(IEnumerable<double> original, IEnumerable<double> estimated, out OnlineCalculatorError errorState) {
+  private static double Gini(IEnumerable<double> original, IEnumerable<double> estimated, out OnlineCalculatorError errorState)
+  {
     var pairs =
       estimated.Zip(original, (e, o) => new {
-                 e,
-                 o
-               })
-               .OrderByDescending(p => p.e);
+          e,
+          o
+        })
+        .OrderByDescending(p => p.e);
     errorState = pairs.Any() ? OnlineCalculatorError.None : OnlineCalculatorError.InsufficientElementsAdded;
     var giniSum = 0.0;
     var sumOriginal = 0.0;
@@ -38,6 +43,6 @@ public class NormalizedGiniCalculator {
 
     giniSum /= sumOriginal;
 
-    return (giniSum - (n + 1) / 2.0) / n;
+    return (giniSum - ((n + 1) / 2.0)) / n;
   }
 }

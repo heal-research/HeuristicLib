@@ -17,22 +17,23 @@ public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> : IAlg
   where TBuildSpec : IBuildSpec
 {
   public List<IAlgorithmBuilderRewriter<TBuildSpec>> Rewriters { get; } = [];
-  
+
   public IEvaluator<TG, TS, TP> Evaluator { get; set; } = new DirectEvaluator<TG>();
-  
+
   public ITerminator<TG, TR, TS, TP> Terminator { get; set; } = new AfterIterationsTerminator<TG>(100);
-  
+
   public IInterceptor<TG, TR, TS, TP>? Interceptor { get; set; }
-  
+
   public IIterationObserver<TG, TS, TP, TR>? Observer { get; set; }
-  
-  public void AddRewriter<TRewriter>(TRewriter rewriter) 
+
+  public void AddRewriter<TRewriter>(TRewriter rewriter)
     where TRewriter : IAlgorithmBuilderRewriter<TBuildSpec>
   {
     Rewriters.Add(rewriter);
   }
 
-  public TAlg Build() {
+  public TAlg Build()
+  {
     var spec = CreateBuildSpec();
     ApplyRewriters(spec);
     return BuildFromSpec(spec);
@@ -40,8 +41,9 @@ public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> : IAlg
 
   protected abstract TBuildSpec CreateBuildSpec();
   protected abstract TAlg BuildFromSpec(TBuildSpec buildSpec);
-  
-  private void ApplyRewriters(TBuildSpec buildSpec) {
+
+  private void ApplyRewriters(TBuildSpec buildSpec)
+  {
     foreach (var rewriter in Rewriters) {
       rewriter.Rewrite(buildSpec);
     }

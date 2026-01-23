@@ -1,20 +1,24 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 #pragma warning disable S2178
-public class OnlineMeanErrorCalculator {
+public class OnlineMeanErrorCalculator
+{
   private readonly OnlineMeanAndVarianceCalculator meanAndVarianceCalculator = new();
   public double MeanError => meanAndVarianceCalculator.Mean;
 
   public OnlineMeanErrorCalculator() => Reset();
 
   #region IOnlineCalculator Members
+
   public OnlineCalculatorError ErrorState => meanAndVarianceCalculator.MeanErrorState;
   public double Value => MeanError;
   public void Reset() => meanAndVarianceCalculator.Reset();
 
   public void Add(double original, double estimated) => meanAndVarianceCalculator.Add(estimated - original);
+
   #endregion
 
-  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
+  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
+  {
     using var originalEnumerator = originalValues.GetEnumerator();
     using var estimatedEnumerator = estimatedValues.GetEnumerator();
     var meCalculator = new OnlineMeanErrorCalculator();
@@ -24,7 +28,9 @@ public class OnlineMeanErrorCalculator {
       var original = originalEnumerator.Current;
       var estimated = estimatedEnumerator.Current;
       meCalculator.Add(original, estimated);
-      if (meCalculator.ErrorState != OnlineCalculatorError.None) break;
+      if (meCalculator.ErrorState != OnlineCalculatorError.None) {
+        break;
+      }
     }
 
     // check if both enumerators are at the end to make sure both enumerations have the same length

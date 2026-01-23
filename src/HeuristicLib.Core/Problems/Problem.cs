@@ -5,7 +5,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Problems;
 
 public abstract class Problem<TSolution, TSearchSpace>(Objective objective, TSearchSpace searchSpace) : IProblem<TSolution, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TSolution> {
+  where TSearchSpace : class, ISearchSpace<TSolution>
+{
   public Objective Objective { get; } = objective;
   public TSearchSpace SearchSpace { get; } = searchSpace;
 

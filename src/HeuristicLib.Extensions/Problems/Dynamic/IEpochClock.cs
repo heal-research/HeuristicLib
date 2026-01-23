@@ -1,10 +1,11 @@
 ﻿namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public interface IEpochClock {
-  public int EpochCount { get; }
-  public int EpochLength { get; }
-  public int CurrentEpoch => EpochCount / EpochLength;
+public interface IEpochClock
+{
+  int EpochCount { get; }
+  int EpochLength { get; }
+  int CurrentEpoch => EpochCount / EpochLength;
 
-  public event EventHandler<int>? OnEpochChange;
-  public EvaluationTiming IncreaseCount();
+  event EventHandler<int>? OnEpochChange;
+  EvaluationTiming IncreaseCount();
 }

@@ -5,25 +5,23 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public class MultiObjectiveTestFunctionProblem : RealVectorProblem {
+public class MultiObjectiveTestFunctionProblem : RealVectorProblem
+{
   private readonly IMultiObjectiveTestFunction testFunction;
 
-  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction) : base(testFunction.Objective, GeTSearchSpace(testFunction)) {
-    this.testFunction = testFunction;
-  }
+  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction)
+    : base(testFunction.Objective, GeTSearchSpace(testFunction)) => this.testFunction = testFunction;
 
-  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction, RealVectorSearchSpace searchSpace) : base(testFunction.Objective, searchSpace) {
+  public MultiObjectiveTestFunctionProblem(IMultiObjectiveTestFunction testFunction, RealVectorSearchSpace searchSpace)
+    : base(testFunction.Objective, searchSpace)
+  {
     ArgumentOutOfRangeException.ThrowIfNotEqual(searchSpace.Length, testFunction.Dimension);
     this.testFunction = testFunction;
   }
 
-  public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) {
-    return new ObjectiveVector(testFunction.Evaluate(solution));
-  }
+  public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => new(testFunction.Evaluate(solution));
 
-  private static RealVectorSearchSpace GeTSearchSpace(IMultiObjectiveTestFunction testFunction) {
-    return new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);
-  }
+  private static RealVectorSearchSpace GeTSearchSpace(IMultiObjectiveTestFunction testFunction) => new(testFunction.Dimension, testFunction.Min, testFunction.Max);
 
   // public override RealVector Decode(RealVector genotype) => genotype;
 

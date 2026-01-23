@@ -5,19 +5,14 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;
 
-public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressionTreeStringFormatter {
-  public bool Indent {
-    get => indent;
-    set => indent = value;
-  }
+public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressionTreeStringFormatter
+{
+  public bool Indent { get; set; }
 
-  private bool indent;
+  public SymbolicExpressionTreeGraphvizFormatter() => Indent = true;
 
-  public SymbolicExpressionTreeGraphvizFormatter() {
-    Indent = true;
-  }
-
-  public string Format(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree) {
+  public string Format(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree)
+  {
     var nodeCounter = 1;
     var strBuilder = new StringBuilder();
     strBuilder.AppendLine("graph {");
@@ -26,15 +21,17 @@ public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressio
     return strBuilder.ToString();
   }
 
-  private string FormatRecursively(SymbolicExpressionTreeNode node, int indentLength, ref int nodeId) {
+  private string FormatRecursively(SymbolicExpressionTreeNode node, int indentLength, ref int nodeId)
+  {
     // save id of current node
     var currentNodeId = nodeId;
     // increment id for next node
     nodeId++;
 
     var strBuilder = new StringBuilder();
-    if (Indent)
+    if (Indent) {
       strBuilder.Append(' ', indentLength);
+    }
 
     // get label for node and map if necessary
 
@@ -85,8 +82,10 @@ public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressio
     // internal nodes or leaf nodes?
     foreach (var subTree in node.Subtrees) {
       // add an edge 
-      if (Indent)
+      if (Indent) {
         strBuilder.Append(' ', indentLength);
+      }
+
       strBuilder.AppendLine(nameof(node) + currentNodeId + " -- node" + nodeId + ";");
       // format the whole subtree
       strBuilder.Append(FormatRecursively(subTree, indentLength + 2, ref nodeId));

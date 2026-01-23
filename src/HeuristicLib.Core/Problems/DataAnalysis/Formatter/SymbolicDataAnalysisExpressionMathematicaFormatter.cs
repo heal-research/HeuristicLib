@@ -7,15 +7,18 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
-public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbolicExpressionTreeStringFormatter {
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) {
+public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbolicExpressionTreeStringFormatter
+{
+  public string Format(SymbolicExpressionTree symbolicExpressionTree)
+  {
     // skip root and start symbols
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     FormatRecursively(symbolicExpressionTree.Root.GetSubtree(0).GetSubtree(0), strBuilder);
     return strBuilder.ToString();
   }
 
-  private void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     if (node.Subtrees.Any()) {
       switch (node.Symbol) {
         case Addition:
@@ -154,43 +157,53 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     }
   }
 
-  private void FormatXor(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatXor(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("If[Xor[");
     foreach (var t in node.Subtrees) {
       strBuilder.Append("Greater[");
       FormatRecursively(t, strBuilder);
       strBuilder.Append(", 0]");
-      if (t != node.Subtrees.Last()) strBuilder.Append(",");
+      if (t != node.Subtrees.Last()) {
+        strBuilder.Append(",");
+      }
     }
 
     strBuilder.Append("], 1, -1]");
   }
 
-  private void FormatOr(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatOr(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("If[Or[");
     foreach (var t in node.Subtrees) {
       strBuilder.Append("Greater[");
       FormatRecursively(t, strBuilder);
       strBuilder.Append(", 0]");
-      if (t != node.Subtrees.Last()) strBuilder.Append(",");
+      if (t != node.Subtrees.Last()) {
+        strBuilder.Append(",");
+      }
     }
 
     strBuilder.Append("], 1, -1]");
   }
 
-  private void FormatAnd(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatAnd(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("If[And[");
     foreach (var t in node.Subtrees) {
       strBuilder.Append("Greater[");
       FormatRecursively(t, strBuilder);
       strBuilder.Append(", 0]");
-      if (t != node.Subtrees.Last()) strBuilder.Append(",");
+      if (t != node.Subtrees.Last()) {
+        strBuilder.Append(",");
+      }
     }
 
     strBuilder.Append("], 1, -1]");
   }
 
-  private void FormatIf(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatIf(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("If[Greater[");
     FormatRecursively(node.GetSubtree(0), strBuilder);
     strBuilder.Append(", 0], ");
@@ -200,11 +213,12 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     strBuilder.Append("]");
   }
 
-  private void FormatAverage(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatAverage(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     // mean function needs a list of values
     strBuilder.Append("Mean[{");
     FormatRecursively(node.GetSubtree(0), strBuilder);
-    for (int i = 1; i < node.SubtreeCount; i++) {
+    for (var i = 1; i < node.SubtreeCount; i++) {
       strBuilder.Append(",");
       FormatRecursively(node.GetSubtree(i), strBuilder);
     }
@@ -212,7 +226,8 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     strBuilder.Append("}]");
   }
 
-  private void FormatSubtraction(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatSubtraction(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("Subtract[");
     FormatRecursively(node.GetSubtree(0), strBuilder);
     strBuilder.Append(", Times[-1");
@@ -224,17 +239,17 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     strBuilder.Append("]]");
   }
 
-  private void FormatSquare(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
-    FormatPower(node, strBuilder, "2");
-  }
+  private void FormatSquare(SymbolicExpressionTreeNode node, StringBuilder strBuilder) => FormatPower(node, strBuilder, "2");
 
-  private void FormatPower(SymbolicExpressionTreeNode node, StringBuilder strBuilder, string exponent) {
+  private void FormatPower(SymbolicExpressionTreeNode node, StringBuilder strBuilder, string exponent)
+  {
     strBuilder.Append("Power[");
     FormatRecursively(node.GetSubtree(0), strBuilder);
     strBuilder.Append($", {exponent}]");
   }
 
-  private void FormatRoot(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatRoot(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("Power[");
     FormatRecursively(node.GetSubtree(0), strBuilder);
     strBuilder.Append(", Divide[1,");
@@ -242,7 +257,8 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     strBuilder.Append("]]");
   }
 
-  private void FormatDivision(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatDivision(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     if (node.SubtreeCount == 1) {
       strBuilder.Append("Divide[1, ");
       FormatRecursively(node.GetSubtree(0), strBuilder);
@@ -252,7 +268,7 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
       FormatRecursively(node.GetSubtree(0), strBuilder);
       strBuilder.Append(", Times[");
       FormatRecursively(node.GetSubtree(1), strBuilder);
-      for (int i = 2; i < node.SubtreeCount; i++) {
+      for (var i = 2; i < node.SubtreeCount; i++) {
         strBuilder.Append(",");
         FormatRecursively(node.GetSubtree(i), strBuilder);
       }
@@ -261,12 +277,14 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     }
   }
 
-  private void FormatFunction(SymbolicExpressionTreeNode node, string function, StringBuilder strBuilder) {
+  private void FormatFunction(SymbolicExpressionTreeNode node, string function, StringBuilder strBuilder)
+  {
     strBuilder.Append(function + "[");
     foreach (var child in node.Subtrees) {
       FormatRecursively(child, strBuilder);
-      if (child != node.Subtrees.Last())
+      if (child != node.Subtrees.Last()) {
         strBuilder.Append(", ");
+      }
     }
 
     strBuilder.Append("]");

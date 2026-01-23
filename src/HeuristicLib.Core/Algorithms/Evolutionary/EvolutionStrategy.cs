@@ -12,12 +12,14 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public enum EvolutionStrategyType {
+public enum EvolutionStrategyType
+{
   Comma,
   Plus
 }
 
-public record EvolutionStrategyIterationState<TGenotype> : PopulationIterationState<TGenotype> {
+public record EvolutionStrategyIterationState<TGenotype> : PopulationIterationState<TGenotype>
+{
   public required double MutationStrength { get; init; }
 }
 
@@ -25,7 +27,8 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class {
+  where TGenotype : class
+{
   public required int PopulationSize { get; init; }
   public required int NumberOfChildren { get; init; }
   public required EvolutionStrategyType Strategy { get; init; }
@@ -35,12 +38,13 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   public double InitialMutationStrength { get; init; } = 1.0;
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
-  public override EvolutionStrategyIterationState<TGenotype> ExecuteStep(TProblem problem, EvolutionStrategyIterationState<TGenotype>? previousState, IRandomNumberGenerator random) {
+  public override EvolutionStrategyIterationState<TGenotype> ExecuteStep(TProblem problem, EvolutionStrategyIterationState<TGenotype>? previousState, IRandomNumberGenerator random)
+  {
     if (previousState == null) {
       var initialPopulation = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
       var objectives = Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
       return new EvolutionStrategyIterationState<TGenotype> {
-        Population = Population.From(initialPopulation, objectives), 
+        Population = Population.From(initialPopulation, objectives),
         CurrentIteration = 0,
         // ToDo: Actually, mutation strength is not used in initial population creation.
         MutationStrength = InitialMutationStrength
@@ -63,7 +67,7 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
     var children = Mutator.Mutate(parents, random, problem.SearchSpace, problem);
     var fitnesses = Evaluator.Evaluate(children, random, problem.SearchSpace, problem);
 
-    double newMutationStrength = previousState.MutationStrength;
+    var newMutationStrength = previousState.MutationStrength;
     if (Mutator is IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem> vm) {
       //adapt Mutation Strength based on 1/5th rule
       var successes = parentQualities.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1, problem.Objective) == DominanceRelation.Dominates);
@@ -91,7 +95,8 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   }
 }
 
-public static class EvolutionStrategy {
+public static class EvolutionStrategy
+{
   public static EvolutionStrategyBuilder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
     ICreator<TGenotype, TSearchSpace, TProblem> creator,
     IMutator<TGenotype, TSearchSpace, TProblem> mutator)

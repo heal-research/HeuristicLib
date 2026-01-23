@@ -6,16 +6,16 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 // This is an example problem that fully uses the standard search space of real vectors and only the standard operators.
-public class TestFunctionProblem(ITestFunction testFunction) : RealVectorProblem(SingleObjective.Create(testFunction.Objective), GeTSearchSpace(testFunction)) {
-  public TestFunctionProblem() : this(null!) { }
-
-  public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) {
-    return testFunction.Evaluate(solution);
+public class TestFunctionProblem(ITestFunction testFunction) : RealVectorProblem(SingleObjective.Create(testFunction.Objective), GeTSearchSpace(testFunction))
+{
+  public TestFunctionProblem()
+    : this(null!)
+  {
   }
 
-  private static RealVectorSearchSpace GeTSearchSpace(ITestFunction testFunction) {
-    return new RealVectorSearchSpace(testFunction.Dimension, testFunction.Min, testFunction.Max);
-  }
+  public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => testFunction.Evaluate(solution);
+
+  private static RealVectorSearchSpace GeTSearchSpace(ITestFunction testFunction) => new(testFunction.Dimension, testFunction.Min, testFunction.Max);
 
   //public override RealVector Decode(RealVector genotype) => genotype;
 

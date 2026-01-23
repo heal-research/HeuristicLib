@@ -2,22 +2,29 @@
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public sealed class Constant() : Symbol(0, 0, 0) {
+public sealed class Constant() : Symbol(0, 0, 0)
+{
   public double Value { get; set; }
 
   public override SymbolicExpressionTreeNode CreateTreeNode() => new ConstantTreeNode(Value);
 }
 
-public sealed class ConstantTreeNode : SymbolicExpressionTreeNode {
+public sealed class ConstantTreeNode : SymbolicExpressionTreeNode
+{
   public new Constant Symbol => (Constant)base.Symbol;
 
   public double Value { get; set; }
 
-  public ConstantTreeNode(Constant numberSymbol) : base(numberSymbol) { }
+  public ConstantTreeNode(Constant numberSymbol)
+    : base(numberSymbol)
+  {
+  }
 
-  public ConstantTreeNode(ConstantTreeNode original) : base(original) => Value = original.Value;
+  public ConstantTreeNode(ConstantTreeNode original)
+    : base(original) => Value = original.Value;
 
-  public ConstantTreeNode(double value) : this(new Constant()) => Value = value;
+  public ConstantTreeNode(double value)
+    : this(new Constant()) => Value = value;
 
   public override bool HasLocalParameters => false;
 

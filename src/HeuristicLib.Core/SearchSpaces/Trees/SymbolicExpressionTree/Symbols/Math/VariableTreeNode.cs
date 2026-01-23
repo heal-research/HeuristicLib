@@ -2,12 +2,19 @@ using HEAL.HeuristicLib.Genotypes.Trees;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public sealed class VariableTreeNode : VariableTreeNodeBase {
+public sealed class VariableTreeNode : VariableTreeNodeBase
+{
   public new Variable Symbol => (Variable)base.Symbol;
 
-  private VariableTreeNode(VariableTreeNode original) : base(original) { }
+  private VariableTreeNode(VariableTreeNode original)
+    : base(original)
+  {
+  }
 
-  public VariableTreeNode(Variable variableSymbol) : base(variableSymbol) { }
+  public VariableTreeNode(Variable variableSymbol)
+    : base(variableSymbol)
+  {
+  }
 
   public override SymbolicExpressionTreeNode Clone() => new VariableTreeNode(this);
 }

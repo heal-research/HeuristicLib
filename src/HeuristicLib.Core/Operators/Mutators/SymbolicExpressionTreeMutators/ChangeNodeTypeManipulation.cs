@@ -6,10 +6,12 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
+public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator
+{
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var allowedSymbols = new List<Symbol>();
     var mutant = new SymbolicExpressionTree(symbolicExpressionTree);
 
@@ -51,25 +53,30 @@ public class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator {
       tries++;
     } while (tries < MaxTries && allowedSymbols.Count == 0);
 
-    if (tries >= MaxTries)
+    if (tries >= MaxTries) {
       return symbolicExpressionTree;
+    }
 
     var weights = allowedSymbols.Select(s => s.InitialFrequency).ToList();
     var newSymbol = allowedSymbols.SampleProportional(random, 1, weights).First();
 
     // replace the old node with the new node
     var newNode = newSymbol.CreateTreeNode();
-    if (newNode.HasLocalParameters)
+    if (newNode.HasLocalParameters) {
       newNode.ResetLocalParameters(random);
-    foreach (var subtree in child.Subtrees)
+    }
+
+    foreach (var subtree in child.Subtrees) {
       newNode.AddSubtree(subtree);
+    }
 
     parent.RemoveSubtree(childIndex);
     parent.InsertSubtree(childIndex, newNode);
     return mutant;
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var t = ChangeNodeType(parent, random, searchSpace);
     Extensions.CheckDebug(searchSpace.Contains(t), "Upps destroyed tree");
     return t;

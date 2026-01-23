@@ -4,7 +4,8 @@ using static System.String;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 
-public class TsplibParser {
+public class TsplibParser
+{
   public string Name { get; private set; }
   public TSPLIBTypes Type { get; private set; }
   public string Comment { get; private set; }
@@ -23,7 +24,9 @@ public class TsplibParser {
   private static readonly char[] ItemSeparator = [' ', '\t'];
 
   #region Private Enums
-  private enum TSPLIBSections {
+
+  private enum TSPLIBSections
+  {
     Unknown = 0,
     Eof = 1,
     Name = 2,
@@ -48,7 +51,8 @@ public class TsplibParser {
 
   [SuppressMessage("ReSharper", "IdentifierTypo")]
   [SuppressMessage("ReSharper", "InconsistentNaming")]
-  private enum TSPLIBEdgeWeightFormats {
+  private enum TSPLIBEdgeWeightFormats
+  {
     Unknown = 0,
     Function = 1,
     FULL_MATRIX = 2,
@@ -57,6 +61,7 @@ public class TsplibParser {
     UPPER_DIAG_ROW = 5,
     LOWER_DIAG_ROW = 6,
     UPPER_COLUMN = 7,
+
     //LowerColumn = 8,
     Upper_Diag_Column = 9,
     Lower_Diag_Column = 10
@@ -64,12 +69,14 @@ public class TsplibParser {
 
   private enum TSPLIBEdgeWeightDataFormats { }
 
-  private enum TslplibNodeCoordTypes {
+  private enum TslplibNodeCoordTypes
+  {
     Unknown = 0,
     Twod_Coords = 1,
     Threed_Coords = 2,
     NO_COORDS = 3
   }
+
   #endregion
 
   private readonly StreamReader source = null!;
@@ -79,7 +86,8 @@ public class TsplibParser {
   private TslplibNodeCoordTypes nodeCoordType;
   private TSPLIBDisplayDataTypes displayDataType;
 
-  private TsplibParser() {
+  private TsplibParser()
+  {
     Name = Empty;
     Comment = Empty;
     Type = TSPLIBTypes.Unknown;
@@ -90,21 +98,20 @@ public class TsplibParser {
     displayDataType = TSPLIBDisplayDataTypes.Unknown;
   }
 
-  public TsplibParser(String path)
-    : this() {
+  public TsplibParser(string path)
+    : this() =>
     source = new StreamReader(path);
-  }
 
   public TsplibParser(Stream stream)
-    : this() {
+    : this() =>
     source = new StreamReader(stream);
-  }
 
   /// <summary>
-  /// Reads the TSPLIB file and parses the elements.
+  ///   Reads the TSPLIB file and parses the elements.
   /// </summary>
   /// <exception cref="InvalidDataException">Thrown if the file has an invalid format or contains invalid data.</exception>
-  public void Parse() {
+  public void Parse()
+  {
     currentLineNumber = 0;
 
     try {
@@ -173,92 +180,114 @@ public class TsplibParser {
           case TSPLIBSections.Eof:
             break;
           default:
-            throw new InvalidDataException("Input file contains unknown or unsupported section (" + line + ") in line " + currentLineNumber.ToString());
+            throw new InvalidDataException("Input file contains unknown or unsupported section (" + line + ") in line " + currentLineNumber);
         }
       } while (!(section == TSPLIBSections.Eof || source.EndOfStream));
-    }
-    finally {
+    } finally {
       source.Close();
     }
   }
 
-  private string? NextLine() {
+  private string? NextLine()
+  {
     currentLineNumber++;
     return source.ReadLine();
   }
 
-  private static TSPLIBSections GetSection(string? line, out string value) {
+  private static TSPLIBSections GetSection(string? line, out string value)
+  {
     value = Empty;
 
-    if (line == null)
+    if (line == null) {
       return TSPLIBSections.Unknown;
+    }
 
     var sectionNameEnd = line.IndexOf(SectionSeparator);
-    if (sectionNameEnd == -1) sectionNameEnd = line.Length;
+    if (sectionNameEnd == -1) {
+      sectionNameEnd = line.Length;
+    }
 
     var sectionName = line[..sectionNameEnd].Trim();
-    if (sectionNameEnd + 1 < line.Length)
+    if (sectionNameEnd + 1 < line.Length) {
       value = line[(sectionNameEnd + 1)..];
+    }
 
     return Enum.TryParse(sectionName.Replace("_", ""), true, out TSPLIBSections section) ? section : TSPLIBSections.Unknown;
   }
 
-  private void ReadName(string value) {
-    Name += value.Trim();
-  }
+  private void ReadName(string value) => Name += value.Trim();
 
-  private void ReadType(string value) {
-    Type = Enum.TryParse(value.Trim(), true, out TSPLIBTypes t) ? t : TSPLIBTypes.Unknown;
-  }
+  private void ReadType(string value) => Type = Enum.TryParse(value.Trim(), true, out TSPLIBTypes t) ? t : TSPLIBTypes.Unknown;
 
-  private void ReadComment(string value) {
-    Comment += value.Trim() + Environment.NewLine;
-  }
+  private void ReadComment(string value) => Comment += value.Trim() + Environment.NewLine;
 
-  private void ReadCapacity(string value) {
-    if (double.TryParse(value.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture.NumberFormat, out var c))
+  private void ReadCapacity(string value)
+  {
+    if (double.TryParse(value.Trim(), NumberStyles.Any, CultureInfo.InvariantCulture.NumberFormat, out var c)) {
       Capacity = c;
-    else throw new InvalidDataException("Parsing the capacity in line " + currentLineNumber + " failed. It is not recognized as double value.");
+    } else {
+      throw new InvalidDataException("Parsing the capacity in line " + currentLineNumber + " failed. It is not recognized as double value.");
+    }
   }
 
-  private void ReadDimension(string value) {
-    if (int.TryParse(value.Trim(), out var dimension))
+  private void ReadDimension(string value)
+  {
+    if (int.TryParse(value.Trim(), out var dimension)) {
       Dimension = dimension;
-    else throw new InvalidDataException("Parsing the dimension in line " + currentLineNumber + " failed. It is not recognized as an integer number.");
+    } else {
+      throw new InvalidDataException("Parsing the dimension in line " + currentLineNumber + " failed. It is not recognized as an integer number.");
+    }
   }
 
-  private void ReadEdgeWeightType(string value) {
-    if (Enum.TryParse(value.Trim(), true, out TSPLIBEdgeWeightTypes e))
+  private void ReadEdgeWeightType(string value)
+  {
+    if (Enum.TryParse(value.Trim(), true, out TSPLIBEdgeWeightTypes e)) {
       EdgeWeightType = e;
-    else throw new InvalidDataException("Input file contains an unsupported edge weight type (" + value + ") in line " + currentLineNumber + ".");
+    } else {
+      throw new InvalidDataException("Input file contains an unsupported edge weight type (" + value + ") in line " + currentLineNumber + ".");
+    }
   }
 
-  private void ReadEdgeWeightFormat(string value) {
-    if (Enum.TryParse(value.Trim(), true, out TSPLIBEdgeWeightFormats e))
+  private void ReadEdgeWeightFormat(string value)
+  {
+    if (Enum.TryParse(value.Trim(), true, out TSPLIBEdgeWeightFormats e)) {
       edgeWeightFormat = e;
-    else throw new InvalidDataException("Input file contains an unsupported edge weight format (" + value + ") in line " + currentLineNumber + ".");
+    } else {
+      throw new InvalidDataException("Input file contains an unsupported edge weight format (" + value + ") in line " + currentLineNumber + ".");
+    }
   }
 
-  private void ReadEdgeWeightDataFormat(string value) {
-    if (!Enum.TryParse(value.Trim().ToUpper(), out TSPLIBEdgeWeightDataFormats _))
+  private void ReadEdgeWeightDataFormat(string value)
+  {
+    if (!Enum.TryParse(value.Trim().ToUpper(), out TSPLIBEdgeWeightDataFormats _)) {
       throw new InvalidDataException("Input file contains an unsupported edge weight data format (" + value + ") in line " + currentLineNumber + ".");
+    }
   }
 
-  private void ReadNodeCoordType(string value) {
-    if (Enum.TryParse(value.Trim(), true, out TslplibNodeCoordTypes n))
+  private void ReadNodeCoordType(string value)
+  {
+    if (Enum.TryParse(value.Trim(), true, out TslplibNodeCoordTypes n)) {
       nodeCoordType = n;
-    else throw new InvalidDataException("Input file contains an unsupported node coordinates type (" + value + ") in line " + currentLineNumber + ".");
+    } else {
+      throw new InvalidDataException("Input file contains an unsupported node coordinates type (" + value + ") in line " + currentLineNumber + ".");
+    }
   }
 
-  private void ReadDisplayDataType(string value) {
-    if (Enum.TryParse(value.Trim(), true, out TSPLIBDisplayDataTypes d))
+  private void ReadDisplayDataType(string value)
+  {
+    if (Enum.TryParse(value.Trim(), true, out TSPLIBDisplayDataTypes d)) {
       displayDataType = d;
-    else throw new InvalidDataException("Input file contains an unsupported display data type (" + value + ") in line " + currentLineNumber + ".");
+    } else {
+      throw new InvalidDataException("Input file contains an unsupported display data type (" + value + ") in line " + currentLineNumber + ".");
+    }
   }
 
-  private void ReadNodeCoordsSection() {
-    if (Dimension == 0)
+  private void ReadNodeCoordsSection()
+  {
+    if (Dimension == 0) {
       throw new InvalidDataException("Input file does not contain dimension information.");
+    }
+
     switch (nodeCoordType) {
       case TslplibNodeCoordTypes.NO_COORDS:
         return;
@@ -277,62 +306,84 @@ public class TsplibParser {
       var line = NextLine();
       var tokens = line!.Split(ItemSeparator, StringSplitOptions.RemoveEmptyEntries);
 
-      if (tokens.Length != Vertices.GetLength(1) + 1)
+      if (tokens.Length != Vertices.GetLength(1) + 1) {
         throw new InvalidDataException("Input file contains invalid number of node coordinates in line " + currentLineNumber + ".");
+      }
 
       if (int.TryParse(tokens[0], out var node)) {
-        for (var j = 0; j < Vertices.GetLength(1); j++)
+        for (var j = 0; j < Vertices.GetLength(1); j++) {
           Vertices[node - 1, j] = double.Parse(tokens[j + 1], CultureInfo.InvariantCulture.NumberFormat);
-      } else throw new InvalidDataException("Input file does not specify a valid node in line " + currentLineNumber + ".");
+        }
+      } else {
+        throw new InvalidDataException("Input file does not specify a valid node in line " + currentLineNumber + ".");
+      }
     }
   }
 
-  private void ReadDepotSection() {
+  private void ReadDepotSection()
+  {
     var depots = new List<int>();
     do {
       var line = NextLine();
-      if (!int.TryParse(line, out var node))
+      if (!int.TryParse(line, out var node)) {
         throw new InvalidDataException("Input file contains an unknown depot entry at line " + currentLineNumber + ".");
-      if (node == -1) break;
+      }
+
+      if (node == -1) {
+        break;
+      }
+
       depots.Add(node);
     } while (true);
 
     Depots = depots.ToArray();
   }
 
-  private void ReadDemandSection() {
-    if (Dimension == 0)
+  private void ReadDemandSection()
+  {
+    if (Dimension == 0) {
       throw new InvalidDataException("Input file does not contain dimension information.");
+    }
+
     Demands = new double[Dimension];
     for (var i = 0; i < Dimension; i++) {
       var tokens = NextLine()!.Split(ItemSeparator, StringSplitOptions.RemoveEmptyEntries);
       if (int.TryParse(tokens[0], out var node)) {
-        if (double.TryParse(tokens[1], NumberStyles.Any, CultureInfo.InvariantCulture.NumberFormat, out var demand))
+        if (double.TryParse(tokens[1], NumberStyles.Any, CultureInfo.InvariantCulture.NumberFormat, out var demand)) {
           Demands[node - 1] = demand;
-        else throw new InvalidDataException("Input file contains invalid demand information in line " + currentLineNumber + ".");
-      } else throw new InvalidDataException("Input file contains invalid node information in line " + currentLineNumber + ".");
+        } else {
+          throw new InvalidDataException("Input file contains invalid demand information in line " + currentLineNumber + ".");
+        }
+      } else {
+        throw new InvalidDataException("Input file contains invalid node information in line " + currentLineNumber + ".");
+      }
     }
   }
 
-  private static void ReadEdgeDataSection() {
-    throw new NotSupportedException("Files with an edge data section are not supported.");
-  }
+  private static void ReadEdgeDataSection() => throw new NotSupportedException("Files with an edge data section are not supported.");
 
-  private void ReadFixedEdgesSection() {
+  private void ReadFixedEdgesSection()
+  {
     var edges = new List<Tuple<int, int>>();
     var finished = false;
     while (!finished) {
       var line = NextLine();
       var tokens = line!.Split(ItemSeparator, StringSplitOptions.RemoveEmptyEntries);
       if (tokens.Length == 1) {
-        if (!int.TryParse(tokens[0], NumberStyles.Integer, CultureInfo.InvariantCulture.NumberFormat, out var number))
+        if (!int.TryParse(tokens[0], NumberStyles.Integer, CultureInfo.InvariantCulture.NumberFormat, out var number)) {
           throw new InvalidDataException("Input file does not end the fixed edges section with \"-1\" in line " + currentLineNumber + ".");
-        if (number != -1)
+        }
+
+        if (number != -1) {
           throw new InvalidDataException("Input file must end the fixed edges section with a -1 in line " + currentLineNumber + ".");
+        }
+
         finished = true;
       } else {
-        if (tokens.Length != 2)
+        if (tokens.Length != 2) {
           throw new InvalidDataException("Input file contains an error in line " + currentLineNumber + ", exactly two nodes need to be given in each line.");
+        }
+
         var node1 = int.Parse(tokens[0], CultureInfo.InvariantCulture.NumberFormat) - 1;
         var node2 = int.Parse(tokens[1], CultureInfo.InvariantCulture.NumberFormat) - 1;
         edges.Add(Tuple.Create(node1, node2));
@@ -346,9 +397,11 @@ public class TsplibParser {
     }
   }
 
-  private void ReadDisplayDataSection() {
-    if (Dimension == 0)
+  private void ReadDisplayDataSection()
+  {
+    if (Dimension == 0) {
       throw new InvalidDataException("Input file does not contain dimension information.");
+    }
 
     switch (displayDataType) {
       case TSPLIBDisplayDataTypes.NO_DISPLAY:
@@ -366,39 +419,50 @@ public class TsplibParser {
       var line = NextLine();
       var tokens = line!.Split(ItemSeparator, StringSplitOptions.RemoveEmptyEntries);
 
-      if (tokens.Length != DisplayVertices.GetLength(1) + 1)
+      if (tokens.Length != DisplayVertices.GetLength(1) + 1) {
         throw new InvalidDataException("Input file contains invalid number of display data coordinates in line " + currentLineNumber + ".");
+      }
 
       if (int.TryParse(tokens[0], out var node)) {
-        for (var j = 0; j < DisplayVertices.GetLength(1); j++)
+        for (var j = 0; j < DisplayVertices.GetLength(1); j++) {
           DisplayVertices[node - 1, j] = double.Parse(tokens[j + 1], CultureInfo.InvariantCulture.NumberFormat);
-      } else throw new InvalidDataException("Input file does not specify a valid node in line " + currentLineNumber + ".");
+        }
+      } else {
+        throw new InvalidDataException("Input file does not specify a valid node in line " + currentLineNumber + ".");
+      }
     }
   }
 
   /// <summary>
-  /// Parses the tour section.
+  ///   Parses the tour section.
   /// </summary>
   /// <remarks>
-  /// Unfortunately, none of the given files for the TSP follow the description
-  /// in the TSPLIB documentation.
-  /// The faulty files use only one -1 to terminate the section as well as the tour
-  /// whereas the documentation says that one -1 terminates the tour and another -1
-  /// terminates the section.
-  /// So the parser peeks at the next character after a -1. If the next character
-  /// is an E as in EOF or the stream ends, the parser ends. Otherwise it will
-  /// continue to read tours until a -1 is followed by a -1.
+  ///   Unfortunately, none of the given files for the TSP follow the description
+  ///   in the TSPLIB documentation.
+  ///   The faulty files use only one -1 to terminate the section as well as the tour
+  ///   whereas the documentation says that one -1 terminates the tour and another -1
+  ///   terminates the section.
+  ///   So the parser peeks at the next character after a -1. If the next character
+  ///   is an E as in EOF or the stream ends, the parser ends. Otherwise it will
+  ///   continue to read tours until a -1 is followed by a -1.
   /// </remarks>
-  private void ReadTourSection() {
-    if (Dimension == 0)
+  private void ReadTourSection()
+  {
+    if (Dimension == 0) {
       throw new InvalidDataException("Input file does not contain dimension information.");
+    }
 
     var tours = new List<List<int>>();
     do {
       var line = NextLine();
-      if (IsNullOrEmpty(line)) break;
+      if (IsNullOrEmpty(line)) {
+        break;
+      }
+
       var nodes = line.Split(ItemSeparator, StringSplitOptions.RemoveEmptyEntries);
-      if (nodes.Length == 0) break;
+      if (nodes.Length == 0) {
+        break;
+      }
 
       var finished = false;
       foreach (var nodeString in nodes) {
@@ -407,24 +471,37 @@ public class TsplibParser {
           finished = (tours.Count > 0 && tours[^1].Count == 0) // -1 followed by -1
                      || (source.BaseStream.CanSeek && source.Peek() == -1)
                      || source.Peek() == 'E';
-          if (finished) break;
+          if (finished) {
+            break;
+          }
+
           tours.Add([]);
         } else {
-          if (tours.Count == 0) tours.Add([]);
+          if (tours.Count == 0) {
+            tours.Add([]);
+          }
+
           tours[^1].Add(node - 1);
         }
       }
 
-      if (finished) break;
+      if (finished) {
+        break;
+      }
     } while (true);
 
-    if (tours[^1].Count == 0) tours.RemoveAt(tours.Count - 1);
+    if (tours[^1].Count == 0) {
+      tours.RemoveAt(tours.Count - 1);
+    }
+
     Tour = tours.Select(x => x.ToArray()).ToArray();
   }
 
-  private void ReadEdgeWeightSection() {
-    if (Dimension == 0)
+  private void ReadEdgeWeightSection()
+  {
+    if (Dimension == 0) {
       throw new InvalidDataException("Input file does not contain dimension information.");
+    }
 
     switch (edgeWeightFormat) {
       case TSPLIBEdgeWeightFormats.Unknown:
@@ -448,8 +525,9 @@ public class TsplibParser {
       var line = NextLine();
       var weights = line!.Split(ItemSeparator, StringSplitOptions.RemoveEmptyEntries);
       foreach (var weightString in weights) {
-        if (!double.TryParse(weightString, NumberStyles.Any, CultureInfo.InvariantCulture.NumberFormat, out var weight))
+        if (!double.TryParse(weightString, NumberStyles.Any, CultureInfo.InvariantCulture.NumberFormat, out var weight)) {
           throw new InvalidDataException("Input file contains unreadable weight information (" + weightString + ") in line " + currentLineNumber + ".");
+        }
 
         Distances[dim1, dim2] = weight;
         if (triangular) {
@@ -457,43 +535,58 @@ public class TsplibParser {
           if (upperTriangular) {
             if (rowWise) {
               dim2++;
-              if (dim2 != Dimension)
+              if (dim2 != Dimension) {
                 continue;
+              }
 
               dim1++;
-              if (diagonal) dim2 = dim1;
-              else dim2 = dim1 + 1;
-            } else { // column-wise
+              if (diagonal) {
+                dim2 = dim1;
+              } else {
+                dim2 = dim1 + 1;
+              }
+            } else {
+              // column-wise
               dim1++;
-              if ((!diagonal || dim1 != dim2 + 1) && (diagonal || dim1 != dim2))
+              if ((!diagonal || dim1 != dim2 + 1) && (diagonal || dim1 != dim2)) {
                 continue;
+              }
 
               dim2++;
               dim1 = 0;
             }
-          } else { // lower-triangular
+          } else {
+            // lower-triangular
             if (rowWise) {
               dim2++;
               if ((!diagonal || dim2 != dim1 + 1)
-                  && (diagonal || dim2 != dim1))
+                  && (diagonal || dim2 != dim1)) {
                 continue;
+              }
 
               dim1++;
               dim2 = 0;
-            } else { // column-wise
+            } else {
+              // column-wise
               dim1++;
-              if (dim1 != Dimension)
+              if (dim1 != Dimension) {
                 continue;
+              }
 
               dim2++;
-              if (diagonal) dim1 = dim2;
-              else dim1 = dim2 + 1;
+              if (diagonal) {
+                dim1 = dim2;
+              } else {
+                dim1 = dim2 + 1;
+              }
             }
           }
-        } else { // full-matrix
+        } else {
+          // full-matrix
           dim2++;
-          if (dim2 != Dimension)
+          if (dim2 != Dimension) {
             continue;
+          }
 
           dim1++;
           dim2 = 0;

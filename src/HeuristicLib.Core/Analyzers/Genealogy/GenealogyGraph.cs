@@ -2,10 +2,12 @@
 
 namespace HEAL.HeuristicLib.Analyzers.Genealogy;
 
-public class GenealogyGraph<TGenotype> where TGenotype : notnull {
+public class GenealogyGraph<TGenotype> where TGenotype : notnull
+{
   private int nextId;
 
-  public class Node(int id, TGenotype value, int generation, int layer, int rank) {
+  public class Node(int id, TGenotype value, int generation, int layer, int rank)
+  {
     public readonly int Id = id;
     public readonly HashSet<Node> Children = [];
     public readonly HashSet<Node> Parents = [];
@@ -14,27 +16,27 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
     public readonly TGenotype Value = value;
     public readonly int Rank = rank;
 
-    public HashSet<Node> GetAllDescendants() {
-      return Children.SelectMany(x => x.GetAllDescendants()).Concat(Children).ToHashSet();
-    }
+    public HashSet<Node> GetAllDescendants() => Children.SelectMany(x => x.GetAllDescendants()).Concat(Children).ToHashSet();
 
-    public HashSet<Node> GetAllAncestors() {
-      return Parents.SelectMany(x => x.GetAllAncestors()).Concat(Children).ToHashSet();
-    }
+    public HashSet<Node> GetAllAncestors() => Parents.SelectMany(x => x.GetAllAncestors()).Concat(Children).ToHashSet();
   }
 
   public Dictionary<TGenotype, Node> CurrentGeneration => Nodes[^1];
   public readonly List<Dictionary<TGenotype, Node>> Nodes = [];
   private readonly IEqualityComparer<TGenotype> equality;
 
-  public GenealogyGraph(IEqualityComparer<TGenotype> equality) {
+  public GenealogyGraph(IEqualityComparer<TGenotype> equality)
+  {
     Nodes.Add(new Dictionary<TGenotype, Node>(equality));
     this.equality = equality;
   }
 
-  public void AddConnection(ICollection<TGenotype> parent, TGenotype child) {
-    if (CurrentGeneration.TryGetValue(child, out var cNode) && parent.Any(x => equality.Equals(x, child)))
+  public void AddConnection(ICollection<TGenotype> parent, TGenotype child)
+  {
+    if (CurrentGeneration.TryGetValue(child, out var cNode) && parent.Any(x => equality.Equals(x, child))) {
       return; //operators sometimes just "give up" and return one of the parents as child
+    }
+
     var pNodes = parent.Where(x => !equality.Equals(x, child)).Select(x => CurrentGeneration[x]).ToArray();
     cNode = new Node(nextId++, child, Nodes.Count - 1, pNodes.Max(x => x.Layer) + 1, -1);
     CurrentGeneration.Add(child, cNode);
@@ -44,29 +46,35 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
     }
   }
 
-  public void SetAsNewGeneration(IEnumerable<TGenotype> survivors, bool saveSpace = false) {
+  public void SetAsNewGeneration(IEnumerable<TGenotype> survivors, bool saveSpace = false)
+  {
     var newGen = new Dictionary<TGenotype, Node>(CurrentGeneration.Comparer);
     var rank = 0;
     foreach (var survivor in survivors) {
       var newNode = new Node(nextId++, survivor, Nodes.Count, 0, rank++);
       newGen[survivor] = newNode;
-      if (!CurrentGeneration.TryGetValue(survivor, out var oldNode))
+      if (!CurrentGeneration.TryGetValue(survivor, out var oldNode)) {
         continue;
+      }
+
       oldNode.Children.Add(newNode);
       newNode.Parents.Add(oldNode);
     }
 
     //only keep parents for the last generation to save space
     if (saveSpace && Nodes.Count > 1) {
-      foreach (var node in Nodes[^1].Values.Where(x => x.Layer == 0))
+      foreach (var node in Nodes[^1].Values.Where(x => x.Layer == 0)) {
         node.Parents.Clear();
+      }
+
       Nodes[^2].Clear();
     }
 
     Nodes.Add(newGen);
   }
 
-  public string ToGraphViz() {
+  public string ToGraphViz()
+  {
     StringBuilder sb = new();
     sb.AppendLine("digraph G {");
     sb.AppendLine("rankdir=TB;");
@@ -74,8 +82,10 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
     var elites = new List<Node>();
 
     foreach (var (genId, gen) in Nodes.Select((x, i) => (i, x))) {
-      if (gen.Count == 0)
+      if (gen.Count == 0) {
         continue;
+      }
+
       sb.AppendLine($"subgraph cluster_gen{genId} {{");
       sb.AppendLine($"label=\"Generation {genId}\"");
       foreach (var nl in gen.Values.GroupBy(x => x.Layer).OrderBy(x => x.Key)) {
@@ -99,8 +109,9 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
           }
 
           //set invisible edges to help ranked-layout
-          for (var i = 0; i < ranked.Length - 1; i++)
+          for (var i = 0; i < ranked.Length - 1; i++) {
             sb.AppendLine($"\"{ranked[i].Id}\"->\"{ranked[i + 1].Id}\" [style=invis]");
+          }
         }
 
         sb.AppendLine("}");

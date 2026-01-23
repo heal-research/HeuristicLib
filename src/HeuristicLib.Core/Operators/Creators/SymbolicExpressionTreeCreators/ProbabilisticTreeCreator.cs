@@ -5,30 +5,41 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
 namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
-public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
+public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator
+{
   private const int MaxTries = 100;
 
-  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var tree = searchSpace.Grammar.MakeStump(random);
     Ptc2(random, tree.Root[0], searchSpace.TreeDepth - 2, searchSpace.TreeLength - 2, searchSpace);
     return tree;
   }
 
   public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, ISymbolicExpressionGrammar grammar, int targetLength,
-                                                            int maxTreeDepth, SymbolicExpressionTreeSearchSpace searchSpace) {
+    int maxTreeDepth, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var rootNode = grammar.ProgramRootSymbol.CreateTreeNode();
-    if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
+    if (rootNode.HasLocalParameters) {
+      rootNode.ResetLocalParameters(random);
+    }
+
     var startNode = grammar.StartSymbol.CreateTreeNode();
-    if (startNode.HasLocalParameters) startNode.ResetLocalParameters(random);
+    if (startNode.HasLocalParameters) {
+      startNode.ResetLocalParameters(random);
+    }
 
     rootNode.AddSubtree(startNode);
     var success = TryCreateFullTreeFromSeed(random, startNode, targetLength - 2, maxTreeDepth - 1, searchSpace);
-    if (!success) throw new InvalidOperationException($"Could not create a tree with target length {targetLength} and max depth {maxTreeDepth}");
+    if (!success) {
+      throw new InvalidOperationException($"Could not create a tree with target length {targetLength} and max depth {maxTreeDepth}");
+    }
 
     return new SymbolicExpressionTree(rootNode);
   }
 
-  private class TreeExtensionPoint(SymbolicExpressionTreeNode parent, int childIndex, int extensionPointDepth) {
+  private class TreeExtensionPoint(SymbolicExpressionTreeNode parent, int childIndex, int extensionPointDepth)
+  {
     public SymbolicExpressionTreeNode Parent { get; } = parent;
     public int ChildIndex { get; } = childIndex;
     public int ExtensionPointDepth { get; } = extensionPointDepth;
@@ -36,12 +47,16 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     public int MinimumExtensionLength { get; set; }
   }
 
-  public static void Ptc2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, int maxLength, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public static void Ptc2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, int maxLength, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     // make sure it is possible to create a trees smaller than maxLength and maxDepth
-    if (searchSpace.Grammar.GetMinimumExpressionLength(seedNode.Symbol) > maxLength)
+    if (searchSpace.Grammar.GetMinimumExpressionLength(seedNode.Symbol) > maxLength) {
       throw new ArgumentException("Cannot create trees of length " + maxLength + " or shorter because of grammar constraints.", "maxLength");
-    if (searchSpace.Grammar.GetMinimumExpressionDepth(seedNode.Symbol) > maxDepth)
+    }
+
+    if (searchSpace.Grammar.GetMinimumExpressionDepth(seedNode.Symbol) > maxDepth) {
       throw new ArgumentException("Cannot create trees of depth " + maxDepth + " or smaller because of grammar constraints.", "maxDepth");
+    }
 
     // tree length is limited by the grammar and by the explicit size constraints
     var allowedMinLength = searchSpace.Grammar.GetMinimumExpressionLength(seedNode.Symbol);
@@ -50,7 +65,9 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     while (tries++ < MaxTries) {
       // select a target tree length uniformly in the possible range (as determined by explicit limits and limits of the grammar)
       var targetTreeLength = random.NextInt(allowedMinLength, allowedMaxLength + 1);
-      if (targetTreeLength <= 1 || maxDepth <= 1) return;
+      if (targetTreeLength <= 1 || maxDepth <= 1) {
+        return;
+      }
 
       var success = TryCreateFullTreeFromSeed(random, seedNode, targetTreeLength - 1, maxDepth - 1, searchSpace);
 
@@ -60,7 +77,9 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
       }
 
       // clean seedNode
-      while (seedNode.Subtrees.Any()) seedNode.RemoveSubtree(0);
+      while (seedNode.Subtrees.Any()) {
+        seedNode.RemoveSubtree(0);
+      }
       // try a different length MAX_TRIES times
     }
 
@@ -68,11 +87,14 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
   }
 
   private static bool TryCreateFullTreeFromSeed(IRandomNumberGenerator random, SymbolicExpressionTreeNode root,
-                                                int targetLength, int maxDepth, SymbolicExpressionTreeSearchSpace searchSpace) {
+    int targetLength, int maxDepth, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var extensionPoints = new List<TreeExtensionPoint>();
     var currentLength = 0;
     var actualArity = SampleArity(random, root, targetLength, maxDepth, searchSpace);
-    if (actualArity < 0) return false;
+    if (actualArity < 0) {
+      return false;
+    }
 
     for (var i = 0; i < actualArity; i++) {
       // insert a dummy sub-tree and add the pending extension to the list
@@ -110,33 +132,42 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
         var length = currentLength;
         var pointsLength = minExtensionPointsLength;
         var symbols = from s in searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, argumentIndex)
-                      where s.InitialFrequency > 0.0
-                      where searchSpace.Grammar.GetMinimumExpressionDepth(s) <= maxDepth - extensionDepth
-                      where searchSpace.Grammar.GetMinimumExpressionLength(s) <= targetLength - length - pointsLength
-                      select s;
+          where s.InitialFrequency > 0.0
+          where searchSpace.Grammar.GetMinimumExpressionDepth(s) <= maxDepth - extensionDepth
+          where searchSpace.Grammar.GetMinimumExpressionLength(s) <= targetLength - length - pointsLength
+          select s;
         if (maxExtensionPointsLength < targetLength - currentLength) {
           var length1 = currentLength;
           var extensionPointsLength = maxExtensionPointsLength;
           symbols = from s in symbols
-                    where searchSpace.Grammar.GetMaximumExpressionLength(s, maxDepth - extensionDepth) >= targetLength - length1 - extensionPointsLength
-                    select s;
+            where searchSpace.Grammar.GetMaximumExpressionLength(s, maxDepth - extensionDepth) >= targetLength - length1 - extensionPointsLength
+            select s;
         }
 
         var allowedSymbols = symbols.ToList();
 
-        if (allowedSymbols.Count == 0) return false;
+        if (allowedSymbols.Count == 0) {
+          return false;
+        }
+
         var weights = allowedSymbols.Select(x => x.InitialFrequency).ToList();
 
         var selectedSymbol = allowedSymbols.SampleProportional(weights, random);
 
         var newTree = selectedSymbol.CreateTreeNode();
-        if (newTree.HasLocalParameters) newTree.ResetLocalParameters(random);
+        if (newTree.HasLocalParameters) {
+          newTree.ResetLocalParameters(random);
+        }
+
         parent.RemoveSubtree(argumentIndex);
         parent.InsertSubtree(argumentIndex, newTree);
 
         currentLength++;
         actualArity = SampleArity(random, newTree, targetLength - currentLength, maxDepth - extensionDepth, searchSpace);
-        if (actualArity < 0) return false;
+        if (actualArity < 0) {
+          return false;
+        }
+
         for (var i = 0; i < actualArity; i++) {
           // insert a dummy sub-tree and add the pending extension to the list
           var dummy = new SymbolicExpressionTreeNode();
@@ -164,20 +195,24 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
   }
 
   private static void ReplaceWithMinimalTree(IRandomNumberGenerator random, SymbolicExpressionTreeNode parent,
-                                             int childIndex, SymbolicExpressionTreeSearchSpace searchSpace) {
+    int childIndex, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     // determine possible symbols that will lead to the smallest possible tree
     var possibleSymbols = (from s in searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
-                           where s.InitialFrequency > 0.0
-                           group s by searchSpace.Grammar.GetMinimumExpressionLength(s)
-                           into g
-                           orderby g.Key
-                           select g).First().ToList();
+      where s.InitialFrequency > 0.0
+      group s by searchSpace.Grammar.GetMinimumExpressionLength(s)
+      into g
+      orderby g.Key
+      select g).First().ToList();
     var weights = possibleSymbols.Select(x => x.InitialFrequency).ToList();
 
     var selectedSymbol = possibleSymbols.SampleProportional(weights, random);
 
     var tree = selectedSymbol.CreateTreeNode();
-    if (tree.HasLocalParameters) tree.ResetLocalParameters(random);
+    if (tree.HasLocalParameters) {
+      tree.ResetLocalParameters(random);
+    }
+
     parent.RemoveSubtree(childIndex);
     parent.InsertSubtree(childIndex, tree);
 
@@ -190,12 +225,16 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     }
   }
 
-  private static void FillExtensionLengths(TreeExtensionPoint extension, int maxDepth, SymbolicExpressionTreeSearchSpace searchSpace) {
+  private static void FillExtensionLengths(TreeExtensionPoint extension, int maxDepth, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var grammar = searchSpace.Grammar;
     var maxLength = int.MinValue;
     var minLength = int.MaxValue;
     foreach (var s in grammar.GetAllowedChildSymbols(extension.Parent.Symbol, extension.ChildIndex)) {
-      if (s.InitialFrequency <= 0.0) continue;
+      if (s.InitialFrequency <= 0.0) {
+        continue;
+      }
+
       var max = grammar.GetMaximumExpressionLength(s, maxDepth - extension.ExtensionPointDepth);
       maxLength = Math.Max(maxLength, max);
       var min = grammar.GetMinimumExpressionLength(s);
@@ -206,7 +245,8 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     extension.MinimumExtensionLength = minLength;
   }
 
-  private static int SampleArity(IRandomNumberGenerator random, SymbolicExpressionTreeNode node, int targetLength, int maxDepth, SymbolicExpressionTreeSearchSpace searchSpace) {
+  private static int SampleArity(IRandomNumberGenerator random, SymbolicExpressionTreeNode node, int targetLength, int maxDepth, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     // select actualArity randomly with the constraint that the sub-trees in the minimal arity can become large enough
     var minArity = searchSpace.Grammar.GetMinimumSubtreeCount(node.Symbol);
     var maxArity = searchSpace.Grammar.GetMaximumSubtreeCount(node.Symbol);
@@ -214,17 +254,22 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
       maxArity = targetLength;
     }
 
-    if (minArity == maxArity) return minArity;
+    if (minArity == maxArity) {
+      return minArity;
+    }
 
     // the min number of sub-trees has to be set to a value that is large enough so that the largest possible tree is at least tree length
     // if 1..3 trees are possible and the largest possible first sub-tree is smaller than the target length then minArity should be at least 2
     long aggregatedLongestExpressionLength = 0;
     for (var i = 0; i < maxArity; i++) {
       aggregatedLongestExpressionLength += (from s in searchSpace.Grammar.GetAllowedChildSymbols(node.Symbol, i)
-                                            where s.InitialFrequency > 0.0
-                                            select searchSpace.Grammar.GetMaximumExpressionLength(s, maxDepth)).Max();
-      if (i > minArity && aggregatedLongestExpressionLength < targetLength) minArity = i + 1;
-      else break;
+        where s.InitialFrequency > 0.0
+        select searchSpace.Grammar.GetMaximumExpressionLength(s, maxDepth)).Max();
+      if (i > minArity && aggregatedLongestExpressionLength < targetLength) {
+        minArity = i + 1;
+      } else {
+        break;
+      }
     }
 
     // the max number of sub-trees has to be set to a value that is small enough so that the smallest possible tree is at most tree length 
@@ -232,18 +277,24 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     long aggregatedShortestExpressionLength = 0;
     for (var i = 0; i < maxArity; i++) {
       aggregatedShortestExpressionLength += (from s in searchSpace.Grammar.GetAllowedChildSymbols(node.Symbol, i)
-                                             where s.InitialFrequency > 0.0
-                                             select searchSpace.Grammar.GetMinimumExpressionLength(s)).Min();
-      if (aggregatedShortestExpressionLength <= targetLength)
+        where s.InitialFrequency > 0.0
+        select searchSpace.Grammar.GetMinimumExpressionLength(s)).Min();
+      if (aggregatedShortestExpressionLength <= targetLength) {
         continue;
+      }
 
       maxArity = i;
       break;
     }
 
-    if (minArity > maxArity) return -1;
+    if (minArity > maxArity) {
+      return -1;
+    }
+
     var defaultArity = node.Symbol.DefaultArity;
-    if (minArity <= defaultArity && defaultArity <= maxArity) return defaultArity;
+    if (minArity <= defaultArity && defaultArity <= maxArity) {
+      return defaultArity;
+    }
 
     return random.NextInt(minArity, maxArity + 1);
   }

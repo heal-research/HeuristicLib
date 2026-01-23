@@ -3,10 +3,9 @@ using HEAL.HeuristicLib.Genotypes.Trees;
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 /// <summary>
-/// Symbol for function defining branches
+///   Symbol for function defining branches
 /// </summary>
-public sealed class DefunSymbol() : Symbol(1, 1, 1) {
-  public override SymbolicExpressionTreeNode CreateTreeNode() {
-    return new DefunTreeNode(this, "function");
-  }
+public sealed class DefunSymbol() : Symbol(1, 1, 1)
+{
+  public override SymbolicExpressionTreeNode CreateTreeNode() => new DefunTreeNode(this, "function");
 }

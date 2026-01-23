@@ -3,20 +3,19 @@ using HEAL.HeuristicLib.Genotypes.Trees;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;
 
-public class SymbolicExpressionTreeStringFormatter : ISymbolicExpressionTreeStringFormatter {
-  public bool Indent {
-    get;
-    set;
-  } = true;
+public class SymbolicExpressionTreeStringFormatter : ISymbolicExpressionTreeStringFormatter
+{
+  public bool Indent { get; set; } = true;
 
-  public string Format(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree) {
-    return FormatRecursively(symbolicExpressionTree.Root, 0);
-  }
+  public string Format(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree) => FormatRecursively(symbolicExpressionTree.Root, 0);
 
-  private string FormatRecursively(SymbolicExpressionTreeNode node, int indentLength) {
+  private string FormatRecursively(SymbolicExpressionTreeNode node, int indentLength)
+  {
     var strBuilder = new StringBuilder();
-    if (Indent)
+    if (Indent) {
       strBuilder.Append(' ', indentLength);
+    }
+
     strBuilder.Append('(');
     // internal nodes or leaf nodes?
     if (node.Subtrees.Any()) {
@@ -28,8 +27,9 @@ public class SymbolicExpressionTreeStringFormatter : ISymbolicExpressionTreeStri
         strBuilder.AppendLine(FormatRecursively(subtree, indentLength + 2));
       }
 
-      if (Indent)
+      if (Indent) {
         strBuilder.Append(' ', indentLength);
+      }
     } else {
       // symbol in the same line with as '(' and ')'
       strBuilder.Append(node);

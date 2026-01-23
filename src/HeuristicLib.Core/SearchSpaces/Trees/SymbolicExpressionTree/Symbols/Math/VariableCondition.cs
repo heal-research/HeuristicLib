@@ -2,11 +2,15 @@
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public sealed class VariableCondition() : Symbol(2, 2, 2) {
+public sealed class VariableCondition() : Symbol(2, 2, 2)
+{
   #region properties
+
   public double ThresholdInitializerMu { get; set; } = 0.0;
   private double thresholdInitializerSigma = 0.1;
-  public double ThresholdInitializerSigma {
+
+  public double ThresholdInitializerSigma
+  {
     get => thresholdInitializerSigma;
     set {
       ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
@@ -16,7 +20,9 @@ public sealed class VariableCondition() : Symbol(2, 2, 2) {
 
   public double ThresholdManipulatorMu { get; set; } = 0.0;
   private double thresholdManipulatorSigma = 0.1;
-  public double ThresholdManipulatorSigma {
+
+  public double ThresholdManipulatorSigma
+  {
     get => thresholdManipulatorSigma;
     set {
       ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
@@ -25,7 +31,9 @@ public sealed class VariableCondition() : Symbol(2, 2, 2) {
   }
 
   private readonly List<string> variableNames = [];
-  public IReadOnlyList<string> VariableNames {
+
+  public IReadOnlyList<string> VariableNames
+  {
     get => variableNames;
     set {
       variableNames.Clear();
@@ -34,7 +42,9 @@ public sealed class VariableCondition() : Symbol(2, 2, 2) {
   }
 
   private readonly List<string> allVariableNames = [];
-  public IReadOnlyList<string> AllVariableNames {
+
+  public IReadOnlyList<string> AllVariableNames
+  {
     get => allVariableNames;
     set {
       allVariableNames.Clear();
@@ -44,34 +54,42 @@ public sealed class VariableCondition() : Symbol(2, 2, 2) {
 
   public double SlopeInitializerMu { get; set; } = 0.0;
   private double slopeInitializerSigma;
-  public double SlopeInitializerSigma {
+
+  public double SlopeInitializerSigma
+  {
     get => slopeInitializerSigma;
     set {
-      if (slopeInitializerSigma < 0.0)
+      if (slopeInitializerSigma < 0.0) {
         throw new ArgumentException("Negative sigma is not allowed.");
+      }
+
       slopeInitializerSigma = value;
     }
   }
 
   public double SlopeManipulatorMu { get; set; } = 0.0;
   private double slopeManipulatorSigma;
-  public double SlopeManipulatorSigma {
+
+  public double SlopeManipulatorSigma
+  {
     get => slopeManipulatorSigma;
     set {
-      if (slopeManipulatorSigma < 0.0)
+      if (slopeManipulatorSigma < 0.0) {
         throw new ArgumentException("Negative sigma is not allowed.");
+      }
+
       slopeManipulatorSigma = value;
     }
   }
 
   /// <summary>
-  /// Flag to indicate if the interpreter should ignore the slope parameter (introduced for representation of expression trees)
+  ///   Flag to indicate if the interpreter should ignore the slope parameter (introduced for representation of expression
+  ///   trees)
   /// </summary>
 
   public bool IgnoreSlope { get; set; }
+
   #endregion
 
-  public override SymbolicExpressionTreeNode CreateTreeNode() {
-    return new VariableConditionTreeNode(this);
-  }
+  public override SymbolicExpressionTreeNode CreateTreeNode() => new VariableConditionTreeNode(this);
 }

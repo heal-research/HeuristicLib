@@ -2,29 +2,32 @@
 
 namespace HEAL.HeuristicLib.Tests;
 
-public class MultiObjectiveTests {
+public class MultiObjectiveTests
+{
   [Fact]
-  public void EmptyInput_ReturnsNoFronts_AndEmptyRank() {
+  public void EmptyInput_ReturnsNoFronts_AndEmptyRank()
+  {
     var solutions = Array.Empty<ISolution<object>>();
     var objective = MinimizeAll(2);
 
-    var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, dominateOnEqualQualities: true);
+    var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, true);
 
     Assert.Empty(fronts);
     Assert.Empty(rank);
   }
 
   [Fact]
-  public void TwoObjectives_ThreeFronts_SimpleSeparation() {
+  public void TwoObjectives_ThreeFronts_SimpleSeparation()
+  {
     // Arrange: minimize both objectives.
     // A dominates everyone; {C,D,E} are mutually non-dominating; B is dominated by E
     // Points: A(1,1), B(2,2), C(1,3), D(3,1), E(2,1.5)
-    var solutions = new[] { Sol("A", 1.0, 1.0), Sol("B", 2.0, 2.0), Sol("C", 1.0, 3.0), Sol("D", 3.0, 1.0), Sol("E", 2.0, 1.5), };
+    var solutions = new[] { Sol("A", 1.0, 1.0), Sol("B", 2.0, 2.0), Sol("C", 1.0, 3.0), Sol("D", 3.0, 1.0), Sol("E", 2.0, 1.5) };
 
     var objective = MinimizeAll(2);
 
     // Act
-    var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, dominateOnEqualQualities: true);
+    var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, true);
 
     // Assert
     var ids = FrontIds(fronts);
@@ -41,13 +44,14 @@ public class MultiObjectiveTests {
   }
 
   [Fact]
-  public void DuplicatePoints_AreBothNonDominated_WhenDominateOnEqualFalse() {
+  public void DuplicatePoints_AreBothNonDominated_WhenDominateOnEqualFalse()
+  {
     // Arrange: A(1,1), B(1,1), C(2,2). When equal doesn't dominate, A and B share front 0.
-    var solutions = new[] { Sol("A", 1.0, 1.0), Sol("B", 1.0, 1.0), Sol("C", 2.0, 2.0), };
+    var solutions = new[] { Sol("A", 1.0, 1.0), Sol("B", 1.0, 1.0), Sol("C", 2.0, 2.0) };
     var objective = MinimizeAll(2);
 
     // Act
-    var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, dominateOnEqualQualities: false);
+    var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, false);
 
     // Assert
     var ids = FrontIds(fronts);
@@ -62,13 +66,14 @@ public class MultiObjectiveTests {
   }
 
   [Fact]
-  public void DuplicatePoints_OneIsDominated_WhenDominateOnEqualTrue() {
+  public void DuplicatePoints_OneIsDominated_WhenDominateOnEqualTrue()
+  {
     // Arrange: Same set, but equal qualities *do* dominate.
-    var solutions = new[] { Sol("A", 1.0, 1.0), Sol("B", 1.0, 1.0), Sol("C", 2.0, 2.0), };
+    var solutions = new[] { Sol("A", 1.0, 1.0), Sol("B", 1.0, 1.0), Sol("C", 2.0, 2.0) };
     var objective = MinimizeAll(2);
 
     // Act
-    var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, dominateOnEqualQualities: true);
+    var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, true);
 
     // Assert
     Assert.Equal(3, fronts.Count);
@@ -80,6 +85,6 @@ public class MultiObjectiveTests {
   private static string[][] FrontIds(List<List<ISolution<string>>> fronts)
     => fronts.Select(f => f.Select(s => s.Genotype).OrderBy(x => x).ToArray()).ToArray();
 
-  private static Solution<string> Sol(string id, params double[] values) => new Solution<string>(id, values);
+  private static Solution<string> Sol(string id, params double[] values) => new(id, values);
   private static Objective MinimizeAll(int i) => new(Enumerable.Repeat(ObjectiveDirection.Minimize, i).ToArray(), new NoTotalOrderComparer());
 }

@@ -42,7 +42,9 @@ public sealed record EvolutionStrategyBuildSpec<TG, TS, TP>
     ISelector<TG, TS, TP> Selector,
     int NumberOfChildren,
     ICreator<TG, TS, TP> Creator
-  ) : base(Evaluator, Terminator, Interceptor, Observer) {
+  )
+    : base(Evaluator, Terminator, Interceptor, Observer)
+  {
     this.PopulationSize = PopulationSize;
     this.Strategy = Strategy;
     this.Mutator = Mutator;

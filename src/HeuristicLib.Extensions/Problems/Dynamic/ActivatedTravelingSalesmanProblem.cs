@@ -7,13 +7,16 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, PermutationSearchSpace> {
+public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, PermutationSearchSpace>
+{
   public ActivatedTravelingSalesmanProblem(ITravelingSalesmanProblemData tspData,
-                                           IRandomNumberGenerator environmentRandom,
-                                           double activationProb = 0.9,
-                                           double switchProbability = 0.1,
-                                           UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                           int epochLength = int.MaxValue) : base(updatePolicy, epochLength) {
+    IRandomNumberGenerator environmentRandom,
+    double activationProb = 0.9,
+    double switchProbability = 0.1,
+    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+    int epochLength = int.MaxValue)
+    : base(updatePolicy, epochLength)
+  {
     EnvironmentRandom = environmentRandom;
     SwitchProbability = switchProbability;
     CurrentState = Generate(tspData, activationProb, EnvironmentRandom);
@@ -29,20 +32,20 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
   public override PermutationSearchSpace SearchSpace { get; }
   public override Objective Objective { get; }
 
-  public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing) {
+  public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
+  {
     return solution
-           .Where(x => CurrentState[x])
-           .PairwiseRoundRobin(ProblemData.GetDistance)
-           .Sum();
+      .Where(x => CurrentState[x])
+      .PairwiseRoundRobin(ProblemData.GetDistance)
+      .Sum();
   }
 
-  protected override void Update() {
+  protected override void Update()
+  {
     CurrentState = CurrentState
-                   .Select(a => EnvironmentRandom.NextBool(SwitchProbability) ? !a : a)
-                   .ToArray();
+      .Select(a => EnvironmentRandom.NextBool(SwitchProbability) ? !a : a)
+      .ToArray();
   }
 
-  private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb, IRandomNumberGenerator random) {
-    return Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.NextBool(activationProb)).ToArray();
-  }
+  private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb, IRandomNumberGenerator random) => Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.NextBool(activationProb)).ToArray();
 }

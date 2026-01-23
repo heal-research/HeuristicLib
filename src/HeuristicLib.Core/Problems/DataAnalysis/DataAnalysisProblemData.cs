@@ -1,11 +1,13 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public abstract class DataAnalysisProblemData : IProblemData {
+public abstract class DataAnalysisProblemData : IProblemData
+{
   public Dataset Dataset { get; set; }
   public List<string> InputVariables { get; }
   public Dictionary<PartitionType, Range> Partitions { get; }
 
-  protected DataAnalysisProblemData(Dataset dataset, IEnumerable<string> inputs) {
+  protected DataAnalysisProblemData(Dataset dataset, IEnumerable<string> inputs)
+  {
     Dataset = dataset;
     InputVariables = inputs.Where(variable => dataset.VariableHasType<double>(variable) || dataset.VariableHasType<string>(variable)).ToList();
     Partitions = new Dictionary<PartitionType, Range> {
@@ -16,7 +18,8 @@ public abstract class DataAnalysisProblemData : IProblemData {
     };
   }
 
-  public enum PartitionType {
+  public enum PartitionType
+  {
     Training,
     Test,
     Validation,

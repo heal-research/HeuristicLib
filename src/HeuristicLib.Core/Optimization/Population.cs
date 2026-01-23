@@ -3,23 +3,32 @@ using HEAL.HeuristicLib.Collections;
 
 namespace HEAL.HeuristicLib.Optimization;
 
-public static class Population {
-  public static Population<TGenotype> From<TGenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) {
-    return new Population<TGenotype>(genotypes, fitnesses);
-  }
+public static class Population
+{
+  public static Population<TGenotype> From<TGenotype>(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) => new(genotypes, fitnesses);
 
-  public static Population<TGenotype> From<TGenotype>(IEnumerable<ISolution<TGenotype>> solutions) {
-    return new Population<TGenotype>(new ImmutableList<ISolution<TGenotype>>(solutions));
-  }
+  public static Population<TGenotype> From<TGenotype>(IEnumerable<ISolution<TGenotype>> solutions) => new(new ImmutableList<ISolution<TGenotype>>(solutions));
 }
 
-public record Population<TGenotype>(ImmutableList<ISolution<TGenotype>> Solutions) : IISolutionLayout<TGenotype> {
-  public Population(params IEnumerable<ISolution<TGenotype>> solutions) : this(new ImmutableList<ISolution<TGenotype>>(solutions)) { }
-  public Population(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) : this(ToISolutions(genotypes, fitnesses)) { }
+public record Population<TGenotype>(ImmutableList<ISolution<TGenotype>> Solutions) : IISolutionLayout<TGenotype>
+{
+  public Population(params IEnumerable<ISolution<TGenotype>> solutions)
+    : this(new ImmutableList<ISolution<TGenotype>>(solutions))
+  {
+  }
 
-  private static ImmutableList<ISolution<TGenotype>> ToISolutions(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses) {
-    if (genotypes.Count != fitnesses.Count) throw new ArgumentException("Genotypes and fitnesses must have the same length.");
-    var solutions = Enumerable.Zip(genotypes, fitnesses).Select(x => Solution.From(x.First, x.Second));
+  public Population(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses)
+    : this(ToISolutions(genotypes, fitnesses))
+  {
+  }
+
+  private static ImmutableList<ISolution<TGenotype>> ToISolutions(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> fitnesses)
+  {
+    if (genotypes.Count != fitnesses.Count) {
+      throw new ArgumentException("Genotypes and fitnesses must have the same length.");
+    }
+
+    var solutions = genotypes.Zip(fitnesses).Select(x => Solution.From(x.First, x.Second));
     return new ImmutableList<ISolution<TGenotype>>(solutions);
   }
 

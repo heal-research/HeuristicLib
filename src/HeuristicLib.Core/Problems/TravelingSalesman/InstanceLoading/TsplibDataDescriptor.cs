@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 
-public class TsplibDataDescriptor {
+public class TsplibDataDescriptor
+{
   public string Name { get; internal set; }
   public string Description { get; internal set; }
 
@@ -8,7 +9,8 @@ public class TsplibDataDescriptor {
   internal string SolutionIdentifier { get; set; }
   internal double? BestQuality { get; set; }
 
-  internal TsplibDataDescriptor(string name, string description, string instanceIdentifier, string solutionIdentifier, double? bestQuality) {
+  internal TsplibDataDescriptor(string name, string description, string instanceIdentifier, string solutionIdentifier, double? bestQuality)
+  {
     Name = name;
     Description = description;
     InstanceIdentifier = instanceIdentifier;

@@ -24,30 +24,33 @@ namespace HEAL.HeuristicLib.Analyzers.Genealogy;
 //   }
 // }
 
-public static class GenealogyAnalysis {
-  extension<TG, TS, TP, TR, TAlg, TBuildSpec>(AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> builder) 
+public static class GenealogyAnalysis
+{
+  extension<TG, TS, TP, TR, TAlg, TBuildSpec>(AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> builder)
     where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : PopulationIterationState<TG>
     where TAlg : class, IAlgorithm<TG, TS, TP, TR>
-    where TBuildSpec : AlgorithmBuildSpec<TG, TS, TP, TR> 
+    where TBuildSpec : AlgorithmBuildSpec<TG, TS, TP, TR>
   {
-    public GenealogyGraph<TG> AddGenealogyAnalysis(IEqualityComparer<TG>? equality = null, bool saveSpace = false) {
+    public GenealogyGraph<TG> AddGenealogyAnalysis(IEqualityComparer<TG>? equality = null, bool saveSpace = false)
+    {
       GenealogyGraph<TG> graph = new(equality ?? EqualityComparer<TG>.Default);
-      
+
       var universalRewriter = new ObserverRewriter<TG, TS, TP, TR, TBuildSpec>(
-        iterationObserver: IterationObserver.Create<TG, TS, TP, TR>((currentState, previousState, searchSpace, problem) => {
+        IterationObserver.Create<TG, TS, TP, TR>((currentState, previousState, searchSpace, problem) => {
           var ordered = currentState.Population.OrderBy(x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
           graph.SetAsNewGeneration(ordered.Select(x => x.Genotype), saveSpace);
         }),
-        crossoverObserver: CrossoverObserver.Create<TG, TS, TP>((parents, children, searchSpace, problem) => {
-          foreach (var (parents1, child) in parents.Zip(children))
+        CrossoverObserver.Create<TG, TS, TP>((parents, children, searchSpace, problem) => {
+          foreach (var (parents1, child) in parents.Zip(children)) {
             graph.AddConnection([parents1.Item1, parents1.Item2], child);
+          }
         })
         // others
       );
-      
+
       builder.AddRewriter(universalRewriter);
 
       return graph;

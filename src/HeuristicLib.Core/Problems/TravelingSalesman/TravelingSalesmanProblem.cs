@@ -6,25 +6,30 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 // This is an example problem that uses a permutation search spaces to get access to the standard operators, but also offers custom TSP-specific operators.
-public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : PermutationProblem(SingleObjective.Minimize, GeTSearchSpace(problemData)) /*, IDeterministicProblem<Permutation>*/ {
+public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : PermutationProblem(SingleObjective.Minimize, GeTSearchSpace(problemData)) /*, IDeterministicProblem<Permutation>*/
+{
   //public int? Seed { get; init; }
 
   public ITravelingSalesmanProblemData ProblemData { get; } = problemData;
 
-  public TravelingSalesmanProblem() : this(null!) { }
+  public TravelingSalesmanProblem()
+    : this(null!)
+  {
+  }
 
-  public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random) {
-    double totalDistance = 0.0;
-    for (int i = 0; i < solution.Count - 1; i++) totalDistance += ProblemData.GetDistance(solution[i], solution[i + 1]);
+  public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random)
+  {
+    var totalDistance = 0.0;
+    for (var i = 0; i < solution.Count - 1; i++) {
+      totalDistance += ProblemData.GetDistance(solution[i], solution[i + 1]);
+    }
 
     totalDistance += ProblemData.GetDistance(solution[^1], solution[0]); // Return to the starting city
 
     return totalDistance;
   }
 
-  private static PermutationSearchSpace GeTSearchSpace(ITravelingSalesmanProblemData problemData) {
-    return new PermutationSearchSpace(problemData.NumberOfCities);
-  }
+  private static PermutationSearchSpace GeTSearchSpace(ITravelingSalesmanProblemData problemData) => new(problemData.NumberOfCities);
 
   // public IEvaluator<Permutation> CreateEvaluator() {
   //   return new DeterministicProblemEvaluator<Permutation>(this);
@@ -33,12 +38,15 @@ public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
   // public override Tour Decode(Permutation genotype) => new Tour(genotype);
 
   #region Default Instance
-  public static TravelingSalesmanProblem CreateDefault() {
+
+  public static TravelingSalesmanProblem CreateDefault()
+  {
     var problemData = new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates);
     return new TravelingSalesmanProblem(problemData);
   }
 
   private static readonly double[,] DefaultProblemCoordinates = new double[,] { { 100, 100 }, { 100, 200 }, { 100, 300 }, { 100, 400 }, { 200, 100 }, { 200, 200 }, { 200, 300 }, { 200, 400 }, { 300, 100 }, { 300, 200 }, { 300, 300 }, { 300, 400 }, { 400, 100 }, { 400, 200 }, { 400, 300 }, { 400, 400 } };
+
   #endregion
 }
 

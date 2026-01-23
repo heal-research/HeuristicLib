@@ -4,12 +4,14 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-public class PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSearchSpace> {
+public class PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSearchSpace>
+{
   private readonly bool atLeastOnce;
   private readonly double eta;
   public double GetVarProb(RealVectorSearchSpace searchSpace) => Math.Min(0.5, 1.0 / searchSpace.Length);
 
-  public PolynomialMutator(double eta = 20, bool atLeastOnce = false) {
+  public PolynomialMutator(double eta = 20, bool atLeastOnce = false)
+  {
     this.atLeastOnce = atLeastOnce;
     this.eta = eta;
   }
@@ -18,79 +20,94 @@ public class PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSea
     int n,
     double prob,
     bool atLeastOnce,
-    IRandomNumberGenerator randomState) {
+    IRandomNumberGenerator randomState)
+  {
     ArgumentNullException.ThrowIfNull(randomState);
     // Create an n�m boolean matrix for mutations
     var matrix = new bool[n];
 
     // Fill random mask (true with probability 'prob')
-    for (int i = 0; i < n; i++) {
-      if (randomState.NextDouble() < prob)
+    for (var i = 0; i < n; i++) {
+      if (randomState.NextDouble() < prob) {
         matrix[i] = true;
+      }
     }
 
-    if (atLeastOnce)
+    if (atLeastOnce) {
       matrix = RowAtLeastOnceTrue(matrix, randomState);
+    }
 
     return matrix;
   }
 
-  private static bool[] RowAtLeastOnceTrue(bool[] matrix, IRandomNumberGenerator randomState) {
-    int n = matrix.Length;
-    bool atLeastOnce = false;
-    for (int i = 0; i < n; i++) {
-      if (!matrix[i])
+  private static bool[] RowAtLeastOnceTrue(bool[] matrix, IRandomNumberGenerator randomState)
+  {
+    var n = matrix.Length;
+    var atLeastOnce = false;
+    for (var i = 0; i < n; i++) {
+      if (!matrix[i]) {
         continue;
+      }
+
       atLeastOnce = true;
       break;
     }
 
-    if (atLeastOnce)
+    if (atLeastOnce) {
       return matrix;
-    int j1 = randomState.NextInt(n); // inclusive lower, exclusive upper
+    }
+
+    var j1 = randomState.NextInt(n); // inclusive lower, exclusive upper
     matrix[j1] = true;
     return matrix;
   }
 
-  public override RealVector Mutate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) {
-    double probVar = GetVarProb(searchSpace);
+  public override RealVector Mutate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
+  {
+    var probVar = GetVarProb(searchSpace);
     // Current vector and bounds
     var x = parent.ToArray(); // assume double[] (or expose as such)
     var xl = searchSpace.Minimum;
     var xu = searchSpace.Maximum;
-    int nVar = x.Length;
+    var nVar = x.Length;
 
     var xp = new double[nVar];
     Array.Copy(x, xp, nVar);
     var mut = mut_binomial(nVar, probVar, atLeastOnce, random);
 
     // Do not mutate fixed variables (xl == xu)
-    for (int j = 0; j < nVar; j++)
-      if (xl[j % xl.Count] == xu[j % xu.Count])
+    for (var j = 0; j < nVar; j++) {
+      if (xl[j % xl.Count] == xu[j % xu.Count]) {
         mut[j] = false;
+      }
+    }
 
     // If nothing mutates, still run the (cheap) repair for consistency and return
-    bool any = false;
-    for (int j = 0; j < nVar; j++)
+    var any = false;
+    for (var j = 0; j < nVar; j++) {
       if (mut[j]) {
         any = true;
         break;
       }
+    }
 
     if (!any)
       // Very unlikely
+    {
       return RealVector.Clamp(xp, xl, xu);
+    }
 
-    double mutPow = 1.0 / (eta + 1.0);
+    var mutPow = 1.0 / (eta + 1.0);
 
-    for (int j = 0; j < nVar; j++) {
-      if (!mut[j])
+    for (var j = 0; j < nVar; j++) {
+      if (!mut[j]) {
         continue;
+      }
 
-      double xj = x[j];
-      double lb = xl[j % xl.Count];
-      double ub = xu[j % xu.Count];
-      double denom = ub - lb;
+      var xj = x[j];
+      var lb = xl[j % xl.Count];
+      var ub = xu[j % xu.Count];
+      var denom = ub - lb;
 
       // Safety (shouldn�t happen because fixed variables got masked out)
       if (denom == 0.0) {
@@ -98,29 +115,30 @@ public class PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSea
         continue;
       }
 
-      double delta1 = (xj - lb) / denom;
-      double delta2 = (ub - xj) / denom;
+      var delta1 = (xj - lb) / denom;
+      var delta2 = (ub - xj) / denom;
 
-      double r = random.NextDouble();
+      var r = random.NextDouble();
       double deltaq;
 
       if (r <= 0.5) {
-        double xy = 1.0 - delta1;
-        double val = 2.0 * r + (1.0 - 2.0 * r) * Math.Pow(xy, eta + 1.0);
+        var xy = 1.0 - delta1;
+        var val = (2.0 * r) + ((1.0 - (2.0 * r)) * Math.Pow(xy, eta + 1.0));
         deltaq = Math.Pow(val, mutPow) - 1.0;
       } else {
-        double xy = 1.0 - delta2;
-        double val = 2.0 * (1.0 - r) + 2.0 * (r - 0.5) * Math.Pow(xy, eta + 1.0);
+        var xy = 1.0 - delta2;
+        var val = (2.0 * (1.0 - r)) + (2.0 * (r - 0.5) * Math.Pow(xy, eta + 1.0));
         deltaq = 1.0 - Math.Pow(val, mutPow);
       }
 
-      double y = xj + deltaq * denom;
+      var y = xj + (deltaq * denom);
 
       // Clamp to [lb, ub] (floating-point drift)
-      if (y < lb)
+      if (y < lb) {
         y = lb;
-      else if (y > ub)
+      } else if (y > ub) {
         y = ub;
+      }
 
       xp[j] = y;
     }

@@ -5,8 +5,11 @@ using System.Text;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public class TableFileParser : Progress<long> { // reports the number of bytes read
+public class TableFileParser : Progress<long>
+{
+  // reports the number of bytes read
   private const int BufferSize = 65536;
+
   // char used to symbolize whitespaces (no missing values can be handled with whitespaces)
   private const char WhiteSpaceChar = (char)0;
   private static readonly char[] PossibleSeparators = [',', ';', '\t', WhiteSpaceChar];
@@ -22,61 +25,68 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
   public List<IList> Values { get; private set; } = null!;
 
   private List<string> variableNames = [];
-  public IEnumerable<string> VariableNames {
-    get {
-      if (variableNames.Count > 0)
-        return variableNames;
-      else {
-        string[] names = new string[Columns];
-        for (int i = 0; i < names.Length; i++) {
-          names[i] = "X" + i.ToString("000");
-        }
 
-        return names;
+  public IEnumerable<string> VariableNames
+  {
+    get {
+      if (variableNames.Count > 0) {
+        return variableNames;
       }
+
+      var names = new string[Columns];
+      for (var i = 0; i < names.Length; i++) {
+        names[i] = "X" + i.ToString("000");
+      }
+
+      return names;
     }
   }
 
-  public bool AreColumnNamesInFirstLine(string fileName) {
+  public bool AreColumnNamesInFirstLine(string fileName)
+  {
     DetermineFileFormat(fileName, out var numberFormat, out var dateTimeFormatInfo, out var separator);
     using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
     return AreColumnNamesInFirstLine(stream, numberFormat, dateTimeFormatInfo, separator);
   }
 
-  public bool AreColumnNamesInFirstLine(Stream stream) {
-    NumberFormatInfo numberFormat = NumberFormatInfo.InvariantInfo;
-    DateTimeFormatInfo dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
-    char separator = ',';
+  public bool AreColumnNamesInFirstLine(Stream stream)
+  {
+    var numberFormat = NumberFormatInfo.InvariantInfo;
+    var dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
+    var separator = ',';
     return AreColumnNamesInFirstLine(stream, numberFormat, dateTimeFormatInfo, separator);
   }
 
   public bool AreColumnNamesInFirstLine(string fileName, NumberFormatInfo numberFormat,
-                                        DateTimeFormatInfo dateTimeFormatInfo, char separator) {
+    DateTimeFormatInfo dateTimeFormatInfo, char separator)
+  {
     using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
     return AreColumnNamesInFirstLine(stream, numberFormat, dateTimeFormatInfo, separator);
   }
 
   public bool AreColumnNamesInFirstLine(Stream stream, NumberFormatInfo numberFormat,
-                                        DateTimeFormatInfo dateTimeFormatInfo, char separator) {
-    using StreamReader reader = new StreamReader(stream, Encoding);
+    DateTimeFormatInfo dateTimeFormatInfo, char separator)
+  {
+    using var reader = new StreamReader(stream, Encoding);
     tokenizer = new Tokenizer(reader, numberFormat, dateTimeFormatInfo, separator);
-    return (tokenizer.PeekType() != TokenType.Double);
+    return tokenizer.PeekType() != TokenType.Double;
   }
 
   /// <summary>
-  /// Parses a file and determines the format first
+  ///   Parses a file and determines the format first
   /// </summary>
   /// <param name="fileName">file which is parsed</param>
   /// <param name="columnNamesInFirstLine"></param>
   /// <param name="lineLimit"></param>
-  public void Parse(string fileName, bool columnNamesInFirstLine, int lineLimit = -1) {
+  public void Parse(string fileName, bool columnNamesInFirstLine, int lineLimit = -1)
+  {
     DetermineFileFormat(fileName, out var numberFormat, out var dateTimeFormatInfo, out var separator);
     EstimateNumberOfLines(fileName);
     Parse(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), numberFormat, dateTimeFormatInfo, separator, columnNamesInFirstLine, lineLimit);
   }
 
   /// <summary>
-  /// Parses a file with the given formats
+  ///   Parses a file with the given formats
   /// </summary>
   /// <param name="fileName">file which is parsed</param>
   /// <param name="numberFormat">Format of numbers</param>
@@ -84,37 +94,42 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
   /// <param name="separator">defines the separator</param>
   /// <param name="columnNamesInFirstLine"></param>
   /// <param name="lineLimit"></param>
-  public void Parse(string fileName, NumberFormatInfo numberFormat, DateTimeFormatInfo dateTimeFormatInfo, char separator, bool columnNamesInFirstLine, int lineLimit = -1) {
+  public void Parse(string fileName, NumberFormatInfo numberFormat, DateTimeFormatInfo dateTimeFormatInfo, char separator, bool columnNamesInFirstLine, int lineLimit = -1)
+  {
     EstimateNumberOfLines(fileName);
     using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
     Parse(stream, numberFormat, dateTimeFormatInfo, separator, columnNamesInFirstLine, lineLimit);
   }
 
   /// <summary>
-  /// Takes a Stream and parses it with default format. NumberFormatInfo.InvariantInfo, DateTimeFormatInfo.InvariantInfo and separator = ','
+  ///   Takes a Stream and parses it with default format. NumberFormatInfo.InvariantInfo, DateTimeFormatInfo.InvariantInfo
+  ///   and separator = ','
   /// </summary>
   /// <param name="stream">stream which is parsed</param>
   /// <param name="columnNamesInFirstLine"></param>
   /// <param name="lineLimit"></param>
-  public void Parse(Stream stream, bool columnNamesInFirstLine, int lineLimit = -1) {
-    NumberFormatInfo numberFormat = NumberFormatInfo.InvariantInfo;
-    DateTimeFormatInfo dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
-    char separator = ',';
+  public void Parse(Stream stream, bool columnNamesInFirstLine, int lineLimit = -1)
+  {
+    var numberFormat = NumberFormatInfo.InvariantInfo;
+    var dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
+    var separator = ',';
     Parse(stream, numberFormat, dateTimeFormatInfo, separator, columnNamesInFirstLine, lineLimit);
   }
 
   /// <summary>
-  /// Parses a stream with the given formats.
+  ///   Parses a stream with the given formats.
   /// </summary>
-  /// <param name="stream">Stream which is parsed</param>    
+  /// <param name="stream">Stream which is parsed</param>
   /// <param name="numberFormat">Format of numbers</param>
   /// <param name="dateTimeFormatInfo">Format of datetime</param>
   /// <param name="separator">defines the separator</param>
   /// <param name="columnNamesInFirstLine"></param>
   /// <param name="lineLimit"></param>
-  public void Parse(Stream stream, NumberFormatInfo numberFormat, DateTimeFormatInfo dateTimeFormatInfo, char separator, bool columnNamesInFirstLine, int lineLimit = -1) {
-    if (lineLimit > 0)
+  public void Parse(Stream stream, NumberFormatInfo numberFormat, DateTimeFormatInfo dateTimeFormatInfo, char separator, bool columnNamesInFirstLine, int lineLimit = -1)
+  {
+    if (lineLimit > 0) {
       estimatedNumberOfLines = lineLimit;
+    }
 
     using (var reader = new StreamReader(stream)) {
       tokenizer = new Tokenizer(reader, numberFormat, dateTimeFormatInfo, separator);
@@ -122,8 +137,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       Values = [];
       Prepare(columnNamesInFirstLine, strValues);
 
-      int nLinesParsed = 0;
-      int colIdx = 0;
+      var nLinesParsed = 0;
+      var colIdx = 0;
       while (tokenizer.HasNext() && (lineLimit < 0 || nLinesParsed < lineLimit)) {
         if (tokenizer.PeekType() == TokenType.NewLine) {
           tokenizer.Skip();
@@ -157,7 +172,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
 
           // add the value to the column
           AddValue(type, Values[colIdx], strVal, dblVal, dateTimeVal);
-          if (!(Values[colIdx] is List<string>)) { // optimization: don't store the string values in another list if the column is list<string>
+          if (!(Values[colIdx] is List<string>)) {
+            // optimization: don't store the string values in another list if the column is list<string>
             strValues[colIdx].Add(strVal);
           }
 
@@ -166,15 +182,16 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       }
     }
 
-    if (Values.Count == 0 || Values[0].Count == 0)
+    if (Values.Count == 0 || Values[0].Count == 0) {
       Error("Couldn't parse data values. Probably because of incorrect number format " +
             "(the parser expects english number format with a '.' as decimal separator).", "", tokenizer.CurrentLineNumber);
+    }
 
     Rows = Values[0].Count;
     Columns = Values.Count;
 
     // replace lists with undefined type (object) with double-lists
-    for (int i = 0; i < Values.Count; i++) {
+    for (var i = 0; i < Values.Count; i++) {
       if (Values[i] is List<object>) {
         Values[i] = Enumerable.Repeat(double.NaN, Rows).ToList();
       }
@@ -203,22 +220,26 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
   }
 
   // determines the number of newline characters in the first 64KB to guess the number of rows for a file
-  private void EstimateNumberOfLines(string fileName) {
+  private void EstimateNumberOfLines(string fileName)
+  {
     var len = new FileInfo(fileName).Length;
     var buf = new char[1024 * 1024];
     using (var reader = new StreamReader(fileName, Encoding)) {
       reader.ReadBlock(buf, 0, buf.Length);
     }
 
-    int numNewLine = 0;
+    var numNewLine = 0;
     int charsInCurrentLine = 0, charsInFirstLine = 0; // the first line (names) and the last line (incomplete) are not representative
     foreach (var ch in buf) {
       charsInCurrentLine++;
-      if (ch != '\n')
+      if (ch != '\n') {
         continue;
+      }
 
-      if (numNewLine == 0)
+      if (numNewLine == 0) {
         charsInFirstLine = charsInCurrentLine; // store the number of chars in the first line
+      }
+
       charsInCurrentLine = 0;
       numNewLine++;
     }
@@ -226,38 +247,43 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     if (numNewLine <= 1) {
       // fail -> keep the default setting
     } else {
-      double charsPerLineFactor = (buf.Length - charsInFirstLine - charsInCurrentLine) / ((double)numNewLine - 1);
-      double estimatedLines = len / charsPerLineFactor;
+      var charsPerLineFactor = (buf.Length - charsInFirstLine - charsInCurrentLine) / ((double)numNewLine - 1);
+      var estimatedLines = len / charsPerLineFactor;
       estimatedNumberOfLines = (int)Math.Round(estimatedLines * 1.1); // pessimistic allocation of 110% to make sure that the list is very likely large enough
     }
   }
 
-  private void Prepare(bool columnNamesInFirstLine, List<List<string>> strValues) {
+  private void Prepare(bool columnNamesInFirstLine, List<List<string>> strValues)
+  {
     if (columnNamesInFirstLine) {
       ParseVariableNames();
-      if (!tokenizer.HasNext())
+      if (!tokenizer.HasNext()) {
         Error(
           "Couldn't parse data values. Probably because of incorrect number format (the parser expects english number format with a '.' as decimal separator).",
           "", tokenizer.CurrentLineNumber);
+      }
     }
 
     // read first line to determine types and allocate specific lists
     // read values... start in first row 
-    int colIdx = 0;
+    var colIdx = 0;
     while (tokenizer.PeekType() != TokenType.NewLine) {
       // read one value
       tokenizer.Next(out var type, out var strVal, out var dblVal, out var dateTimeVal);
 
       // initialize column
       Values.Add(CreateList(type, estimatedNumberOfLines));
-      if (type == TokenType.String)
+      if (type == TokenType.String) {
         strValues.Add([]); // optimization: don't store the string values in another list if the column is list<string>
-      else
+      } else {
         strValues.Add(new List<string>(estimatedNumberOfLines));
+      }
 
       AddValue(type, Values[colIdx], strVal, dblVal, dateTimeVal);
-      if (type != TokenType.String)
+      if (type != TokenType.String) {
         strValues[colIdx].Add(strVal);
+      }
+
       colIdx++;
     }
 
@@ -265,15 +291,18 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
   }
 
   #region type-dependent dispatch
-  private static bool IsColumnTypeCompatible(IList list, TokenType tokenType) {
-    return (list is List<object>) || // unknown lists are compatible to everything (potential conversion)
-           (list is List<string>) || // all tokens can be added to a string list
-           (tokenType == TokenType.Missing) || // empty entries are allowed in all columns
+
+  private static bool IsColumnTypeCompatible(IList list, TokenType tokenType)
+  {
+    return list is List<object> || // unknown lists are compatible to everything (potential conversion)
+           list is List<string> || // all tokens can be added to a string list
+           tokenType == TokenType.Missing || // empty entries are allowed in all columns
            (tokenType == TokenType.Double && list is List<double>) ||
            (tokenType == TokenType.DateTime && list is List<DateTime>);
   }
 
-  private void AddValue(TokenType type, IList list, string strVal, double dblVal, DateTime dateTimeVal) {
+  private void AddValue(TokenType type, IList list, string strVal, double dblVal, DateTime dateTimeVal)
+  {
     switch (list) {
       // Add value if list has a defined type
       case List<double> dblList:
@@ -291,7 +320,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     if (type == TokenType.Missing) {
       // add null to track number of missing values
       list.Add(null);
-    } else { // first non-missing value for undefined list-type
+    } else {
+      // first non-missing value for undefined list-type
       var newList = ConvertList(type, list, estimatedNumberOfLines);
       // replace list
       var idx = Values.IndexOf(list);
@@ -301,22 +331,26 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     }
   }
 
-  private static void AddValue(TokenType type, List<double> list, double dblVal) {
+  private static void AddValue(TokenType type, List<double> list, double dblVal)
+  {
     Contract.Assert(type == TokenType.Missing || type == TokenType.Double);
     list.Add(type == TokenType.Missing ? double.NaN : dblVal);
   }
 
-  private static void AddValue(TokenType type, List<string> list, string strVal) {
+  private static void AddValue(TokenType type, List<string> list, string strVal)
+  {
     // assumes that strVal is always set to the original token read from the input file
     list.Add(type == TokenType.Missing ? string.Empty : strVal);
   }
 
-  private static void AddValue(TokenType type, List<DateTime> list, DateTime dtVal) {
+  private static void AddValue(TokenType type, List<DateTime> list, DateTime dtVal)
+  {
     Contract.Assert(type == TokenType.Missing || type == TokenType.DateTime);
     list.Add(type == TokenType.Missing ? DateTime.MinValue : dtVal);
   }
 
-  private static IList CreateList(TokenType type, int estimatedNumberOfLines) {
+  private static IList CreateList(TokenType type, int estimatedNumberOfLines)
+  {
     switch (type) {
       case TokenType.String:
         return new List<string>(estimatedNumberOfLines);
@@ -331,15 +365,19 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     }
   }
 
-  private static IList ConvertList(TokenType type, IList list, int estimatedNumberOfLines) {
+  private static IList ConvertList(TokenType type, IList list, int estimatedNumberOfLines)
+  {
     var newList = CreateList(type, estimatedNumberOfLines);
-    object missingValue = GetMissingValue(type);
-    for (int i = 0; i < list.Count; i++)
+    var missingValue = GetMissingValue(type);
+    for (var i = 0; i < list.Count; i++) {
       newList.Add(missingValue);
+    }
+
     return newList;
   }
 
-  private static object GetMissingValue(TokenType type) {
+  private static object GetMissingValue(TokenType type)
+  {
     switch (type) {
       case TokenType.String:
         return string.Empty;
@@ -351,23 +389,23 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
         throw new ArgumentOutOfRangeException("type", type, "No missing value defined");
     }
   }
+
   #endregion
 
-  public static void DetermineFileFormat(string path, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator) {
-    DetermineFileFormat(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), out numberFormat, out dateTimeFormatInfo, out separator);
-  }
+  public static void DetermineFileFormat(string path, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator) => DetermineFileFormat(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), out numberFormat, out dateTimeFormatInfo, out separator);
 
-  public static void DetermineFileFormat(Stream stream, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator) {
-    using StreamReader reader = new StreamReader(stream);
+  public static void DetermineFileFormat(Stream stream, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator)
+  {
+    using var reader = new StreamReader(stream);
     // skip first line
     reader.ReadLine();
     // read a block
-    char[] buffer = new char[BufferSize];
-    int charsRead = reader.ReadBlock(buffer, 0, BufferSize);
+    var buffer = new char[BufferSize];
+    var charsRead = reader.ReadBlock(buffer, 0, BufferSize);
     // count frequency of special characters
-    Dictionary<char, int> charCounts = buffer.Take(charsRead)
-                                             .GroupBy(c => c)
-                                             .ToDictionary(g => g.Key, g => g.Count());
+    var charCounts = buffer.Take(charsRead)
+      .GroupBy(c => c)
+      .ToDictionary(g => g.Key, g => g.Count());
 
     // depending on the characters occuring in the block 
     // we distinguish a number of different cases based on the following rules:
@@ -383,24 +421,27 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       numberFormat = NumberFormatInfo.InvariantInfo;
       dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
       separator = PossibleSeparators
-                  .Where(c => OccurrencesOf(charCounts, c) > 10)
-                  .OrderBy(c => -OccurrencesOf(charCounts, c))
-                  .DefaultIfEmpty(' ')
-                  .First();
+        .Where(c => OccurrencesOf(charCounts, c) > 10)
+        .OrderBy(c => -OccurrencesOf(charCounts, c))
+        .DefaultIfEmpty(' ')
+        .First();
     } else {
       // no points and many commas
       // count the number of tokens (chains of only digits and commas) that contain multiple comma characters
-      int tokensWithMultipleCommas = 0;
-      for (int i = 0; i < charsRead; i++) {
-        int nCommas = 0;
+      var tokensWithMultipleCommas = 0;
+      for (var i = 0; i < charsRead; i++) {
+        var nCommas = 0;
         while (i < charsRead && (buffer[i] == ',' || char.IsDigit(buffer[i]))) {
-          if (buffer[i] == ',')
+          if (buffer[i] == ',') {
             nCommas++;
+          }
+
           i++;
         }
 
-        if (nCommas > 2)
+        if (nCommas > 2) {
           tokensWithMultipleCommas++;
+        }
       }
 
       if (tokensWithMultipleCommas > 1) {
@@ -414,11 +455,11 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
         numberFormat = NumberFormatInfo.GetInstance(new CultureInfo("de-DE"));
         dateTimeFormatInfo = DateTimeFormatInfo.GetInstance(new CultureInfo("de-DE"));
         separator = PossibleSeparators
-                    .Except(disallowedSeparators)
-                    .Where(c => OccurrencesOf(charCounts, c) > 10)
-                    .OrderBy(c => -OccurrencesOf(charCounts, c))
-                    .DefaultIfEmpty(' ')
-                    .First();
+          .Except(disallowedSeparators)
+          .Where(c => OccurrencesOf(charCounts, c) > 10)
+          .OrderBy(c => -OccurrencesOf(charCounts, c))
+          .DefaultIfEmpty(' ')
+          .First();
       }
     }
   }
@@ -426,13 +467,17 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
   private static int OccurrencesOf(Dictionary<char, int> charCounts, char c) => charCounts.GetValueOrDefault(c, 0);
 
   #region tokenizer
+
   // the tokenizer reads full lines and returns separated tokens in the line as well as a terminating end-of-line character
-  internal enum TokenType {
+  internal enum TokenType
+  {
     NewLine = 0, String = 1, Double = 2, DateTime = 3, Missing = 4
   }
 
-  internal class Tokenizer {
+  internal class Tokenizer
+  {
     private readonly StreamReader reader;
+
     // we assume that a buffer of 1024 tokens for a line is sufficient most of the time (the buffer is increased below if necessary)
     private TokenType[] tokenTypes = new TokenType[1024];
     private string[] stringVals = new string[1024];
@@ -450,29 +495,29 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
 
     public int CurrentLineNumber { get; private set; }
     public string CurrentLine { get; private set; } = string.Empty;
-    public long BytesRead {
+
+    public long BytesRead
+    {
       get;
       private set;
     }
 
-    public Tokenizer(StreamReader reader, NumberFormatInfo numberFormatInfo, DateTimeFormatInfo dateTimeFormatInfo, char separator) {
+    public Tokenizer(StreamReader reader, NumberFormatInfo numberFormatInfo, DateTimeFormatInfo dateTimeFormatInfo, char separator)
+    {
       this.reader = reader;
       this.numberFormatInfo = numberFormatInfo;
       this.dateTimeFormatInfo = dateTimeFormatInfo;
       this.separator = separator;
-      this.separators = [separator];
+      separators = [separator];
       ReadNextTokens();
     }
 
-    public bool HasNext() {
-      return numTokens > tokenPos || !reader.EndOfStream;
-    }
+    public bool HasNext() => numTokens > tokenPos || !reader.EndOfStream;
 
-    public TokenType PeekType() {
-      return tokenTypes[tokenPos];
-    }
+    public TokenType PeekType() => tokenTypes[tokenPos];
 
-    public void Skip() {
+    public void Skip()
+    {
       // simply skips one token without returning the result values
       tokenPos++;
       if (numTokens == tokenPos) {
@@ -480,7 +525,8 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       }
     }
 
-    public void Next(out TokenType type, out string strVal, out double dblVal, out DateTime dateTimeVal) {
+    public void Next(out TokenType type, out string strVal, out double dblVal, out DateTime dateTimeVal)
+    {
       type = tokenTypes[tokenPos];
       strVal = stringVals[tokenPos];
       dblVal = doubleVals[tokenPos];
@@ -488,12 +534,13 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       Skip();
     }
 
-    private void ReadNextTokens() {
+    private void ReadNextTokens()
+    {
       if (reader.EndOfStream) {
         return;
       }
 
-      CurrentLine = reader.ReadLine() ?? String.Empty;
+      CurrentLine = reader.ReadLine() ?? string.Empty;
       CurrentLineNumber++;
       if (reader.BaseStream.CanSeek) {
         BytesRead = reader.BaseStream.Position;
@@ -501,7 +548,7 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
         BytesRead += CurrentLine.Length + 2; // guess
       }
 
-      int i = 0;
+      var i = 0;
       if (!string.IsNullOrWhiteSpace(CurrentLine)) {
         foreach (var tok in Split(CurrentLine)) {
           var type = TokenType.String; // default
@@ -538,29 +585,33 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
       tokenPos = 0;
     }
 
-    private IEnumerable<string> Split(string line) {
-      return separator == WhiteSpaceChar ? line.Split(whiteSpaceSeparators, StringSplitOptions.RemoveEmptyEntries) : line.Split(separators);
-    }
+    private IEnumerable<string> Split(string line) => separator == WhiteSpaceChar ? line.Split(whiteSpaceSeparators, StringSplitOptions.RemoveEmptyEntries) : line.Split(separators);
 
-    private static void IncreaseCapacity<T>(ref T[] arr) {
-      int n = (int)Math.Floor(arr.Length * 1.7); // guess
-      T[] arr2 = new T[n];
+    private static void IncreaseCapacity<T>(ref T[] arr)
+    {
+      var n = (int)Math.Floor(arr.Length * 1.7); // guess
+      var arr2 = new T[n];
       Array.Copy(arr, arr2, arr.Length);
       arr = arr2;
     }
   }
+
   #endregion
 
   #region parsing
-  private void ParseVariableNames() {
+
+  private void ParseVariableNames()
+  {
     // the first line must contain variable names
     List<string> varNames = [];
 
     tokenizer.Next(out var type, out var strVal, out _, out _);
 
     // the first token must be a variable name
-    if (type != TokenType.String)
+    if (type != TokenType.String) {
       throw new ArgumentException("Error: Expected " + TokenType.String + " got " + type);
+    }
+
     varNames.Add(strVal);
 
     while (tokenizer.HasNext() && tokenizer.PeekType() != TokenType.NewLine) {
@@ -573,14 +624,16 @@ public class TableFileParser : Progress<long> { // reports the number of bytes r
     variableNames = varNames;
   }
 
-  private void ExpectType(TokenType expectedToken) {
-    if (tokenizer.PeekType() != expectedToken)
+  private void ExpectType(TokenType expectedToken)
+  {
+    if (tokenizer.PeekType() != expectedToken) {
       throw new ArgumentException("Error: Expected " + expectedToken + " got " + tokenizer.PeekType());
+    }
+
     tokenizer.Skip();
   }
 
-  private static void Error(string message, string token, int lineNumber) {
-    throw new IOException($"Error while parsing. {message} (token: {token} lineNumber: {lineNumber}).");
-  }
+  private static void Error(string message, string token, int lineNumber) => throw new IOException($"Error while parsing. {message} (token: {token} lineNumber: {lineNumber}).");
+
   #endregion
 }

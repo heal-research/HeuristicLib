@@ -3,8 +3,10 @@
 namespace HEAL.HeuristicLib.SearchSpaces.Trees;
 
 public record SymbolicExpressionTreeSearchSpace(ISymbolicExpressionGrammar Grammar, int TreeLength = 50, int TreeDepth = 50)
-  : SearchSpace<Genotypes.Trees.SymbolicExpressionTree> {
+  : SearchSpace<Genotypes.Trees.SymbolicExpressionTree>
+{
   #region Parameter properties
+
   public int TreeLength { get; set; } = TreeLength;
 
   public int TreeDepth { get; set; } = TreeDepth;
@@ -14,9 +16,11 @@ public record SymbolicExpressionTreeSearchSpace(ISymbolicExpressionGrammar Gramm
   public int FunctionDefinitions { get; set; }
 
   public int FunctionArguments { get; set; }
+
   #endregion
 
-  public override bool Contains(Genotypes.Trees.SymbolicExpressionTree genotype) {
+  public override bool Contains(Genotypes.Trees.SymbolicExpressionTree genotype)
+  {
     return genotype.Length <= TreeLength &&
            genotype.Depth <= TreeDepth
            && Grammar.Conforms(genotype)

@@ -5,19 +5,22 @@ using static HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic.BatchOperations;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter {
+public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter
+{
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
-  private static void LoadData(in BatchInstruction instr, ReadOnlySpan<int> rows, int startIndex, int batchSize) {
+  private static void LoadData(in BatchInstruction instr, ReadOnlySpan<int> rows, int startIndex, int batchSize)
+  {
     var data = instr.Data;
     var dst = instr.Buf;
     var w = instr.Weight;
-    for (int i = 0; i < batchSize; ++i) {
+    for (var i = 0; i < batchSize; ++i) {
       var row = rows[startIndex + i]; // ✅ use the i-th selected row
       dst[i] = w * data[row];
     }
   }
 
-  private static void Evaluate(BatchInstruction[] code, ReadOnlySpan<int> rows, int rowIndex, int batchSize) {
+  private static void Evaluate(BatchInstruction[] code, ReadOnlySpan<int> rows, int rowIndex, int batchSize)
+  {
     for (var i = code.Length - 1; i >= 0; --i) {
       ref readonly var instr = ref code[i];
       var c = instr.ChildIndex;
@@ -170,7 +173,8 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
 
   [ThreadStatic] private static Dataset? cachedDataset;
 
-  private static void InitCache(Dataset dataset) {
+  private static void InitCache(Dataset dataset)
+  {
     cachedDataset = dataset;
     cachedData = new Dictionary<string, double[]>();
     foreach (var v in dataset.DoubleVariables) {
@@ -178,7 +182,8 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
     }
   }
 
-  private static double[] GetValues(SymbolicExpressionTree tree, Dataset dataset, int[] rows) {
+  private static double[] GetValues(SymbolicExpressionTree tree, Dataset dataset, int[] rows)
+  {
     if (cachedData == null || cachedDataset != dataset || cachedDataset is ModifiableDataset) {
       InitCache(dataset);
     }
@@ -194,8 +199,9 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
       Array.Copy(code[0].Buf, 0, result, rowIndex, BatchSize);
     }
 
-    if (remainingRows <= 0)
+    if (remainingRows <= 0) {
       return result;
+    }
 
     Evaluate(code, rows, roundedTotal, remainingRows);
     Array.Copy(code[0].Buf, 0, result, roundedTotal, remainingRows);
@@ -203,21 +209,29 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
     return result;
   }
 
-  public IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows) {
-    if (rows is not int[] rowArray)
+  public IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows)
+  {
+    if (rows is not int[] rowArray) {
       rowArray = rows.ToArray();
+    }
+
     return GetValues(tree, dataset, rowArray);
   }
 
-  private static BatchInstruction[] Compile(SymbolicExpressionTree tree, Dataset dataset, Func<SymbolicExpressionTreeNode, byte> opCodeMapper) {
+  private static BatchInstruction[] Compile(SymbolicExpressionTree tree, Dataset dataset, Func<SymbolicExpressionTreeNode, byte> opCodeMapper)
+  {
     var root = tree.Root[0][0];
     var code = new BatchInstruction[root.GetLength()];
-    if (root.SubtreeCount > ushort.MaxValue)
+    if (root.SubtreeCount > ushort.MaxValue) {
       throw new ArgumentException("Number of subtrees is too big (>65.535)");
+    }
+
     int c = 1, i = 0;
     foreach (var node in root.IterateNodesBreadth()) {
-      if (node.SubtreeCount > ushort.MaxValue)
+      if (node.SubtreeCount > ushort.MaxValue) {
         throw new ArgumentException("Number of subtrees is too big (>65.535)");
+      }
+
       double w = 0, v = 0;
       double[] d = [];
       switch (node) {
@@ -239,7 +253,7 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
         }
       }
 
-      code[i] = new BatchInstruction(opcode: opCodeMapper(node), numberOfArguments: (ushort)node.SubtreeCount, buf: new double[BatchSize], childIndex: c, weight: w, data: d, value: v);
+      code[i] = new BatchInstruction(opCodeMapper(node), (ushort)node.SubtreeCount, buf: new double[BatchSize], childIndex: c, weight: w, data: d, value: v);
 
       c += node.SubtreeCount;
       ++i;

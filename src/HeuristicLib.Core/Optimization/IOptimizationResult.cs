@@ -1,3 +1,5 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public interface IOptimizationResult { }
+public interface IOptimizationResult
+{
+}

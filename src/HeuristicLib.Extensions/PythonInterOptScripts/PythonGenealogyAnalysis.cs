@@ -2,21 +2,16 @@ using System.Collections.Concurrent;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
-using HEAL.HeuristicLib.Analyzers;
-using HEAL.HeuristicLib.Analyzers.Genealogy;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Observation;
-using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
-using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
-using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -35,12 +30,14 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
-public class PythonGenealogyAnalysis {
+public class PythonGenealogyAnalysis
+{
   public delegate void GenerationCallback(PopulationIterationState<SymbolicExpressionTree> current);
 
   public delegate void PermutationGenerationCallback(PopulationIterationState<Permutation> current);
 
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> CreateSymRegAllMutator() {
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> CreateSymRegAllMutator()
+  {
     var symRegAllMutator = MultiMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
@@ -51,8 +48,10 @@ public class PythonGenealogyAnalysis {
   }
 
   #region public methods
+
   public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>)[]
-    RunSymbolicRegressionConfigurable(string file, SymRegExperimentParameters parameters, int repetitions, double trainingSplit = 0.66) {
+    RunSymbolicRegressionConfigurable(string file, SymRegExperimentParameters parameters, int repetitions, double trainingSplit = 0.66)
+  {
     return Enumerable.Range(0, repetitions).ParallelSelect(RandomNumberGenerator.Create(parameters.Seed),
       (i, _, _) => RunSymbolicRegressionConfigurable(
         file,
@@ -65,7 +64,8 @@ public class PythonGenealogyAnalysis {
     string file,
     SymRegExperimentParameters parameters,
     double trainingSplit = 0.66,
-    GenerationCallback? callback = null) {
+    GenerationCallback? callback = null)
+  {
     parameters = parameters with {
       Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
       Crossover = parameters.Crossover ?? new SubtreeCrossover(),
@@ -77,7 +77,8 @@ public class PythonGenealogyAnalysis {
   }
 
   public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<Permutation>>)[]
-    RunTravelingSalesmanConfigurable(string file, TravelingSalesmanExperimentParameters parameters, int repetitions) {
+    RunTravelingSalesmanConfigurable(string file, TravelingSalesmanExperimentParameters parameters, int repetitions)
+  {
     return Enumerable.Range(0, repetitions).ParallelSelect(new SystemRandomNumberGenerator(parameters.Seed),
       (i, _, _) => RunTravelingSalesmanConfigurable(
         file,
@@ -88,7 +89,8 @@ public class PythonGenealogyAnalysis {
   public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<Permutation>>) RunTravelingSalesmanConfigurable(
     string file,
     TravelingSalesmanExperimentParameters parameters,
-    PermutationGenerationCallback? callback = null) {
+    PermutationGenerationCallback? callback = null)
+  {
     var problem = CreateTestTravellingSalesmanProblem(file);
 
     parameters = parameters with {
@@ -99,9 +101,11 @@ public class PythonGenealogyAnalysis {
     var actionCallback = callback is null ? null : new Action<PopulationIterationState<Permutation>>(callback);
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
+
   #endregion
 
   #region Parameters
+
   public record ExperimentParameters<T, TS>(
     uint Seed = 0,
     int Elites = 1,
@@ -151,12 +155,15 @@ public class PythonGenealogyAnalysis {
     string AlgorithmName = "ga") : ExperimentParameters<Permutation, PermutationSearchSpace>(Seed, Elites, PopulationSize,
     Iterations, MutationRate, NoChildren, WithCrossover, Strategy, Creator, Crossover, Mutator, Selector,
     AlgorithmName);
+
   #endregion
 
   #region Problem Generation
+
   private static readonly ConcurrentDictionary<string, ITravelingSalesmanProblemData> TSPCache = [];
 
-  private static TravelingSalesmanProblem CreateTestTravellingSalesmanProblem(string file) {
+  private static TravelingSalesmanProblem CreateTestTravellingSalesmanProblem(string file)
+  {
     var cdata = TSPCache.GetOrAdd(file, s => {
       var t = TsplibTspInstanceProvider.LoadData(s);
       return (t.Coordinates?.Length ?? 0) <= 1000 ? t.ToDistanceMatrixData() : t.ToCoordinatesData();
@@ -166,7 +173,8 @@ public class PythonGenealogyAnalysis {
 
   private static readonly ConcurrentDictionary<(string, double), RegressionProblemData> SymRegCache = [];
 
-  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(string file, double trainingSplit = 0.66) {
+  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(string file, double trainingSplit = 0.66)
+  {
     var problemData = SymRegCache.GetOrAdd((file, trainingSplit), key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
     var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator()) {
       SearchSpace = {
@@ -178,23 +186,30 @@ public class PythonGenealogyAnalysis {
     problem.SearchSpace.Grammar.AddFullyConnectedSymbols(root, new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables });
     return problem;
   }
+
   #endregion
 
   #region generic helpers
+
   private record MyAnalyzers<T>(
     BestMedianWorstQualityAttachedAnalysis<T> Qualities,
     RankAnalysis<T> RankAnalysis,
-    QualityCurveAnalysis<T> QualityCurve) where T : class { }
+    QualityCurveAnalysis<T> QualityCurve) where T : class
+  {
+  }
 
   private static MyAnalyzers<T>
     AddAnalyzers<T, TS, TP, TRes>(Action<TRes>? callback, IAlgorithmBuilder<T, TS, TP, TRes> builder)
     where TRes : PopulationIterationState<T>
     where T : class
     where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<T, TS> {
+    where TP : class, IProblem<T, TS>
+  {
     var qualities = BestMedianWorstAnalysis.Analyze(builder);
-    if (callback != null)
+    if (callback != null) {
       FuncAnalysis.Create(builder, (_, y) => callback(y));
+    }
+
     var rankAnalysis = new RankAnalysis<T>();
     rankAnalysis.AttachTo(builder);
     var qc = QualityCurveAnalysis.Create(builder);
@@ -204,10 +219,12 @@ public class PythonGenealogyAnalysis {
   private static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<T>>) RunAlgorithmConfigurable<T, TS>(
     IProblem<T, TS> problem,
     Action<PopulationIterationState<T>>? callback,
-    ExperimentParameters<T, TS> parameters) where TS : class, ISearchSpace<T> where T : class {
+    ExperimentParameters<T, TS> parameters) where TS : class, ISearchSpace<T> where T : class
+  {
     var terminator = new AfterIterationsTerminator<T>(parameters.Iterations);
-    if (parameters.NoChildren < 0)
+    if (parameters.NoChildren < 0) {
       parameters = parameters with { NoChildren = parameters.PopulationSize };
+    }
 
     IAlgorithm<T, TS, IProblem<T, TS>, PopulationIterationState<T>> algorithm;
 
@@ -219,8 +236,10 @@ public class PythonGenealogyAnalysis {
         ga.PopulationSize = parameters.PopulationSize;
         ga.MutationRate = parameters.MutationRate;
         ga.Elites = parameters.Elites;
-        if (parameters.Selector != null)
+        if (parameters.Selector != null) {
           ga.Selector = parameters.Selector;
+        }
+
         //ga.RandomSeed = parameters.Seed;
         ga.Terminator = terminator;
 
@@ -234,10 +253,13 @@ public class PythonGenealogyAnalysis {
         es.Strategy = parameters.Strategy;
         es.Terminator = terminator;
         //es.RandomSeed = parameters.Seed;
-        if (parameters.Selector != null)
+        if (parameters.Selector != null) {
           es.Selector = parameters.Selector;
-        if (parameters.WithCrossover)
+        }
+
+        if (parameters.WithCrossover) {
           es.Crossover = parameters.Crossover;
+        }
 
         analyzers = AddAnalyzers(callback, es);
         algorithm = es.Build();
@@ -247,7 +269,7 @@ public class PythonGenealogyAnalysis {
         ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
         ls.Terminator = terminator;
         //ls.RandomSeed = parameters.Seed;
-        
+
         analyzers = AddAnalyzers(callback, ls);
         algorithm = ls.Build();
         break;
@@ -255,8 +277,10 @@ public class PythonGenealogyAnalysis {
         var nsga2 = NSGA2.GetBuilder(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
         nsga2.PopulationSize = parameters.PopulationSize;
         nsga2.MutationRate = parameters.MutationRate;
-        if (parameters.Selector != null)
+        if (parameters.Selector != null) {
           nsga2.Selector = parameters.Selector;
+        }
+
         //nsga2.RandomSeed = parameters.Seed;
         nsga2.Terminator = terminator;
         //nsga2.DominateOnEquals = true; //todo make configurable
@@ -267,8 +291,9 @@ public class PythonGenealogyAnalysis {
         throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");
     }
 
-    _ = algorithm.Execute(problem, random: RandomNumberGenerator.Create(parameters.Seed));
+    _ = algorithm.Execute(problem, RandomNumberGenerator.Create(parameters.Seed));
     return (analyzers.RankAnalysis.Graph.ToGraphViz(), analyzers.RankAnalysis.Ranks, analyzers.Qualities.BestISolutions);
   }
+
   #endregion
 }

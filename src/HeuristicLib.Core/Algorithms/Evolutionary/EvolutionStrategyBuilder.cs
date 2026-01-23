@@ -7,10 +7,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, EvolutionStrategyIterationState<TG>, EvolutionStrategy<TG, TS, TP>, EvolutionStrategyBuildSpec<TG, TS, TP>> 
+public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, EvolutionStrategyIterationState<TG>, EvolutionStrategy<TG, TS, TP>, EvolutionStrategyBuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TG : class 
+  where TG : class
 {
   public int PopulationSize { get; set; } = 100;
   public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
@@ -21,7 +21,7 @@ public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP
   public int NumberOfChildren { get; set; } = 100;
   public required ICreator<TG, TS, TP> Creator { get; set; }
 
-  protected override EvolutionStrategyBuildSpec<TG, TS, TP> CreateBuildSpec() => new EvolutionStrategyBuildSpec<TG, TS, TP>(
+  protected override EvolutionStrategyBuildSpec<TG, TS, TP> CreateBuildSpec() => new(
     Evaluator, Terminator, Interceptor, Observer, PopulationSize, Strategy, Mutator, InitialMutationStrength, Crossover, Selector, NumberOfChildren, Creator
   );
 

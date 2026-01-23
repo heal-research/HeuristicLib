@@ -4,28 +4,32 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
 
-public class CutPoint {
+public class CutPoint
+{
   public SymbolicExpressionTreeNode Parent { get; }
   public SymbolicExpressionTreeNode? Child { get; }
   private readonly ISymbolicExpressionGrammar grammar;
 
   public int ChildIndex { get; }
 
-  public CutPoint(SymbolicExpressionTreeNode parent, SymbolicExpressionTreeNode child, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public CutPoint(SymbolicExpressionTreeNode parent, SymbolicExpressionTreeNode child, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     Parent = parent;
     Child = child;
     ChildIndex = parent.IndexOfSubtree(child);
     grammar = searchSpace.Grammar;
   }
 
-  public CutPoint(SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public CutPoint(SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     Parent = parent;
     ChildIndex = childIndex;
     Child = null;
     grammar = searchSpace.Grammar;
   }
 
-  public bool IsMatchingPointType(SymbolicExpressionTreeNode? newChild) {
+  public bool IsMatchingPointType(SymbolicExpressionTreeNode? newChild)
+  {
     if (newChild == null) {
       // make sure that one subtree can be removed and that only the last subtree is removed 
       return grammar.GetMinimumSubtreeCount(Parent.Symbol) < Parent.SubtreeCount &&
@@ -34,8 +38,9 @@ public class CutPoint {
 
     // check syntax constraints of direct parent - child relation
     if (!grammar.ContainsSymbol(newChild.Symbol) ||
-        !grammar.IsAllowedChildSymbol(Parent.Symbol, newChild.Symbol, ChildIndex))
+        !grammar.IsAllowedChildSymbol(Parent.Symbol, newChild.Symbol, ChildIndex)) {
       return false;
+    }
 
     var result = true;
     // check point type for the whole branch

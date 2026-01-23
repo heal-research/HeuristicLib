@@ -4,11 +4,13 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype> {
+public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype>
+{
   private readonly int tournamentSize;
   private readonly bool dominateOnEqualities;
 
-  public ParetoCrowdingTournamentSelector(bool dominateOnEqualities, int tournamentSize = 2) {
+  public ParetoCrowdingTournamentSelector(bool dominateOnEqualities, int tournamentSize = 2)
+  {
     this.dominateOnEqualities = dominateOnEqualities;
     this.tournamentSize = tournamentSize;
   }
@@ -17,7 +19,8 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype> {
     IReadOnlyList<ISolution<TGenotype>> population,
     Objective objective,
     int count,
-    IRandomNumberGenerator random) {
+    IRandomNumberGenerator random)
+  {
     var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
 
     // Key by solution instead of ObjectiveVector
@@ -26,11 +29,11 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype> {
 
     var calculatedFront = new HashSet<int>();
 
-    for (int i = 0; i < count; i++) {
+    for (var i = 0; i < count; i++) {
       var bestIdx = random.NextInt(population.Count);
       var bestRank = rank[bestIdx];
 
-      for (int j = 1; j < tournamentSize; j++) {
+      for (var j = 1; j < tournamentSize; j++) {
         var idx = random.NextInt(population.Count);
         var idxRank = rank[idx];
         if (idxRank < bestRank) {
@@ -39,7 +42,9 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype> {
           continue;
         }
 
-        if (idxRank > bestRank) continue; // worse rank
+        if (idxRank > bestRank) {
+          continue; // worse rank
+        }
 
         // equal rank -> compare crowding
 
@@ -48,13 +53,16 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype> {
           var frontSolutions = fronts[bestRank];
           var frontObjectives = frontSolutions.Select(x => x.ObjectiveVector).ToArray();
           var distances = CrowdingDistance.CalculateCrowdingDistances(frontObjectives);
-          for (int k = 0; k < frontSolutions.Count; k++)
+          for (var k = 0; k < frontSolutions.Count; k++) {
             crowdingBySolution[frontSolutions[k]] = distances[k];
+          }
+
           calculatedFront.Add(bestRank);
         }
 
-        if (crowdingBySolution[population[idx]] <= crowdingBySolution[population[bestIdx]])
+        if (crowdingBySolution[population[idx]] <= crowdingBySolution[population[bestIdx]]) {
           continue;
+        }
 
         bestIdx = idx;
         bestRank = idxRank;

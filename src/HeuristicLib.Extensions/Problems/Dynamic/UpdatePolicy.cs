@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public enum UpdatePolicy {
+public enum UpdatePolicy
+{
   Asynchronous,
   AfterEvaluation,
   AfterInterception

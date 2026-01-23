@@ -1,12 +1,15 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class MatthewsCorrelationCoefficientCalculator {
-  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
+public class MatthewsCorrelationCoefficientCalculator
+{
+  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
+  {
     var confusionMatrix = ConfusionMatrixCalculator.Calculate(originalValues, estimatedValues, out errorState);
     return !errorState.Equals(OnlineCalculatorError.None) ? double.NaN : CalculateMcc(confusionMatrix);
   }
 
-  private static double CalculateMcc(double[,] confusionMatrix) {
+  private static double CalculateMcc(double[,] confusionMatrix)
+  {
     if (confusionMatrix.GetLength(0) != confusionMatrix.GetLength(1)) {
       throw new ArgumentException("Confusion matrix is not a square matrix.");
     }
@@ -16,7 +19,7 @@ public class MatthewsCorrelationCoefficientCalculator {
     for (var k = 0; k < classes; k++) {
       for (var l = 0; l < classes; l++) {
         for (var m = 0; m < classes; m++) {
-          numerator += confusionMatrix[k, k] * confusionMatrix[m, l] - confusionMatrix[l, k] * confusionMatrix[k, m];
+          numerator += (confusionMatrix[k, k] * confusionMatrix[m, l]) - (confusionMatrix[l, k] * confusionMatrix[k, m]);
         }
       }
     }

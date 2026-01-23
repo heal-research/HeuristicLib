@@ -7,8 +7,10 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 public abstract class DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>(TProblemData problemData, Objective objective, TSearchSpace searchSpace)
   : Problem<TSolution, TSearchSpace>(objective, searchSpace)
   where TProblemData : DataAnalysisProblemData
-  where TSearchSpace : class, ISearchSpace<TSolution> {
-  public virtual TProblemData ProblemData {
+  where TSearchSpace : class, ISearchSpace<TSolution>
+{
+  public virtual TProblemData ProblemData
+  {
     get;
   } = problemData;
 

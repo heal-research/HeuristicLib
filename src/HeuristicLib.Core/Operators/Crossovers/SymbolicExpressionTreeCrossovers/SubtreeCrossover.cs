@@ -6,17 +6,20 @@ using HEAL.HeuristicLib.SearchSpaces.Trees;
 namespace HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
 
 /// <summary>
-/// Takes two parent individuals P0 and P1 each. Selects a random node N0 of P0 and a random node N1 of P1.
-/// And replaces the branch with root0 N0 in P0 with N1 from P1 if the tree-size limits are not violated.
-/// When recombination with N0 and N1 would create a tree that is too large or invalid the operator randomly selects new N0 and N1 
-/// until a valid configuration is found.
-/// </summary>  
-public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
+///   Takes two parent individuals P0 and P1 each. Selects a random node N0 of P0 and a random node N1 of P1.
+///   And replaces the branch with root0 N0 in P0 with N1 from P1 if the tree-size limits are not violated.
+///   When recombination with N0 and N1 would create a tree that is too large or invalid the operator randomly selects new
+///   N0 and N1
+///   until a valid configuration is found.
+/// </summary>
+public class SubtreeCrossover : SymbolicExpressionTreeCrossover
+{
   public double InternalCrossoverPointProbability { get; set; } = 0.9;
 
   public static SymbolicExpressionTree Cross(IRandomNumberGenerator random,
-                                             SymbolicExpressionTree parent0, SymbolicExpressionTree parent1,
-                                             double internalCrossoverPointProbability, SymbolicExpressionTreeSearchSpace searchSpace) {
+    SymbolicExpressionTree parent0, SymbolicExpressionTree parent1,
+    double internalCrossoverPointProbability, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     // select a random crossover point in the first parent 
     parent0 = new SymbolicExpressionTree(parent0.Root.Clone());
     SelectCrossoverPoint(random, parent0, internalCrossoverPointProbability, searchSpace, out var crossoverPoint0);
@@ -27,13 +30,16 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     var maxInsertedBranchDepth = Math.Max(0, searchSpace.TreeDepth - parent0.Root.GetBranchLevel(crossoverPoint0.Parent));
 
     var allowedBranches = new List<SymbolicExpressionTreeNode?>();
-    parent1.Root.ForEachNodePostfix((n) => {
+    parent1.Root.ForEachNodePostfix(n => {
       if (n.GetLength() <= maxInsertedBranchLength &&
-          n.GetDepth() <= maxInsertedBranchDepth && crossoverPoint0.IsMatchingPointType(n))
+          n.GetDepth() <= maxInsertedBranchDepth && crossoverPoint0.IsMatchingPointType(n)) {
         allowedBranches.Add(n);
+      }
     });
     // empty branch
-    if (crossoverPoint0.IsMatchingPointType(null)) allowedBranches.Add(null);
+    if (crossoverPoint0.IsMatchingPointType(null)) {
+      allowedBranches.Add(null);
+    }
 
     if (allowedBranches.Count == 0) {
       return parent0;
@@ -61,7 +67,8 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     return parent0;
   }
 
-  private static void SelectCrossoverPoint(IRandomNumberGenerator random, SymbolicExpressionTree parent0, double internalNodeProbability, SymbolicExpressionTreeSearchSpace searchSpace, out CutPoint crossoverPoint) {
+  private static void SelectCrossoverPoint(IRandomNumberGenerator random, SymbolicExpressionTree parent0, double internalNodeProbability, SymbolicExpressionTreeSearchSpace searchSpace, out CutPoint crossoverPoint)
+  {
     ArgumentOutOfRangeException.ThrowIfLessThan(internalNodeProbability, 0);
     ArgumentOutOfRangeException.ThrowIfGreaterThan(internalNodeProbability, 1);
     var maxBranchLength = searchSpace.TreeLength;
@@ -69,8 +76,9 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     var internalCrossoverPoints = new List<CutPoint>();
     var leafCrossoverPoints = new List<CutPoint>();
     parent0.Root.ForEachNodePostfix(n => {
-        if (n.SubtreeCount <= 0 || n == parent0.Root)
+        if (n.SubtreeCount <= 0 || n == parent0.Root) {
           return;
+        }
 
         //avoid linq to reduce memory pressure
         for (var i = 0; i < n.SubtreeCount; i++) {
@@ -80,10 +88,11 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
             continue;
           }
 
-          if (child.SubtreeCount > 0)
+          if (child.SubtreeCount > 0) {
             internalCrossoverPoints.Add(new CutPoint(n, child, searchSpace));
-          else
+          } else {
             leafCrossoverPoints.Add(new CutPoint(n, child, searchSpace));
+          }
         }
 
         // add one additional extension point if the number of subtrees for the symbol is not full
@@ -111,35 +120,41 @@ public class SubtreeCrossover : SymbolicExpressionTreeCrossover {
     }
   }
 
-  private static SymbolicExpressionTreeNode? SelectRandomBranch(IRandomNumberGenerator random, List<SymbolicExpressionTreeNode?> branches, double internalNodeProbability) {
-    if (internalNodeProbability is < 0.0 or > 1.0) throw new ArgumentException("internalNodeProbability");
+  private static SymbolicExpressionTreeNode? SelectRandomBranch(IRandomNumberGenerator random, List<SymbolicExpressionTreeNode?> branches, double internalNodeProbability)
+  {
+    if (internalNodeProbability is < 0.0 or > 1.0) {
+      throw new ArgumentException("internalNodeProbability");
+    }
+
     List<SymbolicExpressionTreeNode> allowedInternalBranches;
     List<SymbolicExpressionTreeNode> allowedLeafBranches;
     if (random.NextDouble() < internalNodeProbability) {
       // select internal node if possible
       allowedInternalBranches = (from branch in branches
-                                 where branch is { SubtreeCount: > 0 }
-                                 select branch).ToList();
-      if (allowedInternalBranches.Count > 0)
+        where branch is { SubtreeCount: > 0 }
+        select branch).ToList();
+      if (allowedInternalBranches.Count > 0) {
         return allowedInternalBranches.SampleRandom(random);
+      }
 
       // no internal nodes allowed => select leaf nodes
       allowedLeafBranches = (from branch in branches
-                             where branch == null || branch.SubtreeCount == 0
-                             select branch).ToList();
+        where branch == null || branch.SubtreeCount == 0
+        select branch).ToList();
       return allowedLeafBranches.Count == 0 ? null : allowedLeafBranches.SampleRandom(random);
     }
 
     // select leaf node if possible
     allowedLeafBranches = (from branch in branches
-                           where branch == null || branch.SubtreeCount == 0
-                           select branch).ToList();
-    if (allowedLeafBranches.Count > 0)
+      where branch == null || branch.SubtreeCount == 0
+      select branch).ToList();
+    if (allowedLeafBranches.Count > 0) {
       return allowedLeafBranches.SampleRandom(random);
+    }
 
     allowedInternalBranches = (from branch in branches
-                               where branch is { SubtreeCount: > 0 }
-                               select branch).ToList();
+      where branch is { SubtreeCount: > 0 }
+      select branch).ToList();
     return allowedInternalBranches.Count == 0 ? null : allowedInternalBranches.SampleRandom(random);
   }
 

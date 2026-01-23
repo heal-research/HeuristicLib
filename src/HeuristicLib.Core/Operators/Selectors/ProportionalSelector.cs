@@ -3,10 +3,13 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public class ProportionalSelector<TGenotype>(bool windowing = true) : Selector<TGenotype> { // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
+public class ProportionalSelector<TGenotype>(bool windowing = true) : Selector<TGenotype>
+{
+  // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
   public bool Windowing { get; set; } = windowing;
 
-  public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random) {
+  public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+  {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     var fitnesses = population.Select(s => s.ObjectiveVector.Count == 1 ? s.ObjectiveVector[0] : throw new InvalidOperationException("Proportional selection requires a single objective.")).ToList();
 
@@ -28,8 +31,10 @@ public class ProportionalSelector<TGenotype>(bool windowing = true) : Selector<T
           qualities = qualities.Select(q => maxQuality - q);
         }
       } else {
-        if (minQuality < 0.0)
+        if (minQuality < 0.0) {
           throw new InvalidOperationException("Proportional selection without windowing does not work with quality values < 0.");
+        }
+
         if (singleObjective == ObjectiveDirection.Minimize) {
           var limit = Math.Min(maxQuality * 2, double.MaxValue);
           qualities = qualities.Select(q => limit - q);

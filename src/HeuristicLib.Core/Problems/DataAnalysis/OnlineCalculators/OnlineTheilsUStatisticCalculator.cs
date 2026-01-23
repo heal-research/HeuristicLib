@@ -1,7 +1,8 @@
 ﻿#pragma warning disable S2178
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class OnlineTheilsUStatisticCalculator {
+public class OnlineTheilsUStatisticCalculator
+{
   private readonly OnlineMeanAndVarianceCalculator squaredErrorMeanCalculator;
   private readonly OnlineMeanAndVarianceCalculator unbiasedEstimatorMeanCalculator;
 
@@ -10,16 +11,19 @@ public class OnlineTheilsUStatisticCalculator {
   private OnlineCalculatorError errorState;
   public OnlineCalculatorError ErrorState => errorState | squaredErrorMeanCalculator.MeanErrorState | unbiasedEstimatorMeanCalculator.MeanErrorState;
 
-  public OnlineTheilsUStatisticCalculator() {
+  public OnlineTheilsUStatisticCalculator()
+  {
     squaredErrorMeanCalculator = new OnlineMeanAndVarianceCalculator();
     unbiasedEstimatorMeanCalculator = new OnlineMeanAndVarianceCalculator();
     Reset();
   }
 
   #region IOnlineEvaluator Members
+
   public double Value => TheilsUStatistic;
 
-  public void Add(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> referenceContinuation, IEnumerable<double> predictedContinuation) {
+  public void Add(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> referenceContinuation, IEnumerable<double> predictedContinuation)
+  {
     if (double.IsNaN(startValue) || (errorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       errorState |= OnlineCalculatorError.InvalidValueAdded;
       return;
@@ -29,7 +33,7 @@ public class OnlineTheilsUStatisticCalculator {
     using var predictedEnumerator = predictedContinuation.GetEnumerator();
     using var referenceEnumerator = referenceContinuation.GetEnumerator();
     while (actualEnumerator.MoveNext() & predictedEnumerator.MoveNext() & referenceEnumerator.MoveNext()
-           & ErrorState != OnlineCalculatorError.InvalidValueAdded) {
+           & (ErrorState != OnlineCalculatorError.InvalidValueAdded)) {
       var actual = actualEnumerator.Current;
       var predicted = predictedEnumerator.Current;
       var reference = referenceEnumerator.Current;
@@ -53,21 +57,25 @@ public class OnlineTheilsUStatisticCalculator {
     }
   }
 
-  public void Reset() {
+  public void Reset()
+  {
     squaredErrorMeanCalculator.Reset();
     unbiasedEstimatorMeanCalculator.Reset();
     errorState = OnlineCalculatorError.InsufficientElementsAdded;
   }
+
   #endregion
 
-  public static double Calculate(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> referenceContinuation, IEnumerable<double> predictedContinuation, out OnlineCalculatorError errorState) {
+  public static double Calculate(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> referenceContinuation, IEnumerable<double> predictedContinuation, out OnlineCalculatorError errorState)
+  {
     var calculator = new OnlineTheilsUStatisticCalculator();
     calculator.Add(startValue, actualContinuation, referenceContinuation, predictedContinuation);
     errorState = calculator.ErrorState;
     return calculator.TheilsUStatistic;
   }
 
-  public static double Calculate(IEnumerable<double> startValues, IEnumerable<IEnumerable<double>> actualContinuations, IEnumerable<IEnumerable<double>> referenceContinuations, IEnumerable<IEnumerable<double>> predictedContinuations, out OnlineCalculatorError errorState) {
+  public static double Calculate(IEnumerable<double> startValues, IEnumerable<IEnumerable<double>> actualContinuations, IEnumerable<IEnumerable<double>> referenceContinuations, IEnumerable<IEnumerable<double>> predictedContinuations, out OnlineCalculatorError errorState)
+  {
     using var startValueEnumerator = startValues.GetEnumerator();
     using var actualContinuationsEnumerator = actualContinuations.GetEnumerator();
     using var referenceContinuationsEnumerator = referenceContinuations.GetEnumerator();
@@ -78,7 +86,9 @@ public class OnlineTheilsUStatisticCalculator {
     // always move forward all enumerators (do not use short-circuit evaluation!)
     while (startValueEnumerator.MoveNext() & actualContinuationsEnumerator.MoveNext() & referenceContinuationsEnumerator.MoveNext() & predictedContinuationsEnumerator.MoveNext()) {
       calculator.Add(startValueEnumerator.Current, actualContinuationsEnumerator.Current, referenceContinuationsEnumerator.Current, predictedContinuationsEnumerator.Current);
-      if (calculator.ErrorState != OnlineCalculatorError.None) break;
+      if (calculator.ErrorState != OnlineCalculatorError.None) {
+        break;
+      }
     }
 
     // check if all enumerators are at the end to make sure both enumerations have the same length

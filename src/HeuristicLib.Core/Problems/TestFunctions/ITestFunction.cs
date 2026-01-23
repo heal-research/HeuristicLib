@@ -3,10 +3,11 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public interface ITestFunction {
-  public int Dimension { get; }
+public interface ITestFunction
+{
+  int Dimension { get; }
   double Min { get; }
   double Max { get; }
-  public ObjectiveDirection Objective { get; }
+  ObjectiveDirection Objective { get; }
   double Evaluate(RealVector solution);
 }

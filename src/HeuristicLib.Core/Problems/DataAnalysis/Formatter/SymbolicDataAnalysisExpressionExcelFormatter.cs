@@ -8,24 +8,27 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
-public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpressionTreeStringFormatter {
-  private string GetExcelColumnName(int columnNumber) {
-    int dividend = columnNumber;
-    string columnName = string.Empty;
+public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpressionTreeStringFormatter
+{
+  private string GetExcelColumnName(int columnNumber)
+  {
+    var dividend = columnNumber;
+    var columnName = string.Empty;
 
     while (dividend > 0) {
-      int modulo = (dividend - 1) % 26;
-      columnName = System.Convert.ToChar(65 + modulo) + columnName;
+      var modulo = (dividend - 1) % 26;
+      columnName = Convert.ToChar(65 + modulo) + columnName;
       dividend = (dividend - modulo) / 26;
     }
 
     return columnName;
   }
 
-  private readonly Dictionary<string, string> variableNameMapping = new Dictionary<string, string>();
-  private int currentVariableIndex = 0;
+  private readonly Dictionary<string, string> variableNameMapping = new();
+  private int currentVariableIndex;
 
-  private string GetColumnToVariableName(string varName) {
+  private string GetColumnToVariableName(string varName)
+  {
     if (!variableNameMapping.ContainsKey(varName)) {
       currentVariableIndex++;
       variableNameMapping.Add(varName, GetExcelColumnName(currentVariableIndex));
@@ -34,18 +37,23 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
     return string.Format("${0}1", variableNameMapping[varName]);
   }
 
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) {
-    return Format(symbolicExpressionTree, null);
-  }
+  public string Format(SymbolicExpressionTree symbolicExpressionTree) => Format(symbolicExpressionTree, null);
 
-  public string Format(SymbolicExpressionTree symbolicExpressionTree, Dataset? dataset) {
-    if (dataset != null)
+  public string Format(SymbolicExpressionTree symbolicExpressionTree, Dataset? dataset)
+  {
+    if (dataset != null) {
       return FormatWithMapping(symbolicExpressionTree, CalculateVariableMapping(symbolicExpressionTree, dataset));
-    else return FormatWithMapping(symbolicExpressionTree, new Dictionary<string, string>());
+    }
+
+    return FormatWithMapping(symbolicExpressionTree, new Dictionary<string, string>());
   }
 
-  public string FormatWithMapping(SymbolicExpressionTree symbolicExpressionTree, Dictionary<string, string> variableNameMapping) {
-    foreach (var kvp in variableNameMapping) this.variableNameMapping.Add(kvp.Key, kvp.Value);
+  public string FormatWithMapping(SymbolicExpressionTree symbolicExpressionTree, Dictionary<string, string> variableNameMapping)
+  {
+    foreach (var kvp in variableNameMapping) {
+      this.variableNameMapping.Add(kvp.Key, kvp.Value);
+    }
+
     var stringBuilder = new StringBuilder();
 
     stringBuilder.Append("=");
@@ -59,12 +67,16 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
     return stringBuilder.ToString();
   }
 
-  private Dictionary<string, string> CalculateVariableMapping(SymbolicExpressionTree tree, Dataset dataset) {
+  private Dictionary<string, string> CalculateVariableMapping(SymbolicExpressionTree tree, Dataset dataset)
+  {
     var mapping = new Dictionary<string, string>();
-    int inputIndex = 0;
+    var inputIndex = 0;
     var usedVariables = tree.IterateNodesPrefix().OfType<VariableTreeNode>().Select(v => v.VariableName).Distinct().ToArray();
     foreach (var variable in dataset.GetVariableNames()) {
-      if (!usedVariables.Contains(variable)) continue;
+      if (!usedVariables.Contains(variable)) {
+        continue;
+      }
+
       inputIndex++;
       mapping[variable] = GetExcelColumnName(inputIndex);
     }
@@ -72,18 +84,22 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
     return mapping;
   }
 
-  private string FormatRecursively(SymbolicExpressionTreeNode node) {
-    Symbol symbol = node.Symbol;
-    StringBuilder stringBuilder = new StringBuilder();
+  private string FormatRecursively(SymbolicExpressionTreeNode node)
+  {
+    var symbol = node.Symbol;
+    var stringBuilder = new StringBuilder();
 
     if (symbol is ProgramRootSymbol) {
       stringBuilder.AppendLine(FormatRecursively(node.GetSubtree(0)));
-    } else if (symbol is StartSymbol)
+    } else if (symbol is StartSymbol) {
       return FormatRecursively(node.GetSubtree(0));
-    else if (symbol is Addition) {
+    } else if (symbol is Addition) {
       stringBuilder.Append("(");
-      for (int i = 0; i < node.SubtreeCount; i++) {
-        if (i > 0) stringBuilder.Append("+");
+      for (var i = 0; i < node.SubtreeCount; i++) {
+        if (i > 0) {
+          stringBuilder.Append("+");
+        }
+
         stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
       }
 
@@ -96,8 +112,11 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       stringBuilder.Append("(1/(");
       stringBuilder.Append(node.SubtreeCount);
       stringBuilder.Append(")*(");
-      for (int i = 0; i < node.SubtreeCount; i++) {
-        if (i > 0) stringBuilder.Append("+");
+      for (var i = 0; i < node.SubtreeCount; i++) {
+        if (i > 0) {
+          stringBuilder.Append("+");
+        }
+
         stringBuilder.Append("(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         stringBuilder.Append(")");
@@ -124,8 +143,11 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       } else {
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append("/(");
-        for (int i = 1; i < node.SubtreeCount; i++) {
-          if (i > 1) stringBuilder.Append("*");
+        for (var i = 1; i < node.SubtreeCount; i++) {
+          if (i > 1) {
+            stringBuilder.Append("*");
+          }
+
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
@@ -148,8 +170,11 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
       stringBuilder.Append(")");
     } else if (symbol is Multiplication) {
-      for (int i = 0; i < node.SubtreeCount; i++) {
-        if (i > 0) stringBuilder.Append("*");
+      for (var i = 0; i < node.SubtreeCount; i++) {
+        if (i > 0) {
+          stringBuilder.Append("*");
+        }
+
         stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
       }
     } else if (symbol is Sine) {
@@ -163,7 +188,7 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
       } else {
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
-        for (int i = 1; i < node.SubtreeCount; i++) {
+        for (var i = 1; i < node.SubtreeCount; i++) {
           stringBuilder.Append("-");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
@@ -179,7 +204,7 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
       stringBuilder.Append(")");
     } else if (symbol is Variable) {
-      VariableTreeNode variableTreeNode = (VariableTreeNode)node;
+      var variableTreeNode = (VariableTreeNode)node;
       stringBuilder.Append(variableTreeNode.Weight.ToString(CultureInfo.InvariantCulture));
       stringBuilder.Append("*");
       stringBuilder.Append(GetColumnToVariableName(variableTreeNode.VariableName));
@@ -195,7 +220,7 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       var values = factorNode.Symbol.GetVariableValues(factorNode.VariableName).ToArray();
       var w = factorNode.Weights ?? [];
       // create nested if
-      for (int i = 0; i < values.Length; i++) {
+      for (var i = 0; i < values.Length; i++) {
         stringBuilder.AppendFormat("IF({0}=\"{1}\", {2}, ",
           GetColumnToVariableName(factorNode.VariableName),
           values[i],
@@ -225,13 +250,13 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       stringBuilder.Append(FormatRecursively(node.GetSubtree(2)));
       stringBuilder.Append(")");
     } else if (symbol is VariableCondition) {
-      VariableConditionTreeNode variableConditionTreeNode = (VariableConditionTreeNode)node;
+      var variableConditionTreeNode = (VariableConditionTreeNode)node;
       if (!variableConditionTreeNode.Symbol.IgnoreSlope) {
-        double threshold = variableConditionTreeNode.Threshold;
-        double slope = variableConditionTreeNode.Slope;
-        string p = "(1 / (1 + EXP(-" + slope.ToString(CultureInfo.InvariantCulture) + " * (" +
-                   GetColumnToVariableName(variableConditionTreeNode.VariableName) + "-" +
-                   threshold.ToString(CultureInfo.InvariantCulture) + "))))";
+        var threshold = variableConditionTreeNode.Threshold;
+        var slope = variableConditionTreeNode.Slope;
+        var p = "(1 / (1 + EXP(-" + slope.ToString(CultureInfo.InvariantCulture) + " * (" +
+                GetColumnToVariableName(variableConditionTreeNode.VariableName) + "-" +
+                threshold.ToString(CultureInfo.InvariantCulture) + "))))";
         stringBuilder.Append("((");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append("*");

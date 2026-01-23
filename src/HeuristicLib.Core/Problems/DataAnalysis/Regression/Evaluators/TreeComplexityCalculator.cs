@@ -5,10 +5,12 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 
-public static class TreeComplexityCalculator {
+public static class TreeComplexityCalculator
+{
   public static double CalculateComplexity(SymbolicExpressionTree tree) => CalculateComplexity(tree.Root);
 
-  public static double CalculateComplexity(SymbolicExpressionTreeNode treeNode) {
+  public static double CalculateComplexity(SymbolicExpressionTreeNode treeNode)
+  {
     double complexity;
 
     switch (treeNode.Symbol) {
@@ -43,14 +45,19 @@ public static class TreeComplexityCalculator {
       case Power:
       case Root:
         complexity = CalculateComplexity(treeNode[0]);
-        if (treeNode[1] is not NumberTreeNode exponent)
+        if (treeNode[1] is not NumberTreeNode exponent) {
           return Math.Pow(complexity, 2 * CalculateComplexity(treeNode[1]));
+        }
 
         var expVal = exponent.Value;
-        if (expVal < 0)
+        if (expVal < 0) {
           expVal = Math.Abs(expVal);
-        if (expVal < 1)
+        }
+
+        if (expVal < 1) {
           expVal = 1 / expVal;
+        }
+
         return Math.Pow(complexity, Math.Round(expVal));
 
       default:

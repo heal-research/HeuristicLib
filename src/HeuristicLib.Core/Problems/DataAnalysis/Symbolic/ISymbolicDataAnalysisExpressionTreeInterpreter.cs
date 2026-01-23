@@ -2,7 +2,8 @@
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public interface ISymbolicDataAnalysisExpressionTreeInterpreter {
+public interface ISymbolicDataAnalysisExpressionTreeInterpreter
+{
   IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, Range partition) =>
     GetSymbolicExpressionTreeValues(tree, dataset, partition.Enumerate());
 

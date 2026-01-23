@@ -3,27 +3,34 @@ using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-public record RealVectorSearchSpace : SearchSpace<RealVector>, ISubSearchSpaceComparable<RealVectorSearchSpace> {
+public record RealVectorSearchSpace : SearchSpace<RealVector>, ISubSearchSpaceComparable<RealVectorSearchSpace>
+{
   public int Length { get; }
   public RealVector Minimum { get; }
   public RealVector Maximum { get; }
   //public IRepairer<RealVector> OutOfBoundsRepairer { get; }
 
-  public RealVectorSearchSpace(int length, RealVector minimum, RealVector maximum /*, OutOfBoundsStrategy outOfBoundsRepairer = OutOfBoundsStrategy.Clamp*/) {
-    if (!RealVector.AreCompatible(length, minimum, maximum)) throw new ArgumentException("Minimum and Maximum vector must be of length 1 or match the searchSpace length");
+  public RealVectorSearchSpace(int length, RealVector minimum, RealVector maximum /*, OutOfBoundsStrategy outOfBoundsRepairer = OutOfBoundsStrategy.Clamp*/)
+  {
+    if (!RealVector.AreCompatible(length, minimum, maximum)) {
+      throw new ArgumentException("Minimum and Maximum vector must be of length 1 or match the searchSpace length");
+    }
+
     Length = length;
     Minimum = minimum;
     Maximum = maximum;
     //  OutOfBounds = outOfBounds;
   }
 
-  public override bool Contains(RealVector genotype) {
+  public override bool Contains(RealVector genotype)
+  {
     return genotype.Count == Length
            && (genotype >= Minimum).All()
            && (genotype <= Maximum).All();
   }
 
-  public bool IsSubspaceOf(RealVectorSearchSpace other) {
+  public bool IsSubspaceOf(RealVectorSearchSpace other)
+  {
     return other.Length == Length
            && (other.Minimum >= Minimum).All()
            && (other.Maximum <= Maximum).All();

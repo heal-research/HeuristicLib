@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Observation;
-using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -28,7 +28,8 @@ public abstract record AlgorithmBuildSpec<TG, TS, TP, TR> : IBuildSpec, ISpecWit
     ITerminator<TG, TR, TS, TP> terminator,
     IInterceptor<TG, TR, TS, TP>? interceptor,
     IIterationObserver<TG, TS, TP, TR>? observer
-  ) {
+  )
+  {
     Evaluator = evaluator;
     Terminator = terminator;
     Interceptor = interceptor;
@@ -60,7 +61,7 @@ public interface ISpecWithSelector<TG, TS, TP> : IBuildSpec
   ISelector<TG, TS, TP> Selector { get; set; }
 }
 
-public interface ISpecWithCrossover<TG, TS, TP>: IBuildSpec
+public interface ISpecWithCrossover<TG, TS, TP> : IBuildSpec
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -68,7 +69,7 @@ public interface ISpecWithCrossover<TG, TS, TP>: IBuildSpec
   ICrossover<TG, TS, TP> Crossover { get; set; }
 }
 
-public interface ISpecWithMutator<TG, TS, TP>: IBuildSpec
+public interface ISpecWithMutator<TG, TS, TP> : IBuildSpec
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>

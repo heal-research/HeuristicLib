@@ -2,7 +2,8 @@
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
-public interface ISymbolicExpressionGrammarBase {
+public interface ISymbolicExpressionGrammarBase
+{
   IEnumerable<Symbol> Symbols { get; }
   IEnumerable<Symbol> AllowedSymbols { get; }
 

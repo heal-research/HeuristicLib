@@ -1,6 +1,7 @@
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 
-public enum TSPLIBTypes {
+public enum TSPLIBTypes
+{
   Unknown = 0,
   TSP = 1,
   Atsp = 2,

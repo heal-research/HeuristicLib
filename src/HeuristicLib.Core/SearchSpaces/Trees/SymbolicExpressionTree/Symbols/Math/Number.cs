@@ -2,30 +2,40 @@ using HEAL.HeuristicLib.Genotypes.Trees;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public sealed class Number : Symbol {
+public sealed class Number : Symbol
+{
   #region Properties
+
   public double MinValue { get; set; }
   public double MaxValue { get; set; }
   public double ManipulatorMu { get; set; }
   private double manipulatorSigma;
-  public double ManipulatorSigma {
+
+  public double ManipulatorSigma
+  {
     get => manipulatorSigma;
     set {
       ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
       manipulatorSigma = value;
     }
   }
+
   private double multiplicativeManipulatorSigma;
-  public double MultiplicativeManipulatorSigma {
+
+  public double MultiplicativeManipulatorSigma
+  {
     get => multiplicativeManipulatorSigma;
     set {
       ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
       multiplicativeManipulatorSigma = value;
     }
   }
+
   #endregion
 
-  private Number(Number original) : base(original.MinimumArity, original.DefaultArity, original.MaximumArity) {
+  private Number(Number original)
+    : base(original.MinimumArity, original.DefaultArity, original.MaximumArity)
+  {
     MinValue = original.MinValue;
     MaxValue = original.MaxValue;
     ManipulatorMu = original.ManipulatorMu;
@@ -33,7 +43,9 @@ public sealed class Number : Symbol {
     multiplicativeManipulatorSigma = original.multiplicativeManipulatorSigma;
   }
 
-  public Number() : base(0, 0, 0) {
+  public Number()
+    : base(0, 0, 0)
+  {
     ManipulatorMu = 0.0;
     manipulatorSigma = 1.0;
     multiplicativeManipulatorSigma = 0.03;

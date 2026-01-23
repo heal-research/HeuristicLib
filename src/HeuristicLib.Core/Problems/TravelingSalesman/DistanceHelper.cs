@@ -1,10 +1,13 @@
 ﻿#pragma warning disable S2368
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
-public static class DistanceHelper {
-  public static double[,] GetDistanceMatrix(DistanceMeasure distanceMeasure, double[,]? coordinates, double[,]? distances, int dimension) {
-    if (distances != null)
+public static class DistanceHelper
+{
+  public static double[,] GetDistanceMatrix(DistanceMeasure distanceMeasure, double[,]? coordinates, double[,]? distances, int dimension)
+  {
+    if (distances != null) {
       return distances;
+    }
 
     distances = new double[dimension, dimension];
     for (var i = 0; i < dimension - 1; i++) {
@@ -17,7 +20,8 @@ public static class DistanceHelper {
     return distances;
   }
 
-  public static double GetDistance(DistanceMeasure distanceMeasure, double x1, double y1, double x2, double y2) {
+  public static double GetDistance(DistanceMeasure distanceMeasure, double x1, double y1, double x2, double y2)
+  {
     return distanceMeasure switch {
       DistanceMeasure.Att => AttDistance(x1, y1, x2, y2),
       DistanceMeasure.Direct => throw new ArgumentException("Direct distance measure requires distance matrix for distance calculation."),
@@ -35,7 +39,9 @@ public static class DistanceHelper {
   private static double ChebyshevDistance(double x1, double y1, double x2, double y2) => Math.Max(Math.Abs(x1 - x2), Math.Abs(y1 - y2));
 
   #region Private Helpers
-  private static double GetDistance(int i, int j, DistanceMeasure distanceMeasure, double[,]? coordinates, double[,]? distances) {
+
+  private static double GetDistance(int i, int j, DistanceMeasure distanceMeasure, double[,]? coordinates, double[,]? distances)
+  {
     return distanceMeasure switch {
       DistanceMeasure.Att => AttDistance(coordinates![i, 0], coordinates[i, 1], coordinates[j, 0], coordinates[j, 1]),
       DistanceMeasure.Direct => distances![i, j],
@@ -50,18 +56,15 @@ public static class DistanceHelper {
     };
   }
 
-  private static double AttDistance(double x1, double y1, double x2, double y2) {
-    return Math.Ceiling(Math.Sqrt(((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)) / 10.0));
-  }
+  private static double AttDistance(double x1, double y1, double x2, double y2) => Math.Ceiling(Math.Sqrt((((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2))) / 10.0));
 
-  private static double EuclideanDistance(double x1, double y1, double x2, double y2) {
-    return Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
-  }
+  private static double EuclideanDistance(double x1, double y1, double x2, double y2) => Math.Sqrt(((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2)));
 
   private const double Pi = 3.141592;
   private const double Radius = 6378.388;
 
-  private static double GeoDistance(double x1, double y1, double x2, double y2) {
+  private static double GeoDistance(double x1, double y1, double x2, double y2)
+  {
     var latitude1 = ConvertToRadian(x1);
     var longitude1 = ConvertToRadian(y1);
     var latitude2 = ConvertToRadian(x2);
@@ -71,19 +74,14 @@ public static class DistanceHelper {
     var q2 = Math.Cos(latitude1 - latitude2);
     var q3 = Math.Cos(latitude1 + latitude2);
 
-    return (int)(Radius * Math.Acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
+    return (int)((Radius * Math.Acos(0.5 * (((1.0 + q1) * q2) - ((1.0 - q1) * q3)))) + 1.0);
   }
 
-  private static double ConvertToRadian(double x) {
-    return Pi * (Math.Truncate(x) + 5.0 * (x - Math.Truncate(x)) / 3.0) / 180.0;
-  }
+  private static double ConvertToRadian(double x) => Pi * (Math.Truncate(x) + (5.0 * (x - Math.Truncate(x)) / 3.0)) / 180.0;
 
-  private static double ManhattanDistance(double x1, double y1, double x2, double y2) {
-    return Math.Round(Math.Abs(x1 - x2) + Math.Abs(y1 - y2), MidpointRounding.AwayFromZero);
-  }
+  private static double ManhattanDistance(double x1, double y1, double x2, double y2) => Math.Round(Math.Abs(x1 - x2) + Math.Abs(y1 - y2), MidpointRounding.AwayFromZero);
 
-  private static double MaximumDistance(double x1, double y1, double x2, double y2) {
-    return Math.Max(Math.Round(Math.Abs(x1 - x2), MidpointRounding.AwayFromZero), Math.Round(Math.Abs(y1 - y2), MidpointRounding.AwayFromZero));
-  }
+  private static double MaximumDistance(double x1, double y1, double x2, double y2) => Math.Max(Math.Round(Math.Abs(x1 - x2), MidpointRounding.AwayFromZero), Math.Round(Math.Abs(y1 - y2), MidpointRounding.AwayFromZero));
+
   #endregion
 }

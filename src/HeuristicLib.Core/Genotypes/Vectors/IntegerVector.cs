@@ -1,6 +1,9 @@
-﻿namespace HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using System.Collections;
 
-public class IntegerVector(params IEnumerable<int> elements) : IReadOnlyList<int>, IEquatable<IntegerVector> {
+namespace HEAL.HeuristicLib.Genotypes.Vectors;
+
+public class IntegerVector(params IEnumerable<int> elements) : IReadOnlyList<int>, IEquatable<IntegerVector>
+{
   private readonly int[] elements = elements.ToArray();
 
   // public RealVector(double value) {
@@ -9,9 +12,9 @@ public class IntegerVector(params IEnumerable<int> elements) : IReadOnlyList<int
 
   public int Count => elements.Length;
 
-  public static implicit operator IntegerVector(int value) => new IntegerVector(value);
+  public static implicit operator IntegerVector(int value) => new(value);
 
-  public static implicit operator IntegerVector(int[] values) => new IntegerVector(values);
+  public static implicit operator IntegerVector(int[] values) => new(values);
 
   public int this[int index] => elements[index];
 
@@ -19,15 +22,20 @@ public class IntegerVector(params IEnumerable<int> elements) : IReadOnlyList<int
 
   public IEnumerator<int> GetEnumerator() => ((IEnumerable<int>)elements).GetEnumerator();
 
-  System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => elements.GetEnumerator();
+  IEnumerator IEnumerable.GetEnumerator() => elements.GetEnumerator();
 
-  public bool Equals(IntegerVector? other) {
-    if (other is null) return false;
+  public bool Equals(IntegerVector? other)
+  {
+    if (other is null) {
+      return false;
+    }
+
     return ReferenceEquals(this, other)
            || elements.SequenceEqual(other.elements);
   }
 
-  public override int GetHashCode() {
+  public override int GetHashCode()
+  {
     var hash = new HashCode();
     foreach (var element in elements) {
       hash.Add(element);
@@ -36,7 +44,8 @@ public class IntegerVector(params IEnumerable<int> elements) : IReadOnlyList<int
     return hash.ToHashCode();
   }
 
-  public static implicit operator RealVector(IntegerVector integerVector) {
+  public static implicit operator RealVector(IntegerVector integerVector)
+  {
     return new RealVector(integerVector.elements.Select(i => (double)i));
   }
 }

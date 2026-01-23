@@ -6,10 +6,12 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator {
+public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
+{
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree RemoveRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public static SymbolicExpressionTree RemoveRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     SymbolicExpressionTree childTree = new(symbolicExpressionTree);
     var allowedSymbols = new List<Symbol>();
     SymbolicExpressionTreeNode parent;
@@ -42,25 +44,32 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
       tries++;
     } while (tries < MaxTries && allowedSymbols.Count == 0);
 
-    if (tries >= MaxTries) return symbolicExpressionTree;
+    if (tries >= MaxTries) {
+      return symbolicExpressionTree;
+    }
+
     ReplaceWithMinimalTree(random, childTree.Root, parent, childIndex, searchSpace);
     return childTree;
   }
 
-  private static void ReplaceWithMinimalTree(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeSearchSpace searchSpace) {
+  private static void ReplaceWithMinimalTree(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     // determine possible symbols that will lead to the smallest possible tree
     var possibleSymbols = (from s in searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
-                           where s.InitialFrequency > 0.0
-                           group s by searchSpace.Grammar.GetMinimumExpressionLength(s)
-                           into g
-                           orderby g.Key
-                           select g).First().ToList();
+      where s.InitialFrequency > 0.0
+      group s by searchSpace.Grammar.GetMinimumExpressionLength(s)
+      into g
+      orderby g.Key
+      select g).First().ToList();
     var weights = possibleSymbols.Select(x => x.InitialFrequency).ToList();
 
     var selectedSymbol = possibleSymbols.SampleProportional(random, 1, weights).First();
 
     var newTreeNode = selectedSymbol.CreateTreeNode();
-    if (newTreeNode.HasLocalParameters) newTreeNode.ResetLocalParameters(random);
+    if (newTreeNode.HasLocalParameters) {
+      newTreeNode.ResetLocalParameters(random);
+    }
+
     parent.RemoveSubtree(childIndex);
     parent.InsertSubtree(childIndex, newTreeNode);
 
@@ -73,7 +82,8 @@ public sealed class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
     }
   }
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) {
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
     var t = RemoveRandomBranch(random, parent, searchSpace);
     Extensions.CheckDebug(searchSpace.Contains(t), "Upps destroyed tree");
     return t;

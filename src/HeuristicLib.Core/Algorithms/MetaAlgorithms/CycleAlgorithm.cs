@@ -15,17 +15,18 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
   where TAlgorithmState : class, IAlgorithmState
   where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
-  public ImmutableList<TAlgorithm> Algorithms { get;}
-  
+  public ImmutableList<TAlgorithm> Algorithms { get; }
+
   public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
   {
     Algorithms = new ImmutableList<TAlgorithm>(algorithms);
   }
 
-  public override async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default) {
+  public override async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+  {
     var state = initialState;
 
-    foreach (int cycle in Enumerable.InfiniteSequence(0, 1)) {
+    foreach (var cycle in Enumerable.InfiniteSequence(0, 1)) {
       var cycleRng = random.Fork(cycle);
       foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i))) {
         var algorithmRng = cycleRng.Fork(algorithmIndex);

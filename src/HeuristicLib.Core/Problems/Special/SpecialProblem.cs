@@ -5,14 +5,11 @@ namespace HEAL.HeuristicLib.Problems.Special;
 
 // This is an example problem that do not use any of the standard search spaces and needs to define its own operators
 
-public class SpecialProblem(double data) : Problem<SpecialGenotype, SpecialSearchSpace>(SingleObjective.Maximize, GeTSearchSpace()) {
+public class SpecialProblem(double data) : Problem<SpecialGenotype, SpecialSearchSpace>(SingleObjective.Maximize, GeTSearchSpace())
+{
   public double Data { get; set; } = data;
 
-  public override ObjectiveVector Evaluate(SpecialGenotype solution, IRandomNumberGenerator random) {
-    return Data + solution.Value;
-  }
+  public override ObjectiveVector Evaluate(SpecialGenotype solution, IRandomNumberGenerator random) => Data + solution.Value;
 
-  private static SpecialSearchSpace GeTSearchSpace() {
-    return new SpecialSearchSpace();
-  }
+  private static SpecialSearchSpace GeTSearchSpace() => new();
 }

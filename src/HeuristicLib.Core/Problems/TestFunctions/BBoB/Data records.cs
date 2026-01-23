@@ -21,7 +21,8 @@ public record FStepEllipsoidData(
   double[][] Rot2 // [n][n]
 );
 
-public class FWeierstrassData {
+public class FWeierstrassData
+{
   public double F0 { get; set; }
   public double[] Ak { get; } = new double[12];
   public double[] Bk { get; } = new double[12];

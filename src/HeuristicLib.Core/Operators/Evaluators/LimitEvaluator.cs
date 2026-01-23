@@ -6,31 +6,39 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public class LimitEvaluator<TG, TS, TP>(CountedEvaluator<TG, TS, TP> evaluator, int maxEvaluations, bool preventOverBudget) : Evaluator<TG, TS, TP> 
+public class LimitEvaluator<TG, TS, TP>(CountedEvaluator<TG, TS, TP> evaluator, int maxEvaluations, bool preventOverBudget) : Evaluator<TG, TS, TP>
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
   public LimitEvaluator(IEvaluator<TG, TS, TP> evaluator, int maxEvaluations, bool preventOverBudget)
-    : this(evaluator.AsCountedEvaluator(), maxEvaluations, preventOverBudget) { }
-  
-  public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> solutions, IRandomNumberGenerator random, TS searchSpace, TP problem) {
-    int count = solutions.Count;
-    int n = count;
-    
+    : this(evaluator.AsCountedEvaluator(), maxEvaluations, preventOverBudget)
+  {
+  }
+
+  public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> solutions, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  {
+    var count = solutions.Count;
+    var n = count;
+
     if (preventOverBudget) {
-      int remaining = maxEvaluations - evaluator.CurrentCount;
-      if (remaining <= 0) return Enumerable.Repeat(problem.Objective.Worst, count).ToArray();
-      if (n > remaining) n = remaining;
+      var remaining = maxEvaluations - evaluator.CurrentCount;
+      if (remaining <= 0) {
+        return Enumerable.Repeat(problem.Objective.Worst, count).ToArray();
+      }
+
+      if (n > remaining) {
+        n = remaining;
+      }
     }
 
     if (n == count) {
       return evaluator.Evaluate(solutions, random, searchSpace, problem);
-    } else {
-      var evaluated = evaluator.Evaluate(solutions.Take(n).ToList(), random, searchSpace, problem);
-      var fill = Enumerable.Repeat(problem.Objective.Worst, count - n);
-      return evaluated.Concat(fill).ToArray();
     }
+
+    var evaluated = evaluator.Evaluate(solutions.Take(n).ToList(), random, searchSpace, problem);
+    var fill = Enumerable.Repeat(problem.Objective.Worst, count - n);
+    return evaluated.Concat(fill).ToArray();
   }
 }
 
@@ -41,7 +49,8 @@ public class LimitingEvaluatorRewriter<TBuildSpec, TG, TS, TP>(int maxEvaluation
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  public void Rewrite(TBuildSpec buildSpec) {
+  public void Rewrite(TBuildSpec buildSpec)
+  {
     var countedEvaluator = buildSpec.Evaluator.AsCountedEvaluator();
     // ToDo: think about only using the limit evaluator if prevenOverBudget is true
     var limitEvaluator = new LimitEvaluator<TG, TS, TP>(countedEvaluator, maxEvaluations, preventOverBudget);

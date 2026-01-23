@@ -6,14 +6,16 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 using ValuesType = Dictionary<string, IList>;
 
-public static class DatasetUtil {
+public static class DatasetUtil
+{
   /// <summary>
-  /// Shuffle all the lists with the same shuffling.
+  ///   Shuffle all the lists with the same shuffling.
   /// </summary>
   /// <param name="values">The value lists to be shuffled.</param>
   /// <param name="random">The random number generator</param>
   /// <returns>A new list containing shuffled copies of the original value lists.</returns>
-  public static List<IList> ShuffleLists(this List<IList> values, IRandomNumberGenerator random) {
+  public static List<IList> ShuffleLists(this List<IList> values, IRandomNumberGenerator random)
+  {
     var count = values[0].Count;
     var indices = Enumerable.Range(0, count).Shuffle(random).ToArray();
     var shuffled = new List<IList>(values.Count);
@@ -40,7 +42,8 @@ public static class DatasetUtil {
     return shuffled;
   }
 
-  static DatasetUtil() {
+  static DatasetUtil()
+  {
     var dataset = Expression.Parameter(typeof(Dataset));
     var variableValues = Expression.Parameter(typeof(ValuesType));
     var valuesExpression = Expression.Field(dataset, nameof(variableValues));
@@ -68,7 +71,8 @@ public static class DatasetUtil {
   //  return variableRanges;
   //}
 
-  private static bool GetEqualValues(this Dictionary<ValuesType, ValuesType> variableValuesMapping, ValuesType originalValues, out ValuesType matchingValues) {
+  private static bool GetEqualValues(this Dictionary<ValuesType, ValuesType> variableValuesMapping, ValuesType originalValues, out ValuesType matchingValues)
+  {
     if (variableValuesMapping.TryGetValue(originalValues, out var value)) {
       matchingValues = value;
       return true;
@@ -85,15 +89,24 @@ public static class DatasetUtil {
     return result;
   }
 
-  private static bool EqualVariableValues(ValuesType values1, ValuesType values2) {
+  private static bool EqualVariableValues(ValuesType values1, ValuesType values2)
+  {
     //compare variable names for equality
-    if (!values1.Keys.SequenceEqual(values2.Keys)) return false;
+    if (!values1.Keys.SequenceEqual(values2.Keys)) {
+      return false;
+    }
+
     foreach (var key in values1.Keys) {
       var v1 = values1[key];
       var v2 = values2[key];
-      if (v1.Count != v2.Count) return false;
+      if (v1.Count != v2.Count) {
+        return false;
+      }
+
       for (var i = 0; i < v1.Count; i++) {
-        if (!v1[i]!.Equals(v2[i])) return false;
+        if (!v1[i]!.Equals(v2[i])) {
+          return false;
+        }
       }
     }
 

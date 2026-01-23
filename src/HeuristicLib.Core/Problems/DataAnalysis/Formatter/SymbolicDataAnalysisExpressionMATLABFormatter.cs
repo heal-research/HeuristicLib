@@ -8,26 +8,23 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
-public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExpressionTreeStringFormatter {
+public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExpressionTreeStringFormatter
+{
   private int currentLag;
 
   private int currentIndexNumber;
-  public string CurrentIndexVariable {
-    get {
-      return "i" + currentIndexNumber;
-    }
-  }
+  public string CurrentIndexVariable => "i" + currentIndexNumber;
 
-  private void ReleaseIndexVariable() {
-    currentIndexNumber--;
-  }
+  private void ReleaseIndexVariable() => currentIndexNumber--;
 
-  private string AllocateIndexVariable() {
+  private string AllocateIndexVariable()
+  {
     currentIndexNumber++;
     return CurrentIndexVariable;
   }
 
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) {
+  public string Format(SymbolicExpressionTree symbolicExpressionTree)
+  {
     currentLag = 0;
     currentIndexNumber = 0;
 
@@ -47,15 +44,15 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
 
     var factorVariableNames =
       symbolicExpressionTree.IterateNodesPostfix()
-                            .OfType<FactorVariableTreeNode>()
-                            .Select(n => n.VariableName)
-                            .Distinct();
+        .OfType<FactorVariableTreeNode>()
+        .Select(n => n.VariableName)
+        .Distinct();
 
     foreach (var factorVarName in factorVariableNames) {
       var factorSymb = symbolicExpressionTree.IterateNodesPostfix()
-                                             .OfType<FactorVariableTreeNode>()
-                                             .First(n => n.VariableName == factorVarName)
-                                             .Symbol;
+        .OfType<FactorVariableTreeNode>()
+        .First(n => n.VariableName == factorVarName)
+        .Symbol;
       stringBuilder.Append($"function y = switch_{factorVarName}(val, v)").AppendLine();
       var values = factorSymb.GetVariableValues(factorVarName).ToArray();
       stringBuilder.AppendLine("switch val");
@@ -70,7 +67,8 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
     return stringBuilder.ToString();
   }
 
-  public string FormatOnlyExpression(SymbolicExpressionTreeNode expressionNode) {
+  public string FormatOnlyExpression(SymbolicExpressionTreeNode expressionNode)
+  {
     var stringBuilder = new StringBuilder();
     stringBuilder.AppendLine("  for " + CurrentIndexVariable + " = 1:1:rows");
     stringBuilder.AppendLine("    estimated(" + CurrentIndexVariable + ") = " + FormatRecursively(expressionNode.GetSubtree(0)) + ";");
@@ -78,7 +76,8 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
     return stringBuilder.ToString();
   }
 
-  private string FormatRecursively(SymbolicExpressionTreeNode node) {
+  private string FormatRecursively(SymbolicExpressionTreeNode node)
+  {
     var symbol = node.Symbol;
     var stringBuilder = new StringBuilder();
 
@@ -91,7 +90,10 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
       case Addition: {
         stringBuilder.Append('(');
         for (var i = 0; i < node.SubtreeCount; i++) {
-          if (i > 0) stringBuilder.Append('+');
+          if (i > 0) {
+            stringBuilder.Append('+');
+          }
+
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
@@ -107,7 +109,10 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
       case And: {
         stringBuilder.Append("((");
         for (var i = 0; i < node.SubtreeCount; i++) {
-          if (i > 0) stringBuilder.Append('&');
+          if (i > 0) {
+            stringBuilder.Append('&');
+          }
+
           stringBuilder.Append("((");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           stringBuilder.Append(")>0)");
@@ -122,7 +127,10 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append(node.SubtreeCount);
         stringBuilder.Append(")*(");
         for (var i = 0; i < node.SubtreeCount; i++) {
-          if (i > 0) stringBuilder.Append("+");
+          if (i > 0) {
+            stringBuilder.Append("+");
+          }
+
           stringBuilder.Append("(");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           stringBuilder.Append(")");
@@ -149,7 +157,10 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append("/(");
         for (var i = 1; i < node.SubtreeCount; i++) {
-          if (i > 1) stringBuilder.Append("*");
+          if (i > 1) {
+            stringBuilder.Append("*");
+          }
+
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
@@ -224,7 +235,10 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         break;
       case Multiplication: {
         for (var i = 0; i < node.SubtreeCount; i++) {
-          if (i > 0) stringBuilder.Append("*");
+          if (i > 0) {
+            stringBuilder.Append("*");
+          }
+
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
@@ -238,7 +252,10 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
       case Or: {
         stringBuilder.Append("((");
         for (var i = 0; i < node.SubtreeCount; i++) {
-          if (i > 0) stringBuilder.Append("|");
+          if (i > 0) {
+            stringBuilder.Append("|");
+          }
+
           stringBuilder.Append("((");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           stringBuilder.Append(")>0)");
@@ -349,7 +366,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
           var factorNode = (FactorVariableTreeNode)node;
           var weights = string.Join(" ", factorNode.Weights!.Select(w => w.ToString("G17", CultureInfo.InvariantCulture)));
           stringBuilder.Append($"switch_{factorNode.VariableName}(\"{factorNode.VariableName}\",[{weights}])")
-                       .AppendLine();
+            .AppendLine();
         } else if (symbol is BinaryFactorVariable) {
           var factorNode = (BinaryFactorVariableTreeNode)node;
           stringBuilder.Append(CultureInfo.InvariantCulture,
@@ -410,7 +427,8 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
     return stringBuilder.ToString();
   }
 
-  private string LagToString(int lag) {
+  private string LagToString(int lag)
+  {
     return lag switch {
       < 0 => "(" + CurrentIndexVariable + "" + lag + ")",
       > 0 => "(" + CurrentIndexVariable + "+" + lag + ")",

@@ -1,9 +1,11 @@
 namespace HEAL.HeuristicLib.Random.KeyCombiners;
 
-public class Fmix64KeyCombiner : IKeyCombiner {
-  public ulong Combine(ulong parentKey, ulong childKey) {
+public class Fmix64KeyCombiner : IKeyCombiner
+{
+  public ulong Combine(ulong parentKey, ulong childKey)
+  {
     unchecked {
-      ulong x = parentKey ^ childKey;
+      var x = parentKey ^ childKey;
 
       x ^= x >> 33;
       x *= 0xFF51AFD7ED558CCDUL;

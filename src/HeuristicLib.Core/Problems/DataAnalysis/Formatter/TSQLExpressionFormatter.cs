@@ -7,24 +7,30 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
-internal static class StringBuilderExtensions {
-  extension(StringBuilder strBuilder) {
-    internal void AppendIndented(int level, string text) {
+internal static class StringBuilderExtensions
+{
+  extension(StringBuilder strBuilder)
+  {
+    internal void AppendIndented(int level, string text)
+    {
       strBuilder.Append(new string(' ', level * 2));
       strBuilder.Append(text);
     }
 
-    internal void AppendLineIndented(int level, string text) {
+    internal void AppendLineIndented(int level, string text)
+    {
       strBuilder.Append(new string(' ', level * 2));
       strBuilder.AppendLine(text);
     }
   }
 }
 
-public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringFormatter {
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) {
+public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringFormatter
+{
+  public string Format(SymbolicExpressionTree symbolicExpressionTree)
+  {
     // skip root and start symbols
-    StringBuilder strBuilder = new StringBuilder();
+    var strBuilder = new StringBuilder();
     GenerateHeader(strBuilder, symbolicExpressionTree);
 
     //generate function body
@@ -34,15 +40,16 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     return strBuilder.ToString();
   }
 
-  private void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree) {
-    HashSet<string> floatVarNames = new HashSet<string>();
+  private void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree)
+  {
+    var floatVarNames = new HashSet<string>();
     foreach (var node in symbolicExpressionTree.IterateNodesPostfix().Where(x => x is VariableTreeNode || x is VariableConditionTreeNode)) {
       floatVarNames.Add(((VariableTreeNode)node).VariableName);
     }
 
     var sortedFloatIdentifiers = floatVarNames.OrderBy(n => n, new NaturalStringComparer()).Select(n => VariableName2Identifier(n)).ToList();
 
-    HashSet<string> varcharVarNames = new HashSet<string>();
+    var varcharVarNames = new HashSet<string>();
     foreach (var node in symbolicExpressionTree.IterateNodesPostfix().Where(x => x is BinaryFactorVariableTreeNode || x is FactorVariableTreeNode)) {
       varcharVarNames.Add(((VariableTreeNode)node).VariableName);
     }
@@ -52,8 +59,10 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     //Generate comment and instructions
     strBuilder.Append("-- generated. created function can be used like 'SELECT dbo.REGRESSIONMODEL(");
     strBuilder.Append(string.Join(", ", sortedVarcharIdentifiers));
-    if (varcharVarNames.Any() && floatVarNames.Any())
+    if (varcharVarNames.Any() && floatVarNames.Any()) {
       strBuilder.Append(",");
+    }
+
     strBuilder.Append(string.Join(", ", sortedFloatIdentifiers));
     strBuilder.AppendLine(")'");
     strBuilder.AppendLine("-- use the expression after the RETURN statement if you want to incorporate the model in a query without creating a function.");
@@ -61,8 +70,10 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     //Generate function header
     strBuilder.Append("CREATS FUNCTION dbo.REGRESSIONMODEL(");
     strBuilder.Append(string.Join(", ", sortedVarcharIdentifiers.Select(n => $"{n} NVARCHAR(max)")));
-    if (varcharVarNames.Any() && floatVarNames.Any())
+    if (varcharVarNames.Any() && floatVarNames.Any()) {
       strBuilder.Append(",");
+    }
+
     strBuilder.Append(string.Join(", ", sortedFloatIdentifiers.Select(n => $"{n} FLOAT")));
     strBuilder.AppendLine(")");
 
@@ -72,15 +83,20 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
 
     //add variable declaration for convenience
     strBuilder.AppendLineIndented(1, "-- added variable declaration for convenience");
-    foreach (var name in sortedVarcharIdentifiers)
+    foreach (var name in sortedVarcharIdentifiers) {
       strBuilder.AppendLineIndented(1, $"-- DECLARE {name} NVARCHAR(max) = ''");
-    foreach (var name in sortedFloatIdentifiers)
+    }
+
+    foreach (var name in sortedFloatIdentifiers) {
       strBuilder.AppendLineIndented(1, $"-- DECLARE {name} FLOAT = 0.0");
+    }
+
     strBuilder.AppendLineIndented(1, "-- SELECT");
     strBuilder.AppendLine("RETURN ");
   }
 
-  private void FormatRecursively(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatRecursively(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     if (node.Subtrees.Any()) {
       switch (node.Symbol) {
         case Addition:
@@ -180,7 +196,8 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     }
   }
 
-  private void FormatIfThenElse(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatIfThenElse(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("CASE ISNULL((SELECT 1 WHERE");
     FormatRecursively(level, node.GetSubtree(0), strBuilder);
     strBuilder.AppendLine("),0)");
@@ -193,57 +210,66 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.AppendIndented(level, "END");
   }
 
-  private void FormatAverage(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatAverage(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.Append("(");
     foreach (var child in node.Subtrees) {
       FormatRecursively(level, child, strBuilder);
-      if (child != node.Subtrees.Last())
+      if (child != node.Subtrees.Last()) {
         strBuilder.Append(" + ");
+      }
     }
 
     strBuilder.AppendFormat(") / {0}", node.Subtrees.Count());
   }
 
-  private string VariableName2Identifier(string variableName) {
-    return "@" + variableName.Replace(' ', '_');
-  }
+  private string VariableName2Identifier(string variableName) => "@" + variableName.Replace(' ', '_');
 
-  private void GenerateFooter(StringBuilder strBuilder) {
+  private void GenerateFooter(StringBuilder strBuilder)
+  {
     strBuilder.Append(Environment.NewLine);
     strBuilder.AppendLine("END");
   }
 
-  private void FormatOperator(int level, SymbolicExpressionTreeNode node, string symbol, StringBuilder strBuilder) {
+  private void FormatOperator(int level, SymbolicExpressionTreeNode node, string symbol, StringBuilder strBuilder)
+  {
     strBuilder.Append("(");
     foreach (var child in node.Subtrees) {
       FormatRecursively(level, child, strBuilder);
-      if (child != node.Subtrees.Last())
+      if (child != node.Subtrees.Last()) {
         strBuilder.Append(" " + symbol + " ");
+      }
     }
 
     strBuilder.Append(")");
   }
 
-  private void FormatFunction(int level, SymbolicExpressionTreeNode node, string function, StringBuilder strBuilder) {
+  private void FormatFunction(int level, SymbolicExpressionTreeNode node, string function, StringBuilder strBuilder)
+  {
     strBuilder.Append(function + "(");
     foreach (var child in node.Subtrees) {
       FormatRecursively(level++, child, strBuilder);
-      if (child != node.Subtrees.Last())
+      if (child != node.Subtrees.Last()) {
         strBuilder.Append(", ");
+      }
     }
 
     strBuilder.Append(")");
   }
 
-  private void FormatDivision(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatDivision(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     if (node.SubtreeCount == 1) {
       strBuilder.Append("1.0 / ");
       FormatRecursively(level, node.GetSubtree(0), strBuilder);
     } else {
       FormatRecursively(level, node.GetSubtree(0), strBuilder);
       strBuilder.Append("/ (");
-      for (int i = 1; i < node.SubtreeCount; i++) {
-        if (i > 1) strBuilder.Append(" * ");
+      for (var i = 1; i < node.SubtreeCount; i++) {
+        if (i > 1) {
+          strBuilder.Append(" * ");
+        }
+
         FormatRecursively(level, node.GetSubtree(i), strBuilder);
       }
 
@@ -251,7 +277,8 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     }
   }
 
-  private void FormatSubtraction(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatSubtraction(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     if (node.SubtreeCount == 1) {
       strBuilder.Append("-");
       FormatRecursively(level, node.GetSubtree(0), strBuilder);
@@ -262,7 +289,8 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     FormatOperator(level, node, "-", strBuilder);
   }
 
-  private void FormatRoot(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatRoot(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.AppendLine("POWER(");
     FormatRecursively(level, node.GetSubtree(0), strBuilder);
     strBuilder.AppendLineIndented(level, " , 1.0 / (");
@@ -270,7 +298,8 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.AppendLineIndented(level, "))");
   }
 
-  private void FormatFactor(int level, FactorVariableTreeNode node, StringBuilder strBuilder) {
+  private void FormatFactor(int level, FactorVariableTreeNode node, StringBuilder strBuilder)
+  {
     strBuilder.AppendLine("( ");
     strBuilder.AppendLineIndented(level + 1, $"CASE {VariableName2Identifier(node.VariableName)}");
     foreach (var name in node.Symbol.GetVariableValues(node.VariableName)) {
