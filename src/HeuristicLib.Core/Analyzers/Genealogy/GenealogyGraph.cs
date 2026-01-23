@@ -15,11 +15,11 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull {
     public readonly int Rank = rank;
 
     public HashSet<Node> GetAllDescendants() {
-      return Children.SelectMany(x => x.GetAllDescendants()).Append(Children).ToHashSet();
+      return Children.SelectMany(x => x.GetAllDescendants()).Concat(Children).ToHashSet();
     }
 
     public HashSet<Node> GetAllAncestors() {
-      return Parents.SelectMany(x => x.GetAllAncestors()).Append(Children).ToHashSet();
+      return Parents.SelectMany(x => x.GetAllAncestors()).Concat(Children).ToHashSet();
     }
   }
 

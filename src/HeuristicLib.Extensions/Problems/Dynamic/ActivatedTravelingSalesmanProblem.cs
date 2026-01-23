@@ -38,11 +38,11 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
 
   protected override void Update() {
     CurrentState = CurrentState
-                   .Select(a => EnvironmentRandom.Boolean(SwitchProbability) ? !a : a)
+                   .Select(a => EnvironmentRandom.NextBool(SwitchProbability) ? !a : a)
                    .ToArray();
   }
 
   private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb, IRandomNumberGenerator random) {
-    return Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.Boolean(activationProb)).ToArray();
+    return Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.NextBool(activationProb)).ToArray();
   }
 }

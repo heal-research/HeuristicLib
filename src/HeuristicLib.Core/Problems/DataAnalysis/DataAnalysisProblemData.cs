@@ -1,6 +1,4 @@
-﻿using HEAL.HeuristicLib.Problems.Dynamic;
-
-namespace HEAL.HeuristicLib.Problems.DataAnalysis;
+﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public abstract class DataAnalysisProblemData : IProblemData {
   public Dataset Dataset { get; set; }

@@ -3,7 +3,6 @@ using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Random.Distributions;
-using MoreLinq;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
@@ -169,7 +168,7 @@ public sealed class RegressionVariableImpactsCalculator(
                                                             IReadOnlyList<double> targetValues,
                                                             FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Shuffle) {
     List<string> replacementValues = [];
-    var random = new System.Random(31415);
+    var random = RandomNumberGenerator.Create(31415, RandomProfile.SystemRandom);
 
     switch (factorReplacementMethod) {
       case FactorReplacementMethodType.Best:

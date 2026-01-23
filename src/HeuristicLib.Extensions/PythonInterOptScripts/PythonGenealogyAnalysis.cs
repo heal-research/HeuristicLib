@@ -6,6 +6,7 @@ using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Analyzers.Genealogy;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
@@ -52,7 +53,7 @@ public class PythonGenealogyAnalysis {
   #region public methods
   public static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<SymbolicExpressionTree>>)[]
     RunSymbolicRegressionConfigurable(string file, SymRegExperimentParameters parameters, int repetitions, double trainingSplit = 0.66) {
-    return Enumerable.Range(0, repetitions).ParallelSelect(new SystemRandomNumberGenerator(parameters.Seed),
+    return Enumerable.Range(0, repetitions).ParallelSelect(RandomNumberGenerator.Create(parameters.Seed),
       (i, _, _) => RunSymbolicRegressionConfigurable(
         file,
         parameters with { Seed = parameters.Seed + i },
@@ -102,7 +103,7 @@ public class PythonGenealogyAnalysis {
 
   #region Parameters
   public record ExperimentParameters<T, TS>(
-    int Seed = 0,
+    uint Seed = 0,
     int Elites = 1,
     int PopulationSize = 10,
     int Iterations = 30,
@@ -113,11 +114,11 @@ public class PythonGenealogyAnalysis {
     ICreator<T, TS>? Creator = null,
     ICrossover<T, TS>? Crossover = null,
     IMutator<T, TS>? Mutator = null,
-    ISelector<T>? Selector = null,
-    string AlgorithmName = "ga") where TS : class, ISearchSpace<T>;
+    ISelector<T, TS>? Selector = null,
+    string AlgorithmName = "ga") where T : class where TS : class, ISearchSpace<T>;
 
   public record SymRegExperimentParameters(
-    int Seed = 0,
+    uint Seed = 0,
     int Elites = 1,
     int PopulationSize = 10,
     int Iterations = 30,
@@ -266,7 +267,7 @@ public class PythonGenealogyAnalysis {
         throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");
     }
 
-    _ = algorithm.Execute(problem, random: new SystemRandomNumberGenerator(parameters.Seed));
+    _ = algorithm.Execute(problem, random: RandomNumberGenerator.Create(parameters.Seed));
     return (analyzers.RankAnalysis.Graph.ToGraphViz(), analyzers.RankAnalysis.Ranks, analyzers.Qualities.BestISolutions);
   }
   #endregion

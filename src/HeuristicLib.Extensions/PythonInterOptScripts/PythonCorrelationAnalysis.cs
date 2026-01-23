@@ -22,11 +22,11 @@ namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public static class PythonCorrelationAnalysis {
   public static double[] GetCorrelations(IReadOnlyList<RealVector> solutions, RealVectorProblem problem, double[] delta, int count, int seed = 0) {
-    var random = new SystemRandomNumberGenerator(seed);
+    var random = RandomNumberGenerator.Create(12345); 
     var evaluator = new DirectEvaluator<RealVector>();
     return solutions.ParallelSelect(random, (i, solution, r) => {
       var n = Enumerable.Range(0, count).Select(x =>
-        NormalDistributedRandomPolar.NextSphere(r, solution.ToArray(), delta, solution.Count, false)).ToArray();
+        NormalDistribution.NextSphere(r, solution.ToArray(), delta, solution.Count, false)).ToArray();
       var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
       var d = OnlinePearsonsRCalculator.Calculate(
         objectives.Select(x => x[0]),
@@ -37,7 +37,7 @@ public static class PythonCorrelationAnalysis {
   }
 
   public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem) {
-    var random = new SystemRandomNumberGenerator();
+    var random = RandomNumberGenerator.Create(12345);
     var evaluator = new DirectEvaluator<RealVector>();
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
   }
@@ -45,7 +45,7 @@ public static class PythonCorrelationAnalysis {
   public delegate void GenerationCallback(PopulationIterationState<RealVector> current, RealVectorProblem problem);
 
   public static void RunCorrelationNsga2(GenerationCallback callback, int generations, int populationSize,
-                                         int dimensions = 10, double min = -5, double max = 5, int seed = 0) {
+                                         int dimensions = 10, double min = -5, double max = 5, uint seed = 0) {
     var prob = SphereRastriginProblem(dimensions, min, max);
 
     var proto = NSGA2.GetBuilder(
@@ -54,12 +54,12 @@ public static class PythonCorrelationAnalysis {
       new PolynomialMutator().WithRate(0.9));
 
     proto.Terminator = new AfterIterationsTerminator<RealVector>(generations);
-    proto.RandomSeed = seed;
+    //proto.RandomSeed = seed;
     proto.PopulationSize = populationSize;
     proto.MutationRate = 1;
 
     _ = FuncAnalysis.Create(proto, (_, iterationState) => callback(iterationState, prob));
-    proto.Build().Execute(prob, prob.SearchSpace, new SystemRandomNumberGenerator(seed));
+    proto.Build().Execute(prob, prob.SearchSpace, RandomNumberGenerator.Create(seed));
   }
 
   public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max) {
