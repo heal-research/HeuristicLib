@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Executors;
 
-public interface IExperimentExecutor<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState, TAlgorithm>
+public interface IExecutor<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState, TAlgorithm>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
