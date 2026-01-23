@@ -15,7 +15,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class 

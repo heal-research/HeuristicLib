@@ -19,41 +19,8 @@ public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmSta
   public required ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> Terminator { get; init; }
   public IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; init; }
   public IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; init; }
-
+  
   public required IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; }
   
-  public abstract TAlgorithmState ExecuteStep(TProblem problem, TAlgorithmState? previousState, IRandomNumberGenerator random);
-  
-  public TAlgorithmState Execute(
-    TProblem problem,
-    IRandomNumberGenerator random,
-    TAlgorithmState? initialState = null
-  ) {
-    return ExecuteStreaming(problem, random, initialState).Last();
-  }
-
-  public IEnumerable<TAlgorithmState> ExecuteStreaming(
-    TProblem problem,
-    IRandomNumberGenerator random,
-    TAlgorithmState? initialState = null
-  ) {
-    TAlgorithmState? previousState = initialState;
-    bool shouldContinue =
-      previousState is null ||
-      Terminator.ShouldContinue(previousState, previousIterationState: null, problem.SearchSpace, problem);
-
-    while (shouldContinue) {
-      var newIterationState = ExecuteStep(problem, previousState, random);
-      if (Interceptor is not null) {
-        newIterationState = Interceptor.Transform(newIterationState, previousState, problem.SearchSpace, problem);
-      }
-
-      Observer?.OnIterationCompleted(newIterationState, previousState, problem.SearchSpace, problem);
-
-      yield return newIterationState;
-
-      shouldContinue = Terminator.ShouldContinue(newIterationState, previousState, problem.SearchSpace, problem);
-      previousState = newIterationState;
-    }
-  }
+  public abstract IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default);
 }

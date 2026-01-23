@@ -22,7 +22,7 @@ public record EvolutionStrategyIterationState<TGenotype> : PopulationIterationSt
 }
 
 public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class {

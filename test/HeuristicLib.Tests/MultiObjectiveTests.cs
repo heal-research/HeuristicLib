@@ -73,7 +73,7 @@ public class MultiObjectiveTests {
     // Assert
     Assert.Equal(3, fronts.Count);
     var ids = FrontIds(fronts);
-    Assert.Equal(["A", "B"], ids[0].Append(ids[1]).OrderBy(x => x)); // Implementation may break ties arbitrarily
+    Assert.Equal(["A", "B"], ids[0].Concat(ids[1]).OrderBy(x => x)); // Implementation may break ties arbitrarily
     Assert.Equal(["C"], ids[2]);
   }
 

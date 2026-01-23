@@ -55,7 +55,7 @@ public class AgedProblem<TGenotype, TSearchSpace, TProblem>(TProblem innerProble
 
 
 public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, AlpsIterationState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, AlpsIterationState<TGenotype>>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace> {
@@ -119,7 +119,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var agedProblem = new AgedProblem<TGenotype, TSearchSpace, TProblem>(problem);
     var agedSearchSpace = new AgedSearchSpace<TGenotype, TSearchSpace>(problem.SearchSpace);
     int iteration = previousState?.CurrentIteration + 1 ?? 0;
-    var iterationRandom = random.Fork((ulong)iteration);
+    var iterationRandom = random.Fork(iteration);
     return previousState switch {
       null => ExecuteInitialization(agedProblem, agedSearchSpace, iterationRandom),
       _ => ExecuteGeneration(agedProblem, agedSearchSpace, previousState, iterationRandom)

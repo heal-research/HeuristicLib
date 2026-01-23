@@ -10,17 +10,17 @@ public static class Extensions {
     var selected = new TOut[source.Count];
     if (parallelOptions == null) {
       Parallel.For(0, source.Count, i => {
-        var individualRandom = random.Fork((ulong)i);
+        var individualRandom = random.Fork(i);
         selected[i] = action(i, source[i], individualRandom);
       });
     } else if (parallelOptions.MaxDegreeOfParallelism == 1) { //avoid parallel overhead
       for (int i = 0; i < source.Count; i++) {
-        var individualRandom = random.Fork((ulong)i);
+        var individualRandom = random.Fork(i);
         selected[i] = action(i, source[i], individualRandom);
       }
     } else {
       Parallel.For(0, source.Count, parallelOptions, i => {
-        var individualRandom = random.Fork((ulong)i);
+        var individualRandom = random.Fork(i);
         selected[i] = action(i, source[i], individualRandom);
       });
     }

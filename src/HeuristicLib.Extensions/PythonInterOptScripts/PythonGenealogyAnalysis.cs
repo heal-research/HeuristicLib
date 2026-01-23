@@ -136,7 +136,7 @@ public class PythonGenealogyAnalysis {
       AlgorithmName);
 
   public record TravelingSalesmanExperimentParameters(
-    int Seed = 0,
+    uint Seed = 0,
     int Elites = 1,
     int PopulationSize = 10,
     int Iterations = 30,
@@ -221,7 +221,7 @@ public class PythonGenealogyAnalysis {
         ga.Elites = parameters.Elites;
         if (parameters.Selector != null)
           ga.Selector = parameters.Selector;
-        ga.RandomSeed = parameters.Seed;
+        //ga.RandomSeed = parameters.Seed;
         ga.Terminator = terminator;
 
         analyzers = AddAnalyzers(callback, ga);
@@ -233,7 +233,7 @@ public class PythonGenealogyAnalysis {
         es.NumberOfChildren = parameters.NoChildren;
         es.Strategy = parameters.Strategy;
         es.Terminator = terminator;
-        es.RandomSeed = parameters.Seed;
+        //es.RandomSeed = parameters.Seed;
         if (parameters.Selector != null)
           es.Selector = parameters.Selector;
         if (parameters.WithCrossover)
@@ -246,7 +246,7 @@ public class PythonGenealogyAnalysis {
         var ls = HillClimber.GetBuilder(parameters.Creator!, parameters.Mutator!);
         ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
         ls.Terminator = terminator;
-        ls.RandomSeed = parameters.Seed;
+        //ls.RandomSeed = parameters.Seed;
         
         analyzers = AddAnalyzers(callback, ls);
         algorithm = ls.Build();
@@ -257,7 +257,7 @@ public class PythonGenealogyAnalysis {
         nsga2.MutationRate = parameters.MutationRate;
         if (parameters.Selector != null)
           nsga2.Selector = parameters.Selector;
-        nsga2.RandomSeed = parameters.Seed;
+        //nsga2.RandomSeed = parameters.Seed;
         nsga2.Terminator = terminator;
         //nsga2.DominateOnEquals = true; //todo make configurable
         analyzers = AddAnalyzers(callback, nsga2);

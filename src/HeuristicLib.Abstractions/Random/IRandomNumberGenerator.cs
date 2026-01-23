@@ -11,3 +11,13 @@ public interface IRandomNumberGenerator {
     
     IRandomNumberGenerator Fork(ulong forkKey);
 }
+
+public static class RandomNumberGeneratorExtensions 
+{
+  extension(IRandomNumberGenerator rng) 
+  {
+    public IRandomNumberGenerator Fork(int forkKey) => rng.Fork((ulong)forkKey);
+    
+    public IRandomNumberGenerator Fork(long forkKey) => rng.Fork((ulong)forkKey);
+  }
+}

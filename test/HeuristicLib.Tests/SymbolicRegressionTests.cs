@@ -30,7 +30,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void MultiObjectiveConstant() {
     var problem = CreateTestSymbolicRegressionProblem(multiObjective: true);
-    var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
+    var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var numberNode = new Number().CreateTreeNode(10);
     tree.Root[0].AddSubtree(numberNode);
@@ -44,7 +44,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void Constant() {
     var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
-    var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
+    var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var startNode = tree.Root[0];
     var numberNode = new Number().CreateTreeNode(10);
@@ -63,7 +63,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void Variable() {
     var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
-    var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
+    var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     tree.Root[0].AddSubtree(new Variable().CreateTreeNode("x", 1));
     var y = problem.Evaluate(tree)[0];
@@ -73,7 +73,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void Add() {
     var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
-    var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
+    var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var variableTreeNode = new Variable().CreateTreeNode("x", 1);
     var numberTreeNode = new Number().CreateTreeNode(1);
@@ -89,7 +89,7 @@ public class SymbolicRegressionTests {
   [Fact]
   public void AddOpt() {
     var problem = CreateTestSymbolicRegressionProblem();
-    var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
+    var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var variableTreeNode = new Variable().CreateTreeNode("x", 1);
     var numberTreeNode = new Number().CreateTreeNode(1);
@@ -107,7 +107,7 @@ public class SymbolicRegressionTests {
   public void Creators() {
     var problem = CreateTestSymbolicRegressionProblem(treeLength: 12);
     var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator(), };
-    var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
+    var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
 
     foreach (var c in creators) {
       var tree = c.Create(r, problem.SearchSpace);
@@ -133,11 +133,11 @@ public class SymbolicRegressionTests {
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
     ga.Elites = 1;
-    ga.RandomSeed = AlgorithmRandomSeed;
+    //ga.RandomSeed = AlgorithmRandomSeed;
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
     var qualities = BestMedianWorstAnalysis.Analyze(ga);
-    var res = ga.Build().Execute(problem);
+    var res = ga.Build().Execute(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
 
     Assert.Equal(100, qualities.BestISolutions.Count);
     Assert.Equal(100, res.Population.Solutions.Count);
@@ -154,13 +154,13 @@ public class SymbolicRegressionTests {
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
     ga.Elites = 1;
-    ga.RandomSeed = AlgorithmRandomSeed;
+    //ga.RandomSeed = AlgorithmRandomSeed;
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
 
     var evalQualities = QualityCurveAnalysis.Create(ga);
     var qualities = BestMedianWorstAnalysis.Analyze(ga);
     var genealogy = GenealogyAnalysis.Create(ga);
-    var res = ga.Build().Execute(problem);
+    var res = ga.Build().Execute(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
 
     Assert.Equal(gens, qualities.BestISolutions.Count);
     Assert.Equal(popsize, res.Population.Solutions.Count);
@@ -173,11 +173,11 @@ public class SymbolicRegressionTests {
   public void GenealogyGraphOnLocalSearch() {
     var problem = CreateTestSymbolicRegressionProblem();
     var ga = HillClimber.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
-    ga.RandomSeed = AlgorithmRandomSeed;
+    //ga.RandomSeed = AlgorithmRandomSeed;
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
     var genealogy = GenealogyAnalysis.Create(ga);
-    var res = ga.Build().Execute(problem);
+    var res = ga.Build().Execute(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
     Assert.Single(res.Population.Solutions);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
@@ -202,7 +202,7 @@ public class SymbolicRegressionTests {
     var genealogy = GenealogyAnalysis.Create(nsga2);
     var qualities = BestMedianWorstAnalysis.Analyze(nsga2);
 
-    var res = nsga2.Build().Execute(problem);
+    var res = nsga2.Build().Execute(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
     Assert.Equal(maximumIterations, qualities.BestISolutions.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();

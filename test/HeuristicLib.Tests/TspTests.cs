@@ -33,14 +33,14 @@ public class TspTests {
     );
 
     ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-    ga.RandomSeed = 42;
+    //ga.RandomSeed = 42;
     ga.PopulationSize = 100;
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<Permutation>(2);
     ga.Elites = 1;
 
     //execute
-    var resGa = ga.Build().Execute(prob);
+    var resGa = ga.Build().Execute(prob, RandomNumberGenerator.Create(42));
 
     //look at results
     var objGa = resGa.Population
@@ -55,7 +55,7 @@ public class TspTests {
     //Load Problem
     var data = TsplibTspInstanceProvider.LoadData(TestDataBerlin52TSP);
     var cdata = data.ToCoordinatesData();
-    var prob = new ActivatedTravelingSalesmanProblem(cdata, new SystemRandomNumberGenerator(0), epochLength: 10000);
+    var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
 
     //GA
     var ga = GeneticAlgorithm.GetBuilder(
@@ -65,7 +65,7 @@ public class TspTests {
     );
 
     ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-    ga.RandomSeed = 42;
+    //ga.RandomSeed = 42;
     ga.PopulationSize = 100;
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<Permutation>(2);
@@ -75,7 +75,7 @@ public class TspTests {
     prob.AttachTo(ga);
 
     //execute
-    var resGa = ga.Build().Execute(prob);
+    var resGa = ga.Build().Execute(prob, RandomNumberGenerator.Create(42));
 
     //look at results
     var objGa = resGa.Population

@@ -14,26 +14,52 @@ public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmS
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  // ToDo: Mayabe remove the Terminator and Interceptor properties?
+  // ToDo: Maybe remove the Terminator and Interceptor properties?
   
   ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> Terminator { get; }
 
   IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; }
   
   IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; }
-
-  // Maybe pull the ExecuteStep and ExecuteStreaming out into something like "iterable-algorithm"?
-  TAlgorithmState ExecuteStep(TProblem problem, TAlgorithmState? previousState, IRandomNumberGenerator random);
-
-  TAlgorithmState Execute(
+  
+  IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(
     TProblem problem,
     IRandomNumberGenerator random,
-    TAlgorithmState? initialState = null
+    TAlgorithmState? initialState = null, 
+    CancellationToken ct = default
   );
+}
 
-  IEnumerable<TAlgorithmState> ExecuteStreaming(
-    TProblem problem,
-    IRandomNumberGenerator random,
-    TAlgorithmState? initialState = null
-  );
+public static class AlgorithmExtensions 
+{
+  extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
+    where TGenotype : class
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    where TAlgorithmState : class, IAlgorithmState
+  {
+    public async Task<TAlgorithmState> ExecuteAsync(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null
+    ) {
+      return await algorithm.ExecuteStreamingAsync(problem, random, initialState).LastAsync();
+    }
+    
+    public IEnumerable<TAlgorithmState> ExecuteStreaming(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null
+    ) {
+      return algorithm.ExecuteStreamingAsync(problem, random, initialState).ToBlockingEnumerable();
+    }
+    
+    public TAlgorithmState Execute(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null
+    ) {
+      return algorithm.ExecuteAsync(problem, random, initialState).GetAwaiter().GetResult();
+    }
+  }
 }
