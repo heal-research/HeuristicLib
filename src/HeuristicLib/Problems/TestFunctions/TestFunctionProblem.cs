@@ -20,43 +20,4 @@ public class TestFunctionProblem : RealVectorProblem {
   private static RealVectorEncoding GetEncoding(ITestFunction testFunction) {
     return new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
   }
-
-  //public override RealVector Decode(RealVector genotype) => genotype;
-
-  // return new RealVectorSearchSpace<RealVector>(Decoder.Identity<RealVector>()) {
-  //   Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
-  //   Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
-  //   Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)
-  // };
-
-  //
-  // public RealVectorSearchSpace CreateRealVectorSearchSpace() {
-  //   return new RealVectorSearchSpace(length: 2, min, max);
-  // }
-  // public RealVectorSearchSpace CreateRealVectorSearchSpace() {
-  //   var parameter = CreateRealVectorSearchSpace();
-  //
-  //   return new RealVectorSearchSpace(parameter) {
-  //    
-  //   };
-  // }
-
-  // public GeneticAlgorithmSpec CreateGeneticAlgorithmDefaultConfig() {
-  //   return new GeneticAlgorithmSpec(
-  //     Creator: functionType == FunctionType.Sphere ? new UniformRealVectorCreatorSpec() : new NormalRealVectorCreatorSpec([5], [0.5]),
-  //     Crossover: new AlphaBetaBlendRealVectorCrossoverSpec(Alpha: 0.8, Beta: 0.2),
-  //     Mutator: new GaussianRealVectorMutatorSpec()
-  //   );
-  // }
 }
-
-// public static class GeneticAlgorithmBuilderRealVectorTestFunctionExtensions {
-//   public static GeneticAlgorithmBuilder<RealVectorSearchSpace, RealVector> WithProblemSearchSpace
-//     (this GeneticAlgorithmBuilder<RealVectorSearchSpace, RealVector> builder, RealVectorTestFunctionProblem problem)
-//   {
-//     builder.WithEvaluator(problem.CreateEvaluator());
-//     builder.WithSearchSpace(problem.CreateRealVectorSearchSpaceSearchSpace());
-//     builder.WithSpecs(problem.CreateGeneticAlgorithmDefaultConfig());
-//     return builder;
-//     }
-// }

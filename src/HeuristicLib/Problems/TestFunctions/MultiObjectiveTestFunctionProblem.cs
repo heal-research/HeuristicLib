@@ -23,12 +23,4 @@ public class MultiObjectiveTestFunctionProblem : RealVectorProblem {
   private static RealVectorEncoding GetEncoding(IMultiObjectiveTestFunction testFunction) {
     return new RealVectorEncoding(testFunction.Dimension, testFunction.Min, testFunction.Max);
   }
-
-  // public override RealVector Decode(RealVector genotype) => genotype;
-
-  // return new RealVectorSearchSpace<RealVector>(Decoder.Identity<RealVector>()) {
-  //   Creator = new UniformDistributedCreator(minimum: null, maximum: null), 
-  //   Crossover = new AlphaBetaBlendCrossover(alpha: 0.7, beta: 0.3),
-  //   Mutator = new GaussianMutator(mutationRate: 0.1, mutationStrength: 0.1)
-  // };
 }

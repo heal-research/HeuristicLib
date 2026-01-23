@@ -11,5 +11,8 @@ public class ShiftedTestFunction(RealVector shiftVector, ITestFunction inner) : 
 }
 
 public class ShiftedGradientTestFunction(RealVector shiftVector, IGradientTestFunction inner) : ShiftedTestFunction(shiftVector, inner), IGradientTestFunction {
-  public RealVector EvaluateGradient(RealVector solution) => inner.EvaluateGradient(solution + ShiftVector);
+  protected readonly IGradientTestFunction GradientInner = inner;
+
+  public RealVector EvaluateGradient(RealVector solution)
+    => GradientInner.EvaluateGradient(solution + ShiftVector);
 }

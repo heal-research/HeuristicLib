@@ -2,16 +2,17 @@
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 
-public class ScaledTestFunction : MetaTestFunction {
-  private readonly double[] inputScaling;
-  private readonly double outputScaling;
+public class ScaledTestFunction(double[] inputScaling, double outputScaling, ITestFunction inner)
+  : MetaTestFunction(inner) {
+  protected readonly double[] InputScaling = inputScaling;
+  protected readonly double OutputScaling = outputScaling;
 
-  public ScaledTestFunction(double[] inputScaling, double outputScaling, ITestFunction inner) : base(inner) {
-    this.inputScaling = inputScaling;
-    this.outputScaling = outputScaling;
-  }
+  public override double Evaluate(RealVector solution) => Inner.Evaluate(solution * InputScaling) * OutputScaling;
+}
 
-  public override double Evaluate(RealVector solution) {
-    return Inner.Evaluate(solution * inputScaling) * outputScaling;
+public class ScaledGradientTestFunction(double[] inputScaling, double outputScaling, IGradientTestFunction inner)
+  : ScaledTestFunction(inputScaling, outputScaling, inner), IGradientTestFunction {
+  public RealVector EvaluateGradient(RealVector solution) {
+    return inner.EvaluateGradient(solution * InputScaling) * InputScaling * OutputScaling;
   }
 }

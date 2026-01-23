@@ -10,7 +10,3 @@ public interface IMultiObjectiveTestFunction {
   public Objective Objective { get; }
   RealVector Evaluate(RealVector solution);
 }
-
-public interface IMultiObjectiveGradientTestFunction : IMultiObjectiveTestFunction {
-  RealVector[] EvaluateGradient(RealVector solution);
-}

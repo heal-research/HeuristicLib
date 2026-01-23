@@ -81,7 +81,7 @@ public class PythonGenealogyAnalysis {
       Crossover = parameters.Crossover ?? new SubtreeCrossover(),
       Mutator = parameters.Mutator ?? CreateSymRegAllMutator()
     };
-    var problem = ProblemGeneration.CreateTestSymbolicRegressionProblem(file, parameters);
+    var problem = ProblemGeneration.CreateSymbolicRegressionProblem(file, parameters);
     var actionCallback = callback is null ? null : new Action<PopulationIterationResult<SymbolicExpressionTree>>(callback);
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
@@ -90,7 +90,7 @@ public class PythonGenealogyAnalysis {
     string file,
     TravelingSalesmanExperimentParameters parameters,
     GenerationCallback? callback = null) {
-    var problem = ProblemGeneration.CreateTestTravellingSalesmanProblem(file);
+    var problem = ProblemGeneration.CreateTravellingSalesmanProblem(file);
 
     parameters = new TravelingSalesmanExperimentParameters(parameters) {
       Creator = parameters.Creator ?? new RandomPermutationCreator(),

@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
 

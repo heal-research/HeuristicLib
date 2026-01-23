@@ -2,13 +2,11 @@
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 
-public class RotatedTestFunction : MetaTestFunction {
-  private readonly double[,] rotation;
-  public override int Dimension => rotation.GetLength(0);
+public class RotatedTestFunction(double[,] rotation, ITestFunction inner) : MetaTestFunction(inner) {
+  protected readonly double[,] Rotation = rotation;
+  public override int Dimension => Rotation.GetLength(0);
 
-  public RotatedTestFunction(double[,] rotation, ITestFunction inner) : base(inner) => this.rotation = rotation;
-
-  public override double Evaluate(RealVector solution) => Inner.Evaluate(Rotate(rotation, solution));
+  public override double Evaluate(RealVector solution) => Inner.Evaluate(Rotate(Rotation, solution));
 
   public static double[] Rotate(double[,] r, IReadOnlyList<double> v) {
     var result = new double[r.GetLength(0)];
@@ -30,5 +28,25 @@ public class RotatedTestFunction : MetaTestFunction {
     }
 
     return result;
+  }
+}
+
+public class RotatedGradientTestFunction(double[,] rotation, IGradientTestFunction inner) : RotatedTestFunction(rotation, inner), IGradientTestFunction {
+  protected readonly IGradientTestFunction GradientInner = inner;
+
+  public RealVector EvaluateGradient(RealVector solution) {
+    var rotatedSolution = Rotate(Rotation, solution);
+    var gradInner = GradientInner.EvaluateGradient(rotatedSolution);
+    var nCols = Rotation.GetLength(1);
+    var rotatedGrad = new double[nCols];
+    var nRows = Rotation.GetLength(0);
+    for (var j = 0; j < nCols; j++) {
+      var sum = 0.0;
+      for (var i = 0; i < nRows; i++)
+        sum += Rotation[i, j] * gradInner[i];
+      rotatedGrad[j] = sum;
+    }
+
+    return new RealVector(rotatedGrad);
   }
 }

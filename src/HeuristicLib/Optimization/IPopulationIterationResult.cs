@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib.Operators;
+namespace HEAL.HeuristicLib.Optimization;
 
 public interface IPopulationIterationResult<TGenotype, out TSelf> : IIterationResult
   where TSelf : IPopulationIterationResult<TGenotype, TSelf> {

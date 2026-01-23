@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using HEAL.HeuristicLib.Encodings.Permutation;
 using HEAL.HeuristicLib.Encodings.RealVector;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
@@ -14,15 +15,15 @@ using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 using static HEAL.HeuristicLib.PythonInterOptScripts.PythonGenealogyAnalysis;
-using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.RastriginFunction;
-using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SphereFunction;
+using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
+using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public class ProblemGeneration {
   private static readonly ConcurrentDictionary<string, ITravelingSalesmanProblemData> TSPCache = [];
 
-  public static TravelingSalesmanProblem CreateTestTravellingSalesmanProblem(string file) {
+  public static TravelingSalesmanProblem CreateTravellingSalesmanProblem(string file) {
     var cdata = TSPCache.GetOrAdd(file, s => {
       var t = TsplibTspInstanceProvider.LoadData(s);
       return t.Distances != null || (t.Coordinates?.Length ?? 0) <= 1000 ? t.ToDistanceMatrixData() : t.ToCoordinatesData();
@@ -32,7 +33,7 @@ public class ProblemGeneration {
 
   private static readonly ConcurrentDictionary<(string, double), RegressionProblemData> SymRegCache = [];
 
-  public static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(string file, SymRegExperimentParameters parameters) {
+  public static SymbolicRegressionProblem CreateSymbolicRegressionProblem(string file, SymRegExperimentParameters parameters) {
     var problemData = SymRegCache.GetOrAdd((file, parameters.TrainingSplit), key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
     var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator(), new TreeLengthEvaluator()) {
       SearchSpace = {
@@ -62,5 +63,26 @@ public class ProblemGeneration {
     var encoding = new RealVectorEncoding(dimensions, min, max);
     var prob = new MultiObjectiveTestFunctionProblem(testFunction, encoding);
     return prob;
+  }
+
+  public class MultiObjectiveTravellingSalesmanProblem(TravelingSalesmanProblem[] tsps) :
+    RealVectorProblem(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
+      new RealVectorEncoding(
+        tsps.Max(x => x.ProblemData.NumberOfCities),
+        new RealVector(0.0), new RealVector(1.0))) {
+    private readonly TravelingSalesmanProblem[] tsps = tsps.ToArray();
+
+    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) {
+      return tsps.Select(x => EvaluateSolutionFromRealVector(x, solution, random)[0]).ToArray();
+    }
+
+    private static ObjectiveVector EvaluateSolutionFromRealVector(TravelingSalesmanProblem problem, RealVector solution, IRandomNumberGenerator random) {
+      var p = new Permutation(Enumerable.Range(0, problem.ProblemData.NumberOfCities).OrderBy(x => solution[x]));
+      return problem.Evaluate(p, random);
+    }
+  }
+
+  public static MultiObjectiveTravellingSalesmanProblem CreateMultiObjectiveRealVectorTravellingSalesmanProblem(params string[] files) {
+    return new MultiObjectiveTravellingSalesmanProblem(files.Select(CreateTravellingSalesmanProblem).ToArray());
   }
 }

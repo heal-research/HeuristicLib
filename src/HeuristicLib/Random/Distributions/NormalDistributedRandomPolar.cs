@@ -1,6 +1,6 @@
 ﻿using HEAL.HeuristicLib.Encodings.RealVector;
 
-namespace HEAL.HeuristicLib.Random;
+namespace HEAL.HeuristicLib.Random.Distributions;
 
 /// <summary>
 /// Normally distributed random variable.

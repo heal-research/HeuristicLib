@@ -1,33 +1,22 @@
 ﻿using HEAL.HeuristicLib.Encodings.RealVector;
 using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions;
+namespace HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 
-public class RastriginFunction(int dimension) : IGradientTestFunction {
+public class SphereFunction(int dimension) : IGradientTestFunction {
   public int Dimension { get; } = dimension;
   public double Min => -5.12;
   public double Max => 5.12;
   public ObjectiveDirection Objective => ObjectiveDirection.Minimize;
 
-  private const double A = 10;
-  private const double PiTwo = 2 * Math.PI;
-
   public double Evaluate(RealVector solution) {
-    var n = solution.Count;
-    var sum = A * n;
-    for (var i = 0; i < n; i++) {
-      var d = solution[i];
-      sum += d * d - A * Math.Cos(PiTwo * d);
-    }
-
-    return sum;
+    return solution.Sum(x => x * x);
   }
 
   public RealVector EvaluateGradient(RealVector solution) {
     var g = new double[solution.Count];
     for (var i = 0; i < solution.Count; i++) {
-      var d = solution[i];
-      g[i] = 2 * d + PiTwo * A * Math.Sin(PiTwo * d);
+      g[i] = 2 * solution[i];
     }
 
     return g;

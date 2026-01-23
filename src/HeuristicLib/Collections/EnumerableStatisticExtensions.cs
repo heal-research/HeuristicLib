@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.Contracts;
 using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib;
+namespace HEAL.HeuristicLib.Collections;
 
 public static class EnumerableStatisticExtensions {
   /// <summary>
