@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Observation;
+﻿using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Terminators;
@@ -22,12 +23,27 @@ public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmSta
 
   public required IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; }
 
-  public abstract IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default);
+  public virtual IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecution() => new Execution();
+  
+  public class Execution : IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  {
+    public async virtual IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null,
+      [EnumeratorCancellation] CancellationToken ct = default
+    )
+    {
+      yield break;
+    }
+  }
+  
+  //public abstract IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default);
 }
 
 public static class AlgorithmExtensions
 {
-  extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
+  extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
     where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -36,28 +52,78 @@ public static class AlgorithmExtensions
     public async Task<TAlgorithmState> ExecuteAsync(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null
+      TAlgorithmState? initialState = null,
+      CancellationToken ct = default
     )
     {
-      return await algorithm.ExecuteStreamingAsync(problem, random, initialState).LastAsync();
+      return await algorithm.ExecuteStreamingAsync(problem, random, initialState, ct).LastAsync(cancellationToken: ct);
     }
 
     public IEnumerable<TAlgorithmState> ExecuteStreaming(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null
+      TAlgorithmState? initialState = null,
+      CancellationToken ct = default
     )
     {
-      return algorithm.ExecuteStreamingAsync(problem, random, initialState).ToBlockingEnumerable();
+      return algorithm.ExecuteStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable();
     }
 
     public TAlgorithmState Execute(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null
+      TAlgorithmState? initialState = null,
+      CancellationToken ct = default
     )
     {
-      return algorithm.ExecuteAsync(problem, random, initialState).GetAwaiter().GetResult();
+      return algorithm.ExecuteAsync(problem, random, initialState, ct: ct).GetAwaiter().GetResult();
+    }
+  }
+  
+  extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
+    where TGenotype : class
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    where TAlgorithmState : class, IAlgorithmState
+  {
+    public IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null,
+      CancellationToken ct = default
+    )
+    {
+      return algorithm.CreateExecution().ExecuteStreamingAsync(problem, random, initialState, ct);
+    }
+    
+    public async Task<TAlgorithmState> ExecuteAsync(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null,
+      CancellationToken ct = default
+    )
+    {
+      return await algorithm.CreateExecution().ExecuteStreamingAsync(problem, random, initialState, ct).LastAsync(cancellationToken: ct);
+    }
+
+    public IEnumerable<TAlgorithmState> ExecuteStreaming(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null,
+      CancellationToken ct = default
+    )
+    {
+      return algorithm.CreateExecution().ExecuteStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable();
+    }
+
+    public TAlgorithmState Execute(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null,
+      CancellationToken ct = default
+    )
+    {
+      return algorithm.CreateExecution().ExecuteAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
     }
   }
 }

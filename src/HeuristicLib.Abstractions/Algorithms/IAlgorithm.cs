@@ -22,6 +22,15 @@ public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmS
 
   IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; }
 
+  IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecution();
+}
+
+public interface IAlgorithmExecution<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TAlgorithmState : class, IAlgorithmState
+{
   IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(
     TProblem problem,
     IRandomNumberGenerator random,

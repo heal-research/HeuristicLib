@@ -16,14 +16,27 @@ public class RepeatExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, 
 {
   public required TAlgorithm Algorithm { get; init; }
   public int Repetitions { get; init; } = 5;
+  
+  IExecutorExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> IExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>.CreateExecution() => this.CreateExecution();
+  public virtual Execution CreateExecution() => new Execution(this);
 
-  public IReadOnlyList<(TAlgorithm, IAsyncEnumerable<TAlgorithmState>)> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
+  public class Execution : IExecutorExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
   {
-    return Enumerable.Range(0, Repetitions)
-      .Select(repetitionsIndex => {
-        var repetitionRng = random.Fork(repetitionsIndex);
-        return (Algorithm, Algorithm.ExecuteStreamingAsync(problem, repetitionRng, initialState, cancellationToken));
-      }).ToList();
+    private readonly RepeatExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> executor;
+
+    public Execution(RepeatExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> executor)
+    {
+      this.executor = executor;
+    }
+    
+    public IReadOnlyList<(TAlgorithm, IAsyncEnumerable<TAlgorithmState>)> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
+    {
+      return Enumerable.Range(0, executor.Repetitions)
+        .Select(repetitionsIndex => {
+          var repetitionRng = random.Fork(repetitionsIndex);
+          return (executor.Algorithm, executor.Algorithm.ExecuteStreamingAsync(problem, repetitionRng, initialState, cancellationToken));
+        }).ToList();
+    }
   }
 }
 
