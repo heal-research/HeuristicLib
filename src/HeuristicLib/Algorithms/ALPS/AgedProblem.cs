@@ -14,12 +14,12 @@ public class AgedProblem<TGenotype, TEncoding, TProblem>(TProblem innerProblem) 
 
   public AgedEncoding<TGenotype, TEncoding> SearchSpace { get; } = new(innerProblem.SearchSpace);
 
-  //public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<AgedGenotype<TGenotype>> ISolutions) {
+  //public IReadOnlyList<ObjectiveVector> PredictAndTrain(IReadOnlyList<AgedGenotype<TGenotype>> ISolutions) {
   //  var genotypes = new TGenotype[ISolutions.Count];
   //  for (int i = 0; i < ISolutions.Count; i++) {
   //    genotypes[i] = ISolutions[i].InnerGenotype;
   //  }
 
-  //  return InnerProblem.Evaluate(genotypes);
+  //  return InnerProblem.PredictAndTrain(genotypes);
   //}
 }

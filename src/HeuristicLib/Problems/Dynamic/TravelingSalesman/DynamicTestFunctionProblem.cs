@@ -16,9 +16,8 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorE
   public DynamicTestFunctionProblem(IRandomNumberGenerator environmentRandom,
                                     IProblem<RealVector, RealVectorEncoding> problem,
                                     UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                    int epochLength = int.MaxValue) : base(updatePolicy, epochLength) {
+                                    int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy: updatePolicy, epochLength: epochLength) {
     this.problem = problem;
-    EnvironmentRandom = environmentRandom;
     var rot = new double[problem.SearchSpace.Length, problem.SearchSpace.Length];
     var shift = new double[problem.SearchSpace.Length];
     var inputScaling = new double[problem.SearchSpace.Length];
@@ -33,7 +32,6 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorE
   public State CurrentState { get; private set; }
   public required DeviationSigmas DeviationSigma { get; init; }
 
-  private IRandomNumberGenerator EnvironmentRandom { get; }
   public override RealVectorEncoding SearchSpace => problem.SearchSpace;
   public override Objective Objective => problem.Objective;
 
@@ -87,10 +85,12 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorE
   static double[,] Multiply(double[,] a, double[,] b) {
     int n = a.GetLength(0);
     double[,] c = new double[n, n];
-    for (int i = 0; i < n; i++)
-    for (int j = 0; j < n; j++)
-    for (int k = 0; k < n; k++)
-      c[i, j] += a[i, k] * b[k, j];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        for (int k = 0; k < n; k++)
+          c[i, j] += a[i, k] * b[k, j];
+      }
+    }
 
     return c;
   }
@@ -99,7 +99,7 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorE
     var n = rot.GetLength(0);
 
     double[] u, v;
-    double norm = 0;
+    double norm;
     do {
       norm = 0;
       u = RandomUnitVector(n, rng);
@@ -123,10 +123,11 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorE
       p[i, i] = 1.0;
 
     // Apply plane rotation update
-    for (int i = 0; i < n; i++)
-    for (int j = 0; j < n; j++) {
-      p[i, j] += (cos - 1) * (u[i] * u[j] + v[i] * v[j])
-                 + sin * (v[i] * u[j] - u[i] * v[j]);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        p[i, j] += (cos - 1) * (u[i] * u[j] + v[i] * v[j])
+                   + sin * (v[i] * u[j] - u[i] * v[j]);
+      }
     }
 
     return Multiply(p, rot);

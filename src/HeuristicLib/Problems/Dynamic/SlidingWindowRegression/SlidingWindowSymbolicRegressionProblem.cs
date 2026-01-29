@@ -6,53 +6,70 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 
-public class SlidingWindowSymbolicRegressionProblem : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
-  public SlidingWindowSymbolicRegressionProblem(SymbolicRegressionProblem problem,
-                                                int windowStart = 0,
-                                                int windowLength = 100,
-                                                int stepSize = 10,
-                                                UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                                int epochLength = int.MaxValue) : base(updatePolicy, epochLength) {
+public class SlidingWindowSymbolicRegressionProblem
+  : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
+  public SlidingWindowSymbolicRegressionProblem(
+    SymbolicRegressionProblem problem,
+    int windowStart = 0,
+    int windowLength = 100,
+    int stepSize = 10,
+    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+    int epochLength = int.MaxValue
+  ) : base(NoRandomGenerator.Instance, updatePolicy: updatePolicy, epochLength: epochLength) {
+    ArgumentOutOfRangeException.ThrowIfNegative(windowStart);
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowLength);
+    ArgumentOutOfRangeException.ThrowIfNegative(stepSize);
+
     innerProblem = problem;
-    CurrentState = (windowStart, windowStart + windowLength);
     StepSize = stepSize;
+    WindowLength = windowLength;
+    CurrentState = (windowStart, windowStart + windowLength);
+    RebuildWindowCache();
   }
 
   private readonly SymbolicRegressionProblem innerProblem;
-  private int StepSize { get; }
 
-  public (int StartIndex, int EndIndex) CurrentState { get; set; }
+  public int StepSize { get; }
+  public int WindowLength { get; }
+
+  public (int StartIndex, int EndIndex) CurrentState { get; private set; }
+
+  private int[] cachedRows = [];
+  private double[] cachedTargets = [];
 
   public override SymbolicExpressionTreeEncoding SearchSpace => innerProblem.SearchSpace;
   public override Objective Objective => innerProblem.Objective;
 
   public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) {
-    var dataPartition = innerProblem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
-    var targets = innerProblem.ProblemData.Dataset.GetDoubleValues(innerProblem.ProblemData.TargetVariable, RoundRobinRange(dataPartition)).ToArray();
-    return innerProblem.Evaluate(solution, RoundRobinRange(dataPartition), targets);
+    return innerProblem.Evaluate(solution, cachedRows, cachedTargets);
   }
 
   protected override void Update() {
     CurrentState = (CurrentState.StartIndex + StepSize, CurrentState.EndIndex + StepSize);
+    RebuildWindowCache();
   }
 
-  private IEnumerable<int> RoundRobinRange(Range range) {
-    var min = CurrentState.StartIndex;
-    var max = CurrentState.EndIndex;
-    // Extract start and end from the Range
-    var (rangeStart, rangeEnd) = GetRangeBounds(range, max); // using max as array length fallback
-    ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(rangeStart, rangeEnd);
+  private void RebuildWindowCache() {
+    var trainingRange = innerProblem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
+    int rowCount = innerProblem.ProblemData.Dataset.Rows;
+    int rangeStart = trainingRange.Start.IsFromEnd ? rowCount - trainingRange.Start.Value : trainingRange.Start.Value;
+    int rangeEnd = trainingRange.End.IsFromEnd ? rowCount - trainingRange.End.Value : trainingRange.End.Value;
+    ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(rangeEnd, rangeStart);
+    int rangeLength = rangeEnd - rangeStart;
+    int start = CurrentState.StartIndex;
 
-    var rangeLength = rangeEnd - rangeStart;
-    for (var i = min; i < max; i++) {
-      yield return rangeStart + i % rangeLength;
+    var rows = new int[CurrentState.EndIndex - start];
+    for (int k = 0; k < rows.Length; k++) {
+      int r = (start + k) % rangeLength;
+      int offset = r < 0 ? r + rangeLength : r;
+      rows[k] = rangeStart + offset;
     }
-  }
 
-  private static (int Start, int End) GetRangeBounds(Range range, int length) {
-    var start = range.Start.IsFromEnd ? length - range.Start.Value : range.Start.Value;
-    var end = range.End.IsFromEnd ? length - range.End.Value : range.End.Value;
-    return (start, end);
+    var targets = innerProblem.ProblemData.Dataset
+                              .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
+                              .ToArray();
+
+    cachedRows = rows;
+    cachedTargets = targets;
   }
 }

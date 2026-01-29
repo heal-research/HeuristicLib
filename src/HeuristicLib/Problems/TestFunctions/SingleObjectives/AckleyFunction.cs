@@ -1,7 +1,7 @@
 ﻿using HEAL.HeuristicLib.Encodings.RealVector;
 using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class AckleyFunction(int dimension) : IGradientTestFunction {
   public int Dimension { get; } = dimension;

@@ -12,17 +12,15 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
                                            double activationProb = 0.9,
                                            double switchProbability = 0.1,
                                            UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                           int epochLength = int.MaxValue) : base(updatePolicy, epochLength) {
-    EnvironmentRandom = environmentRandom;
+                                           int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength) {
     SwitchProbability = switchProbability;
-    CurrentState = Generate(tspData, activationProb, EnvironmentRandom);
+    CurrentState = Generate(tspData, activationProb, environmentRandom);
     SearchSpace = new PermutationEncoding(tspData.NumberOfCities);
     Objective = SingleObjective.Minimize;
     ProblemData = tspData;
   }
 
   public IReadOnlyList<bool> CurrentState { get; private set; }
-  private IRandomNumberGenerator EnvironmentRandom { get; }
   public double SwitchProbability { get; init; }
   public ITravelingSalesmanProblemData ProblemData { get; }
   public override PermutationEncoding SearchSpace { get; }
@@ -36,9 +34,40 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
   }
 
   protected override void Update() {
-    CurrentState = CurrentState
-                   .Select(a => EnvironmentRandom.Boolean(SwitchProbability) ? !a : a)
-                   .ToArray();
+    var active = new List<int>();
+    var inactive = new List<int>();
+
+    for (int i = 0; i < CurrentState.Count; i++) {
+      if (CurrentState[i]) active.Add(i);
+      else inactive.Add(i);
+    }
+
+    int k = Math.Min(active.Count, inactive.Count);
+    if (k == 0) return;
+
+    ShuffleInPlace(active, EnvironmentRandom);
+    ShuffleInPlace(inactive, EnvironmentRandom);
+
+    var next = CurrentState.ToArray();
+
+    for (int i = 0; i < k; i++) {
+      if (!EnvironmentRandom.Boolean(SwitchProbability))
+        continue;
+      int a = active[i];
+      int b = inactive[i];
+      next[a] = false;
+      next[b] = true;
+    }
+
+    CurrentState = next;
+  }
+
+// Fisher–Yates shuffle
+  private static void ShuffleInPlace<T>(IList<T> list, IRandomNumberGenerator rng) {
+    for (int i = list.Count - 1; i > 0; i--) {
+      int j = rng.Integer(0, i, true);
+      (list[i], list[j]) = (list[j], list[i]);
+    }
   }
 
   private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb, IRandomNumberGenerator random) {

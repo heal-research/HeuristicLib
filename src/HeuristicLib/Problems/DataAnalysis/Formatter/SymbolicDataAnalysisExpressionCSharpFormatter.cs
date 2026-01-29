@@ -254,7 +254,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     GenerateIfThenElseSource(strBuilder);
     GenerateFactorSource(strBuilder);
     GenerateBinaryFactorSource(strBuilder);
-    strBuilder.Append(Environment.NewLine + "public static double Evaluate (");
+    strBuilder.Append(Environment.NewLine + "public static double PredictAndTrain (");
 
     // here we don't have access to problemData to determine the type for each variable (double/string) therefore we must distinguish based on the symbol type
     var doubleVarNames = new HashSet<string>();

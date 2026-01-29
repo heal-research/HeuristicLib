@@ -10,36 +10,21 @@ public class SymbolicRegressionProblem :
   RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeEncoding> {
   public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
   public int ParameterOptimizationIterations { get; init; } = -1;
-  protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, Interpreter);
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution) {
-    var rows = ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate();
-    var targets = ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training);
-    return Evaluate(solution, rows, targets);
-  }
-
-  public ObjectiveVector Evaluate(SymbolicExpressionTree solution, IEnumerable<int> rows, IReadOnlyList<double> targets) {
-    var debug = new SymbolicExpressionTreeGraphvizFormatter().Format(solution);
-
+  public override IEnumerable<double> PredictAndTrain(SymbolicExpressionTree solution, IReadOnlyList<int> rows, IReadOnlyList<double> targets) {
     if (ParameterOptimizationIterations > 0) {
-      var materialRows = rows as IReadOnlyList<int> ?? rows.ToArray();
-      rows = materialRows;
       _ = SymbolicRegressionParameterOptimization.OptimizeParameters(
         Interpreter,
         solution,
         ProblemData,
-        materialRows,
+        rows,
         ParameterOptimizationIterations,
         true,
         LowerPredictionBound,
         UpperPredictionBound);
     }
 
-    var predictions = solution
-                      .PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets)
-                      .LimitToRange(LowerPredictionBound, UpperPredictionBound)
-                      .ToArray();
-    return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(solution, targets, predictions)));
+    return solution.PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets);
   }
 
   public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :

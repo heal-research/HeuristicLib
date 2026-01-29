@@ -272,7 +272,7 @@ public class GeneticAlgorithmTests {
   // }
 
   // private class RealVectorMockOptimizable : IOptimizable<RealVector, RealVectorSearchSpace> {
-  //   public ObjectiveVector Evaluate(RealVector Solution) => Solution.Sum();
+  //   public ObjectiveVector PredictAndTrain(RealVector Solution) => Solution.Sum();
   //   public Objective Objective => SingleObjective.Minimize;
   //   public RealVectorSearchSpace ProblemContext => new RealVectorSearchSpace(3, -5, +5);
   // }
@@ -314,7 +314,7 @@ public class GeneticAlgorithmTests {
 //     public override MultiGenotype GetEvaluator() { return new MultiGenotype(realVectorCreator.GetEvaluator(), permutationCreator.GetEvaluator()); }
 //   }
 //   private class MultiGenotypeEvaluator : IEvaluator<MultiGenotype, Fitness> {
-//     public Fitness Evaluate(MultiGenotype Solution) { return Solution.RealVector.Sum() + Solution.Permutation.Count; }
+//     public Fitness PredictAndTrain(MultiGenotype Solution) { return Solution.RealVector.Sum() + Solution.Permutation.Count; }
 //   }
 //   private class MultiGenotypeCrossover(ICrossover<RealVector> realVectorCrossover, ICrossover<Permutation> permutationCrossover) : ICrossover<MultiGenotype> {
 //     public MultiGenotype Cross(MultiGenotype parent1, MultiGenotype parent2) {

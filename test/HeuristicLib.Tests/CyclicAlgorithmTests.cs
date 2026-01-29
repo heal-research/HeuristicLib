@@ -114,7 +114,7 @@
 //   // public Task CyclicAlgorithm_WithGA() {
 //   //   var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
 //   //   var searchSpace = problem.CreateRealVectorSearchSpace();
-//   //   var DirectEvaluator = DirectEvaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+//   //   var DirectEvaluator = DirectEvaluator.UsingFitnessFunction<RealVector>(problem.PredictAndTrain);
 //   //   var randomSource = new RandomSource(42);
 //   //
 //   //   var ga1 = new GeneticAlgorithm<RealVector>(
@@ -173,7 +173,7 @@
 //   // public Task EvolutionStrategyAndGeneticAlgorithm_SolveRealVectorTestFunctionProblem() {
 //   //   var problem = new RealVectorTestFunctionProblem(RealVectorTestFunctionProblem.FunctionType.Sphere, -5.0, 5.0);
 //   //   var searchSpace = problem.CreateRealVectorSearchSpace();
-//   //   var DirectEvaluator = DirectEvaluator.UsingFitnessFunction<RealVector>(problem.Evaluate);
+//   //   var DirectEvaluator = DirectEvaluator.UsingFitnessFunction<RealVector>(problem.PredictAndTrain);
 //   //   var randomSource = new RandomSource(42);
 //   //
 //   //   var evolutionStrategy = new EvolutionStrategy(

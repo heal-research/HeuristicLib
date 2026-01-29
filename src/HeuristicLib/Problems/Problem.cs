@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Problems;
 
 // public interface IDeterministicProblem<in TGenotype> : IProblem<TGenotype>
 // {
-//   double Evaluate(TGenotype Solution);
+//   double PredictAndTrain(TGenotype Solution);
 //   
 //   // IEvaluator<TGenotype> GetEvaluator()
 //   // {
@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Problems;
 // }
 // public interface IStochasticProblem<in TGenotype> : IProblem<TGenotype>
 // {
-//   double Evaluate(TGenotype Solution, IRandomNumberGenerator random);
+//   double PredictAndTrain(TGenotype Solution, IRandomNumberGenerator random);
 // }
 
 //
@@ -67,13 +67,13 @@ namespace HEAL.HeuristicLib.Problems;
 //   // public TProblemData ProblemData { get; }
 //   
 //   protected ProblemBase(/*TSearchSpace searchSpace,*/ Objective objective/*, TProblemData problemData*/) {
-//     // Evaluator = Operators.Evaluator.FromFitnessFunction<TISolution>(Evaluate);
+//     // Evaluator = Operators.Evaluator.FromFitnessFunction<TISolution>(PredictAndTrain);
 //     // ProblemContext = searchSpace;
 //     Objective = objective;
 //     // ProblemData = problemData;
 //   }
 //   
-//   public abstract ObjectiveVector Evaluate(TISolution Solution);
+//   public abstract ObjectiveVector PredictAndTrain(TISolution Solution);
 // }
 
 // public abstract class Problem<TISolution>(Objective objective)

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace HEAL.HeuristicLib.Operators;
+namespace HEAL.HeuristicLib.OperatorExtensions.MeasuredOperators;
 
 // public interface IOperator
 // {

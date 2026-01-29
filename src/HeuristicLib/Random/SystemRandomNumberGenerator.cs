@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Random;
+﻿using System.Reflection.Metadata.Ecma335;
+
+namespace HEAL.HeuristicLib.Random;
 
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   private static readonly System.Random GlobalSeedGenerator = new();
@@ -45,4 +47,16 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
 
   public IReadOnlyList<SystemRandomNumberGenerator> Spawn(int count) => seedSequence.Spawn(count).Select(childSequence => new SystemRandomNumberGenerator(childSequence)).ToArray();
   IReadOnlyList<IRandomNumberGenerator> IRandomNumberGenerator.Spawn(int count) => Spawn(count);
+}
+
+public class NoRandomGenerator : IRandomNumberGenerator {
+  public static readonly NoRandomGenerator Instance = new NoRandomGenerator();
+  private NoRandomGenerator() { }
+  public int Integer(int low, int high, bool inclusiveHigh = false) => throw new InvalidOperationException();
+
+  public double Random() => throw new InvalidOperationException();
+
+  public byte[] RandomBytes(int length) => throw new InvalidOperationException();
+
+  public IReadOnlyList<IRandomNumberGenerator> Spawn(int count) => Enumerable.Repeat(this, count).ToArray();
 }

@@ -24,16 +24,18 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TG
   private readonly ConcurrentBag<(TGenotype solution, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
 
   public event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
+  protected IRandomNumberGenerator EnvironmentRandom { get; }
 
-  protected DynamicProblem(UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) {
+  protected DynamicProblem(IRandomNumberGenerator environmentRandom, UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) {
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochLength);
     UpdatePolicy = updatePolicy;
     EpochClock = new EvaluationClock { EpochLength = epochLength };
+    EnvironmentRandom = environmentRandom;
   }
 
   //this method will be called in parallel
   public ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random) {
-    //Evaluate in parallel read lock
+    //PredictAndTrain in parallel read lock
     var timing = EpochClock.IncreaseCount();
 
     rwLock.EnterReadLock();

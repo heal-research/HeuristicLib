@@ -11,8 +11,8 @@ namespace HEAL.HeuristicLib.Operators.Evaluator;
 //     this.problem = problem;
 //   }
 //
-//   public double Evaluate(TGenotype Solution) {
-//     return problem.Evaluate(Solution);
+//   public double PredictAndTrain(TGenotype Solution) {
+//     return problem.PredictAndTrain(Solution);
 //   }
 // }
 //
@@ -26,8 +26,8 @@ namespace HEAL.HeuristicLib.Operators.Evaluator;
 //     this.random = random;
 //   }
 //
-//   public double Evaluate(TGenotype Solution) {
-//     return problem.Evaluate(Solution, random);
+//   public double PredictAndTrain(TGenotype Solution) {
+//     return problem.PredictAndTrain(Solution, random);
 //   }
 // }
 

@@ -8,6 +8,11 @@ public interface IRandomNumberGenerator {
   double Random();
   double NextDouble() => Random();
 
+  double NextDouble(double min, double max) {
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(min, max);
+    return Random() * (max - min) + min;
+  }
+
   bool Boolean(double probability = 0.5) => Random() < probability;
 
   byte[] RandomBytes(int length);

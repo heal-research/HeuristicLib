@@ -15,8 +15,8 @@ using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 using static HEAL.HeuristicLib.PythonInterOptScripts.PythonGenealogyAnalysis;
-using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
-using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
+using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.RastriginFunction;
+using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SphereFunction;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
