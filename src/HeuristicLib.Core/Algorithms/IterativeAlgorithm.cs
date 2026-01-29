@@ -13,7 +13,7 @@ public abstract class IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlg
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  public int? MaximumIterations { get; init; }
+  //public int? MaximumIterations { get; init; }
   
   public abstract TAlgorithmState ExecuteStep(TProblem problem, TAlgorithmState? previousState, IRandomNumberGenerator random);
 
@@ -23,52 +23,25 @@ public abstract class IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlg
     return new ValueTask<TAlgorithmState>(result);
   }
 
-  public override Execution CreateExecution() => new(this);
-  
-  public new class Execution : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>.Execution
+  public override async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
-    private readonly IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm;
-    
-    public int CurrentGeneration { get; set; } = 0;
+    var previousState = initialState;
 
-
-    public Execution(IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
-    {
-      this.algorithm = algorithm;
-    }
-    
-    public override async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
-    {
-      var previousState = initialState;
-      var shouldContinue = previousState is null || ShouldContinue(previousState, null, problem.SearchSpace, problem);
-
-      while (shouldContinue) {
-        ct.ThrowIfCancellationRequested();
-        var newIterationState = await algorithm.ExecuteStepAsync(problem, previousState, random);
-        if (algorithm.Interceptor is not null) {
-          newIterationState = algorithm.Interceptor.Transform(newIterationState, previousState, problem.SearchSpace, problem);
-        }
-
-        algorithm.Observer?.OnIterationCompleted(newIterationState, previousState, problem.SearchSpace, problem);
-
-        yield return newIterationState;
-        
-        CurrentGeneration++;
-        
-        await Task.Yield();
-
-        shouldContinue = ShouldContinue(newIterationState, previousState, problem.SearchSpace, problem);
-        previousState = newIterationState;
-      }
-    }
-
-    protected virtual bool ShouldContinue(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, TProblem problem)
-    {
-      if (algorithm.MaximumIterations.HasValue && CurrentGeneration >= algorithm.MaximumIterations.Value) {
-        return false;
+    foreach (var currentIteration in Enumerable.InfiniteSequence(0, 1)) {
+      ct.ThrowIfCancellationRequested();
+      var iterationRandom = random.Fork(currentIteration);
+      var newIterationState = await ExecuteStepAsync(problem, previousState, iterationRandom);
+      if (Interceptor is not null) {
+        newIterationState = Interceptor.Transform(newIterationState, previousState, problem.SearchSpace, problem);
       }
 
-      return algorithm.Terminator.ShouldContinue(currentIterationState, previousIterationState, searchSpace, problem);
+      Observer?.OnIterationCompleted(newIterationState, previousState, problem.SearchSpace, problem);
+
+      yield return newIterationState;
+      
+      await Task.Yield();
+
+      previousState = newIterationState;
     }
   }
 }

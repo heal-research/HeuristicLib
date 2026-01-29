@@ -30,7 +30,7 @@ public static class GenealogyAnalysis
     where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
-    where TR : PopulationIterationState<TG>
+    where TR : PopulationState<TG>
     where TAlg : class, IAlgorithm<TG, TS, TP, TR>
     where TBuildSpec : AlgorithmBuildSpec<TG, TS, TP, TR>
   {

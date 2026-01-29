@@ -2,5 +2,5 @@
 
 public class NeverTerminator<TGenotype> : Terminator<TGenotype>
 {
-  public override bool ShouldTerminate() => false;
+  public override Func<bool> CreateShouldTerminatePredicate() => () => false;
 }

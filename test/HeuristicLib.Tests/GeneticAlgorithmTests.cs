@@ -53,7 +53,7 @@ public class GeneticAlgorithmTests
       Selector = selector,
       Replacer = replacement,
       //AlgorithmRandom = SystemRandomNumberGenerator.Default(42),
-      Terminator = terminator
+      //Terminator = terminator
     };
     //SearchSpace = searchSpace,
 

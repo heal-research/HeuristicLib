@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public record GeneticAlgorithmBuilder<TG, TS, TP>
-  : AlgorithmBuilder<TG, TS, TP, PopulationIterationState<TG>, GeneticAlgorithm<TG, TS, TP>, GeneticAlgorithmBuildSpec<TG, TS, TP>>
+  : AlgorithmBuilder<TG, TS, TP, PopulationState<TG>, GeneticAlgorithm<TG, TS, TP>, GeneticAlgorithmBuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TG : class
@@ -41,7 +41,7 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
       Selector = spec.Selector,
       Evaluator = spec.Evaluator,
       Replacer = new ElitismReplacer<TG>(spec.Elites),
-      Terminator = spec.Terminator,
+      //Terminator = spec.Terminator,
       Interceptor = spec.Interceptor,
       Mutator = spec.Mutator.WithRate(spec.MutationRate)
     };

@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public class NSGA2<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationIterationState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TGenotype : class
@@ -24,14 +24,14 @@ public class NSGA2<TGenotype, TSearchSpace, TProblem>
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
   public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
 
-  public override PopulationIterationState<TGenotype> ExecuteStep(TProblem problem, PopulationIterationState<TGenotype>? previousState, IRandomNumberGenerator random)
+  public override PopulationState<TGenotype> ExecuteStep(TProblem problem, PopulationState<TGenotype>? previousState, IRandomNumberGenerator random)
   {
     if (previousState == null) {
       var initialSolutions = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
       var initialFitnesses = Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-      return new PopulationIterationState<TGenotype> {
+      return new PopulationState<TGenotype> {
         Population = Population.From(initialSolutions, initialFitnesses),
-        CurrentIteration = 0
+        //CurrentIteration = 0
       };
     }
 
@@ -42,9 +42,9 @@ public class NSGA2<TGenotype, TSearchSpace, TProblem>
     var newPop = Population.From(mutants, Evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
     var nextPop = Replacer.Replace(previousState.Population.Solutions, newPop.Solutions, problem.Objective, random, problem.SearchSpace, problem);
 
-    return new PopulationIterationState<TGenotype> {
+    return new PopulationState<TGenotype> {
       Population = Population.From(nextPop),
-      CurrentIteration = previousState.CurrentIteration + 1
+      //CurrentIteration = previousState.CurrentIteration + 1
     };
   }
 }

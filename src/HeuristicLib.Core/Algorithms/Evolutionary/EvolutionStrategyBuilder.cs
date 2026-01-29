@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, EvolutionStrategyIterationState<TG>, EvolutionStrategy<TG, TS, TP>, EvolutionStrategyBuildSpec<TG, TS, TP>>
+public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, EvolutionStrategyState<TG>, EvolutionStrategy<TG, TS, TP>, EvolutionStrategyBuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TG : class
@@ -33,7 +33,7 @@ public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP
     Crossover = spec.Crossover,
     Selector = spec.Selector,
     Evaluator = spec.Evaluator,
-    Terminator = spec.Terminator,
+    //Terminator = spec.Terminator,
     InitialMutationStrength = spec.InitialMutationStrength,
     Interceptor = spec.Interceptor,
     NumberOfChildren = spec.NumberOfChildren

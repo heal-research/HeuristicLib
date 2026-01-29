@@ -4,36 +4,43 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
+// Move Terminators out of Operators?
+
 public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
   where TAlgorithmState : IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public abstract bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, TProblem problem);
+  public abstract Func<TAlgorithmState, bool> CreateShouldTerminatePredicate(TSearchSpace searchSpace, TProblem problem);
 }
 
 public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace> : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TAlgorithmState : IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public abstract bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace);
+  public abstract Func<TAlgorithmState, bool> CreateShouldTerminatePredicate(TSearchSpace searchSpace);
 
-  bool ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) => ShouldTerminate(currentIterationState, previousIterationState, searchSpace);
+  Func<TAlgorithmState, bool> ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.CreateShouldTerminatePredicate(TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) => CreateShouldTerminatePredicate(searchSpace);
 }
 
 public abstract class Terminator<TGenotype, TAlgorithmState> : ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   where TAlgorithmState : IAlgorithmState
 {
-  public abstract bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState);
+  public abstract Func<TAlgorithmState, bool> CreateShouldTerminatePredicate();
 
-  bool ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => ShouldTerminate(currentIterationState, previousIterationState);
+  Func<TAlgorithmState, bool> ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.CreateShouldTerminatePredicate(ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => CreateShouldTerminatePredicate();
 }
 
 public abstract class Terminator<TGenotype> : ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
-  public abstract bool ShouldTerminate();
+  public abstract Func<bool> CreateShouldTerminatePredicate();
 
-  bool ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(IAlgorithmState currentIterationState, IAlgorithmState? previousIterationState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => ShouldTerminate();
+
+  public Func<IAlgorithmState, bool> CreateShouldTerminatePredicate(ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  {
+    var predicate = CreateShouldTerminatePredicate();
+    return _ => predicate();
+  }
 }
 
 // public class OnMaximumIterationTerminator : AlgorithmStateBasedTerminator<IIterativeAlgorithm>

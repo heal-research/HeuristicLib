@@ -7,6 +7,9 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
+// ToDo: Add Pipeline with different State types
+// ToDo: Add support for Transformation between different (or the same typed) states.
+
 public class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TGenotype : class
@@ -22,28 +25,15 @@ public class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TA
     Algorithms = new ImmutableList<TAlgorithm>(algorithms);
   }
 
-  public override Execution CreateExecution() => new(this);
-
-  public class Execution : IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  public override async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
-    private readonly PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> pipeline;
+    var state = initialState;
 
-    public Execution(PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> pipeline)
-    {
-      this.pipeline = pipeline;
-    }
-
-    public virtual async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
-    {
-      var state = initialState;
-
-      foreach (var (algorithm, index) in pipeline.Algorithms.Select((a, i) => (Algorithm: a, Index: i))) {
-        var algRng = random.Fork(index);
-        var algExecution = algorithm.CreateExecution();
-        await foreach (var newState in algorithm.ExecuteStreamingAsync(problem, algRng, state, ct)) {
-          state = newState;
-          yield return newState;
-        }
+    foreach (var (algorithm, index) in Algorithms.Select((a, i) => (Algorithm: a, Index: i))) {
+      var algRng = random.Fork(index);
+      await foreach (var newState in algorithm.ExecuteStreamingAsync(problem, algRng, state, ct)) {
+        state = newState;
+        yield return newState;
       }
     }
   }

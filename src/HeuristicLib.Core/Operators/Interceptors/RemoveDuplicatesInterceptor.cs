@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public class RemoveDuplicatesInterceptor<TGenotype, TAlgorithmState>(IEqualityComparer<TGenotype> comparer) : Interceptor<TGenotype, TAlgorithmState>
-  where TAlgorithmState : PopulationIterationState<TGenotype>
+  where TAlgorithmState : PopulationState<TGenotype>
 {
   public override TAlgorithmState Transform(TAlgorithmState currentState, TAlgorithmState? previousState)
   {

@@ -13,7 +13,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public sealed record NSGA2BuildSpec<TG, TS, TP>
-  : AlgorithmBuildSpec<TG, TS, TP, PopulationIterationState<TG>>,
+  : AlgorithmBuildSpec<TG, TS, TP, PopulationState<TG>>,
     ISpecWithCreator<TG, TS, TP>,
     ISpecWithSelector<TG, TS, TP>,
     ISpecWithCrossover<TG, TS, TP>,
@@ -32,9 +32,9 @@ public sealed record NSGA2BuildSpec<TG, TS, TP>
 
   public NSGA2BuildSpec(
     IEvaluator<TG, TS, TP> Evaluator,
-    ITerminator<TG, PopulationIterationState<TG>, TS, TP> Terminator,
-    IInterceptor<TG, PopulationIterationState<TG>, TS, TP>? Interceptor,
-    IIterationObserver<TG, TS, TP, PopulationIterationState<TG>>? Observer,
+    ITerminator<TG, PopulationState<TG>, TS, TP> Terminator,
+    IInterceptor<TG, PopulationState<TG>, TS, TP>? Interceptor,
+    IIterationObserver<TG, TS, TP, PopulationState<TG>>? Observer,
     int PopulationSize,
     ISelector<TG, TS, TP> Selector,
     ICreator<TG, TS, TP> Creator,

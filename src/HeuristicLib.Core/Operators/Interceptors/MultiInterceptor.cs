@@ -10,7 +10,7 @@ public static class MultiInterceptor
     IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-    where TAlgorithmState : IAlgorithmState
+    where TAlgorithmState : class, IAlgorithmState
   {
     var list = new List<IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>>();
     if (interceptor != null) {
@@ -21,7 +21,11 @@ public static class MultiInterceptor
   }
 }
 
-public class MultiInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>(IEnumerable<IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> interceptors) : Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> where TAlgorithmState : IAlgorithmState where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public class MultiInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>(IEnumerable<IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> interceptors) 
+  : Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
+  where TAlgorithmState : class, IAlgorithmState 
+  where TSearchSpace : class, ISearchSpace<TGenotype> 
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public List<IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> Interceptors { get; } = interceptors.ToList();
 

@@ -6,22 +6,23 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public class AfterIterationsTerminator<TGenotype>(int maximumIterations)
-  : Terminator<TGenotype, IAlgorithmState>
+  : Terminator<TGenotype>
 {
   public int MaximumIterations { get; } = maximumIterations;
-
-  public override bool ShouldTerminate(IAlgorithmState currentIterationState, IAlgorithmState? previousIterationState) => currentIterationState.CurrentIteration >= MaximumIterations;
+  
+  public override Func<bool> CreateShouldTerminatePredicate()
+  {
+    var currentCounter = 0;
+    return () => currentCounter++ >= MaximumIterations;
+  }
 }
 
 public class TargetTerminator<TGenotype>(ObjectiveVector target)
-  : Terminator<TGenotype, PopulationIterationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  : Terminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
-  public override bool ShouldTerminate(PopulationIterationState<TGenotype> currentIterationState,
-    PopulationIterationState<TGenotype>? previousIterationState,
-    ISearchSpace<TGenotype> searchSpace,
-    IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public override Func<PopulationState<TGenotype>, bool> CreateShouldTerminatePredicate(ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
-    return currentIterationState.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
+    return currentIterationState => currentIterationState.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
   }
 }
 

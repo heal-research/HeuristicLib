@@ -2,5 +2,8 @@
 
 public class PauseTokenTerminator<TGenotype>(PauseToken pauseToken) : Terminator<TGenotype>
 {
-  public override bool ShouldTerminate() => pauseToken.IsPaused;
+  public override Func<bool> CreateShouldTerminatePredicate()
+  {
+    return () => pauseToken.IsPaused;
+  }
 }

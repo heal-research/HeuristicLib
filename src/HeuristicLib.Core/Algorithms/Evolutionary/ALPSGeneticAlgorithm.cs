@@ -120,11 +120,10 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   {
     var agedProblem = new AgedProblem<TGenotype, TSearchSpace, TProblem>(problem);
     var agedSearchSpace = new AgedSearchSpace<TGenotype, TSearchSpace>(problem.SearchSpace);
-    var iteration = previousState?.CurrentIteration + 1 ?? 0;
-    var iterationRandom = random.Fork(iteration);
+    //var iteration = previousState?.CurrentIteration + 1 ?? 0;
     return previousState switch {
-      null => ExecuteInitialization(agedProblem, agedSearchSpace, iterationRandom),
-      _ => ExecuteGeneration(agedProblem, agedSearchSpace, previousState, iterationRandom)
+      null => ExecuteInitialization(agedProblem, agedSearchSpace, random),
+      _ => ExecuteGeneration(agedProblem, agedSearchSpace, previousState, random)
     };
   }
 
@@ -141,7 +140,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
     var result = new AlpsIterationState<TGenotype> {
       Population = [Population.From(initialLayerPopulation, fitnesses)],
-      CurrentIteration = 0
+      //CurrentIteration = 0
     };
 
     return result;
@@ -186,7 +185,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
     var result = new AlpsIterationState<TGenotype> {
       Population = [new Population<AgedGenotype<TGenotype>>(new ImmutableList<ISolution<AgedGenotype<TGenotype>>>(newPopulation))],
-      CurrentIteration = previousGenerationState.CurrentIteration + 1
+      //CurrentIteration = previousGenerationState.CurrentIteration + 1
     };
 
     return result;

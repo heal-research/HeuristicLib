@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
 public sealed record HillClimberBuildSpec<TG, TS, TP>
-  : AlgorithmBuildSpec<TG, TS, TP, SingleSolutionIterationState<TG>>,
+  : AlgorithmBuildSpec<TG, TS, TP, SingleSolutionState<TG>>,
     ISpecWithCreator<TG, TS, TP>,
     ISpecWithMutator<TG, TS, TP>
   where TG : class
@@ -26,9 +26,9 @@ public sealed record HillClimberBuildSpec<TG, TS, TP>
 
   public HillClimberBuildSpec(
     IEvaluator<TG, TS, TP> Evaluator,
-    ITerminator<TG, SingleSolutionIterationState<TG>, TS, TP> Terminator,
-    IInterceptor<TG, SingleSolutionIterationState<TG>, TS, TP>? Interceptor,
-    IIterationObserver<TG, TS, TP, SingleSolutionIterationState<TG>>? Observer,
+    ITerminator<TG, SingleSolutionState<TG>, TS, TP> Terminator,
+    IInterceptor<TG, SingleSolutionState<TG>, TS, TP>? Interceptor,
+    IIterationObserver<TG, TS, TP, SingleSolutionState<TG>>? Observer,
     int MaxNeighbors,
     int BatchSize,
     LocalSearchDirection Direction,

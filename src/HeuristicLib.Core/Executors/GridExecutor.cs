@@ -32,8 +32,7 @@ public class GridExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TA
       var algorithms = executor.ParameterGrid.GetConfigurations();
       return algorithms.Select((alg, index) => {
         var algRng = random.Fork(index);
-        var algExecution = alg.CreateExecution();
-        return (alg, algExecution.ExecuteStreamingAsync(problem, algRng, initialState, cancellationToken));
+        return (alg, alg.ExecuteStreamingAsync(problem, algRng, initialState, cancellationToken));
       }).ToList();
     }
   }

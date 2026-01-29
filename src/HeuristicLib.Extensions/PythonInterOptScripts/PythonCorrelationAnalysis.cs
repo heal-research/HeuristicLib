@@ -43,7 +43,7 @@ public static class PythonCorrelationAnalysis
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
   }
 
-  public delegate void GenerationCallback(PopulationIterationState<RealVector> current, RealVectorProblem problem);
+  public delegate void GenerationCallback(PopulationState<RealVector> current, RealVectorProblem problem);
 
   public static void RunCorrelationNsga2(GenerationCallback callback, int generations, int populationSize,
     int dimensions = 10, double min = -5, double max = 5, uint seed = 0)

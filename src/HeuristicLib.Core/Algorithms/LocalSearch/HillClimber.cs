@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
 public class HillClimber<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionIterationState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class
@@ -21,16 +21,16 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
   public required int MaxNeighbors { get; init; }
   public required int BatchSize { get; init; }
 
-  public override SingleSolutionIterationState<TGenotype> ExecuteStep(TProblem problem,
-    SingleSolutionIterationState<TGenotype>? previousState,
+  public override SingleSolutionState<TGenotype> ExecuteStep(TProblem problem,
+    SingleSolutionState<TGenotype>? previousState,
     IRandomNumberGenerator random)
   {
     if (previousState == null) {
       var initialSolution = Creator.Create(random, problem.SearchSpace, problem);
       var initialFitness = Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
-      return new SingleSolutionIterationState<TGenotype> {
+      return new SingleSolutionState<TGenotype> {
         Population = Population.From([initialSolution], [initialFitness]),
-        CurrentIteration = 0
+        //CurrentIteration = 0
       };
     }
 
@@ -47,16 +47,16 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
 
       newISolution = new Solution<TGenotype>(child[best], res[best]);
       if (Direction == LocalSearchDirection.FirstImprovement) {
-        return new SingleSolutionIterationState<TGenotype> {
+        return new SingleSolutionState<TGenotype> {
           Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector]),
-          CurrentIteration = previousState.CurrentIteration + 1
+          //CurrentIteration = previousState.CurrentIteration + 1
         };
       }
     }
 
-    return new SingleSolutionIterationState<TGenotype> {
+    return new SingleSolutionState<TGenotype> {
       Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector]),
-      CurrentIteration = previousState.CurrentIteration + 1
+      //CurrentIteration = previousState.CurrentIteration + 1
     };
   }
 }

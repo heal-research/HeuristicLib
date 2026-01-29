@@ -18,13 +18,13 @@ public enum EvolutionStrategyType
   Plus
 }
 
-public record EvolutionStrategyIterationState<TGenotype> : PopulationIterationState<TGenotype>
+public record EvolutionStrategyState<TGenotype> : PopulationState<TGenotype>
 {
   public required double MutationStrength { get; init; }
 }
 
 public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyIterationState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : class
@@ -38,14 +38,14 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   public double InitialMutationStrength { get; init; } = 1.0;
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
-  public override EvolutionStrategyIterationState<TGenotype> ExecuteStep(TProblem problem, EvolutionStrategyIterationState<TGenotype>? previousState, IRandomNumberGenerator random)
+  public override EvolutionStrategyState<TGenotype> ExecuteStep(TProblem problem, EvolutionStrategyState<TGenotype>? previousState, IRandomNumberGenerator random)
   {
     if (previousState == null) {
       var initialPopulation = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
       var objectives = Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
-      return new EvolutionStrategyIterationState<TGenotype> {
+      return new EvolutionStrategyState<TGenotype> {
         Population = Population.From(initialPopulation, objectives),
-        CurrentIteration = 0,
+        //CurrentIteration = 0,
         // ToDo: Actually, mutation strength is not used in initial population creation.
         MutationStrength = InitialMutationStrength
       };
@@ -87,9 +87,9 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
       _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
     };
     var newPopulation = replacer.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, random);
-    return new EvolutionStrategyIterationState<TGenotype> {
+    return new EvolutionStrategyState<TGenotype> {
       Population = Population.From(newPopulation),
-      CurrentIteration = previousState.CurrentIteration + 1,
+      //CurrentIteration = previousState.CurrentIteration + 1,
       MutationStrength = newMutationStrength
     };
   }

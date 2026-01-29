@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public sealed record EvolutionStrategyBuildSpec<TG, TS, TP>
-  : AlgorithmBuildSpec<TG, TS, TP, EvolutionStrategyIterationState<TG>>,
+  : AlgorithmBuildSpec<TG, TS, TP, EvolutionStrategyState<TG>>,
     ISpecWithCreator<TG, TS, TP>,
     ISpecWithSelector<TG, TS, TP>,
     ISpecWithMutator<TG, TS, TP>
@@ -31,9 +31,9 @@ public sealed record EvolutionStrategyBuildSpec<TG, TS, TP>
 
   public EvolutionStrategyBuildSpec(
     IEvaluator<TG, TS, TP> Evaluator,
-    ITerminator<TG, EvolutionStrategyIterationState<TG>, TS, TP> Terminator,
-    IInterceptor<TG, EvolutionStrategyIterationState<TG>, TS, TP>? Interceptor,
-    IIterationObserver<TG, TS, TP, EvolutionStrategyIterationState<TG>>? Observer,
+    ITerminator<TG, EvolutionStrategyState<TG>, TS, TP> Terminator,
+    IInterceptor<TG, EvolutionStrategyState<TG>, TS, TP>? Interceptor,
+    IIterationObserver<TG, TS, TP, EvolutionStrategyState<TG>>? Observer,
     int PopulationSize,
     EvolutionStrategyType Strategy,
     IMutator<TG, TS, TP> Mutator,

@@ -11,10 +11,7 @@ public class AfterOperatorCountTerminator<TGenotype>(InvocationCounter counter, 
   public int MaximumCount { get; } = maximumCount;
   //public bool PreventOverBudget { get; } = preventOverBudget;
 
-  public override bool ShouldTerminate()
-  {
-    return Counter.CurrentCount >= MaximumCount;
-  }
+  public override Func<bool> CreateShouldTerminatePredicate() => () => Counter.CurrentCount >= MaximumCount;
 }
 
 // After evaluations terminator is not here because it actually a counting operator terminator wrapper. I am not sure if this is good.

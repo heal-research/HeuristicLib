@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
 public record HillClimberBuilder<TG, TS, TP>
-  : AlgorithmBuilder<TG, TS, TP, SingleSolutionIterationState<TG>, HillClimber<TG, TS, TP>, HillClimberBuildSpec<TG, TS, TP>>
+  : AlgorithmBuilder<TG, TS, TP, SingleSolutionState<TG>, HillClimber<TG, TS, TP>, HillClimberBuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TG : class
@@ -23,15 +23,15 @@ public record HillClimberBuilder<TG, TS, TP>
   public required ICreator<TG, TS, TP> Creator { get; set; }
 
   public IEvaluator<TG, TS, TP> Evaluator { get; set; } = new DirectEvaluator<TG>();
-  public ITerminator<TG, SingleSolutionIterationState<TG>, TS, TP> Terminator { get; set; } = new AfterIterationsTerminator<TG>(100);
-  public IInterceptor<TG, SingleSolutionIterationState<TG>, TS, TP>? Interceptor { get; set; } = null;
+  public ITerminator<TG, SingleSolutionState<TG>, TS, TP> Terminator { get; set; } = new AfterIterationsTerminator<TG>(100);
+  public IInterceptor<TG, SingleSolutionState<TG>, TS, TP>? Interceptor { get; set; } = null;
 
   protected override HillClimberBuildSpec<TG, TS, TP> CreateBuildSpec() => new(
     Evaluator, Terminator, Interceptor, Observer, MaxNeighbors, BatchSize, Direction, Mutator, Creator
   );
 
   protected override HillClimber<TG, TS, TP> BuildFromSpec(HillClimberBuildSpec<TG, TS, TP> spec) => new() {
-    Terminator = spec.Terminator,
+    //Terminator = spec.Terminator,
     Interceptor = spec.Interceptor,
     Creator = spec.Creator,
     Mutator = spec.Mutator,

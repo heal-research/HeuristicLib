@@ -32,9 +32,9 @@ namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public class PythonGenealogyAnalysis
 {
-  public delegate void GenerationCallback(PopulationIterationState<SymbolicExpressionTree> current);
+  public delegate void GenerationCallback(PopulationState<SymbolicExpressionTree> current);
 
-  public delegate void PermutationGenerationCallback(PopulationIterationState<Permutation> current);
+  public delegate void PermutationGenerationCallback(PopulationState<Permutation> current);
 
   private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> CreateSymRegAllMutator()
   {
@@ -72,7 +72,7 @@ public class PythonGenealogyAnalysis
       Mutator = parameters.Mutator ?? CreateSymRegAllMutator()
     };
     var problem = CreateTestSymbolicRegressionProblem(file, trainingSplit);
-    var actionCallback = callback is null ? null : new Action<PopulationIterationState<SymbolicExpressionTree>>(callback);
+    var actionCallback = callback is null ? null : new Action<PopulationState<SymbolicExpressionTree>>(callback);
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
 
@@ -98,7 +98,7 @@ public class PythonGenealogyAnalysis
       Crossover = parameters.Crossover ?? new EdgeRecombinationCrossover(),
       Mutator = parameters.Mutator ?? new InversionMutator()
     };
-    var actionCallback = callback is null ? null : new Action<PopulationIterationState<Permutation>>(callback);
+    var actionCallback = callback is null ? null : new Action<PopulationState<Permutation>>(callback);
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
 
@@ -200,7 +200,7 @@ public class PythonGenealogyAnalysis
 
   private static MyAnalyzers<T>
     AddAnalyzers<T, TS, TP, TRes>(Action<TRes>? callback, IAlgorithmBuilder<T, TS, TP, TRes> builder)
-    where TRes : PopulationIterationState<T>
+    where TRes : PopulationState<T>
     where T : class
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS>
@@ -218,7 +218,7 @@ public class PythonGenealogyAnalysis
 
   private static (string graph, List<List<double>> childRanks, List<BestMedianWorstEntry<T>>) RunAlgorithmConfigurable<T, TS>(
     IProblem<T, TS> problem,
-    Action<PopulationIterationState<T>>? callback,
+    Action<PopulationState<T>>? callback,
     ExperimentParameters<T, TS> parameters) where TS : class, ISearchSpace<T> where T : class
   {
     var terminator = new AfterIterationsTerminator<T>(parameters.Iterations);
@@ -226,7 +226,7 @@ public class PythonGenealogyAnalysis
       parameters = parameters with { NoChildren = parameters.PopulationSize };
     }
 
-    IAlgorithm<T, TS, IProblem<T, TS>, PopulationIterationState<T>> algorithm;
+    IAlgorithm<T, TS, IProblem<T, TS>, PopulationState<T>> algorithm;
 
     MyAnalyzers<T> analyzers;
 

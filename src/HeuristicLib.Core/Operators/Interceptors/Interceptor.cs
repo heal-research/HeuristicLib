@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public abstract class Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> : IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
-  where TAlgorithmState : IAlgorithmState
+  where TAlgorithmState : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -13,7 +13,7 @@ public abstract class Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TPro
 }
 
 public abstract class Interceptor<TGenotype, TAlgorithmState, TSearchSpace> : IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TAlgorithmState : IAlgorithmState
+  where TAlgorithmState : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TAlgorithmState Transform(TAlgorithmState currentState, TAlgorithmState? previousState, TSearchSpace searchSpace);
@@ -22,7 +22,7 @@ public abstract class Interceptor<TGenotype, TAlgorithmState, TSearchSpace> : II
 }
 
 public abstract class Interceptor<TGenotype, TAlgorithmState> : IInterceptor<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TAlgorithmState : IAlgorithmState
+  where TAlgorithmState : class
 {
   public abstract TAlgorithmState Transform(TAlgorithmState currentState, TAlgorithmState? previousState);
 

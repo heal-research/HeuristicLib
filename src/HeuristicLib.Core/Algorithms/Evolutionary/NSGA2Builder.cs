@@ -9,7 +9,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, PopulationIterationState<TG>, NSGA2<TG, TS, TP>, NSGA2BuildSpec<TG, TS, TP>>
+public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, PopulationState<TG>, NSGA2<TG, TS, TP>, NSGA2BuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TG : class
@@ -35,7 +35,7 @@ public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, Population
     Selector = spec.Selector,
     Evaluator = spec.Evaluator,
     Replacer = new ElitismReplacer<TG>(spec.Elites),
-    Terminator = spec.Terminator,
+    //Terminator = spec.Terminator,
     Interceptor = spec.Interceptor,
     Mutator = spec.Mutator.WithRate(spec.MutationRate)
   };

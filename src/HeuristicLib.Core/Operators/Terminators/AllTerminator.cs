@@ -12,8 +12,9 @@ public class AllTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>(p
 {
   public IReadOnlyList<ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> Terminators { get; } = terminators;
 
-  public override bool ShouldTerminate(TAlgorithmState currentIterationState, TAlgorithmState? previousIterationState, TSearchSpace searchSpace, TProblem problem)
-  {
-    return Terminators.All(criterion => criterion.ShouldTerminate(currentIterationState, previousIterationState, searchSpace, problem));
+  public override Func<TAlgorithmState, bool> CreateShouldTerminatePredicate(TSearchSpace searchSpace, TProblem problem) {
+    var predicates = Terminators.Select(t => t.CreateShouldTerminatePredicate(searchSpace, problem)).ToList();
+
+    return state => predicates.All(p => p(state));
   }
 }

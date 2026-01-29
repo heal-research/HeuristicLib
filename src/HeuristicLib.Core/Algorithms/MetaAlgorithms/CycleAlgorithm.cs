@@ -17,6 +17,7 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
 {
   public ImmutableList<TAlgorithm> Algorithms { get; }
   
+  // ToDo: think if better place outside and keep CycleAlgorithm as infinite cycles?
   public int? MaximumCycles { get; init; }
 
   public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
@@ -24,34 +25,21 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
     Algorithms = new ImmutableList<TAlgorithm>(algorithms);
   }
   
-  public override Execution CreateExecution() => new(this);
-
-  public class Execution : IAlgorithmExecution<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  public override async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
-    private readonly CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> cycle;
+    var state = initialState;
 
-    public Execution(CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> cycle)
-    {
-      this.cycle = cycle;
-    }
-
-    public virtual async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
-    {
-      var state = initialState;
-
-      var cycleCountGenerator = cycle.MaximumCycles.HasValue 
-        ? Enumerable.Range(0, cycle.MaximumCycles.Value) 
-        : Enumerable.InfiniteSequence(0, 1);
+    var cycleCountGenerator = MaximumCycles.HasValue 
+      ? Enumerable.Range(0, MaximumCycles.Value) 
+      : Enumerable.InfiniteSequence(0, 1);
       
-      foreach (var cycleCount in cycleCountGenerator) {
-        var cycleRng = random.Fork(cycleCount);
-        foreach (var (algorithm, algorithmIndex) in cycle.Algorithms.Select((a, i) => (a, i))) {
-          var algorithmRng = cycleRng.Fork(algorithmIndex);
-          var algorithmExecution = algorithm.CreateExecution();
-          await foreach (var newState in algorithmExecution.ExecuteStreamingAsync(problem, algorithmRng, state, ct)) {
-            state = newState;
-            yield return newState;
-          }
+    foreach (var cycleCount in cycleCountGenerator) {
+      var cycleRng = random.Fork(cycleCount);
+      foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i))) {
+        var algorithmRng = cycleRng.Fork(algorithmIndex);
+        await foreach (var newState in algorithm.ExecuteStreamingAsync(problem, algorithmRng, state, ct)) {
+          state = newState;
+          yield return newState;
         }
       }
     }
