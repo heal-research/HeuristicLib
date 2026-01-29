@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators.MetaOperators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,13 +7,13 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public class LimitEvaluator<TG, TS, TP>(CountedEvaluator<TG, TS, TP> evaluator, int maxEvaluations, bool preventOverBudget) : Evaluator<TG, TS, TP>
+public class LimitEvaluator<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator, InvocationCounter counter, int maxEvaluations, bool preventOverBudget) : Evaluator<TG, TS, TP>
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
   public LimitEvaluator(IEvaluator<TG, TS, TP> evaluator, int maxEvaluations, bool preventOverBudget)
-    : this(evaluator.AsCountedEvaluator(), maxEvaluations, preventOverBudget)
+    : this(evaluator.CountInvocations(out var c), c, maxEvaluations, preventOverBudget)
   {
   }
 
@@ -22,7 +23,7 @@ public class LimitEvaluator<TG, TS, TP>(CountedEvaluator<TG, TS, TP> evaluator, 
     var n = count;
 
     if (preventOverBudget) {
-      var remaining = maxEvaluations - evaluator.CurrentCount;
+      var remaining = maxEvaluations - counter.CurrentCount;
       if (remaining <= 0) {
         return Enumerable.Repeat(problem.Objective.Worst, count).ToArray();
       }
@@ -42,18 +43,18 @@ public class LimitEvaluator<TG, TS, TP>(CountedEvaluator<TG, TS, TP> evaluator, 
   }
 }
 
-public class LimitingEvaluatorRewriter<TBuildSpec, TG, TS, TP>(int maxEvaluations, bool preventOverBudget)
-  : IAlgorithmBuilderRewriter<TBuildSpec>
-  where TBuildSpec : class, ISpecWithEvaluator<TG, TS, TP>
-  where TG : class
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-{
-  public void Rewrite(TBuildSpec buildSpec)
-  {
-    var countedEvaluator = buildSpec.Evaluator.AsCountedEvaluator();
-    // ToDo: think about only using the limit evaluator if prevenOverBudget is true
-    var limitEvaluator = new LimitEvaluator<TG, TS, TP>(countedEvaluator, maxEvaluations, preventOverBudget);
-    buildSpec.Evaluator = limitEvaluator;
-  }
-}
+// public class LimitingEvaluatorRewriter<TBuildSpec, TG, TS, TP>(int maxEvaluations, bool preventOverBudget)
+//   : IAlgorithmBuilderRewriter<TBuildSpec>
+//   where TBuildSpec : class, ISpecWithEvaluator<TG, TS, TP>
+//   where TG : class
+//   where TS : class, ISearchSpace<TG>
+//   where TP : class, IProblem<TG, TS>
+// {
+//   public void Rewrite(TBuildSpec buildSpec)
+//   {
+//     var countedEvaluator = buildSpec.Evaluator.AsCountedEvaluator();
+//     // ToDo: think about only using the limit evaluator if prevenOverBudget is true
+//     var limitEvaluator = new LimitEvaluator<TG, TS, TP>(countedEvaluator, maxEvaluations, preventOverBudget);
+//     buildSpec.Evaluator = limitEvaluator;
+//   }
+// }
