@@ -43,7 +43,7 @@ public class ParetoCrowdingTournamentSelector<TGenotype> : BatchSelector<TGenoty
 
         // equal rank -> compare crowding
 
-        // ensure we have distances for this front
+        // ensure we have Distances for this front
         if (!calculatedFront.Contains(bestRank)) {
           var frontSolutions = fronts[bestRank];
           var frontObjectives = frontSolutions.Select(x => x.ObjectiveVector).ToArray();

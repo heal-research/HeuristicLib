@@ -30,10 +30,10 @@ public sealed class NumberTreeNode : SymbolicExpressionTreeNode {
     base.ShakeLocalParameters(random, shakingFactor);
     // 50% additive & 50% multiplicative
     if (random.Random() < 0.5) {
-      var x = NormalDistributedRandomPolar.NextDouble(random, Symbol.ManipulatorMu, Symbol.ManipulatorSigma);
+      var x = random.NextGaussian(Symbol.ManipulatorMu, Symbol.ManipulatorSigma);
       Value = Value + x * shakingFactor;
     } else {
-      var x = NormalDistributedRandomPolar.NextDouble(random, 1.0, Symbol.MultiplicativeManipulatorSigma);
+      var x = random.NextGaussian(1.0, Symbol.MultiplicativeManipulatorSigma);
       Value = Value * x;
     }
   }

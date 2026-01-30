@@ -24,10 +24,10 @@ public sealed class BinaryFactorVariableTreeNode : VariableTreeNodeBase {
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
     // 50% additive & 50% multiplicative (override of functionality of base class because of a BUG)
     if (random.Random() < 0.5) {
-      var x = NormalDistributedRandomPolar.NextDouble(random, Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
+      var x = random.NextGaussian(Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
       Weight = Weight + x * shakingFactor;
     } else {
-      var x = NormalDistributedRandomPolar.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
+      var x = random.NextGaussian(1.0, Symbol.MultiplicativeWeightManipulatorSigma);
       Weight = Weight * x;
     }
 
@@ -36,7 +36,7 @@ public sealed class BinaryFactorVariableTreeNode : VariableTreeNodeBase {
       VariableName = Symbol.VariableNames.SampleRandom(random);
       // reinitialize weights if variable has changed (similar to FactorVariableTreeNode)
       if (oldName != VariableName)
-        Weight = NormalDistributedRandomPolar.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
+        Weight = random.NextGaussian(Symbol.WeightMu, Symbol.WeightSigma);
     }
 
     VariableValue = Symbol.GetVariableValues(VariableName).SampleRandom(random);

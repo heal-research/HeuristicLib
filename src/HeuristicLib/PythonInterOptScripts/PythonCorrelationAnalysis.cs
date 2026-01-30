@@ -32,7 +32,7 @@ public static class PythonCorrelationAnalysis {
     var evaluator = new DirectEvaluator<RealVector>();
     return solutions.ParallelSelect(random, (i, solution, r) => {
       var n = Enumerable.Range(0, count).Select(_ =>
-        NormalDistributedRandomPolar.NextSphere(r, solution.ToArray(), delta, solution.Count, false)).ToArray();
+        r.NextSphere(solution.ToArray(), delta, solution.Count, false)).ToArray();
       var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
       var d = OnlinePearsonsRCalculator.Calculate(
         objectives.Select(x => x[0]),

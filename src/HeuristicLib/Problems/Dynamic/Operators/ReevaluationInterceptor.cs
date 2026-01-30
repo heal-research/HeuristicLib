@@ -40,16 +40,12 @@ public class ReevaluationInterceptor<T, TR, TE, TP> : IInterceptor<T, TR, TE, TP
     var r = currentIterationResult;
     if (inner != null)
       r = inner.Transform(currentIterationResult, previousIterationResult, random, encoding, problem);
-
     bool wasTrue = Interlocked.Exchange(ref requireReevaluation, 0) != 0;
-
     if (!wasTrue)
       return r;
-
     var genotypes = r.Population.Genotypes.ToArray();
     var fitnesses = evaluator.Evaluate(genotypes, random, encoding, problem);
     r = r with { Population = Population.From(genotypes, fitnesses) };
-
     return r;
   }
 }

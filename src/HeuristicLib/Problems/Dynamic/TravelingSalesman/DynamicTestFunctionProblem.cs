@@ -45,10 +45,10 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorE
   }
 
   protected override void Update() {
-    var shift = CurrentState.Shift.Select(x => x + NormalDistributedRandomPolar.NextDouble(EnvironmentRandom, sigma: DeviationSigma.ShiftStrength)).ToArray();
-    var rot = RandomRotationMatrix(CurrentState.Rotation, EnvironmentRandom, NormalDistributedRandomPolar.NextDouble(EnvironmentRandom, sigma: DeviationSigma.RotationStrength));
-    var inScale = CurrentState.InputScaling.Select(x => x + NormalDistributedRandomPolar.NextDouble(EnvironmentRandom, sigma: DeviationSigma.InputScalingStrength)).ToArray();
-    var outScale = CurrentState.OutputScaling + NormalDistributedRandomPolar.NextDouble(EnvironmentRandom, sigma: DeviationSigma.OutputScalingStrength);
+    var shift = CurrentState.Shift.Select(x => x + EnvironmentRandom.NextGaussian(sigma: DeviationSigma.ShiftStrength)).ToArray();
+    var rot = RandomRotationMatrix(CurrentState.Rotation, EnvironmentRandom, EnvironmentRandom.NextGaussian(sigma: DeviationSigma.RotationStrength));
+    var inScale = CurrentState.InputScaling.Select(x => x + EnvironmentRandom.NextGaussian(sigma: DeviationSigma.InputScalingStrength)).ToArray();
+    var outScale = CurrentState.OutputScaling + EnvironmentRandom.NextGaussian(sigma: DeviationSigma.OutputScalingStrength);
     CurrentState = new State(shift, rot, inScale, outScale);
 
     //Note: the scaling factors could become zero or negative, which may lead to degenerate situations.
@@ -60,7 +60,7 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorE
     double norm = 0.0;
 
     for (int i = 0; i < n; i++) {
-      v[i] = NormalDistributedRandomPolar.NextDouble(rng);
+      v[i] = rng.NextGaussian();
       norm += v[i] * v[i];
     }
 

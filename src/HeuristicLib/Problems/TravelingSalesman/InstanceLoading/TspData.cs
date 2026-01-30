@@ -19,7 +19,7 @@ public class TspData {
   /// </summary>
   public DistanceMeasure DistanceMeasure { get; set; }
   /// <summary>
-  /// Optional! The distances are given in form of a distance matrix.
+  /// Optional! The Distances are given in form of a distance matrix.
   /// </summary>
   /// <remarks>
   /// Either this property or <see cref="Coordinates"/> needs to be specified.
@@ -32,7 +32,7 @@ public class TspData {
   /// <remarks>
   /// Either this property or <see cref="Distances"/> needs to be specified.
   /// 
-  /// If no distance matrix is given, the distances have to be calculated by the
+  /// If no distance matrix is given, the Distances have to be calculated by the
   /// specified distance measure. If a distance matrix is given in addition to the
   /// coordinates, the distance matrix takes precedence and the coordinates are
   /// for display only.

@@ -7,10 +7,10 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions;
 /// <summary>
 /// ZDT5 is a binary-encoded multi-objective optimization problem and therefore can not fit into the RealVector TestFunctions
 /// </summary>
-public class ZDT5 : Problem<BoolVector, BoolVectorEncoding> {
+public class Zdt5 : Problem<BoolVector, BoolVectorEncoding> {
   private readonly int numberOfVariables;
 
-  public ZDT5(int n) : base(MultiObjective.Minimize(2), new BoolVectorEncoding(n)) {
+  public Zdt5(int n) : base(MultiObjective.Minimize(2), new BoolVectorEncoding(n)) {
     ArgumentOutOfRangeException.ThrowIfLessThan(n, 35);
     ArgumentOutOfRangeException.ThrowIfNotEqual((n - 30) % 5, 0);
     numberOfVariables = (n - 30) / 5 + 1;

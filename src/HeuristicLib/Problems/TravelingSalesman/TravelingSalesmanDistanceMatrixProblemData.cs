@@ -10,7 +10,7 @@ public class TravelingSalesmanDistanceMatrixProblemData : ITravelingSalesmanProb
   public TravelingSalesmanDistanceMatrixProblemData(double[,] distances) {
     if (distances.GetLength(0) != distances.GetLength(1)) throw new ArgumentException("The distance matrix must be square.");
     if (distances.GetLength(0) < 1) throw new ArgumentException("The distance matrix must have at least one city.");
-    this.distances = (double[,])distances.Clone(); // clone distances to prevent modification
+    this.distances = (double[,])distances.Clone(); // clone Distances to prevent modification
   }
 #pragma warning restore S2368
 

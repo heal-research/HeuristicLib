@@ -50,7 +50,7 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
 }
 
 public class NoRandomGenerator : IRandomNumberGenerator {
-  public static readonly NoRandomGenerator Instance = new NoRandomGenerator();
+  public static readonly NoRandomGenerator Instance = new();
   private NoRandomGenerator() { }
   public int Integer(int low, int high, bool inclusiveHigh = false) => throw new InvalidOperationException();
 
