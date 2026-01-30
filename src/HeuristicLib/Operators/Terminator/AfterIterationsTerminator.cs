@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators.Analyzer;
 using HEAL.HeuristicLib.Operators.Evaluator;
-using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -15,40 +14,6 @@ public class AfterIterationsTerminator<TGenotype>(int maximumIterations) : Termi
 
   public override bool ShouldTerminate() {
     return ++CurrentCount >= MaximumIterations;
-  }
-}
-
-public class TargetTerminator<TGenotype>(ObjectiveVector target) : Terminator<TGenotype, PopulationIterationResult<TGenotype>, IEncoding<TGenotype>, IProblem<TGenotype, IEncoding<TGenotype>>> {
-  public override bool ShouldTerminate(PopulationIterationResult<TGenotype> currentIterationState,
-                                       PopulationIterationResult<TGenotype>? previousIterationState,
-                                       IEncoding<TGenotype> encoding,
-                                       IProblem<TGenotype, IEncoding<TGenotype>> problem) =>
-    currentIterationState.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
-}
-
-public static class TerminationExtensions {
-  extension<TG, TE, TP, TR>(IAlgorithmBuilder<TG, TE, TP, TR> builder)
-    where TG : class
-    where TE : class, IEncoding<TG>
-    where TP : class, IProblem<TG, TE>
-    where TR : class, IIterationResult {
-    public void SetMaxEvaluations(int maxEvaluations, bool preventOverBudget = false) {
-      builder.AddAttachment(new AfterEvaluationsTermination<TG>(maxEvaluations, preventOverBudget));
-    }
-
-    public void SetMaxIterations(int maxIteration) {
-      builder.Terminator = new AnyTerminator<TG, TR, TE, TP>(builder.Terminator, new AfterIterationsTerminator<TG>(maxIteration));
-    }
-  }
-
-  extension<TG, TE, TP, TR>(IAlgorithmBuilder<TG, TE, TP, TR> builder)
-    where TG : class
-    where TE : class, IEncoding<TG>
-    where TP : class, IProblem<TG, TE>
-    where TR : PopulationIterationResult<TG> {
-    public void SetTargetObjective(ObjectiveVector target) {
-      builder.Terminator = new AnyTerminator<TG, TR, TE, TP>(builder.Terminator, new TargetTerminator<TG>(target));
-    }
   }
 }
 
@@ -74,8 +39,8 @@ public class AfterEvaluationsTermination<TGenotype>(int maximumEvaluations, bool
 
   public class EvaluationLimitEvaluator<T1, TE1, TP1>(AfterEvaluationsTermination<TGenotype> termination, IEvaluator<T1, TE1, TP1> evaluator)
     : BatchEvaluator<T1, TE1, TP1> where TE1 : class, IEncoding<T1> where TP1 : class, IProblem<T1, TE1> {
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> solutions, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
-      var count = solutions.Count;
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> genotypes, IRandomNumberGenerator random, TE1 encoding, TP1 problem) {
+      var count = genotypes.Count;
       var n = count;
 
       if (termination.PreventOverBudget) {
@@ -86,8 +51,8 @@ public class AfterEvaluationsTermination<TGenotype>(int maximumEvaluations, bool
 
       termination.CurrentCount += n;
       if (n == count)
-        return evaluator.Evaluate(solutions, random, encoding, problem);
-      return evaluator.Evaluate(solutions.Take(n).ToList(), random, encoding, problem)
+        return evaluator.Evaluate(genotypes, random, encoding, problem);
+      return evaluator.Evaluate(genotypes.Take(n).ToList(), random, encoding, problem)
                       .Concat(Enumerable.Repeat(problem.Objective.Worst, count - n))
                       .ToArray();
     }

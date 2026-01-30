@@ -30,7 +30,7 @@ public static class RandomEnumerable {
     /// O(N) for all others.
     /// </remarks>
     /// <exception cref="ArgumentException">If the sequence is empty.</exception>
-    /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
+    /// <param name="random">The random number generator to use, its Double() method must produce values in the range [0;1)</param>
     /// <param name="count">The number of items to be selected.</param>
     /// <returns>An element that has been chosen randomly from the sequence.</returns>
     public T SampleRandom(IRandomNumberGenerator random) {
@@ -46,7 +46,7 @@ public static class RandomEnumerable {
     /// 
     /// The method is online.
     /// </remarks>
-    /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
+    /// <param name="random">The random number generator to use, its Double() method must produce values in the range [0;1)</param>
     /// <param name="count">The number of items to be selected.</param>
     /// <returns>A sequence of elements that have been chosen randomly.</returns>
     public IEnumerable<T> SampleRandom(IRandomNumberGenerator random, int count) {
@@ -83,7 +83,7 @@ public static class RandomEnumerable {
     /// 
     /// The method is online.
     /// </remarks>
-    /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
+    /// <param name="random">The random number generator to use, its Double() method must produce values in the range [0;1)</param>
     /// <param name="count">The number of items to be selected.</param>
     /// <param name="sourceCount">Optional parameter specifying the number of elements in the source enumerations</param>
     /// <returns>A sequence of elements that have been chosen randomly.</returns>
@@ -119,7 +119,7 @@ public static class RandomEnumerable {
     /// 
     /// The method internally holds two arrays: One that is the sequence itself and another one for the values.
     /// </remarks>
-    /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
+    /// <param name="random">The random number generator to use, its Double() method must produce values in the range [0;1)</param>
     /// <param name="count">The number of items to be selected.</param>
     /// <param name="weights">The weight values for the items.</param>
     /// <param name="windowing">Whether to scale the proportional values or not.</param>
@@ -140,7 +140,7 @@ public static class RandomEnumerable {
     /// 
     /// The method does not check if the number of elements in source and weights are the same.
     /// </remarks>
-    /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
+    /// <param name="random">The random number generator to use, its Double() method must produce values in the range [0;1)</param>
     /// <param name="count">The number of items to be selected.</param>
     /// <param name="weights">The weight values for the items.</param>
     /// <param name="windowing">Whether to scale the proportional values or not.</param>
@@ -149,42 +149,67 @@ public static class RandomEnumerable {
     public IEnumerable<T> SampleProportionalWithoutRepetition(IRandomNumberGenerator random, int count, IEnumerable<double> weights, bool windowing = true, bool inverseProportional = false) {
       return source.SampleProportionalWithoutRepetition(random, weights, windowing, inverseProportional).Take(count);
     }
+
+    private IEnumerable<T> SampleProportional(IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
+      var sourceArray = source.ToArray();
+      var valueArray = PrepareProportional(weights, windowing, inverseProportional);
+      var total = valueArray.Sum();
+
+      while (true) {
+        var index = 0;
+        double ball = valueArray[index], sum = random.Random() * total;
+        while (ball < sum)
+          ball += valueArray[++index];
+        yield return sourceArray[index];
+      }
+    }
+
+    private IEnumerable<T> SampleProportionalWithoutRepetition(IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
+      var valueArray = PrepareProportional(weights, windowing, inverseProportional);
+      var list = new LinkedList<Tuple<T, double>>(source.Zip(valueArray, Tuple.Create));
+      var total = valueArray.Sum();
+
+      while (list.Count > 0) {
+        var cur = list.First;
+        double ball = cur!.Value.Item2, sum = random.Random() * total; // assert: sum < total. When there is only one item remaining: sum < ball
+        while (ball < sum && cur.Next != null) {
+          cur = cur.Next;
+          ball += cur.Value.Item2;
+        }
+
+        yield return cur.Value.Item1;
+        list.Remove(cur);
+        total -= cur.Value.Item2;
+      }
+    }
+
+    /// <summary>
+    /// Shuffles an enumerable and returns a new enumerable according to the Fisher-Yates shuffle.
+    /// </summary>
+    /// <remarks>
+    /// Note that the source enumerable is transformed into an array.
+    /// 
+    /// The implementation is described in http://stackoverflow.com/questions/1287567/c-is-using-random-and-orderby-a-good-shuffle-algorithm.
+    /// </remarks>
+    /// <param name="random">The random number generator, its Next(n) method must deliver uniformly distributed random numbers in the range [0;n).</param>
+    /// <returns>An enumerable with the elements shuffled.</returns>
+    public IEnumerable<T> Shuffle(IRandomNumberGenerator random) {
+      var elements = source.ToArray();
+      for (var i = elements.Length - 1; i > 0; i--) {
+        // Swap element "i" with a random earlier element (including itself)
+        var swapIndex = random.Integer(i + 1);
+        yield return elements[swapIndex];
+        elements[swapIndex] = elements[i];
+        // we don't actually perform the swap, we can forget about the
+        // swapped element because we already returned it.
+      }
+
+      if (elements.Length > 0)
+        yield return elements[0];
+    }
   }
 
   #region Proportional Helpers
-  private static IEnumerable<T> SampleProportional<T>(this IEnumerable<T> source, IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
-    var sourceArray = source.ToArray();
-    var valueArray = PrepareProportional(weights, windowing, inverseProportional);
-    var total = valueArray.Sum();
-
-    while (true) {
-      var index = 0;
-      double ball = valueArray[index], sum = random.Random() * total;
-      while (ball < sum)
-        ball += valueArray[++index];
-      yield return sourceArray[index];
-    }
-  }
-
-  private static IEnumerable<T> SampleProportionalWithoutRepetition<T>(this IEnumerable<T> source, IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional) {
-    var valueArray = PrepareProportional(weights, windowing, inverseProportional);
-    var list = new LinkedList<Tuple<T, double>>(source.Zip(valueArray, Tuple.Create));
-    var total = valueArray.Sum();
-
-    while (list.Count > 0) {
-      var cur = list.First;
-      double ball = cur!.Value.Item2, sum = random.Random() * total; // assert: sum < total. When there is only one item remaining: sum < ball
-      while (ball < sum && cur.Next != null) {
-        cur = cur.Next;
-        ball += cur.Value.Item2;
-      }
-
-      yield return cur.Value.Item1;
-      list.Remove(cur);
-      total -= cur.Value.Item2;
-    }
-  }
-
   private static double[] PrepareProportional(IEnumerable<double> weights, bool windowing, bool inverseProportional) {
     double maxValue = double.MinValue, minValue = double.MaxValue;
     var valueArray = weights.ToArray();
@@ -213,7 +238,7 @@ public static class RandomEnumerable {
 
   private static void ProportionalScale(double[] values, double minValue) {
     for (var i = 0; i < values.Length; i++) {
-      values[i] = values[i] - minValue;
+      values[i] -= minValue;
     }
   }
 
@@ -223,31 +248,4 @@ public static class RandomEnumerable {
     }
   }
   #endregion
-
-  /// <summary>
-  /// Shuffles an enumerable and returns a new enumerable according to the Fisher-Yates shuffle.
-  /// </summary>
-  /// <remarks>
-  /// Note that the source enumerable is transformed into an array.
-  /// 
-  /// The implementation is described in http://stackoverflow.com/questions/1287567/c-is-using-random-and-orderby-a-good-shuffle-algorithm.
-  /// </remarks>
-  /// <typeparam name="T">The type of the items that are to be shuffled.</typeparam>
-  /// <param name="source">The enumerable that contains the items.</param>
-  /// <param name="random">The random number generator, its Next(n) method must deliver uniformly distributed random numbers in the range [0;n).</param>
-  /// <returns>An enumerable with the elements shuffled.</returns>
-  public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> source, IRandomNumberGenerator random) {
-    var elements = source.ToArray();
-    for (var i = elements.Length - 1; i > 0; i--) {
-      // Swap element "i" with a random earlier element (including itself)
-      var swapIndex = random.Integer(i + 1);
-      yield return elements[swapIndex];
-      elements[swapIndex] = elements[i];
-      // we don't actually perform the swap, we can forget about the
-      // swapped element because we already returned it.
-    }
-
-    if (elements.Length > 0)
-      yield return elements[0];
-  }
 }

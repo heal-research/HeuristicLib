@@ -22,10 +22,10 @@ public class QualityCurveAnalysis<TGenotype> : AttachedAnalysis<TGenotype> where
   private ISolution<TGenotype>? best;
   private int evalCount;
 
-  public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> res, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
+  public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values, IEncoding<TGenotype> encoding, IProblem<TGenotype, IEncoding<TGenotype>> problem) {
     for (var i = 0; i < genotypes.Count; i++) {
       var genotype = genotypes[i];
-      var q = res[i];
+      var q = values[i];
       evalCount++;
 
       if (best is not null) {

@@ -10,12 +10,11 @@ using HEAL.HeuristicLib.Operators.Selector;
 using HEAL.HeuristicLib.Operators.Terminator;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.Decoder;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests;
 
-public class DummyEvaluator {
+public static class DummyEvaluator {
   public static readonly ObjectiveVector DummyObjectives = new(0.0);
 }
 
@@ -34,7 +33,6 @@ public class GeneticAlgorithmTests {
     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
-    var decoder = Decoder.Identity<RealVector>();
     // var DirectEvaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector<RealVector>();
     var replacement = new PlusSelectionReplacer<RealVector>();

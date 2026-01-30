@@ -11,14 +11,13 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator {
     return CalculateHoeffdings(originalValues, estimatedValues, out errorState);
   }
 
-  public static double CalculateHoeffdings(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
-    var d = HoeffD(originalValues, estimatedValues, out errorState);
-    if (errorState != OnlineCalculatorError.None) return double.NaN;
-    return d;
-  }
-
   public double Calculate(IEnumerable<Tuple<double, double>> values, out OnlineCalculatorError errorState) {
     return HoeffD(values.Select(v => v.Item1), values.Select(v => v.Item2), out errorState);
+  }
+
+  public static double CalculateHoeffdings(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
+    var d = HoeffD(originalValues, estimatedValues, out errorState);
+    return errorState != OnlineCalculatorError.None ? double.NaN : d;
   }
 
   /// <summary>
@@ -26,10 +25,11 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator {
   /// Source: hoeffd.r from R package hmisc http://cran.r-project.org/web/packages/Hmisc/index.html
   /// </summary>
   private static double HoeffD(IEnumerable<double> xs, IEnumerable<double> ys, out OnlineCalculatorError errorState) {
-    var rx = TiedRank(xs);
+    var x = xs as ICollection<double> ?? xs.ToArray();
+    var rx = TiedRank(x);
     var ry = TiedRank(ys);
     if (rx.Length != ry.Length) throw new ArgumentException("The number of elements in xs and ys does not match");
-    var rxy = TiedRank(xs, ys);
+    var rxy = TiedRank(x, ys);
 
     var n = rx.Length;
     double q = 0, r = 0, s = 0;

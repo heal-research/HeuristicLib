@@ -5,16 +5,7 @@ using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Formatters;
 
 public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressionTreeStringFormatter {
-  public bool Indent {
-    get => indent;
-    set => indent = value;
-  }
-
-  private bool indent;
-
-  public SymbolicExpressionTreeGraphvizFormatter() {
-    Indent = true;
-  }
+  public bool Indent { get; set; } = true;
 
   public string Format(SymbolicExpressionTree symbolicExpressionTree) {
     var nodeCounter = 1;

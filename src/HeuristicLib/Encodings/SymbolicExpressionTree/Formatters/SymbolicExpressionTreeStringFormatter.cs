@@ -8,7 +8,7 @@ public class SymbolicExpressionTreeStringFormatter : ISymbolicExpressionTreeStri
     set;
   } = true;
 
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) {
+  public virtual string Format(SymbolicExpressionTree symbolicExpressionTree) {
     return FormatRecursively(symbolicExpressionTree.Root, 0);
   }
 

@@ -1,13 +1,14 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class FOneScoreCalculator {
+public static class FOneScoreCalculator {
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
-    if (originalValues.Distinct().Skip(2).Any()) {
+    var enumerable = originalValues as ICollection<double> ?? originalValues.ToArray();
+    if (enumerable.Distinct().Skip(2).Any()) {
       // TODO: we could use ClassificationPerformanceMeasuresCalculator instead of the ConfusionMatrixCalculator below to handle multi-class problems
       throw new ArgumentException("F1 score can only be calculated for binary classification.");
     }
 
-    var confusionMatrix = ConfusionMatrixCalculator.Calculate(originalValues, estimatedValues, out errorState);
+    var confusionMatrix = ConfusionMatrixCalculator.Calculate(enumerable, estimatedValues, out errorState);
     if (!errorState.Equals(OnlineCalculatorError.None)) {
       return double.NaN;
     }

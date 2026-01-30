@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.OperatorExtensions.MeasuredOperators;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creator;
 using HEAL.HeuristicLib.Operators.Crossover;
 using HEAL.HeuristicLib.Operators.Evaluator;
@@ -34,7 +33,6 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
   private readonly AgedSelector<TGenotype, TEncoding, TProblem> agedSelector;
   private readonly AgedReplacer<TGenotype, TEncoding, TProblem> agedReplacer;
 
-  private readonly MultiMutator<TGenotype, TEncoding, TProblem> internalMutator;
   private readonly IReplacer<TGenotype, TEncoding, TProblem> internalReplacer;
 
   public OperatorMetric CreatorMetric { get; protected set; } = OperatorMetric.Zero;
@@ -67,12 +65,12 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     //Replacer = replacer;
     Elites = elites;
 
-    internalMutator = new MultiMutator<TGenotype, TEncoding, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
+    var internalMutator1 = new MultiMutator<TGenotype, TEncoding, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
     internalReplacer = new ElitismReplacer<TGenotype>(elites);
 
     agedCreator = new AgedGenotypeCreator<TGenotype, TEncoding, TProblem>(Creator);
     agedCrossover = new AgedCrossover<TGenotype, TEncoding, TProblem>(Crossover);
-    agedMutator = new AgedMutator<TGenotype, TEncoding, TProblem>(internalMutator);
+    agedMutator = new AgedMutator<TGenotype, TEncoding, TProblem>(internalMutator1);
     agedSelector = new AgedSelector<TGenotype, TEncoding, TProblem>(Selector);
     agedReplacer = new AgedReplacer<TGenotype, TEncoding, TProblem>(internalReplacer);
   }
@@ -92,11 +90,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TEncoding, TProblem>
     var initialLayerPopulation = agedCreator.Create(PopulationSize, iterationRandom, searchSpace, problem);
     var endCreating = Stopwatch.GetTimestamp();
     CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
-
-    var startEvaluating = Stopwatch.GetTimestamp();
     var fitnesses = Evaluator.Evaluate(initialLayerPopulation.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerEncoding, problem.InnerProblem);
-    var endEvaluating = Stopwatch.GetTimestamp();
-
     var result = new AlpsIterationResult<TGenotype>() { Population = [Population.From(initialLayerPopulation, fitnesses)] };
 
     return result;

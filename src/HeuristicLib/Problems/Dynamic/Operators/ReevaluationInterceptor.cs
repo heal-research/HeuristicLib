@@ -28,7 +28,7 @@ public class ReevaluationInterceptor<T, TR, TE, TP> : IInterceptor<T, TR, TE, TP
   private readonly IInterceptor<T, TR, TE, TP>? inner;
   private readonly IEvaluator<T, TE, TP> evaluator;
 
-  private int requireReevaluation = 0;
+  private int requireReevaluation;
 
   public ReevaluationInterceptor(IInterceptor<T, TR, TE, TP>? inner, IEvaluator<T, TE, TP> evaluator, TP problem) {
     this.inner = inner;

@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems;
 
-public class FuncProblem {
+public static class FuncProblem {
   public static FuncProblem<TGenotype, TEncoding> Create<TGenotype, TEncoding>(
     Func<TGenotype, double> evaluateFunc,
     TEncoding encoding,

@@ -8,14 +8,16 @@ using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
 internal static class StringBuilderExtensions {
-  internal static void AppendIndented(this StringBuilder strBuilder, int level, string text) {
-    strBuilder.Append(new string(' ', level * 2));
-    strBuilder.Append(text);
-  }
+  extension(StringBuilder strBuilder) {
+    internal void AppendIndented(int level, string text) {
+      strBuilder.Append(new string(' ', level * 2));
+      strBuilder.Append(text);
+    }
 
-  internal static void AppendLineIndented(this StringBuilder strBuilder, int level, string text) {
-    strBuilder.Append(new string(' ', level * 2));
-    strBuilder.AppendLine(text);
+    internal void AppendLineIndented(int level, string text) {
+      strBuilder.Append(new string(' ', level * 2));
+      strBuilder.AppendLine(text);
+    }
   }
 }
 
@@ -32,7 +34,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     return strBuilder.ToString();
   }
 
-  private void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree) {
+  private static void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree) {
     var floatVarNames = new HashSet<string>();
     foreach (var node in symbolicExpressionTree.IterateNodesPostfix().Where(x => x is VariableTreeNode || x is VariableConditionTreeNode)) {
       floatVarNames.Add(((VariableTreeNode)node).VariableName);
@@ -152,7 +154,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     } else {
       switch (node) {
         case VariableTreeNode treeNode: {
-          strBuilder.AppendFormat("{0} * {1}", VariableName2Identifier(treeNode.VariableName), treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture));
+          strBuilder.Append($"{VariableName2Identifier(treeNode.VariableName)} * {treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
           break;
         }
         case NumberTreeNode numNode:
@@ -161,7 +163,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
         default: {
           switch (node.Symbol) {
             case FactorVariable: {
-              var factorNode = node as FactorVariableTreeNode;
+              var factorNode = (FactorVariableTreeNode)node;
               FormatFactor(level, factorNode, strBuilder);
               break;
             }
@@ -202,24 +204,24 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.AppendFormat(") / {0}", node.Subtrees.Count());
   }
 
-  private string VariableName2Identifier(string variableName) {
+  private static string VariableName2Identifier(string variableName) {
     return "@" + variableName.Replace(' ', '_');
   }
 
-  private void GenerateFooter(StringBuilder strBuilder) {
+  private static void GenerateFooter(StringBuilder strBuilder) {
     strBuilder.Append(Environment.NewLine);
     strBuilder.AppendLine("END");
   }
 
   private void FormatOperator(int level, SymbolicExpressionTreeNode node, string symbol, StringBuilder strBuilder) {
-    strBuilder.Append("(");
+    strBuilder.Append('(');
     foreach (var child in node.Subtrees) {
       FormatRecursively(level, child, strBuilder);
       if (child != node.Subtrees.Last())
         strBuilder.Append(" " + symbol + " ");
     }
 
-    strBuilder.Append(")");
+    strBuilder.Append(')');
   }
 
   private void FormatFunction(int level, SymbolicExpressionTreeNode node, string function, StringBuilder strBuilder) {
@@ -230,7 +232,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
         strBuilder.Append(", ");
     }
 
-    strBuilder.Append(")");
+    strBuilder.Append(')');
   }
 
   private void FormatDivision(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
@@ -245,13 +247,13 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
         FormatRecursively(level, node.GetSubtree(i), strBuilder);
       }
 
-      strBuilder.Append(")");
+      strBuilder.Append(')');
     }
   }
 
   private void FormatSubtraction(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
     if (node.SubtreeCount == 1) {
-      strBuilder.Append("-");
+      strBuilder.Append('-');
       FormatRecursively(level, node.GetSubtree(0), strBuilder);
       return;
     }
@@ -268,7 +270,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.AppendLineIndented(level, "))");
   }
 
-  private void FormatFactor(int level, FactorVariableTreeNode node, StringBuilder strBuilder) {
+  private static void FormatFactor(int level, FactorVariableTreeNode node, StringBuilder strBuilder) {
     strBuilder.AppendLine("( ");
     strBuilder.AppendLineIndented(level + 1, $"CASE {VariableName2Identifier(node.VariableName)}");
     foreach (var name in node.Symbol.GetVariableValues(node.VariableName)) {

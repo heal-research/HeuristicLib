@@ -1,5 +1,7 @@
 ﻿using HEAL.HeuristicLib.Encodings.RealVector;
 
+#pragma warning disable S2368
+
 namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 
 public class RotatedTestFunction(double[,] rotation, ITestFunction inner) : MetaTestFunction(inner) {
@@ -13,10 +15,8 @@ public class RotatedTestFunction(double[,] rotation, ITestFunction inner) : Meta
     var nRows = r.GetLength(0);
     var nCols = r.GetLength(1);
 
-    if (v.Count != nCols)
-      throw new ArgumentException("Vector length must match matrix column count.", nameof(v));
-    if (result.Length != nRows)
-      throw new ArgumentException("Result length must match matrix row count.", nameof(result));
+    ArgumentOutOfRangeException.ThrowIfNotEqual(v.Count, nCols);
+    ArgumentOutOfRangeException.ThrowIfNotEqual(result.Length, nRows);
 
     for (var i = 0; i < nRows; i++) {
       var sum = 0.0;

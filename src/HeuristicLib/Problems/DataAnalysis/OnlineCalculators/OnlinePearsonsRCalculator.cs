@@ -13,7 +13,7 @@ public class OnlinePearsonsRCalculator {
       double xVar = sxCalculator.PopulationVariance;
       double yVar = syCalculator.PopulationVariance;
 
-      if (xVar == 0 || yVar == 0)
+      if (xVar.IsAlmost(0.0) || yVar.IsAlmost(0.0))
         return 0.0;
 
       var r = covCalculator.Covariance / (Math.Sqrt(xVar) * Math.Sqrt(yVar));

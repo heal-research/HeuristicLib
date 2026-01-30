@@ -10,7 +10,7 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
   private readonly QuadraticAssignmentData baseData;
   private readonly double sigma;
 
-  private double[,] noisyFlows; // current state
+  private readonly double[,] noisyFlows; // current state
 
   public NoisyFlowQuadraticAssignmentProblem(
     QuadraticAssignmentData problemData,
@@ -56,16 +56,8 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
 
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
-        noisyFlows[i, j] = f0[i, j] + sigma * NextGaussian(EnvironmentRandom);
+        noisyFlows[i, j] = f0[i, j] + EnvironmentRandom.NextGaussian(0, sigma);
       }
     }
-  }
-
-  // Box–Muller; uses only Uniform(0,1) from your RNG
-  private static double NextGaussian(IRandomNumberGenerator rng) {
-    // protect log(0)
-    double u1 = Math.Max(double.Epsilon, rng.NextDouble());
-    double u2 = rng.Double();
-    return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
   }
 }

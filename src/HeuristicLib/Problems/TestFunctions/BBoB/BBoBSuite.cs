@@ -1,4 +1,7 @@
-﻿namespace HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
+﻿// ReSharper disable UnusedParameter.Local
+
+#pragma warning disable S1172
+namespace HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 
 public static class BBoBSuite {
   public static string GetInstancesByYear(int year) => year switch {
@@ -410,21 +413,20 @@ public static class BBoBSuite {
     }
   }
 
-  private static void Bbob2009Gauss(double[] g, int N, long seed) {
-    if (g == null)
-      throw new ArgumentNullException(nameof(g));
-    if (N < 0 || N > g.Length)
-      throw new ArgumentOutOfRangeException(nameof(N));
-    if (2 * N >= 6000)
-      throw new ArgumentException("2 * N must be < 6000, as in original COCO code.", nameof(N));
+  private static void Bbob2009Gauss(double[] g, int n, long seed) {
+    ArgumentNullException.ThrowIfNull(g);
+    if (n < 0 || n > g.Length)
+      throw new ArgumentOutOfRangeException(nameof(n));
+    if (2 * n >= 6000)
+      throw new ArgumentException("2 * N must be < 6000, as in original COCO code.", nameof(n));
 
     // Generate 2N uniforms using the COCO RNG we translated earlier
-    var uniftmp = new double[2 * N];
-    Bbob2009Unif(uniftmp, 2 * N, seed);
+    var uniftmp = new double[2 * n];
+    Bbob2009Unif(uniftmp, 2 * n, seed);
 
-    for (var i = 0; i < N; i++) {
+    for (var i = 0; i < n; i++) {
       var u1 = uniftmp[i];
-      var u2 = uniftmp[N + i];
+      var u2 = uniftmp[n + i];
 
       // Box-Muller transform
       var val = Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
@@ -454,22 +456,23 @@ public static class BBoBSuite {
   }
 
   private static void Reshape(double[][] B, double[] vector, int rows, int cols) {
-    for (var col = 0; col < cols; col++)
-    for (var row = 0; row < rows; row++)
-      B[row][col] = vector[col * rows + row];
+    for (var col = 0; col < cols; col++) {
+      for (var row = 0; row < rows; row++)
+        B[row][col] = vector[col * rows + row];
+    }
   }
 
-  private static void ComputeRotation(double[][] B, long seed, int dim) {
+  private static void ComputeRotation(double[][] b, long seed, int dim) {
     if (dim * dim >= 2000)
       throw new ArgumentException("DIM * DIM must be < 2000 per COCO constraint.");
 
-    var gvect = new double[dim * dim];
+    var gVector = new double[dim * dim];
 
     // Fill with Gaussians using the COCO RNG
-    Bbob2009Gauss(gvect, dim * dim, seed);
+    Bbob2009Gauss(gVector, dim * dim, seed);
 
     // Reshape gvect → matrix B
-    Reshape(B, gvect, dim, dim);
+    Reshape(b, gVector, dim, dim);
 
     // Gram-Schmidt orthonormalization of columns
     for (var i = 0; i < dim; i++) {
@@ -478,21 +481,21 @@ public static class BBoBSuite {
         var dot = 0.0;
 
         for (var k = 0; k < dim; k++)
-          dot += B[k][i] * B[k][j];
+          dot += b[k][i] * b[k][j];
 
         for (var k = 0; k < dim; k++)
-          B[k][i] -= dot * B[k][j];
+          b[k][i] -= dot * b[k][j];
       }
 
       // Normalize column i
       var norm = 0.0;
       for (var k = 0; k < dim; k++)
-        norm += B[k][i] * B[k][i];
+        norm += b[k][i] * b[k][i];
 
       norm = Math.Sqrt(norm);
 
       for (var k = 0; k < dim; k++)
-        B[k][i] /= norm;
+        b[k][i] /= norm;
     }
   }
 

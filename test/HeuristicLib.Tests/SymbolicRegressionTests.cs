@@ -213,7 +213,7 @@ public class SymbolicRegressionTests {
     const int iterations = 200;
     var i = 0;
     var file = @"TestData\192_vineyard.tsv";
-    var res = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
+    PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
       new PythonGenealogyAnalysis.SymRegExperimentParameters {
         Seed = AlgorithmRandomSeed,
         Iterations = iterations
@@ -233,8 +233,8 @@ public class SymbolicRegressionTests {
   [Fact]
   public void TestPlayground3() {
     var t = DateTime.Now;
-    var it = 20;
-    var res = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable("d:\\Projekte\\HCAI\\HeuristicLib\\HCAI-Scripts\\data\\FeynmanICh40Eq1.csv",
+    const int it = 20;
+    PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(@"d:\Projekte\HCAI\HeuristicLib\HCAI-Scripts\data\FeynmanICh40Eq1.csv",
       new PythonGenealogyAnalysis.SymRegExperimentParameters() {
         PopulationSize = 100,
         Iterations = it,

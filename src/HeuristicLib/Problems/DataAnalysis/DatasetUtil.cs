@@ -68,35 +68,35 @@ public static class DatasetUtil {
   //  return variableRanges;
   //}
 
-  private static bool GetEqualValues(this Dictionary<ValuesType, ValuesType> variableValuesMapping, ValuesType originalValues, out ValuesType matchingValues) {
-    if (variableValuesMapping.TryGetValue(originalValues, out var value)) {
-      matchingValues = value;
-      return true;
-    }
+  //private static bool GetEqualValues(this Dictionary<ValuesType, ValuesType> variableValuesMapping, ValuesType originalValues, out ValuesType matchingValues) {
+  //  if (variableValuesMapping.TryGetValue(originalValues, out var value)) {
+  //    matchingValues = value;
+  //    return true;
+  //  }
 
-    matchingValues = variableValuesMapping.FirstOrDefault(kv => kv.Key == kv.Value && EqualVariableValues(originalValues, kv.Key)).Key;
-    var result = true;
-    if (matchingValues == null) {
-      matchingValues = originalValues;
-      result = false;
-    }
+  //  matchingValues = variableValuesMapping.FirstOrDefault(kv => kv.Key == kv.Value && EqualVariableValues(originalValues, kv.Key)).Key;
+  //  var result = true;
+  //  if (matchingValues == null) {
+  //    matchingValues = originalValues;
+  //    result = false;
+  //  }
 
-    variableValuesMapping[originalValues] = matchingValues;
-    return result;
-  }
+  //  variableValuesMapping[originalValues] = matchingValues;
+  //  return result;
+  //}
 
-  private static bool EqualVariableValues(ValuesType values1, ValuesType values2) {
-    //compare variable names for equality
-    if (!values1.Keys.SequenceEqual(values2.Keys)) return false;
-    foreach (var key in values1.Keys) {
-      var v1 = values1[key];
-      var v2 = values2[key];
-      if (v1.Count != v2.Count) return false;
-      for (var i = 0; i < v1.Count; i++) {
-        if (!v1[i]!.Equals(v2[i])) return false;
-      }
-    }
+  //private static bool EqualVariableValues(ValuesType values1, ValuesType values2) {
+  //  //compare variable names for equality
+  //  if (!values1.Keys.SequenceEqual(values2.Keys)) return false;
+  //  foreach (var key in values1.Keys) {
+  //    var v1 = values1[key];
+  //    var v2 = values2[key];
+  //    if (v1.Count != v2.Count) return false;
+  //    for (var i = 0; i < v1.Count; i++) {
+  //      if (!v1[i]!.Equals(v2[i])) return false;
+  //    }
+  //  }
 
-    return true;
-  }
+  //  return true;
+  //}
 }

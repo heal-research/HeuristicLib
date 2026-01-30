@@ -2,7 +2,8 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
+
+#pragma warning disable S2368
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
 

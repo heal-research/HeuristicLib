@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Operators.Creator;
-using HEAL.HeuristicLib.Operators.Evaluator;
 using HEAL.HeuristicLib.Operators.Mutator;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Operators.Selector;

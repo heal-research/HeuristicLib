@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Encodings.RealVector.Mutators;
 public class PolynomialMutator : Mutator<RealVector, RealVectorEncoding> {
   private readonly bool atLeastOnce;
   private readonly double eta;
-  public double GetVarProb(RealVectorEncoding encoding) => Math.Min(0.5, 1.0 / encoding.Length);
+  public static double GetVarProb(RealVectorEncoding encoding) => Math.Min(0.5, 1.0 / encoding.Length);
 
   public PolynomialMutator(double eta = 20, bool atLeastOnce = false) {
     this.atLeastOnce = atLeastOnce;
@@ -24,7 +24,7 @@ public class PolynomialMutator : Mutator<RealVector, RealVectorEncoding> {
 
     // Fill random mask (true with probability 'prob')
     for (var i = 0; i < n; i++) {
-      if (randomState.NextDouble() < prob)
+      if (randomState.Double() < prob)
         matrix[i] = true;
     }
 
@@ -100,7 +100,7 @@ public class PolynomialMutator : Mutator<RealVector, RealVectorEncoding> {
       var delta1 = (xj - lb) / denom;
       var delta2 = (ub - xj) / denom;
 
-      var r = random.NextDouble();
+      var r = random.Double();
       double deltaq;
 
       if (r <= 0.5) {

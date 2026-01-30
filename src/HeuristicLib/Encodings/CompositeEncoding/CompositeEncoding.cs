@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Encodings.CompositeEncoding;
+﻿//namespace HEAL.HeuristicLib.Encodings.CompositeEncoding;
 
 // public interface IRecordSearchSpace<TGenotype, TEncoding1, TEncoding2> : IEncoding<TGenotype, IRecordSearchSpace<TGenotype, TEncoding1, TEncoding2>> {
 //   TEncoding1 Encoding1 { get; }
@@ -34,3 +34,5 @@
 //     return TGenotype.Construct(child1, child2);
 //   }
 // }
+
+

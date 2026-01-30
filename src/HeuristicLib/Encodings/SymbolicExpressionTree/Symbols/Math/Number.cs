@@ -23,14 +23,6 @@ public sealed class Number : Symbol {
   }
   #endregion
 
-  private Number(Number original) : base(original.MinimumArity, original.DefaultArity, original.MaximumArity) {
-    MinValue = original.MinValue;
-    MaxValue = original.MaxValue;
-    ManipulatorMu = original.ManipulatorMu;
-    manipulatorSigma = original.manipulatorSigma;
-    multiplicativeManipulatorSigma = original.multiplicativeManipulatorSigma;
-  }
-
   public Number() : base(0, 0, 0) {
     ManipulatorMu = 0.0;
     manipulatorSigma = 1.0;

@@ -113,16 +113,18 @@ public sealed class InterpolatedQuadraticAssignmentProblem
     int n1 = dst.GetLength(1);
     double s = 1.0 - t;
 
-    for (int i = 0; i < n0; i++)
-    for (int j = 0; j < n1; j++)
-      dst[i, j] = s * x[i, j] + t * y[i, j];
+    for (int i = 0; i < n0; i++) {
+      for (int j = 0; j < n1; j++)
+        dst[i, j] = s * x[i, j] + t * y[i, j];
+    }
   }
 
   private static void CopyInto(double[,] dst, double[,] src) {
     int n0 = dst.GetLength(0);
     int n1 = dst.GetLength(1);
-    for (int i = 0; i < n0; i++)
-    for (int j = 0; j < n1; j++)
-      dst[i, j] = src[i, j];
+    for (int i = 0; i < n0; i++) {
+      for (int j = 0; j < n1; j++)
+        dst[i, j] = src[i, j];
+    }
   }
 }

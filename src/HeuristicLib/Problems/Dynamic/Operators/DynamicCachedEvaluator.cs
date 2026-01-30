@@ -11,7 +11,7 @@ public class DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
   where TKey : notnull
   where TGenotype : class {
   public int GraceCount { get; init; } = int.MaxValue;
-  private int hitCount = 0;
+  private int hitCount;
 
   public DynamicCachedEvaluator(
     Func<TGenotype, TKey> keySelector,

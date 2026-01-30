@@ -7,6 +7,8 @@ namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : PermutationProblem(SingleObjective.Minimize, GetEncoding(problemData)) /*, IDeterministicProblem<Permutation>*/ {
   public ITravelingSalesmanProblemData ProblemData { get; } = problemData;
 
+  public TravelingSalesmanProblem() : this(new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates)) { }
+
   public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random) {
     var totalDistance = 0.0;
     for (var i = 0; i < solution.Count - 1; i++) totalDistance += ProblemData.GetDistance(solution[i], solution[i + 1]);

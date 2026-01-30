@@ -7,10 +7,8 @@ public interface IRandomNumberGenerator {
   int Integer(int low, int high, bool inclusiveHigh = false);
   double Random();
   double Double() => Random();
-  double Double(double min, double max) => NextDouble(min, max);
-  double NextDouble() => Random();
 
-  double NextDouble(double min, double max) {
+  double Double(double min, double max) {
     ArgumentOutOfRangeException.ThrowIfGreaterThan(min, max);
     return Random() * (max - min) + min;
   }
@@ -52,7 +50,7 @@ public interface IRandomNumberGenerator {
   }
 
   public RealVector NextSphere(double[] mu, double[] sigma, int dim, bool surface = true) {
-    var d = new RealVector(Enumerable.Range(0, dim).Select(_ => NextDouble()));
+    var d = new RealVector(Enumerable.Range(0, dim).Select(_ => Double()));
     if (surface)
       d /= d.Norm();
     d *= sigma;

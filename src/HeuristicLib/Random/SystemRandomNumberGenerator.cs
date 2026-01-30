@@ -1,6 +1,4 @@
-﻿using System.Reflection.Metadata.Ecma335;
-
-namespace HEAL.HeuristicLib.Random;
+﻿namespace HEAL.HeuristicLib.Random;
 
 public class SystemRandomNumberGenerator : IRandomNumberGenerator {
   private static readonly System.Random GlobalSeedGenerator = new();
@@ -37,8 +35,8 @@ public class SystemRandomNumberGenerator : IRandomNumberGenerator {
     return data;
   }
 
-  public int Integer(int minValue, int maxValue, bool inclusiveHigh = false) {
-    return random.Next(minValue, maxValue + (inclusiveHigh ? 1 : 0));
+  public int Integer(int low, int high, bool inclusiveHigh = false) {
+    return random.Next(low, high + (inclusiveHigh ? 1 : 0));
   }
 
   public double Random() {

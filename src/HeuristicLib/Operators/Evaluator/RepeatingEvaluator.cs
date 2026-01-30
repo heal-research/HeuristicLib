@@ -39,16 +39,17 @@ public class RepeatingEvaluator<TGenotype, TEncoding, TProblem> : BatchEvaluator
   private readonly Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator;
 
   public RepeatingEvaluator(IEvaluator<TGenotype, TEncoding, TProblem> evaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator) {
+    ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(repeats, 0);
     this.evaluator = evaluator;
     this.repeats = repeats;
     this.aggregator = aggregator;
   }
 
-  public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
+  public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
     ObjectiveVector[]? results = null;
 
     for (var i = 0; i < repeats; i++) {
-      var singleResult = evaluator.Evaluate(solutions, random, encoding, problem);
+      var singleResult = evaluator.Evaluate(genotypes, random, encoding, problem);
       if (results is null) {
         results = singleResult.ToArray();
       } else {
@@ -58,6 +59,6 @@ public class RepeatingEvaluator<TGenotype, TEncoding, TProblem> : BatchEvaluator
       }
     }
 
-    return results;
+    return results!;
   }
 }

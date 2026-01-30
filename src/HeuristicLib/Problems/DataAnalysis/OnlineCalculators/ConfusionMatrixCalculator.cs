@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class ConfusionMatrixCalculator {
+public static class ConfusionMatrixCalculator {
   public static readonly double[,] Empty = new double[0, 0];
 
   //TODO this has heavy multi-enumeration issues and more importantly it is not online 

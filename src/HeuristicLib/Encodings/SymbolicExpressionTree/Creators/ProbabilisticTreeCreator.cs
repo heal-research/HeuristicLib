@@ -26,7 +26,7 @@ public class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator {
     return new SymbolicExpressionTree(rootNode);
   }
 
-  private class TreeExtensionPoint(SymbolicExpressionTreeNode parent, int childIndex, int extensionPointDepth) {
+  private sealed class TreeExtensionPoint(SymbolicExpressionTreeNode parent, int childIndex, int extensionPointDepth) {
     public SymbolicExpressionTreeNode Parent { get; } = parent;
     public int ChildIndex { get; } = childIndex;
     public int ExtensionPointDepth { get; } = extensionPointDepth;

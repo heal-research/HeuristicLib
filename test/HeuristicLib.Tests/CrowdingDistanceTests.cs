@@ -116,8 +116,8 @@ public class CrowdingDistanceTests {
     Assert.Equal(3, result.Count);
 
     // Both extremes must be present in the selected set
-    Assert.True(result.Contains(offspring[0]));
-    Assert.True(result.Contains(offspring[^1]));
+    Assert.Contains(offspring[0], result);
+    Assert.Contains(offspring[^1], result);
   }
 
   // ---------------- helpers ----------------

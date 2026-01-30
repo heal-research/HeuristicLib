@@ -1,6 +1,8 @@
 ﻿using HEAL.HeuristicLib.Encodings.RealVector;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 
+#pragma warning disable S2368
+
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public static class TestFunctionExtensions {

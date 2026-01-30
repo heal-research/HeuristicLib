@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class MatthewsCorrelationCoefficientCalculator {
+public static class MatthewsCorrelationCoefficientCalculator {
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
     var confusionMatrix = ConfusionMatrixCalculator.Calculate(originalValues, estimatedValues, out errorState);
     return !errorState.Equals(OnlineCalculatorError.None) ? double.NaN : CalculateMcc(confusionMatrix);

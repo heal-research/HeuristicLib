@@ -4,19 +4,19 @@ namespace HEAL.HeuristicLib.Encodings.RealVector;
 
 public record RealVectorEncoding : Encoding<RealVector>, ISubencodingComparable<RealVectorEncoding> {
   public int Length { get; }
-  public Encodings.RealVector.RealVector Minimum { get; }
-  public Encodings.RealVector.RealVector Maximum { get; }
+  public RealVector Minimum { get; }
+  public RealVector Maximum { get; }
   //public IRepairer<RealVector> OutOfBoundsRepairer { get; }
 
-  public RealVectorEncoding(int length, Encodings.RealVector.RealVector minimum, Encodings.RealVector.RealVector maximum /*, OutOfBoundsStrategy outOfBoundsRepairer = OutOfBoundsStrategy.Clamp*/) {
-    if (!Encodings.RealVector.RealVector.AreCompatible(length, minimum, maximum)) throw new ArgumentException("Minimum and Maximum vector must be of length 1 or match the searchSpace length");
+  public RealVectorEncoding(int length, RealVector minimum, RealVector maximum /*, OutOfBoundsStrategy outOfBoundsRepairer = OutOfBoundsStrategy.Clamp*/) {
+    if (!RealVector.AreCompatible(length, minimum, maximum)) throw new ArgumentException("Minimum and Maximum vector must be of length 1 or match the searchSpace length");
     Length = length;
     Minimum = minimum;
     Maximum = maximum;
     //  OutOfBounds = outOfBounds;
   }
 
-  public override bool Contains(Encodings.RealVector.RealVector genotype) {
+  public override bool Contains(RealVector genotype) {
     return genotype.Count == Length
            && (genotype >= Minimum).All()
            && (genotype <= Maximum).All();

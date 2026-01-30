@@ -30,7 +30,7 @@ public static class Extensions {
 
   public static IReadOnlyList<TOut> ParallelSelect<TOut, TIn>(this IEnumerable<TIn> source, IRandomNumberGenerator random, Func<int, TIn, IRandomNumberGenerator, TOut> action) => source.ToArray().ParallelSelect(random, action);
 
-  private class DebugException(string message) : Exception(message);
+  public class DebugException(string message) : Exception(message);
 
   [Conditional("DEBUG")]
   public static void CheckDebug(bool value, string text) {

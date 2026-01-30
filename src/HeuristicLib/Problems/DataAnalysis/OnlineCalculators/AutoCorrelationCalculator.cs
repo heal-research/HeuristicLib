@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class AutoCorrelationCalculator {
+public static class AutoCorrelationCalculator {
   public static double[] Calculate(double[] values, out OnlineCalculatorError error) {
     if (values.Any(x => double.IsNaN(x) || double.IsInfinity(x))) {
       error = OnlineCalculatorError.InvalidValueAdded;

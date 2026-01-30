@@ -40,7 +40,7 @@ public sealed class InfixExpressionParser {
 
   private class Token {
     internal double DoubleVal;
-    internal string StrVal;
+    internal string StrVal = "";
     internal TokenType TokenType;
   }
 
@@ -57,17 +57,17 @@ public sealed class InfixExpressionParser {
   // format name <-> symbol 
   // the lookup table is also used in the corresponding formatter
   internal static readonly BidirectionalLookup<string, Symbol>
-    KnownSymbols = new BidirectionalLookup<string, Symbol>(StringComparer.InvariantCulture, new SymbolComparer());
-  internal static readonly SubFunctionSymbol SubFunctionSymbol = new SubFunctionSymbol();
+    KnownSymbols = new(StringComparer.InvariantCulture, new SymbolComparer());
+  internal static readonly SubFunctionSymbol SubFunctionSym = new();
 
-  private Number number = new Number();
-  private Constant minusOne = new Constant() { Value = -1 };
-  private Variable variable = new Variable();
-  private BinaryFactorVariable binaryFactorVar = new BinaryFactorVariable();
-  private FactorVariable factorVar = new FactorVariable();
+  private readonly Number number = new();
+  private readonly Constant minusOne = new() { Value = -1 };
+  private readonly Variable variable = new();
+  private readonly BinaryFactorVariable binaryFactorVar = new();
+  private readonly FactorVariable factorVar = new();
 
-  private ProgramRootSymbol programRootSymbol = new ProgramRootSymbol();
-  private StartSymbol startSymbol = new StartSymbol();
+  private readonly ProgramRootSymbol programRootSymbol = new();
+  private readonly StartSymbol startSymbol = new();
 
   static InfixExpressionParser() {
     // populate bidirectional lookup
@@ -135,7 +135,7 @@ public sealed class InfixExpressionParser {
     return new SymbolicExpressionTree(root);
   }
 
-  private IEnumerable<Token> GetAllTokens(string str) {
+  private static IEnumerable<Token> GetAllTokens(string str) {
     var pos = 0;
     while (true) {
       while (pos < str.Length && char.IsWhiteSpace(str[pos])) pos++;
@@ -208,8 +208,9 @@ public sealed class InfixExpressionParser {
             TokenType = TokenType.Identifier,
             StrVal = sb.ToString()
           };
-        } else
+        } else {
           yield return new Token { TokenType = TokenType.Na };
+        }
       } else if (str[pos] == '\'') {
         // read to next '
         pos++;
@@ -225,8 +226,9 @@ public sealed class InfixExpressionParser {
             TokenType = TokenType.Identifier,
             StrVal = sb.ToString()
           };
-        } else
+        } else {
           yield return new Token { TokenType = TokenType.Na };
+        }
       } else if (str[pos] == '+') {
         pos++;
         yield return new Token {
@@ -329,7 +331,7 @@ public sealed class InfixExpressionParser {
 
     var endTok = tokens.Dequeue();
     if (endTok.TokenType != TokenType.End)
-      throw new ArgumentException(string.Format("Expected end of expression (got {0})", endTok.StrVal));
+      throw new ArgumentException($"Expected end of expression (got {endTok.StrVal})");
 
     return expr;
   }
@@ -372,10 +374,8 @@ public sealed class InfixExpressionParser {
     return left;
   }
 
-  private Symbol GetSymbol(string tok) {
-    if (KnownSymbols.ContainsFirst(tok))
-      return KnownSymbols.GetByFirst(tok).FirstOrDefault();
-    return SubFunctionSymbol;
+  private static Symbol GetSymbol(string tok) {
+    return (KnownSymbols.ContainsFirst(tok) ? KnownSymbols.GetByFirst(tok).FirstOrDefault() : SubFunctionSym) ?? throw new ArgumentException($"token {tok} not known");
   }
 
   /// Term          = Fact { '*' Fact | '/' Fact }
@@ -388,7 +388,7 @@ public sealed class InfixExpressionParser {
     var left = ParseFact(tokens);
 
     var next = tokens.Peek();
-    while (next.StrVal == "*" || next.StrVal == "/") {
+    while (next.StrVal is "*" or "/") {
       switch (next.StrVal) {
         case "*": {
           tokens.Dequeue();
@@ -528,18 +528,15 @@ public sealed class InfixExpressionParser {
       throw new ArgumentException($"unexpected token in expression {next.StrVal}");
     }
 
-    {
-      // number
-      var numTok = tokens.Dequeue();
-      var constSy = new Constant { Value = numTok.DoubleVal };
-      return constSy.CreateTreeNode();
-    }
+    // number
+    var numTok = tokens.Dequeue();
+    var constSymbol = new Constant { Value = numTok.DoubleVal };
+    return constSymbol.CreateTreeNode();
   }
 
   private SymbolicExpressionTreeNode ParseNumber(Queue<Token> tokens) {
     // we distinguish parameters and constants. The values of parameters can be changed.
     // a parameter is written as '<' 'num' [ '=' ['+'|'-'] number ] '>' with an optional initialization 
-    Token numberTok = null;
     var leftAngleBracket = tokens.Dequeue();
     if (leftAngleBracket.TokenType != TokenType.LeftAngleBracket)
       throw new ArgumentException("opening bracket < expected");
@@ -557,23 +554,20 @@ public sealed class InfixExpressionParser {
         throw new ArgumentException("Expected '+', '-' or number.");
 
       var sign = 1.0;
-      if (next.StrVal == "+" || next.StrVal == "-") {
-        if (tokens.Dequeue().StrVal == "-") sign = -1.0;
+      if (next.StrVal is "+" or "-" && tokens.Dequeue().StrVal == "-") {
+        sign = -1.0;
       }
 
       if (tokens.Peek().TokenType != TokenType.Number) {
         throw new ArgumentException("Expected number.");
       }
 
-      numberTok = tokens.Dequeue();
+      var numberTok = tokens.Dequeue();
       numNode.Value = sign * numberTok.DoubleVal;
     }
 
     var rightAngleBracket = tokens.Dequeue();
-    if (rightAngleBracket.TokenType != TokenType.RightAngleBracket)
-      throw new ArgumentException("closing bracket > expected");
-
-    return numNode;
+    return rightAngleBracket.TokenType != TokenType.RightAngleBracket ? throw new ArgumentException("closing bracket > expected") : numNode;
   }
 
   private SymbolicExpressionTreeNode ParseVariable(Queue<Token> tokens, Token idTok) {
@@ -601,9 +595,11 @@ public sealed class InfixExpressionParser {
       var sign = 1.0;
       if (tokens.Peek().TokenType == TokenType.Operator) {
         var opToken = tokens.Dequeue();
-        if (opToken.StrVal == "+") sign = 1.0;
-        else if (opToken.StrVal == "-") sign = -1.0;
-        else throw new ArgumentException();
+        sign = opToken.StrVal switch {
+          "+" => 1.0,
+          "-" => -1.0,
+          _ => throw new ArgumentException($"token {opToken.StrVal} not expected")
+        };
       }
 
       if (tokens.Peek().TokenType != TokenType.Number) throw new ArgumentException("number expected");
@@ -614,9 +610,11 @@ public sealed class InfixExpressionParser {
         tokens.Dequeue();
         if (tokens.Peek().TokenType == TokenType.Operator) {
           var opToken = tokens.Dequeue();
-          if (opToken.StrVal == "+") sign = 1.0;
-          else if (opToken.StrVal == "-") sign = -1.0;
-          else throw new ArgumentException();
+          sign = opToken.StrVal switch {
+            "+" => 1.0,
+            "-" => -1.0,
+            _ => throw new ArgumentException($"token {opToken.StrVal} not expected")
+          };
         }
 
         weightTok = tokens.Dequeue();
@@ -645,36 +643,38 @@ public sealed class InfixExpressionParser {
     if (lPar.TokenType != TokenType.LeftPar)
       throw new ArgumentException("expected (");
 
-    // handle 'lag' specifically
-    if (funcNode.Symbol is LaggedVariable) {
-      ParseLaggedVariable(tokens, funcNode);
-    } else if (funcNode.Symbol is SubFunctionSymbol) { // SubFunction
-      var subFunction = funcNode as SubFunctionTreeNode;
-      subFunction.Name = idTok.StrVal;
-      // input arguments
-      var args = ParseArgList(tokens);
-      IList<string> arguments = new List<string>();
-      foreach (var arg in args)
-        if (arg is VariableTreeNode varTreeNode)
-          arguments.Add(varTreeNode.VariableName);
-      subFunction.Arguments = arguments;
-    } else {
-      // functions
-      var args = ParseArgList(tokens);
-      // check number of arguments
-      if (funcNode.Symbol.MinimumArity > args.Length || funcNode.Symbol.MaximumArity < args.Length) {
-        throw new ArgumentException(string.Format("Symbol {0} requires between {1} and  {2} arguments.", funcId,
-          funcNode.Symbol.MinimumArity, funcNode.Symbol.MaximumArity));
+    switch (funcNode.Symbol) {
+      // handle 'lag' specifically
+      case LaggedVariable:
+        ParseLaggedVariable(tokens, funcNode);
+        break;
+      case SubFunctionSymbol: { // SubFunction
+        var subFunction = (SubFunctionTreeNode)funcNode;
+        subFunction.Name = idTok.StrVal;
+        // input arguments
+        var args = ParseArgList(tokens);
+        IList<string> arguments = new List<string>();
+        foreach (var arg in args)
+          if (arg is VariableTreeNode varTreeNode)
+            arguments.Add(varTreeNode.VariableName);
+        subFunction.Arguments = arguments;
+        break;
       }
+      default: {
+        // functions
+        var args = ParseArgList(tokens);
+        // check number of arguments
+        if (funcNode.Symbol.MinimumArity > args.Length || funcNode.Symbol.MaximumArity < args.Length) {
+          throw new ArgumentException($"Symbol {funcId} requires between {funcNode.Symbol.MinimumArity} and  {funcNode.Symbol.MaximumArity} arguments.");
+        }
 
-      foreach (var arg in args) funcNode.AddSubtree(arg);
+        foreach (var arg in args) funcNode.AddSubtree(arg);
+        break;
+      }
     }
 
     var rPar = tokens.Dequeue();
-    if (rPar.TokenType != TokenType.RightPar)
-      throw new ArgumentException("expected )");
-
-    return funcNode;
+    return rPar.TokenType != TokenType.RightPar ? throw new ArgumentException("expected )") : funcNode;
   }
 
   private static void ParseLaggedVariable(Queue<Token> tokens, SymbolicExpressionTreeNode funcNode) {
@@ -693,7 +693,7 @@ public sealed class InfixExpressionParser {
     if (lagToken.TokenType != TokenType.Number) throw new ArgumentException("Number expected, Format for lagged variables: \"lag(x, -1)\"");
     if (!lagToken.DoubleVal.IsAlmost(Math.Round(lagToken.DoubleVal)))
       throw new ArgumentException("Time lags must be integer values");
-    var laggedVarNode = funcNode as LaggedVariableTreeNode;
+    var laggedVarNode = (LaggedVariableTreeNode)funcNode;
     laggedVarNode.VariableName = varId.StrVal;
     laggedVarNode.Lag = (int)Math.Round(sign * lagToken.DoubleVal);
     laggedVarNode.Weight = 1.0;
@@ -701,8 +701,7 @@ public sealed class InfixExpressionParser {
 
   // ArgList = Expr { ',' Expr }
   private SymbolicExpressionTreeNode[] ParseArgList(Queue<Token> tokens) {
-    var exprList = new List<SymbolicExpressionTreeNode>();
-    exprList.Add(ParseExpr(tokens));
+    var exprList = new List<SymbolicExpressionTreeNode> { ParseExpr(tokens) };
     while (tokens.Peek().TokenType != TokenType.RightPar) {
       var comma = tokens.Dequeue();
       if (comma.TokenType != TokenType.Comma) throw new ArgumentException("expected ',' ");
@@ -712,7 +711,7 @@ public sealed class InfixExpressionParser {
     return exprList.ToArray();
   }
 
-  private bool IsAssociative(Symbol sy) {
+  private static bool IsAssociative(Symbol sy) {
     return sy == GetSymbol("+") || sy == GetSymbol("-") ||
            sy == GetSymbol("*") || sy == GetSymbol("/") ||
            sy == GetSymbol("AND") || sy == GetSymbol("OR") || sy == GetSymbol("XOR");

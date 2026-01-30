@@ -88,7 +88,7 @@ public static class SymbolicRegressionParameterOptimization {
     var status = ExitCondition.None;
 
     try {
-      (cOpt1, retVal) = alglibLM(maxIterations, iterationCallback, x, y, n, m, k, functionCx1Func, functionCx1Grad, rowEvaluationsCounter, c.ToArray());
+      (cOpt1, retVal) = AlgLibLevenbergMarquardt(maxIterations, iterationCallback, x, y, n, m, k, functionCx1Func, functionCx1Grad, rowEvaluationsCounter, c.ToArray());
     }
     catch (ArithmeticException) {
       return originalQuality;
@@ -98,7 +98,7 @@ public static class SymbolicRegressionParameterOptimization {
     }
 
     try {
-      (cOpt, status) = (cOpt1, ExitCondition.None); //MathnetLM(maxIterations, n, y, m, x, func, rowEvaluationsCounter, funcGrad, c.ToArray(), k);
+      (cOpt, status) = (cOpt1, ExitCondition.None); //MathNetLevenbergMarquardt(maxIterations, n, y, m, x, func, rowEvaluationsCounter, funcGrad, c.ToArray(), k);
     }
     catch (NonConvergenceException) {
       if (retVal != -7 && retVal != -8)
@@ -148,19 +148,19 @@ public static class SymbolicRegressionParameterOptimization {
     return quality;
   }
 
-  private static (double[] c, int retVal) alglibLM(int maxIterations, Action<double[], double, object>? iterationCallback, double[,] x, double[] y, int n, int m, int k, PFunc functionCx1Func, PGrad functionCx1Grad, EvaluationsCounter rowEvaluationsCounter, double[] c) {
+  private static (double[] c, int retVal) AlgLibLevenbergMarquardt(int maxIterations, Action<double[], double, object>? iterationCallback, double[,] x, double[] y, int n, int m, int k, PFunc functionCx1Func, PGrad functionCx1Grad, EvaluationsCounter rowEvaluationsCounter, double[] c) {
     alglib.lsfitcreatefg(x, y, c, n, m, k, false, out var state);
     alglib.lsfitsetcond(state, 0.0, maxIterations);
     alglib.lsfitsetxrep(state, iterationCallback != null);
     alglib.lsfitfit(state,
       new alglib.ndimensional_pfunc(functionCx1Func),
-      new alglib.ndimensional_pgrad(functionCx1Grad), Xrep, rowEvaluationsCounter);
+      new alglib.ndimensional_pgrad(functionCx1Grad), Callback, rowEvaluationsCounter);
     alglib.lsfitresults(state, out var retVal, out c, out _);
     return (c, retVal);
-    void Xrep(double[] p, double f, object obj) => iterationCallback?.Invoke(p, f, obj);
+    void Callback(double[] p, double f, object obj) => iterationCallback?.Invoke(p, f, obj);
   }
 
-  private static (double[] cOpt, ExitCondition status) MathnetLM(int maxIterations, int n, double[] y, int m, double[,] x, TreeToAutoDiffTermConverter.ParametricFunction func, EvaluationsCounter rowEvaluationsCounter, TreeToAutoDiffTermConverter.ParametricFunctionGradient funcGrad, double[] c, int k) {
+  private static (double[] cOpt, ExitCondition status) MathNetLevenbergMarquardt(int maxIterations, int n, double[] y, int m, double[,] x, TreeToAutoDiffTermConverter.ParametricFunction func, EvaluationsCounter rowEvaluationsCounter, TreeToAutoDiffTermConverter.ParametricFunctionGradient funcGrad, double[] c, int k) {
     #region math.net.numerics
     var xIdx = Vector<double>.Build.Dense(n, i => i);
     var yVec = Vector<double>.Build.DenseOfArray(y);
@@ -168,7 +168,7 @@ public static class SymbolicRegressionParameterOptimization {
 
     // Model: parameters p -> vector of predicted y_i
     Vector<double> ModelN(Vector<double> p, Vector<double> idx) {
-      var pred = Vector<double>.Build.Dense(idx.Count);
+      var predicted = Vector<double>.Build.Dense(idx.Count);
       var xRow = new double[m];
 
       for (var j = 0; j < idx.Count; j++) {
@@ -176,11 +176,11 @@ public static class SymbolicRegressionParameterOptimization {
 
         for (var col = 0; col < m; col++) xRow[col] = x[i, col];
 
-        pred[j] = func(p.ToArray(), xRow);
+        predicted[j] = func(p.ToArray(), xRow);
         rowEvaluationsCounter.FunctionEvaluations++;
       }
 
-      return pred;
+      return predicted;
     }
 
     // Jacobian: J[i, q] = ∂f(c, x_i) / ∂c_q
@@ -242,7 +242,7 @@ public static class SymbolicRegressionParameterOptimization {
     var i = 0;
     foreach (var node in tree.Root.IterateNodesPrefix()) {
       switch (node) {
-        case NumberTreeNode { Parent.Symbol: Power } numberTreeNode when numberTreeNode.Parent[1] == numberTreeNode:
+        case NumberTreeNode { Parent.Symbol: Power } numberTreeNode when (numberTreeNode.Parent?[1] ?? null) == numberTreeNode:
           continue; // exponents in powers are not optimized (see TreeToAutoDiffTermConverter)
         case NumberTreeNode numberTreeNode:
           numberTreeNode.Value = parameters[i++];
@@ -265,7 +265,7 @@ public static class SymbolicRegressionParameterOptimization {
   public delegate void PFunc(double[] c, double[] x, ref double fx, object o);
 
   private static PFunc CreatePFunc(TreeToAutoDiffTermConverter.ParametricFunction func) {
-    return (double[] c, double[] x, ref double fx, object o) => {
+    return (c, x, ref fx, o) => {
       fx = func(c, x);
       var counter = (EvaluationsCounter)o;
       counter.FunctionEvaluations++;
@@ -275,7 +275,7 @@ public static class SymbolicRegressionParameterOptimization {
   public delegate void PGrad(double[] c, double[] x, ref double fx, double[] grad, object o);
 
   private static PGrad CreatePGrad(TreeToAutoDiffTermConverter.ParametricFunctionGradient funcGrad) {
-    return (double[] c, double[] x, ref double fx, double[] grad, object o) => {
+    return (c, x, ref fx, grad, o) => {
       var tuple = funcGrad(c, x);
       fx = tuple.Item2;
       Array.Copy(tuple.Item1, grad, grad.Length);

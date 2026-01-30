@@ -92,11 +92,11 @@ public class CachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(
   }
 
   public override IReadOnlyList<ObjectiveVector> Evaluate(
-    IReadOnlyList<TGenotype> solutions,
+    IReadOnlyList<TGenotype> genotypes,
     IRandomNumberGenerator random,
     TEncoding encoding,
     TProblem problem) {
-    var (results, _, _) = EvaluateWithCache(solutions, random, encoding, problem);
+    var (results, _, _) = EvaluateWithCache(genotypes, random, encoding, problem);
     return results;
   }
 

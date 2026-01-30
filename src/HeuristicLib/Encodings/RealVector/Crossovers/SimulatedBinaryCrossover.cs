@@ -10,7 +10,7 @@ public class SimulatedBinaryCrossover : Crossover<RealVector, RealVectorEncoding
   /// </summary>
   /// <exception cref="ArgumentException">Thrown when the parents' vectors are of unequal length or when <paramref name="contiguity"/> is smaller than 0.</exception>
   /// <remarks>
-  /// The manipulated value is not restricted by the (possibly) specified lower and upper bounds. Use the <see cref="BoundsChecker"/> to correct the values after performing the crossover.
+  /// The manipulated value is not restricted by the (possibly) specified lower and upper bounds. Use the <see /> to correct the values after performing the crossover.
   /// </remarks>
   /// <param name="random">The random number generator to use.</param>
   /// <param name="parent1">The first parent vector.</param>
@@ -34,28 +34,28 @@ public class SimulatedBinaryCrossover : Crossover<RealVector, RealVectorEncoding
           _ => 0
         };
 
-        if (random.Random() < 0.5)
+        if (random.Random() < 0.5) {
           result[i] = (parent1[i] + parent2[i]) / 2.0 - beta * 0.5 * Math.Abs(parent1[i] - parent2[i]);
-        else
+        } else {
           result[i] = (parent1[i] + parent2[i]) / 2.0 + beta * 0.5 * Math.Abs(parent1[i] - parent2[i]);
-      } else
+        }
+      } else {
         result[i] = parent1[i];
+      }
     }
 
     return result;
   }
 
   /// <summary>
-  /// Checks number of parents, availability of the parameters and forwards the call to <see cref="Apply(IRandom, RealVector, RealVector, DoubleValue)"/>.
+  /// Checks number of parents, availability of the parameters and forwards the call to <see />.
   /// </summary>
   /// <exception cref="ArgumentException">Thrown when there are not exactly 2 parents or when the contiguity parameter could not be found.</exception>
   /// <param name="random">The random number generator.</param>
   /// <param name="parents">The collection of parents (must be of size 2).</param>
   /// <returns>The real vector resulting from the crossover.</returns>
   protected RealVector Cross(IRandomNumberGenerator random, RealVector[] parents) {
-    if (parents.Length != 2)
-      throw new ArgumentException("SimulatedBinaryCrossover: The number of parents is not equal to 2");
-    return Apply(random, parents[0], parents[1], Contiguity);
+    return parents.Length == 2 ? Apply(random, parents[0], parents[1], Contiguity) : throw new ArgumentException("SimulatedBinaryCrossover: The number of parents is not equal to 2");
   }
 
   public double Contiguity { get; } = 2;
@@ -97,6 +97,7 @@ public static class Sbx {
       var x2 = p2[v];
 
       // skip fixed variables (equal bounds)
+      // ReSharper disable once CompareOfFloatsByEqualityOperator
       if (xl[v % xl.Count] == xu[v % xu.Count])
         continue;
 

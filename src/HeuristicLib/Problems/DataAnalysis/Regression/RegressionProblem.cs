@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Collections;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Optimization;
-using LanguageExt;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 

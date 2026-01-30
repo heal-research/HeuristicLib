@@ -77,11 +77,11 @@ public sealed class MovingPeaksProblem
     for (int i = 0; i < Parameters.NumberOfPeaks; i++) {
       peakPositions[i] = new double[Parameters.Dimension];
       for (int d = 0; d < Parameters.Dimension; d++) {
-        peakPositions[i][d] = EnvironmentRandom.NextDouble(Parameters.LowerBound, Parameters.UpperBound);
+        peakPositions[i][d] = EnvironmentRandom.Double(Parameters.LowerBound, Parameters.UpperBound);
       }
 
-      peakHeights[i] = EnvironmentRandom.NextDouble(Parameters.MinHeight, Parameters.MaxHeight);
-      peakWidths[i] = EnvironmentRandom.NextDouble(Parameters.MinWidth, Parameters.MaxWidth);
+      peakHeights[i] = EnvironmentRandom.Double(Parameters.MinHeight, Parameters.MaxHeight);
+      peakWidths[i] = EnvironmentRandom.Double(Parameters.MinWidth, Parameters.MaxWidth);
     }
   }
 
@@ -99,13 +99,13 @@ public sealed class MovingPeaksProblem
     var v = new double[dim];
     double normSq = 0.0;
     for (int i = 0; i < dim; i++) {
-      double a = EnvironmentRandom.NextDouble(-1.0, 1.0);
+      double a = EnvironmentRandom.Double(-1.0, 1.0);
       v[i] = a;
       normSq += a * a;
     }
 
     double norm = Math.Sqrt(normSq);
-    if (norm == 0) {
+    if (norm.IsAlmost(0.0, 1e-100)) {
       v[0] = 1;
       return v;
     }
