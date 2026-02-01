@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
 public interface IMutator<TGenotype, in TSearchSpace, in TProblem>
+  : IOperator<IReadOnlyList<TGenotype>, IOptimizationContext<TGenotype, TSearchSpace, TProblem>, IReadOnlyList<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

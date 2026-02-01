@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using HEAL.HeuristicLib.Collections;
-using HEAL.HeuristicLib.OperatorExtensions.MeasuredOperators;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -76,13 +75,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
   private readonly MultiMutator<TGenotype, TSearchSpace, TProblem> internalMutator;
   private readonly IReplacer<TGenotype, TSearchSpace, TProblem> internalReplacer;
-
-  public OperatorMetric CreatorMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric CrossoverMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric MutationMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric SelectionMetric { get; protected set; } = OperatorMetric.Zero;
-  public OperatorMetric ReplacementMetric { get; protected set; } = OperatorMetric.Zero;
-
+  
   public AlpsGeneticAlgorithm(
     int populationSize,
     ICreator<TGenotype, TSearchSpace, TProblem> creator,
@@ -132,7 +125,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var startCreating = Stopwatch.GetTimestamp();
     var initialLayerPopulation = agedCreator.Create(PopulationSize, iterationRandom, searchSpace, problem);
     var endCreating = Stopwatch.GetTimestamp();
-    CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
+    //CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
 
     var startEvaluating = Stopwatch.GetTimestamp();
     var fitnesses = Evaluator.Evaluate(initialLayerPopulation.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerSearchSpace, problem.InnerProblem);
@@ -155,7 +148,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var startSelection = Stopwatch.GetTimestamp();
     var parents = agedSelector.Select(oldPopulation, problem.Objective, offspringCount * 2, iterationRandom, searchSpace, problem);
     var endSelection = Stopwatch.GetTimestamp();
-    SelectionMetric += new OperatorMetric(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection));
+    //SelectionMetric += new OperatorMetric(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection));
 
     var parentPairs = new IParents<AgedGenotype<TGenotype>>[offspringCount];
     for (int i = 0, j = 0; i < offspringCount; i++, j += 2) {
@@ -166,13 +159,13 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var crossoverCount = 0;
     var population = agedCrossover.Cross(parentPairs, iterationRandom, searchSpace, problem);
     var endCrossover = Stopwatch.GetTimestamp();
-    CrossoverMetric += new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover));
+    //CrossoverMetric += new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover));
 
     var startMutation = Stopwatch.GetTimestamp();
     var mutationCount = 0;
     population = agedMutator.Mutate(population, iterationRandom, searchSpace, problem);
     var endMutation = Stopwatch.GetTimestamp();
-    MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
+    //MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
 
     var fitnesses = Evaluator.Evaluate(population.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerSearchSpace, problem.InnerProblem);
 
@@ -181,7 +174,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var startReplacement = Stopwatch.GetTimestamp();
     var newPopulation = agedReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, iterationRandom, searchSpace, problem);
     var endReplacement = Stopwatch.GetTimestamp();
-    ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
+    //ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
 
     var result = new AlpsIterationState<TGenotype> {
       Population = [new Population<AgedGenotype<TGenotype>>(new ImmutableList<ISolution<AgedGenotype<TGenotype>>>(newPopulation))],
@@ -193,6 +186,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
   #region Aged Types
 
+  // ToDo: probably remove all the Aged adapters and instead hold solutions and ages separated and only use a separate age-calculation scheme
   public class AgedCreator(ICreator<TGenotype, TSearchSpace, TProblem> internalCreator) : ICreator<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
   {
     public IReadOnlyList<AgedGenotype<TGenotype>> Create(int count, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
@@ -207,9 +201,9 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     }
   }
 
-  public class AgedMutator(IMutator<TGenotype, TSearchSpace, TProblem> internalMutator) : IMutator<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
+  public class AgedMutator(IMutator<TGenotype, TSearchSpace, TProblem> internalMutator) : Mutator<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
   {
-    public IReadOnlyList<AgedGenotype<TGenotype>> Mutate(IReadOnlyList<AgedGenotype<TGenotype>> population, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
+    public override IReadOnlyList<AgedGenotype<TGenotype>> Mutate(IReadOnlyList<AgedGenotype<TGenotype>> population, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
     {
       var innerPopulation = new TGenotype[population.Count];
       for (var i = 0; i < population.Count; i++) {
@@ -229,9 +223,9 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   }
 
   private class AgedCrossover(ICrossover<TGenotype, TSearchSpace, TProblem> internalCrossover)
-    : ICrossover<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
+    : Crossover<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
   {
-    public IReadOnlyList<AgedGenotype<TGenotype>> Cross(IReadOnlyList<IParents<AgedGenotype<TGenotype>>> parents, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
+    public override IReadOnlyList<AgedGenotype<TGenotype>> Cross(IReadOnlyList<IParents<AgedGenotype<TGenotype>>> parents, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
     {
       var innerParents = new IParents<TGenotype>[parents.Count];
       for (var i = 0; i < parents.Count; i++) {
@@ -249,9 +243,9 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     }
   }
 
-  public class AgedSelector(ISelector<TGenotype, TSearchSpace, TProblem> internalSelector) : ISelector<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
+  public class AgedSelector(ISelector<TGenotype, TSearchSpace, TProblem> internalSelector) : Selector<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
   {
-    public IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Select(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> population, Objective objective, int count, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
+    public override IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Select(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> population, Objective objective, int count, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
     {
       var innerPopulation = new ISolution<TGenotype>[population.Count];
       for (var i = 0; i < population.Count; i++) {
@@ -271,9 +265,9 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   }
 
 
-  public class AgedReplacer(IReplacer<TGenotype, TSearchSpace, TProblem> innerReplacer) : IReplacer<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
+  public class AgedReplacer(IReplacer<TGenotype, TSearchSpace, TProblem> innerReplacer) : Replacer<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
   {
-    public IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Replace(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> previousPopulation, IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> offspringPopulation, Objective objective, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
+    public  override IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Replace(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> previousPopulation, IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> offspringPopulation, Objective objective, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
     {
       var innerPreviousPopulation = new ISolution<TGenotype>[previousPopulation.Count];
       for (var i = 0; i < previousPopulation.Count; i++) {
@@ -296,7 +290,7 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
       return result;
     }
 
-    public int GetOffspringCount(int populationSize) => innerReplacer.GetOffspringCount(populationSize);
+    public override int GetOffspringCount(int populationSize) => innerReplacer.GetOffspringCount(populationSize);
   }
 
   #endregion

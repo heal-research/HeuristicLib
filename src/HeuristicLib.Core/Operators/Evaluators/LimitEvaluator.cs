@@ -13,7 +13,7 @@ public class LimitEvaluator<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator, Invoca
   where TP : class, IProblem<TG, TS>
 {
   public LimitEvaluator(IEvaluator<TG, TS, TP> evaluator, int maxEvaluations, bool preventOverBudget)
-    : this(evaluator.CountInvocations(out var c), c, maxEvaluations, preventOverBudget)
+    : this(evaluator.CountInvocations(out var c).AsEvaluator(), c, maxEvaluations, preventOverBudget)
   {
   }
 
