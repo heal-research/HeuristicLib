@@ -9,38 +9,21 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 public sealed class RegressionVariableImpactsCalculator(
   RegressionVariableImpactsCalculator.ReplacementMethodType replacementMethod,
   RegressionVariableImpactsCalculator.FactorReplacementMethodType factorReplacementMethod,
-  DataAnalysisProblemData.PartitionType dataPartition) {
-  #region Parameters/Properties
-  public enum ReplacementMethodType {
-    Median = 0,
-    Average = 1,
-    Shuffle = 2,
-    Noise = 3
-  }
+  DataAnalysisProblemData.PartitionType dataPartition)
+{
 
-  public enum FactorReplacementMethodType {
-    Best = 0,
-    Mode = 1,
-    Shuffle = 2
-  }
-
-  public ReplacementMethodType ReplacementMethod { get; set; } = replacementMethod;
-  public FactorReplacementMethodType FactorReplacementMethod { get; set; } = factorReplacementMethod;
-  public DataAnalysisProblemData.PartitionType DataPartition { get; set; } = dataPartition;
-  #endregion
-
-  public ICollection<(string, double)> Calculate(IRegressionModel solution, RegressionProblemData data) {
-    return CalculateImpacts(data, solution, ReplacementMethod, FactorReplacementMethod, DataPartition);
-  }
+  public ICollection<(string, double)> Calculate(IRegressionModel solution, RegressionProblemData data) => CalculateImpacts(data, solution, ReplacementMethod, FactorReplacementMethod, DataPartition);
 
   public static ICollection<(string, double)> CalculateImpacts(
     RegressionProblemData data,
     IRegressionModel solution,
     ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle,
     FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best,
-    DataAnalysisProblemData.PartitionType dataPartition = DataAnalysisProblemData.PartitionType.Training) {
+    DataAnalysisProblemData.PartitionType dataPartition = DataAnalysisProblemData.PartitionType.Training)
+  {
     var rows = data.Partitions[dataPartition].Enumerate().ToArray();
     var estimatedValues = solution.Predict(data.Dataset, rows).ToArray();
+
     return CalculateImpacts(solution, data, estimatedValues, rows, replacementMethod, factorReplacementMethod);
   }
 
@@ -50,53 +33,60 @@ public sealed class RegressionVariableImpactsCalculator(
     IReadOnlyList<double> estimatedValues,
     IReadOnlyList<int> rows,
     ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle,
-    FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best) {
+    FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best)
+  {
     var targetValues = problemData.Dataset.GetDoubleValues(problemData.TargetVariable, rows).ToArray();
     var originalQuality = CalculateQuality(targetValues, estimatedValues);
 
     var modifiableDataset = problemData.Dataset.ToModifiable();
 
     return problemData.InputVariables
-                      .Select(x => (x,
-                        CalculateImpact(x,
-                          solution,
-                          problemData,
-                          modifiableDataset,
-                          rows,
-                          replacementMethod,
-                          factorReplacementMethod,
-                          targetValues, originalQuality)))
-                      .ToArray();
+      .Select(x => (x,
+        CalculateImpact(x,
+        solution,
+        problemData,
+        modifiableDataset,
+        rows,
+        replacementMethod,
+        factorReplacementMethod,
+        targetValues, originalQuality)))
+      .ToArray();
   }
 
   public static double CalculateImpact(string variableName,
-                                       IRegressionModel solution,
-                                       RegressionProblemData problemData,
-                                       ModifiableDataset modifiableDataset,
-                                       IReadOnlyList<int> rows,
-                                       ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle,
-                                       FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best,
-                                       IReadOnlyList<double>? targetValues = null,
-                                       double quality = double.NaN) {
-    if (!problemData.InputVariables.Contains(variableName))
+    IRegressionModel solution,
+    RegressionProblemData problemData,
+    ModifiableDataset modifiableDataset,
+    IReadOnlyList<int> rows,
+    ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle,
+    FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best,
+    IReadOnlyList<double>? targetValues = null,
+    double quality = double.NaN)
+  {
+    if (!problemData.InputVariables.Contains(variableName)) {
       throw new InvalidOperationException($"Can not calculate variable impact, because the Solution uses inputs missing in the dataset ({variableName})");
+    }
 
     targetValues ??= problemData.Dataset.GetDoubleValues(problemData.TargetVariable, rows).ToArray();
 
-    if (double.IsNaN(quality)) quality = CalculateQuality(solution.Predict(modifiableDataset, rows), targetValues);
+    if (double.IsNaN(quality)) {
+      quality = CalculateQuality(solution.Predict(modifiableDataset, rows), targetValues);
+    }
     var replacementValues = GetReplacementValues(modifiableDataset, variableName, solution, rows, targetValues, out var originalValues, replacementMethod, factorReplacementMethod);
     var newValue = CalculateQualityForReplacement(solution, modifiableDataset, variableName, originalValues, rows, replacementValues, targetValues);
+
     return quality - newValue;
   }
 
   private static IList GetReplacementValues(ModifiableDataset modifiableDataset,
-                                            string variableName,
-                                            IRegressionModel solution,
-                                            IReadOnlyList<int> rows,
-                                            IReadOnlyList<double> targetValues,
-                                            out IList originalValues,
-                                            ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle,
-                                            FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best) {
+    string variableName,
+    IRegressionModel solution,
+    IReadOnlyList<int> rows,
+    IReadOnlyList<double> targetValues,
+    out IList originalValues,
+    ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle,
+    FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Best)
+  {
     IList replacementValues;
     if (modifiableDataset.VariableHasType<double>(variableName)) {
       originalValues = modifiableDataset.GetDoubleValues(variableName).ToList();
@@ -112,9 +102,10 @@ public sealed class RegressionVariableImpactsCalculator(
   }
 
   private static List<double> GetReplacementValuesForDouble(ModifiableDataset modifiableDataset,
-                                                            IReadOnlyList<int> rows,
-                                                            List<double> originalValues,
-                                                            ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle) {
+    IReadOnlyList<int> rows,
+    List<double> originalValues,
+    ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle)
+  {
     var random = new System.Random(31475);
     IRandomNumberGenerator r2 = new SystemRandomNumberGenerator(31475);
     List<double> replacementValues;
@@ -124,10 +115,12 @@ public sealed class RegressionVariableImpactsCalculator(
       case ReplacementMethodType.Median:
         replacementValue = rows.Select(r => originalValues[r]).Median();
         replacementValues = Enumerable.Repeat(replacementValue, modifiableDataset.Rows).ToList();
+
         break;
       case ReplacementMethodType.Average:
         replacementValue = rows.Select(r => originalValues[r]).Average();
         replacementValues = Enumerable.Repeat(replacementValue, modifiableDataset.Rows).ToList();
+
         break;
       case ReplacementMethodType.Shuffle:
         // new var has same empirical distribution but the relation to y is broken
@@ -148,8 +141,9 @@ public sealed class RegressionVariableImpactsCalculator(
         // prepare a complete column for the dataset
         replacementValues = Enumerable.Repeat(double.NaN, modifiableDataset.Rows).ToList();
         // update column values 
-        foreach (var r in rows)
+        foreach (var r in rows) {
           replacementValues[r] = r2.NextGaussian(avg, stdDev);
+        }
 
         break;
 
@@ -161,12 +155,13 @@ public sealed class RegressionVariableImpactsCalculator(
   }
 
   private static List<string> GetReplacementValuesForString(IRegressionModel solution,
-                                                            ModifiableDataset modifiableDataset,
-                                                            string variableName,
-                                                            IReadOnlyList<int> rows,
-                                                            List<string> originalValues,
-                                                            IReadOnlyList<double> targetValues,
-                                                            FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Shuffle) {
+    ModifiableDataset modifiableDataset,
+    string variableName,
+    IReadOnlyList<int> rows,
+    List<string> originalValues,
+    IReadOnlyList<double> targetValues,
+    FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Shuffle)
+  {
     List<string> replacementValues = [];
     var random = new System.Random(31415);
 
@@ -190,10 +185,11 @@ public sealed class RegressionVariableImpactsCalculator(
         break;
       case FactorReplacementMethodType.Mode:
         var mostCommonValue = rows.Select(r => originalValues[r])
-                                  .GroupBy(v => v)
-                                  .OrderByDescending(g => g.Count())
-                                  .First().Key;
+          .GroupBy(v => v)
+          .OrderByDescending(g => g.Count())
+          .First().Key;
         replacementValues = Enumerable.Repeat(mostCommonValue, modifiableDataset.Rows).ToList();
+
         break;
       case FactorReplacementMethodType.Shuffle:
         // new var has same empirical distribution but the relation to y is broken
@@ -203,8 +199,9 @@ public sealed class RegressionVariableImpactsCalculator(
         var shuffledValues = rows.Select(r => originalValues[r]).Shuffle(random).ToList();
         var i = 0;
         // update column values 
-        foreach (var r in rows)
+        foreach (var r in rows) {
           replacementValues[r] = shuffledValues[i++];
+        }
 
         break;
       default:
@@ -221,17 +218,47 @@ public sealed class RegressionVariableImpactsCalculator(
     IList originalValues,
     IEnumerable<int> rows,
     IList replacementValues,
-    IEnumerable<double> targetValues) {
+    IEnumerable<double> targetValues)
+  {
     modifiableDataset.ReplaceVariable(variableName, replacementValues);
     //mkommend: ToList is used on purpose to avoid lazy evaluation that could result in wrong estimates due to variable replacements
     var ret = CalculateQuality(targetValues, solution.Predict(modifiableDataset, rows));
     modifiableDataset.ReplaceVariable(variableName, originalValues);
+
     return ret;
   }
 
-  public static double CalculateQuality(IEnumerable<double> targetValues, IEnumerable<double> estimatedValues) {
+  public static double CalculateQuality(IEnumerable<double> targetValues, IEnumerable<double> estimatedValues)
+  {
     var ret = OnlinePearsonsRCalculator.Calculate(targetValues, estimatedValues, out var errorState);
-    if (errorState != OnlineCalculatorError.None) throw new InvalidOperationException("Error during calculation with replaced inputs.");
+    if (errorState != OnlineCalculatorError.None) {
+      throw new InvalidOperationException("Error during calculation with replaced inputs.");
+    }
+
     return ret * ret;
   }
+
+  #region Parameters/Properties
+
+  public enum ReplacementMethodType
+  {
+    Median = 0,
+    Average = 1,
+    Shuffle = 2,
+    Noise = 3
+  }
+
+  public enum FactorReplacementMethodType
+  {
+    Best = 0,
+    Mode = 1,
+    Shuffle = 2
+  }
+
+  public ReplacementMethodType ReplacementMethod { get; set; } = replacementMethod;
+  public FactorReplacementMethodType FactorReplacementMethod { get; set; } = factorReplacementMethod;
+  public DataAnalysisProblemData.PartitionType DataPartition { get; set; } = dataPartition;
+
+  #endregion
+
 }

@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems;
 
@@ -18,10 +19,10 @@ namespace HEAL.HeuristicLib.Problems;
 // }
 
 //
-// public interface IEncodingProvider<out TEncoding> 
-//   where TEncoding : IEncoding 
+// public interface IEncodingProvider<out TSearchSpace> 
+//   where TSearchSpace : IEncoding 
 // {
-//   TEncoding Encoding { get; }
+//   TSearchSpace Encoding { get; }
 // } 
 
 //
@@ -81,10 +82,11 @@ namespace HEAL.HeuristicLib.Problems;
 // {
 // }
 
-public abstract class Problem<TISolution, TEncoding>(Objective objective, TEncoding searchSpace) : IProblem<TISolution, TEncoding>
-  where TEncoding : class, IEncoding<TISolution> {
+public abstract class Problem<TISolution, TSearchSpace>(Objective objective, TSearchSpace searchSpace) : IProblem<TISolution, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TISolution>
+{
   public Objective Objective { get; } = objective;
-  public TEncoding SearchSpace { get; } = searchSpace;
+  public TSearchSpace SearchSpace { get; } = searchSpace;
 
   public abstract ObjectiveVector Evaluate(TISolution solution, IRandomNumberGenerator random);
 }

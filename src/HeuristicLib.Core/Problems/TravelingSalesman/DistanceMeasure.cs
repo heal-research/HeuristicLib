@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
-public enum DistanceMeasure {
+public enum DistanceMeasure
+{
   Direct,
   Euclidean,
   RoundedEuclidean,
@@ -10,4 +11,4 @@ public enum DistanceMeasure {
   Maximum,
   Att,
   Chebyshev
-};
+}

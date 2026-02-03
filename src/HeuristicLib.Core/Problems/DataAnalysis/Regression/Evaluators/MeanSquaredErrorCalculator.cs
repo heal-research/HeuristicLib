@@ -3,12 +3,17 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 
-public class MeanSquaredErrorCalculator : RegressionEvaluator {
+public class MeanSquaredErrorCalculator : RegressionEvaluator
+{
   public override ObjectiveDirection Direction => ObjectiveDirection.Minimize;
 
-  public override double Evaluate(IEnumerable<double> predictedValues, IEnumerable<double> trueValues) {
+  public override double Evaluate(IEnumerable<double> predictedValues, IEnumerable<double> trueValues)
+  {
     var r = OnlineMeanSquaredErrorCalculator.Calculate(trueValues, predictedValues, out var state);
-    if (state != OnlineCalculatorError.None) throw new InvalidOperationException("can not calculate Normalized Mean Squared Error");
+    if (state != OnlineCalculatorError.None) {
+      throw new InvalidOperationException("can not calculate Normalized Mean Squared Error");
+    }
+
     return r;
   }
 }

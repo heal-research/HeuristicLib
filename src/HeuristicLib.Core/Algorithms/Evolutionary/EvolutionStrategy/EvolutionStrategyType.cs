@@ -1,6 +1,7 @@
-﻿namespace HEAL.HeuristicLib.Algorithms.EvolutionStrategy;
+﻿namespace HEAL.HeuristicLib.Algorithms.Evolutionary.EvolutionStrategy;
 
-public enum EvolutionStrategyType {
+public enum EvolutionStrategyType
+{
   Comma,
   Plus
 }

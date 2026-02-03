@@ -1,46 +1,46 @@
-﻿using System.Text;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Formatters;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
+﻿using System.Globalization;
+using System.Text;
+using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
-public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpressionTreeStringFormatter {
+public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpressionTreeStringFormatter
+{
   private readonly List<KeyValuePair<string, double>> parameters = [];
+  private bool containsTimeSeriesSymbol;
+  private int currentLag;
   private int paramIdx;
   private int targetCount;
-  private int currentLag;
   private string? targetVariable;
-  private bool containsTimeSeriesSymbol;
 
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) {
-    return Format(symbolicExpressionTree, null);
-  }
+  public string Format(SymbolicExpressionTree symbolicExpressionTree) => Format(symbolicExpressionTree, null);
 
-  public string Format(SymbolicExpressionTree symbolicExpressionTree, string? targetVariableName) {
+  public string Format(SymbolicExpressionTree symbolicExpressionTree, string? targetVariableName)
+  {
     try {
       var strBuilder = new StringBuilder();
       parameters.Clear();
       paramIdx = 0;
-      this.targetVariable = targetVariableName;
+      targetVariable = targetVariableName;
       containsTimeSeriesSymbol = symbolicExpressionTree.IterateNodesBreadth().Any(n => IsTimeSeriesSymbol(n.Symbol));
       strBuilder.AppendLine(FormatRecursively(symbolicExpressionTree.Root));
+
       return strBuilder.ToString();
-    }
-    catch (NotImplementedException ex) {
+    } catch (NotImplementedException ex) {
       return ex.Message + Environment.NewLine + ex.StackTrace;
     }
   }
 
-  static bool IsTimeSeriesSymbol(Symbol s) {
-    return s is TimeLag or Integral or Derivative or LaggedVariable;
-  }
+  private static bool IsTimeSeriesSymbol(Symbol s) => s is TimeLag or Integral or Derivative or LaggedVariable;
 
-  private string FormatRecursively(SymbolicExpressionTreeNode node) {
+  private string FormatRecursively(SymbolicExpressionTreeNode node)
+  {
     var strBuilder = new StringBuilder();
     currentLag = 0;
     FormatBegin(node, strBuilder);
@@ -62,30 +62,38 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
     return strBuilder.ToString();
   }
 
-  private void FormatBegin(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatBegin(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     switch (node.Symbol) {
       case Addition:
         strBuilder.Append(@" \left( ");
+
         break;
       case Subtraction when node.SubtreeCount == 1:
         strBuilder.Append(@"- \left( ");
+
         break;
       case Subtraction:
         strBuilder.Append(@" \left( ");
+
         break;
       case Multiplication:
         break;
       case Division when node.SubtreeCount == 1:
         strBuilder.Append(@" \cfrac{1}{");
+
         break;
       case Division:
         strBuilder.Append(@" \cfrac{ ");
+
         break;
       case Absolute:
         strBuilder.Append(@"\operatorname{abs} \left( ");
+
         break;
       case AnalyticQuotient:
         strBuilder.Append(@" \frac { ");
+
         break;
       case Average: {
         // skip output of (1/1) if only one subtree
@@ -94,98 +102,129 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
         }
 
         strBuilder.Append(@" \left( ");
+
         break;
       }
       case Logarithm:
         strBuilder.Append(@"\log \left( ");
+
         break;
       case Exponential:
         strBuilder.Append(@"\exp \left( ");
+
         break;
       case Square:
         strBuilder.Append(@"\left(");
+
         break;
       case SquareRoot:
         strBuilder.Append(@"\sqrt{");
+
         break;
       case Cube:
         strBuilder.Append(@"\left(");
+
         break;
       case CubeRoot:
         strBuilder.Append(@"\operatorname{cbrt}\left(");
+
         break;
       case Sine:
         strBuilder.Append(@"\sin \left( ");
+
         break;
       case Cosine:
         strBuilder.Append(@"\cos \left( ");
+
         break;
       case Tangent:
         strBuilder.Append(@"\tan \left( ");
+
         break;
       case HyperbolicTangent:
         strBuilder.Append(@"\tanh \left( ");
+
         break;
       case AiryA:
         strBuilder.Append(@"\operatorname{airy}_a \left( ");
+
         break;
       case AiryB:
         strBuilder.Append(@"\operatorname{airy}_b \left( ");
+
         break;
       case Bessel:
         strBuilder.Append(@"\operatorname{bessel}_1 \left( ");
+
         break;
       case CosineIntegral:
         strBuilder.Append(@"\operatorname{cosInt} \left( ");
+
         break;
       case Dawson:
         strBuilder.Append(@"\operatorname{dawson} \left( ");
+
         break;
       case Erf:
         strBuilder.Append(@"\operatorname{erf} \left( ");
+
         break;
       case ExponentialIntegralEi:
         strBuilder.Append(@"\operatorname{expInt}_i \left( ");
+
         break;
       case FresnelCosineIntegral:
         strBuilder.Append(@"\operatorname{fresnel}_\operatorname{cosInt} \left( ");
+
         break;
       case FresnelSineIntegral:
         strBuilder.Append(@"\operatorname{fresnel}_\operatorname{sinInt} \left( ");
+
         break;
       case Gamma:
         strBuilder.Append(@"\Gamma \left( ");
+
         break;
       case HyperbolicCosineIntegral:
         strBuilder.Append(@"\operatorname{hypCosInt} \left( ");
+
         break;
       case HyperbolicSineIntegral:
         strBuilder.Append(@"\operatorname{hypSinInt} \left( ");
+
         break;
       case Norm:
         strBuilder.Append(@"\operatorname{norm} \left( ");
+
         break;
       case Psi:
         strBuilder.Append(@"\operatorname{digamma} \left( ");
+
         break;
       case SineIntegral:
         strBuilder.Append(@"\operatorname{sinInt} \left( ");
+
         break;
       case GreaterThan:
       case LessThan:
         strBuilder.Append(@"  \left( ");
+
         break;
       case And:
         strBuilder.Append(@"  \left( \left( ");
+
         break;
       case Or:
         strBuilder.Append(@"   \left( \left( ");
+
         break;
       case Not:
         strBuilder.Append(@" \neg \left( ");
+
         break;
       case IfThenElse:
         strBuilder.Append(@" \operatorname{if}  \left( ");
+
         break;
       default: {
         switch (node) {
@@ -207,7 +246,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
               var paramName = "c_{" + paramIdx + "}";
               strBuilder.Append(paramName + " ");
               foreach (var e in factorNode.Symbol.GetVariableValues(factorNode.VariableName)
-                                          .Zip(factorNode.Weights!, Tuple.Create)) {
+                         .Zip(factorNode.Weights!, Tuple.Create)) {
                 parameters.Add(new KeyValuePair<string, double>("c_{" + paramIdx + ", " + EscapeLatexString(factorNode.VariableName) + "=" + EscapeLatexString(e.Item1) + "}", e.Item2));
               }
 
@@ -215,7 +254,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
             } else {
               switch (node) {
                 case BinaryFactorVariableTreeNode binFactorNode: {
-                  if (!binFactorNode.Weight.IsAlmost((1.0))) {
+                  if (!binFactorNode.Weight.IsAlmost(1.0)) {
                     var paramName = "c_{" + paramIdx + "}";
                     strBuilder.Append(paramName + "  \\cdot");
                     parameters.Add(new KeyValuePair<string, double>(paramName, binFactorNode.Weight));
@@ -225,6 +264,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
                   strBuilder.Append("(" + EscapeLatexString(binFactorNode.VariableName));
                   strBuilder.Append(LagToString(currentLag));
                   strBuilder.Append(" = " + EscapeLatexString(binFactorNode.VariableValue) + " )");
+
                   break;
                 }
                 case LaggedVariableTreeNode laggedVarNode: {
@@ -237,6 +277,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
 
                   strBuilder.Append(EscapeLatexString(laggedVarNode.VariableName));
                   strBuilder.Append(LagToString(currentLag + laggedVarNode.Lag));
+
                   break;
                 }
                 case VariableTreeNode varNode: {
@@ -249,6 +290,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
 
                   strBuilder.Append(EscapeLatexString(varNode.VariableName));
                   strBuilder.Append(LagToString(currentLag));
+
                   break;
                 }
                 default:
@@ -257,6 +299,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
                       strBuilder
                         .AppendLine("\\begin{align*}")
                         .AppendLine("\\nonumber");
+
                       break;
                     //else if (node.Symbol is Defun) {
                     //  var defunNode = node as DefunTreeNode;
@@ -272,19 +315,23 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
                     //} 
                     case Derivative:
                       strBuilder.Append(@" \cfrac{d \left( ");
+
                       break;
                     case TimeLag: {
                       var laggedNode = (LaggedTreeNode)node;
                       currentLag += laggedNode.Lag;
+
                       break;
                     }
                     case Power or Root:
                       strBuilder.Append(@" \left( ");
+
                       break;
                     case Integral: {
                       // actually a new variable for t is needed in all subtrees (TODO)
                       var laggedTreeNode = (LaggedTreeNode)node;
                       strBuilder.Append(@"\sum_{t=" + (laggedTreeNode.Lag + currentLag) + @"}^0 \left( ");
+
                       break;
                     }
                     case VariableCondition: {
@@ -298,6 +345,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
                       parameters.Add(new KeyValuePair<string, double>(const2Name, conditionTreeNode.Threshold));
                       paramIdx++;
                       strBuilder.Append(@" \left( " + p + @"\cdot ");
+
                       break;
                     }
                     case SubFunctionSymbol:
@@ -320,30 +368,38 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
     }
   }
 
-  private void FormatSep(SymbolicExpressionTreeNode node, StringBuilder strBuilder, int step) {
+  private void FormatSep(SymbolicExpressionTreeNode node, StringBuilder strBuilder, int step)
+  {
     switch (node.Symbol) {
       case Addition:
         strBuilder.Append(" + ");
+
         break;
       case Subtraction:
         strBuilder.Append(" - ");
+
         break;
       case Multiplication:
         strBuilder.Append(@" \cdot ");
+
         break;
       case Division when step + 1 == node.SubtreeCount:
         strBuilder.Append(@"}{");
+
         break;
       case Division:
         strBuilder.Append(@" }{ \cfrac{ ");
+
         break;
       case Absolute:
         throw new InvalidOperationException();
       case AnalyticQuotient:
         strBuilder.Append(@"}{\sqrt{1 + \left( ");
+
         break;
       case Average:
         strBuilder.Append(@" + ");
+
         break;
       case Logarithm:
       case Exponential:
@@ -373,23 +429,29 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
         throw new InvalidOperationException();
       case GreaterThan:
         strBuilder.Append(@" > ");
+
         break;
       case LessThan:
         strBuilder.Append(@" < ");
+
         break;
       case And:
         strBuilder.Append(@" > 0  \right) \land \left(");
+
         break;
       case Or:
         strBuilder.Append(@" > 0  \right) \lor \left(");
+
         break;
       case Not:
         throw new InvalidOperationException();
       case IfThenElse:
         strBuilder.Append(@" , ");
+
         break;
       case ProgramRootSymbol:
         strBuilder.Append(@"\\" + Environment.NewLine);
+
         break;
       default: {
         //if (node.Symbol is Defun) { } else if (node.Symbol is InvokeFunction) {
@@ -400,12 +462,15 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
           case StartSymbol:
             strBuilder.Append(@"\\" + Environment.NewLine);
             FormatStartSymbol(strBuilder);
+
             break;
           case Power:
             strBuilder.Append(@"\right) ^ { \operatorname{round} \left(");
+
             break;
           case Root:
             strBuilder.Append(@"\right) ^ {  \cfrac{1}{ \operatorname{round} \left(");
+
             break;
           case VariableCondition: {
             var conditionTreeNode = (VariableConditionTreeNode)node;
@@ -418,6 +483,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
             parameters.Add(new KeyValuePair<string, double>(const2Name, conditionTreeNode.Threshold));
             paramIdx++;
             strBuilder.Append(@" +  \left( 1 - " + p + @" \right) \cdot ");
+
             break;
           }
           case SubFunctionSymbol:
@@ -431,42 +497,53 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
     }
   }
 
-  private void FormatEnd(SymbolicExpressionTreeNode node, StringBuilder strBuilder) {
+  private void FormatEnd(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
+  {
     switch (node.Symbol) {
       case Addition:
       case Subtraction:
         strBuilder.Append(@" \right) ");
+
         break;
       case Multiplication:
         break;
       case Division: {
         strBuilder.Append(" } ");
-        for (var i = 2; i < node.SubtreeCount; i++)
+        for (var i = 2; i < node.SubtreeCount; i++) {
           strBuilder.Append(" } ");
+        }
+
         break;
       }
       case Absolute:
         strBuilder.Append(@" \right)");
+
         break;
       case AnalyticQuotient:
         strBuilder.Append(@" \right)^2}}");
+
         break;
       case Average:
       case Logarithm:
       case Exponential:
         strBuilder.Append(@" \right) ");
+
         break;
       case Square:
         strBuilder.Append(@"\right)^2");
+
         break;
       case SquareRoot:
         strBuilder.Append('}');
+
         break;
       case Cube:
         strBuilder.Append(@"\right)^3");
+
         break;
       case CubeRoot:
         strBuilder.Append(@"\right)");
+
         break;
       case Sine:
       case Cosine:
@@ -490,14 +567,17 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
       case GreaterThan:
       case LessThan:
         strBuilder.Append(@" \right) ");
+
         break;
       case And:
       case Or:
         strBuilder.Append(@" > 0 \right) \right) ");
+
         break;
       case Not:
       case IfThenElse:
         strBuilder.Append(@" \right) ");
+
         break;
       case Number:
       case Constant:
@@ -515,16 +595,18 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
         if (parameters.Count > 0) {
           foreach (var param in parameters) {
             // replace "." with ".&" to align decimal points
-            var paramStr = string.Format(System.Globalization.NumberFormatInfo.InvariantInfo, "{0:G5}", param.Value);
-            if (!paramStr.Contains("."))
+            var paramStr = string.Format(NumberFormatInfo.InvariantInfo, "{0:G5}", param.Value);
+            if (!paramStr.Contains(".")) {
               paramStr = paramStr + ".0";
-            paramStr = paramStr.Replace(".", "&."); // fix problem in rendering of aligned expressions
+            }
+            paramStr = paramStr.Replace(".", "&.");// fix problem in rendering of aligned expressions
             strBuilder.Append(param.Key + "& = & " + paramStr);
             strBuilder.Append(@"\\");
           }
         }
 
         strBuilder.AppendLine("\\end{align*}");
+
         break;
       }
       default: {
@@ -532,29 +614,36 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
         switch (node.Symbol) {
           case InvokeFunction:
             strBuilder.Append(@" \right) ");
+
             break;
           case StartSymbol:
           case Argument:
             break;
           case Derivative:
             strBuilder.Append(@" \right) }{dt} ");
+
             break;
           case TimeLag: {
             var laggedNode = (LaggedTreeNode)node;
             currentLag -= laggedNode.Lag;
+
             break;
           }
           case Power:
             strBuilder.Append(@" \right) } ");
+
             break;
           case Root:
             strBuilder.Append(@" \right) } } ");
+
             break;
           case Integral:
             strBuilder.Append(@" \right) ");
+
             break;
           case VariableCondition:
             strBuilder.Append(@"\right) ");
+
             break;
           case SubFunctionSymbol:
             break;
@@ -567,14 +656,17 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
     }
   }
 
-  private void FormatStartSymbol(StringBuilder strBuilder) {
+  private void FormatStartSymbol(StringBuilder strBuilder)
+  {
     strBuilder.Append(targetVariable != null ? EscapeLatexString(targetVariable) : "\\text{target}_{" + targetCount++ + "}");
-    if (containsTimeSeriesSymbol)
+    if (containsTimeSeriesSymbol) {
       strBuilder.Append("(t)");
+    }
     strBuilder.Append(" & = ");
   }
 
-  private static string LagToString(int lag) {
+  private static string LagToString(int lag)
+  {
     return lag switch {
       < 0 => "(t" + lag + ")",
       > 0 => "(t+" + lag + ")",
@@ -582,7 +674,8 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
     };
   }
 
-  private static string EscapeLatexString(string s) {
+  private static string EscapeLatexString(string s)
+  {
     return "\\text{" +
            s
              .Replace("\\", @"\\")

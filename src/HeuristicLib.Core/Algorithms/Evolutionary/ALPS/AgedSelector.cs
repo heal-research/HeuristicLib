@@ -1,14 +1,17 @@
-﻿using HEAL.HeuristicLib.Operators.Selector;
+﻿using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Algorithms.ALPS;
+namespace HEAL.HeuristicLib.Algorithms.Evolutionary.ALPS;
 
-public class AgedSelector<TGenotype, TEncoding, TProblem>(ISelector<TGenotype, TEncoding, TProblem> internalSelector) : ISelector<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TEncoding>, AgedProblem<TGenotype, TEncoding, TProblem>>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Select(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> population, Objective objective, int count, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TEncoding> searchSpace, AgedProblem<TGenotype, TEncoding, TProblem> problem) {
+public class AgedSelector<TGenotype, TSearchSpace, TProblem>(ISelector<TGenotype, TSearchSpace, TProblem> internalSelector) : ISelector<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  public IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Select(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> population, Objective objective, int count, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
+  {
     var innerPopulation = new ISolution<TGenotype>[population.Count];
     for (var i = 0; i < population.Count; i++) {
       innerPopulation[i] = new Solution<TGenotype>(population[i].Genotype.InnerGenotype, population[i].ObjectiveVector);

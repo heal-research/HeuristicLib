@@ -1,14 +1,14 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
+﻿using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public static class SymbolicExpressionTreeCompiler {
-  public static Instruction[] Compile(SymbolicExpressionTree tree, Func<SymbolicExpressionTreeNode, byte> opCodeMapper) {
-    return Compile(tree, opCodeMapper, Array.Empty<Func<Instruction, Instruction>>());
-  }
+public static class SymbolicExpressionTreeCompiler
+{
+  public static Instruction[] Compile(SymbolicExpressionTree tree, Func<SymbolicExpressionTreeNode, byte> opCodeMapper) => Compile(tree, opCodeMapper, Array.Empty<Func<Instruction, Instruction>>());
 
-  public static Instruction[] Compile(SymbolicExpressionTree tree, Func<SymbolicExpressionTreeNode, byte> opCodeMapper, ICollection<Func<Instruction, Instruction>> postInstructionCompiledHooks) {
+  public static Instruction[] Compile(SymbolicExpressionTree tree, Func<SymbolicExpressionTreeNode, byte> opCodeMapper, ICollection<Func<Instruction, Instruction>> postInstructionCompiledHooks)
+  {
     var entryPoint = new Dictionary<string, ushort>();
     var code = new List<Instruction>();
     // compile main body branches
@@ -19,7 +19,9 @@ public static class SymbolicExpressionTreeCompiler {
     // compile function branches
     var functionBranches = tree.IterateNodesPrefix().OfType<DefunTreeNode>();
     foreach (var branch in functionBranches) {
-      if (code.Count > ushort.MaxValue) throw new ArgumentException("Code for the tree is too long (> ushort.MaxValue).");
+      if (code.Count > ushort.MaxValue) {
+        throw new ArgumentException("Code for the tree is too long (> ushort.MaxValue).");
+      }
       entryPoint[branch.FunctionName] = (ushort)code.Count;
       code.AddRange(Compile(branch[0], opCodeMapper, postInstructionCompiledHooks));
     }
@@ -27,8 +29,9 @@ public static class SymbolicExpressionTreeCompiler {
     // address of all functions is fixed now
     // iterate through code again and fill in the jump locations
     foreach (var instr in code) {
-      if (instr.DynamicNode.Symbol is not InvokeFunction)
+      if (instr.DynamicNode.Symbol is not InvokeFunction) {
         continue;
+      }
       var invokeNode = instr.DynamicNode;
       var functionName = ((InvokeFunctionSymbol)invokeNode.Symbol).FunctionName;
       instr.Data = entryPoint[functionName];
@@ -37,10 +40,13 @@ public static class SymbolicExpressionTreeCompiler {
     return code.ToArray();
   }
 
-  private static IEnumerable<Instruction> Compile(SymbolicExpressionTreeNode branch, Func<SymbolicExpressionTreeNode, byte> opCodeMapper, ICollection<Func<Instruction, Instruction>> postInstructionCompiledHooks) {
+  private static IEnumerable<Instruction> Compile(SymbolicExpressionTreeNode branch, Func<SymbolicExpressionTreeNode, byte> opCodeMapper, ICollection<Func<Instruction, Instruction>> postInstructionCompiledHooks)
+  {
     foreach (var node in branch.IterateNodesPrefix()) {
       var subtreesCount = node.SubtreeCount;
-      if (subtreesCount > ushort.MaxValue) throw new ArgumentException("Number of subtrees is too big (> 65.535)");
+      if (subtreesCount > ushort.MaxValue) {
+        throw new ArgumentException("Number of subtrees is too big (> 65.535)");
+      }
       ushort data = 0;
       if (node.Symbol is Argument) {
         var argNode = (ArgumentSymbol)node.Symbol;

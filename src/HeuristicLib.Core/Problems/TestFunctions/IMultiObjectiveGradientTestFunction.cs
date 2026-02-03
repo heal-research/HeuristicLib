@@ -1,7 +1,8 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public interface IMultiObjectiveGradientTestFunction : IMultiObjectiveTestFunction {
+public interface IMultiObjectiveGradientTestFunction : IMultiObjectiveTestFunction
+{
   RealVector[] EvaluateGradient(RealVector solution);
 }

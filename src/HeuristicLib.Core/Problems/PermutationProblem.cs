@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Encodings.Permutation;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems;

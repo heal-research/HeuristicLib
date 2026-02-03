@@ -1,19 +1,25 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
+﻿using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter {
+public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter
+{
+
   #region properties
-  public bool CheckExpressionsWithIntervalArithmetic {
+
+  public bool CheckExpressionsWithIntervalArithmetic
+  {
     get;
     set;
   }
+
   #endregion
 
-  public IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows) {
+  public IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows)
+  {
     if (CheckExpressionsWithIntervalArithmetic) {
       throw new NotSupportedException("Interval arithmetic is not yet supported in the symbolic data analysis interpreter.");
     }
@@ -22,12 +28,14 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
     foreach (var rowEnum in rows) {
       var row = rowEnum;
+
       yield return Evaluate(dataset, ref row, state);
       state.Reset();
     }
   }
 
-  private static InterpreterState PrepareInterpreterState(SymbolicExpressionTree tree, Dataset dataset) {
+  private static InterpreterState PrepareInterpreterState(SymbolicExpressionTree tree, Dataset dataset)
+  {
     var code = SymbolicExpressionTreeCompiler.Compile(tree, OpCodes.MapSymbolToOpCode);
     var necessaryArgStackSize = 0;
     foreach (var instr in code) {
@@ -35,30 +43,36 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         case OpCodes.Variable: {
           var variableTreeNode = (VariableTreeNode)instr.DynamicNode;
           instr.Data = dataset.GetDoubleValues(variableTreeNode.VariableName);
+
           break;
         }
         case OpCodes.FactorVariable: {
           var factorTreeNode = (FactorVariableTreeNode)instr.DynamicNode;
           instr.Data = dataset.GetStringValues(factorTreeNode.VariableName);
+
           break;
         }
         case OpCodes.BinaryFactorVariable: {
           var factorTreeNode = (BinaryFactorVariableTreeNode)instr.DynamicNode;
           instr.Data = dataset.GetStringValues(factorTreeNode.VariableName);
+
           break;
         }
         case OpCodes.LagVariable: {
           var laggedVariableTreeNode = (LaggedVariableTreeNode)instr.DynamicNode;
           instr.Data = dataset.GetDoubleValues(laggedVariableTreeNode.VariableName);
+
           break;
         }
         case OpCodes.VariableCondition: {
           var variableConditionTreeNode = (VariableConditionTreeNode)instr.DynamicNode;
           instr.Data = dataset.GetDoubleValues(variableConditionTreeNode.VariableName);
+
           break;
         }
         case OpCodes.Call:
           necessaryArgStackSize += instr.NArguments + 1;
+
           break;
       }
     }
@@ -66,7 +80,8 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
     return new InterpreterState(code, necessaryArgStackSize);
   }
 
-  public virtual double Evaluate(Dataset dataset, ref int row, InterpreterState state) {
+  public virtual double Evaluate(Dataset dataset, ref int row, InterpreterState state)
+  {
     var currentInstr = state.NextInstruction();
     switch (currentInstr.OpCode) {
       case OpCodes.Add: {
@@ -137,6 +152,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       case OpCodes.Power: {
         var x = Evaluate(dataset, ref row, state);
         var y = Math.Round(Evaluate(dataset, ref row, state));
+
         return Math.Pow(x, y);
       }
       case OpCodes.SquareRoot: {
@@ -144,11 +160,13 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.CubeRoot: {
         var arg = Evaluate(dataset, ref row, state);
+
         return arg < 0 ? -Math.Pow(-arg, 1.0 / 3.0) : Math.Pow(arg, 1.0 / 3.0);
       }
       case OpCodes.Root: {
         var x = Evaluate(dataset, ref row, state);
         var y = Math.Round(Evaluate(dataset, ref row, state));
+
         return Math.Pow(x, 1 / y);
       }
       case OpCodes.Exp: {
@@ -159,6 +177,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.Gamma: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Gamma function is currently not implemented");
       }
       case OpCodes.Psi: {
@@ -173,60 +192,74 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       }
       case OpCodes.Dawson: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Dawson Integral is currently not implemented");
       }
       case OpCodes.ExponentialIntegralEi: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Exponential Integral EI is currently not implemented");
       }
       case OpCodes.SineIntegral: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Sine integral is currently not implemented");
       }
       case OpCodes.CosineIntegral: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Cosine Integral is currently not implemented");
       }
       case OpCodes.HyperbolicSineIntegral: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Hyperbolic Sine Integral is currently not implemented");
       }
       case OpCodes.HyperbolicCosineIntegral: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Hyperbolic Cosine Integral is currently not implemented");
       }
       case OpCodes.FresnelCosineIntegral: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Fresnel Cosine Integral is currently not implemented");
       }
       case OpCodes.FresnelSineIntegral: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Fresnel Sine Integral is currently not implemented");
       }
       case OpCodes.AiryA: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("AiryA is currently not implemented");
       }
       case OpCodes.AiryB: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("AiryB is currently not implemented");
       }
       case OpCodes.Norm: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Norm is currently not implemented");
       }
       case OpCodes.Erf: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Error function is currently not implemented");
       }
       case OpCodes.Bessel: {
         var x = Evaluate(dataset, ref row, state);
+
         return double.IsNaN(x) ? double.NaN : throw new NotImplementedException("Bessel function is currently not implemented");
       }
 
       case OpCodes.AnalyticQuotient: {
         var x1 = Evaluate(dataset, ref row, state);
         var x2 = Evaluate(dataset, ref row, state);
+
         return x1 / Math.Pow(1 + x2 * x2, 0.5);
       }
       case OpCodes.IfThenElse: {
@@ -245,8 +278,9 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       case OpCodes.And: {
         var result = Evaluate(dataset, ref row, state);
         for (var i = 1; i < currentInstr.NArguments; i++) {
-          if (result > 0.0) result = Evaluate(dataset, ref row, state);
-          else {
+          if (result > 0.0) {
+            result = Evaluate(dataset, ref row, state);
+          } else {
             state.SkipInstructions();
           }
         }
@@ -256,8 +290,9 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
       case OpCodes.Or: {
         var result = Evaluate(dataset, ref row, state);
         for (var i = 1; i < currentInstr.NArguments; i++) {
-          if (result <= 0.0) result = Evaluate(dataset, ref row, state);
-          else {
+          if (result <= 0.0) {
+            result = Evaluate(dataset, ref row, state);
+          } else {
             state.SkipInstructions();
           }
         }
@@ -296,6 +331,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         row += timeLagTreeNode.Lag;
         var result = Evaluate(dataset, ref row, state);
         row -= timeLagTreeNode.Lag;
+
         return result;
       }
       case OpCodes.Integral: {
@@ -310,6 +346,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
         row -= timeLagTreeNode.Lag;
         sum += Evaluate(dataset, ref row, state);
+
         return sum;
       }
 
@@ -331,7 +368,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         var f4 = Evaluate(dataset, ref row, state);
         row += 4;
 
-        return (f0 + 2 * f1 - 2 * f3 - f4) / 8; // h = 1
+        return (f0 + 2 * f1 - 2 * f3 - f4) / 8;// h = 1
       }
       case OpCodes.Call: {
         // evaluate sub-trees
@@ -355,24 +392,34 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
         // restore the pc => evaluation will continue at point after my subtrees  
         state.ProgramCounter = savedPc;
+
         return v;
       }
       case OpCodes.Arg: {
         return state.GetStackFrameValue((ushort)currentInstr.Data);
       }
       case OpCodes.Variable: {
-        if (row < 0 || row >= dataset.Rows) return double.NaN;
+        if (row < 0 || row >= dataset.Rows) {
+          return double.NaN;
+        }
         var variableTreeNode = (VariableTreeNode)currentInstr.DynamicNode;
+
         return ((IList<double>)currentInstr.Data)[row] * variableTreeNode.Weight;
       }
       case OpCodes.BinaryFactorVariable: {
-        if (row < 0 || row >= dataset.Rows) return double.NaN;
+        if (row < 0 || row >= dataset.Rows) {
+          return double.NaN;
+        }
         var factorVarTreeNode = (BinaryFactorVariableTreeNode)currentInstr.DynamicNode;
+
         return ((IList<string>)currentInstr.Data)[row] == factorVarTreeNode.VariableValue ? factorVarTreeNode.Weight : 0;
       }
       case OpCodes.FactorVariable: {
-        if (row < 0 || row >= dataset.Rows) return double.NaN;
+        if (row < 0 || row >= dataset.Rows) {
+          return double.NaN;
+        }
         var factorVarTreeNode = (FactorVariableTreeNode)currentInstr.DynamicNode;
+
         return factorVarTreeNode.GetValue(((IList<string>)currentInstr.Data)[row]);
       }
       case OpCodes.LagVariable: {
@@ -382,16 +429,19 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
         return ((IList<double>)currentInstr.Data)[actualRow] * laggedVariableTreeNode.Weight;
       }
-      case OpCodes.Constant: // fall through
+      case OpCodes.Constant:// fall through
       case OpCodes.Number: {
         var numericTreeNode = (NumberTreeNode)currentInstr.DynamicNode;
+
         return numericTreeNode.Value;
       }
 
       //mkommend: this symbol uses the logistic function f(x) = 1 / (1 + e^(-alpha * x) ) 
       //to determine the relative amounts of the true and false branch see http://en.wikipedia.org/wiki/Logistic_function
       case OpCodes.VariableCondition: {
-        if (row < 0 || row >= dataset.Rows) return double.NaN;
+        if (row < 0 || row >= dataset.Rows) {
+          return double.NaN;
+        }
         var variableConditionTreeNode = (VariableConditionTreeNode)currentInstr.DynamicNode;
         if (!variableConditionTreeNode.Symbol.IgnoreSlope) {
           var variableValue = ((IList<double>)currentInstr.Data)[row];
@@ -408,10 +458,12 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
           if (variableValue <= variableConditionTreeNode.Threshold) {
             var left = Evaluate(dataset, ref row, state);
             state.SkipInstructions();
+
             return left;
           }
 
           state.SkipInstructions();
+
           return Evaluate(dataset, ref row, state);
         }
       }

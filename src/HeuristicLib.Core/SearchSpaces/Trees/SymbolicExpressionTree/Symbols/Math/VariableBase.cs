@@ -1,66 +1,10 @@
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public class VariableBase : Symbol {
-  #region Properties
-  public double WeightMu { get; set; }
-  private double weightSigma;
-  public double WeightSigma {
-    get => weightSigma;
-    set {
-      if (weightSigma < 0.0) throw new ArgumentException("Negative sigma is not allowed.");
-      weightSigma = value;
-    }
-  }
-  public double WeightManipulatorMu { get; set; }
-  private double weightManipulatorSigma;
-  public double WeightManipulatorSigma {
-    get => weightManipulatorSigma;
-    set {
-      if (weightManipulatorSigma < 0.0) throw new ArgumentException("Negative sigma is not allowed.");
-      weightManipulatorSigma = value;
-    }
-  }
-  private double multiplicativeWeightManipulatorSigma;
-  public double MultiplicativeWeightManipulatorSigma {
-    get => multiplicativeWeightManipulatorSigma;
-    set {
-      if (multiplicativeWeightManipulatorSigma < 0.0) throw new ArgumentException("Negative sigma is not allowed.");
-      multiplicativeWeightManipulatorSigma = value;
-    }
-  }
+public class VariableBase : Symbol
+{
 
-  private double variableChangeProbability;
-
-  public double VariableChangeProbability {
-    get => variableChangeProbability;
-    set {
-      if (value is < 0 or > 1.0) throw new ArgumentException("Variable change probability must lie in the interval [0..1]");
-      variableChangeProbability = value;
-    }
-  }
-
-  private readonly List<string> variableNames;
-  public IEnumerable<string> VariableNames {
-    get => variableNames;
-    set {
-      ArgumentNullException.ThrowIfNull(value);
-      variableNames.Clear();
-      variableNames.AddRange(value);
-    }
-  }
-
-  private readonly List<string> allVariableNames;
-  public IEnumerable<string> AllVariableNames {
-    get => allVariableNames;
-    set {
-      ArgumentNullException.ThrowIfNull(value);
-      allVariableNames.Clear();
-      allVariableNames.AddRange(value);
-    }
-  }
-  #endregion
-
-  protected VariableBase(VariableBase original) : base(original.MinimumArity, original.DefaultArity, original.MaximumArity) {
+  protected VariableBase(VariableBase original) : base(original.MinimumArity, original.DefaultArity, original.MaximumArity)
+  {
     WeightMu = original.WeightMu;
     weightSigma = original.weightSigma;
     variableNames = [..original.variableNames];
@@ -71,7 +15,8 @@ public class VariableBase : Symbol {
     variableChangeProbability = original.variableChangeProbability;
   }
 
-  protected VariableBase() : base(0, 0, 0) {
+  protected VariableBase() : base(0, 0, 0)
+  {
     WeightMu = 1.0;
     weightSigma = 1.0;
     WeightManipulatorMu = 0.0;
@@ -81,4 +26,87 @@ public class VariableBase : Symbol {
     variableNames = [];
     allVariableNames = [];
   }
+
+  #region Properties
+
+  public double WeightMu { get; set; }
+  private double weightSigma;
+
+  public double WeightSigma
+  {
+    get => weightSigma;
+    set {
+      if (weightSigma < 0.0) {
+        throw new ArgumentException("Negative sigma is not allowed.");
+      }
+      weightSigma = value;
+    }
+  }
+
+  public double WeightManipulatorMu { get; set; }
+  private double weightManipulatorSigma;
+
+  public double WeightManipulatorSigma
+  {
+    get => weightManipulatorSigma;
+    set {
+      if (weightManipulatorSigma < 0.0) {
+        throw new ArgumentException("Negative sigma is not allowed.");
+      }
+      weightManipulatorSigma = value;
+    }
+  }
+
+  private double multiplicativeWeightManipulatorSigma;
+
+  public double MultiplicativeWeightManipulatorSigma
+  {
+    get => multiplicativeWeightManipulatorSigma;
+    set {
+      if (multiplicativeWeightManipulatorSigma < 0.0) {
+        throw new ArgumentException("Negative sigma is not allowed.");
+      }
+      multiplicativeWeightManipulatorSigma = value;
+    }
+  }
+
+  private double variableChangeProbability;
+
+  public double VariableChangeProbability
+  {
+    get => variableChangeProbability;
+    set {
+      if (value is < 0 or > 1.0) {
+        throw new ArgumentException("Variable change probability must lie in the interval [0..1]");
+      }
+      variableChangeProbability = value;
+    }
+  }
+
+  private readonly List<string> variableNames;
+
+  public IEnumerable<string> VariableNames
+  {
+    get => variableNames;
+    set {
+      ArgumentNullException.ThrowIfNull(value);
+      variableNames.Clear();
+      variableNames.AddRange(value);
+    }
+  }
+
+  private readonly List<string> allVariableNames;
+
+  public IEnumerable<string> AllVariableNames
+  {
+    get => allVariableNames;
+    set {
+      ArgumentNullException.ThrowIfNull(value);
+      allVariableNames.Clear();
+      allVariableNames.AddRange(value);
+    }
+  }
+
+  #endregion
+
 }

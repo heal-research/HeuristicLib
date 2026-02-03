@@ -3,22 +3,25 @@
 #pragma warning disable S2178
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class OnlineWeightedDirectionalSymmetryCalculator {
-  private int n;
+public class OnlineWeightedDirectionalSymmetryCalculator
+{
   private double correctSum;
   private double incorrectSum;
-
-  public double WeightedDirectionalSymmetry => n <= 1 ? 0.0 : incorrectSum / correctSum;
+  private int n;
 
   public OnlineWeightedDirectionalSymmetryCalculator() => Reset();
+
+  public double WeightedDirectionalSymmetry => n <= 1 ? 0.0 : incorrectSum / correctSum;
 
   public double Value => WeightedDirectionalSymmetry;
 
   public OnlineCalculatorError ErrorState { get; private set; }
 
-  public void Add(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> predictedContinuation) {
+  public void Add(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> predictedContinuation)
+  {
     if (double.IsNaN(startValue) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
+
       return;
     }
 
@@ -48,25 +51,29 @@ public class OnlineWeightedDirectionalSymmetryCalculator {
     if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext()) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
     } else {
-      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
     }
   }
 
-  public void Reset() {
+  public void Reset()
+  {
     n = 0;
     correctSum = 0;
     incorrectSum = 0;
     ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
   }
 
-  public static double Calculate(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> predictedContinuation, out OnlineCalculatorError errorState) {
+  public static double Calculate(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> predictedContinuation, out OnlineCalculatorError errorState)
+  {
     var calculator = new OnlineWeightedDirectionalSymmetryCalculator();
     calculator.Add(startValue, actualContinuation, predictedContinuation);
     errorState = calculator.ErrorState;
+
     return calculator.WeightedDirectionalSymmetry;
   }
 
-  public static double Calculate(IEnumerable<double> startValues, IEnumerable<IEnumerable<double>> actualContinuations, IEnumerable<IEnumerable<double>> predictedContinuations, out OnlineCalculatorError errorState) {
+  public static double Calculate(IEnumerable<double> startValues, IEnumerable<IEnumerable<double>> actualContinuations, IEnumerable<IEnumerable<double>> predictedContinuations, out OnlineCalculatorError errorState)
+  {
     using var startValueEnumerator = startValues.GetEnumerator();
     using var actualContinuationsEnumerator = actualContinuations.GetEnumerator();
     using var predictedContinuationsEnumerator = predictedContinuations.GetEnumerator();
@@ -75,7 +82,9 @@ public class OnlineWeightedDirectionalSymmetryCalculator {
     // always move forward all enumerators (do not use short-circuit evaluation!)
     while (startValueEnumerator.MoveNext() & actualContinuationsEnumerator.MoveNext() & predictedContinuationsEnumerator.MoveNext()) {
       calculator.Add(startValueEnumerator.Current, actualContinuationsEnumerator.Current, predictedContinuationsEnumerator.Current);
-      if (calculator.ErrorState != OnlineCalculatorError.None) break;
+      if (calculator.ErrorState != OnlineCalculatorError.None) {
+        break;
+      }
     }
 
     // check if all enumerators are at the end to make sure both enumerations have the same length
@@ -85,6 +94,7 @@ public class OnlineWeightedDirectionalSymmetryCalculator {
     }
 
     errorState = calculator.ErrorState;
+
     return calculator.WeightedDirectionalSymmetry;
   }
 }

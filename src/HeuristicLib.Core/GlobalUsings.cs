@@ -1,3 +1,5 @@
 ﻿namespace HEAL.HeuristicLib;
 
-internal class GlobalUsings { }
+internal class GlobalUsings
+{
+}

@@ -1,3 +1,5 @@
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public sealed class Absolute() : Symbol(1, 1, 1) { }
+public sealed class Absolute() : Symbol(1, 1, 1)
+{
+}

@@ -1,26 +1,30 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Encodings.RealVector;
-using HEAL.HeuristicLib.Encodings.RealVector.Creators;
-using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
-using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
-using HEAL.HeuristicLib.Operators.Crossover;
-using HEAL.HeuristicLib.Operators.Evaluator;
-using HEAL.HeuristicLib.Operators.Mutator;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
+using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
-public static class PythonCorrelationAnalysis {
-  public static double[] GetPseudoCorrelations(IReadOnlyList<RealVector> solutions, MultiObjectiveTestFunctionProblem problem) {
+public static class PythonCorrelationAnalysis
+{
+
+  public delegate void GenerationCallback(PopulationAlgorithmState<RealVector> current, RealVectorProblem problem);
+
+  public static double[] GetPseudoCorrelations(IReadOnlyList<RealVector> solutions, MultiObjectiveTestFunctionProblem problem)
+  {
     var gradcal = (IMultiObjectiveGradientTestFunction)problem.TestFunction;
     var res = new double[solutions.Count];
     for (var i = 0; i < solutions.Count; i++) {
       var grads = gradcal.EvaluateGradient(solutions[i]);
-      res[i] = 0.5 - (Math.Abs(grads[0].Angle(grads[1])) / Math.PI);
+      res[i] = 0.5 - Math.Abs(grads[0].Angle(grads[1])) / Math.PI;
     }
 
     return res;
@@ -41,15 +45,16 @@ public static class PythonCorrelationAnalysis {
   //   }).ToArray();
   // }
 
-  public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem) {
+  public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem)
+  {
     var random = new SystemRandomNumberGenerator();
     var evaluator = new DirectEvaluator<RealVector>();
+
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
   }
 
-  public delegate void GenerationCallback(PopulationAlgorithmState<RealVector> current, RealVectorProblem problem);
-
-  public static PythonGenealogyAnalysis.ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0) {
+  public static PythonGenealogyAnalysis.ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)
+  {
     //var prob = SphereRastriginProblem(dimensions, min, max);
 
     //var proto = Nsga2.GetBuilder(
@@ -64,17 +69,17 @@ public static class PythonCorrelationAnalysis {
     //proto.MutationRate = 1;
 
     var res = PythonGenealogyAnalysis.RunAlgorithmConfigurable(problem, callback is null ? null : r => callback(r, problem),
-      new PythonGenealogyAnalysis.TestFunctionExperimentParameters {
-        AlgorithmName = "nsga2",
-        Creator = new UniformDistributedCreator(),
-        Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
-        Mutator = new PolynomialMutator().WithRate(0.9),
-        Iterations = generations,
-        PopulationSize = populationSize,
-        MutationRate = 1,
-        Seed = seed,
-        TrackPopulations = true
-      });
+    new PythonGenealogyAnalysis.TestFunctionExperimentParameters {
+      AlgorithmName = "nsga2",
+      Creator = new UniformDistributedCreator(),
+      Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
+      Mutator = new PolynomialMutator().WithRate(0.9),
+      Iterations = generations,
+      PopulationSize = populationSize,
+      MutationRate = 1,
+      Seed = seed,
+      TrackPopulations = true
+    });
 
     return res;
   }

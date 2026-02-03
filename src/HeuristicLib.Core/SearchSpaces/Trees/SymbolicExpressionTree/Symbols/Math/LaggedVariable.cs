@@ -1,6 +1,9 @@
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Genotypes.Trees;
 
-public class LaggedVariable : VariableBase {
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+
+public class LaggedVariable : VariableBase
+{
   public int MinLag { get; set; }
 
   public int MaxLag { get; set; }

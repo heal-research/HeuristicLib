@@ -2,7 +2,8 @@
 
 public interface IOptimizationResult<TGenotype, out TISolutionLayout> : IOptimizationResult
   where TGenotype : IEquatable<TGenotype>
-  where TISolutionLayout : IISolutionLayout<TGenotype> {
+  where TISolutionLayout : IISolutionLayout<TGenotype>
+{
   TISolutionLayout Solutions { get; }
 }
 

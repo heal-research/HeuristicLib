@@ -1,5 +1,6 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems;
 

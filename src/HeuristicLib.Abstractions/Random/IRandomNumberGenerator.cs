@@ -1,13 +1,16 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
-public interface IRandomNumberGenerator {
-  int Integer() => Integer(0, int.MaxValue); //exclusive high is a concession to System.Random that can not generate int.MaxValue
+public interface IRandomNumberGenerator
+{
+  int Integer() => Integer(0, int.MaxValue);//exclusive high is a concession to System.Random that can not generate int.MaxValue
   int Integer(int low, int high, bool inclusiveHigh = false);
   double Random();
   double Double() => Random();
 
-  double Double(double min, double max) {
+  double Double(double min, double max)
+  {
     ArgumentOutOfRangeException.ThrowIfGreaterThan(min, max);
+
     return Random() * (max - min) + min;
   }
 
@@ -15,7 +18,8 @@ public interface IRandomNumberGenerator {
 
   byte[] RandomBytes(int length);
 
-  public double[] Random(int length) {
+  double[] Random(int length)
+  {
     var values = new double[length];
     for (var i = 0; i < length; i++) {
       values[i] = Random();
@@ -24,16 +28,20 @@ public interface IRandomNumberGenerator {
     return values;
   }
 
-  public int[] Integers(int length, int high, bool inclusiveHigh = false) => Integers(length, 0, high, inclusiveHigh);
+  int[] Integers(int length, int high, bool inclusiveHigh = false) => Integers(length, 0, high, inclusiveHigh);
 
-  public int[] Integers(int length, int low, int high, bool inclusiveHigh = false) {
+  int[] Integers(int length, int low, int high, bool inclusiveHigh = false)
+  {
     var values = new int[length];
-    for (var i = 0; i < length; i++)
+    for (var i = 0; i < length; i++) {
       values[i] = Integer(low, high, inclusiveHigh);
+    }
+
     return values;
   }
 
-  public double NextGaussian(double mu = 0, double sigma = 1) {
+  double NextGaussian(double mu = 0, double sigma = 1)
+  {
     // we don't use spare numbers (efficiency loss but easier for multithreaded code)
     double u;
     double s;
@@ -44,6 +52,7 @@ public interface IRandomNumberGenerator {
     } while (s is > 1 or 0);
 
     s = Math.Sqrt(-2.0 * Math.Log(s) / s);
+
     return mu + sigma * u * s;
   }
 

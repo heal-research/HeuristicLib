@@ -1,6 +1,9 @@
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Genotypes.Trees;
 
-public sealed class Variable : VariableBase {
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+
+public sealed class Variable : VariableBase
+{
   public override SymbolicExpressionTreeNode CreateTreeNode() => new VariableTreeNode(this);
 
   public VariableTreeNode CreateTreeNode(string variable, double weight) => new(this) {

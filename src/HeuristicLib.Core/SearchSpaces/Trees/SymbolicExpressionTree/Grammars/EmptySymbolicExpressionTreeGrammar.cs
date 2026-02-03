@@ -1,11 +1,13 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
+﻿using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
-internal sealed class EmptySymbolicExpressionTreeGrammar : ISymbolicExpressionGrammar {
+internal sealed class EmptySymbolicExpressionTreeGrammar : ISymbolicExpressionGrammar
+{
   private readonly ISymbolicExpressionGrammar grammar;
 
-  internal EmptySymbolicExpressionTreeGrammar(ISymbolicExpressionGrammar grammar) {
+  internal EmptySymbolicExpressionTreeGrammar(ISymbolicExpressionGrammar grammar)
+  {
     ArgumentNullException.ThrowIfNull(grammar);
     this.grammar = grammar;
   }
@@ -35,15 +37,15 @@ internal sealed class EmptySymbolicExpressionTreeGrammar : ISymbolicExpressionGr
 
   public int GetMaximumExpressionLength(Symbol start, int maxDepth) => grammar.GetMaximumExpressionLength(start, maxDepth);
 
-  public void AddSymbol(Symbol symbol) { throw new NotSupportedException(); }
-  public void RemoveSymbol(Symbol symbol) { throw new NotSupportedException(); }
-  public void AddAllowedChildSymbol(Symbol parent, Symbol child) { throw new NotSupportedException(); }
-  public void AddAllowedChildSymbol(Symbol parent, Symbol child, int argumentIndex) { throw new NotSupportedException(); }
-  public void RemoveAllowedChildSymbol(Symbol parent, Symbol child) { throw new NotSupportedException(); }
-  public void RemoveAllowedChildSymbol(Symbol parent, Symbol child, int argumentIndex) { throw new NotSupportedException(); }
-  public void ClearAllowedChildSymbols(Symbol parent) { throw new NotSupportedException(); }
-  public void ClearAllAllowedChildSymbols() { throw new NotSupportedException(); }
-  public void SetSubtreeCount(Symbol symbol, int minimumSubtreeCount, int maximumSubtreeCount) { throw new NotSupportedException(); }
+  public void AddSymbol(Symbol symbol) => throw new NotSupportedException();
+  public void RemoveSymbol(Symbol symbol) => throw new NotSupportedException();
+  public void AddAllowedChildSymbol(Symbol parent, Symbol child) => throw new NotSupportedException();
+  public void AddAllowedChildSymbol(Symbol parent, Symbol child, int argumentIndex) => throw new NotSupportedException();
+  public void RemoveAllowedChildSymbol(Symbol parent, Symbol child) => throw new NotSupportedException();
+  public void RemoveAllowedChildSymbol(Symbol parent, Symbol child, int argumentIndex) => throw new NotSupportedException();
+  public void ClearAllowedChildSymbols(Symbol parent) => throw new NotSupportedException();
+  public void ClearAllAllowedChildSymbols() => throw new NotSupportedException();
+  public void SetSubtreeCount(Symbol symbol, int minimumSubtreeCount, int maximumSubtreeCount) => throw new NotSupportedException();
 
   public ProgramRootSymbol ProgramRootSymbol => grammar.ProgramRootSymbol;
   public StartSymbol StartSymbol => grammar.StartSymbol;
@@ -52,5 +54,5 @@ internal sealed class EmptySymbolicExpressionTreeGrammar : ISymbolicExpressionGr
   public int MinimumFunctionArguments { get => grammar.MinimumFunctionArguments; set => grammar.MinimumFunctionArguments = value; }
   public int MaximumFunctionArguments { get => grammar.MaximumFunctionArguments; set => grammar.MaximumFunctionArguments = value; }
   public bool ReadOnly { get; set; }
-  public bool Conforms(SymbolicExpressionTree symbolicExpressionTree) => symbolicExpressionTree.Root.Symbol == grammar.ProgramRootSymbol;
+  public bool Conforms(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree) => symbolicExpressionTree.Root.Symbol == grammar.ProgramRootSymbol;
 }

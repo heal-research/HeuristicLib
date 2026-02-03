@@ -1,8 +1,11 @@
-﻿namespace HEAL.HeuristicLib.Optimization;
+﻿namespace HEAL.HeuristicLib.SearchSpaces;
 
-public interface IEncoding { }
+public interface ISearchSpace
+{
+}
 
-public interface IEncoding<in TGenotype> : IEncoding {
+public interface ISearchSpace<in TGenotype> : ISearchSpace
+{
   bool Contains(TGenotype genotype);
 
   //bool IsSubspaceOf(IEncoding<TGenotype> other);

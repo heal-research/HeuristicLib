@@ -1,49 +1,49 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
 
-        <IsPackable>false</IsPackable>
-        <IsTestProject>true</IsTestProject>
-        <AssemblyName>HEAL.HeuristicLib.Tests</AssemblyName>
-        <RootNamespace>HEAL.HeuristicLib.Tests</RootNamespace>
-    </PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <AssemblyName>HEAL.HeuristicLib.Tests</AssemblyName>
+    <RootNamespace>HEAL.HeuristicLib.Tests</RootNamespace>
+  </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="coverlet.collector" Version="6.0.4">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
-        <PackageReference Include="Shouldly" Version="4.3.0" />
-        <PackageReference Include="System.Reactive" Version="6.0.1" />
-        <PackageReference Include="Verify" Version="29.3.0" />
-        <PackageReference Include="Verify.Xunit" Version="29.3.0" />
-        <PackageReference Include="xunit" Version="2.9.3" />
-        <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2">
-          <PrivateAssets>all</PrivateAssets>
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="Shouldly" Version="4.3.0" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
+    <PackageReference Include="Verify" Version="29.3.0" />
+    <PackageReference Include="Verify.Xunit" Version="29.3.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
 
-    <ItemGroup>
-        <Using Include="Shouldly" />
-    </ItemGroup>
+  <ItemGroup>
+    <Using Include="Shouldly" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\src\HeuristicLib.Core\HeuristicLib.Core.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\HeuristicLib.Core\HeuristicLib.Core.csproj" />
+  </ItemGroup>
 
-    <ItemGroup>
-      <None Update="TestData\192_vineyard.tsv">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="TestData\berlin52.tsp">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-    </ItemGroup>
+  <ItemGroup>
+    <None Update="TestData\192_vineyard.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\berlin52.tsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 
 </Project>

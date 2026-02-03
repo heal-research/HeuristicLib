@@ -1,28 +1,33 @@
+using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode {
+public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode
+{
+
+  protected VariableTreeNodeBase(VariableBase variableSymbol) : base(variableSymbol) {}
+
+  protected VariableTreeNodeBase(VariableTreeNodeBase other) : base(other)
+  {
+    Weight = other.Weight;
+    VariableName = other.VariableName;
+  }
   public new VariableBase Symbol => (VariableBase)base.Symbol;
   public double Weight { get; set; } = 1;
   public string VariableName { get; set; } = "";
   public override bool HasLocalParameters => true;
 
-  protected VariableTreeNodeBase(VariableBase variableSymbol) : base(variableSymbol) { }
-
-  protected VariableTreeNodeBase(VariableTreeNodeBase other) : base(other) {
-    Weight = other.Weight;
-    VariableName = other.VariableName;
-  }
-
-  public override void ResetLocalParameters(IRandomNumberGenerator random) {
+  public override void ResetLocalParameters(IRandomNumberGenerator random)
+  {
     base.ResetLocalParameters(random);
     Weight = random.NextGaussian(Symbol.WeightMu, Symbol.WeightSigma);
     VariableName = Symbol.VariableNames.SampleRandom(random, 1).Single();
   }
 
-  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {
+  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
+  {
     base.ShakeLocalParameters(random, shakingFactor);
 
     // 50% additive & 50% multiplicative (TODO: BUG in if statement below -> fix in HL 4.0!)
@@ -34,8 +39,9 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode {
       Weight *= x;
     }
 
-    if (random.Random() >= Symbol.VariableChangeProbability)
+    if (random.Random() >= Symbol.VariableChangeProbability) {
       return;
+    }
 
     var oldName = VariableName;
     VariableName = Symbol.VariableNames.SampleRandom(random);
@@ -45,8 +51,12 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode {
     }
   }
 
-  public override string ToString() {
-    if (Weight.IsAlmost(1.0)) return VariableName;
+  public override string ToString()
+  {
+    if (Weight.IsAlmost(1.0)) {
+      return VariableName;
+    }
+
     return Weight.ToString("E4") + " " + VariableName;
   }
 }

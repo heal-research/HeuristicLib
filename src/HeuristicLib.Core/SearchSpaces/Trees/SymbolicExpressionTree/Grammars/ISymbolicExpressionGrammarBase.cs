@@ -1,8 +1,9 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
+﻿using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
-public interface ISymbolicExpressionGrammarBase {
+public interface ISymbolicExpressionGrammarBase
+{
   IEnumerable<Symbol> Symbols { get; }
   IEnumerable<Symbol> AllowedSymbols { get; }
 

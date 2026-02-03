@@ -1,3 +1,5 @@
 ﻿namespace HEAL.HeuristicLib.Algorithms;
 
-public static class PopulationBasedAlgorithmHelpers { }
+public static class PopulationBasedAlgorithmHelpers
+{
+}

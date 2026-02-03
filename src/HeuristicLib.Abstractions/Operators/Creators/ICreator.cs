@@ -1,21 +1,24 @@
-﻿using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Creator;
+namespace HEAL.HeuristicLib.Operators.Creators;
 
-public interface ICreator<out TGenotype> : ICreator<TGenotype, IEncoding<TGenotype>> {
+public interface ICreator<out TGenotype> : ICreator<TGenotype, ISearchSpace<TGenotype>>
+{
   IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random);
 }
 
-public interface ICreator<out TGenotype, in TEncoding> : ICreator<TGenotype, TEncoding, IProblem<TGenotype, TEncoding>>
-  where TEncoding : class, IEncoding<TGenotype> {
-  IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding);
+public interface ICreator<out TGenotype, in TSearchSpace> : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+{
+  IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace encoding);
 }
 
-public interface ICreator<out TGenotype, in TEncoding, in TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
-  TGenotype Create(IRandomNumberGenerator random, TEncoding encoding, TProblem problem) => Create(1, random, encoding, problem)[0];
+public interface ICreator<out TGenotype, in TSearchSpace, in TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem);
+  TGenotype Create(IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem) => Create(1, random, encoding, problem)[0];
 }

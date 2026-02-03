@@ -1,20 +1,22 @@
-﻿using HEAL.HeuristicLib.Encodings.Permutation;
-using HEAL.HeuristicLib.Operators.Evaluator;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems.Dynamic.Operators;
 using HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Tests.Dynamic;
+namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
-public class TravelingSalesmanProblemTests {
-  static readonly double[,] D = { { 0, 1, 2, 3 }, { 1, 0, 4, 5 }, { 2, 4, 0, 6 }, { 3, 5, 6, 0 } };
+public class TravelingSalesmanProblemTests
+{
+  private static readonly double[,] D = { { 0, 1, 2, 3 }, { 1, 0, 4, 5 }, { 2, 4, 0, 6 }, { 3, 5, 6, 0 } };
 
   [Fact]
-  public void Update_SwitchProbZero_StateUnchanged() {
+  public void Update_SwitchProbZero_StateUnchanged()
+  {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
     var env = new SystemRandomNumberGenerator(0);
-    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, false], switchProbability: 0.0);
+    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, false], 0.0);
 
     var before = p.CurrentState.ToArray();
     p.UpdateOnce();
@@ -22,10 +24,11 @@ public class TravelingSalesmanProblemTests {
   }
 
   [Fact]
-  public void Evaluate_AllActive_EqualsFullCycleCost() {
+  public void Evaluate_AllActive_EqualsFullCycleCost()
+  {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = new SystemRandomNumberGenerator(0); // irrelevant for evaluation
-    var p = new ActivatedTravelingSalesmanProblem(data, env, activationProb: 1.0, switchProbability: 0.0);
+    var env = new SystemRandomNumberGenerator(0);// irrelevant for evaluation
+    var p = new ActivatedTravelingSalesmanProblem(data, env, 1.0, 0.0);
     Assert.Equal([true, true, true, true], p.CurrentState);
     var tour = new Permutation([0, 1, 2, 3]);
     var cost = p.Evaluate(tour, NoRandomGenerator.Instance)[0];
@@ -37,10 +40,11 @@ public class TravelingSalesmanProblemTests {
   }
 
   [Fact]
-  public void Evaluate_SkipsInactiveCities_ReconnectsTour() {
+  public void Evaluate_SkipsInactiveCities_ReconnectsTour()
+  {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = new SystemRandomNumberGenerator(0); // irrelevant for evaluation
-    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, true], switchProbability: 0.0);
+    var env = new SystemRandomNumberGenerator(0);// irrelevant for evaluation
+    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, true], 0.0);
     var tour = new Permutation([0, 1, 2, 3]);
     var cost = p.Evaluate(tour, NoRandomGenerator.Instance)[0];
     // 0->2 (2) + 2->3 (6) + 3->0 (3) = 11
@@ -51,10 +55,11 @@ public class TravelingSalesmanProblemTests {
   }
 
   [Fact]
-  public void Evaluate_NoActiveCities_ReturnsZero() {
+  public void Evaluate_NoActiveCities_ReturnsZero()
+  {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = new SystemRandomNumberGenerator(0); // irrelevant for evaluation
-    var p = new ActivatedTravelingSalesmanProblem(data, env, [false, false, false, false], switchProbability: 0.0);
+    var env = new SystemRandomNumberGenerator(0);// irrelevant for evaluation
+    var p = new ActivatedTravelingSalesmanProblem(data, env, [false, false, false, false], 0.0);
     var tour = new Permutation([0, 1, 2, 3]);
 
     var cost = p.Evaluate(tour, NoRandomGenerator.Instance)[0];
@@ -65,10 +70,11 @@ public class TravelingSalesmanProblemTests {
   }
 
   [Fact]
-  public void Evaluate_OneActiveCity_ReturnsZero() {
+  public void Evaluate_OneActiveCity_ReturnsZero()
+  {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = new SystemRandomNumberGenerator(0); // irrelevant for evaluation
-    var p = new ActivatedTravelingSalesmanProblem(data, env, [false, true, false, false], switchProbability: 0.0);
+    var env = new SystemRandomNumberGenerator(0);// irrelevant for evaluation
+    var p = new ActivatedTravelingSalesmanProblem(data, env, [false, true, false, false], 0.0);
 
     var tour = new Permutation([0, 1, 2, 3]);
 
@@ -80,19 +86,21 @@ public class TravelingSalesmanProblemTests {
   }
 
   [Fact]
-  public void Update_SwitchProbOne_FlipsAllBits() {
+  public void Update_SwitchProbOne_FlipsAllBits()
+  {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = new SystemRandomNumberGenerator(0); // irrelevant for evaluation
-    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, false], switchProbability: 1.0);
+    var env = new SystemRandomNumberGenerator(0);// irrelevant for evaluation
+    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, false], 1.0);
     p.UpdateOnce();
     Assert.Equal([false, true, false, true], p.CurrentState);
   }
 
   [Fact]
-  public void Evaluate_TwoActiveCities_IsTwoWayEdgeSum() {
+  public void Evaluate_TwoActiveCities_IsTwoWayEdgeSum()
+  {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
     var env = new SystemRandomNumberGenerator(0);
-    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], switchProbability: 0.0);
+    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 0.0);
 
     var tour = new Permutation([0, 1, 2, 3]);
     var cost = p.Evaluate(tour, NoRandomGenerator.Instance)[0];
@@ -102,10 +110,11 @@ public class TravelingSalesmanProblemTests {
   }
 
   [Fact]
-  public void MyCachedTestCase() {
+  public void MyCachedTestCase()
+  {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
     var env = new SystemRandomNumberGenerator(0);
-    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], switchProbability: 1.0, epochLength: 200);
+    var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 1.0, epochLength: 200);
     var tour = new Permutation([0, 1, 2, 3]);
     var cachedEval = p.GetCachedEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>();
     Assert.Equal(0, p.EpochClock.CurrentEpoch);

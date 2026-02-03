@@ -4,16 +4,32 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-using ValuesType = Dictionary<string, IList>;
+using ValuesType=Dictionary<string, IList>;
 
-public static class DatasetUtil {
+public static class DatasetUtil
+{
+
+  static DatasetUtil()
+  {
+    var dataset = Expression.Parameter(typeof(Dataset));
+    var variableValues = Expression.Parameter(typeof(ValuesType));
+    var valuesExpression = Expression.Field(dataset, nameof(variableValues));
+    var assignExpression = Expression.Assign(valuesExpression, variableValues);
+
+    var variableValuesSetExpression = Expression.Lambda<Action<Dataset, ValuesType>>(assignExpression, dataset, variableValues);
+    variableValuesSetExpression.Compile();
+
+    var variableValuesGetExpression = Expression.Lambda<Func<Dataset, ValuesType>>(valuesExpression, dataset);
+    variableValuesGetExpression.Compile();
+  }
   /// <summary>
-  /// Shuffle all the lists with the same shuffling.
+  ///   Shuffle all the lists with the same shuffling.
   /// </summary>
   /// <param name="values">The value lists to be shuffled.</param>
   /// <param name="random">The random number generator</param>
   /// <returns>A new list containing shuffled copies of the original value lists.</returns>
-  public static List<IList> ShuffleLists(this List<IList> values, IRandomNumberGenerator random) {
+  public static List<IList> ShuffleLists(this List<IList> values, IRandomNumberGenerator random)
+  {
     var count = values[0].Count;
     var indices = Enumerable.Range(0, count).Shuffle(random).ToArray();
     var shuffled = new List<IList>(values.Count);
@@ -21,12 +37,15 @@ public static class DatasetUtil {
       switch (values[col]) {
         case IList<double>:
           shuffled.Add(new List<double>());
+
           break;
         case IList<DateTime>:
           shuffled.Add(new List<DateTime>());
+
           break;
         case IList<string>:
           shuffled.Add(new List<string>());
+
           break;
         default:
           throw new InvalidOperationException();
@@ -38,19 +57,6 @@ public static class DatasetUtil {
     }
 
     return shuffled;
-  }
-
-  static DatasetUtil() {
-    var dataset = Expression.Parameter(typeof(Dataset));
-    var variableValues = Expression.Parameter(typeof(ValuesType));
-    var valuesExpression = Expression.Field(dataset, nameof(variableValues));
-    var assignExpression = Expression.Assign(valuesExpression, variableValues);
-
-    var variableValuesSetExpression = Expression.Lambda<Action<Dataset, ValuesType>>(assignExpression, dataset, variableValues);
-    variableValuesSetExpression.Compile();
-
-    var variableValuesGetExpression = Expression.Lambda<Func<Dataset, ValuesType>>(valuesExpression, dataset);
-    variableValuesGetExpression.Compile();
   }
 
   //public static Dictionary<string, Interval> GetVariableRanges(IDataset dataset, IEnumerable<int> rows = null) {

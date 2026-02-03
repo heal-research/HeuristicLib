@@ -1,13 +1,20 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+﻿using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 
 public class SlidingWindowSymbolicRegressionProblem
-  : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionSearchSpace> {
+  : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionSearchSpace>
+{
+
+  private readonly SymbolicRegressionProblem innerProblem;
+
+  protected int[] CachedRows = [];
+  protected double[] CachedTargets = [];
   public SlidingWindowSymbolicRegressionProblem(
     SymbolicRegressionProblem problem,
     int windowStart = 0,
@@ -15,7 +22,8 @@ public class SlidingWindowSymbolicRegressionProblem
     int stepSize = 10,
     UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
     int epochLength = int.MaxValue
-  ) : base(NoRandomGenerator.Instance, updatePolicy: updatePolicy, epochLength: epochLength) {
+  ) : base(NoRandomGenerator.Instance, updatePolicy, epochLength)
+  {
     ArgumentOutOfRangeException.ThrowIfNegative(windowStart);
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowLength);
     ArgumentOutOfRangeException.ThrowIfNegative(stepSize);
@@ -27,47 +35,42 @@ public class SlidingWindowSymbolicRegressionProblem
     RebuildWindowCache();
   }
 
-  private readonly SymbolicRegressionProblem innerProblem;
-
   public int StepSize { get; }
   public int WindowLength { get; }
 
   public (int StartIndex, int EndIndex) CurrentState { get; private set; }
 
-  protected int[] CachedRows = [];
-  protected double[] CachedTargets = [];
-
   public override SymbolicExpressionSearchSpace SearchSpace => innerProblem.SearchSpace;
   public override Objective Objective => innerProblem.Objective;
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) {
-    return innerProblem.Evaluate(solution, CachedRows, CachedTargets);
-  }
+  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) => innerProblem.Evaluate(solution, CachedRows, CachedTargets);
 
-  protected override void Update() {
+  protected override void Update()
+  {
     CurrentState = (CurrentState.StartIndex + StepSize, CurrentState.EndIndex + StepSize);
     RebuildWindowCache();
   }
 
-  private void RebuildWindowCache() {
+  private void RebuildWindowCache()
+  {
     var trainingRange = innerProblem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
-    int rowCount = innerProblem.ProblemData.Dataset.Rows;
-    int rangeStart = trainingRange.Start.IsFromEnd ? rowCount - trainingRange.Start.Value : trainingRange.Start.Value;
-    int rangeEnd = trainingRange.End.IsFromEnd ? rowCount - trainingRange.End.Value : trainingRange.End.Value;
+    var rowCount = innerProblem.ProblemData.Dataset.Rows;
+    var rangeStart = trainingRange.Start.IsFromEnd ? rowCount - trainingRange.Start.Value : trainingRange.Start.Value;
+    var rangeEnd = trainingRange.End.IsFromEnd ? rowCount - trainingRange.End.Value : trainingRange.End.Value;
     ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(rangeEnd, rangeStart);
-    int rangeLength = rangeEnd - rangeStart;
-    int start = CurrentState.StartIndex;
+    var rangeLength = rangeEnd - rangeStart;
+    var start = CurrentState.StartIndex;
 
     var rows = new int[CurrentState.EndIndex - start];
-    for (int k = 0; k < rows.Length; k++) {
-      int r = (start + k) % rangeLength;
-      int offset = r < 0 ? r + rangeLength : r;
+    for (var k = 0; k < rows.Length; k++) {
+      var r = (start + k) % rangeLength;
+      var offset = r < 0 ? r + rangeLength : r;
       rows[k] = rangeStart + offset;
     }
 
     var targets = innerProblem.ProblemData.Dataset
-                              .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
-                              .ToArray();
+      .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
+      .ToArray();
 
     CachedRows = rows;
     CachedTargets = targets;

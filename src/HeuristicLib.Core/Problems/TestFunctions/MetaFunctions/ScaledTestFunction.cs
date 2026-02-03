@@ -1,9 +1,10 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 
 public class ScaledTestFunction(double[] inputScaling, double outputScaling, ITestFunction inner)
-  : MetaTestFunction(inner) {
+  : MetaTestFunction(inner)
+{
   protected readonly double[] InputScaling = inputScaling;
   protected readonly double OutputScaling = outputScaling;
 
@@ -11,8 +12,7 @@ public class ScaledTestFunction(double[] inputScaling, double outputScaling, ITe
 }
 
 public class ScaledGradientTestFunction(double[] inputScaling, double outputScaling, IGradientTestFunction inner)
-  : ScaledTestFunction(inputScaling, outputScaling, inner), IGradientTestFunction {
-  public RealVector EvaluateGradient(RealVector solution) {
-    return inner.EvaluateGradient(solution * InputScaling) * InputScaling * OutputScaling;
-  }
+  : ScaledTestFunction(inputScaling, outputScaling, inner), IGradientTestFunction
+{
+  public RealVector EvaluateGradient(RealVector solution) => inner.EvaluateGradient(solution * InputScaling) * InputScaling * OutputScaling;
 }

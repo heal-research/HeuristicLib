@@ -3,8 +3,10 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public static class RegressionCsvInstanceProvider {
-  public static RegressionProblemData ImportData(string path, double trainingSplit = 0.66) {
+public static class RegressionCsvInstanceProvider
+{
+  public static RegressionProblemData ImportData(string path, double trainingSplit = 0.66)
+  {
     var csvFileParser = new TableFileParser();
     csvFileParser.Parse(path, csvFileParser.AreColumnNamesInFirstLine(path));
 

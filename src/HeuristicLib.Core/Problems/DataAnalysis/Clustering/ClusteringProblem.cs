@@ -1,21 +1,27 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering;
 
-public class ClusteringProblem<TProblemData, TISolution, TEncoding>(TProblemData problemData, ICollection<IClusteringEvaluator> objective, IComparer<ObjectiveVector> a, TEncoding encoding)
-  : DataAnalysisProblem<TProblemData, TISolution, TEncoding>(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), encoding)
+public class ClusteringProblem<TProblemData, TISolution, TSearchSpace>(TProblemData problemData, ICollection<IClusteringEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace encoding)
+  : DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), encoding)
   where TProblemData : ClusteringProblemData
-  where TEncoding : class, IEncoding<TISolution>
-  where TISolution : IClusteringModel {
+  where TSearchSpace : class, ISearchSpace<TISolution>
+  where TISolution : IClusteringModel
+{
   public List<IClusteringEvaluator> Evaluators { get; set; } = objective.ToList();
 
-  public override ObjectiveVector Evaluate(TISolution solution) {
+  public override ObjectiveVector Evaluate(TISolution solution)
+  {
     var predictions = solution.GetClusterValues(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
-    if (Evaluators.Count == 1)
+    if (Evaluators.Count == 1) {
       return new ObjectiveVector(Evaluators[0].Evaluate(ProblemData, DataAnalysisProblemData.PartitionType.Training, predictions));
+    }
 
-    if (predictions is not ICollection<int> materialPredictions)
+    if (predictions is not ICollection<int> materialPredictions) {
       materialPredictions = predictions.ToArray();
+    }
+
     return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(ProblemData, DataAnalysisProblemData.PartitionType.Training, materialPredictions)).ToArray());
   }
 }

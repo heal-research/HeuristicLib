@@ -1,10 +1,12 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public class CombinedTestFunction : IMultiObjectiveTestFunction {
-  public CombinedTestFunction(params IEnumerable<ITestFunction> functions) {
+public class CombinedTestFunction : IMultiObjectiveTestFunction
+{
+  public CombinedTestFunction(params IEnumerable<ITestFunction> functions)
+  {
     Functions = functions.ToArray();
     Dimension = Functions.Select(f => f.Dimension).Distinct().Single();
     Min = Functions.Select(f => f.Min).Max();

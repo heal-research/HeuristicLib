@@ -3,7 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 
 [SuppressMessage("ReSharper", "InconsistentNaming")]
-public enum TSPLIBEdgeWeightTypes {
+public enum TSPLIBEdgeWeightTypes
+{
   Unknown = 0,
   Explicit = 1,
   EUC_2D = 2,

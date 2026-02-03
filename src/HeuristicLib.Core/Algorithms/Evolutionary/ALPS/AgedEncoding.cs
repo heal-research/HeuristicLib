@@ -1,12 +1,11 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Algorithms.ALPS;
+namespace HEAL.HeuristicLib.Algorithms.Evolutionary.ALPS;
 
-public class AgedSearchSpace<TGenotype, TEncoding>(TEncoding innerEncoding) : IEncoding<AgedGenotype<TGenotype>>
-  where TEncoding : class, IEncoding<TGenotype> {
-  public TEncoding InnerEncoding { get; } = innerEncoding;
+public class AgedSearchSpace<TGenotype, TSearchSpace>(TSearchSpace innerEncoding) : ISearchSpace<AgedGenotype<TGenotype>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+{
+  public TSearchSpace InnerEncoding { get; } = innerEncoding;
 
-  public bool Contains(AgedGenotype<TGenotype> genotype) {
-    return InnerEncoding.Contains(genotype.InnerGenotype);
-  }
+  public bool Contains(AgedGenotype<TGenotype> genotype) => InnerEncoding.Contains(genotype.InnerGenotype);
 }

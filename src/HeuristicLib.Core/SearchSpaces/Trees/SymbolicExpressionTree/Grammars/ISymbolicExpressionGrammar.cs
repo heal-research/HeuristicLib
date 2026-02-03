@@ -1,9 +1,10 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
-public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase {
+public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase
+{
   ProgramRootSymbol ProgramRootSymbol { get; }
   StartSymbol StartSymbol { get; }
 
@@ -14,28 +15,38 @@ public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase {
 
   bool ReadOnly { get; set; }
 
-  bool Conforms(SymbolicExpressionTree symbolicExpressionTree);
+  bool Conforms(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree);
 }
 
-public static class SymbolicExpressionGrammarExtensions {
-  extension(ISymbolicExpressionGrammar grammar) {
-    public SymbolicExpressionTree MakeStump(IRandomNumberGenerator random) {
+public static class SymbolicExpressionGrammarExtensions
+{
+  extension(ISymbolicExpressionGrammar grammar)
+  {
+    public Genotypes.Trees.SymbolicExpressionTree MakeStump(IRandomNumberGenerator random)
+    {
       var rootNode = grammar.ProgramRootSymbol.CreateTreeNode();
-      var tree = new SymbolicExpressionTree(rootNode);
-      if (rootNode.HasLocalParameters) rootNode.ResetLocalParameters(random);
+      var tree = new Genotypes.Trees.SymbolicExpressionTree(rootNode);
+      if (rootNode.HasLocalParameters) {
+        rootNode.ResetLocalParameters(random);
+      }
       var startNode = grammar.StartSymbol.CreateTreeNode();
-      if (startNode.HasLocalParameters) startNode.ResetLocalParameters(random);
+      if (startNode.HasLocalParameters) {
+        startNode.ResetLocalParameters(random);
+      }
       rootNode.AddSubtree(startNode);
       tree.Root = rootNode;
+
       return tree;
     }
 
-    public void AddFullyConnectedSymbols(Symbol root, params ICollection<Symbol> symbols) {
+    public void AddFullyConnectedSymbols(Symbol root, params ICollection<Symbol> symbols)
+    {
       foreach (var symbol in symbols) {
         grammar.AddSymbol(symbol);
         grammar.AddAllowedChildSymbol(root, symbol, 0);
-        if (symbol.MaximumArity == 0)
+        if (symbol.MaximumArity == 0) {
           continue;
+        }
         foreach (var symbol1 in symbols) {
           grammar.AddAllowedChildSymbol(symbol, symbol1);
         }

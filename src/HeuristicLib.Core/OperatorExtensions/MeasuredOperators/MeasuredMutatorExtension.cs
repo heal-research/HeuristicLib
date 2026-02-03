@@ -1,13 +1,11 @@
-﻿using HEAL.HeuristicLib.Operators.Mutator;
+﻿using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.OperatorExtensions.MeasuredOperators;
 
-public static class MeasuredMutatorExtension {
-  public static MeasuredMutator<TGenotype, TEncoding, TProblem> MeasureTime<TGenotype, TEncoding, TProblem>(this IMutator<TGenotype, TEncoding, TProblem> mutator)
-    where TEncoding : class, IEncoding<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TEncoding> {
-    return new MeasuredMutator<TGenotype, TEncoding, TProblem>(mutator);
-  }
+public static class MeasuredMutatorExtension
+{
+  public static MeasuredMutator<TGenotype, TSearchSpace, TProblem> MeasureTime<TGenotype, TSearchSpace, TProblem>(this IMutator<TGenotype, TSearchSpace, TProblem> mutator) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> => new(mutator);
 }

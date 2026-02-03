@@ -1,24 +1,30 @@
 ﻿namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
-public class TravelingSalesmanDistanceMatrixProblemData : ITravelingSalesmanProblemData {
+public class TravelingSalesmanDistanceMatrixProblemData : ITravelingSalesmanProblemData
+{
   private readonly double[,] distances;
 
-  public int NumberOfCities => distances.GetLength(0);
-  public IReadOnlyList<IReadOnlyList<double>> Distances => Clone(distances);
-
 #pragma warning disable S2368
-  public TravelingSalesmanDistanceMatrixProblemData(double[,] distances) {
-    if (distances.GetLength(0) != distances.GetLength(1)) throw new ArgumentException("The distance matrix must be square.");
-    if (distances.GetLength(0) < 1) throw new ArgumentException("The distance matrix must have at least one city.");
-    this.distances = (double[,])distances.Clone(); // clone Distances to prevent modification
+  public TravelingSalesmanDistanceMatrixProblemData(double[,] distances)
+  {
+    if (distances.GetLength(0) != distances.GetLength(1)) {
+      throw new ArgumentException("The distance matrix must be square.");
+    }
+
+    if (distances.GetLength(0) < 1) {
+      throw new ArgumentException("The distance matrix must have at least one city.");
+    }
+    this.distances = (double[,])distances.Clone();// clone Distances to prevent modification
   }
 #pragma warning restore S2368
+  public IReadOnlyList<IReadOnlyList<double>> Distances => Clone(distances);
 
-  public double GetDistance(int fromCity, int toCity) {
-    return distances[fromCity, toCity];
-  }
+  public int NumberOfCities => distances.GetLength(0);
 
-  private static IReadOnlyList<IReadOnlyList<double>> Clone(double[,] array) {
+  public double GetDistance(int fromCity, int toCity) => distances[fromCity, toCity];
+
+  private static IReadOnlyList<IReadOnlyList<double>> Clone(double[,] array)
+  {
     var result = new double[array.GetLength(0)][];
     for (var i = 0; i < array.GetLength(0); i++) {
       result[i] = new double[array.GetLength(1)];

@@ -1,17 +1,19 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions;
+namespace HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 
-public class RosenbrockFunction(int dimension) : IGradientTestFunction {
+public class RosenbrockFunction(int dimension) : IGradientTestFunction
+{
+
+  private const double A = 100;
   public int Dimension { get; } = dimension;
   public double Min => -2.048;
   public double Max => 2.048;
   public ObjectiveDirection Objective => ObjectiveDirection.Minimize;
 
-  private const double A = 100;
-
-  public double Evaluate(RealVector solution) {
+  public double Evaluate(RealVector solution)
+  {
     var n = solution.Count;
     var sum = 0.0;
     for (var i = 0; i < n - 1; i++) {
@@ -25,7 +27,8 @@ public class RosenbrockFunction(int dimension) : IGradientTestFunction {
     return sum;
   }
 
-  public RealVector EvaluateGradient(RealVector solution) {
+  public RealVector EvaluateGradient(RealVector solution)
+  {
     var n = solution.Count;
     var g = new double[n];
     for (var i = 0; i < n; i++) {

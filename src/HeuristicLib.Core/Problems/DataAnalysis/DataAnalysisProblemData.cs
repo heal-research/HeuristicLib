@@ -1,13 +1,18 @@
-﻿using HEAL.HeuristicLib.Problems.Dynamic;
+﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-namespace HEAL.HeuristicLib.Problems.DataAnalysis;
+public abstract class DataAnalysisProblemData : IProblemData
+{
 
-public abstract class DataAnalysisProblemData : IProblemData {
-  public Dataset Dataset { get; set; }
-  public List<string> InputVariables { get; }
-  public Dictionary<PartitionType, Range> Partitions { get; }
+  public enum PartitionType
+  {
+    Training,
+    Test,
+    Validation,
+    All
+  }
 
-  protected DataAnalysisProblemData(Dataset dataset, IEnumerable<string> inputs, Range? trainingRange = null) {
+  protected DataAnalysisProblemData(Dataset dataset, IEnumerable<string> inputs, Range? trainingRange = null)
+  {
     Dataset = dataset;
     var trainingRange1 = trainingRange ?? new Range(0, dataset.Rows / 2);
     var testRange = new Range(trainingRange1.End, dataset.Rows);
@@ -19,11 +24,7 @@ public abstract class DataAnalysisProblemData : IProblemData {
       [PartitionType.All] = new(0, dataset.Rows)
     };
   }
-
-  public enum PartitionType {
-    Training,
-    Test,
-    Validation,
-    All
-  }
+  public Dataset Dataset { get; set; }
+  public List<string> InputVariables { get; }
+  public Dictionary<PartitionType, Range> Partitions { get; }
 }

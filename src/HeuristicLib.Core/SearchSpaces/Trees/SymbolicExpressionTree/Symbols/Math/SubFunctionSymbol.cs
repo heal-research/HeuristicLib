@@ -1,5 +1,8 @@
-﻿namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+﻿using HEAL.HeuristicLib.Genotypes.Trees;
 
-public sealed class SubFunctionSymbol() : Symbol(0, 1, 1) {
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+
+public sealed class SubFunctionSymbol() : Symbol(0, 1, 1)
+{
   public override SymbolicExpressionTreeNode CreateTreeNode() => new SubFunctionTreeNode(this);
 }

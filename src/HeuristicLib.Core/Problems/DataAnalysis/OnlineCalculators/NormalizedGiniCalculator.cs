@@ -1,7 +1,9 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public static class NormalizedGiniCalculator {
-  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
+public static class NormalizedGiniCalculator
+{
+  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
+  {
     var originalValuesArr = originalValues.ToArray();
     var estimatedValuesArr = estimatedValues.ToArray();
     if (originalValuesArr.Length != estimatedValuesArr.Length) {
@@ -9,14 +11,16 @@ public static class NormalizedGiniCalculator {
     }
 
     var oe = Gini(originalValuesArr, estimatedValuesArr, out errorState);
-    if (errorState != OnlineCalculatorError.None)
+    if (errorState != OnlineCalculatorError.None) {
       return double.NaN;
+    }
 
     return oe / Gini(originalValuesArr, originalValuesArr, out errorState);
   }
 
-  private static double Gini(IEnumerable<double> original, IEnumerable<double> estimated, out OnlineCalculatorError errorState) {
-    var pairs = estimated.Zip(original, (e, o) => (e, o)).OrderByDescending(p => p.e);
+  private static double Gini(IEnumerable<double> original, IEnumerable<double> estimated, out OnlineCalculatorError errorState)
+  {
+    var pairs = estimated.Zip(original, resultSelector: (e, o) => (e, o)).OrderByDescending(p => p.e);
     errorState = OnlineCalculatorError.InsufficientElementsAdded;
     var giniSum = 0.0;
     var sumOriginal = 0.0;
@@ -24,6 +28,7 @@ public static class NormalizedGiniCalculator {
     foreach (var p in pairs) {
       if (double.IsNaN(p.o) || double.IsNaN(p.e)) {
         errorState = OnlineCalculatorError.InvalidValueAdded;
+
         return double.NaN;
       }
 
@@ -32,8 +37,11 @@ public static class NormalizedGiniCalculator {
       n++;
     }
 
-    if (n > 0) errorState = OnlineCalculatorError.None;
+    if (n > 0) {
+      errorState = OnlineCalculatorError.None;
+    }
     giniSum /= sumOriginal;
+
     return (giniSum - (n + 1) / 2.0) / n;
   }
 }

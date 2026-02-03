@@ -1,14 +1,17 @@
 ﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IIterativeAlgorithm<TGenotype, in TEncoding, in TProblem, TIterationResult>
-  : IAlgorithm<TGenotype, TEncoding, TProblem, TIterationResult>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding>
-  where TIterationResult : IAlgorithmState {
-  TIterationResult ExecuteStep(TProblem problem, TEncoding searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
-  IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TEncoding? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
+public interface IIterativeAlgorithm<TGenotype, in TSearchSpace, in TProblem, TIterationResult>
+  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TIterationResult>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TIterationResult : IAlgorithmState
+{
+  TIterationResult ExecuteStep(TProblem problem, TSearchSpace searchSpace, TIterationResult? previousIterationResult, IRandomNumberGenerator random);
+  IEnumerable<TIterationResult> ExecuteStreaming(TProblem problem, TSearchSpace? searchSpace = null, TIterationResult? previousIterationResult = default, IRandomNumberGenerator? random = null);
 }

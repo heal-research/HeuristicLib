@@ -1,23 +1,39 @@
 ﻿using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using static HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic.BatchOperations;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter {
+public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataAnalysisExpressionTreeInterpreter
+{
+
+  [ThreadStatic] private static Dictionary<string, double[]>? cachedData;
+
+  [ThreadStatic] private static Dataset? cachedDataset;
+
+  public IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows)
+  {
+    if (rows is not int[] rowArray) {
+      rowArray = rows.ToArray();
+    }
+
+    return GetValues(tree, dataset, rowArray);
+  }
   [MethodImpl(MethodImplOptions.AggressiveInlining)]
-  private static void LoadData(in BatchInstruction instr, ReadOnlySpan<int> rows, int startIndex, int batchSize) {
+  private static void LoadData(in BatchInstruction instr, ReadOnlySpan<int> rows, int startIndex, int batchSize)
+  {
     var data = instr.Data;
     var dst = instr.Buf;
     var w = instr.Weight;
     for (var i = 0; i < batchSize; ++i) {
-      var row = rows[startIndex + i]; // ✅ use the i-th selected row
+      var row = rows[startIndex + i];// ✅ use the i-th selected row
       dst[i] = w * data[row];
     }
   }
 
-  private static void Evaluate(BatchInstruction[] code, ReadOnlySpan<int> rows, int rowIndex, int batchSize) {
+  private static void Evaluate(BatchInstruction[] code, ReadOnlySpan<int> rows, int rowIndex, int batchSize)
+  {
     for (var i = code.Length - 1; i >= 0; --i) {
       ref readonly var instr = ref code[i];
       var c = instr.ChildIndex;
@@ -28,11 +44,12 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
       switch (instr.Opcode) {
         case OpCodes.Variable: {
           LoadData(instr, rows, rowIndex, batchSize);
+
           break;
         }
-        case OpCodes.Constant: // fall through
+        case OpCodes.Constant:// fall through
         case OpCodes.Number:
-          break; // nothing to do here, don't remove because we want to prevent falling into the default case here.
+          break;// nothing to do here, don't remove because we want to prevent falling into the default case here.
         case OpCodes.Add: {
           Load(instr.Buf, childInstruction.Buf);
           for (var j = 1; j < n; ++j) {
@@ -83,6 +100,7 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
 
         case OpCodes.Square: {
           Square(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
@@ -90,20 +108,24 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
           Load(instr.Buf, childInstruction.Buf);
           ref readonly var ch = ref code[c + 1];
           Root(instr.Buf, ch.Buf);
+
           break;
         }
 
         case OpCodes.SquareRoot: {
           Sqrt(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
         case OpCodes.Cube: {
           Cube(instr.Buf, childInstruction.Buf);
+
           break;
         }
         case OpCodes.CubeRoot: {
           CubeRoot(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
@@ -111,41 +133,49 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
           Load(instr.Buf, childInstruction.Buf);
           ref readonly var ch = ref code[c + 1];
           Pow(instr.Buf, ch.Buf);
+
           break;
         }
 
         case OpCodes.Exp: {
           Exp(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
         case OpCodes.Log: {
           Log(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
         case OpCodes.Sin: {
           Sin(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
         case OpCodes.Cos: {
           Cos(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
         case OpCodes.Tan: {
           Tan(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
         case OpCodes.Tanh: {
           Tanh(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
         case OpCodes.Absolute: {
           Absolute(instr.Buf, childInstruction.Buf);
+
           break;
         }
 
@@ -153,11 +183,13 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
           Load(instr.Buf, childInstruction.Buf);
           ref readonly var ch = ref code[c + 1];
           AnalyticQuotient(instr.Buf, ch.Buf);
+
           break;
         }
 
         case OpCodes.SubFunction: {
           Load(instr.Buf, childInstruction.Buf);
+
           break;
         }
         default:
@@ -166,11 +198,8 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
     }
   }
 
-  [ThreadStatic] private static Dictionary<string, double[]>? cachedData;
-
-  [ThreadStatic] private static Dataset? cachedDataset;
-
-  private static void InitCache(Dataset dataset) {
+  private static void InitCache(Dataset dataset)
+  {
     cachedDataset = dataset;
     cachedData = new Dictionary<string, double[]>();
     foreach (var v in dataset.DoubleVariables) {
@@ -178,7 +207,8 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
     }
   }
 
-  private static double[] GetValues(SymbolicExpressionTree tree, Dataset dataset, int[] rows) {
+  private static double[] GetValues(SymbolicExpressionTree tree, Dataset dataset, int[] rows)
+  {
     if (cachedData == null || cachedDataset != dataset || cachedDataset is ModifiableDataset) {
       InitCache(dataset);
     }
@@ -194,8 +224,9 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
       Array.Copy(code[0].Buf, 0, result, rowIndex, BatchSize);
     }
 
-    if (remainingRows <= 0)
+    if (remainingRows <= 0) {
       return result;
+    }
 
     Evaluate(code, rows, roundedTotal, remainingRows);
     Array.Copy(code[0].Buf, 0, result, roundedTotal, remainingRows);
@@ -203,21 +234,18 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
     return result;
   }
 
-  public IEnumerable<double> GetSymbolicExpressionTreeValues(SymbolicExpressionTree tree, Dataset dataset, IEnumerable<int> rows) {
-    if (rows is not int[] rowArray)
-      rowArray = rows.ToArray();
-    return GetValues(tree, dataset, rowArray);
-  }
-
-  private static BatchInstruction[] Compile(SymbolicExpressionTree tree, Dataset dataset, Func<SymbolicExpressionTreeNode, byte> opCodeMapper) {
+  private static BatchInstruction[] Compile(SymbolicExpressionTree tree, Dataset dataset, Func<SymbolicExpressionTreeNode, byte> opCodeMapper)
+  {
     var root = tree.Root[0][0];
     var code = new BatchInstruction[root.GetLength()];
-    if (root.SubtreeCount > ushort.MaxValue)
+    if (root.SubtreeCount > ushort.MaxValue) {
       throw new ArgumentException("Number of subtrees is too big (>65.535)");
+    }
     int c = 1, i = 0;
     foreach (var node in root.IterateNodesBreadth()) {
-      if (node.SubtreeCount > ushort.MaxValue)
+      if (node.SubtreeCount > ushort.MaxValue) {
         throw new ArgumentException("Number of subtrees is too big (>65.535)");
+      }
       double w = 0, v = 0;
       double[] d = [];
       switch (node) {
@@ -235,11 +263,12 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
         case NumberTreeNode numeric: {
           v = numeric.Value;
           Array.Fill(code[i].Buf, code[i].Value, 0, BatchSize);
+
           break;
         }
       }
 
-      code[i] = new BatchInstruction(opcode: opCodeMapper(node), numberOfArguments: (ushort)node.SubtreeCount, buf: new double[BatchSize], childIndex: c, weight: w, data: d, value: v);
+      code[i] = new BatchInstruction(opCodeMapper(node), (ushort)node.SubtreeCount, buf: new double[BatchSize], childIndex: c, weight: w, data: d, value: v);
 
       c += node.SubtreeCount;
       ++i;

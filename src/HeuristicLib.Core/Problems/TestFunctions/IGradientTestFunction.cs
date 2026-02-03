@@ -1,7 +1,8 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public interface IGradientTestFunction : ITestFunction {
+public interface IGradientTestFunction : ITestFunction
+{
   RealVector EvaluateGradient(RealVector solution);
 }

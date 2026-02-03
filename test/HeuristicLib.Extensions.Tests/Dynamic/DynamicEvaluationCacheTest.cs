@@ -1,23 +1,28 @@
-﻿using HEAL.HeuristicLib.Operators.Evaluator;
+﻿using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.Dynamic.Operators;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Tests.Dynamic;
+namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
 //genotypes must be class types
-file sealed class DummyGenotype(int val) {
+file sealed class DummyGenotype(int val)
+{
   public readonly int Value = val;
 }
 
-file sealed class DummySearchSpace : IEncoding<DummyGenotype> {
+file sealed class DummySearchSpace : ISearchSpace<DummyGenotype>
+{
   public bool Contains(DummyGenotype genotype) => true;
 }
 
-file sealed class DummyDynamicProblem : DynamicProblem<DummyGenotype, DummySearchSpace> {
+file sealed class DummyDynamicProblem : DynamicProblem<DummyGenotype, DummySearchSpace>
+{
   public DummyDynamicProblem(IRandomNumberGenerator env, int epochLength)
-    : base(env, updatePolicy: UpdatePolicy.AfterEvaluation, epochLength: epochLength) {
+    : base(env, UpdatePolicy.AfterEvaluation, epochLength)
+  {
     SearchSpace = new DummySearchSpace();
     Objective = SingleObjective.Minimize;
   }
@@ -25,14 +30,13 @@ file sealed class DummyDynamicProblem : DynamicProblem<DummyGenotype, DummySearc
   public override DummySearchSpace SearchSpace { get; }
   public override Objective Objective { get; }
 
-  public override ObjectiveVector Evaluate(DummyGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing) {
-    return solution.Value;
-  }
+  public override ObjectiveVector Evaluate(DummyGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing) => solution.Value;
 
-  protected override void Update() { }
+  protected override void Update() {}
 }
 
-file sealed class CountingEvaluator : IEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem> {
+file sealed class CountingEvaluator : IEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem>
+{
   public int Calls { get; private set; }
   public int LastBatchSize { get; private set; }
 
@@ -40,27 +44,31 @@ file sealed class CountingEvaluator : IEvaluator<DummyGenotype, DummySearchSpace
     IReadOnlyList<DummyGenotype> solutions,
     IRandomNumberGenerator random,
     DummySearchSpace searchSpace,
-    DummyDynamicProblem problem) {
+    DummyDynamicProblem problem)
+  {
     Calls++;
     LastBatchSize = solutions.Count;
+
     return solutions.Select(s => problem.Evaluate(s, random)).ToArray();
   }
 }
 
-public class DynamicEvaluationCacheTests {
+public class DynamicEvaluationCacheTests
+{
   [Fact]
-  public void DeduplicatesWithinBatch_EvaluatesOnce() {
+  public void DeduplicatesWithinBatch_EvaluatesOnce()
+  {
     var env = new SystemRandomNumberGenerator(0);
-    var problem = new DummyDynamicProblem(env, epochLength: 10_000); // avoid boundary
+    var problem = new DummyDynamicProblem(env, 10_000);// avoid boundary
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-      s => s.Value, inner, problem
+    keySelector: s => s.Value, inner, problem
     );
 
     var res = cached.Evaluate(
-      [new DummyGenotype(1), new DummyGenotype(1), new DummyGenotype(1)],
-      NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    [new DummyGenotype(1), new DummyGenotype(1), new DummyGenotype(1)],
+    NoRandomGenerator.Instance, problem.SearchSpace, problem);
 
     Assert.Equal(1, inner.Calls);
     Assert.Equal(1, inner.LastBatchSize);
@@ -73,13 +81,14 @@ public class DynamicEvaluationCacheTests {
   }
 
   [Fact]
-  public void CachesAcrossBatches_NoReevaluation_NoTick() {
+  public void CachesAcrossBatches_NoReevaluation_NoTick()
+  {
     var env = new SystemRandomNumberGenerator(0);
-    var problem = new DummyDynamicProblem(env, epochLength: 10_000); // avoid boundary
+    var problem = new DummyDynamicProblem(env, 10_000);// avoid boundary
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-      s => s.Value, inner, problem
+    keySelector: s => s.Value, inner, problem
     );
 
     _ = cached.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
@@ -93,13 +102,14 @@ public class DynamicEvaluationCacheTests {
   }
 
   [Fact]
-  public void EpochBoundary_ClearsCache_ThenRequiresReevaluation() {
+  public void EpochBoundary_ClearsCache_ThenRequiresReevaluation()
+  {
     var env = new SystemRandomNumberGenerator(0);
-    var problem = new DummyDynamicProblem(env, epochLength: 2); // boundary every 2 evals
+    var problem = new DummyDynamicProblem(env, 2);// boundary every 2 evals
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-      s => s.Value, inner, problem
+    keySelector: s => s.Value, inner, problem
     );
 
     // Evaluate two distinct keys -> 2 evaluations -> should hit boundary and schedule an epoch change
@@ -109,7 +119,7 @@ public class DynamicEvaluationCacheTests {
     Assert.True(problem.EpochClock.PendingEpochs > 0);
 
     // resolve -> fires OnEpochChange -> cached evaluator clears cache
-    problem.EpochClock.ResolvePendingEpochs(() => { });
+    problem.EpochClock.ResolvePendingEpochs(() => {});
 
     Assert.Equal(1, problem.EpochClock.CurrentEpoch);
     Assert.Equal(0, problem.EpochClock.PendingEpochs);
@@ -120,13 +130,14 @@ public class DynamicEvaluationCacheTests {
   }
 
   [Fact]
-  public void GraceCount_Reached_AdvancesEpoch_WithoutTicking() {
+  public void GraceCount_Reached_AdvancesEpoch_WithoutTicking()
+  {
     var env = new SystemRandomNumberGenerator(0);
-    var problem = new DummyDynamicProblem(env, epochLength: 10_000); // avoid natural boundary
+    var problem = new DummyDynamicProblem(env, 10_000);// avoid natural boundary
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-      s => s.Value, inner, problem
+    keySelector: s => s.Value, inner, problem
     ) { GraceCount = 3 };
 
     // Prime cache (causes 1 tick)
@@ -137,16 +148,16 @@ public class DynamicEvaluationCacheTests {
 
     // Now do 3 cached batches => no ticking, but should force AdvanceEpoch
     _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
-    Assert.Equal(1L, problem.EpochClock.Ticks); // still 1 => proves no ticking on cache hit
+    Assert.Equal(1L, problem.EpochClock.Ticks);// still 1 => proves no ticking on cache hit
     _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
-    Assert.Equal(1L, problem.EpochClock.Ticks); // still 1 => proves no ticking on cache hit
+    Assert.Equal(1L, problem.EpochClock.Ticks);// still 1 => proves no ticking on cache hit
     _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
 
-    Assert.Equal(10_000L, problem.EpochClock.Ticks); // still 1 => proves no ticking on cache hit
-    Assert.True(problem.EpochClock.PendingEpochs > 0); // epoch forced
+    Assert.Equal(10_000L, problem.EpochClock.Ticks);// still 1 => proves no ticking on cache hit
+    Assert.True(problem.EpochClock.PendingEpochs > 0);// epoch forced
 
     // resolve -> epoch changes -> cache cleared
-    problem.EpochClock.ResolvePendingEpochs(() => { });
+    problem.EpochClock.ResolvePendingEpochs(() => {});
 
     Assert.Equal(1, problem.EpochClock.CurrentEpoch);
 
@@ -156,13 +167,14 @@ public class DynamicEvaluationCacheTests {
   }
 
   [Fact]
-  public void HitStreakResets_WhenUncachedAppears() {
+  public void HitStreakResets_WhenUncachedAppears()
+  {
     var env = new SystemRandomNumberGenerator(0);
-    var problem = new DummyDynamicProblem(env, epochLength: 10_000); // avoid natural boundary
+    var problem = new DummyDynamicProblem(env, 10_000);// avoid natural boundary
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-      s => s.Value, inner, problem
+    keySelector: s => s.Value, inner, problem
     ) { GraceCount = 3 };
 
     // Prime cache
@@ -187,13 +199,14 @@ public class DynamicEvaluationCacheTests {
   }
 
   [Fact]
-  public void EmptyBatch_DoesNothing() {
+  public void EmptyBatch_DoesNothing()
+  {
     var env = new SystemRandomNumberGenerator(0);
-    var problem = new DummyDynamicProblem(env, epochLength: 10_000);
+    var problem = new DummyDynamicProblem(env, 10_000);
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-      s => s.Value, inner, problem
+    keySelector: s => s.Value, inner, problem
     ) { GraceCount = 1 };
 
     var epochBefore = problem.EpochClock.CurrentEpoch;
@@ -209,12 +222,13 @@ public class DynamicEvaluationCacheTests {
   }
 
   [Fact]
-  public void AdvanceEpoch_JumpsTicksToNextEpochBoundary() {
+  public void AdvanceEpoch_JumpsTicksToNextEpochBoundary()
+  {
     var env = new SystemRandomNumberGenerator(0);
-    var problem = new DummyDynamicProblem(env, epochLength: 10_000);
+    var problem = new DummyDynamicProblem(env, 10_000);
     var inner = new CountingEvaluator();
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-      s => s.Value, inner, problem
+    keySelector: s => s.Value, inner, problem
     ) { GraceCount = 1 };
 
     // prime cache -> ticks=1

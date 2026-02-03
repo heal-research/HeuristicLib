@@ -1,3 +1,3 @@
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 public sealed class ProgramRootSymbol() : Symbol(1, 1, 1);

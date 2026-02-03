@@ -1,23 +1,24 @@
-﻿using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Encodings.Permutation;
-using HEAL.HeuristicLib.Encodings.Permutation.Creators;
-using HEAL.HeuristicLib.Encodings.Permutation.Crossovers;
-using HEAL.HeuristicLib.Encodings.Permutation.Mutators;
-using HEAL.HeuristicLib.Operators.Selector;
-using HEAL.HeuristicLib.Operators.Terminator;
+﻿using HEAL.HeuristicLib.Algorithms.Evolutionary.GeneticAlgorithm;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
+using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
+using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
-using HEAL.HeuristicLib.Random;
 
 #pragma warning disable S1481
 
 namespace HEAL.HeuristicLib.Tests;
 
-public class TspTests {
+public class TspTests
+{
   private const string TestDataBerlin52TSP = @"TestData\berlin52.tsp";
 
   [Fact]
-  public void GaWithTSP() {
+  public void GaWithTSP()
+  {
     //Load Problem
     var data = TsplibTspInstanceProvider.LoadData(TestDataBerlin52TSP);
     var cdata = data.ToCoordinatesData();
@@ -25,9 +26,9 @@ public class TspTests {
 
     //GA
     var ga = GeneticAlgorithm.GetBuilder(
-      creator: new RandomPermutationCreator(),
-      crossover: new EdgeRecombinationCrossover(),
-      mutator: new InversionMutator()
+    new RandomPermutationCreator(),
+    new EdgeRecombinationCrossover(),
+    new InversionMutator()
     );
 
     ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
@@ -42,8 +43,8 @@ public class TspTests {
 
     //look at results
     var objGa = resGa.Population
-                     .OrderBy(x => x.ObjectiveVector[0])
-                     .First();
+      .OrderBy(x => x.ObjectiveVector[0])
+      .First();
 
     //best possible 7542
   }

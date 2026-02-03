@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators.DependencyCalculator;
 
-public interface IDependencyCalculator {
+public interface IDependencyCalculator
+{
   double Maximum { get; }
   double Minimum { get; }
   string Name { get; }

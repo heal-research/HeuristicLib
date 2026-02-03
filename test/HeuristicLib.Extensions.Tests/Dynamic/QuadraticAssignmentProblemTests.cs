@@ -1,36 +1,43 @@
-﻿using HEAL.HeuristicLib.Encodings.Permutation;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Tests.Dynamic;
+namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
-public static class QuadraticAssignmentProblemHelper {
-  public static QuadraticAssignmentProblemData CreateDefaultA() {
+public static class QuadraticAssignmentProblemHelper
+{
+  public static QuadraticAssignmentProblemData CreateDefaultA()
+  {
     // Example flow and distance matrices for a small QAP instance
     var flowMatrix = new double[,] { { 0, 2, 0, 1 }, { 2, 0, 3, 0 }, { 0, 3, 0, 4 }, { 1, 0, 4, 0 } };
     var distanceMatrix = new double[,] { { 0, 1, 2, 3 }, { 1, 0, 1, 2 }, { 2, 1, 0, 1 }, { 3, 2, 1, 0 } };
+
     return new QuadraticAssignmentProblemData(flowMatrix, distanceMatrix);
   }
 
-  public static QuadraticAssignmentProblemData CreateDefaultB() {
+  public static QuadraticAssignmentProblemData CreateDefaultB()
+  {
     // Example flow and distance matrices for a small QAP instance
     var flowMatrix = new double[,] { { 0, 0, 0, 0 }, { 1, 0, 0, 0 }, { 1, 1, 0, 0 }, { 1, 1, 1, 0 } };
     var distanceMatrix = new double[,] { { 0, 1, 2, 3 }, { 1, 0, 1, 2 }, { 2, 1, 0, 1 }, { 3, 2, 1, 0 } };
+
     return new QuadraticAssignmentProblemData(flowMatrix, distanceMatrix);
   }
 }
 
-public class QuadraticAssignmentProblemTests {
+public class QuadraticAssignmentProblemTests
+{
   [Fact]
-  public void Evaluate_KnownToyInstance_ReturnsExpectedCost() {
+  public void Evaluate_KnownToyInstance_ReturnsExpectedCost()
+  {
     var problem = QuadraticAssignmentProblem.CreateDefault();
     var rng = new SystemRandomNumberGenerator(1);
 
     // identity assignment: facility i -> location i
-    var sol = new Permutation([0, 1, 2, 3]); // adapt ctor if needed
+    var sol = new Permutation([0, 1, 2, 3]);// adapt ctor if needed
 
-    var cost = problem.Evaluate(sol, rng)[0]; // adapt cast if ObjectiveVector differs
+    var cost = problem.Evaluate(sol, rng)[0];// adapt cast if ObjectiveVector differs
 
     // Compute expected manually for the default matrices you used
     // expected = sum_i sum_j F[i,j] * D[i,j]
@@ -43,11 +50,12 @@ public class QuadraticAssignmentProblemTests {
   }
 
   [Fact]
-  public void Alpha0_EqualsInstanceA() {
+  public void Alpha0_EqualsInstanceA()
+  {
     var rng = new SystemRandomNumberGenerator(1);
     var a = QuadraticAssignmentProblemHelper.CreateDefaultA();
     var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
-    var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, alphaStart: 0.0, alphaStep: 0.1, interpolateDistances: true);
+    var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 0.1, true);
     var sol = new Permutation(Enumerable.Range(0, a.Size).ToArray());
     var costDyn = dyn.Evaluate(sol, NoRandomGenerator.Instance);
     var costA = new QuadraticAssignmentProblem(a).Evaluate(sol, NoRandomGenerator.Instance);
@@ -55,11 +63,12 @@ public class QuadraticAssignmentProblemTests {
   }
 
   [Fact]
-  public void Alpha1_EqualsInstanceB_AfterSteps() {
+  public void Alpha1_EqualsInstanceB_AfterSteps()
+  {
     var rng = new SystemRandomNumberGenerator(1);
     var a = QuadraticAssignmentProblemHelper.CreateDefaultA();
     var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
-    var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, alphaStart: 0.0, alphaStep: 1.0, interpolateDistances: true, pingPong: false);
+    var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 1.0, true, false);
 
     dyn.UpdateOnce();
     var sol = new Permutation(Enumerable.Range(0, a.Size).ToArray());
@@ -69,11 +78,12 @@ public class QuadraticAssignmentProblemTests {
   }
 
   [Fact]
-  public void SigmaZero_EqualsBaseCost_Always() {
+  public void SigmaZero_EqualsBaseCost_Always()
+  {
     var baseData = QuadraticAssignmentProblemHelper.CreateDefaultA();
     var env = new SystemRandomNumberGenerator(123);
 
-    var dyn = new NoisyFlowQuadraticAssignmentProblem(baseData, env, sigma: 0.0);
+    var dyn = new NoisyFlowQuadraticAssignmentProblem(baseData, env, 0.0);
     var stat = new QuadraticAssignmentProblem(baseData);
 
     var sol = new Permutation(Enumerable.Range(0, baseData.Size).ToArray());
@@ -83,8 +93,9 @@ public class QuadraticAssignmentProblemTests {
     Assert.Equal(c2, c1);
 
     // After many updates, still equal (since noise is zero)
-    for (var i = 0; i < 50; i++)
+    for (var i = 0; i < 50; i++) {
       dyn.EpochClock.AdvanceEpoch();
+    }
 
     var c3 = dyn.Evaluate(sol, NoRandomGenerator.Instance);
     Assert.Equal(c2, c3);

@@ -1,17 +1,22 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public static class AutoCorrelationCalculator {
-  public static double[] Calculate(double[] values, out OnlineCalculatorError error) {
+public static class AutoCorrelationCalculator
+{
+  public static double[] Calculate(double[] values, out OnlineCalculatorError error)
+  {
     if (values.Any(x => double.IsNaN(x) || double.IsInfinity(x))) {
       error = OnlineCalculatorError.InvalidValueAdded;
+
       return [];
     }
 
     error = OnlineCalculatorError.None;
+
     return CircularCrossCorrelation(values, values);
   }
 
-  public static double[] CircularCrossCorrelation(double[] x, double[] y) {
+  public static double[] CircularCrossCorrelation(double[] x, double[] y)
+  {
     var n = Math.Max(x.Length, y.Length);
     var result = new double[n];
 

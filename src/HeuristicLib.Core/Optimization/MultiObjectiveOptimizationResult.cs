@@ -2,11 +2,11 @@
 
 public record MultiObjectiveOptimizationResult<TGenotype, TISolutionLayout> : OptimizationResult<TGenotype, TISolutionLayout>, IMultiObjectiveResult<TGenotype>
   where TGenotype : IEquatable<TGenotype>
-  where TISolutionLayout : IISolutionLayout<TGenotype> {
-  public IReadOnlyList<ISolution<TGenotype>> ParetoFront { get; init; }
+  where TISolutionLayout : IISolutionLayout<TGenotype>
+{
 
   public MultiObjectiveOptimizationResult(TISolutionLayout Solutions, IReadOnlyList<ISolution<TGenotype>> paretoFront)
-    : base(Solutions) {
+    : base(Solutions) =>
     ParetoFront = paretoFront;
-  }
+  public IReadOnlyList<ISolution<TGenotype>> ParetoFront { get; init; }
 }

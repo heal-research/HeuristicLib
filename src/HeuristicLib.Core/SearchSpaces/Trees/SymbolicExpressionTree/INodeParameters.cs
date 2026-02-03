@@ -1,3 +1,5 @@
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree;
 
-public interface INodeParameters { }
+public interface INodeParameters
+{
+}

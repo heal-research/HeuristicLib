@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public enum DominanceRelation {
+public enum DominanceRelation
+{
   Dominates,
   IsDominatedBy,
   Equivalent,

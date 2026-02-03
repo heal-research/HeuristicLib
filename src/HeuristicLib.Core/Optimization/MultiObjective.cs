@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public static class MultiObjective {
+public static class MultiObjective
+{
   public static Objective Minimize(int size) => Create(Enumerable.Repeat(ObjectiveDirection.Minimize, size).ToArray());
   public static Objective Maximize(int size) => Create(Enumerable.Repeat(ObjectiveDirection.Maximize, size).ToArray());
   public static Objective Create(params bool[] maximization) => Create(maximization.Select(x => x ? ObjectiveDirection.Maximize : ObjectiveDirection.Minimize).ToArray());

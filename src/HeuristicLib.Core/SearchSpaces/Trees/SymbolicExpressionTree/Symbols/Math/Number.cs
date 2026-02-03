@@ -1,29 +1,12 @@
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Genotypes.Trees;
 
-public sealed class Number : Symbol {
-  #region Properties
-  public double MinValue { get; set; }
-  public double MaxValue { get; set; }
-  public double ManipulatorMu { get; set; }
-  private double manipulatorSigma;
-  public double ManipulatorSigma {
-    get => manipulatorSigma;
-    set {
-      ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
-      manipulatorSigma = value;
-    }
-  }
-  private double multiplicativeManipulatorSigma;
-  public double MultiplicativeManipulatorSigma {
-    get => multiplicativeManipulatorSigma;
-    set {
-      ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
-      multiplicativeManipulatorSigma = value;
-    }
-  }
-  #endregion
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-  public Number() : base(0, 0, 0) {
+public sealed class Number : Symbol
+{
+
+  public Number() : base(0, 0, 0)
+  {
     ManipulatorMu = 0.0;
     manipulatorSigma = 1.0;
     multiplicativeManipulatorSigma = 0.03;
@@ -35,4 +18,34 @@ public sealed class Number : Symbol {
     => new NumberTreeNode(this);
 
   public NumberTreeNode CreateTreeNode(double number) => new(this) { Value = number };
+
+  #region Properties
+
+  public double MinValue { get; set; }
+  public double MaxValue { get; set; }
+  public double ManipulatorMu { get; set; }
+  private double manipulatorSigma;
+
+  public double ManipulatorSigma
+  {
+    get => manipulatorSigma;
+    set {
+      ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
+      manipulatorSigma = value;
+    }
+  }
+
+  private double multiplicativeManipulatorSigma;
+
+  public double MultiplicativeManipulatorSigma
+  {
+    get => multiplicativeManipulatorSigma;
+    set {
+      ArgumentOutOfRangeException.ThrowIfLessThan(value, 0);
+      multiplicativeManipulatorSigma = value;
+    }
+  }
+
+  #endregion
+
 }

@@ -3,45 +3,48 @@
 #pragma warning disable S2178
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class OnlineLinearScalingParameterCalculator {
-  /// <summary>
-  /// Additive offset
-  /// </summary>
-  public double Alpha => targetMeanCalculator.Mean - Beta * originalMeanAndVarianceCalculator.Mean;
-
-  /// <summary>
-  /// Multiplicative factor
-  /// </summary>
-  public double Beta {
-    get { return originalMeanAndVarianceCalculator.PopulationVariance.IsAlmost(0.0) ? 1 : originalTargetCovarianceCalculator.Covariance / originalMeanAndVarianceCalculator.PopulationVariance; }
-  }
-
-  public OnlineCalculatorError ErrorState => targetMeanCalculator.MeanErrorState | originalMeanAndVarianceCalculator.MeanErrorState |
-                                             originalMeanAndVarianceCalculator.PopulationVarianceErrorState | originalTargetCovarianceCalculator.ErrorState;
-
-  private readonly OnlineMeanAndVarianceCalculator targetMeanCalculator;
+public class OnlineLinearScalingParameterCalculator
+{
   private readonly OnlineMeanAndVarianceCalculator originalMeanAndVarianceCalculator;
   private readonly OnlineCovarianceCalculator originalTargetCovarianceCalculator;
 
-  public OnlineLinearScalingParameterCalculator() {
+  private readonly OnlineMeanAndVarianceCalculator targetMeanCalculator;
+
+  public OnlineLinearScalingParameterCalculator()
+  {
     targetMeanCalculator = new OnlineMeanAndVarianceCalculator();
     originalMeanAndVarianceCalculator = new OnlineMeanAndVarianceCalculator();
     originalTargetCovarianceCalculator = new OnlineCovarianceCalculator();
     Reset();
   }
 
-  public void Reset() {
+  /// <summary>
+  ///   Additive offset
+  /// </summary>
+  public double Alpha => targetMeanCalculator.Mean - Beta * originalMeanAndVarianceCalculator.Mean;
+
+  /// <summary>
+  ///   Multiplicative factor
+  /// </summary>
+  public double Beta => originalMeanAndVarianceCalculator.PopulationVariance.IsAlmost(0.0) ? 1 : originalTargetCovarianceCalculator.Covariance / originalMeanAndVarianceCalculator.PopulationVariance;
+
+  public OnlineCalculatorError ErrorState => targetMeanCalculator.MeanErrorState | originalMeanAndVarianceCalculator.MeanErrorState |
+                                             originalMeanAndVarianceCalculator.PopulationVarianceErrorState | originalTargetCovarianceCalculator.ErrorState;
+
+  public void Reset()
+  {
     targetMeanCalculator.Reset();
     originalMeanAndVarianceCalculator.Reset();
     originalTargetCovarianceCalculator.Reset();
   }
 
   /// <summary>
-  /// Calculates linear scaling parameters in one pass.
-  /// The formulas to calculate the scaling parameters were taken from Scaled Symblic Regression by Maarten Keijzer.
-  /// http://www.springerlink.com/content/x035121165125175/
+  ///   Calculates linear scaling parameters in one pass.
+  ///   The formulas to calculate the scaling parameters were taken from Scaled Symblic Regression by Maarten Keijzer.
+  ///   http://www.springerlink.com/content/x035121165125175/
   /// </summary>
-  public void Add(double original, double target) {
+  public void Add(double original, double target)
+  {
     // validity of values is checked in mean calculator and covariance calculator
     targetMeanCalculator.Add(target);
     originalMeanAndVarianceCalculator.Add(original);
@@ -49,15 +52,16 @@ public class OnlineLinearScalingParameterCalculator {
   }
 
   /// <summary>
-  /// Calculates alpha and beta parameters to linearly scale elements of original to the scale and location of target
-  /// original[i] * beta + alpha
+  ///   Calculates alpha and beta parameters to linearly scale elements of original to the scale and location of target
+  ///   original[i] * beta + alpha
   /// </summary>
   /// <param name="original">Values that should be scaled</param>
   /// <param name="target">Target values to which the original values should be scaled</param>
   /// <param name="alpha">Additive offset for the linear scaling</param>
   /// <param name="beta">Multiplicative factor for the linear scaling</param>
   /// <param name="errorState">Flag that indicates if errors occurred in the calculation of the linea scaling parameters.</param>
-  public static void Calculate(IEnumerable<double> original, IEnumerable<double> target, out double alpha, out double beta, out OnlineCalculatorError errorState) {
+  public static void Calculate(IEnumerable<double> original, IEnumerable<double> target, out double alpha, out double beta, out OnlineCalculatorError errorState)
+  {
     var calculator = new OnlineLinearScalingParameterCalculator();
     using var originalEnumerator = original.GetEnumerator();
     using var targetEnumerator = target.GetEnumerator();
@@ -67,7 +71,9 @@ public class OnlineLinearScalingParameterCalculator {
       var originalElement = originalEnumerator.Current;
       var targetElement = targetEnumerator.Current;
       calculator.Add(originalElement, targetElement);
-      if (calculator.ErrorState != OnlineCalculatorError.None) break;
+      if (calculator.ErrorState != OnlineCalculatorError.None) {
+        break;
+      }
     }
 
     // check if both enumerators are at the end to make sure both enumerations have the same length

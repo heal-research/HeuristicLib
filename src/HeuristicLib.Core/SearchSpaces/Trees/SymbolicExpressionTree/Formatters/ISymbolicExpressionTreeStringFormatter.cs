@@ -1,5 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Formatters;
+﻿namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;
 
-public interface ISymbolicExpressionTreeStringFormatter {
-  string Format(SymbolicExpressionTree symbolicExpressionTree);
+public interface ISymbolicExpressionTreeStringFormatter
+{
+  string Format(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree);
 }

@@ -1,16 +1,18 @@
-﻿using HEAL.HeuristicLib.Operators.Creator;
+﻿using HEAL.HeuristicLib.Operators.Creators;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
 namespace HEAL.HeuristicLib.Tests;
 
-public class TypeCompatabilityTests {
+public class TypeCompatabilityTests
+{
   [Fact]
-  public void TestCompatabilityTest1() {
+  public void TestCompatabilityTest1()
+  {
     var hlAssembly = typeof(ICreator<,,>).Assembly;
     var compilation = CSharpCompilation.Create("asd")
-                                       .AddReferences(MetadataReference.CreateFromFile(hlAssembly.Location))
-                                       .AddSyntaxTrees(CSharpSyntaxTree.ParseText(@"
+      .AddReferences(MetadataReference.CreateFromFile(hlAssembly.Location))
+      .AddSyntaxTrees(CSharpSyntaxTree.ParseText(@"
         using HEAL.HeuristicLib.Operators;
 
         public class

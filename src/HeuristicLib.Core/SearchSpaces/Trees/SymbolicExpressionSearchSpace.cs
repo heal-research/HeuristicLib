@@ -1,11 +1,22 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
-namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees;
 
 public record SymbolicExpressionSearchSpace(ISymbolicExpressionGrammar Grammar, int TreeLength = 50, int TreeDepth = 50)
-  : SearchSpace<SymbolicExpressionTree> {
+  : SearchSpace<Genotypes.Trees.SymbolicExpressionTree>
+{
+
+  public override bool Contains(Genotypes.Trees.SymbolicExpressionTree genotype)
+  {
+    return genotype.Length <= TreeLength &&
+           genotype.Depth <= TreeDepth
+           && Grammar.Conforms(genotype)
+      ;
+  }
+
   #region Parameter properties
+
   public int TreeLength { get; set; } = TreeLength;
 
   public int TreeDepth { get; set; } = TreeDepth;
@@ -15,12 +26,7 @@ public record SymbolicExpressionSearchSpace(ISymbolicExpressionGrammar Grammar, 
   public int FunctionDefinitions { get; set; }
 
   public int FunctionArguments { get; set; }
+
   #endregion
 
-  public override bool Contains(SymbolicExpressionTree genotype) {
-    return genotype.Length <= TreeLength &&
-           genotype.Depth <= TreeDepth
-           && Grammar.Conforms(genotype)
-      ;
-  }
 }

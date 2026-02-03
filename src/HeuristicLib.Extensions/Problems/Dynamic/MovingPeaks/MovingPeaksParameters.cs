@@ -14,18 +14,20 @@ public readonly record struct MovingPeaksParameters(
   double WidthSeverity
 );
 
-public static class MovingPeaksDefaults {
-  // Canonical “scenario 2”
-  public static MovingPeaksParameters Scenario2() => new(
-    Dimension: 5, NumberOfPeaks: 10,
-    LowerBound: 0, UpperBound: 100,
-    MinHeight: 30, MaxHeight: 70,
-    MinWidth: 1, MaxWidth: 12,
-    ShiftSeverity: 1.0, HeightSeverity: 7.0, WidthSeverity: 1.0
-  );
+public static class MovingPeaksDefaults
+{
 
   public static int[] Scenario2_PeakCounts = [5, 10, 20, 50];
+
   public static int[] Scenario2_Dimensions = [5, 10, 20, 50];
+  // Canonical “scenario 2”
+  public static MovingPeaksParameters Scenario2() => new(
+  5, 10,
+  0, 100,
+  30, 70,
+  1, 12,
+  1.0, 7.0, 1.0
+  );
 
   // “Static landscape” control
   public static MovingPeaksParameters Scenario2_Static() => Scenario2() with {

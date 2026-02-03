@@ -1,7 +1,9 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public static class FOneScoreCalculator {
-  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) {
+public static class FOneScoreCalculator
+{
+  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
+  {
     var enumerable = originalValues as ICollection<double> ?? originalValues.ToArray();
     if (enumerable.Distinct().Skip(2).Any()) {
       // TODO: we could use ClassificationPerformanceMeasuresCalculator instead of the ConfusionMatrixCalculator below to handle multi-class problems
@@ -21,7 +23,8 @@ public static class FOneScoreCalculator {
     return CalculateFOne(confusionMatrix);
   }
 
-  private static double CalculateFOne(double[,] confusionMatrix) {
+  private static double CalculateFOne(double[,] confusionMatrix)
+  {
     var precision = confusionMatrix[0, 0] / (confusionMatrix[0, 0] + confusionMatrix[0, 1]);
     var recall = confusionMatrix[0, 0] / (confusionMatrix[0, 0] + confusionMatrix[1, 0]);
 

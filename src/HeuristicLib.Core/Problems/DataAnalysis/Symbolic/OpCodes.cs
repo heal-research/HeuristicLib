@@ -1,10 +1,11 @@
-﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
+﻿using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public static class OpCodes {
+public static class OpCodes
+{
   // constants for API compatibility only
   public const byte Add = (byte)OpCode.Add;
   public const byte Sub = (byte)OpCode.Sub;
@@ -61,7 +62,7 @@ public static class OpCodes {
   public const byte Tanh = (byte)OpCode.Tanh;
   public const byte SubFunction = (byte)OpCode.SubFunction;
 
-  private static readonly Dictionary<Type, byte> SymbolToOpcode = new Dictionary<Type, byte>() {
+  private static readonly Dictionary<Type, byte> SymbolToOpcode = new() {
     { typeof(Addition), Add },
     { typeof(Subtraction), Sub },
     { typeof(Multiplication), Mul },
@@ -119,8 +120,12 @@ public static class OpCodes {
     { typeof(SubFunctionSymbol), SubFunction }
   };
 
-  public static byte MapSymbolToOpCode(SymbolicExpressionTreeNode treeNode) {
-    if (SymbolToOpcode.TryGetValue(treeNode.Symbol.GetType(), out var opCode)) return opCode;
+  public static byte MapSymbolToOpCode(SymbolicExpressionTreeNode treeNode)
+  {
+    if (SymbolToOpcode.TryGetValue(treeNode.Symbol.GetType(), out var opCode)) {
+      return opCode;
+    }
+
     throw new NotSupportedException("Symbol: " + treeNode.Symbol);
   }
 }

@@ -1,6 +1,7 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
-public enum OpCode : byte {
+public enum OpCode : byte
+{
   Add = 1,
   Sub = 2,
   Mul = 3,
@@ -55,4 +56,4 @@ public enum OpCode : byte {
   Tanh = 52,
   SubFunction = 53,
   Constant = 54
-};
+}

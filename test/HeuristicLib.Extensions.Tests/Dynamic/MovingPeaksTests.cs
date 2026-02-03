@@ -1,23 +1,24 @@
-﻿using HEAL.HeuristicLib.Encodings.RealVector;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Tests.Dynamic;
+namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
-public class MovingPeaksTests {
+public class MovingPeaksTests
+{
   public static readonly MovingPeaksParameters Parameters = new(
-    Dimension: 2,
-    NumberOfPeaks: 2,
-    LowerBound: 0,
-    UpperBound: 100,
-    MinHeight: 0,
-    MaxHeight: 100,
-    MinWidth: 0,
-    MaxWidth: 10,
-    ShiftSeverity: 10,
-    HeightSeverity: 5,
-    WidthSeverity: 1
+  2,
+  2,
+  0,
+  100,
+  0,
+  100,
+  0,
+  10,
+  10,
+  5,
+  1
   );
 
   private static readonly (double[] center, double height, double width)[] Peaks = [
@@ -26,7 +27,8 @@ public class MovingPeaksTests {
   ];
 
   [Fact]
-  public void Evaluate_AtPeakCenter_EqualsPeakHeight() {
+  public void Evaluate_AtPeakCenter_EqualsPeakHeight()
+  {
     var rng = new SystemRandomNumberGenerator(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
@@ -37,7 +39,8 @@ public class MovingPeaksTests {
   }
 
   [Fact]
-  public void Evaluate_UsesMaximumOverPeaks() {
+  public void Evaluate_UsesMaximumOverPeaks()
+  {
     var rng = new SystemRandomNumberGenerator(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
@@ -49,7 +52,8 @@ public class MovingPeaksTests {
   }
 
   [Fact]
-  public void Evaluate_FarAway_DecreasesWithDistance() {
+  public void Evaluate_FarAway_DecreasesWithDistance()
+  {
     var rng = new SystemRandomNumberGenerator(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
@@ -62,7 +66,8 @@ public class MovingPeaksTests {
   }
 
   [Fact]
-  public void Evaluate_DoesNotUseRandomGenerator() {
+  public void Evaluate_DoesNotUseRandomGenerator()
+  {
     var rng = new SystemRandomNumberGenerator(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
@@ -72,7 +77,8 @@ public class MovingPeaksTests {
   }
 
   [Fact]
-  public void Update_WithZeroSeverities_DoesNotChangeFitness() {
+  public void Update_WithZeroSeverities_DoesNotChangeFitness()
+  {
     var rng = new SystemRandomNumberGenerator(0);
     var staticParams = Parameters with {
       ShiftSeverity = 0,
@@ -84,14 +90,17 @@ public class MovingPeaksTests {
     var x = new RealVector(33.0, 33.0);
     var before = p.Evaluate(x, NoRandomGenerator.Instance)[0];
 
-    for (int i = 0; i < 5; i++) p.UpdateOnce();
+    for (var i = 0; i < 5; i++) {
+      p.UpdateOnce();
+    }
 
     var after = p.Evaluate(x, NoRandomGenerator.Instance)[0];
     Assert.Equal(before, after, 12);
   }
 
   [Fact]
-  public void Update_WithNonzeroSeverities_ChangesFitnessEventually() {
+  public void Update_WithNonzeroSeverities_ChangesFitnessEventually()
+  {
     var rng = new SystemRandomNumberGenerator(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
@@ -99,13 +108,15 @@ public class MovingPeaksTests {
     var before = p.Evaluate(x, NoRandomGenerator.Instance)[0];
 
     var changed = false;
-    for (int i = 0; i < 50; i++) {
+    for (var i = 0; i < 50; i++) {
       p.UpdateOnce();
       var now = p.Evaluate(x, NoRandomGenerator.Instance)[0];
-      if (now.IsAlmost(before, 1e-12))
+      if (now.IsAlmost(before, 1e-12)) {
         continue;
+      }
 
       changed = true;
+
       break;
     }
 
@@ -113,13 +124,14 @@ public class MovingPeaksTests {
   }
 
   [Fact]
-  public void Update_ClampsHeightsAndWidths_ToConfiguredRanges() {
+  public void Update_ClampsHeightsAndWidths_ToConfiguredRanges()
+  {
     // This test assumes your implementation clamps heights/widths after update.
     // If you don't clamp, either remove this test or change it to assert "can exceed".
     var rng = new SystemRandomNumberGenerator(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
-    for (int i = 0; i < 200; i++) {
+    for (var i = 0; i < 200; i++) {
       p.UpdateOnce();
 
       // This assumes you expose current peaks as a read-only list.
@@ -132,7 +144,8 @@ public class MovingPeaksTests {
   }
 
   [Fact]
-  public void Update_ShiftsCenters_ByAtMostShiftSeverity() {
+  public void Update_ShiftsCenters_ByAtMostShiftSeverity()
+  {
     // Assumes: center movement step length is limited by ShiftSeverity,
     // and boundary handling can't increase it.
     var rng = new SystemRandomNumberGenerator(0);
@@ -143,14 +156,16 @@ public class MovingPeaksTests {
     p.UpdateOnce();
 
     var peaks = p.Peaks().ToArr();
-    for (int i = 0; i < peaks.Length; i++) {
+    for (var i = 0; i < peaks.Length; i++) {
       var dist = Euclidean(before[i], peaks[i].Center);
       Assert.True(dist <= Parameters.ShiftSeverity + 1e-9);
     }
   }
 
-  private static double Euclidean(double[] a, IReadOnlyList<double> b) {
-    double s = a.Select((t, i) => t - b[i]).Sum(d => d * d);
+  private static double Euclidean(double[] a, IReadOnlyList<double> b)
+  {
+    var s = a.Select((t, i) => t - b[i]).Sum(d => d * d);
+
     return Math.Sqrt(s);
   }
 }

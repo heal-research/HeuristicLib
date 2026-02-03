@@ -1,25 +1,26 @@
 ﻿using System.Globalization;
 using System.Text;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Formatters;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math.Variables;
+using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
-public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpressionTreeStringFormatter {
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) {
-    return FormatRecursively(symbolicExpressionTree.Root);
-  }
+public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpressionTreeStringFormatter
+{
+  public string Format(SymbolicExpressionTree symbolicExpressionTree) => FormatRecursively(symbolicExpressionTree.Root);
 
   // returns the smalltalk expression corresponding to the node 
   // smalltalk expressions are always surrounded by parentheses "(<expr>)"
-  private string FormatRecursively(SymbolicExpressionTreeNode node) {
+  private string FormatRecursively(SymbolicExpressionTreeNode node)
+  {
     var symbol = node.Symbol;
 
-    if (symbol is ProgramRootSymbol or StartSymbol)
+    if (symbol is ProgramRootSymbol or StartSymbol) {
       return FormatRecursively(node.GetSubtree(0));
+    }
 
     var stringBuilder = new StringBuilder(20);
 
@@ -28,7 +29,9 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
     switch (symbol) {
       case Addition: {
         for (var i = 0; i < node.SubtreeCount; i++) {
-          if (i > 0) stringBuilder.Append("+");
+          if (i > 0) {
+            stringBuilder.Append("+");
+          }
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
@@ -37,31 +40,39 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
       case And: {
         stringBuilder.Append("(");
         for (var i = 0; i < node.SubtreeCount; i++) {
-          if (i > 0) stringBuilder.Append("&");
+          if (i > 0) {
+            stringBuilder.Append("&");
+          }
           stringBuilder.Append("(");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           stringBuilder.Append(" > 0)");
         }
 
         stringBuilder.Append(") ifTrue:[1] ifFalse:[-1]");
+
         break;
       }
       case Absolute:
         stringBuilder.Append($"({FormatRecursively(node.GetSubtree(0))}) abs");
+
         break;
       case AnalyticQuotient:
         stringBuilder.Append($"({FormatRecursively(node.GetSubtree(0))}) / (1 + ({FormatPower(node.GetSubtree(1), "2")})) sqrt");
+
         break;
       case Average: {
         stringBuilder.Append("(1/");
         stringBuilder.Append(node.SubtreeCount);
         stringBuilder.Append(")*(");
         for (var i = 0; i < node.SubtreeCount; i++) {
-          if (i > 0) stringBuilder.Append("+");
+          if (i > 0) {
+            stringBuilder.Append("+");
+          }
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
         stringBuilder.Append(")");
+
         break;
       }
       default: {
@@ -84,7 +95,9 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
             stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
             stringBuilder.Append("/(");
             for (var i = 1; i < node.SubtreeCount; i++) {
-              if (i > 1) stringBuilder.Append('*');
+              if (i > 1) {
+                stringBuilder.Append('*');
+              }
               stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
             }
 
@@ -120,7 +133,9 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
           stringBuilder.Append("ln");
         } else if (symbol is Multiplication) {
           for (var i = 0; i < node.SubtreeCount; i++) {
-            if (i > 0) stringBuilder.Append("*");
+            if (i > 0) {
+              stringBuilder.Append("*");
+            }
             stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           }
         } else if (symbol is Not) {
@@ -130,7 +145,9 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
         } else if (symbol is Or) {
           stringBuilder.Append("(");
           for (var i = 0; i < node.SubtreeCount; i++) {
-            if (i > 0) stringBuilder.Append("|");
+            if (i > 0) {
+              stringBuilder.Append("|");
+            }
             stringBuilder.Append("(");
             stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
             stringBuilder.Append(">0)");
@@ -173,7 +190,9 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
         } else {
           stringBuilder.Append('(');
           for (var i = 0; i < node.SubtreeCount; i++) {
-            if (i > 0) stringBuilder.Append(", ");
+            if (i > 0) {
+              stringBuilder.Append(", ");
+            }
             stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           }
 
@@ -189,7 +208,5 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
     return stringBuilder.ToString();
   }
 
-  private string FormatPower(SymbolicExpressionTreeNode node, string exponent) {
-    return $"(({FormatRecursively(node)}) log * {exponent}) exp ";
-  }
+  private string FormatPower(SymbolicExpressionTreeNode node, string exponent) => $"(({FormatRecursively(node)}) log * {exponent}) exp ";
 }

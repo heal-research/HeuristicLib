@@ -1,7 +1,10 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class OnlineMeanAndVarianceCalculator {
+public class OnlineMeanAndVarianceCalculator
+{
   private double mOldM, mNewM, mOldS, mNewS;
+
+  public OnlineMeanAndVarianceCalculator() => Reset();
 
   public OnlineCalculatorError VarianceErrorState { get; private set; }
 
@@ -15,17 +18,15 @@ public class OnlineMeanAndVarianceCalculator {
 
   public int Count { get; private set; }
 
-  public OnlineMeanAndVarianceCalculator() {
-    Reset();
-  }
-
-  public void Reset() {
+  public void Reset()
+  {
     Count = 0;
     PopulationVarianceErrorState = OnlineCalculatorError.InsufficientElementsAdded;
     VarianceErrorState = OnlineCalculatorError.InsufficientElementsAdded;
   }
 
-  public void Add(double x) {
+  public void Add(double x)
+  {
     if (double.IsNaN(x) || double.IsInfinity(x) || (PopulationVarianceErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       PopulationVarianceErrorState |= OnlineCalculatorError.InvalidValueAdded;
       VarianceErrorState |= OnlineCalculatorError.InvalidValueAdded;
@@ -35,9 +36,9 @@ public class OnlineMeanAndVarianceCalculator {
       if (Count == 1) {
         mOldM = mNewM = x;
         mOldS = 0.0;
-        PopulationVarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+        PopulationVarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
       } else {
-        VarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 2
+        VarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 2
         mNewM = mOldM + (x - mOldM) / Count;
         mNewS = mOldS + (x - mOldM) * (x - mNewM);
 
@@ -48,7 +49,8 @@ public class OnlineMeanAndVarianceCalculator {
     }
   }
 
-  public static void Calculate(IEnumerable<double> x, out double mean, out double variance, out OnlineCalculatorError meanErrorState, out OnlineCalculatorError varianceErrorState) {
+  public static void Calculate(IEnumerable<double> x, out double mean, out double variance, out OnlineCalculatorError meanErrorState, out OnlineCalculatorError varianceErrorState)
+  {
     var meanAndVarianceCalculator = new OnlineMeanAndVarianceCalculator();
     foreach (var xi in x) {
       meanAndVarianceCalculator.Add(xi);

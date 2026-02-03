@@ -1,13 +1,14 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Operators.Interceptor;
+namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public interface IInterceptor<TGenotype, TIterationResult, in TEncoding, in TProblem>
+public interface IInterceptor<TGenotype, TIterationResult, in TSearchSpace, in TProblem>
   where TIterationResult : IAlgorithmState
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, IRandomNumberGenerator random, TEncoding encoding, TProblem problem);
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  TIterationResult Transform(TIterationResult currentIterationResult, TIterationResult? previousIterationResult, IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem);
 }

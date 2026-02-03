@@ -1,55 +1,61 @@
 ﻿namespace HEAL.HeuristicLib.Random;
 
-public class SystemRandomNumberGenerator : IRandomNumberGenerator {
+public class SystemRandomNumberGenerator : IRandomNumberGenerator
+{
   private static readonly System.Random GlobalSeedGenerator = new();
-
-  public static SystemRandomNumberGenerator Default(int? seed) {
-    if (seed.HasValue)
-      return new SystemRandomNumberGenerator(seed.Value);
-    lock (GlobalSeedGenerator)
-      return new SystemRandomNumberGenerator(NextGlobal());
-  }
-
-  private readonly SeedSequence seedSequence;
   private readonly System.Random random;
 
-  public SystemRandomNumberGenerator(SeedSequence seedSequence) {
+  private readonly SeedSequence seedSequence;
+
+  public SystemRandomNumberGenerator(SeedSequence seedSequence)
+  {
     this.seedSequence = seedSequence;
     var seed = seedSequence.GenerateSeed();
     random = new System.Random(seed);
   }
 
-  public SystemRandomNumberGenerator(int seed) : this(new SeedSequence(seed)) { }
+  public SystemRandomNumberGenerator(int seed) : this(new SeedSequence(seed)) {}
 
-  private static int NextGlobal() {
+  public SystemRandomNumberGenerator() : this(NextGlobal()) {}
+
+  public byte[] RandomBytes(int length)
+  {
+    var data = new byte[length];
+    random.NextBytes(data);
+
+    return data;
+  }
+
+  public int Integer(int low, int high, bool inclusiveHigh = false) => random.Next(low, high + (inclusiveHigh ? 1 : 0));
+
+  public double Random() => random.NextDouble();
+  IReadOnlyList<IRandomNumberGenerator> IRandomNumberGenerator.Spawn(int count) => Spawn(count);
+
+  public static SystemRandomNumberGenerator Default(int? seed)
+  {
+    if (seed.HasValue) {
+      return new SystemRandomNumberGenerator(seed.Value);
+    }
+
+    lock (GlobalSeedGenerator) {
+      return new SystemRandomNumberGenerator(NextGlobal());
+    }
+  }
+
+  private static int NextGlobal()
+  {
     lock (GlobalSeedGenerator) {
       return GlobalSeedGenerator.Next();
     }
   }
 
-  public SystemRandomNumberGenerator() : this(NextGlobal()) { }
-
-  public byte[] RandomBytes(int length) {
-    var data = new byte[length];
-    random.NextBytes(data);
-    return data;
-  }
-
-  public int Integer(int low, int high, bool inclusiveHigh = false) {
-    return random.Next(low, high + (inclusiveHigh ? 1 : 0));
-  }
-
-  public double Random() {
-    return random.NextDouble();
-  }
-
   public IReadOnlyList<SystemRandomNumberGenerator> Spawn(int count) => seedSequence.Spawn(count).Select(childSequence => new SystemRandomNumberGenerator(childSequence)).ToArray();
-  IReadOnlyList<IRandomNumberGenerator> IRandomNumberGenerator.Spawn(int count) => Spawn(count);
 }
 
-public class NoRandomGenerator : IRandomNumberGenerator {
+public class NoRandomGenerator : IRandomNumberGenerator
+{
   public static readonly NoRandomGenerator Instance = new();
-  private NoRandomGenerator() { }
+  private NoRandomGenerator() {}
   public int Integer(int low, int high, bool inclusiveHigh = false) => throw new InvalidOperationException();
 
   public double Random() => throw new InvalidOperationException();

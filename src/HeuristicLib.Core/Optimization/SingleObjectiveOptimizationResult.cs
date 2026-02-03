@@ -2,11 +2,11 @@
 
 public record SingleObjectiveOptimizationResult<TGenotype, TISolutionLayout> : OptimizationResult<TGenotype, TISolutionLayout>, ISingleObjectiveResult<TGenotype>
   where TGenotype : IEquatable<TGenotype>
-  where TISolutionLayout : IISolutionLayout<TGenotype> {
-  public ISolution<TGenotype> BestSolution { get; init; }
+  where TISolutionLayout : IISolutionLayout<TGenotype>
+{
 
   public SingleObjectiveOptimizationResult(TISolutionLayout Solutions, ISolution<TGenotype> bestSolution)
-    : base(Solutions) {
+    : base(Solutions) =>
     BestSolution = bestSolution;
-  }
+  public ISolution<TGenotype> BestSolution { get; init; }
 }

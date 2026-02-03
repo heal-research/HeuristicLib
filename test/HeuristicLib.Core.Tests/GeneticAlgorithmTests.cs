@@ -1,36 +1,40 @@
-using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
-using HEAL.HeuristicLib.Encodings.RealVector;
-using HEAL.HeuristicLib.Encodings.RealVector.Creators;
-using HEAL.HeuristicLib.Encodings.RealVector.Crossovers;
-using HEAL.HeuristicLib.Encodings.RealVector.Mutators;
-using HEAL.HeuristicLib.Operators.Evaluator;
-using HEAL.HeuristicLib.Operators.Mutator;
-using HEAL.HeuristicLib.Operators.Replacer;
-using HEAL.HeuristicLib.Operators.Selector;
-using HEAL.HeuristicLib.Operators.Terminator;
+using HEAL.HeuristicLib.Algorithms.Evolutionary.GeneticAlgorithm;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
+using HEAL.HeuristicLib.Operators.Replacers;
+using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests;
 
-public static class DummyEvaluator {
+public static class DummyEvaluator
+{
   public static readonly ObjectiveVector DummyObjectives = new(0.0);
 }
 
-public class DummyEvaluator<TGenotype, TEncoding, TProblem> : Evaluator<TGenotype, TEncoding, TProblem>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  protected override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TEncoding encoding, TProblem problem) {
-    return DummyEvaluator.DummyObjectives;
-  }
+public class DummyEvaluator<TGenotype, TSearchSpace, TProblem> : Evaluator<TGenotype, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  protected override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem) => DummyEvaluator.DummyObjectives;
 }
 
-public class GeneticAlgorithmTests {
+public class GeneticAlgorithmTests
+{
   [Fact]
-  public void GeneticAlgorithm_Create_WithConstructor() {
+  public void GeneticAlgorithm_Create_WithConstructor()
+  {
     var searchSpace = new RealVectorSearchSpace(10, -5, +5);
-    var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
+    var creator = new UniformDistributedCreator(null, 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
     // var DirectEvaluator = new RealVectorMockEvaluator();
@@ -38,7 +42,7 @@ public class GeneticAlgorithmTests {
     var replacement = new PlusSelectionReplacer<RealVector>();
     var terminator = new AfterIterationsTerminator<RealVector>(5);
 
-    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>() {
+    var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace> {
       PopulationSize = 200,
       Creator = creator,
       Crossover = crossover,

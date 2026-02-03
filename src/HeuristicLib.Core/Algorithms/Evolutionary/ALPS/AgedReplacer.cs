@@ -1,14 +1,17 @@
-﻿using HEAL.HeuristicLib.Operators.Replacer;
+﻿using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Algorithms.ALPS;
+namespace HEAL.HeuristicLib.Algorithms.Evolutionary.ALPS;
 
-public class AgedReplacer<TGenotype, TEncoding, TProblem>(IReplacer<TGenotype, TEncoding, TProblem> innerReplacer) : IReplacer<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TEncoding>, AgedProblem<TGenotype, TEncoding, TProblem>>
-  where TEncoding : class, IEncoding<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TEncoding> {
-  public IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Replace(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> previousPopulation, IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> offspringPopulation, Objective objective, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TEncoding> searchSpace, AgedProblem<TGenotype, TEncoding, TProblem> problem) {
+public class AgedReplacer<TGenotype, TSearchSpace, TProblem>(IReplacer<TGenotype, TSearchSpace, TProblem> innerReplacer) : IReplacer<AgedGenotype<TGenotype>, AgedSearchSpace<TGenotype, TSearchSpace>, AgedProblem<TGenotype, TSearchSpace, TProblem>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  public IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> Replace(IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> previousPopulation, IReadOnlyList<ISolution<AgedGenotype<TGenotype>>> offspringPopulation, Objective objective, IRandomNumberGenerator random, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AgedProblem<TGenotype, TSearchSpace, TProblem> problem)
+  {
     var innerPreviousPopulation = new ISolution<TGenotype>[previousPopulation.Count];
     for (var i = 0; i < previousPopulation.Count; i++) {
       innerPreviousPopulation[i] = new Solution<TGenotype>(previousPopulation[i].Genotype.InnerGenotype, previousPopulation[i].ObjectiveVector);
@@ -30,7 +33,5 @@ public class AgedReplacer<TGenotype, TEncoding, TProblem>(IReplacer<TGenotype, T
     return result;
   }
 
-  public int GetOffspringCount(int populationSize) {
-    return innerReplacer.GetOffspringCount(populationSize);
-  }
+  public int GetOffspringCount(int populationSize) => innerReplacer.GetOffspringCount(populationSize);
 }
