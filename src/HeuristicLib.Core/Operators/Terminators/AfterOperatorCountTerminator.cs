@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.MetaOperators;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;

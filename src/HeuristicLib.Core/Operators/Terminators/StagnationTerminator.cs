@@ -21,7 +21,10 @@ public class StagnationTerminator<TGenotype>
     var bestQualitySoFar = problem.Objective.Worst;
     int stagnationCounter = 0;
 
-    return state => {
+    return ShouldTerminatePredicate;
+
+    bool ShouldTerminatePredicate(PopulationState<TGenotype> state)
+    {
       var currentBestQuality = state.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
       if (comparer.Compare(currentBestQuality, bestQualitySoFar) < 0) {
         bestQualitySoFar = currentBestQuality;
@@ -32,8 +35,9 @@ public class StagnationTerminator<TGenotype>
           return true;
         }
       }
+
       return false;
-    };
+    }
   }
 }
 

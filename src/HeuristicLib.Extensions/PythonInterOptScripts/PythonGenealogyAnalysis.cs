@@ -291,7 +291,7 @@ public class PythonGenealogyAnalysis
         throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");
     }
 
-    _ = algorithm.Execute(problem, RandomNumberGenerator.Create(parameters.Seed));
+    _ = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
     return (analyzers.RankAnalysis.Graph.ToGraphViz(), analyzers.RankAnalysis.Ranks, analyzers.Qualities.BestISolutions);
   }
 

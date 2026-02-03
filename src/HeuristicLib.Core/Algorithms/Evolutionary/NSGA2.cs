@@ -24,9 +24,9 @@ public class NSGA2<TGenotype, TSearchSpace, TProblem>
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
   public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
 
-  public override PopulationState<TGenotype> ExecuteStep(TProblem problem, PopulationState<TGenotype>? previousState, IRandomNumberGenerator random)
+  public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
-    if (previousState == null) {
+    if (previousState is null) {
       var initialSolutions = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
       var initialFitnesses = Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
       return new PopulationState<TGenotype> {

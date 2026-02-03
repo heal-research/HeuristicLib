@@ -26,11 +26,11 @@ public class TimedOperator<TInput, TContext, TOutput>
   }
 
 
-  public TOutput Apply(TInput input, TContext context)
+  public TOutput Execute(TInput input, TContext context)
   {
     // ToDo: think if we want the actual timer as dependency
     var start = Stopwatch.GetTimestamp();
-    var result = @operator.Apply(input, context);
+    var result = @operator.Execute(input, context);
     var duration = Stopwatch.GetElapsedTime(start);
     timing.AddTime(duration);
     return result;

@@ -4,6 +4,11 @@ public class PauseTokenTerminator<TGenotype>(PauseToken pauseToken) : Terminator
 {
   public override Func<bool> CreateShouldTerminatePredicate()
   {
-    return () => pauseToken.IsPaused;
+    return ShouldTerminate;
+  }
+  
+  private bool ShouldTerminate()
+  {
+    return pauseToken.IsPaused;
   }
 }

@@ -42,7 +42,7 @@ public class TspTests
     ga.Elites = 1;
 
     //execute
-    var resGa = ga.Build().Execute(prob, RandomNumberGenerator.Create(42));
+    var resGa = ga.Build().RunToCompletion(prob, RandomNumberGenerator.Create(42));
 
     //look at results
     var objGa = resGa.Population
@@ -78,7 +78,7 @@ public class TspTests
     prob.AttachTo(ga);
 
     //execute
-    var resGa = ga.Build().Execute(prob, RandomNumberGenerator.Create(42));
+    var resGa = ga.Build().RunToCompletion(prob, RandomNumberGenerator.Create(42));
 
     //look at results
     var objGa = resGa.Population

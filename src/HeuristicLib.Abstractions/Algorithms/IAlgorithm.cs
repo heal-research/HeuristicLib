@@ -1,6 +1,4 @@
 using HEAL.HeuristicLib.Observation;
-using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -16,14 +14,17 @@ public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmS
 {
   // ToDo: Maybe remove the Terminator and Interceptor properties?
 
-  IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; }
+  
+  
+  // ToDo: Shouldn't any algorithm be terminatable?
 
   IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; }
 
-  IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(
+  // ToDo: think about moving the initialState after problem/random (OptimizationContext) to allow null default and thus reduce number of overloads 
+  IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
+    TAlgorithmState? initialState,
     TProblem problem,
     IRandomNumberGenerator random,
-    TAlgorithmState? initialState = null,
     CancellationToken ct = default
   );
 }

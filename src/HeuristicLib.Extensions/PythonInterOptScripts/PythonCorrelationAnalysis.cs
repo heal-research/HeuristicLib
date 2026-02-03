@@ -61,7 +61,7 @@ public static class PythonCorrelationAnalysis
     proto.MutationRate = 1;
 
     _ = FuncAnalysis.Create(proto, (_, iterationState) => callback(iterationState, prob));
-    proto.Build().Execute(prob, prob.SearchSpace, RandomNumberGenerator.Create(seed));
+    proto.Build().ExecuteStepAsync(prob, prob.SearchSpace, RandomNumberGenerator.Create(seed));
   }
 
   public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max)

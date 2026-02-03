@@ -144,7 +144,7 @@ public class SymbolicRegressionTests
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
     var qualities = BestMedianWorstAnalysis.Analyze(ga);
-    var res = ga.Build().Execute(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+    var res = ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
 
     Assert.Equal(100, qualities.BestISolutions.Count);
     Assert.Equal(100, res.Population.Solutions.Count);
@@ -168,7 +168,7 @@ public class SymbolicRegressionTests
     var evalQualities = QualityCurveAnalysis.Create(ga);
     var qualities = BestMedianWorstAnalysis.Analyze(ga);
     var genealogy = GenealogyAnalysis.Create(ga);
-    var res = ga.Build().Execute(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+    var res = ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
 
     Assert.Equal(gens, qualities.BestISolutions.Count);
     Assert.Equal(popsize, res.Population.Solutions.Count);
@@ -186,7 +186,7 @@ public class SymbolicRegressionTests
     ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
     var genealogy = GenealogyAnalysis.Create(ga);
-    var res = ga.Build().Execute(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+    var res = ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
     Assert.Single(res.Population.Solutions);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
@@ -212,7 +212,7 @@ public class SymbolicRegressionTests
     var genealogy = GenealogyAnalysis.Create(nsga2);
     var qualities = BestMedianWorstAnalysis.Analyze(nsga2);
 
-    var res = nsga2.Build().Execute(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+    var res = nsga2.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
     Assert.Equal(maximumIterations, qualities.BestISolutions.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Count);
     var graphViz = genealogy.Graph.ToGraphViz();

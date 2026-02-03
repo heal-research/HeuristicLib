@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators.MetaOperators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;

@@ -21,11 +21,9 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
   public required int MaxNeighbors { get; init; }
   public required int BatchSize { get; init; }
 
-  public override SingleSolutionState<TGenotype> ExecuteStep(TProblem problem,
-    SingleSolutionState<TGenotype>? previousState,
-    IRandomNumberGenerator random)
+  public override SingleSolutionState<TGenotype> ExecuteStep(SingleSolutionState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
-    if (previousState == null) {
+    if (previousState is null) {
       var initialSolution = Creator.Create(random, problem.SearchSpace, problem);
       var initialFitness = Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
       return new SingleSolutionState<TGenotype> {

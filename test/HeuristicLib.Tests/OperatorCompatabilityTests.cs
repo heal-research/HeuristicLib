@@ -218,7 +218,7 @@ public class IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : Algorithm
 {
   public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<TGenotype>> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<TGenotype>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAsyncEnumerable<AlgorithmState<TGenotype>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<TGenotype>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
 public class IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
@@ -235,7 +235,7 @@ public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutat
 {
   public ICrossover<Permutation, PermutationSearchSpace, TProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<Permutation>> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<Permutation>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAsyncEnumerable<AlgorithmState<Permutation>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<Permutation>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
 public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>
@@ -246,7 +246,7 @@ public class TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, 
 {
   public ICrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<Permutation>> ExecuteStreamingAsync(TravelingSalesmanProblem problem, IRandomNumberGenerator random, AlgorithmState<Permutation>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAsyncEnumerable<AlgorithmState<Permutation>> RunStreamingAsync(TravelingSalesmanProblem problem, IRandomNumberGenerator random, AlgorithmState<Permutation>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorSearchSpace, TProblem, AlgorithmState<RealVector>>
@@ -254,7 +254,7 @@ public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVecto
 {
   public ICrossover<RealVector, RealVectorSearchSpace, TProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<RealVector>> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<RealVector>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAsyncEnumerable<AlgorithmState<RealVector>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<RealVector>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorSearchSpace>>
@@ -265,7 +265,7 @@ public class TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVe
 {
   public ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<RealVector>> ExecuteStreamingAsync(TestFunctionProblem problem, IRandomNumberGenerator random, AlgorithmState<RealVector>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAsyncEnumerable<AlgorithmState<RealVector>> RunStreamingAsync(TestFunctionProblem problem, IRandomNumberGenerator random, AlgorithmState<RealVector>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
 }
 
 public class IndependentCrossover<TGenotype> : SingleSolutionCrossover<TGenotype>

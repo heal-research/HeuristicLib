@@ -7,6 +7,8 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
+// ToDo: maybe we need another base class for MetaAlgorithms like this?
+// ToDo: think if we want the CycleAlgorithm to terminate internally by checking each result of the inner algorihtms
 public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TGenotype : class
@@ -24,8 +26,8 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
   {
     Algorithms = new ImmutableList<TAlgorithm>(algorithms);
   }
-  
-  public override async IAsyncEnumerable<TAlgorithmState> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+
+  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TAlgorithmState? initialState, TProblem problem, IRandomNumberGenerator random, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 
@@ -37,7 +39,7 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
       var cycleRng = random.Fork(cycleCount);
       foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i))) {
         var algorithmRng = cycleRng.Fork(algorithmIndex);
-        await foreach (var newState in algorithm.ExecuteStreamingAsync(problem, algorithmRng, state, ct)) {
+        await foreach (var newState in algorithm.RunStreamingAsync(state, problem, algorithmRng, ct)) {
           state = newState;
           yield return newState;
         }

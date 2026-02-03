@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using HEAL.HeuristicLib.Collections;
+﻿using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -16,6 +15,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
+// ToDo: find another way than changing the genotype to avoid re-creating all operators and wrapping the problem.
 public record AgedGenotype<TGenotype>(TGenotype InnerGenotype, int Age);
 
 public record AlpsIterationState<TGenotype> : AlgorithmState
@@ -109,72 +109,44 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     agedReplacer = new AgedReplacer(internalReplacer);
   }
 
-  public override AlpsIterationState<TGenotype> ExecuteStep(TProblem problem, AlpsIterationState<TGenotype>? previousState, IRandomNumberGenerator random)
+  public override AlpsIterationState<TGenotype> ExecuteStep(AlpsIterationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     var agedProblem = new AgedProblem<TGenotype, TSearchSpace, TProblem>(problem);
     var agedSearchSpace = new AgedSearchSpace<TGenotype, TSearchSpace>(problem.SearchSpace);
-    //var iteration = previousState?.CurrentIteration + 1 ?? 0;
-    return previousState switch {
-      null => ExecuteInitialization(agedProblem, agedSearchSpace, random),
-      _ => ExecuteGeneration(agedProblem, agedSearchSpace, previousState, random)
-    };
-  }
 
-  protected virtual AlpsIterationState<TGenotype> ExecuteInitialization(AgedProblem<TGenotype, TSearchSpace, TProblem> problem, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, IRandomNumberGenerator iterationRandom)
-  {
-    var startCreating = Stopwatch.GetTimestamp();
-    var initialLayerPopulation = agedCreator.Create(PopulationSize, iterationRandom, searchSpace, problem);
-    var endCreating = Stopwatch.GetTimestamp();
-    //CreatorMetric += new OperatorMetric(PopulationSize, Stopwatch.GetElapsedTime(startCreating, endCreating));
+    if (previousState is null) {
+      //var iteration = previousState?.CurrentIteration + 1 ?? 0;
 
-    var startEvaluating = Stopwatch.GetTimestamp();
-    var fitnesses = Evaluator.Evaluate(initialLayerPopulation.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerSearchSpace, problem.InnerProblem);
-    var endEvaluating = Stopwatch.GetTimestamp();
+      var initialLayerPopulation = agedCreator.Create(PopulationSize, random, agedSearchSpace, agedProblem);
+      
+      var initialFitnesses = Evaluator.Evaluate(initialLayerPopulation.Select(x => x.InnerGenotype).ToArray(), random, agedSearchSpace.InnerSearchSpace, agedProblem.InnerProblem);
 
-    var result = new AlpsIterationState<TGenotype> {
-      Population = [Population.From(initialLayerPopulation, fitnesses)],
-      //CurrentIteration = 0
-    };
-
-    return result;
-  }
-
-  protected virtual AlpsIterationState<TGenotype> ExecuteGeneration(AgedProblem<TGenotype, TSearchSpace, TProblem> problem, AgedSearchSpace<TGenotype, TSearchSpace> searchSpace, AlpsIterationState<TGenotype> previousGenerationState, IRandomNumberGenerator iterationRandom)
-  {
+      return new AlpsIterationState<TGenotype> {
+        Population = [Population.From(initialLayerPopulation, initialFitnesses)],
+        //CurrentIteration = 0
+      };
+    }
+    
     var offspringCount = internalReplacer.GetOffspringCount(PopulationSize);
 
-    var oldPopulation = previousGenerationState.Population[0].ToArray();
+    var oldPopulation = previousState.Population[0].ToArray();
 
-    var startSelection = Stopwatch.GetTimestamp();
-    var parents = agedSelector.Select(oldPopulation, problem.Objective, offspringCount * 2, iterationRandom, searchSpace, problem);
-    var endSelection = Stopwatch.GetTimestamp();
-    //SelectionMetric += new OperatorMetric(parents.Count, Stopwatch.GetElapsedTime(startSelection, endSelection));
+    var parents = agedSelector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, agedSearchSpace, agedProblem);
 
     var parentPairs = new IParents<AgedGenotype<TGenotype>>[offspringCount];
     for (int i = 0, j = 0; i < offspringCount; i++, j += 2) {
       parentPairs[i] = new Parents<AgedGenotype<TGenotype>>(parents[j].Genotype, parents[j + 1].Genotype);
     }
 
-    var startCrossover = Stopwatch.GetTimestamp();
-    var crossoverCount = 0;
-    var population = agedCrossover.Cross(parentPairs, iterationRandom, searchSpace, problem);
-    var endCrossover = Stopwatch.GetTimestamp();
-    //CrossoverMetric += new OperatorMetric(crossoverCount, Stopwatch.GetElapsedTime(startCrossover, endCrossover));
+    var population = agedCrossover.Cross(parentPairs, random, agedSearchSpace, agedProblem);
 
-    var startMutation = Stopwatch.GetTimestamp();
-    var mutationCount = 0;
-    population = agedMutator.Mutate(population, iterationRandom, searchSpace, problem);
-    var endMutation = Stopwatch.GetTimestamp();
-    //MutationMetric += new OperatorMetric(mutationCount, Stopwatch.GetElapsedTime(startMutation, endMutation));
+    population = agedMutator.Mutate(population, random, agedSearchSpace, agedProblem);
 
-    var fitnesses = Evaluator.Evaluate(population.Select(x => x.InnerGenotype).ToArray(), iterationRandom, searchSpace.InnerSearchSpace, problem.InnerProblem);
+    var fitnesses = Evaluator.Evaluate(population.Select(x => x.InnerGenotype).ToArray(), random, agedSearchSpace.InnerSearchSpace, agedProblem.InnerProblem);
 
     var evaluatedPopulation = Population.From(population, fitnesses);
 
-    var startReplacement = Stopwatch.GetTimestamp();
-    var newPopulation = agedReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, iterationRandom, searchSpace, problem);
-    var endReplacement = Stopwatch.GetTimestamp();
-    //ReplacementMetric += new OperatorMetric(1, Stopwatch.GetElapsedTime(startReplacement, endReplacement));
+    var newPopulation = agedReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, random, agedSearchSpace, agedProblem);
 
     var result = new AlpsIterationState<TGenotype> {
       Population = [new Population<AgedGenotype<TGenotype>>(new ImmutableList<ISolution<AgedGenotype<TGenotype>>>(newPopulation))],

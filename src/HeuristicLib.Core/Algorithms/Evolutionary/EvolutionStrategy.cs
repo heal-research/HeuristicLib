@@ -38,9 +38,9 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   public double InitialMutationStrength { get; init; } = 1.0;
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
-  public override EvolutionStrategyState<TGenotype> ExecuteStep(TProblem problem, EvolutionStrategyState<TGenotype>? previousState, IRandomNumberGenerator random)
+  public override EvolutionStrategyState<TGenotype> ExecuteStep(EvolutionStrategyState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
-    if (previousState == null) {
+    if (previousState is null) {
       var initialPopulation = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
       var objectives = Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
       return new EvolutionStrategyState<TGenotype> {

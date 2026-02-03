@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface IOperator<in TInput, in TContext, out TOutput>
 {
-  TOutput Apply(TInput input, TContext context);
+  TOutput Execute(TInput input, TContext context);
 }
 
 public interface IOptimizationContext<TG, out TS, out TP>

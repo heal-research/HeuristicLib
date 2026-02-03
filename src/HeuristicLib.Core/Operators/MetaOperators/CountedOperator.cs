@@ -16,6 +16,7 @@ public sealed class InvocationCounter
   }
 }
 
+[Obsolete("Can be handled via ObservedOperator that gets the counter as observer.")]
 public class CountedOperator<TInput, TContext, TOutput> : IOperator<TInput, TContext, TOutput>
 {
   private readonly IOperator<TInput, TContext, TOutput> @operator;
@@ -27,9 +28,9 @@ public class CountedOperator<TInput, TContext, TOutput> : IOperator<TInput, TCon
     this.counter = counter;
   }
 
-  public TOutput Apply(TInput input, TContext context)
+  public TOutput Execute(TInput input, TContext context)
   {
-    var result = @operator.Apply(input, context);
+    var result = @operator.Execute(input, context);
     // ToDo: figure out the internal counter?
     counter.Increment();
     return result;
