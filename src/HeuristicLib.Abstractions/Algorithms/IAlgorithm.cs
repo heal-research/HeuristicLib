@@ -12,19 +12,12 @@ public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmS
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  // ToDo: Maybe remove the Terminator and Interceptor properties?
-
-  
-  
-  // ToDo: Shouldn't any algorithm be terminatable?
-
   IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; }
 
-  // ToDo: think about moving the initialState after problem/random (OptimizationContext) to allow null default and thus reduce number of overloads 
   IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
-    TAlgorithmState? initialState,
     TProblem problem,
     IRandomNumberGenerator random,
+    TAlgorithmState? initialState = null,
     CancellationToken ct = default
   );
 }

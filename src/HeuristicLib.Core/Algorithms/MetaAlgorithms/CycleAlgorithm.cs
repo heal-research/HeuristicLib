@@ -27,7 +27,7 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
     Algorithms = new ImmutableList<TAlgorithm>(algorithms);
   }
 
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TAlgorithmState? initialState, TProblem problem, IRandomNumberGenerator random, [EnumeratorCancellation] CancellationToken ct = default)
+  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 
@@ -39,7 +39,7 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
       var cycleRng = random.Fork(cycleCount);
       foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i))) {
         var algorithmRng = cycleRng.Fork(algorithmIndex);
-        await foreach (var newState in algorithm.RunStreamingAsync(state, problem, algorithmRng, ct)) {
+        await foreach (var newState in algorithm.RunStreamingAsync(problem, algorithmRng, state, ct)) {
           state = newState;
           yield return newState;
         }

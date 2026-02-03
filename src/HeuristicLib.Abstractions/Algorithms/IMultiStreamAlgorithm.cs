@@ -5,9 +5,10 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-// ToDo: Maybe different name "MultiStreamAlgorithm"?
-public interface IMetaAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState, TAlgorithmKey>
-  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+// ToDo: either make a MultiStreamAlgorithm an Algorithm or provide an adapter that interleaves results, or take last, or any other of compression to a single stream.
+
+public interface IMultiStreamAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState, TAlgorithmKey>
+  // : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -15,10 +16,10 @@ public interface IMetaAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgori
   //where TAlgorithmKey,> : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
   // ToDo: Maybe rename to "ExecuteManyStreamingAsync"?
-  new IReadOnlyList<KeyValuePair<TAlgorithmKey, IAsyncEnumerable<TAlgorithmState>>> RunStreamingAsync(
-    TAlgorithmState? initialState,
+  IReadOnlyList<KeyValuePair<TAlgorithmKey, IAsyncEnumerable<TAlgorithmState>>> RunStreamingAsync(
     TProblem problem,
     IRandomNumberGenerator random,
+    TAlgorithmState? initialState = null,
     CancellationToken ct = default
   );
 }

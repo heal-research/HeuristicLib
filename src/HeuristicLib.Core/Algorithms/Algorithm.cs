@@ -21,11 +21,10 @@ public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmSta
   public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TGenotype>();
 
   public abstract IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
-    TAlgorithmState? initialState,
     TProblem problem,
     IRandomNumberGenerator random,
-    CancellationToken ct = default
-  );
+    TAlgorithmState? initialState = null,
+    CancellationToken ct = default);
 }
 
 public static class AlgorithmExtensions
@@ -37,69 +36,33 @@ public static class AlgorithmExtensions
     where TAlgorithmState : class, IAlgorithmState
   {
     public async Task<TAlgorithmState> RunToCompletionAsync(
-      TAlgorithmState? initialState,
       TProblem problem,
       IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null,
       CancellationToken ct = default
     )
     {
-      return await algorithm.RunStreamingAsync(initialState, problem, random, ct).LastAsync(cancellationToken: ct);
-    }
-
-    public IEnumerable<TAlgorithmState> RunStreaming(
-      TAlgorithmState? initialState,
-      TProblem problem,
-      IRandomNumberGenerator random,
-      CancellationToken ct = default
-    )
-    {
-      return algorithm.RunStreamingAsync(initialState, problem, random, ct).ToBlockingEnumerable();
-    }
-
-    public TAlgorithmState RunToCompletion(
-      TAlgorithmState? initialState,
-      TProblem problem,
-      IRandomNumberGenerator random,
-      CancellationToken ct = default
-    )
-    {
-      return algorithm.RunToCompletionAsync(initialState, problem, random, ct).GetAwaiter().GetResult();
-    }
-    
-    public IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
-      TProblem problem,
-      IRandomNumberGenerator random,
-      CancellationToken ct = default
-    )
-    {
-      return algorithm.RunStreamingAsync(null, problem, random, ct);
-    }
-    
-    public async Task<TAlgorithmState> RunToCompletionAsync(
-      TProblem problem,
-      IRandomNumberGenerator random,
-      CancellationToken ct = default
-    )
-    {
-      return await algorithm.RunStreamingAsync(null, problem, random, ct).LastAsync(cancellationToken: ct);
+      return await algorithm.RunStreamingAsync(problem, random, initialState, ct).LastAsync(cancellationToken: ct);
     }
 
     public IEnumerable<TAlgorithmState> RunStreaming(
       TProblem problem,
       IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null,
       CancellationToken ct = default
     )
     {
-      return algorithm.RunStreamingAsync(null, problem, random, ct).ToBlockingEnumerable();
+      return algorithm.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable();
     }
 
     public TAlgorithmState RunToCompletion(
       TProblem problem,
       IRandomNumberGenerator random,
+      TAlgorithmState? initialState = null,
       CancellationToken ct = default
     )
     {
-      return algorithm.RunToCompletionAsync(null, problem, random, ct).GetAwaiter().GetResult();
+      return algorithm.RunToCompletionAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
     }
   }
 }

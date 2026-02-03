@@ -25,13 +25,13 @@ public class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TA
     Algorithms = new ImmutableList<TAlgorithm>(algorithms);
   }
 
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TAlgorithmState? initialState, TProblem problem, IRandomNumberGenerator random, [EnumeratorCancellation] CancellationToken ct = default)
+  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 
     foreach (var (algorithm, index) in Algorithms.Select((a, i) => (Algorithm: a, Index: i))) {
       var algRng = random.Fork(index);
-      await foreach (var newState in algorithm.RunStreamingAsync(state, problem, algRng, ct)) {
+      await foreach (var newState in algorithm.RunStreamingAsync(problem, algRng, state, ct)) {
         state = newState;
         yield return newState;
       }

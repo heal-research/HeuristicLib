@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Operators.Interceptors;
+﻿using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -25,7 +26,7 @@ public abstract class IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlg
   //   return new ValueTask<TAlgorithmState>(ExecuteStep(problem, previousState, random));
   // }
   
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TAlgorithmState? initialState, TProblem problem, IRandomNumberGenerator random, CancellationToken ct = default)
+  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var previousState = initialState;
 
@@ -56,34 +57,6 @@ public static class IterativeAlgorithmExtensions
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
   {
-    public async Task<TAlgorithmState> RunToCompletionAsync(
-      TAlgorithmState? initialState,
-      TProblem problem,
-      IRandomNumberGenerator random,
-      CancellationToken ct = default
-    )
-    {
-      return await algorithm.RunStreamingAsync(initialState, problem, random, ct).LastAsync(cancellationToken: ct);
-    }
-
-    public IEnumerable<TAlgorithmState> RunStreaming(
-      TAlgorithmState? initialState,
-      TProblem problem,
-      IRandomNumberGenerator random,
-      CancellationToken ct = default
-    )
-    {
-      return algorithm.RunStreamingAsync(initialState, problem, random, ct).ToBlockingEnumerable();
-    }
-
-    public TAlgorithmState RunToCompletion(
-      TAlgorithmState? initialState,
-      TProblem problem,
-      IRandomNumberGenerator random,
-      CancellationToken ct = default
-    )
-    {
-      return algorithm.RunToCompletionAsync(initialState, problem, random, ct).GetAwaiter().GetResult();
-    }
+   
   }
 }

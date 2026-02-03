@@ -16,7 +16,7 @@ public class TerminatableAlgorithm<TG, TS, TP, TR>
   public required IAlgorithm<TG, TS, TP, TR> Algorithm { get; init; }
   public required ITerminator<TG, TR, TS, TP> Terminator { get; init; }
 
-  public override async IAsyncEnumerable<TR> RunStreamingAsync(TR? initialState, TP problem, IRandomNumberGenerator random, CancellationToken ct = default)
+  public override async IAsyncEnumerable<TR> RunStreamingAsync(TP problem, IRandomNumberGenerator random, TR? initialState, CancellationToken ct = default)
   {
     // this holds the local state of the terminator
     var shouldTerminate = Terminator.CreateShouldTerminatePredicate(problem.SearchSpace, problem);
@@ -25,7 +25,7 @@ public class TerminatableAlgorithm<TG, TS, TP, TR>
       yield break;
     }
     
-    await foreach (var state in Algorithm.RunStreamingAsync(initialState, problem, random, ct)) {
+    await foreach (var state in Algorithm.RunStreamingAsync(problem, random, initialState, ct)) {
       yield return state;
 
       if (shouldTerminate(state)) {

@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Algorithms;
+﻿using HEAL.HeuristicLib.Executors;
 using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
@@ -7,10 +6,10 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Executors;
+namespace HEAL.HeuristicLib.Algorithms.MultiStreamAlgorithms;
 
 public class GridExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> 
-  : IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
+  : MultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -33,25 +32,15 @@ public class GridExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TA
   public IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; init; }
   public IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; init; }
   
-  public IReadOnlyList<KeyValuePair<TAlgorithm, IAsyncEnumerable<TAlgorithmState>>> RunStreamingAsync(TAlgorithmState? initialState, TProblem problem, IRandomNumberGenerator random, CancellationToken ct = default)
+  public override IReadOnlyList<KeyValuePair<TAlgorithm, IAsyncEnumerable<TAlgorithmState>>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default)
   {
     var algorithms = ParameterGrid.GetConfigurations();
     return algorithms.Select((alg, index) => {
       var algRng = random.Fork(index);
-      return KeyValuePair.Create(alg, alg.RunStreamingAsync(initialState, problem, algRng, ct));
+      return KeyValuePair.Create(alg, alg.RunStreamingAsync(problem, algRng, initialState, ct));
     }).ToList();
   }
-
-  async IAsyncEnumerable<TAlgorithmState> IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>.RunStreamingAsync(TAlgorithmState? initialState, TProblem problem, IRandomNumberGenerator random, [EnumeratorCancellation] CancellationToken ct)
-  {
-    foreach (var stream in RunStreamingAsync(initialState, problem, random, ct)) {
-      await foreach (var state in stream.Value.WithCancellation(ct)) {
-        yield return state;
-      }
-    }
-  }
-
-
+  
   // public IReadOnlyList<(TAlgorithm, IAsyncEnumerable<TAlgorithmState>)> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
   //   {
   //     var algorithms = executor.ParameterGrid.GetConfigurations();
@@ -65,21 +54,14 @@ public class GridExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TA
 
 public static class GridExecutorExtensions
 {
-  extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> algorithm)
+  extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> algorithm)
     where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
     where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   {
-    public IReadOnlyList<(TAlgorithm, TAlgorithmState)> RunToCompletion(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
-    {
-      return algorithm.RunStreamingAsync(initialState, problem, random, cancellationToken)
-        .Select(alg => (alg.Key, alg.Value.LastAsync(cancellationToken).AsTask().Result))
-        .ToList();
-    }
-    
-    // ToDo: add other Run versions, including the default null version.
+   
   }
   
   // extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> executor)
