@@ -32,7 +32,6 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
           if (i > 0) {
             stringBuilder.Append("+");
           }
-
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
@@ -44,20 +43,22 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
           if (i > 0) {
             stringBuilder.Append("&");
           }
-
           stringBuilder.Append("(");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           stringBuilder.Append(" > 0)");
         }
 
         stringBuilder.Append(") ifTrue:[1] ifFalse:[-1]");
+
         break;
       }
       case Absolute:
         stringBuilder.Append($"({FormatRecursively(node.GetSubtree(0))}) abs");
+
         break;
       case AnalyticQuotient:
         stringBuilder.Append($"({FormatRecursively(node.GetSubtree(0))}) / (1 + ({FormatPower(node.GetSubtree(1), "2")})) sqrt");
+
         break;
       case Average: {
         stringBuilder.Append("(1/");
@@ -67,11 +68,11 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
           if (i > 0) {
             stringBuilder.Append("+");
           }
-
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
         stringBuilder.Append(")");
+
         break;
       }
       default: {
@@ -95,13 +96,12 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
             stringBuilder.Append("/(");
             for (var i = 1; i < node.SubtreeCount; i++) {
               if (i > 1) {
-                stringBuilder.Append("*");
+                stringBuilder.Append('*');
               }
-
               stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
             }
 
-            stringBuilder.Append(")");
+            stringBuilder.Append(')');
           }
         } else if (symbol is Exponential) {
           stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
@@ -136,7 +136,6 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
             if (i > 0) {
               stringBuilder.Append("*");
             }
-
             stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           }
         } else if (symbol is Not) {
@@ -149,7 +148,6 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
             if (i > 0) {
               stringBuilder.Append("|");
             }
-
             stringBuilder.Append("(");
             stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
             stringBuilder.Append(">0)");
@@ -183,23 +181,22 @@ public class SymbolicDataAnalysisExpressionSmalltalkFormatter : ISymbolicExpress
         } else if (symbol is Variable) {
           var variableTreeNode = (VariableTreeNode)node;
           stringBuilder.Append(variableTreeNode.Weight.ToString(CultureInfo.InvariantCulture));
-          stringBuilder.Append("*");
+          stringBuilder.Append('*');
           stringBuilder.Append(variableTreeNode.VariableName);
-        } else if (symbol is BinaryFactorVariable || symbol is FactorVariable) {
+        } else if (symbol is BinaryFactorVariable or FactorVariable) {
           stringBuilder.Append("factor variables are not supported");
         } else if (symbol is SubFunctionSymbol) {
           stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         } else {
-          stringBuilder.Append("(");
+          stringBuilder.Append('(');
           for (var i = 0; i < node.SubtreeCount; i++) {
             if (i > 0) {
               stringBuilder.Append(", ");
             }
-
             stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           }
 
-          stringBuilder.AppendFormat(" {0} [Not Supported] )", node.Symbol);
+          stringBuilder.Append($" {node.Symbol} [Not Supported] )");
         }
 
         break;

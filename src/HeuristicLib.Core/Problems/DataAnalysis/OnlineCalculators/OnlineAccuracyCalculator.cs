@@ -6,9 +6,36 @@ public class OnlineAccuracyCalculator
 {
   private int correctlyClassified;
   private int n;
-  public double Accuracy => correctlyClassified / (double)n;
 
   public OnlineAccuracyCalculator() => Reset();
+  public double Accuracy => correctlyClassified / (double)n;
+
+  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
+  {
+    using var originalEnumerator = originalValues.GetEnumerator();
+    using var estimatedEnumerator = estimatedValues.GetEnumerator();
+    var accuracyCalculator = new OnlineAccuracyCalculator();
+
+    // always move forward both enumerators (do not use short-circuit evaluation!)
+    while (originalEnumerator.MoveNext() & estimatedEnumerator.MoveNext()) {
+      var original = originalEnumerator.Current;
+      var estimated = estimatedEnumerator.Current;
+      accuracyCalculator.Add(original, estimated);
+      if (accuracyCalculator.ErrorState != OnlineCalculatorError.None) {
+        break;
+      }
+    }
+
+    // check if both enumerators are at the end to make sure both enumerations have the same length
+    if (accuracyCalculator.ErrorState == OnlineCalculatorError.None &&
+        (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
+      throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
+    }
+
+    errorState = accuracyCalculator.ErrorState;
+
+    return accuracyCalculator.Accuracy;
+  }
 
   #region IOnlineCalculator Members
 
@@ -38,34 +65,9 @@ public class OnlineAccuracyCalculator
       correctlyClassified++;
     }
 
-    ErrorState = OnlineCalculatorError.None; // number of (non-NaN) samples >= 1
+    ErrorState = OnlineCalculatorError.None;// number of (non-NaN) samples >= 1
   }
 
   #endregion
 
-  public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
-  {
-    using var originalEnumerator = originalValues.GetEnumerator();
-    using var estimatedEnumerator = estimatedValues.GetEnumerator();
-    var accuracyCalculator = new OnlineAccuracyCalculator();
-
-    // always move forward both enumerators (do not use short-circuit evaluation!)
-    while (originalEnumerator.MoveNext() & estimatedEnumerator.MoveNext()) {
-      var original = originalEnumerator.Current;
-      var estimated = estimatedEnumerator.Current;
-      accuracyCalculator.Add(original, estimated);
-      if (accuracyCalculator.ErrorState != OnlineCalculatorError.None) {
-        break;
-      }
-    }
-
-    // check if both enumerators are at the end to make sure both enumerations have the same length
-    if (accuracyCalculator.ErrorState == OnlineCalculatorError.None &&
-        (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
-      throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
-    }
-
-    errorState = accuracyCalculator.ErrorState;
-    return accuracyCalculator.Accuracy;
-  }
 }

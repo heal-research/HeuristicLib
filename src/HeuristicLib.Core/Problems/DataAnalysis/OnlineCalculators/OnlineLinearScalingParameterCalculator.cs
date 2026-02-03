@@ -5,22 +5,10 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public class OnlineLinearScalingParameterCalculator
 {
-  /// <summary>
-  ///   Additive offset
-  /// </summary>
-  public double Alpha => targetMeanCalculator.Mean - (Beta * originalMeanAndVarianceCalculator.Mean);
-
-  /// <summary>
-  ///   Multiplicative factor
-  /// </summary>
-  public double Beta => originalMeanAndVarianceCalculator.PopulationVariance.IsAlmost(0.0) ? 1 : originalTargetCovarianceCalculator.Covariance / originalMeanAndVarianceCalculator.PopulationVariance;
-
-  public OnlineCalculatorError ErrorState => targetMeanCalculator.MeanErrorState | originalMeanAndVarianceCalculator.MeanErrorState |
-                                             originalMeanAndVarianceCalculator.PopulationVarianceErrorState | originalTargetCovarianceCalculator.ErrorState;
-
-  private readonly OnlineMeanAndVarianceCalculator targetMeanCalculator;
   private readonly OnlineMeanAndVarianceCalculator originalMeanAndVarianceCalculator;
   private readonly OnlineCovarianceCalculator originalTargetCovarianceCalculator;
+
+  private readonly OnlineMeanAndVarianceCalculator targetMeanCalculator;
 
   public OnlineLinearScalingParameterCalculator()
   {
@@ -29,6 +17,19 @@ public class OnlineLinearScalingParameterCalculator
     originalTargetCovarianceCalculator = new OnlineCovarianceCalculator();
     Reset();
   }
+
+  /// <summary>
+  ///   Additive offset
+  /// </summary>
+  public double Alpha => targetMeanCalculator.Mean - Beta * originalMeanAndVarianceCalculator.Mean;
+
+  /// <summary>
+  ///   Multiplicative factor
+  /// </summary>
+  public double Beta => originalMeanAndVarianceCalculator.PopulationVariance.IsAlmost(0.0) ? 1 : originalTargetCovarianceCalculator.Covariance / originalMeanAndVarianceCalculator.PopulationVariance;
+
+  public OnlineCalculatorError ErrorState => targetMeanCalculator.MeanErrorState | originalMeanAndVarianceCalculator.MeanErrorState |
+                                             originalMeanAndVarianceCalculator.PopulationVarianceErrorState | originalTargetCovarianceCalculator.ErrorState;
 
   public void Reset()
   {

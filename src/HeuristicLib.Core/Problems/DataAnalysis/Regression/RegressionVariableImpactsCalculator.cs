@@ -2,7 +2,7 @@
 using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
+using MoreLinq;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
@@ -11,28 +11,6 @@ public sealed class RegressionVariableImpactsCalculator(
   RegressionVariableImpactsCalculator.FactorReplacementMethodType factorReplacementMethod,
   DataAnalysisProblemData.PartitionType dataPartition)
 {
-  #region Parameters/Properties
-
-  public enum ReplacementMethodType
-  {
-    Median = 0,
-    Average = 1,
-    Shuffle = 2,
-    Noise = 3
-  }
-
-  public enum FactorReplacementMethodType
-  {
-    Best = 0,
-    Mode = 1,
-    Shuffle = 2
-  }
-
-  public ReplacementMethodType ReplacementMethod { get; set; } = replacementMethod;
-  public FactorReplacementMethodType FactorReplacementMethod { get; set; } = factorReplacementMethod;
-  public DataAnalysisProblemData.PartitionType DataPartition { get; set; } = dataPartition;
-
-  #endregion
 
   public ICollection<(string, double)> Calculate(IRegressionModel solution, RegressionProblemData data) => CalculateImpacts(data, solution, ReplacementMethod, FactorReplacementMethod, DataPartition);
 
@@ -45,6 +23,7 @@ public sealed class RegressionVariableImpactsCalculator(
   {
     var rows = data.Partitions[dataPartition].Enumerate().ToArray();
     var estimatedValues = solution.Predict(data.Dataset, rows).ToArray();
+
     return CalculateImpacts(solution, data, estimatedValues, rows, replacementMethod, factorReplacementMethod);
   }
 
@@ -64,13 +43,13 @@ public sealed class RegressionVariableImpactsCalculator(
     return problemData.InputVariables
       .Select(x => (x,
         CalculateImpact(x,
-          solution,
-          problemData,
-          modifiableDataset,
-          rows,
-          replacementMethod,
-          factorReplacementMethod,
-          targetValues, originalQuality)))
+        solution,
+        problemData,
+        modifiableDataset,
+        rows,
+        replacementMethod,
+        factorReplacementMethod,
+        targetValues, originalQuality)))
       .ToArray();
   }
 
@@ -93,9 +72,9 @@ public sealed class RegressionVariableImpactsCalculator(
     if (double.IsNaN(quality)) {
       quality = CalculateQuality(solution.Predict(modifiableDataset, rows), targetValues);
     }
-
     var replacementValues = GetReplacementValues(modifiableDataset, variableName, solution, rows, targetValues, out var originalValues, replacementMethod, factorReplacementMethod);
     var newValue = CalculateQualityForReplacement(solution, modifiableDataset, variableName, originalValues, rows, replacementValues, targetValues);
+
     return quality - newValue;
   }
 
@@ -127,8 +106,8 @@ public sealed class RegressionVariableImpactsCalculator(
     List<double> originalValues,
     ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle)
   {
-    var random = RandomNumberGenerator.Create(31475, RandomProfile.SystemRandom);
-    var r2 = RandomNumberGenerator.Create(31475, RandomProfile.SystemRandom);
+    var random = new System.Random(31475);
+    IRandomNumberGenerator r2 = new SystemRandomNumberGenerator(31475);
     List<double> replacementValues;
     double replacementValue;
 
@@ -136,10 +115,12 @@ public sealed class RegressionVariableImpactsCalculator(
       case ReplacementMethodType.Median:
         replacementValue = rows.Select(r => originalValues[r]).Median();
         replacementValues = Enumerable.Repeat(replacementValue, modifiableDataset.Rows).ToList();
+
         break;
       case ReplacementMethodType.Average:
         replacementValue = rows.Select(r => originalValues[r]).Average();
         replacementValues = Enumerable.Repeat(replacementValue, modifiableDataset.Rows).ToList();
+
         break;
       case ReplacementMethodType.Shuffle:
         // new var has same empirical distribution but the relation to y is broken
@@ -161,7 +142,7 @@ public sealed class RegressionVariableImpactsCalculator(
         replacementValues = Enumerable.Repeat(double.NaN, modifiableDataset.Rows).ToList();
         // update column values 
         foreach (var r in rows) {
-          replacementValues[r] = NormalDistribution.NextDouble(r2, avg, stdDev);
+          replacementValues[r] = r2.NextGaussian(avg, stdDev);
         }
 
         break;
@@ -182,7 +163,7 @@ public sealed class RegressionVariableImpactsCalculator(
     FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Shuffle)
   {
     List<string> replacementValues = [];
-    var random = RandomNumberGenerator.Create(31415, RandomProfile.SystemRandom);
+    var random = new System.Random(31415);
 
     switch (factorReplacementMethod) {
       case FactorReplacementMethodType.Best:
@@ -208,6 +189,7 @@ public sealed class RegressionVariableImpactsCalculator(
           .OrderByDescending(g => g.Count())
           .First().Key;
         replacementValues = Enumerable.Repeat(mostCommonValue, modifiableDataset.Rows).ToList();
+
         break;
       case FactorReplacementMethodType.Shuffle:
         // new var has same empirical distribution but the relation to y is broken
@@ -242,6 +224,7 @@ public sealed class RegressionVariableImpactsCalculator(
     //mkommend: ToList is used on purpose to avoid lazy evaluation that could result in wrong estimates due to variable replacements
     var ret = CalculateQuality(targetValues, solution.Predict(modifiableDataset, rows));
     modifiableDataset.ReplaceVariable(variableName, originalValues);
+
     return ret;
   }
 
@@ -254,4 +237,28 @@ public sealed class RegressionVariableImpactsCalculator(
 
     return ret * ret;
   }
+
+  #region Parameters/Properties
+
+  public enum ReplacementMethodType
+  {
+    Median = 0,
+    Average = 1,
+    Shuffle = 2,
+    Noise = 3
+  }
+
+  public enum FactorReplacementMethodType
+  {
+    Best = 0,
+    Mode = 1,
+    Shuffle = 2
+  }
+
+  public ReplacementMethodType ReplacementMethod { get; set; } = replacementMethod;
+  public FactorReplacementMethodType FactorReplacementMethod { get; set; } = factorReplacementMethod;
+  public DataAnalysisProblemData.PartitionType DataPartition { get; set; } = dataPartition;
+
+  #endregion
+
 }

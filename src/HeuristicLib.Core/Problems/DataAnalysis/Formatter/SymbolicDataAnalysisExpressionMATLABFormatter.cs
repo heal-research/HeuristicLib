@@ -10,18 +10,10 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 
 public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExpressionTreeStringFormatter
 {
-  private int currentLag;
 
   private int currentIndexNumber;
+  private int currentLag;
   public string CurrentIndexVariable => "i" + currentIndexNumber;
-
-  private void ReleaseIndexVariable() => currentIndexNumber--;
-
-  private string AllocateIndexVariable()
-  {
-    currentIndexNumber++;
-    return CurrentIndexVariable;
-  }
 
   public string Format(SymbolicExpressionTree symbolicExpressionTree)
   {
@@ -67,12 +59,22 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
     return stringBuilder.ToString();
   }
 
+  private void ReleaseIndexVariable() => currentIndexNumber--;
+
+  private string AllocateIndexVariable()
+  {
+    currentIndexNumber++;
+
+    return CurrentIndexVariable;
+  }
+
   public string FormatOnlyExpression(SymbolicExpressionTreeNode expressionNode)
   {
     var stringBuilder = new StringBuilder();
     stringBuilder.AppendLine("  for " + CurrentIndexVariable + " = 1:1:rows");
     stringBuilder.AppendLine("    estimated(" + CurrentIndexVariable + ") = " + FormatRecursively(expressionNode.GetSubtree(0)) + ";");
     stringBuilder.AppendLine("  end;");
+
     return stringBuilder.ToString();
   }
 
@@ -84,6 +86,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
     switch (symbol) {
       case ProgramRootSymbol:
         stringBuilder.AppendLine(FormatRecursively(node.GetSubtree(0)));
+
         break;
       case StartSymbol:
         return FormatRecursively(node.GetSubtree(0));
@@ -93,18 +96,20 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
           if (i > 0) {
             stringBuilder.Append('+');
           }
-
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
         stringBuilder.Append(')');
+
         break;
       }
       case Absolute:
         stringBuilder.Append($"abs({FormatRecursively(node.GetSubtree(0))})");
+
         break;
       case AnalyticQuotient:
         stringBuilder.Append($"({FormatRecursively(node.GetSubtree(0))}) / sqrt(1 + ({FormatRecursively(node.GetSubtree(1))}).^2)");
+
         break;
       case And: {
         stringBuilder.Append("((");
@@ -112,13 +117,13 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
           if (i > 0) {
             stringBuilder.Append('&');
           }
-
           stringBuilder.Append("((");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           stringBuilder.Append(")>0)");
         }
 
         stringBuilder.Append(")-0.5)*2");
+
         // MATLAB maps false and true to 0 and 1, resp., we map this result to -1.0 and +1.0, resp.
         break;
       }
@@ -130,28 +135,31 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
           if (i > 0) {
             stringBuilder.Append("+");
           }
-
           stringBuilder.Append("(");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           stringBuilder.Append(")");
         }
 
         stringBuilder.Append(")");
+
         break;
       }
       case Number: {
         var numberTreeNode = (NumberTreeNode)node;
         stringBuilder.Append(numberTreeNode.Value.ToString(CultureInfo.InvariantCulture));
+
         break;
       }
       case Cosine:
         stringBuilder.Append("cos(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(")");
+
         break;
       case Division when node.SubtreeCount == 1:
         stringBuilder.Append("1/");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
+
         break;
       case Division: {
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
@@ -160,37 +168,42 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
           if (i > 1) {
             stringBuilder.Append("*");
           }
-
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
         stringBuilder.Append(")");
+
         break;
       }
       case Exponential:
         stringBuilder.Append("exp(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(")");
+
         break;
       case Square:
         stringBuilder.Append("(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(").^2");
+
         break;
       case SquareRoot:
         stringBuilder.Append("sqrt(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(")");
+
         break;
       case Cube:
         stringBuilder.Append("(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(").^3");
+
         break;
       case CubeRoot:
         stringBuilder.Append("NTHROOT(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(", 3)");
+
         break;
       case GreaterThan:
         stringBuilder.Append("((");
@@ -198,6 +211,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append(">");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(1)));
         stringBuilder.Append(")-0.5)*2");
+
         // MATLAB maps false and true to 0 and 1, resp., we map this result to -1.0 and +1.0, resp.
         break;
       case IfThenElse:
@@ -210,6 +224,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append("<=0)*");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(2)));
+
         break;
       case LaggedVariable: {
         // this if must be checked before if(symbol is LaggedVariable)
@@ -218,6 +233,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append('*');
         stringBuilder.Append(laggedVariableTreeNode.VariableName +
                              LagToString(currentLag + laggedVariableTreeNode.Lag));
+
         break;
       }
       case LessThan:
@@ -226,19 +242,20 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append("<");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(1)));
         stringBuilder.Append(")-0.5)*2");
+
         // MATLAB maps false and true to 0 and 1, resp., we map this result to -1.0 and +1.0, resp.
         break;
       case Logarithm:
         stringBuilder.Append("log_(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(")");
+
         break;
       case Multiplication: {
         for (var i = 0; i < node.SubtreeCount; i++) {
           if (i > 0) {
             stringBuilder.Append("*");
           }
-
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
         }
 
@@ -248,6 +265,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append("~(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(" > 0 )");
+
         break;
       case Or: {
         stringBuilder.Append("((");
@@ -255,13 +273,13 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
           if (i > 0) {
             stringBuilder.Append("|");
           }
-
           stringBuilder.Append("((");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(i)));
           stringBuilder.Append(")>0)");
         }
 
         stringBuilder.Append(")-0.5)*2");
+
         // MATLAB maps false and true to 0 and 1, resp., we map this result to -1.0 and +1.0, resp.
         break;
       }
@@ -269,6 +287,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append("sin(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(")");
+
         break;
       case Subtraction: {
         stringBuilder.Append("(");
@@ -284,17 +303,20 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         }
 
         stringBuilder.Append(")");
+
         break;
       }
       case Tangent:
         stringBuilder.Append("tan(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(")");
+
         break;
       case HyperbolicTangent:
         stringBuilder.Append("tanh(");
         stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
         stringBuilder.Append(")");
+
         break;
       default: {
         if (node.Symbol is AiryA) {
@@ -370,7 +392,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         } else if (symbol is BinaryFactorVariable) {
           var factorNode = (BinaryFactorVariableTreeNode)node;
           stringBuilder.Append(CultureInfo.InvariantCulture,
-            $"((strcmp({factorNode.VariableName},\"{factorNode.VariableValue}\")==1) * {factorNode.Weight:G17})");
+          $"((strcmp({factorNode.VariableName},\"{factorNode.VariableValue}\")==1) * {factorNode.Weight:G17})");
         } else if (symbol is Power) {
           stringBuilder.Append('(');
           stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));

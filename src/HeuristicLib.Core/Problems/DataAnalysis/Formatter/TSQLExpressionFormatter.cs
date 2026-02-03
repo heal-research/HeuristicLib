@@ -37,24 +37,25 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     FormatRecursively(1, symbolicExpressionTree.Root.GetSubtree(0).GetSubtree(0), strBuilder);
 
     GenerateFooter(strBuilder);
+
     return strBuilder.ToString();
   }
 
-  private void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree)
+  private static void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree)
   {
     var floatVarNames = new HashSet<string>();
     foreach (var node in symbolicExpressionTree.IterateNodesPostfix().Where(x => x is VariableTreeNode || x is VariableConditionTreeNode)) {
       floatVarNames.Add(((VariableTreeNode)node).VariableName);
     }
 
-    var sortedFloatIdentifiers = floatVarNames.OrderBy(n => n, new NaturalStringComparer()).Select(n => VariableName2Identifier(n)).ToList();
+    var sortedFloatIdentifiers = floatVarNames.OrderBy(keySelector: n => n, new NaturalStringComparer()).Select(n => VariableName2Identifier(n)).ToList();
 
     var varcharVarNames = new HashSet<string>();
     foreach (var node in symbolicExpressionTree.IterateNodesPostfix().Where(x => x is BinaryFactorVariableTreeNode || x is FactorVariableTreeNode)) {
       varcharVarNames.Add(((VariableTreeNode)node).VariableName);
     }
 
-    var sortedVarcharIdentifiers = varcharVarNames.OrderBy(n => n, new NaturalStringComparer()).Select(n => VariableName2Identifier(n)).ToList();
+    var sortedVarcharIdentifiers = varcharVarNames.OrderBy(keySelector: n => n, new NaturalStringComparer()).Select(n => VariableName2Identifier(n)).ToList();
 
     //Generate comment and instructions
     strBuilder.Append("-- generated. created function can be used like 'SELECT dbo.REGRESSIONMODEL(");
@@ -62,18 +63,16 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     if (varcharVarNames.Any() && floatVarNames.Any()) {
       strBuilder.Append(",");
     }
-
     strBuilder.Append(string.Join(", ", sortedFloatIdentifiers));
     strBuilder.AppendLine(")'");
     strBuilder.AppendLine("-- use the expression after the RETURN statement if you want to incorporate the model in a query without creating a function.");
 
     //Generate function header
-    strBuilder.Append("CREATS FUNCTION dbo.REGRESSIONMODEL(");
+    strBuilder.Append("CREATE FUNCTION dbo.REGRESSIONMODEL(");
     strBuilder.Append(string.Join(", ", sortedVarcharIdentifiers.Select(n => $"{n} NVARCHAR(max)")));
     if (varcharVarNames.Any() && floatVarNames.Any()) {
       strBuilder.Append(",");
     }
-
     strBuilder.Append(string.Join(", ", sortedFloatIdentifiers.Select(n => $"{n} FLOAT")));
     strBuilder.AppendLine(")");
 
@@ -86,11 +85,9 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     foreach (var name in sortedVarcharIdentifiers) {
       strBuilder.AppendLineIndented(1, $"-- DECLARE {name} NVARCHAR(max) = ''");
     }
-
     foreach (var name in sortedFloatIdentifiers) {
       strBuilder.AppendLineIndented(1, $"-- DECLARE {name} FLOAT = 0.0");
     }
-
     strBuilder.AppendLineIndented(1, "-- SELECT");
     strBuilder.AppendLine("RETURN ");
   }
@@ -101,68 +98,89 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
       switch (node.Symbol) {
         case Addition:
           FormatOperator(level, node, "+", strBuilder);
+
           break;
         case And:
           FormatOperator(level, node, "AND", strBuilder);
+
           break;
         case Average:
           FormatAverage(level, node, strBuilder);
+
           break;
         case Cosine:
           FormatFunction(level, node, "COS", strBuilder);
+
           break;
         case Division:
           FormatDivision(level, node, strBuilder);
+
           break;
         case Exponential:
           FormatFunction(level, node, "EXP", strBuilder);
+
           break;
         case GreaterThan:
           FormatOperator(level, node, ">", strBuilder);
+
           break;
         case IfThenElse:
           FormatIfThenElse(level, node, strBuilder);
+
           break;
         case LessThan:
           FormatOperator(level, node, "<", strBuilder);
+
           break;
         case Logarithm:
           FormatFunction(level, node, "LOG", strBuilder);
+
           break;
         case Multiplication:
           FormatOperator(level, node, "*", strBuilder);
+
           break;
         case Not:
           FormatOperator(level, node, "NOT LIKE", strBuilder);
+
           break;
         case Or:
           FormatOperator(level, node, "OR", strBuilder);
+
           break;
         case Xor:
           throw new NotSupportedException($"Symbol {node.Symbol.GetType().Name} not yet supported.");
         case Sine:
           FormatFunction(level, node, "SIN", strBuilder);
+
           break;
         case Subtraction:
           FormatSubtraction(level, node, strBuilder);
+
           break;
         case Tangent:
           FormatFunction(level, node, "TAN", strBuilder);
+
           break;
         case Square:
           FormatFunction(level, node, "SQUARE", strBuilder);
+
           break;
         case SquareRoot:
           FormatFunction(level, node, "SQRT", strBuilder);
+
           break;
         case Power:
           FormatFunction(level, node, "POWER", strBuilder);
+
           break;
         case Root:
           FormatRoot(level, node, strBuilder);
+
           break;
         case SubFunctionSymbol:
           FormatRecursively(level, node.GetSubtree(0), strBuilder);
+
           break;
         default:
           throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for TSQL symbolic expression tree formatter.");
@@ -170,17 +188,20 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     } else {
       switch (node) {
         case VariableTreeNode treeNode: {
-          strBuilder.AppendFormat("{0} * {1}", VariableName2Identifier(treeNode.VariableName), treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture));
+          strBuilder.Append($"{VariableName2Identifier(treeNode.VariableName)} * {treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
+
           break;
         }
         case NumberTreeNode numNode:
           strBuilder.Append(numNode.Value.ToString("g17", CultureInfo.InvariantCulture));
+
           break;
         default: {
           switch (node.Symbol) {
             case FactorVariable: {
               var factorNode = (FactorVariableTreeNode)node;
               FormatFactor(level, factorNode, strBuilder);
+
               break;
             }
             case BinaryFactorVariable: {
@@ -223,9 +244,9 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.AppendFormat(") / {0}", node.Subtrees.Count());
   }
 
-  private string VariableName2Identifier(string variableName) => "@" + variableName.Replace(' ', '_');
+  private static string VariableName2Identifier(string variableName) => "@" + variableName.Replace(' ', '_');
 
-  private void GenerateFooter(StringBuilder strBuilder)
+  private static void GenerateFooter(StringBuilder strBuilder)
   {
     strBuilder.Append(Environment.NewLine);
     strBuilder.AppendLine("END");
@@ -233,7 +254,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
 
   private void FormatOperator(int level, SymbolicExpressionTreeNode node, string symbol, StringBuilder strBuilder)
   {
-    strBuilder.Append("(");
+    strBuilder.Append('(');
     foreach (var child in node.Subtrees) {
       FormatRecursively(level, child, strBuilder);
       if (child != node.Subtrees.Last()) {
@@ -241,7 +262,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
       }
     }
 
-    strBuilder.Append(")");
+    strBuilder.Append(')');
   }
 
   private void FormatFunction(int level, SymbolicExpressionTreeNode node, string function, StringBuilder strBuilder)
@@ -254,7 +275,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
       }
     }
 
-    strBuilder.Append(")");
+    strBuilder.Append(')');
   }
 
   private void FormatDivision(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder)
@@ -269,19 +290,19 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
         if (i > 1) {
           strBuilder.Append(" * ");
         }
-
         FormatRecursively(level, node.GetSubtree(i), strBuilder);
       }
 
-      strBuilder.Append(")");
+      strBuilder.Append(')');
     }
   }
 
   private void FormatSubtraction(int level, SymbolicExpressionTreeNode node, StringBuilder strBuilder)
   {
     if (node.SubtreeCount == 1) {
-      strBuilder.Append("-");
+      strBuilder.Append('-');
       FormatRecursively(level, node.GetSubtree(0), strBuilder);
+
       return;
     }
 
@@ -298,7 +319,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.AppendLineIndented(level, "))");
   }
 
-  private void FormatFactor(int level, FactorVariableTreeNode node, StringBuilder strBuilder)
+  private static void FormatFactor(int level, FactorVariableTreeNode node, StringBuilder strBuilder)
   {
     strBuilder.AppendLine("( ");
     strBuilder.AppendLineIndented(level + 1, $"CASE {VariableName2Identifier(node.VariableName)}");

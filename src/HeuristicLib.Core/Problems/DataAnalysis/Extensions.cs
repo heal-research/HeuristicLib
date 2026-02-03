@@ -6,6 +6,7 @@ public static class Extensions
   {
     var s = r.Start.Value;
     var e = r.End.Value;
+
     return s <= e ? Enumerable.Range(s, e - s) : Enumerable.Range(e, s - e).Reverse();
   }
 

@@ -5,9 +5,13 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters
 
 public class SymbolicExpressionTreeStringFormatter : ISymbolicExpressionTreeStringFormatter
 {
-  public bool Indent { get; set; } = true;
+  public bool Indent
+  {
+    get;
+    set;
+  } = true;
 
-  public string Format(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree) => FormatRecursively(symbolicExpressionTree.Root, 0);
+  public virtual string Format(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree) => FormatRecursively(symbolicExpressionTree.Root, 0);
 
   private string FormatRecursively(SymbolicExpressionTreeNode node, int indentLength)
   {
@@ -15,7 +19,6 @@ public class SymbolicExpressionTreeStringFormatter : ISymbolicExpressionTreeStri
     if (Indent) {
       strBuilder.Append(' ', indentLength);
     }
-
     strBuilder.Append('(');
     // internal nodes or leaf nodes?
     if (node.Subtrees.Any()) {
@@ -36,6 +39,7 @@ public class SymbolicExpressionTreeStringFormatter : ISymbolicExpressionTreeStri
     }
 
     strBuilder.Append(')');
+
     return strBuilder.ToString();
   }
 }

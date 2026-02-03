@@ -89,7 +89,8 @@ public static class EnumerableExtensions
   public static IEnumerable<IEnumerable<T>> CartesianProduct<T>(this IEnumerable<IEnumerable<T>> sequences)
   {
     IEnumerable<IEnumerable<T>> result = [[]];
-    return sequences.Where(s => s.Any()).Aggregate(result, (current, s) => from seq in current from item in s select seq.Concat([item]));
+
+    return sequences.Where(s => s.Any()).Aggregate(result, func: (current, s) => from seq in current from item in s select seq.Concat([item]));
   }
 
   /// <summary>
@@ -181,6 +182,85 @@ public static class EnumerableExtensions
       }
 
       return r;
+    }
+  }
+
+  /// <param name="source">The enumeration in which the items with a maximal value should be found.</param>
+  /// <typeparam name="T">The type of the elements.</typeparam>
+  extension<T>(IEnumerable<T> source)
+  {
+    /// <summary>
+    ///   Selects all elements in the sequence that are maximal with respect to the given value.
+    /// </summary>
+    /// <remarks>
+    ///   Runtime complexity of the operation is O(N).
+    /// </remarks>
+    /// <param name="valueSelector">The function that selects the value to compare.</param>
+    /// <returns>All elements in the enumeration where the selected value is the maximum.</returns>
+    public IEnumerable<T> MaxItems(Func<T, IComparable> valueSelector)
+    {
+      using var enumerator = source.GetEnumerator();
+      if (!enumerator.MoveNext()) {
+        return [];
+      }
+      var max = valueSelector(enumerator.Current);
+      var result = new List<T> { enumerator.Current };
+
+      while (enumerator.MoveNext()) {
+        var item = enumerator.Current;
+        var comparison = valueSelector(item);
+        switch (comparison.CompareTo(max)) {
+          case > 0:
+            result.Clear();
+            result.Add(item);
+            max = comparison;
+
+            break;
+          case 0:
+            result.Add(item);
+
+            break;
+        }
+      }
+
+      return result;
+    }
+
+    /// <summary>
+    ///   Selects all elements in the sequence that are minimal with respect to the given value.
+    /// </summary>
+    /// <remarks>
+    ///   Runtime complexity of the operation is O(N).
+    /// </remarks>
+    /// <param name="valueSelector">The function that selects the value.</param>
+    /// <returns>All elements in the enumeration where the selected value is the minimum.</returns>
+    public IEnumerable<T> MinItems(Func<T, IComparable> valueSelector)
+    {
+      using var enumerator = source.GetEnumerator();
+      if (!enumerator.MoveNext()) {
+        return [];
+      }
+      var min = valueSelector(enumerator.Current);
+      var result = new List<T> { enumerator.Current };
+
+      while (enumerator.MoveNext()) {
+        var item = enumerator.Current;
+        var comparison = valueSelector(item);
+        switch (comparison.CompareTo(min)) {
+          case < 0:
+            result.Clear();
+            result.Add(item);
+            min = comparison;
+
+            break;
+          case 0:
+            result.Add(item);
+
+            break;
+        }
+      }
+
+      return result;
     }
   }
 }

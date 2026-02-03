@@ -8,6 +8,7 @@ public sealed class SymbolicExpressionTreeHierarchicalFormatter : ISymbolicExpre
   {
     var sw = new StringWriter();
     RenderTree(sw, symbolicExpressionTree);
+
     return sw.ToString();
   }
 
@@ -19,6 +20,7 @@ public sealed class SymbolicExpressionTreeHierarchicalFormatter : ISymbolicExpre
     writer.Write(label);
     if (node.SubtreeCount <= 0) {
       writer.WriteLine();
+
       return;
     }
 

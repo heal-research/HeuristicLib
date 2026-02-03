@@ -21,6 +21,7 @@ public class PearsonsRDependenceCalculator : IDependencyCalculator
     }
 
     errorState = calculator.ErrorState;
+
     return calculator.R;
   }
 }

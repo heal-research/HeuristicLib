@@ -6,8 +6,8 @@ public readonly struct BatchInstruction(byte opcode, ushort numberOfArguments, i
   public readonly ushort NumberOfArguments = numberOfArguments;
   public readonly int ChildIndex = childIndex;
 
-  public readonly double Value = value; // for numbers and constants
-  public readonly double Weight = weight; // for variables
+  public readonly double Value = value;// for numbers and constants
+  public readonly double Weight = weight;// for variables
   public readonly double[] Buf = buf;
-  public readonly double[] Data = data; // to hold dataset data
+  public readonly double[] Data = data;// to hold dataset data
 }

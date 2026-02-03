@@ -1,22 +1,17 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
 public sealed class BinaryFactorVariableTreeNode : VariableTreeNodeBase
 {
+
+  private BinaryFactorVariableTreeNode(BinaryFactorVariableTreeNode original) : base(original) => VariableValue = original.VariableValue;
+
+  public BinaryFactorVariableTreeNode(BinaryFactorVariable variableSymbol) : base(variableSymbol) {}
   public new BinaryFactorVariable Symbol => (BinaryFactorVariable)base.Symbol;
 
   public string VariableValue { get; set; } = "";
-
-  private BinaryFactorVariableTreeNode(BinaryFactorVariableTreeNode original)
-    : base(original) => VariableValue = original.VariableValue;
-
-  public BinaryFactorVariableTreeNode(BinaryFactorVariable variableSymbol)
-    : base(variableSymbol)
-  {
-  }
 
   public override bool HasLocalParameters => true;
 
@@ -29,20 +24,20 @@ public sealed class BinaryFactorVariableTreeNode : VariableTreeNodeBase
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
   {
     // 50% additive & 50% multiplicative (override of functionality of base class because of a BUG)
-    if (random.NextDouble() < 0.5) {
-      var x = NormalDistribution.NextDouble(random, Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
-      Weight = Weight + (x * shakingFactor);
+    if (random.Random() < 0.5) {
+      var x = random.NextGaussian(Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
+      Weight = Weight + x * shakingFactor;
     } else {
-      var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
+      var x = random.NextGaussian(1.0, Symbol.MultiplicativeWeightManipulatorSigma);
       Weight = Weight * x;
     }
 
-    if (random.NextDouble() < Symbol.VariableChangeProbability) {
+    if (random.Random() < Symbol.VariableChangeProbability) {
       var oldName = VariableName;
       VariableName = Symbol.VariableNames.SampleRandom(random);
       // reinitialize weights if variable has changed (similar to FactorVariableTreeNode)
       if (oldName != VariableName) {
-        Weight = NormalDistribution.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
+        Weight = random.NextGaussian(Symbol.WeightMu, Symbol.WeightSigma);
       }
     }
 

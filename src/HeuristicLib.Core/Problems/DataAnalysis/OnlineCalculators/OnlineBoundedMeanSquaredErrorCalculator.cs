@@ -5,10 +5,6 @@ public class OnlineBoundedMeanSquaredErrorCalculator
 {
   private double errorSum;
   private int n;
-  public double BoundedMeanSquaredError => n > 0 ? errorSum / n : 0.0;
-
-  public double LowerBound { get; }
-  public double UpperBound { get; }
 
   public OnlineBoundedMeanSquaredErrorCalculator(double lowerBound, double upperBound)
   {
@@ -16,39 +12,10 @@ public class OnlineBoundedMeanSquaredErrorCalculator
     UpperBound = upperBound;
     Reset();
   }
+  public double BoundedMeanSquaredError => n > 0 ? errorSum / n : 0.0;
 
-  #region IOnlineCalculator Members
-
-  public OnlineCalculatorError ErrorState { get; private set; }
-  public double Value => BoundedMeanSquaredError;
-
-  public void Reset()
-  {
-    n = 0;
-    errorSum = 0.0;
-    ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
-  }
-
-  public void Add(double original, double estimated)
-  {
-    if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
-        double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
-      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-      return;
-    }
-
-    var error = estimated - original;
-    if (estimated < LowerBound || estimated > UpperBound) {
-      errorSum += Math.Abs(error);
-    } else {
-      errorSum += error * error;
-    }
-
-    n++;
-    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
-  }
-
-  #endregion
+  public double LowerBound { get; }
+  public double UpperBound { get; }
 
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, double lowerBound, double upperBound, out OnlineCalculatorError errorState)
   {
@@ -73,6 +40,41 @@ public class OnlineBoundedMeanSquaredErrorCalculator
     }
 
     errorState = boundedMseCalculator.ErrorState;
+
     return boundedMseCalculator.BoundedMeanSquaredError;
   }
+
+  #region IOnlineCalculator Members
+
+  public OnlineCalculatorError ErrorState { get; private set; }
+  public double Value => BoundedMeanSquaredError;
+
+  public void Reset()
+  {
+    n = 0;
+    errorSum = 0.0;
+    ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
+  }
+
+  public void Add(double original, double estimated)
+  {
+    if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
+        double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
+      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
+
+      return;
+    }
+
+    var error = estimated - original;
+    if (estimated < LowerBound || estimated > UpperBound) {
+      errorSum += Math.Abs(error);
+    } else {
+      errorSum += error * error;
+    }
+    n++;
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+  }
+
+  #endregion
+
 }

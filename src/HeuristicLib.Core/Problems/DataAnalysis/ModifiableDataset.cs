@@ -1,27 +1,24 @@
 ﻿using System.Collections;
 
-#pragma warning disable S2368 //multidimensional parameters are explicitly allowed
+#pragma warning disable S2368//multidimensional parameters are explicitly allowed
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public class ModifiableDataset : Dataset
 {
-  public ModifiableDataset() { }
+  public ModifiableDataset() {}
 
-  public ModifiableDataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues, bool cloneValues)
-    :
+  public ModifiableDataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues, bool cloneValues) :
     base(variableNames, variableValues, cloneValues)
   {
   }
 
-  public ModifiableDataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues)
-    :
+  public ModifiableDataset(IEnumerable<string> variableNames, IEnumerable<IList> variableValues) :
     base(variableNames, variableValues)
   {
   }
 
-  public ModifiableDataset(IEnumerable<string> variableNames, double[,] variableValues)
-    :
+  public ModifiableDataset(IEnumerable<string> variableNames, double[,] variableValues) :
     base(variableNames, variableValues)
   {
   }
@@ -41,7 +38,6 @@ public class ModifiableDataset : Dataset
     if (list.Count != VariableNames.Count) {
       throw new ArgumentException("The number of values must be equal to the number of variable names.");
     }
-
     // check if all the values are of the correct type
     for (var i = 0; i < list.Count; ++i) {
       if (list[i].GetType() != GetVariableType(VariableNames[i])) {
@@ -63,7 +59,6 @@ public class ModifiableDataset : Dataset
     if (list.Count != VariableNames.Count) {
       throw new ArgumentException("The number of values must be equal to the number of variable names.");
     }
-
     // check if all the values are of the correct type
     for (var i = 0; i < list.Count; ++i) {
       if (list[i].GetType() != GetVariableType(VariableNames[i])) {
@@ -83,7 +78,6 @@ public class ModifiableDataset : Dataset
     foreach (var list in VariableValues.Values) {
       list.RemoveAt(row);
     }
-
     Rows--;
   }
 
@@ -129,7 +123,6 @@ public class ModifiableDataset : Dataset
     if (GetVariableType(variableName) != values[0]?.GetType()) {
       throw new ArgumentException("The type of the provided value does not match the variable type.");
     }
-
     VariableValues[variableName] = values;
   }
 
@@ -138,7 +131,6 @@ public class ModifiableDataset : Dataset
     if (!VariableValues.ContainsKey(variableName)) {
       throw new ArgumentException($"The variable {variableName} does not exist in the dataset.");
     }
-
     VariableValues.Remove(variableName);
     VariableNames.Remove(variableName);
   }

@@ -2,9 +2,9 @@
 
 public interface IEpochClock
 {
-  int EpochCount { get; }
+  long Ticks { get; }
   int EpochLength { get; }
-  int CurrentEpoch => EpochCount / EpochLength;
+  int CurrentEpoch => (int)(Ticks / EpochLength);
 
   event EventHandler<int>? OnEpochChange;
   EvaluationTiming IncreaseCount();

@@ -11,7 +11,6 @@ public static class TsplibTspInstanceProvider
     if (parser.FixedEdges != null) {
       throw new InvalidDataException("TSP instance " + parser.Name + " contains fixed edges which are not supported by HeuristicLab.");
     }
-
     var data = new TspData {
       Dimension = parser.Dimension,
       Coordinates = parser.Vertices ?? parser.DisplayVertices,

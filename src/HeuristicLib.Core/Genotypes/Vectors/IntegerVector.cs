@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
-public class IntegerVector(params IEnumerable<int> elements) : IReadOnlyList<int>, IEquatable<IntegerVector>
+public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyList<int>, IEquatable<IntegerVector>
 {
   private readonly int[] elements = elements.ToArray();
 

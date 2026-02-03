@@ -6,15 +6,16 @@ using System.Text;
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public class TableFileParser : Progress<long>
-{
-  // reports the number of bytes read
+{// reports the number of bytes read
   private const int BufferSize = 65536;
 
   // char used to symbolize whitespaces (no missing values can be handled with whitespaces)
   private const char WhiteSpaceChar = (char)0;
   private static readonly char[] PossibleSeparators = [',', ';', '\t', WhiteSpaceChar];
+  private int estimatedNumberOfLines = 200;// initial capacity for columns, will be set automatically when data is read from a file
   private Tokenizer tokenizer = null!;
-  private int estimatedNumberOfLines = 200; // initial capacity for columns, will be set automatically when data is read from a file
+
+  private List<string> variableNames = [];
 
   public Encoding Encoding { get; set; } = Encoding.Default;
 
@@ -24,15 +25,12 @@ public class TableFileParser : Progress<long>
 
   public List<IList> Values { get; private set; } = null!;
 
-  private List<string> variableNames = [];
-
   public IEnumerable<string> VariableNames
   {
     get {
       if (variableNames.Count > 0) {
         return variableNames;
       }
-
       var names = new string[Columns];
       for (var i = 0; i < names.Length; i++) {
         names[i] = "X" + i.ToString("000");
@@ -46,6 +44,7 @@ public class TableFileParser : Progress<long>
   {
     DetermineFileFormat(fileName, out var numberFormat, out var dateTimeFormatInfo, out var separator);
     using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
     return AreColumnNamesInFirstLine(stream, numberFormat, dateTimeFormatInfo, separator);
   }
 
@@ -54,6 +53,7 @@ public class TableFileParser : Progress<long>
     var numberFormat = NumberFormatInfo.InvariantInfo;
     var dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
     var separator = ',';
+
     return AreColumnNamesInFirstLine(stream, numberFormat, dateTimeFormatInfo, separator);
   }
 
@@ -61,6 +61,7 @@ public class TableFileParser : Progress<long>
     DateTimeFormatInfo dateTimeFormatInfo, char separator)
   {
     using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
     return AreColumnNamesInFirstLine(stream, numberFormat, dateTimeFormatInfo, separator);
   }
 
@@ -69,6 +70,7 @@ public class TableFileParser : Progress<long>
   {
     using var reader = new StreamReader(stream, Encoding);
     tokenizer = new Tokenizer(reader, numberFormat, dateTimeFormatInfo, separator);
+
     return tokenizer.PeekType() != TokenType.Double;
   }
 
@@ -149,7 +151,7 @@ public class TableFileParser : Progress<long>
             // read at least one value in the row (support for skipping empty lines)
             Error("The first row of the dataset has " + Values.Count + " columns." + Environment.NewLine +
                   "Line " + tokenizer.CurrentLineNumber + " has " + colIdx + " columns.", "",
-              tokenizer.CurrentLineNumber);
+            tokenizer.CurrentLineNumber);
           }
 
           OnReport(tokenizer.BytesRead);
@@ -163,7 +165,7 @@ public class TableFileParser : Progress<long>
           if (colIdx == Values.Count) {
             Error("The first row of the dataset has " + Values.Count + " columns." + Environment.NewLine +
                   "Line " + tokenizer.CurrentLineNumber + " has more columns.", "",
-              tokenizer.CurrentLineNumber);
+            tokenizer.CurrentLineNumber);
           }
 
           if (!IsColumnTypeCompatible(Values[colIdx], type)) {
@@ -172,8 +174,7 @@ public class TableFileParser : Progress<long>
 
           // add the value to the column
           AddValue(type, Values[colIdx], strVal, dblVal, dateTimeVal);
-          if (!(Values[colIdx] is List<string>)) {
-            // optimization: don't store the string values in another list if the column is list<string>
+          if (!(Values[colIdx] is List<string>)) {// optimization: don't store the string values in another list if the column is list<string>
             strValues[colIdx].Add(strVal);
           }
 
@@ -202,18 +203,23 @@ public class TableFileParser : Progress<long>
       switch (l) {
         case List<byte> l1:
           l1.TrimExcess();
+
           break;
         case List<DateTime> l1:
           l1.TrimExcess();
+
           break;
         case List<string> l1:
           l1.TrimExcess();
+
           break;
         case List<object> l1:
           l1.TrimExcess();
+
           break;
         case List<double> l1:
           l1.TrimExcess();
+
           break;
       }
     }
@@ -229,7 +235,7 @@ public class TableFileParser : Progress<long>
     }
 
     var numNewLine = 0;
-    int charsInCurrentLine = 0, charsInFirstLine = 0; // the first line (names) and the last line (incomplete) are not representative
+    int charsInCurrentLine = 0, charsInFirstLine = 0;// the first line (names) and the last line (incomplete) are not representative
     foreach (var ch in buf) {
       charsInCurrentLine++;
       if (ch != '\n') {
@@ -237,9 +243,8 @@ public class TableFileParser : Progress<long>
       }
 
       if (numNewLine == 0) {
-        charsInFirstLine = charsInCurrentLine; // store the number of chars in the first line
+        charsInFirstLine = charsInCurrentLine;// store the number of chars in the first line
       }
-
       charsInCurrentLine = 0;
       numNewLine++;
     }
@@ -249,7 +254,7 @@ public class TableFileParser : Progress<long>
     } else {
       var charsPerLineFactor = (buf.Length - charsInFirstLine - charsInCurrentLine) / ((double)numNewLine - 1);
       var estimatedLines = len / charsPerLineFactor;
-      estimatedNumberOfLines = (int)Math.Round(estimatedLines * 1.1); // pessimistic allocation of 110% to make sure that the list is very likely large enough
+      estimatedNumberOfLines = (int)Math.Round(estimatedLines * 1.1);// pessimistic allocation of 110% to make sure that the list is very likely large enough
     }
   }
 
@@ -259,8 +264,8 @@ public class TableFileParser : Progress<long>
       ParseVariableNames();
       if (!tokenizer.HasNext()) {
         Error(
-          "Couldn't parse data values. Probably because of incorrect number format (the parser expects english number format with a '.' as decimal separator).",
-          "", tokenizer.CurrentLineNumber);
+        "Couldn't parse data values. Probably because of incorrect number format (the parser expects english number format with a '.' as decimal separator).",
+        "", tokenizer.CurrentLineNumber);
       }
     }
 
@@ -274,7 +279,7 @@ public class TableFileParser : Progress<long>
       // initialize column
       Values.Add(CreateList(type, estimatedNumberOfLines));
       if (type == TokenType.String) {
-        strValues.Add([]); // optimization: don't store the string values in another list if the column is list<string>
+        strValues.Add([]);// optimization: don't store the string values in another list if the column is list<string>
       } else {
         strValues.Add(new List<string>(estimatedNumberOfLines));
       }
@@ -283,22 +288,94 @@ public class TableFileParser : Progress<long>
       if (type != TokenType.String) {
         strValues[colIdx].Add(strVal);
       }
-
       colIdx++;
     }
 
-    tokenizer.Skip(); // skip newline
+    tokenizer.Skip();// skip newline
   }
+
+  public static void DetermineFileFormat(string path, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator) => DetermineFileFormat(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), out numberFormat, out dateTimeFormatInfo, out separator);
+
+  public static void DetermineFileFormat(Stream stream, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator)
+  {
+    using var reader = new StreamReader(stream);
+    // skip first line
+    reader.ReadLine();
+    // read a block
+    var buffer = new char[BufferSize];
+    var charsRead = reader.ReadBlock(buffer, 0, BufferSize);
+    // count frequency of special characters
+    var charCounts = buffer.Take(charsRead)
+      .GroupBy(c => c)
+      .ToDictionary(keySelector: g => g.Key, elementSelector: g => g.Count());
+
+    // depending on the characters occuring in the block 
+    // we distinguish a number of different cases based on the following rules:
+    // many points => it must be English number format, the other frequently occuring char is the separator
+    // no points but many commas => this is the problematic case. Either German format (real numbers) or English format (only integer numbers) with ',' as separator
+    //   => check the line in more detail:
+    //            English: 0, 0, 0, 0
+    //            German:  0,0 0,0 0,0 ...
+    //            => if commas are followed by space => English format
+    // no points no commas => English format (only integer numbers) use the other frequently occuring char as separator
+    // in all cases only treat ' ' as separator if no other separator is possible (spaces can also occur additionally to separators)
+    if (OccurrencesOf(charCounts, '.') > 10 || OccurrencesOf(charCounts, ',') <= 10) {
+      numberFormat = NumberFormatInfo.InvariantInfo;
+      dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
+      separator = PossibleSeparators
+        .Where(c => OccurrencesOf(charCounts, c) > 10)
+        .OrderBy(c => -OccurrencesOf(charCounts, c))
+        .DefaultIfEmpty(' ')
+        .First();
+    } else {
+      // no points and many commas
+      // count the number of tokens (chains of only digits and commas) that contain multiple comma characters
+      var tokensWithMultipleCommas = 0;
+      for (var i = 0; i < charsRead; i++) {
+        var nCommas = 0;
+        while (i < charsRead && (buffer[i] == ',' || char.IsDigit(buffer[i]))) {
+          if (buffer[i] == ',') {
+            nCommas++;
+          }
+          i++;
+        }
+
+        if (nCommas > 2) {
+          tokensWithMultipleCommas++;
+        }
+      }
+
+      if (tokensWithMultipleCommas > 1) {
+        // English format (only integer values) with ',' as separator
+        numberFormat = NumberFormatInfo.InvariantInfo;
+        dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
+        separator = ',';
+      } else {
+        char[] disallowedSeparators = [','];// n. def. contains a space so ' ' should be disallowed to, however existing unit tests would fail
+        // German format (real values)
+        numberFormat = NumberFormatInfo.GetInstance(new CultureInfo("de-DE"));
+        dateTimeFormatInfo = DateTimeFormatInfo.GetInstance(new CultureInfo("de-DE"));
+        separator = PossibleSeparators
+          .Except(disallowedSeparators)
+          .Where(c => OccurrencesOf(charCounts, c) > 10)
+          .OrderBy(c => -OccurrencesOf(charCounts, c))
+          .DefaultIfEmpty(' ')
+          .First();
+      }
+    }
+  }
+
+  private static int OccurrencesOf(Dictionary<char, int> charCounts, char c) => charCounts.GetValueOrDefault(c, 0);
 
   #region type-dependent dispatch
 
   private static bool IsColumnTypeCompatible(IList list, TokenType tokenType)
   {
-    return list is List<object> || // unknown lists are compatible to everything (potential conversion)
-           list is List<string> || // all tokens can be added to a string list
-           tokenType == TokenType.Missing || // empty entries are allowed in all columns
-           (tokenType == TokenType.Double && list is List<double>) ||
-           (tokenType == TokenType.DateTime && list is List<DateTime>);
+    return list is List<object> ||// unknown lists are compatible to everything (potential conversion)
+           list is List<string> ||// all tokens can be added to a string list
+           tokenType == TokenType.Missing ||// empty entries are allowed in all columns
+           tokenType == TokenType.Double && list is List<double> ||
+           tokenType == TokenType.DateTime && list is List<DateTime>;
   }
 
   private void AddValue(TokenType type, IList list, string strVal, double dblVal, DateTime dateTimeVal)
@@ -307,12 +384,15 @@ public class TableFileParser : Progress<long>
       // Add value if list has a defined type
       case List<double> dblList:
         AddValue(type, dblList, dblVal);
+
         return;
       case List<string> strList:
         AddValue(type, strList, strVal);
+
         return;
       case List<DateTime> dtList:
         AddValue(type, dtList, dateTimeVal);
+
         return;
     }
 
@@ -320,8 +400,7 @@ public class TableFileParser : Progress<long>
     if (type == TokenType.Missing) {
       // add null to track number of missing values
       list.Add(null);
-    } else {
-      // first non-missing value for undefined list-type
+    } else {// first non-missing value for undefined list-type
       var newList = ConvertList(type, list, estimatedNumberOfLines);
       // replace list
       var idx = Values.IndexOf(list);
@@ -358,7 +437,7 @@ public class TableFileParser : Progress<long>
         return new List<double>(estimatedNumberOfLines);
       case TokenType.DateTime:
         return new List<DateTime>(estimatedNumberOfLines);
-      case TokenType.Missing: // List<object> represent list of unknown type
+      case TokenType.Missing:// List<object> represent list of unknown type
         return new List<object>(estimatedNumberOfLines);
       default:
         throw new InvalidOperationException();
@@ -392,80 +471,6 @@ public class TableFileParser : Progress<long>
 
   #endregion
 
-  public static void DetermineFileFormat(string path, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator) => DetermineFileFormat(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), out numberFormat, out dateTimeFormatInfo, out separator);
-
-  public static void DetermineFileFormat(Stream stream, out NumberFormatInfo numberFormat, out DateTimeFormatInfo dateTimeFormatInfo, out char separator)
-  {
-    using var reader = new StreamReader(stream);
-    // skip first line
-    reader.ReadLine();
-    // read a block
-    var buffer = new char[BufferSize];
-    var charsRead = reader.ReadBlock(buffer, 0, BufferSize);
-    // count frequency of special characters
-    var charCounts = buffer.Take(charsRead)
-      .GroupBy(c => c)
-      .ToDictionary(g => g.Key, g => g.Count());
-
-    // depending on the characters occuring in the block 
-    // we distinguish a number of different cases based on the following rules:
-    // many points => it must be English number format, the other frequently occuring char is the separator
-    // no points but many commas => this is the problematic case. Either German format (real numbers) or English format (only integer numbers) with ',' as separator
-    //   => check the line in more detail:
-    //            English: 0, 0, 0, 0
-    //            German:  0,0 0,0 0,0 ...
-    //            => if commas are followed by space => English format
-    // no points no commas => English format (only integer numbers) use the other frequently occuring char as separator
-    // in all cases only treat ' ' as separator if no other separator is possible (spaces can also occur additionally to separators)
-    if (OccurrencesOf(charCounts, '.') > 10 || OccurrencesOf(charCounts, ',') <= 10) {
-      numberFormat = NumberFormatInfo.InvariantInfo;
-      dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
-      separator = PossibleSeparators
-        .Where(c => OccurrencesOf(charCounts, c) > 10)
-        .OrderBy(c => -OccurrencesOf(charCounts, c))
-        .DefaultIfEmpty(' ')
-        .First();
-    } else {
-      // no points and many commas
-      // count the number of tokens (chains of only digits and commas) that contain multiple comma characters
-      var tokensWithMultipleCommas = 0;
-      for (var i = 0; i < charsRead; i++) {
-        var nCommas = 0;
-        while (i < charsRead && (buffer[i] == ',' || char.IsDigit(buffer[i]))) {
-          if (buffer[i] == ',') {
-            nCommas++;
-          }
-
-          i++;
-        }
-
-        if (nCommas > 2) {
-          tokensWithMultipleCommas++;
-        }
-      }
-
-      if (tokensWithMultipleCommas > 1) {
-        // English format (only integer values) with ',' as separator
-        numberFormat = NumberFormatInfo.InvariantInfo;
-        dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
-        separator = ',';
-      } else {
-        char[] disallowedSeparators = [',']; // n. def. contains a space so ' ' should be disallowed to, however existing unit tests would fail
-        // German format (real values)
-        numberFormat = NumberFormatInfo.GetInstance(new CultureInfo("de-DE"));
-        dateTimeFormatInfo = DateTimeFormatInfo.GetInstance(new CultureInfo("de-DE"));
-        separator = PossibleSeparators
-          .Except(disallowedSeparators)
-          .Where(c => OccurrencesOf(charCounts, c) > 10)
-          .OrderBy(c => -OccurrencesOf(charCounts, c))
-          .DefaultIfEmpty(' ')
-          .First();
-      }
-    }
-  }
-
-  private static int OccurrencesOf(Dictionary<char, int> charCounts, char c) => charCounts.GetValueOrDefault(c, 0);
-
   #region tokenizer
 
   // the tokenizer reads full lines and returns separated tokens in the line as well as a terminating end-of-line character
@@ -476,31 +481,23 @@ public class TableFileParser : Progress<long>
 
   internal class Tokenizer
   {
+    private readonly DateTimeFormatInfo dateTimeFormatInfo;
+    private readonly NumberFormatInfo numberFormatInfo;
     private readonly StreamReader reader;
+    private readonly char separator;
+    private readonly char[] separators;
+
+    // arrays for string.Split()
+    private readonly char[] whiteSpaceSeparators = [];// string split uses separators as default
+    private DateTime[] dateTimeVals = new DateTime[1024];
+    private double[] doubleVals = new double[1024];
+    private int numTokens;
+    private string[] stringVals = new string[1024];
+
+    private int tokenPos;
 
     // we assume that a buffer of 1024 tokens for a line is sufficient most of the time (the buffer is increased below if necessary)
     private TokenType[] tokenTypes = new TokenType[1024];
-    private string[] stringVals = new string[1024];
-    private double[] doubleVals = new double[1024];
-    private DateTime[] dateTimeVals = new DateTime[1024];
-    private int tokenPos;
-    private int numTokens;
-    private readonly NumberFormatInfo numberFormatInfo;
-    private readonly DateTimeFormatInfo dateTimeFormatInfo;
-    private readonly char separator;
-
-    // arrays for string.Split()
-    private readonly char[] whiteSpaceSeparators = []; // string split uses separators as default
-    private readonly char[] separators;
-
-    public int CurrentLineNumber { get; private set; }
-    public string CurrentLine { get; private set; } = string.Empty;
-
-    public long BytesRead
-    {
-      get;
-      private set;
-    }
 
     public Tokenizer(StreamReader reader, NumberFormatInfo numberFormatInfo, DateTimeFormatInfo dateTimeFormatInfo, char separator)
     {
@@ -510,6 +507,15 @@ public class TableFileParser : Progress<long>
       this.separator = separator;
       separators = [separator];
       ReadNextTokens();
+    }
+
+    public int CurrentLineNumber { get; private set; }
+    public string CurrentLine { get; private set; } = string.Empty;
+
+    public long BytesRead
+    {
+      get;
+      private set;
     }
 
     public bool HasNext() => numTokens > tokenPos || !reader.EndOfStream;
@@ -545,19 +551,19 @@ public class TableFileParser : Progress<long>
       if (reader.BaseStream.CanSeek) {
         BytesRead = reader.BaseStream.Position;
       } else {
-        BytesRead += CurrentLine.Length + 2; // guess
+        BytesRead += CurrentLine.Length + 2;// guess
       }
 
       var i = 0;
       if (!string.IsNullOrWhiteSpace(CurrentLine)) {
         foreach (var tok in Split(CurrentLine)) {
-          var type = TokenType.String; // default
+          var type = TokenType.String;// default
           stringVals[i] = tok.Trim();
           if (double.TryParse(tok, NumberStyles.Float, numberFormatInfo, out var doubleVal)) {
             type = TokenType.Double;
             doubleVals[i] = doubleVal;
           } else if (DateTime.TryParse(tok, dateTimeFormatInfo, DateTimeStyles.NoCurrentDateDefault, out var dateTimeValue)
-                     && (dateTimeValue.Year > 1 || dateTimeValue.Month > 1 || dateTimeValue.Day > 1) // if no date is given it is returned as 1.1.0001 -> don't allow this
+                     && (dateTimeValue.Year > 1 || dateTimeValue.Month > 1 || dateTimeValue.Day > 1)// if no date is given it is returned as 1.1.0001 -> don't allow this
                     ) {
             type = TokenType.DateTime;
             dateTimeVals[i] = dateTimeValue;
@@ -589,7 +595,7 @@ public class TableFileParser : Progress<long>
 
     private static void IncreaseCapacity<T>(ref T[] arr)
     {
-      var n = (int)Math.Floor(arr.Length * 1.7); // guess
+      var n = (int)Math.Floor(arr.Length * 1.7);// guess
       var arr2 = new T[n];
       Array.Copy(arr, arr2, arr.Length);
       arr = arr2;
@@ -611,7 +617,6 @@ public class TableFileParser : Progress<long>
     if (type != TokenType.String) {
       throw new ArgumentException("Error: Expected " + TokenType.String + " got " + type);
     }
-
     varNames.Add(strVal);
 
     while (tokenizer.HasNext() && tokenizer.PeekType() != TokenType.NewLine) {
@@ -629,11 +634,11 @@ public class TableFileParser : Progress<long>
     if (tokenizer.PeekType() != expectedToken) {
       throw new ArgumentException("Error: Expected " + expectedToken + " got " + tokenizer.PeekType());
     }
-
     tokenizer.Skip();
   }
 
   private static void Error(string message, string token, int lineNumber) => throw new IOException($"Error while parsing. {message} (token: {token} lineNumber: {lineNumber}).");
 
   #endregion
+
 }

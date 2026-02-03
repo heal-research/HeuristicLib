@@ -2,16 +2,14 @@ namespace HEAL.HeuristicLib.Genotypes.Trees;
 
 public class SymbolicExpressionTree(SymbolicExpressionTreeNode root)
 {
+  public SymbolicExpressionTree(SymbolicExpressionTree symbolicExpressionTree) : this(symbolicExpressionTree.Root.Clone()) {}
   public SymbolicExpressionTreeNode Root { get; set; } = root;
 
   public int Length => Root.GetLength();
 
   public int Depth => Root.GetDepth();
 
-  public SymbolicExpressionTree(SymbolicExpressionTree symbolicExpressionTree)
-    : this(symbolicExpressionTree.Root.Clone())
-  {
-  }
+  public SymbolicExpressionTree(SymbolicExpressionTree symbolicExpressionTree) : this(symbolicExpressionTree.Root.Clone()) { }
 
   public IEnumerable<SymbolicExpressionTreeNode> IterateNodesBreadth() => Root.IterateNodesBreadth();
 

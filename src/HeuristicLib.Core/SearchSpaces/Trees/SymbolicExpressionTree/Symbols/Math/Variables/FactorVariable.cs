@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public sealed class FactorVariable : VariableBase
 {
-  private readonly Dictionary<string, Dictionary<string, int>> variableValues = new(); // for each variable value also store a zero-based index
+  private readonly Dictionary<string, Dictionary<string, int>> variableValues = new();// for each variable value also store a zero-based index
 
   public IEnumerable<KeyValuePair<string, Dictionary<string, int>>> VariableValues
   {

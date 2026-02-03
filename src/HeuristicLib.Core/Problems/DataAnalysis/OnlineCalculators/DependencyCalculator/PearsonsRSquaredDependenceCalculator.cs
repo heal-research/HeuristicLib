@@ -11,6 +11,7 @@ public class PearsonsRSquaredDependenceCalculator : IDependencyCalculator
   public double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
   {
     var r = OnlinePearsonsRCalculator.Calculate(originalValues, estimatedValues, out errorState);
+
     return r * r;
   }
 
@@ -26,6 +27,7 @@ public class PearsonsRSquaredDependenceCalculator : IDependencyCalculator
 
     errorState = calculator.ErrorState;
     var r = calculator.R;
+
     return r * r;
   }
 }

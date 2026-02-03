@@ -56,9 +56,9 @@ public static class DistanceHelper
     };
   }
 
-  private static double AttDistance(double x1, double y1, double x2, double y2) => Math.Ceiling(Math.Sqrt((((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2))) / 10.0));
+  private static double AttDistance(double x1, double y1, double x2, double y2) => Math.Ceiling(Math.Sqrt(((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2)) / 10.0));
 
-  private static double EuclideanDistance(double x1, double y1, double x2, double y2) => Math.Sqrt(((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2)));
+  private static double EuclideanDistance(double x1, double y1, double x2, double y2) => Math.Sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 
   private const double Pi = 3.141592;
   private const double Radius = 6378.388;
@@ -74,14 +74,15 @@ public static class DistanceHelper
     var q2 = Math.Cos(latitude1 - latitude2);
     var q3 = Math.Cos(latitude1 + latitude2);
 
-    return (int)((Radius * Math.Acos(0.5 * (((1.0 + q1) * q2) - ((1.0 - q1) * q3)))) + 1.0);
+    return (int)(Radius * Math.Acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
   }
 
-  private static double ConvertToRadian(double x) => Pi * (Math.Truncate(x) + (5.0 * (x - Math.Truncate(x)) / 3.0)) / 180.0;
+  private static double ConvertToRadian(double x) => Pi * (Math.Truncate(x) + 5.0 * (x - Math.Truncate(x)) / 3.0) / 180.0;
 
   private static double ManhattanDistance(double x1, double y1, double x2, double y2) => Math.Round(Math.Abs(x1 - x2) + Math.Abs(y1 - y2), MidpointRounding.AwayFromZero);
 
   private static double MaximumDistance(double x1, double y1, double x2, double y2) => Math.Max(Math.Round(Math.Abs(x1 - x2), MidpointRounding.AwayFromZero), Math.Round(Math.Abs(y1 - y2), MidpointRounding.AwayFromZero));
 
   #endregion
+
 }

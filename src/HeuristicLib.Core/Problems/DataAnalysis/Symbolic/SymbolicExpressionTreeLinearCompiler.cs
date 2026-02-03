@@ -12,7 +12,6 @@ public static class SymbolicExpressionTreeLinearCompiler
     if (root.SubtreeCount > ushort.MaxValue) {
       throw new ArgumentException("Number of subtrees is too big (>65.535)");
     }
-
     code[0] = new LinearInstruction(root, (ushort)root.SubtreeCount, opCodeMapper(root), 0);
     int c = 1, i = 0;
     foreach (var node in root.IterateNodesBreadth()) {
@@ -21,7 +20,6 @@ public static class SymbolicExpressionTreeLinearCompiler
         if (s.SubtreeCount > ushort.MaxValue) {
           throw new ArgumentException("Number of subtrees is too big (>65.535)");
         }
-
         code[c + j] = new LinearInstruction(s, (ushort)s.SubtreeCount, opCodeMapper(s), 0);
       }
 

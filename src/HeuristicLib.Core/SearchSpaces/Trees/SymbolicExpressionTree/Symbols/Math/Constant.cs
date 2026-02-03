@@ -11,20 +11,15 @@ public sealed class Constant() : Symbol(0, 0, 0)
 
 public sealed class ConstantTreeNode : SymbolicExpressionTreeNode
 {
+
+  public ConstantTreeNode(Constant numberSymbol) : base(numberSymbol) {}
+
+  public ConstantTreeNode(ConstantTreeNode original) : base(original) => Value = original.Value;
+
+  public ConstantTreeNode(double value) : this(new Constant()) => Value = value;
   public new Constant Symbol => (Constant)base.Symbol;
 
   public double Value { get; set; }
-
-  public ConstantTreeNode(Constant numberSymbol)
-    : base(numberSymbol)
-  {
-  }
-
-  public ConstantTreeNode(ConstantTreeNode original)
-    : base(original) => Value = original.Value;
-
-  public ConstantTreeNode(double value)
-    : this(new Constant()) => Value = value;
 
   public override bool HasLocalParameters => false;
 

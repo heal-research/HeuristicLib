@@ -3,19 +3,9 @@
 public class OnlineMeanErrorCalculator
 {
   private readonly OnlineMeanAndVarianceCalculator meanAndVarianceCalculator = new();
-  public double MeanError => meanAndVarianceCalculator.Mean;
 
   public OnlineMeanErrorCalculator() => Reset();
-
-  #region IOnlineCalculator Members
-
-  public OnlineCalculatorError ErrorState => meanAndVarianceCalculator.MeanErrorState;
-  public double Value => MeanError;
-  public void Reset() => meanAndVarianceCalculator.Reset();
-
-  public void Add(double original, double estimated) => meanAndVarianceCalculator.Add(estimated - original);
-
-  #endregion
+  public double MeanError => meanAndVarianceCalculator.Mean;
 
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
   {
@@ -40,6 +30,18 @@ public class OnlineMeanErrorCalculator
     }
 
     errorState = meCalculator.ErrorState;
+
     return meCalculator.MeanError;
   }
+
+  #region IOnlineCalculator Members
+
+  public OnlineCalculatorError ErrorState => meanAndVarianceCalculator.MeanErrorState;
+  public double Value => MeanError;
+  public void Reset() => meanAndVarianceCalculator.Reset();
+
+  public void Add(double original, double estimated) => meanAndVarianceCalculator.Add(estimated - original);
+
+  #endregion
+
 }

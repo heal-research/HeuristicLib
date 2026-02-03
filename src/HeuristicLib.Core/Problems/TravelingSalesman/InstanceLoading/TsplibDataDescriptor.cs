@@ -2,12 +2,6 @@
 
 public class TsplibDataDescriptor
 {
-  public string Name { get; internal set; }
-  public string Description { get; internal set; }
-
-  internal string InstanceIdentifier { get; set; }
-  internal string SolutionIdentifier { get; set; }
-  internal double? BestQuality { get; set; }
 
   internal TsplibDataDescriptor(string name, string description, string instanceIdentifier, string solutionIdentifier, double? bestQuality)
   {
@@ -17,4 +11,10 @@ public class TsplibDataDescriptor
     SolutionIdentifier = solutionIdentifier;
     BestQuality = bestQuality;
   }
+  public string Name { get; internal set; }
+  public string Description { get; internal set; }
+
+  internal string InstanceIdentifier { get; set; }
+  internal string SolutionIdentifier { get; set; }
+  internal double? BestQuality { get; set; }
 }

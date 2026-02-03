@@ -22,7 +22,6 @@ public static class SymbolicExpressionTreeCompiler
       if (code.Count > ushort.MaxValue) {
         throw new ArgumentException("Code for the tree is too long (> ushort.MaxValue).");
       }
-
       entryPoint[branch.FunctionName] = (ushort)code.Count;
       code.AddRange(Compile(branch[0], opCodeMapper, postInstructionCompiledHooks));
     }
@@ -33,7 +32,6 @@ public static class SymbolicExpressionTreeCompiler
       if (instr.DynamicNode.Symbol is not InvokeFunction) {
         continue;
       }
-
       var invokeNode = instr.DynamicNode;
       var functionName = ((InvokeFunctionSymbol)invokeNode.Symbol).FunctionName;
       instr.Data = entryPoint[functionName];
@@ -49,7 +47,6 @@ public static class SymbolicExpressionTreeCompiler
       if (subtreesCount > ushort.MaxValue) {
         throw new ArgumentException("Number of subtrees is too big (> 65.535)");
       }
-
       ushort data = 0;
       if (node.Symbol is Argument) {
         var argNode = (ArgumentSymbol)node.Symbol;

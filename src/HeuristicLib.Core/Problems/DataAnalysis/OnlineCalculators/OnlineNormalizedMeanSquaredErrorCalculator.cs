@@ -6,15 +6,6 @@ public class OnlineNormalizedMeanSquaredErrorCalculator
   private readonly OnlineMeanAndVarianceCalculator meanSquaredErrorCalculator;
   private readonly OnlineMeanAndVarianceCalculator originalVarianceCalculator;
 
-  public double NormalizedMeanSquaredError
-  {
-    get {
-      var var = originalVarianceCalculator.PopulationVariance;
-      var m = meanSquaredErrorCalculator.Mean;
-      return var > 0 ? m / var : 0.0;
-    }
-  }
-
   public OnlineNormalizedMeanSquaredErrorCalculator()
   {
     meanSquaredErrorCalculator = new OnlineMeanAndVarianceCalculator();
@@ -22,26 +13,15 @@ public class OnlineNormalizedMeanSquaredErrorCalculator
     Reset();
   }
 
-  #region IOnlineCalculator Members
-
-  public OnlineCalculatorError ErrorState => meanSquaredErrorCalculator.MeanErrorState | originalVarianceCalculator.PopulationVarianceErrorState;
-  public double Value => NormalizedMeanSquaredError;
-
-  public void Reset()
+  public double NormalizedMeanSquaredError
   {
-    meanSquaredErrorCalculator.Reset();
-    originalVarianceCalculator.Reset();
-  }
+    get {
+      var var = originalVarianceCalculator.PopulationVariance;
+      var m = meanSquaredErrorCalculator.Mean;
 
-  public void Add(double original, double estimated)
-  {
-    // no need to check for validity of values explicitly as it is checked in the meanAndVariance calculator anyway
-    var error = estimated - original;
-    meanSquaredErrorCalculator.Add(error * error);
-    originalVarianceCalculator.Add(original);
+      return var > 0 ? m / var : 0.0;
+    }
   }
-
-  #endregion
 
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
   {
@@ -73,6 +53,29 @@ public class OnlineNormalizedMeanSquaredErrorCalculator
     }
 
     errorState = normalizedMseCalculator.ErrorState;
+
     return normalizedMseCalculator.NormalizedMeanSquaredError;
   }
+
+  #region IOnlineCalculator Members
+
+  public OnlineCalculatorError ErrorState => meanSquaredErrorCalculator.MeanErrorState | originalVarianceCalculator.PopulationVarianceErrorState;
+  public double Value => NormalizedMeanSquaredError;
+
+  public void Reset()
+  {
+    meanSquaredErrorCalculator.Reset();
+    originalVarianceCalculator.Reset();
+  }
+
+  public void Add(double original, double estimated)
+  {
+    // no need to check for validity of values explicitly as it is checked in the meanAndVariance calculator anyway
+    var error = estimated - original;
+    meanSquaredErrorCalculator.Add(error * error);
+    originalVarianceCalculator.Add(original);
+  }
+
+  #endregion
+
 }

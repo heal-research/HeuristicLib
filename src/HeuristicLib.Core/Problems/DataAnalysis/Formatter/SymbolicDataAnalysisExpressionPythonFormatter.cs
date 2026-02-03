@@ -14,12 +14,14 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
     var strBuilderModel = new StringBuilder();
     var header = GenerateHeader(symbolicExpressionTree);
     FormatRecursively(symbolicExpressionTree.Root, strBuilderModel);
+
     return $"{header}{strBuilderModel}";
   }
 
   public static string FormatTree(SymbolicExpressionTree symbolicExpressionTree)
   {
     var formatter = new SymbolicDataAnalysisExpressionPythonFormatter();
+
     return formatter.Format(symbolicExpressionTree);
   }
 
@@ -38,9 +40,11 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
       switch (symbol) {
         case Average:
           statisticLibCounter++;
+
           break;
         case IfThenElse:
           evaluateIfCounter++;
+
           break;
         case Cosine:
         case Exponential:
@@ -52,6 +56,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
         case Power:
         case AnalyticQuotient:
           mathLibCounter++;
+
           break;
         default: {
           if (node is VariableTreeNode varNode) {
@@ -87,11 +92,9 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
       if (mathLibCounter > 0) {
         strBuilder.AppendLine("import math");
       }
-
       if (statisticLibCounter > 0) {
         strBuilder.AppendLine("import statistics");
       }
-
       strBuilder.AppendLine();
     }
 
@@ -117,7 +120,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
   {
     var strBuilder = new StringBuilder();
     strBuilder.Append("def evaluate(");
-    var orderedVariables = variables.OrderBy(n => n, new NaturalStringComparer()).ToArray();
+    var orderedVariables = variables.OrderBy(keySelector: n => n, new NaturalStringComparer()).ToArray();
     foreach (var variable in orderedVariables) {
       strBuilder.Append($"{variable}");
       if (variable != orderedVariables[^1]) {
@@ -127,6 +130,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
 
     strBuilder.AppendLine("):");
     strBuilder.Append("\treturn ");
+
     return strBuilder.ToString();
   }
 
@@ -250,6 +254,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
     if (node.SubtreeCount == 1) {
       strBuilder.Append("-");
       FormatRecursively(node.GetSubtree(0), strBuilder);
+
       return;
     }
 
@@ -270,7 +275,6 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
         if (i > 1) {
           strBuilder.Append(" * ");
         }
-
         FormatRecursively(node.GetSubtree(i), strBuilder);
       }
 

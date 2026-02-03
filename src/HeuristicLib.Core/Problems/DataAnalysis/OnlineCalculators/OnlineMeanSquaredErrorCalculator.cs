@@ -3,39 +3,11 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public class OnlineMeanSquaredErrorCalculator
 {
-  private double sse;
   private int n;
-  public double MeanSquaredError => n > 0 ? sse / n : 0.0;
+  private double sse;
 
   public OnlineMeanSquaredErrorCalculator() => Reset();
-
-  #region IOnlineCalculator Members
-
-  public OnlineCalculatorError ErrorState { get; private set; }
-  public double Value => MeanSquaredError;
-
-  public void Reset()
-  {
-    n = 0;
-    sse = 0.0;
-    ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
-  }
-
-  public void Add(double original, double estimated)
-  {
-    if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
-        double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
-      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-      return;
-    }
-
-    var error = estimated - original;
-    sse += error * error;
-    n++;
-    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
-  }
-
-  #endregion
+  public double MeanSquaredError => n > 0 ? sse / n : 0.0;
 
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
   {
@@ -60,6 +32,37 @@ public class OnlineMeanSquaredErrorCalculator
     }
 
     errorState = mseCalculator.ErrorState;
+
     return mseCalculator.MeanSquaredError;
   }
+
+  #region IOnlineCalculator Members
+
+  public OnlineCalculatorError ErrorState { get; private set; }
+  public double Value => MeanSquaredError;
+
+  public void Reset()
+  {
+    n = 0;
+    sse = 0.0;
+    ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
+  }
+
+  public void Add(double original, double estimated)
+  {
+    if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
+        double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
+      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
+
+      return;
+    }
+
+    var error = estimated - original;
+    sse += error * error;
+    n++;
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+  }
+
+  #endregion
+
 }

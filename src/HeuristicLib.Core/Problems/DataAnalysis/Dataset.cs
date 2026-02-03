@@ -1,20 +1,11 @@
 using System.Collections;
 
-#pragma warning disable S2368 //The work with 2-dimensional rectangular  arrays is explicitly wanted here 
+#pragma warning disable S2368//The work with 2-dimensional rectangular  arrays is explicitly wanted here 
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public abstract class Dataset
 {
-  protected Dictionary<string, IList> VariableValues { get; }
-
-  protected List<string> VariableNames { get; }
-
-  public IReadOnlyList<string> GetVariableNames() => VariableNames;
-
-  public int Rows { get; protected set; }
-
-  public int Columns => VariableNames.Count;
 
   protected Dataset()
   {
@@ -61,8 +52,9 @@ public abstract class Dataset
     if (vNames.Distinct().Count() != vNames.Count) {
       var duplicateVariableNames = vNames.GroupBy(v => v).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
       var message = "The dataset cannot contain duplicate variables names: " + Environment.NewLine;
-      message = duplicateVariableNames.Aggregate(message, (current, duplicateVariableName) =>
+      message = duplicateVariableNames.Aggregate(message, func: (current, duplicateVariableName) =>
         current + duplicateVariableName + Environment.NewLine);
+
       throw new ArgumentException(message);
     }
 
@@ -80,6 +72,19 @@ public abstract class Dataset
       VariableValues.Add(columName, values);
     }
   }
+  protected Dictionary<string, IList> VariableValues { get; }
+
+  protected List<string> VariableNames { get; }
+
+  public int Rows { get; protected set; }
+
+  public int Columns => VariableNames.Count;
+
+  public IEnumerable<string> DoubleVariables => VariableValues.Where(p => p.Value is IList<double>).Select(p => p.Key);
+  public IEnumerable<string> StringVariables => VariableValues.Where(p => p.Value is IList<string>).Select(p => p.Key);
+  public IEnumerable<string> DateTimeVariables => VariableValues.Where(p => p.Value is IList<DateTime>).Select(p => p.Key);
+
+  public IReadOnlyList<string> GetVariableNames() => VariableNames;
 
   public ModifiableDataset ToModifiable() => new(VariableNames, VariableNames.Select(n => VariableValues[n]), true);
 
@@ -106,12 +111,15 @@ public abstract class Dataset
           switch (value) {
             case double d:
               transposed.Add(new List<double> { d });
+
               break;
             case DateTime dt:
               transposed.Add(new List<DateTime> { dt });
+
               break;
             case string s:
               transposed.Add(new List<string> { s });
+
               break;
             default:
               throw new NotSupportedException($"Variable {vNames[colCount]} has type {value.GetType()}. This is not supported when converting from row-wise data.");
@@ -138,10 +146,6 @@ public abstract class Dataset
   }
 
   public bool ContainsVariable(string variableName) => VariableValues.ContainsKey(variableName);
-
-  public IEnumerable<string> DoubleVariables => VariableValues.Where(p => p.Value is IList<double>).Select(p => p.Key);
-  public IEnumerable<string> StringVariables => VariableValues.Where(p => p.Value is IList<string>).Select(p => p.Key);
-  public IEnumerable<string> DateTimeVariables => VariableValues.Where(p => p.Value is IList<DateTime>).Select(p => p.Key);
 
   public IReadOnlyList<double> GetDoubleValues(string variableName) => GetValues<double>(variableName);
   public IEnumerable<double> GetDoubleValues(string variableName, IEnumerable<int> rows) => GetValues<double>(variableName, rows);
@@ -184,12 +188,14 @@ public abstract class Dataset
   protected static Type GetElementType(IList list)
   {
     var type = list.GetType();
+
     return (type.IsGenericType ? type.GetGenericArguments()[0] : type.GetElementType())!;
   }
 
   protected static bool IsAllowedType(IList list)
   {
     var type = GetElementType(list);
+
     return IsAllowedType(type);
   }
 
@@ -210,7 +216,8 @@ public abstract class Dataset
         variableNames.GroupBy(v => v).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
       var message = "The dataset cannot contain duplicate variables names: " + Environment.NewLine;
       message = duplicateVariableNames.Aggregate(message,
-        (current, duplicateVariableName) => current + duplicateVariableName + Environment.NewLine);
+      func: (current, duplicateVariableName) => current + duplicateVariableName + Environment.NewLine);
+
       throw new ArgumentException(message);
     }
 
@@ -222,9 +229,9 @@ public abstract class Dataset
     }
   }
 
-  protected static Dictionary<string, IList> CloneValues(Dictionary<string, IList> variableValues) => variableValues.ToDictionary(x => x.Key, x => CloneValues(x.Value));
+  protected static Dictionary<string, IList> CloneValues(Dictionary<string, IList> variableValues) => variableValues.ToDictionary(keySelector: x => x.Key, elementSelector: x => CloneValues(x.Value));
 
-  protected static Dictionary<string, IList> CloneValues(IEnumerable<string> variableNames, IEnumerable<IList> variableValues) => variableNames.Zip(variableValues, Tuple.Create).ToDictionary(x => x.Item1, x => CloneValues(x.Item2));
+  protected static Dictionary<string, IList> CloneValues(IEnumerable<string> variableNames, IEnumerable<IList> variableValues) => variableNames.Zip(variableValues, Tuple.Create).ToDictionary(keySelector: x => x.Item1, elementSelector: x => CloneValues(x.Item2));
 
   protected static IList CloneValues(IList values)
   {

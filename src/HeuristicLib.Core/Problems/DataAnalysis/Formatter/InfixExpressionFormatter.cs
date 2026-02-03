@@ -27,7 +27,7 @@ public static class BaseInfixExpressionFormatter
   {
     // recurse post-order
     foreach (var subtree in n.Subtrees.ToArray()) {
-      ConvertToBinaryLeftAssocRec(n, subtree); // ToArray required as n.Subtrees is changed in method
+      ConvertToBinaryLeftAssocRec(n, subtree);// ToArray required as n.Subtrees is changed in method
     }
 
     if (n is VariableTreeNode varTreeNode && !varTreeNode.Weight.IsAlmost(1.0)) {
@@ -45,10 +45,12 @@ public static class BaseInfixExpressionFormatter
         case 1 when n.Symbol is Addition or Multiplication or And or Or or Xor:
           // single-argument addition or multiplication has no effect -> remove
           parent.ReplaceSubtree(n, n.GetSubtree(0));
+
           break;
         case 1 when n.Symbol is Division:
           // single-argument division is 1/f(x)
           n.InsertSubtree(0, new Constant { Value = 1.0 }.CreateTreeNode());
+
           break;
         case > 2 when IsLeftAssocOp(n.Symbol): {
           // multi-argument +, -, *, / are the same as multiple binary operations (left-associative)
@@ -56,7 +58,7 @@ public static class BaseInfixExpressionFormatter
 
           var additionalTrees = n.Subtrees.Skip(2).ToArray();
           while (n.SubtreeCount > 2) {
-            n.RemoveSubtree(2); // keep only the first two arguments
+            n.RemoveSubtree(2);// keep only the first two arguments
           }
 
           var childIdx = parent.IndexOfSubtree(n);
@@ -71,6 +73,7 @@ public static class BaseInfixExpressionFormatter
           }
 
           parent.InsertSubtree(childIdx, newChild);
+
           break;
         }
         case 2 when n.GetSubtree(1).SubtreeCount == 2 &&
@@ -91,6 +94,7 @@ public static class BaseInfixExpressionFormatter
           n.ReplaceSubtree(op2, b);
           parent.ReplaceSubtree(n, op2);
           op2.InsertSubtree(0, n);
+
           break;
         }
       }
@@ -104,9 +108,10 @@ public static class BaseInfixExpressionFormatter
       // This method assumes that the tree has been converted to binary and left-assoc form (see ConvertToBinaryLeftAssocRec). 
       // no subtrees
       case 0 when node is VariableTreeNode varNode: {
-        if (varNode.Weight != 1.0) { throw new NotSupportedException("Infix formatter does not support variables with coefficients."); }
+        if (!varNode.Weight.IsAlmost(1.0)) { throw new NotSupportedException("Infix formatter does not support variables with coefficients."); }
 
         AppendVariableName(strBuilder, varNode.VariableName);
+
         break;
       }
       case 0 when node is NumberTreeNode numNode: {
@@ -133,6 +138,7 @@ public static class BaseInfixExpressionFormatter
         strBuilder.Append(", ")
           .Append(numberFormat, $"{varNode.Lag}")
           .Append(')');
+
         break;
       }
       case 0 when node is FactorVariableTreeNode factorNode: {
@@ -143,11 +149,11 @@ public static class BaseInfixExpressionFormatter
           if (i > 0) {
             strBuilder.Append(", ");
           }
-
           AppendNumber(strBuilder, parameters, factorNode.Weights[i], formatString, numberFormat);
         }
 
         strBuilder.Append(']');
+
         break;
       }
       case 0: {
@@ -198,7 +204,6 @@ public static class BaseInfixExpressionFormatter
           if (parenthesisRequired) {
             strBuilder.Append('(');
           }
-
           FormatRecursively(node.Subtrees.First(), strBuilder, numberFormat, formatString, parameters);
 
           foreach (var subtree in node.Subtrees.Skip(1)) {
@@ -261,16 +266,14 @@ public static class BaseInfixExpressionFormatter
     if (child.SubtreeCount == 0) {
       return false;
     }
-
     var parentPrio = Priority(parent.Symbol);
     var childPrio = Priority(child.Symbol);
     if (parentPrio > childPrio) {
       return true;
     }
-
     if (parentPrio == childPrio) {
       if (IsLeftAssocOp(child.Symbol)) {
-        return parent.GetSubtree(0) != child; // (..) required only for right child for left-assoc op
+        return parent.GetSubtree(0) != child;// (..) required only for right child for left-assoc op
       }
 
       if (IsRightAssocOp(child.Symbol)) {
@@ -308,7 +311,7 @@ public static class BaseInfixExpressionFormatter
     // a <op> b <op> c = a <op> (b <op> c)
     // Negation (single-argument subtraction) is also right-assoc, but we do not have a separate symbol for negation.
     return symbol is Not ||
-           symbol is Power; // x^y^z = x^(y^z) (as in Fortran or Mathematica)
+           symbol is Power;// x^y^z = x^(y^z) (as in Fortran or Mathematica)
   }
 
   private static void AppendNumber(StringBuilder strBuilder, List<KeyValuePair<string, double>>? parameters, double value, string formatString, NumberFormatInfo numberFormat)
@@ -327,11 +330,9 @@ public static class BaseInfixExpressionFormatter
   private static string GetToken(Symbol symbol)
   {
     var tok = InfixExpressionParser.KnownSymbols.GetBySecond(symbol).FirstOrDefault();
-    if (tok == null) {
-      throw new ArgumentException($"Unknown symbol {symbol} found.");
-    }
+    ArgumentOutOfRangeException.ThrowIfEqual(tok, null);
 
-    return tok;
+    return tok!;
   }
 }
 
@@ -358,23 +359,24 @@ public sealed class InfixExpressionFormatter : SymbolicExpressionTreeStringForma
     var cleanTree = new SymbolicExpressionTree(symbolicExpressionTree);
     BaseInfixExpressionFormatter.ConvertToBinaryLeftAssoc(cleanTree);
     BaseInfixExpressionFormatter.FormatRecursively(cleanTree.Root.GetSubtree(0).GetSubtree(0),
-      strBuilder, numberFormat, formatString);
+    strBuilder, numberFormat, formatString);
+
     return strBuilder.ToString();
   }
 
-  public string Format(SymbolicExpressionTree symbolicExpressionTree) => Format(symbolicExpressionTree, NumberFormatInfo.InvariantInfo);
+  public override string Format(SymbolicExpressionTree symbolicExpressionTree) => Format(symbolicExpressionTree, NumberFormatInfo.InvariantInfo);
 }
 
 public sealed class InfixExpressionStringFormatter : SymbolicExpressionTreeStringFormatter
 {
-  public string Format(SymbolicExpressionTree symbolicExpressionTree)
+  public override string Format(SymbolicExpressionTree symbolicExpressionTree)
   {
     var strBuilder = new StringBuilder();
     var parameters = new List<KeyValuePair<string, double>>();
     var cleanTree = new SymbolicExpressionTree(symbolicExpressionTree);
     BaseInfixExpressionFormatter.ConvertToBinaryLeftAssoc(cleanTree);
     BaseInfixExpressionFormatter.FormatRecursively(cleanTree.Root.GetSubtree(0).GetSubtree(0),
-      strBuilder, NumberFormatInfo.InvariantInfo, "G", parameters);
+    strBuilder, NumberFormatInfo.InvariantInfo, "G", parameters);
     strBuilder.Append($"{Environment.NewLine}{Environment.NewLine}");
     var maxDigits = GetDigits(parameters.Count);
     var padding = parameters.Max(x => x.Value.ToString("F12", CultureInfo.InvariantCulture).Length);

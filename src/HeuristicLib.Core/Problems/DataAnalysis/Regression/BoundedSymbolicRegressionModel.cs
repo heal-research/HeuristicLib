@@ -10,6 +10,7 @@ public readonly struct BoundedSymbolicRegressionModel(SymbolicExpressionTree tre
   {
     var u = upperPredictionBound;
     var l = lowerPredictionBound;
+
     return interpreter.GetSymbolicExpressionTreeValues(tree, data, rows).Select(v => Math.Min(u, Math.Max(l, v)));
   }
 }

@@ -6,10 +6,7 @@ public class OnlineTheilsUStatisticCalculator
   private readonly OnlineMeanAndVarianceCalculator squaredErrorMeanCalculator;
   private readonly OnlineMeanAndVarianceCalculator unbiasedEstimatorMeanCalculator;
 
-  public double TheilsUStatistic => Math.Sqrt(squaredErrorMeanCalculator.Mean) / Math.Sqrt(unbiasedEstimatorMeanCalculator.Mean);
-
   private OnlineCalculatorError errorState;
-  public OnlineCalculatorError ErrorState => errorState | squaredErrorMeanCalculator.MeanErrorState | unbiasedEstimatorMeanCalculator.MeanErrorState;
 
   public OnlineTheilsUStatisticCalculator()
   {
@@ -18,59 +15,15 @@ public class OnlineTheilsUStatisticCalculator
     Reset();
   }
 
-  #region IOnlineEvaluator Members
-
-  public double Value => TheilsUStatistic;
-
-  public void Add(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> referenceContinuation, IEnumerable<double> predictedContinuation)
-  {
-    if (double.IsNaN(startValue) || (errorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
-      errorState |= OnlineCalculatorError.InvalidValueAdded;
-      return;
-    }
-
-    using var actualEnumerator = actualContinuation.GetEnumerator();
-    using var predictedEnumerator = predictedContinuation.GetEnumerator();
-    using var referenceEnumerator = referenceContinuation.GetEnumerator();
-    while (actualEnumerator.MoveNext() & predictedEnumerator.MoveNext() & referenceEnumerator.MoveNext()
-           & (ErrorState != OnlineCalculatorError.InvalidValueAdded)) {
-      var actual = actualEnumerator.Current;
-      var predicted = predictedEnumerator.Current;
-      var reference = referenceEnumerator.Current;
-      if (double.IsNaN(actual) || double.IsNaN(predicted) || double.IsNaN(reference)) {
-        errorState |= OnlineCalculatorError.InvalidValueAdded;
-      } else {
-        // error of predicted change
-        var errorPredictedChange = predicted - startValue - (actual - startValue);
-        squaredErrorMeanCalculator.Add(errorPredictedChange * errorPredictedChange);
-
-        var errorReference = reference - startValue - (actual - startValue);
-        unbiasedEstimatorMeanCalculator.Add(errorReference * errorReference);
-      }
-    }
-
-    // check if both enumerators are at the end to make sure both enumerations have the same length
-    if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext() || referenceEnumerator.MoveNext()) {
-      errorState |= OnlineCalculatorError.InvalidValueAdded;
-    } else {
-      errorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
-    }
-  }
-
-  public void Reset()
-  {
-    squaredErrorMeanCalculator.Reset();
-    unbiasedEstimatorMeanCalculator.Reset();
-    errorState = OnlineCalculatorError.InsufficientElementsAdded;
-  }
-
-  #endregion
+  public double TheilsUStatistic => Math.Sqrt(squaredErrorMeanCalculator.Mean) / Math.Sqrt(unbiasedEstimatorMeanCalculator.Mean);
+  public OnlineCalculatorError ErrorState => errorState | squaredErrorMeanCalculator.MeanErrorState | unbiasedEstimatorMeanCalculator.MeanErrorState;
 
   public static double Calculate(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> referenceContinuation, IEnumerable<double> predictedContinuation, out OnlineCalculatorError errorState)
   {
     var calculator = new OnlineTheilsUStatisticCalculator();
     calculator.Add(startValue, actualContinuation, referenceContinuation, predictedContinuation);
     errorState = calculator.ErrorState;
+
     return calculator.TheilsUStatistic;
   }
 
@@ -98,6 +51,57 @@ public class OnlineTheilsUStatisticCalculator
     }
 
     errorState = calculator.ErrorState;
+
     return calculator.TheilsUStatistic;
   }
+
+  #region IOnlineEvaluator Members
+
+  public double Value => TheilsUStatistic;
+
+  public void Add(double startValue, IEnumerable<double> actualContinuation, IEnumerable<double> referenceContinuation, IEnumerable<double> predictedContinuation)
+  {
+    if (double.IsNaN(startValue) || (errorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
+      errorState |= OnlineCalculatorError.InvalidValueAdded;
+
+      return;
+    }
+
+    using var actualEnumerator = actualContinuation.GetEnumerator();
+    using var predictedEnumerator = predictedContinuation.GetEnumerator();
+    using var referenceEnumerator = referenceContinuation.GetEnumerator();
+    while (actualEnumerator.MoveNext() & predictedEnumerator.MoveNext() & referenceEnumerator.MoveNext()
+           & ErrorState != OnlineCalculatorError.InvalidValueAdded) {
+      var actual = actualEnumerator.Current;
+      var predicted = predictedEnumerator.Current;
+      var reference = referenceEnumerator.Current;
+      if (double.IsNaN(actual) || double.IsNaN(predicted) || double.IsNaN(reference)) {
+        errorState |= OnlineCalculatorError.InvalidValueAdded;
+      } else {
+        // error of predicted change
+        var errorPredictedChange = predicted - startValue - (actual - startValue);
+        squaredErrorMeanCalculator.Add(errorPredictedChange * errorPredictedChange);
+
+        var errorReference = reference - startValue - (actual - startValue);
+        unbiasedEstimatorMeanCalculator.Add(errorReference * errorReference);
+      }
+    }
+
+    // check if both enumerators are at the end to make sure both enumerations have the same length
+    if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext() || referenceEnumerator.MoveNext()) {
+      errorState |= OnlineCalculatorError.InvalidValueAdded;
+    } else {
+      errorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+    }
+  }
+
+  public void Reset()
+  {
+    squaredErrorMeanCalculator.Reset();
+    unbiasedEstimatorMeanCalculator.Reset();
+    errorState = OnlineCalculatorError.InsufficientElementsAdded;
+  }
+
+  #endregion
+
 }

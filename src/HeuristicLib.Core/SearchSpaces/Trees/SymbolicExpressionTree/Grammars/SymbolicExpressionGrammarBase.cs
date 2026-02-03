@@ -11,7 +11,239 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 /// </summary>
 public abstract class SymbolicExpressionGrammarBase
 {
+  private readonly Lock cachedIsAllowedChildSymbolIndexLock = new();
+  private readonly Lock cachedIsAllowedChildSymbolLock = new();
+  private readonly Lock cachedMaxExpressionDepthLock = new();
+  private readonly Lock cachedMaxExpressionLengthLock = new();
+  private readonly Lock cachedMinExpressionDepthLock = new();
+  private readonly Lock cachedMinExpressionLengthLock = new();
   protected readonly Dictionary<Symbol, SymbolConfiguration> SymbolConfigurations = [];
+
+  private Dictionary<Tuple<Symbol, Symbol>, bool> cachedIsAllowedChildSymbol = new();
+  private Dictionary<Tuple<Symbol, Symbol, int>, bool> cachedIsAllowedChildSymbolIndex = new();
+
+  private Dictionary<Symbol, int> cachedMaxExpressionDepth = new();
+
+  private Dictionary<Tuple<Symbol, int>, int> cachedMaxExpressionLength = new();
+
+  private Dictionary<Symbol, int> cachedMinExpressionDepth = new();
+
+  private Dictionary<Symbol, int> cachedMinExpressionLength = new();
+
+  public virtual IEnumerable<Symbol> Symbols => SymbolConfigurations.Keys;
+  public virtual IEnumerable<Symbol> AllowedSymbols => Symbols.Where(s => s.Enabled);
+  public virtual bool ContainsSymbol(Symbol symbol) => SymbolConfigurations.ContainsKey(symbol);
+
+  public virtual bool IsAllowedChildSymbol(Symbol parent, Symbol child)
+  {
+    if (SymbolConfigurations.Count == 0) {
+      return false;
+    }
+
+    if (!child.Enabled) {
+      return false;
+    }
+
+    var key = Tuple.Create(parent, child);
+    if (cachedIsAllowedChildSymbol.TryGetValue(key, out var result)) {
+      return result;
+    }
+
+    // value has to be calculated and cached make sure this is done in only one thread
+    lock (cachedIsAllowedChildSymbolLock) {
+      // in case the value has been calculated on another thread in the meanwhile
+      if (cachedIsAllowedChildSymbol.TryGetValue(key, out result)) {
+        return result;
+      }
+
+      var state = SymbolConfigurations.TryGetValue(parent, out var config) && config.AllowedChildSymbols.SelectMany(x => x.Flatten()).Contains(child);
+      cachedIsAllowedChildSymbol.Add(key, state);
+
+      return state;
+    }
+  }
+
+  public virtual bool IsAllowedChildSymbol(Symbol parent, Symbol child, int argumentIndex)
+  {
+    if (!child.Enabled) {
+      return false;
+    }
+
+    if (IsAllowedChildSymbol(parent, child)) {
+      return true;
+    }
+
+    if (SymbolConfigurations.Count == 0) {
+      return false;
+    }
+
+    var key = Tuple.Create(parent, child, argumentIndex);
+    if (cachedIsAllowedChildSymbolIndex.TryGetValue(key, out var result)) {
+      return result;
+    }
+
+    // value has to be calculated and cached make sure this is done in only one thread
+    lock (cachedIsAllowedChildSymbolIndexLock) {
+      // in case the value has been calculated on another thread in the meanwhile
+      if (cachedIsAllowedChildSymbolIndex.TryGetValue(key, out result)) {
+        return result;
+      }
+      var state = SymbolConfigurations.TryGetValue(parent, out var config)
+                  && config.AllowedChildSymbolsPerIndex.TryGetValue(argumentIndex, out var l)
+                  && l.SelectMany(x => x.Flatten()).Contains(child);
+
+      cachedIsAllowedChildSymbolIndex.Add(key, state);
+
+      return state;
+    }
+  }
+
+  public IEnumerable<Symbol> GetAllowedChildSymbols(Symbol parent)
+    => AllowedSymbols.Where(child => IsAllowedChildSymbol(parent, child));
+
+  public IEnumerable<Symbol> GetAllowedChildSymbols(Symbol parent, int argumentIndex)
+    => AllowedSymbols.Where(child => IsAllowedChildSymbol(parent, child, argumentIndex));
+
+  public virtual int GetMinimumSubtreeCount(Symbol symbol) => SymbolConfigurations[symbol].SymbolSubtreeCount.Item1;
+
+  public virtual int GetMaximumSubtreeCount(Symbol symbol) => SymbolConfigurations[symbol].SymbolSubtreeCount.Item2;
+
+  protected void ClearCaches()
+  {
+    cachedMinExpressionLength = [];
+    cachedMaxExpressionLength = [];
+    cachedMinExpressionDepth = [];
+    cachedMaxExpressionDepth = [];
+    cachedIsAllowedChildSymbol = [];
+    cachedIsAllowedChildSymbolIndex = [];
+  }
+
+  public int GetMinimumExpressionLength(Symbol symbol)
+  {
+    if (cachedMinExpressionLength.TryGetValue(symbol, out var res)) {
+      return res;
+    }
+
+    // value has to be calculated and cached make sure this is done in only one thread
+    lock (cachedMinExpressionLengthLock) {
+      // in case the value has been calculated on another thread in the meanwhile
+      if (cachedMinExpressionLength.TryGetValue(symbol, out res)) {
+        return res;
+      }
+
+      var cMin = new Dictionary<Symbol, int>(cachedMinExpressionLength);
+      GrammarUtils.CalculateMinimumExpressionLengths(this, cMin);
+      cachedMinExpressionLength = cMin;
+
+      return cachedMinExpressionLength[symbol];
+    }
+  }
+
+  public int GetMaximumExpressionLength(Symbol symbol, int maxDepth)
+  {
+    var key = Tuple.Create(symbol, maxDepth);
+    if (cachedMaxExpressionLength.TryGetValue(key, out var temp)) {
+      return temp;
+    }
+    // value has to be calculated and cached make sure this is done in only one thread
+    lock (cachedMaxExpressionLengthLock) {
+      // in case the value has been calculated on another thread in the meanwhile
+      if (cachedMaxExpressionLength.TryGetValue(key, out temp)) {
+        return temp;
+      }
+
+      var cMin = new Dictionary<Tuple<Symbol, int>, int>(cachedMaxExpressionLength);
+      var res = GetMaximumExpressionLength(symbol, maxDepth, cMin);
+      cachedMaxExpressionLength = cMin;
+
+      return res;
+    }
+  }
+
+  private int GetMaximumExpressionLength(Symbol symbol, int maxDepth, Dictionary<Tuple<Symbol, int>, int> tempMaxExpressionLength)
+  {
+    var key = Tuple.Create(symbol, maxDepth);
+    // in case the value has been calculated on another thread in the meanwhile
+    if (tempMaxExpressionLength.TryGetValue(key, out var temp)) {
+      return temp;
+    }
+
+    tempMaxExpressionLength[key] = int.MaxValue;// prevent infinite recursion
+    var sumOfMaxTrees = 1 + (from argIndex in Enumerable.Range(0, GetMaximumSubtreeCount(symbol))
+      let maxForSlot = (long)(from s in GetAllowedChildSymbols(symbol, argIndex)
+        where s.InitialFrequency > 0.0
+        where GetMinimumExpressionDepth(s) < maxDepth
+        select GetMaximumExpressionLength(s, maxDepth - 1, tempMaxExpressionLength)).DefaultIfEmpty(0).Max()
+      select maxForSlot).DefaultIfEmpty(0).Sum();
+
+    return tempMaxExpressionLength[key] = (int)Math.Min(sumOfMaxTrees, int.MaxValue);
+  }
+
+  public int GetMinimumExpressionDepth(Symbol symbol)
+  {
+    if (cachedMinExpressionDepth.TryGetValue(symbol, out var res)) {
+      return res;
+    }
+
+    // value has to be calculated and cached make sure this is done in only one thread
+    lock (cachedMinExpressionDepthLock) {
+      // in case the value has been calculated on another thread in the meanwhile
+      if (cachedMinExpressionDepth.TryGetValue(symbol, out res)) {
+        return res;
+      }
+
+      var cMin = new Dictionary<Symbol, int>(cachedMinExpressionDepth);
+      GrammarUtils.CalculateMinimumExpressionDepth(this, cMin);
+      cachedMinExpressionDepth = cMin;
+
+      return cachedMinExpressionDepth[symbol];
+    }
+  }
+
+  public int GetMaximumExpressionDepth(Symbol symbol)
+  {
+    if (cachedMaxExpressionDepth.TryGetValue(symbol, out var temp)) {
+      return temp;
+    }
+    // value has to be calculated and cached make sure this is done in only one thread
+    lock (cachedMaxExpressionDepthLock) {
+      // in case the value has been calculated on another thread in the meanwhile
+      if (cachedMaxExpressionDepth.TryGetValue(symbol, out temp)) {
+        return temp;
+      }
+      var cMin = new Dictionary<Symbol, int>(cachedMaxExpressionDepth);
+      var res = GetMaximumExpressionDepth(symbol, cMin);
+      cachedMaxExpressionDepth = cMin;
+
+      return res;
+    }
+  }
+
+  private int GetMaximumExpressionDepth(Symbol symbol, Dictionary<Symbol, int> tempCachedMaxExpressionDepth)
+  {
+    // in case the value has been calculated on another thread in the meanwhile
+    if (tempCachedMaxExpressionDepth.TryGetValue(symbol, out var temp)) {
+      return temp;
+    }
+
+    tempCachedMaxExpressionDepth[symbol] = int.MaxValue;// prevent infinite recursion
+    var maxDepth = 1 + (from argIndex in Enumerable.Range(0, GetMaximumSubtreeCount(symbol))
+      let maxForSlot = (long)(from s in GetAllowedChildSymbols(symbol, argIndex)
+        where s.InitialFrequency > 0.0
+        select GetMaximumExpressionDepth(s, tempCachedMaxExpressionDepth)).DefaultIfEmpty(0).Max()
+      select maxForSlot).DefaultIfEmpty(0).Max();
+
+    return tempCachedMaxExpressionDepth[symbol] = (int)Math.Min(maxDepth, int.MaxValue);
+  }
+
+  private SymbolConfiguration GetConfig(Symbol parent)
+  {
+    if (!SymbolConfigurations.TryGetValue(parent, out var pconfig)) {
+      throw new ArgumentException("Symbol not in Grammar", nameof(parent));
+    }
+
+    return pconfig;
+  }
 
   #region protected grammar manipulation methods
 
@@ -20,7 +252,6 @@ public abstract class SymbolicExpressionGrammarBase
     if (ContainsSymbol(symbol)) {
       throw new ArgumentException("Symbol " + symbol + " is already defined.");
     }
-
     foreach (var s in symbol.Flatten()) {
       SymbolConfigurations.Add(s, new SymbolConfiguration((s.MinimumArity, Math.Min(s.MinimumArity + 1, s.MaximumArity)), [], []));
     }
@@ -88,6 +319,7 @@ public abstract class SymbolicExpressionGrammarBase
     }
 
     pconfig.AllowedChildSymbols.Add(child);
+
     return true;
   }
 
@@ -99,14 +331,13 @@ public abstract class SymbolicExpressionGrammarBase
     if (childSymbols.Contains(child)) {
       return false;
     }
-
     childSymbols = pconfig.AllowedChildSymbolsPerIndex.GetOrInitialize(argumentIndex, []);
 
     if (childSymbols.Contains(child)) {
       return false;
     }
-
     childSymbols.Add(child);
+
     return true;
   }
 
@@ -181,7 +412,6 @@ public abstract class SymbolicExpressionGrammarBase
       if (!pconfig.AllowedChildSymbolsPerIndex.TryGetValue(argumentIndex, out childSymbols)) {
         continue;
       }
-
       changed |= childSymbols.Count > 0;
       childSymbols.Clear();
     }
@@ -203,7 +433,6 @@ public abstract class SymbolicExpressionGrammarBase
     foreach (var s in symbols) {
       SetSubTreeCountInDictionaries(s, minimumSubtreeCount, maximumSubtreeCount);
     }
-
     ClearCaches();
   }
 
@@ -221,233 +450,4 @@ public abstract class SymbolicExpressionGrammarBase
 
   #endregion
 
-  public virtual IEnumerable<Symbol> Symbols => SymbolConfigurations.Keys;
-  public virtual IEnumerable<Symbol> AllowedSymbols => Symbols.Where(s => s.Enabled);
-  public virtual bool ContainsSymbol(Symbol symbol) => SymbolConfigurations.ContainsKey(symbol);
-
-  private Dictionary<Tuple<Symbol, Symbol>, bool> cachedIsAllowedChildSymbol = new();
-  private readonly Lock cachedIsAllowedChildSymbolLock = new();
-  private Dictionary<Tuple<Symbol, Symbol, int>, bool> cachedIsAllowedChildSymbolIndex = new();
-  private readonly Lock cachedIsAllowedChildSymbolIndexLock = new();
-
-  public virtual bool IsAllowedChildSymbol(Symbol parent, Symbol child)
-  {
-    if (SymbolConfigurations.Count == 0) {
-      return false;
-    }
-
-    if (!child.Enabled) {
-      return false;
-    }
-
-    var key = Tuple.Create(parent, child);
-    if (cachedIsAllowedChildSymbol.TryGetValue(key, out var result)) {
-      return result;
-    }
-
-    // value has to be calculated and cached make sure this is done in only one thread
-    lock (cachedIsAllowedChildSymbolLock) {
-      // in case the value has been calculated on another thread in the meanwhile
-      if (cachedIsAllowedChildSymbol.TryGetValue(key, out result)) {
-        return result;
-      }
-
-      var state = SymbolConfigurations.TryGetValue(parent, out var config) && config.AllowedChildSymbols.SelectMany(x => x.Flatten()).Contains(child);
-      cachedIsAllowedChildSymbol.Add(key, state);
-      return state;
-    }
-  }
-
-  public virtual bool IsAllowedChildSymbol(Symbol parent, Symbol child, int argumentIndex)
-  {
-    if (!child.Enabled) {
-      return false;
-    }
-
-    if (IsAllowedChildSymbol(parent, child)) {
-      return true;
-    }
-
-    if (SymbolConfigurations.Count == 0) {
-      return false;
-    }
-
-    var key = Tuple.Create(parent, child, argumentIndex);
-    if (cachedIsAllowedChildSymbolIndex.TryGetValue(key, out var result)) {
-      return result;
-    }
-
-    // value has to be calculated and cached make sure this is done in only one thread
-    lock (cachedIsAllowedChildSymbolIndexLock) {
-      // in case the value has been calculated on another thread in the meanwhile
-      if (cachedIsAllowedChildSymbolIndex.TryGetValue(key, out result)) {
-        return result;
-      }
-
-      var state = SymbolConfigurations.TryGetValue(parent, out var config)
-                  && config.AllowedChildSymbolsPerIndex.TryGetValue(argumentIndex, out var l)
-                  && l.SelectMany(x => x.Flatten()).Contains(child);
-
-      cachedIsAllowedChildSymbolIndex.Add(key, state);
-      return state;
-    }
-  }
-
-  public IEnumerable<Symbol> GetAllowedChildSymbols(Symbol parent)
-    => AllowedSymbols.Where(child => IsAllowedChildSymbol(parent, child));
-
-  public IEnumerable<Symbol> GetAllowedChildSymbols(Symbol parent, int argumentIndex)
-    => AllowedSymbols.Where(child => IsAllowedChildSymbol(parent, child, argumentIndex));
-
-  public virtual int GetMinimumSubtreeCount(Symbol symbol) => SymbolConfigurations[symbol].SymbolSubtreeCount.Item1;
-
-  public virtual int GetMaximumSubtreeCount(Symbol symbol) => SymbolConfigurations[symbol].SymbolSubtreeCount.Item2;
-
-  protected void ClearCaches()
-  {
-    cachedMinExpressionLength = [];
-    cachedMaxExpressionLength = [];
-    cachedMinExpressionDepth = [];
-    cachedMaxExpressionDepth = [];
-    cachedIsAllowedChildSymbol = [];
-    cachedIsAllowedChildSymbolIndex = [];
-  }
-
-  private Dictionary<Symbol, int> cachedMinExpressionLength = new();
-  private readonly Lock cachedMinExpressionLengthLock = new();
-
-  public int GetMinimumExpressionLength(Symbol symbol)
-  {
-    if (cachedMinExpressionLength.TryGetValue(symbol, out var res)) {
-      return res;
-    }
-
-    // value has to be calculated and cached make sure this is done in only one thread
-    lock (cachedMinExpressionLengthLock) {
-      // in case the value has been calculated on another thread in the meanwhile
-      if (cachedMinExpressionLength.TryGetValue(symbol, out res)) {
-        return res;
-      }
-
-      var cMin = new Dictionary<Symbol, int>(cachedMinExpressionLength);
-      GrammarUtils.CalculateMinimumExpressionLengths(this, cMin);
-      cachedMinExpressionLength = cMin;
-
-      return cachedMinExpressionLength[symbol];
-    }
-  }
-
-  private Dictionary<Tuple<Symbol, int>, int> cachedMaxExpressionLength = new();
-  private readonly Lock cachedMaxExpressionLengthLock = new();
-
-  public int GetMaximumExpressionLength(Symbol symbol, int maxDepth)
-  {
-    var key = Tuple.Create(symbol, maxDepth);
-    if (cachedMaxExpressionLength.TryGetValue(key, out var temp)) {
-      return temp;
-    }
-
-    // value has to be calculated and cached make sure this is done in only one thread
-    lock (cachedMaxExpressionLengthLock) {
-      // in case the value has been calculated on another thread in the meanwhile
-      if (cachedMaxExpressionLength.TryGetValue(key, out temp)) {
-        return temp;
-      }
-
-      var cMin = new Dictionary<Tuple<Symbol, int>, int>(cachedMaxExpressionLength);
-      var res = GetMaximumExpressionLength(symbol, maxDepth, cMin);
-      cachedMaxExpressionLength = cMin;
-      return res;
-    }
-  }
-
-  private int GetMaximumExpressionLength(Symbol symbol, int maxDepth, Dictionary<Tuple<Symbol, int>, int> tempMaxExpressionLength)
-  {
-    var key = Tuple.Create(symbol, maxDepth);
-    // in case the value has been calculated on another thread in the meanwhile
-    if (tempMaxExpressionLength.TryGetValue(key, out var temp)) {
-      return temp;
-    }
-
-    tempMaxExpressionLength[key] = int.MaxValue; // prevent infinite recursion
-    var sumOfMaxTrees = 1 + (from argIndex in Enumerable.Range(0, GetMaximumSubtreeCount(symbol))
-      let maxForSlot = (long)(from s in GetAllowedChildSymbols(symbol, argIndex)
-        where s.InitialFrequency > 0.0
-        where GetMinimumExpressionDepth(s) < maxDepth
-        select GetMaximumExpressionLength(s, maxDepth - 1, tempMaxExpressionLength)).DefaultIfEmpty(0).Max()
-      select maxForSlot).DefaultIfEmpty(0).Sum();
-
-    return tempMaxExpressionLength[key] = (int)Math.Min(sumOfMaxTrees, int.MaxValue);
-  }
-
-  private Dictionary<Symbol, int> cachedMinExpressionDepth = new();
-  private readonly Lock cachedMinExpressionDepthLock = new();
-
-  public int GetMinimumExpressionDepth(Symbol symbol)
-  {
-    if (cachedMinExpressionDepth.TryGetValue(symbol, out var res)) {
-      return res;
-    }
-
-    // value has to be calculated and cached make sure this is done in only one thread
-    lock (cachedMinExpressionDepthLock) {
-      // in case the value has been calculated on another thread in the meanwhile
-      if (cachedMinExpressionDepth.TryGetValue(symbol, out res)) {
-        return res;
-      }
-
-      var cMin = new Dictionary<Symbol, int>(cachedMinExpressionDepth);
-      GrammarUtils.CalculateMinimumExpressionDepth(this, cMin);
-      cachedMinExpressionDepth = cMin;
-      return cachedMinExpressionDepth[symbol];
-    }
-  }
-
-  private Dictionary<Symbol, int> cachedMaxExpressionDepth = new();
-  private readonly Lock cachedMaxExpressionDepthLock = new();
-
-  public int GetMaximumExpressionDepth(Symbol symbol)
-  {
-    if (cachedMaxExpressionDepth.TryGetValue(symbol, out var temp)) {
-      return temp;
-    }
-
-    // value has to be calculated and cached make sure this is done in only one thread
-    lock (cachedMaxExpressionDepthLock) {
-      // in case the value has been calculated on another thread in the meanwhile
-      if (cachedMaxExpressionDepth.TryGetValue(symbol, out temp)) {
-        return temp;
-      }
-
-      var cMin = new Dictionary<Symbol, int>(cachedMaxExpressionDepth);
-      var res = GetMaximumExpressionDepth(symbol, cMin);
-      cachedMaxExpressionDepth = cMin;
-      return res;
-    }
-  }
-
-  private int GetMaximumExpressionDepth(Symbol symbol, Dictionary<Symbol, int> tempCachedMaxExpressionDepth)
-  {
-    // in case the value has been calculated on another thread in the meanwhile
-    if (tempCachedMaxExpressionDepth.TryGetValue(symbol, out var temp)) {
-      return temp;
-    }
-
-    tempCachedMaxExpressionDepth[symbol] = int.MaxValue; // prevent infinite recursion
-    var maxDepth = 1 + (from argIndex in Enumerable.Range(0, GetMaximumSubtreeCount(symbol))
-      let maxForSlot = (long)(from s in GetAllowedChildSymbols(symbol, argIndex)
-        where s.InitialFrequency > 0.0
-        select GetMaximumExpressionDepth(s, tempCachedMaxExpressionDepth)).DefaultIfEmpty(0).Max()
-      select maxForSlot).DefaultIfEmpty(0).Max();
-    return tempCachedMaxExpressionDepth[symbol] = (int)Math.Min(maxDepth, int.MaxValue);
-  }
-
-  private SymbolConfiguration GetConfig(Symbol parent)
-  {
-    if (!SymbolConfigurations.TryGetValue(parent, out var pconfig)) {
-      throw new ArgumentException("Symbol not in Grammar", nameof(parent));
-    }
-
-    return pconfig;
-  }
 }

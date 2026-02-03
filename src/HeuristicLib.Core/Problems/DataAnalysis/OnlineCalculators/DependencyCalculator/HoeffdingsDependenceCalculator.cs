@@ -10,17 +10,14 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
 
   public double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState) => CalculateHoeffdings(originalValues, estimatedValues, out errorState);
 
+  public double Calculate(IEnumerable<Tuple<double, double>> values, out OnlineCalculatorError errorState) => HoeffD(values.Select(v => v.Item1), values.Select(v => v.Item2), out errorState);
+
   public static double CalculateHoeffdings(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
   {
     var d = HoeffD(originalValues, estimatedValues, out errorState);
-    if (errorState != OnlineCalculatorError.None) {
-      return double.NaN;
-    }
 
-    return d;
+    return errorState != OnlineCalculatorError.None ? double.NaN : d;
   }
-
-  public double Calculate(IEnumerable<Tuple<double, double>> values, out OnlineCalculatorError errorState) => HoeffD(values.Select(v => v.Item1), values.Select(v => v.Item2), out errorState);
 
   /// <summary>
   ///   computes Hoeffding's dependence coefficient.
@@ -28,13 +25,13 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
   /// </summary>
   private static double HoeffD(IEnumerable<double> xs, IEnumerable<double> ys, out OnlineCalculatorError errorState)
   {
-    var rx = TiedRank(xs);
+    var x = xs as ICollection<double> ?? xs.ToArray();
+    var rx = TiedRank(x);
     var ry = TiedRank(ys);
     if (rx.Length != ry.Length) {
       throw new ArgumentException("The number of elements in xs and ys does not match");
     }
-
-    var rxy = TiedRank(xs, ys);
+    var rxy = TiedRank(x, ys);
 
     var n = rx.Length;
     double q = 0, r = 0, s = 0;
@@ -50,6 +47,7 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
     var t0 = q / (n - 2) / (n - 3) / (n - 4);
     var t1 = 2 * r / (n - 3) / (n - 4);
     var t2 = s / (n - 4);
+
     return 30.0 * (t0 - t1 + t2);
   }
 
@@ -60,6 +58,7 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
     Array.Sort(xsArr, idx);
     CRank(xsArr);
     Array.Sort(idx, xsArr);
+
     return xsArr;
   }
 
@@ -91,18 +90,16 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
         } else if (xsArr[j] > xi) {
           cx = 0.0;
         } else {
-          cx = 0.5; // eq
+          cx = 0.5;// eq
         }
-
         double cy;
         if (ysArr[j] < yi) {
           cy = 1.0;
         } else if (ysArr[j] > yi) {
           cy = 0.0;
         } else {
-          cy = 0.5; // eq
+          cy = 0.5;// eq
         }
-
         ri += cx * cy;
       }
 
@@ -122,29 +119,26 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
     var i = 0;
     var n = w.Length;
     while (i < n - 1) {
-      if (w[i + 1] > w[i]) {
-        // w[i+1] must be larger or equal w[i] as w must be sorted
+      if (w[i + 1] > w[i]) {// w[i+1] must be larger or equal w[i] as w must be sorted
         // not a tie
         w[i] = i + 1;
         i++;
       } else {
         int j;
         for (j = i + 1; j < n && w[j] <= w[i]; j++) {
-          ; // how far does it go (<= effectively means == as w must be sorted, side-step equality for double values)
+          ;// how far does it go (<= effectively means == as w must be sorted, side-step equality for double values)
         }
-
-        var rank = 1 + (0.5 * (i + j - 1));
+        var rank = 1 + 0.5 * (i + j - 1);
         int k;
         for (k = i; k < j; k++) {
-          w[k] = rank; // set the rank for all tied entries
+          w[k] = rank;// set the rank for all tied entries
         }
-
         i = j;
       }
     }
 
     if (i == n - 1) {
-      w[n - 1] = n; // if the last element was not tied, this is its rank
+      w[n - 1] = n;// if the last element was not tied, this is its rank
     }
   }
 }

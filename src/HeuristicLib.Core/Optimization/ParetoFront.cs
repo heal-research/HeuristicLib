@@ -6,6 +6,7 @@ public static class ParetoFront
     where T : IEquatable<T>
   {
     var uniqueISolutions = population.Distinct().ToList();
+
     return uniqueISolutions
       .Where(ind => !uniqueISolutions.Any(other => !ind.Equals(other) && fitnessSelector(ind).IsDominatedBy(fitnessSelector(other), objective)))
       .ToList();
@@ -15,6 +16,7 @@ public static class ParetoFront
     where TGenotype : IEquatable<TGenotype>
   {
     var uniqueISolutions = population.Distinct().ToList();
+
     return uniqueISolutions
       .Where(ind => !uniqueISolutions.Any(other => ind != other && ind.ObjectiveVector.IsDominatedBy(other.ObjectiveVector, objective)))
       .ToList();

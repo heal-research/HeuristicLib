@@ -7,9 +7,7 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters
 
 public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressionTreeStringFormatter
 {
-  public bool Indent { get; set; }
-
-  public SymbolicExpressionTreeGraphvizFormatter() => Indent = true;
+  public bool Indent { get; set; } = true;
 
   public string Format(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree)
   {
@@ -18,6 +16,7 @@ public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressio
     strBuilder.AppendLine("graph {");
     strBuilder.AppendLine(FormatRecursively(symbolicExpressionTree.Root, 0, ref nodeCounter));
     strBuilder.AppendLine("}");
+
     return strBuilder.ToString();
   }
 
@@ -85,7 +84,6 @@ public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressio
       if (Indent) {
         strBuilder.Append(' ', indentLength);
       }
-
       strBuilder.AppendLine(nameof(node) + currentNodeId + " -- node" + nodeId + ";");
       // format the whole subtree
       strBuilder.Append(FormatRecursively(subTree, indentLength + 2, ref nodeId));

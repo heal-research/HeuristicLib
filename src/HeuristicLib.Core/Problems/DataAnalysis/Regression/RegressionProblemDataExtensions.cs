@@ -24,6 +24,7 @@ public static class RegressionProblemDataExtensions
   {
     var targets = data.TargetVariableValues(type);
     var predictions = solution.Predict(data.Dataset, data.Partitions[type].Enumerate());
+
     return Evaluate(evaluators, predictions, targets, lowerPredictionLimit, upperPredictionLimit);
   }
 
@@ -33,7 +34,6 @@ public static class RegressionProblemDataExtensions
     if (evaluators.Count == 1) {
       return new ObjectiveVector(evaluators[0].Evaluate(predictions, targets));
     }
-
     if (predictions is not ICollection<double> materialPredictions) {
       materialPredictions = predictions.ToArray();
     }
@@ -45,6 +45,7 @@ public static class RegressionProblemDataExtensions
   {
     var targets = data.Dataset.GetDoubleValues(data.TargetVariable, rows);
     var predictions = solution.Predict(data.Dataset, rows);
+
     return Evaluate(evaluators, predictions, targets, lowerPredictionLimit, upperPredictionLimit);
   }
 }

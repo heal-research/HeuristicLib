@@ -8,9 +8,9 @@ public class OnlineDirectionalSymmetryCalculator
   private int n;
   private int nCorrect;
 
-  public double DirectionalSymmetry => n < 1 ? 0.0 : (double)nCorrect / n;
-
   public OnlineDirectionalSymmetryCalculator() => Reset();
+
+  public double DirectionalSymmetry => n < 1 ? 0.0 : (double)nCorrect / n;
 
   public double Value => DirectionalSymmetry;
 
@@ -44,7 +44,7 @@ public class OnlineDirectionalSymmetryCalculator
       if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext()) {
         ErrorState |= OnlineCalculatorError.InvalidValueAdded;
       } else {
-        ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+        ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
       }
     }
   }
@@ -61,6 +61,7 @@ public class OnlineDirectionalSymmetryCalculator
     var dsCalculator = new OnlineDirectionalSymmetryCalculator();
     dsCalculator.Add(startValue, actualContinuation, predictedContinuation);
     errorState = dsCalculator.ErrorState;
+
     return dsCalculator.DirectionalSymmetry;
   }
 
@@ -86,6 +87,7 @@ public class OnlineDirectionalSymmetryCalculator
     }
 
     errorState = dsCalculator.ErrorState;
+
     return dsCalculator.DirectionalSymmetry;
   }
 }

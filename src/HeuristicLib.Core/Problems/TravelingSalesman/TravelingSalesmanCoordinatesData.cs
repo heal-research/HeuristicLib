@@ -3,17 +3,13 @@ namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public class TravelingSalesmanCoordinatesData : ITravelingSalesmanProblemData
 {
-  public int NumberOfCities => Coordinates.Count;
-  public IReadOnlyList<(double X, double Y)> Coordinates { get; }
-  public DistanceMeasure DistanceMeasure { get; }
 
   public TravelingSalesmanCoordinatesData((double X, double Y)[] coordinates, DistanceMeasure measure = DistanceMeasure.Euclidean)
   {
     if (coordinates.Length < 1) {
       throw new ArgumentException("The coordinates must have at least one city.");
     }
-
-    Coordinates = coordinates.ToArray(); // clone coordinates to prevent modification
+    Coordinates = coordinates.ToArray();// clone coordinates to prevent modification
     DistanceMeasure = measure;
   }
 
@@ -35,6 +31,9 @@ public class TravelingSalesmanCoordinatesData : ITravelingSalesmanProblemData
     Coordinates = data;
     DistanceMeasure = measure;
   }
+  public IReadOnlyList<(double X, double Y)> Coordinates { get; }
+  public DistanceMeasure DistanceMeasure { get; }
+  public int NumberOfCities => Coordinates.Count;
 
   public double GetDistance(int fromCity, int toCity)
   {

@@ -121,10 +121,11 @@
 //   // }
 //
 //   private class MockEvaluator : EvaluatorBase<RealVector> {
-//     public override Fitness Evaluate(RealVector phenotype) {
+//     public override Fitness PredictAndTrain(RealVector phenotype) {
 //       return phenotype.Sum();
 //     }
 //   }
 // }
+
 
 

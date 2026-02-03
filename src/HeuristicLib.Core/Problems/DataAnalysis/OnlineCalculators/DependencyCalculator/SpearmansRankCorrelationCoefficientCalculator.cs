@@ -48,7 +48,7 @@ public class SpearmansRankCorrelationCoefficientCalculator : IDependencyCalculat
       }
 
       // average rank for ties
-      var rank = ((i + j - 1) / 2.0) + 1.0;
+      var rank = (i + j - 1) / 2.0 + 1.0;
 
       for (var k = i; k < j; k++) {
         ranks[sorted[k].Index] = rank;

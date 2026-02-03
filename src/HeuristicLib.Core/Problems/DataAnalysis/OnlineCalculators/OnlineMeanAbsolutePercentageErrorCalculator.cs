@@ -5,39 +5,11 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public class OnlineMeanAbsolutePercentageErrorCalculator
 {
-  private double sre;
   private int n;
-  public double MeanAbsolutePercentageError => n > 0 ? sre / n : 0.0;
+  private double sre;
 
   public OnlineMeanAbsolutePercentageErrorCalculator() => Reset();
-
-  #region IOnlineCalculator Members
-
-  public OnlineCalculatorError ErrorState { get; private set; }
-  public double Value => MeanAbsolutePercentageError;
-
-  public void Reset()
-  {
-    n = 0;
-    sre = 0.0;
-    ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
-  }
-
-  public void Add(double original, double estimated)
-  {
-    if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
-        double.IsNaN(original) || double.IsInfinity(original) ||
-        original.IsAlmost(0.0)) {
-      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-      return;
-    }
-
-    sre += Math.Abs((estimated - original) / original);
-    n++;
-    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
-  }
-
-  #endregion
+  public double MeanAbsolutePercentageError => n > 0 ? sre / n : 0.0;
 
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
   {
@@ -62,6 +34,37 @@ public class OnlineMeanAbsolutePercentageErrorCalculator
     }
 
     errorState = calculator.ErrorState;
+
     return calculator.MeanAbsolutePercentageError;
   }
+
+  #region IOnlineCalculator Members
+
+  public OnlineCalculatorError ErrorState { get; private set; }
+  public double Value => MeanAbsolutePercentageError;
+
+  public void Reset()
+  {
+    n = 0;
+    sre = 0.0;
+    ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
+  }
+
+  public void Add(double original, double estimated)
+  {
+    if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
+        double.IsNaN(original) || double.IsInfinity(original) ||
+        original.IsAlmost(0.0)) {
+      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
+
+      return;
+    }
+
+    sre += Math.Abs((estimated - original) / original);
+    n++;
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+  }
+
+  #endregion
+
 }

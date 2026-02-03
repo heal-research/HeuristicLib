@@ -5,13 +5,13 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public class OnlineWeightedDirectionalSymmetryCalculator
 {
-  private int n;
   private double correctSum;
   private double incorrectSum;
-
-  public double WeightedDirectionalSymmetry => n <= 1 ? 0.0 : incorrectSum / correctSum;
+  private int n;
 
   public OnlineWeightedDirectionalSymmetryCalculator() => Reset();
+
+  public double WeightedDirectionalSymmetry => n <= 1 ? 0.0 : incorrectSum / correctSum;
 
   public double Value => WeightedDirectionalSymmetry;
 
@@ -21,12 +21,13 @@ public class OnlineWeightedDirectionalSymmetryCalculator
   {
     if (double.IsNaN(startValue) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
+
       return;
     }
 
     using var actualEnumerator = actualContinuation.GetEnumerator();
     using var predictedEnumerator = predictedContinuation.GetEnumerator();
-    while (actualEnumerator.MoveNext() & predictedEnumerator.MoveNext() & (ErrorState != OnlineCalculatorError.InvalidValueAdded)) {
+    while (actualEnumerator.MoveNext() & predictedEnumerator.MoveNext() & ErrorState != OnlineCalculatorError.InvalidValueAdded) {
       var actual = actualEnumerator.Current;
       var predicted = predictedEnumerator.Current;
       if (double.IsNaN(actual) || double.IsNaN(predicted)) {
@@ -50,7 +51,7 @@ public class OnlineWeightedDirectionalSymmetryCalculator
     if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext()) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
     } else {
-      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
     }
   }
 
@@ -67,6 +68,7 @@ public class OnlineWeightedDirectionalSymmetryCalculator
     var calculator = new OnlineWeightedDirectionalSymmetryCalculator();
     calculator.Add(startValue, actualContinuation, predictedContinuation);
     errorState = calculator.ErrorState;
+
     return calculator.WeightedDirectionalSymmetry;
   }
 
@@ -92,6 +94,7 @@ public class OnlineWeightedDirectionalSymmetryCalculator
     }
 
     errorState = calculator.ErrorState;
+
     return calculator.WeightedDirectionalSymmetry;
   }
 }

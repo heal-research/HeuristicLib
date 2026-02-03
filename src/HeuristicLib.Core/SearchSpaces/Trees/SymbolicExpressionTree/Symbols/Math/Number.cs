@@ -4,6 +4,21 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public sealed class Number : Symbol
 {
+
+  public Number() : base(0, 0, 0)
+  {
+    ManipulatorMu = 0.0;
+    manipulatorSigma = 1.0;
+    multiplicativeManipulatorSigma = 0.03;
+    MinValue = -20.0;
+    MaxValue = 20.0;
+  }
+
+  public override SymbolicExpressionTreeNode CreateTreeNode()
+    => new NumberTreeNode(this);
+
+  public NumberTreeNode CreateTreeNode(double number) => new(this) { Value = number };
+
   #region Properties
 
   public double MinValue { get; set; }
@@ -33,28 +48,4 @@ public sealed class Number : Symbol
 
   #endregion
 
-  private Number(Number original)
-    : base(original.MinimumArity, original.DefaultArity, original.MaximumArity)
-  {
-    MinValue = original.MinValue;
-    MaxValue = original.MaxValue;
-    ManipulatorMu = original.ManipulatorMu;
-    manipulatorSigma = original.manipulatorSigma;
-    multiplicativeManipulatorSigma = original.multiplicativeManipulatorSigma;
-  }
-
-  public Number()
-    : base(0, 0, 0)
-  {
-    ManipulatorMu = 0.0;
-    manipulatorSigma = 1.0;
-    multiplicativeManipulatorSigma = 0.03;
-    MinValue = -20.0;
-    MaxValue = 20.0;
-  }
-
-  public override SymbolicExpressionTreeNode CreateTreeNode()
-    => new NumberTreeNode(this);
-
-  public NumberTreeNode CreateTreeNode(double number) => new(this) { Value = number };
 }

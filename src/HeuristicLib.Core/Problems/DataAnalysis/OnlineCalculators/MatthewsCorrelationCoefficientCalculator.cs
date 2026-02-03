@@ -1,10 +1,11 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class MatthewsCorrelationCoefficientCalculator
+public static class MatthewsCorrelationCoefficientCalculator
 {
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
   {
     var confusionMatrix = ConfusionMatrixCalculator.Calculate(originalValues, estimatedValues, out errorState);
+
     return !errorState.Equals(OnlineCalculatorError.None) ? double.NaN : CalculateMcc(confusionMatrix);
   }
 
@@ -19,7 +20,7 @@ public class MatthewsCorrelationCoefficientCalculator
     for (var k = 0; k < classes; k++) {
       for (var l = 0; l < classes; l++) {
         for (var m = 0; m < classes; m++) {
-          numerator += (confusionMatrix[k, k] * confusionMatrix[m, l]) - (confusionMatrix[l, k] * confusionMatrix[k, m]);
+          numerator += confusionMatrix[k, k] * confusionMatrix[m, l] - confusionMatrix[l, k] * confusionMatrix[k, m];
         }
       }
     }

@@ -9,9 +9,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 {
   private readonly double[] elements = elements.ToArray();
 
-  // public RealVector(double value) {
-  //   elements = [value];
-  // }
+  public double this[Index index] => elements[index];
 
   public static implicit operator RealVector(double value) => new(value);
 
@@ -22,11 +20,19 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
   public double this[int index] => elements[index];
 
-  public double this[Index index] => elements[index];
-
   public IEnumerator<double> GetEnumerator() => ((IEnumerable<double>)elements).GetEnumerator();
 
   IEnumerator IEnumerable.GetEnumerator() => elements.GetEnumerator();
+
+  public int Count => elements.Length;
+
+  // public RealVector(double value) {
+  //   elements = [value];
+  // }
+
+  public static implicit operator RealVector(double value) => new(value);
+
+  public static implicit operator RealVector(double[] values) => new(values);
 
   public static RealVector Add(RealVector a, RealVector b)
   {
@@ -120,8 +126,6 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   public static RealVector operator -(RealVector a, RealVector b) => Subtract(a, b);
   public static RealVector operator *(RealVector a, RealVector b) => Multiply(a, b);
   public static RealVector operator /(RealVector a, RealVector b) => Divide(a, b);
-
-  public int Count => elements.Length;
 
   public bool Contains(double value) => elements.Contains(value);
 
@@ -358,12 +362,32 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
   public override string ToString() => $"[{string.Join(", ", elements)}]";
 
+  public double Dot(RealVector other)
+  {
+    var sum = 0.0;
+    for (var i = 0; i < elements.Length; i++) {
+      var d1 = elements[i];
+      var d2 = other.elements[i];
+      sum += d1 * d2;
+    }
+
+    return sum;
+  }
+
+  public double Angle(RealVector other)
+  {
+    var r = Dot(other) / (Norm() * other.Norm()
+ );
+
+    return Math.Acos(r);
+  }
+
   public double Norm()
   {
     var sumSquares = 0.0;
     for (var i = 0; i < elements.Length; i++) {
       var d1 = elements[i];
-      sumSquares += d1;
+      sumSquares += d1 * d1;
     }
 
     return Math.Sqrt(sumSquares);

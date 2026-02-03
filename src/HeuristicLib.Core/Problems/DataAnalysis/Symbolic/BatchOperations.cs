@@ -142,7 +142,7 @@ public static class BatchOperations
   public static void AnalyticQuotient(double[] a, double[] b)
   {
     for (var i = 0; i < BatchSize; ++i) {
-      a[i] /= Math.Sqrt(1d + (b[i] * b[i]));
+      a[i] /= Math.Sqrt(1d + b[i] * b[i]);
     }
   }
 }

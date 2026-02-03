@@ -9,7 +9,10 @@ public class PearsonR2Evaluator : RegressionEvaluator
 
   public override double Evaluate(IEnumerable<double> predictedValues, IEnumerable<double> trueValues)
   {
-    var r = OnlinePearsonsRCalculator.Calculate(trueValues, predictedValues, out var state);
+    var p = predictedValues.ToArray();
+    var t = trueValues.ToArray();
+
+    var r = OnlinePearsonsRCalculator.Calculate(p, t, out var state);
     if (state != OnlineCalculatorError.None) {
       throw new InvalidOperationException("can not calculate Pearson R2");
     }

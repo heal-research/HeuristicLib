@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.Random;
 
 #pragma warning disable S1481
 
-namespace HEAL.HeuristicLib.Core.Tests;
+namespace HEAL.HeuristicLib.Tests;
 
 public class TspTests
 {
@@ -28,9 +28,9 @@ public class TspTests
 
     //GA
     var ga = GeneticAlgorithm.GetBuilder(
-      new RandomPermutationCreator(),
-      new EdgeRecombinationCrossover(),
-      new InversionMutator()
+    new RandomPermutationCreator(),
+    new EdgeRecombinationCrossover(),
+    new InversionMutator()
     );
 
     //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);

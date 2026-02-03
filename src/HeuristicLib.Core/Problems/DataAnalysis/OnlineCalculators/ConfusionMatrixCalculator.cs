@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-public class ConfusionMatrixCalculator
+public static class ConfusionMatrixCalculator
 {
   public static readonly double[,] Empty = new double[0, 0];
 
@@ -11,6 +11,7 @@ public class ConfusionMatrixCalculator
     var estimated = estimatedValues as double[] ?? estimatedValues.ToArray();
     if (originals.Length == 0 || estimated.Length == 0) {
       errorState = OnlineCalculatorError.InsufficientElementsAdded;
+
       return Empty;
     }
 
@@ -22,7 +23,7 @@ public class ConfusionMatrixCalculator
     var classValueIndexMapping = originals
       .Distinct()
       .OrderBy(x => x)
-      .ToDictionary(classValue => classValue, _ => index++);
+      .ToDictionary(keySelector: classValue => classValue, elementSelector: _ => index++);
 
     var classes = classValueIndexMapping.Count;
     var confusionMatrix = new double[classes, classes];
@@ -30,11 +31,13 @@ public class ConfusionMatrixCalculator
     for (var i = 0; i < originals.Length; i++) {
       if (!classValueIndexMapping.TryGetValue(originals[i], out var originalIndex)) {
         errorState = OnlineCalculatorError.InvalidValueAdded;
+
         return Empty;
       }
 
       if (!classValueIndexMapping.TryGetValue(estimated[i], out var estimatedIndex)) {
         errorState = OnlineCalculatorError.InvalidValueAdded;
+
         return Empty;
       }
 
@@ -42,6 +45,7 @@ public class ConfusionMatrixCalculator
     }
 
     errorState = OnlineCalculatorError.None;
+
     return confusionMatrix;
   }
 }

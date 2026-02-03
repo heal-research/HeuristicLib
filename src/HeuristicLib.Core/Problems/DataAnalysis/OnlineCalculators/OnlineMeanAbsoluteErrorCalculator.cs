@@ -2,39 +2,11 @@
 #pragma warning disable S2178
 public class OnlineMeanAbsoluteErrorCalculator
 {
-  private double sae;
   private int n;
-  public double MeanAbsoluteError => n > 0 ? sae / n : 0.0;
+  private double sae;
 
   public OnlineMeanAbsoluteErrorCalculator() => Reset();
-
-  #region IOnlineCalculator Members
-
-  public OnlineCalculatorError ErrorState { get; private set; }
-  public double Value => MeanAbsoluteError;
-
-  public void Reset()
-  {
-    n = 0;
-    sae = 0.0;
-    ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
-  }
-
-  public void Add(double original, double estimated)
-  {
-    if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
-        double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
-      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
-      return;
-    }
-
-    var error = estimated - original;
-    sae += Math.Abs(error);
-    n++;
-    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
-  }
-
-  #endregion
+  public double MeanAbsoluteError => n > 0 ? sae / n : 0.0;
 
   public static double Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
   {
@@ -59,6 +31,37 @@ public class OnlineMeanAbsoluteErrorCalculator
     }
 
     errorState = maeCalculator.ErrorState;
+
     return maeCalculator.MeanAbsoluteError;
   }
+
+  #region IOnlineCalculator Members
+
+  public OnlineCalculatorError ErrorState { get; private set; }
+  public double Value => MeanAbsoluteError;
+
+  public void Reset()
+  {
+    n = 0;
+    sae = 0.0;
+    ErrorState = OnlineCalculatorError.InsufficientElementsAdded;
+  }
+
+  public void Add(double original, double estimated)
+  {
+    if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
+        double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
+      ErrorState |= OnlineCalculatorError.InvalidValueAdded;
+
+      return;
+    }
+
+    var error = estimated - original;
+    sae += Math.Abs(error);
+    n++;
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+  }
+
+  #endregion
+
 }

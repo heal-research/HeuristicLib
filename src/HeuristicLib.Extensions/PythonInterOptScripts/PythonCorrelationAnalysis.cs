@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
+﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -6,71 +6,81 @@ using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
-using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public static class PythonCorrelationAnalysis
 {
-  public static double[] GetCorrelations(IReadOnlyList<RealVector> solutions, RealVectorProblem problem, double[] delta, int count, int seed = 0)
+
+  public delegate void GenerationCallback(PopulationAlgorithmState<RealVector> current, RealVectorProblem problem);
+
+  public static double[] GetPseudoCorrelations(IReadOnlyList<RealVector> solutions, MultiObjectiveTestFunctionProblem problem)
   {
-    var random = RandomNumberGenerator.Create(12345);
-    var evaluator = new DirectEvaluator<RealVector>();
-    return solutions.ParallelSelect(random, (i, solution, r) => {
-      var n = Enumerable.Range(0, count).Select(x =>
-        NormalDistribution.NextSphere(r, solution.ToArray(), delta, solution.Count, false)).ToArray();
-      var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
-      var d = OnlinePearsonsRCalculator.Calculate(
-        objectives.Select(x => x[0]),
-        objectives.Select(x => x[1]),
-        out _);
-      return d;
-    }).ToArray();
+    var gradcal = (IMultiObjectiveGradientTestFunction)problem.TestFunction;
+    var res = new double[solutions.Count];
+    for (var i = 0; i < solutions.Count; i++) {
+      var grads = gradcal.EvaluateGradient(solutions[i]);
+      res[i] = 0.5 - Math.Abs(grads[0].Angle(grads[1])) / Math.PI;
+    }
+
+    return res;
   }
+
+  // public static double[] GetCorrelations(IReadOnlyList<RealVector> solutions, RealVectorProblem problem, double[] delta, int count, int seed = 0) {
+  //   var random = new SystemRandomNumberGenerator(seed);
+  //   var evaluator = new DirectEvaluator<RealVector>();
+  //   return solutions.ParallelSelect(random, (i, solution, r) => {
+  //     var n = Enumerable.Range(0, count).Select(_ =>
+  //       r.NextSphere(solution.ToArray(), delta, solution.Count, false)).ToArray();
+  //     var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
+  //     var d = OnlinePearsonsRCalculator.Calculate(
+  //       objectives.Select(x => x[0]),
+  //       objectives.Select(x => x[1]),
+  //       out _);
+  //     return d;
+  //   }).ToArray();
+  // }
 
   public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem)
   {
-    var random = RandomNumberGenerator.Create(12345);
+    var random = new SystemRandomNumberGenerator();
     var evaluator = new DirectEvaluator<RealVector>();
+
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
   }
 
-  public delegate void GenerationCallback(PopulationState<RealVector> current, RealVectorProblem problem);
-
-  public static void RunCorrelationNsga2(GenerationCallback callback, int generations, int populationSize,
-    int dimensions = 10, double min = -5, double max = 5, uint seed = 0)
+  public static PythonGenealogyAnalysis.ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)
   {
-    var prob = SphereRastriginProblem(dimensions, min, max);
+    //var prob = SphereRastriginProblem(dimensions, min, max);
 
-    var proto = NSGA2.GetBuilder(
-      new UniformDistributedCreator(),
-      new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
-      new PolynomialMutator().WithRate(0.9));
+    //var proto = Nsga2.GetBuilder(
+    //  //new UniformDistributedCreator(),
+    //  //new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
+    //  //new PolynomialMutator().WithRate(0.9)
+    //  );
 
-    proto.Terminator = new AfterIterationsTerminator<RealVector>(generations);
+    //proto.Terminator = new AfterIterationsTerminator<RealVector>(generations);
     //proto.RandomSeed = seed;
-    proto.PopulationSize = populationSize;
-    proto.MutationRate = 1;
+    //proto.PopulationSize = populationSize;
+    //proto.MutationRate = 1;
 
-    _ = FuncAnalysis.Create(proto, (_, iterationState) => callback(iterationState, prob));
-    proto.Build().ExecuteStepAsync(prob, prob.SearchSpace, RandomNumberGenerator.Create(seed));
-  }
+    var res = PythonGenealogyAnalysis.RunAlgorithmConfigurable(problem, callback is null ? null : r => callback(r, problem),
+    new PythonGenealogyAnalysis.TestFunctionExperimentParameters {
+      AlgorithmName = "nsga2",
+      Creator = new UniformDistributedCreator(),
+      Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
+      Mutator = new PolynomialMutator().WithRate(0.9),
+      Iterations = generations,
+      PopulationSize = populationSize,
+      MutationRate = 1,
+      Seed = seed,
+      TrackPopulations = true
+    });
 
-  public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max)
-  {
-    var testFunction = new CombinedTestFunction(
-      new SphereFunction(dimensions).Shifted(-0.1),
-      new RastriginFunction(dimensions));
-    var searchSpace = new RealVectorSearchSpace(dimensions, min, max);
-    var prob = new MultiObjectiveTestFunctionProblem(testFunction, searchSpace);
-    return prob;
+    return res;
   }
 }

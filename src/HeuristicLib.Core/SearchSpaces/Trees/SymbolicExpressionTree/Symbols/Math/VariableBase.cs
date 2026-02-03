@@ -2,6 +2,31 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public class VariableBase : Symbol
 {
+
+  protected VariableBase(VariableBase original) : base(original.MinimumArity, original.DefaultArity, original.MaximumArity)
+  {
+    WeightMu = original.WeightMu;
+    weightSigma = original.weightSigma;
+    variableNames = [..original.variableNames];
+    allVariableNames = [..original.allVariableNames];
+    WeightManipulatorMu = original.WeightManipulatorMu;
+    weightManipulatorSigma = original.weightManipulatorSigma;
+    multiplicativeWeightManipulatorSigma = original.multiplicativeWeightManipulatorSigma;
+    variableChangeProbability = original.variableChangeProbability;
+  }
+
+  protected VariableBase() : base(0, 0, 0)
+  {
+    WeightMu = 1.0;
+    weightSigma = 1.0;
+    WeightManipulatorMu = 0.0;
+    weightManipulatorSigma = 0.05;
+    multiplicativeWeightManipulatorSigma = 0.03;
+    variableChangeProbability = 0.2;
+    variableNames = [];
+    allVariableNames = [];
+  }
+
   #region Properties
 
   public double WeightMu { get; set; }
@@ -14,7 +39,6 @@ public class VariableBase : Symbol
       if (weightSigma < 0.0) {
         throw new ArgumentException("Negative sigma is not allowed.");
       }
-
       weightSigma = value;
     }
   }
@@ -29,7 +53,6 @@ public class VariableBase : Symbol
       if (weightManipulatorSigma < 0.0) {
         throw new ArgumentException("Negative sigma is not allowed.");
       }
-
       weightManipulatorSigma = value;
     }
   }
@@ -43,7 +66,6 @@ public class VariableBase : Symbol
       if (multiplicativeWeightManipulatorSigma < 0.0) {
         throw new ArgumentException("Negative sigma is not allowed.");
       }
-
       multiplicativeWeightManipulatorSigma = value;
     }
   }
@@ -57,7 +79,6 @@ public class VariableBase : Symbol
       if (value is < 0 or > 1.0) {
         throw new ArgumentException("Variable change probability must lie in the interval [0..1]");
       }
-
       variableChangeProbability = value;
     }
   }
@@ -88,29 +109,4 @@ public class VariableBase : Symbol
 
   #endregion
 
-  protected VariableBase(VariableBase original)
-    : base(original.MinimumArity, original.DefaultArity, original.MaximumArity)
-  {
-    WeightMu = original.WeightMu;
-    weightSigma = original.weightSigma;
-    variableNames = [..original.variableNames];
-    allVariableNames = [..original.allVariableNames];
-    WeightManipulatorMu = original.WeightManipulatorMu;
-    weightManipulatorSigma = original.weightManipulatorSigma;
-    multiplicativeWeightManipulatorSigma = original.multiplicativeWeightManipulatorSigma;
-    variableChangeProbability = original.variableChangeProbability;
-  }
-
-  protected VariableBase()
-    : base(0, 0, 0)
-  {
-    WeightMu = 1.0;
-    weightSigma = 1.0;
-    WeightManipulatorMu = 0.0;
-    weightManipulatorSigma = 0.05;
-    multiplicativeWeightManipulatorSigma = 0.03;
-    variableChangeProbability = 0.2;
-    variableNames = [];
-    allVariableNames = [];
-  }
 }

@@ -2,64 +2,58 @@ using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public class SymbolicRegressionProblem :
-  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
+  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionSearchSpace>
 {
-  public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
-  public int ParameterOptimizationIterations { get; init; } = -1;
-  protected override IRegressionModel Decode(SymbolicExpressionTree solution) => new SymbolicRegressionModel(solution, Interpreter);
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution)
+  public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
+    this(data, objective, GetDefaultComparer(objective), new SymbolicExpressionSearchSpace(new SimpleSymbolicExpressionGrammar()))
   {
-    var rows = ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate();
-    var targets = ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training);
-    return Evaluate(solution, rows, targets);
   }
 
-  public ObjectiveVector Evaluate(SymbolicExpressionTree solution, IEnumerable<int> rows, IReadOnlyList<double> targets)
-  {
-    var debug = new SymbolicExpressionTreeGraphvizFormatter().Format(solution);
-
-    if (ParameterOptimizationIterations > 0) {
-      var materialRows = rows as IReadOnlyList<int> ?? rows.ToArray();
-      rows = materialRows;
-      _ = SymbolicRegressionParameterOptimization.OptimizeParameters(
-        Interpreter,
-        solution,
-        ProblemData,
-        materialRows,
-        ParameterOptimizationIterations,
-        true,
-        LowerPredictionBound,
-        UpperPredictionBound);
-    }
-
-    var predictions = solution
-      .PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets)
-      .LimitToRange(LowerPredictionBound, UpperPredictionBound)
-      .ToArray();
-    return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(solution, targets, predictions)));
-  }
-
-  public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective)
-    :
-    this(data, objective,
-      GetDefaultComparer(objective),
-      new SymbolicExpressionTreeSearchSpace(new SimpleSymbolicExpressionGrammar()))
+  public SymbolicRegressionProblem(RegressionProblemData data, SymbolicExpressionSearchSpace encoding, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
+    this(data, objective, GetDefaultComparer(objective), encoding)
   {
   }
 
   public SymbolicRegressionProblem(RegressionProblemData data,
     ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
     IComparer<ObjectiveVector> a,
-    SymbolicExpressionTreeSearchSpace searchSpace)
-    : base(data, objective, a, searchSpace)
+    SymbolicExpressionSearchSpace encoding) : base(data, objective, a, encoding)
   {
+  }
+  public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
+  public int ParameterOptimizationIterations { get; init; } = -1;
+
+  public override IEnumerable<double> PredictAndTrain(SymbolicExpressionTree solution, IReadOnlyList<int> rows, IReadOnlyList<double> targets)
+  {
+    if (ParameterOptimizationIterations > 0) {
+      _ = SymbolicRegressionParameterOptimization.OptimizeParameters(
+      Interpreter,
+      solution,
+      ProblemData,
+      rows,
+      ParameterOptimizationIterations,
+      true,
+      LowerPredictionBound,
+      UpperPredictionBound);
+    }
+
+    return solution.PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets);
+  }
+
+  public static SymbolicExpressionSearchSpace GetDefaultEncoding(IEnumerable<string> variableNames)
+  {
+    var grammar = new SimpleSymbolicExpressionGrammar();
+    var root = grammar.AddLinearScaling();
+    grammar.AddFullyConnectedSymbols(root, new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = variableNames });
+
+    return new SymbolicExpressionSearchSpace(grammar);
   }
 
   private static IComparer<ObjectiveVector>

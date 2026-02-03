@@ -31,6 +31,23 @@ public class BidirectionalLookup<TFirst, TSecond> where TFirst : notnull where T
     secondToFirst = new Dictionary<TSecond, HashSet<TFirst>>(secondComparer);
   }
 
+  private sealed class StorableGrouping<TKey, TValue> : IGrouping<TKey, TValue>
+  {
+    private readonly HashSet<TValue> values;
+
+    public StorableGrouping(TKey key, IEnumerable<TValue> values, IEqualityComparer<TValue> comparer)
+    {
+      Key = key;
+      this.values = new HashSet<TValue>(values, comparer);
+    }
+
+    public TKey Key { get; }
+
+    public IEnumerator<TValue> GetEnumerator() => values.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+  }
+
   #region Properties
 
   public int CountFirst => firstToSecond.Count;
@@ -126,12 +143,10 @@ public class BidirectionalLookup<TFirst, TSecond> where TFirst : notnull where T
     if (!ContainsFirst(first) || !ContainsSecond(second)) {
       return;
     }
-
     firstToSecond[first].Remove(second);
     if (!firstToSecond[first].Any()) {
       firstToSecond.Remove(first);
     }
-
     secondToFirst[second].Remove(first);
     if (!secondToFirst[second].Any()) {
       secondToFirst.Remove(second);
@@ -143,7 +158,6 @@ public class BidirectionalLookup<TFirst, TSecond> where TFirst : notnull where T
     if (!ContainsFirst(firstValue)) {
       return;
     }
-
     var secondValues = firstToSecond[firstValue].ToArray();
     firstToSecond.Remove(firstValue);
     foreach (var s in secondValues) {
@@ -159,7 +173,6 @@ public class BidirectionalLookup<TFirst, TSecond> where TFirst : notnull where T
     if (!ContainsSecond(secondValue)) {
       return;
     }
-
     var firstValues = secondToFirst[secondValue].ToArray();
     secondToFirst.Remove(secondValue);
     foreach (var f in firstValues) {
@@ -178,20 +191,4 @@ public class BidirectionalLookup<TFirst, TSecond> where TFirst : notnull where T
 
   #endregion
 
-  private sealed class StorableGrouping<TKey, TValue> : IGrouping<TKey, TValue>
-  {
-    private readonly HashSet<TValue> values;
-
-    public StorableGrouping(TKey key, IEnumerable<TValue> values, IEqualityComparer<TValue> comparer)
-    {
-      Key = key;
-      this.values = new HashSet<TValue>(values, comparer);
-    }
-
-    public TKey Key { get; }
-
-    public IEnumerator<TValue> GetEnumerator() => values.GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-  }
 }

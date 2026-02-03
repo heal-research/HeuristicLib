@@ -12,7 +12,6 @@ public sealed class SimpleSymbolicExpressionGrammar : SymbolicExpressionGrammar
       if (s == ProgramRootSymbol) {
         continue;
       }
-
       if (s.MaximumArity > 0) {
         AddAllowedChildSymbol(s, symbol);
       }
@@ -24,7 +23,6 @@ public sealed class SimpleSymbolicExpressionGrammar : SymbolicExpressionGrammar
       if (s == StartSymbol) {
         continue;
       }
-
       if (symbol.MaximumArity > 0) {
         AddAllowedChildSymbol(symbol, s);
       }

@@ -4,6 +4,15 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public sealed class SubFunctionTreeNode : SymbolicExpressionTreeNode
 {
+
+  #region Cloning
+
+  public override SymbolicExpressionTreeNode Clone() => new SubFunctionTreeNode(this);
+
+  #endregion
+
+  public override string? ToString() => string.IsNullOrEmpty(Name) ? base.ToString() : $"{Name}({string.Join(",", Arguments)})";
+
   #region Properties
 
   public new SubFunctionSymbol Symbol => (SubFunctionSymbol)base.Symbol;
@@ -16,13 +25,9 @@ public sealed class SubFunctionTreeNode : SymbolicExpressionTreeNode
 
   #region Constructors
 
-  public SubFunctionTreeNode(SubFunctionSymbol symbol)
-    : base(symbol)
-  {
-  }
+  public SubFunctionTreeNode(SubFunctionSymbol symbol) : base(symbol) {}
 
-  private SubFunctionTreeNode(SubFunctionTreeNode original)
-    : base(original)
+  private SubFunctionTreeNode(SubFunctionTreeNode original) : base(original)
   {
     Arguments = original.Arguments;
     Name = original.Name;
@@ -30,11 +35,4 @@ public sealed class SubFunctionTreeNode : SymbolicExpressionTreeNode
 
   #endregion
 
-  #region Cloning
-
-  public override SymbolicExpressionTreeNode Clone() => new SubFunctionTreeNode(this);
-
-  #endregion
-
-  public override string? ToString() => string.IsNullOrEmpty(Name) ? base.ToString() : $"{Name}({string.Join(",", Arguments)})";
 }

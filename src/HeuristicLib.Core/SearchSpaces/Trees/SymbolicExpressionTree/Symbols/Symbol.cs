@@ -4,6 +4,14 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 public abstract class Symbol(int minimumArity, int defaultArity, int maximumArity)
 {
+
+  public virtual SymbolicExpressionTreeNode CreateTreeNode() => new(this);
+
+  public virtual IEnumerable<Symbol> Flatten()
+  {
+    yield return this;
+  }
+
   #region Properties
 
   private double initialFrequency = 1.0;
@@ -25,10 +33,4 @@ public abstract class Symbol(int minimumArity, int defaultArity, int maximumArit
 
   #endregion
 
-  public virtual SymbolicExpressionTreeNode CreateTreeNode() => new(this);
-
-  public virtual IEnumerable<Symbol> Flatten()
-  {
-    yield return this;
-  }
 }

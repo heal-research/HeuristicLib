@@ -4,6 +4,9 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public sealed class VariableCondition() : Symbol(2, 2, 2)
 {
+
+  public override SymbolicExpressionTreeNode CreateTreeNode() => new VariableConditionTreeNode(this);
+
   #region properties
 
   public double ThresholdInitializerMu { get; set; } = 0.0;
@@ -62,7 +65,6 @@ public sealed class VariableCondition() : Symbol(2, 2, 2)
       if (slopeInitializerSigma < 0.0) {
         throw new ArgumentException("Negative sigma is not allowed.");
       }
-
       slopeInitializerSigma = value;
     }
   }
@@ -77,7 +79,6 @@ public sealed class VariableCondition() : Symbol(2, 2, 2)
       if (slopeManipulatorSigma < 0.0) {
         throw new ArgumentException("Negative sigma is not allowed.");
       }
-
       slopeManipulatorSigma = value;
     }
   }
@@ -91,5 +92,4 @@ public sealed class VariableCondition() : Symbol(2, 2, 2)
 
   #endregion
 
-  public override SymbolicExpressionTreeNode CreateTreeNode() => new VariableConditionTreeNode(this);
 }

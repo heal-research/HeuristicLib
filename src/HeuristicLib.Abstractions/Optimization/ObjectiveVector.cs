@@ -28,24 +28,30 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
     }
 
     this.values = values.ToArray();
-  }
-
-  public ObjectiveVector(IEnumerable<double> values)
-  {
-    this.values = values.ToArray();
     if (this.values.Length == 0) {
       throw new ArgumentException("Fitness vector must not be empty");
     }
   }
 
-  //public static implicit operator Fitness(SingleFitness[] values) => new(values);
-  public static implicit operator ObjectiveVector(double[] values) => new(values /*.Select(v => new SingleFitness(v))*/);
-
-  //public static implicit operator Fitness(SingleFitness value) => new(value);
-  public static implicit operator ObjectiveVector(double value) => new(value);
-
   public bool IsSingleObjective => Count == 1;
   public ObjectiveValue? SingleFitness => values.SingleOrDefault();
+
+  public bool Equals(ObjectiveVector? other)
+  {
+    if (other is null) {
+      return false;
+    }
+
+    if (ReferenceEquals(this, other)) {
+      return true;
+    }
+
+    if (Count != other.Count) {
+      return false;
+    }
+
+    return values.SequenceEqual(other.values);
+  }
 
   // public IEnumerator<SingleFitness> GetEnumerator() => ((IEnumerable<SingleFitness>)values).GetEnumerator();
   // IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -72,6 +78,12 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
 
     return values.SequenceEqual(other.values);
   }
+  
+  //public static implicit operator Fitness(SingleFitness[] values) => new(values);
+  public static implicit operator ObjectiveVector(double[] values) => new(values/*.Select(v => new SingleFitness(v))*/);
+
+  //public static implicit operator Fitness(SingleFitness value) => new(value);
+  public static implicit operator ObjectiveVector(double value) => new(value);
 
   public override bool Equals(object? obj) => Equals(obj as ObjectiveVector);
   public override int GetHashCode() => values.Aggregate(0, HashCode.Combine);
@@ -81,7 +93,6 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
     if (ReferenceEquals(this, other)) {
       return 0;
     }
-
     ArgumentNullException.ThrowIfNull(other);
     if (Count != other.Count) {
       throw new ArgumentException("Fitness vectors must have the same length");

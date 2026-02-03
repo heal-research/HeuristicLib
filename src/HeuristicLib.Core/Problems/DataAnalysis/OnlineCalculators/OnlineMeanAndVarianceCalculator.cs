@@ -4,6 +4,8 @@ public class OnlineMeanAndVarianceCalculator
 {
   private double mOldM, mNewM, mOldS, mNewS;
 
+  public OnlineMeanAndVarianceCalculator() => Reset();
+
   public OnlineCalculatorError VarianceErrorState { get; private set; }
 
   public double Variance => Count > 1 ? mNewS / (Count - 1) : 0.0;
@@ -16,8 +18,6 @@ public class OnlineMeanAndVarianceCalculator
 
   public int Count { get; private set; }
 
-  public OnlineMeanAndVarianceCalculator() => Reset();
-
   public void Reset()
   {
     Count = 0;
@@ -27,7 +27,7 @@ public class OnlineMeanAndVarianceCalculator
 
   public void Add(double x)
   {
-    if (double.IsNaN(x) || double.IsInfinity(x) || x > 1E13 || x < -1E13 || (PopulationVarianceErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
+    if (double.IsNaN(x) || double.IsInfinity(x) || (PopulationVarianceErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       PopulationVarianceErrorState |= OnlineCalculatorError.InvalidValueAdded;
       VarianceErrorState |= OnlineCalculatorError.InvalidValueAdded;
     } else {
@@ -36,11 +36,11 @@ public class OnlineMeanAndVarianceCalculator
       if (Count == 1) {
         mOldM = mNewM = x;
         mOldS = 0.0;
-        PopulationVarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
+        PopulationVarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
       } else {
-        VarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 2
-        mNewM = mOldM + ((x - mOldM) / Count);
-        mNewS = mOldS + ((x - mOldM) * (x - mNewM));
+        VarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 2
+        mNewM = mOldM + (x - mOldM) / Count;
+        mNewS = mOldS + (x - mOldM) * (x - mNewM);
 
         // set up for next iteration
         mOldM = mNewM;
