@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>HEAL.HeuristicLib</AssemblyName>
+        <RootNamespace>HEAL.HeuristicLib</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <Compile Remove="Problems\Decoder\**" />
+      <EmbeddedResource Remove="Problems\Decoder\**" />
+      <None Remove="Problems\Decoder\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="alglib.net" Version="3.19.0" />
+      <PackageReference Include="AutoDiff" Version="1.2.2" />
+      <PackageReference Include="FluentValidation" Version="11.11.0" />
+      <PackageReference Include="LanguageExt.Core" Version="4.4.9" />
+      <PackageReference Include="MathNet.Numerics.Signed" Version="5.0.0" />
+      <PackageReference Include="morelinq" Version="4.4.0" />
+      <PackageReference Include="YamlDotNet" Version="16.3.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\HeuristicLib.Abstractions\HeuristicLib.Abstractions.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Algorithms\Evolutionary\" />
+    </ItemGroup>
+
+</Project>
