@@ -6,14 +6,13 @@ using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
-using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 
 #pragma warning disable S1481
 
-namespace HEAL.HeuristicLib.Tests;
+namespace HEAL.HeuristicLib.Core.Tests;
 
 public class TspTests
 {
@@ -34,7 +33,7 @@ public class TspTests
       new InversionMutator()
     );
 
-    ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
+    //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
     //ga.RandomSeed = 42;
     ga.PopulationSize = 100;
     ga.MutationRate = 0.05;
@@ -42,43 +41,9 @@ public class TspTests
     ga.Elites = 1;
 
     //execute
-    var resGa = ga.Build().RunToCompletion(prob, RandomNumberGenerator.Create(42));
-
-    //look at results
-    var objGa = resGa.Population
-      .OrderBy(x => x.ObjectiveVector[0])
-      .First();
-
-    //best possible 7542
-  }
-
-  [Fact]
-  public void GaWithDynamicTSP()
-  {
-    //Load Problem
-    var data = TsplibTspInstanceProvider.LoadData(TestDataBerlin52TSP);
-    var cdata = data.ToCoordinatesData();
-    var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
-
-    //GA
-    var ga = GeneticAlgorithm.GetBuilder(
-      new RandomPermutationCreator(),
-      new EdgeRecombinationCrossover(),
-      new InversionMutator()
-    );
-
-    ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-    //ga.RandomSeed = 42;
-    ga.PopulationSize = 100;
-    ga.MutationRate = 0.05;
-    ga.Selector = new TournamentSelector<Permutation>(2);
-    ga.Elites = 1;
-    ga.Evaluator = prob.WrapEvaluator(ga.Evaluator);
-
-    prob.AttachTo(ga);
-
-    //execute
-    var resGa = ga.Build().RunToCompletion(prob, RandomNumberGenerator.Create(42));
+    var resGa = ga.Build()
+      .WithMaxIterations(1000)
+      .RunToCompletion(prob, RandomNumberGenerator.Create(42));
 
     //look at results
     var objGa = resGa.Population

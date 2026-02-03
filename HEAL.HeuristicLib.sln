@@ -38,13 +38,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{46DC3720-0
 		docs\randomness.md = docs\randomness.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Tests", "test\HeuristicLib.Tests\HeuristicLib.Tests.csproj", "{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Core.Tests", "test\HeuristicLib.Core.Tests\HeuristicLib.Core.Tests.csproj", "{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Abstractions", "src\HeuristicLib.Abstractions\HeuristicLib.Abstractions.csproj", "{D28E1A98-620B-45C1-B9DE-859B23B34F63}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Core", "src\HeuristicLib.Core\HeuristicLib.Core.csproj", "{69765C53-085D-4FAD-AF3D-2A47F492B7ED}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Extensions", "src\HeuristicLib.Extensions\HeuristicLib.Extensions.csproj", "{D858705A-406E-4B3D-A866-65843BE73861}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Extensions.Tests", "test\HeuristicLib.Extensions.Tests\HeuristicLib.Extensions.Tests.csproj", "{669E2E93-9C20-446B-899F-E485C69D7125}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -68,11 +70,16 @@ Global
 		{D858705A-406E-4B3D-A866-65843BE73861}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D858705A-406E-4B3D-A866-65843BE73861}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D858705A-406E-4B3D-A866-65843BE73861}.Release|Any CPU.Build.0 = Release|Any CPU
+		{669E2E93-9C20-446B-899F-E485C69D7125}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{669E2E93-9C20-446B-899F-E485C69D7125}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{669E2E93-9C20-446B-899F-E485C69D7125}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{669E2E93-9C20-446B-899F-E485C69D7125}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF} = {7D61D99E-D0EF-4AC1-8182-520A1990C4AC}
 		{D28E1A98-620B-45C1-B9DE-859B23B34F63} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
 		{69765C53-085D-4FAD-AF3D-2A47F492B7ED} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
 		{D858705A-406E-4B3D-A866-65843BE73861} = {C68DA1AA-87E6-411E-B117-C2E48815E70F}
+		{669E2E93-9C20-446B-899F-E485C69D7125} = {7D61D99E-D0EF-4AC1-8182-520A1990C4AC}
 	EndGlobalSection
 EndGlobal

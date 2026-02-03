@@ -7,8 +7,8 @@
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <AssemblyName>HEAL.HeuristicLib.Tests</AssemblyName>
-    <RootNamespace>HEAL.HeuristicLib.Tests</RootNamespace>
+    <AssemblyName>HEAL.HeuristicLib.Core.Tests</AssemblyName>
+    <RootNamespace>HEAL.HeuristicLib.Core.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -48,7 +48,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\HeuristicLib.Core\HeuristicLib.Core.csproj"/>
-    <ProjectReference Include="..\..\src\HeuristicLib.Extensions\HeuristicLib.Extensions.csproj"/>
   </ItemGroup>
 
 </Project>

@@ -8,7 +8,7 @@
 // using HEAL.HeuristicLib.Problems;
 // using HEAL.HeuristicLib.Problems.TestFunctions;
 //
-// namespace HEAL.HeuristicLib.Tests;
+// namespace HEAL.HeuristicLib.Core.Tests;
 //
 // public class NSGA2Tests {
 //   [Fact]

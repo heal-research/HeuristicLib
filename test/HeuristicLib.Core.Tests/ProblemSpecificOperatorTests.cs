@@ -5,7 +5,7 @@
 // using HEAL.HeuristicLib.Operators.PermutationOperators;
 // using HEAL.HeuristicLib.Problems.TravelingSalesman;
 //
-// namespace HEAL.HeuristicLib.Tests;
+// namespace HEAL.HeuristicLib.Core.Tests;
 //
 // public class ProblemSpecificOperatorTests {
 //

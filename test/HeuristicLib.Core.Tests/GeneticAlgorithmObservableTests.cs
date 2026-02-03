@@ -9,7 +9,7 @@
 // using HEAL.HeuristicLib.Optimization;
 // using HEAL.HeuristicLib.Problems;
 //
-// namespace HEAL.HeuristicLib.Tests;
+// namespace HEAL.HeuristicLib.Core.Tests;
 //
 // public class GeneticAlgorithmObservableTests {
 //   [Fact]

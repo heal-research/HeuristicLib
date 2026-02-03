@@ -8,7 +8,7 @@
 // using HEAL.HeuristicLib.Random;
 // using Decoder=HEAL.HeuristicLib.Operators.Decoder;
 //
-// namespace HEAL.HeuristicLib.Tests;
+// namespace HEAL.HeuristicLib.Core.Tests;
 //
 // public class GeneticAlgorithmBuilderBasicTests {
 //   [Fact]

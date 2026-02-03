@@ -2,7 +2,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace HEAL.HeuristicLib.Tests;
+namespace HEAL.HeuristicLib.Core.Tests;
 
 public class TypeCompatabilityTests
 {

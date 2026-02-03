@@ -1,6 +1,6 @@
 ﻿using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib.Tests;
+namespace HEAL.HeuristicLib.Core.Tests;
 
 public class MultiObjectiveTests
 {
