@@ -34,7 +34,8 @@ public class OperatorCompatabilityTests
     var code = $@"
       var algorithm = new {GetCompilableName(algorithmType)}();
       var problem = new {GetCompilableName(problemType)}();
-      algorithm.Execute(problem);
+      var rng = HEAL.HeuristicLib.Random.RandomNumberGenerator.Create(0);
+      algorithm.RunStreamingAsync(problem, rng);
     ";
 
     return DoesCompile(code, typeof(object), algorithmType, problemType);
@@ -53,7 +54,7 @@ public class OperatorCompatabilityTests
 
   private static bool DoesCompile(string code, params Type[] usedTypes)
   {
-    var references = usedTypes.Concat([typeof(object)])
+    var references = usedTypes.Concat([typeof(object), typeof(IAlgorithm<,,,>), typeof(Algorithm<,,,>)])
       .Select(t => t.Assembly)
       .Concat([Assembly.Load("System.Runtime")])
       .Distinct()
@@ -69,9 +70,16 @@ public class OperatorCompatabilityTests
     );
 
     var diagnostics = compilation.GetDiagnostics();
-    var containsError = diagnostics.Any(d => d.Severity == DiagnosticSeverity.Error);
+    var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 
-    return !containsError;
+    if (errors.Any()) {
+      Console.WriteLine("Compilation failed with the following errors:");
+      foreach (var error in errors) {
+        Console.WriteLine(error.ToString());
+      }
+    }
+
+    return errors.Count == 0;
   }
 
   [Theory]

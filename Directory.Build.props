@@ -6,11 +6,4 @@
     <WarningsAsErrors>Nullable</WarningsAsErrors>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.6.0.109712">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
 </Project>
