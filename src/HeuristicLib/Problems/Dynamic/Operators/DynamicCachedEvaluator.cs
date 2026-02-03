@@ -18,7 +18,10 @@ public class DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
     IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
     TProblem problem)
     : base(keySelector, evaluator) {
-    problem.EpochClock.OnEpochChange += (_, _) => ClearCache();
+    problem.EpochClock.OnEpochChange += (_, _) => {
+      ClearCache();
+      hitCount = 0;
+    };
   }
 
   public override IReadOnlyList<ObjectiveVector> Evaluate(
@@ -44,5 +47,44 @@ public class DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
     }
 
     return results;
+  }
+}
+
+public static class DynamicCachedEvaluatorExtension {
+  public static DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
+    WithCache<TGenotype, TEncoding, TProblem, TKey>(this IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+                                                    TProblem problem,
+                                                    Func<TGenotype, TKey> keySelector)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : DynamicProblem<TGenotype, TEncoding>
+    where TKey : notnull
+    where TGenotype : class {
+    return new DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(keySelector, evaluator, problem);
+  }
+
+  public static DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TGenotype>
+    WithCache<TGenotype, TEncoding, TProblem>(this IEvaluator<TGenotype, TEncoding, TProblem> evaluator,
+                                              TProblem problem)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : DynamicProblem<TGenotype, TEncoding>
+    where TGenotype : class {
+    return new DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TGenotype>(x => x, evaluator, problem);
+  }
+
+  public static DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>
+    GetCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(this TProblem problem, Func<TGenotype, TKey> keySelector)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : DynamicProblem<TGenotype, TEncoding>
+    where TGenotype : class
+    where TKey : notnull {
+    return new DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TKey>(keySelector, new DirectEvaluator<TGenotype>(), problem);
+  }
+
+  public static DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TGenotype>
+    GetCachedEvaluator<TGenotype, TEncoding, TProblem>(this TProblem problem)
+    where TEncoding : class, IEncoding<TGenotype>
+    where TProblem : DynamicProblem<TGenotype, TEncoding>
+    where TGenotype : class {
+    return new DynamicCachedEvaluator<TGenotype, TEncoding, TProblem, TGenotype>(x => x, new DirectEvaluator<TGenotype>(), problem);
   }
 }

@@ -1,6 +1,8 @@
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
@@ -27,9 +29,17 @@ public class SymbolicRegressionProblem :
   }
 
   public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
-    this(data, objective,
-      GetDefaultComparer(objective),
-      new SymbolicExpressionTreeEncoding(new SimpleSymbolicExpressionGrammar())) { }
+    this(data, objective, GetDefaultComparer(objective), new SymbolicExpressionTreeEncoding(new SimpleSymbolicExpressionGrammar())) { }
+
+  public SymbolicRegressionProblem(RegressionProblemData data, SymbolicExpressionTreeEncoding encoding, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
+    this(data, objective, GetDefaultComparer(objective), encoding) { }
+
+  public static SymbolicExpressionTreeEncoding GetDefaultEncoding(IEnumerable<string> variableNames) {
+    var grammar = new SimpleSymbolicExpressionGrammar();
+    var root = grammar.AddLinearScaling();
+    grammar.AddFullyConnectedSymbols(root, new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = variableNames });
+    return new SymbolicExpressionTreeEncoding(grammar);
+  }
 
   public SymbolicRegressionProblem(RegressionProblemData data,
                                    ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,

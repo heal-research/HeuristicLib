@@ -7,8 +7,8 @@ namespace HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
 
 public sealed class InterpolatedQuadraticAssignmentProblem
   : DynamicProblem<Permutation, PermutationEncoding> {
-  private readonly QuadraticAssignmentData a;
-  private readonly QuadraticAssignmentData b;
+  private readonly QuadraticAssignmentProblemData a;
+  private readonly QuadraticAssignmentProblemData b;
   private readonly bool interpolateDistances;
 
   private double alpha;
@@ -21,8 +21,8 @@ public sealed class InterpolatedQuadraticAssignmentProblem
   public double Alpha => alpha;
 
   public InterpolatedQuadraticAssignmentProblem(
-    QuadraticAssignmentData a,
-    QuadraticAssignmentData b,
+    QuadraticAssignmentProblemData a,
+    QuadraticAssignmentProblemData b,
     IRandomNumberGenerator environmentRandom,
     double alphaStart = 0.0,
     double alphaStep = 0.01,
@@ -35,7 +35,7 @@ public sealed class InterpolatedQuadraticAssignmentProblem
     ArgumentOutOfRangeException.ThrowIfLessThan(alphaStart, 0.0);
     ArgumentOutOfRangeException.ThrowIfGreaterThan(alphaStart, 1.0);
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(alphaStep);
-    ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(alphaStep, 1.0);
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(alphaStep, 1.0);
 
     this.a = a;
     this.b = b;
@@ -77,7 +77,9 @@ public sealed class InterpolatedQuadraticAssignmentProblem
 
     if (!pingPong) {
       // wrap 0..1
-      alpha = next % 1.0;
+      if (next > 1.0) next -= Math.Floor(next);
+      if (next < 0.0) next -= Math.Floor(next);
+      alpha = next;
     } else {
       // ping-pong 0..1..0..1...
       // simplest: reflect at boundaries

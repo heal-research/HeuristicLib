@@ -20,6 +20,20 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
     ProblemData = tspData;
   }
 
+  public ActivatedTravelingSalesmanProblem(ITravelingSalesmanProblemData tspData,
+                                           IRandomNumberGenerator environmentRandom,
+                                           bool[] startState,
+                                           double switchProbability = 0.1,
+                                           UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+                                           int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength) {
+    SwitchProbability = switchProbability;
+    ArgumentOutOfRangeException.ThrowIfNotEqual(tspData.NumberOfCities, startState.Length);
+    CurrentState = startState.ToArray();
+    SearchSpace = new PermutationEncoding(tspData.NumberOfCities);
+    Objective = SingleObjective.Minimize;
+    ProblemData = tspData;
+  }
+
   public IReadOnlyList<bool> CurrentState { get; private set; }
   public double SwitchProbability { get; init; }
   public ITravelingSalesmanProblemData ProblemData { get; }

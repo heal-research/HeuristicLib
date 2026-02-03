@@ -27,7 +27,7 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TG
   protected DynamicProblem(IRandomNumberGenerator environmentRandom, UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) {
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochLength);
     UpdatePolicy = updatePolicy;
-    EpochClock = new EvaluationClock { EpochLength = epochLength };
+    EpochClock = new EvaluationClock(epochLength);
     EnvironmentRandom = environmentRandom;
   }
 
@@ -80,6 +80,11 @@ public abstract class DynamicProblem<TGenotype, TEncoding> : AttachedAnalysis<TG
   }
 
   protected abstract void Update();
+
+  public void UpdateOnce() {
+    EpochClock.AdvanceEpoch();
+    ResolvePendingUpdates();
+  }
 
   private void ResolvePendingUpdates() {
     if (EpochClock.PendingEpochs == 0)

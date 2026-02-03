@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
 
-public sealed class QuadraticAssignmentData(double[,] flows, double[,] distances) : IQuadraticAssignmentProblemData {
+public sealed class QuadraticAssignmentProblemData(double[,] flows, double[,] distances) : IQuadraticAssignmentProblemData {
   public int Size { get; } = flows.GetLength(0);
 
   public readonly double[,] Flows = ValidateSquare(flows, nameof(flows));

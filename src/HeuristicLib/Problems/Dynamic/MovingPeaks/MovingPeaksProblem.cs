@@ -17,6 +17,7 @@ public sealed class MovingPeaksProblem
                             UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
                             int epochLength = int.MaxValue)
     : base(environmentRandom, updatePolicy, epochLength) {
+    Validate(parameters);
     Parameters = parameters;
     Objective = SingleObjective.Maximize;
     SearchSpace = new RealVectorEncoding(
@@ -26,6 +27,50 @@ public sealed class MovingPeaksProblem
     );
 
     InitializePeaks();
+  }
+
+  public MovingPeaksProblem(MovingPeaksParameters parameters,
+                            IRandomNumberGenerator environmentRandom,
+                            (double[] center, double height, double width)[] peaks,
+                            UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+                            int epochLength = int.MaxValue)
+    : base(environmentRandom, updatePolicy, epochLength) {
+    Validate(parameters);
+    Parameters = parameters;
+    Objective = SingleObjective.Maximize;
+    SearchSpace = new RealVectorEncoding(
+      parameters.Dimension,
+      parameters.LowerBound,
+      parameters.UpperBound
+    );
+    ArgumentOutOfRangeException.ThrowIfNotEqual(peaks.Length, parameters.NumberOfPeaks);
+    peakPositions = new double[parameters.NumberOfPeaks][];
+    peakHeights = new double[parameters.NumberOfPeaks];
+    peakWidths = new double[parameters.NumberOfPeaks];
+    for (int i = 0; i < parameters.NumberOfPeaks; i++) {
+      var center = peaks[i].center;
+      ArgumentOutOfRangeException.ThrowIfNotEqual(center.Length, parameters.Dimension);
+      peakPositions[i] = center.ToArray();
+      peakHeights[i] = peaks[i].height;
+      peakWidths[i] = peaks[i].width;
+    }
+  }
+
+  private static void Validate(MovingPeaksParameters p) {
+    ArgumentOutOfRangeException.ThrowIfNegativeOrZero(p.Dimension);
+    ArgumentOutOfRangeException.ThrowIfNegativeOrZero(p.NumberOfPeaks);
+    ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(p.LowerBound, p.UpperBound);
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(p.MinHeight, p.MaxHeight);
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(p.MinWidth, p.MaxWidth);
+    ArgumentOutOfRangeException.ThrowIfNegative(p.ShiftSeverity);
+    ArgumentOutOfRangeException.ThrowIfNegative(p.HeightSeverity);
+    ArgumentOutOfRangeException.ThrowIfNegative(p.WidthSeverity);
+  }
+
+  public IEnumerable<(double[] Center, double Height, double Width)> Peaks() {
+    for (int i = 0; i < Parameters.NumberOfPeaks; i++) {
+      yield return (peakPositions[i], peakHeights[i], peakWidths[i]);
+    }
   }
 
   public override RealVectorEncoding SearchSpace { get; }

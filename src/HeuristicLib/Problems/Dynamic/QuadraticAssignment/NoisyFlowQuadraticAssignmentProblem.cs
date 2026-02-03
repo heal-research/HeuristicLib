@@ -7,13 +7,13 @@ namespace HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
 
 public sealed class NoisyFlowQuadraticAssignmentProblem
   : DynamicProblem<Permutation, PermutationEncoding> {
-  private readonly QuadraticAssignmentData baseData;
+  private readonly QuadraticAssignmentProblemData baseProblemData;
   private readonly double sigma;
 
   private readonly double[,] noisyFlows; // current state
 
   public NoisyFlowQuadraticAssignmentProblem(
-    QuadraticAssignmentData problemData,
+    QuadraticAssignmentProblemData problemData,
     IRandomNumberGenerator environmentRandom,
     double sigma,
     UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
@@ -21,13 +21,13 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
   ) : base(environmentRandom, updatePolicy, epochLength) {
     ArgumentOutOfRangeException.ThrowIfNegative(sigma);
 
-    baseData = problemData;
+    baseProblemData = problemData;
     this.sigma = sigma;
 
     Objective = SingleObjective.Minimize;
     SearchSpace = new PermutationEncoding(problemData.Size);
 
-    noisyFlows = (double[,])baseData.Flows.Clone();
+    noisyFlows = (double[,])baseProblemData.Flows.Clone();
     Update(); // initialize state (or call RebuildNoisyFlows() directly)
   }
 
@@ -35,14 +35,14 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
   public override Objective Objective { get; }
 
   public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing) {
-    int n = baseData.Size;
+    int n = baseProblemData.Size;
     double cost = 0.0;
 
     for (int i = 0; i < n; i++) {
       int li = solution[i];
       for (int j = 0; j < n; j++) {
         int lj = solution[j];
-        cost += noisyFlows[i, j] * baseData.Distances[li, lj];
+        cost += noisyFlows[i, j] * baseProblemData.Distances[li, lj];
       }
     }
 
@@ -51,8 +51,8 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
 
   protected override void Update() {
     // fresh noise each update (non-cumulative)
-    int n = baseData.Size;
-    var f0 = baseData.Flows;
+    int n = baseProblemData.Size;
+    var f0 = baseProblemData.Flows;
 
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {

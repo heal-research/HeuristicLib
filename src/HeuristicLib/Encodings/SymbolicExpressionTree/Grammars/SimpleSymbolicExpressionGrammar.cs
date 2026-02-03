@@ -1,8 +1,9 @@
 ﻿using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols;
+using HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Symbols.Math;
 
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpressionTree.Grammars;
 
-public sealed class SimpleSymbolicExpressionGrammar() : SymbolicExpressionGrammar() {
+public sealed class SimpleSymbolicExpressionGrammar : SymbolicExpressionGrammar {
   public void AddSymbol(SimpleSymbol symbol) {
     SetSubtreeCount(symbol, symbol.MinimumArity, symbol.MaximumArity);
 

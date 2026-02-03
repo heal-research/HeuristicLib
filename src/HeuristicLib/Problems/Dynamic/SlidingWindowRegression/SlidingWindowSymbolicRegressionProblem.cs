@@ -34,14 +34,14 @@ public class SlidingWindowSymbolicRegressionProblem
 
   public (int StartIndex, int EndIndex) CurrentState { get; private set; }
 
-  private int[] cachedRows = [];
-  private double[] cachedTargets = [];
+  protected int[] CachedRows = [];
+  protected double[] CachedTargets = [];
 
   public override SymbolicExpressionTreeEncoding SearchSpace => innerProblem.SearchSpace;
   public override Objective Objective => innerProblem.Objective;
 
   public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) {
-    return innerProblem.Evaluate(solution, cachedRows, cachedTargets);
+    return innerProblem.Evaluate(solution, CachedRows, CachedTargets);
   }
 
   protected override void Update() {
@@ -69,7 +69,7 @@ public class SlidingWindowSymbolicRegressionProblem
                               .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
                               .ToArray();
 
-    cachedRows = rows;
-    cachedTargets = targets;
+    CachedRows = rows;
+    CachedTargets = targets;
   }
 }

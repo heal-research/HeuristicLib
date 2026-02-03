@@ -3,19 +3,24 @@
 public class EvaluationClock : IEpochClock {
   private readonly Lock epochLocker = new();
 
+  public EvaluationClock(int epochLength) {
+    EpochLength = epochLength;
+    ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochLength);
+  }
+
   public int PendingEpochs { get; private set; }
-  public int EpochCount { get; private set; }
-  public required int EpochLength { get; init; }
-  public int CurrentEpoch => EpochCount / EpochLength;
+  public long Ticks { get; private set; }
+  public int EpochLength { get; }
+  public int CurrentEpoch => (int)(Ticks / EpochLength);
 
   //returns whether no unresolved epoch changes are pending
   public EvaluationTiming IncreaseCount() {
     lock (epochLocker) {
-      EpochCount++;
+      Ticks++;
       var valid = PendingEpochs == 0;
-      if (EpochCount % EpochLength == 0)
+      if (Ticks % EpochLength == 0)
         PendingEpochs++;
-      return new EvaluationTiming(EpochCount, CurrentEpoch, valid);
+      return new EvaluationTiming(Ticks, CurrentEpoch, valid);
     }
   }
 
@@ -36,7 +41,7 @@ public class EvaluationClock : IEpochClock {
 
   public void AdvanceEpoch() {
     lock (epochLocker) {
-      EpochCount = (CurrentEpoch + 1) * EpochLength;
+      Ticks = (CurrentEpoch + 1) * EpochLength;
       PendingEpochs++;
     }
   }

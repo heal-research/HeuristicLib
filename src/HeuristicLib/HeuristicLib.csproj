@@ -9,6 +9,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <Compile Remove="Problems\Decoder\**" />
+      <EmbeddedResource Remove="Problems\Decoder\**" />
+      <None Remove="Problems\Decoder\**" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="alglib.net" Version="3.19.0" />
       <PackageReference Include="AutoDiff" Version="1.2.2" />
       <PackageReference Include="FluentValidation" Version="11.11.0" />
@@ -16,10 +22,6 @@
       <PackageReference Include="MathNet.Numerics.Signed" Version="5.0.0" />
       <PackageReference Include="morelinq" Version="4.4.0" />
       <PackageReference Include="YamlDotNet" Version="16.3.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Problems\Decoder\" />
     </ItemGroup>
 
 </Project>
