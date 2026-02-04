@@ -1,37 +1,91 @@
-﻿using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creators;
 
-public abstract class SingleSolutionCreator<TGenotype, TSearchSpace, TProblem> : ICreator<TGenotype, TSearchSpace, TProblem>
+public abstract class SingleSolutionCreator<TGenotype, TSearchSpace, TProblem> : ISingleSolutionCreator<TGenotype, TSearchSpace, TProblem>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  public abstract ISingleSolutionCreatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionScope scope);
+}
+
+public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace, TProblem> : ISingleSolutionCreatorInstance<TGenotype, TSearchSpace, TProblem>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+  public IBatchExecutor BatchExecutor => BatchExecutors.Sequential;
+}
+
+
+public abstract class SingleSolutionCreator<TGenotype, TSearchSpace> : ISingleSolutionCreator<TGenotype, TSearchSpace>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+{
+  public abstract ISingleSolutionCreatorInstance<TGenotype, TSearchSpace> CreateExecutionInstance(ExecutionScope scope);
+}
+
+public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace> : ISingleSolutionCreatorInstance<TGenotype, TSearchSpace>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+{
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
+  
+  public IBatchExecutor BatchExecutor  => BatchExecutors.Sequential;
+}
+
+
+public abstract class SingleSolutionCreator<TGenotype> : ISingleSolutionCreator<TGenotype>
+  where TGenotype : class
+{
+  public abstract ISingleSolutionCreatorInstance<TGenotype> CreateExecutionInstance(ExecutionScope scope);
+}
+
+public abstract class SingleSolutionCreatorInstance<TGenotype> : ISingleSolutionCreatorInstance<TGenotype>
+  where TGenotype : class
+{
+  public abstract TGenotype Create(IRandomNumberGenerator random);
+  
+  public IBatchExecutor BatchExecutor  => BatchExecutors.Sequential;
+}
+
+
+public abstract class StatelessSingleSolutionCreator<TGenotype, TSearchSpace, TProblem> 
+  : ISingleSolutionCreator<TGenotype, TSearchSpace, TProblem>, ISingleSolutionCreatorInstance<TGenotype, TSearchSpace, TProblem>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r, searchSpace, problem)).ToArray();
+  public ISingleSolutionCreatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionScope scope) => this;
+
+  public IBatchExecutor BatchExecutor => BatchExecutors.Sequential;
 }
 
-public abstract class SingleSolutionCreator<TGenotype, TSearchSpace> : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+public abstract class StatelessSingleSolutionCreator<TGenotype, TSearchSpace> 
+  : IStatelessSingleSolutionCreator<TGenotype, TSearchSpace>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace encoding);
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-  public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) => Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r, searchSpace)).ToArray();
+  public ISingleSolutionCreatorInstance<TGenotype, TSearchSpace> CreateExecutionInstance(ExecutionScope scope) => this;
 
-  IReadOnlyList<TGenotype> ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) => Create(count, random, searchSpace);
+  public IBatchExecutor BatchExecutor => BatchExecutors.Sequential;
 }
 
-public abstract class SingleSolutionCreator<TGenotype> : ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+public abstract class StatelessSingleSolutionCreator<TGenotype> 
+  : IStatelessSingleSolutionCreator<TGenotype>
   where TGenotype : class
 {
   public abstract TGenotype Create(IRandomNumberGenerator random);
 
-  public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) => Enumerable.Range(0, count).ParallelSelect(random, (_, _, r) => Create(r)).ToArray();
+  public ISingleSolutionCreatorInstance<TGenotype> CreateExecutionInstance(ExecutionScope scope) => this;
 
-  IReadOnlyList<TGenotype> ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Create(int count, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => Create(count, random);
+  public IBatchExecutor BatchExecutor => BatchExecutors.Sequential;
 }

@@ -1,29 +1,27 @@
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
-
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IOperator<in TInput, in TContext, out TOutput>
+public interface IOperator<out TExecutionInstance>
+  where TExecutionInstance : IExecutionInstance
 {
-  TOutput Execute(TInput input, TContext context);
+  TExecutionInstance CreateExecutionInstance(ExecutionScope scope);
 }
 
-public interface IOptimizationContext<TG, out TS, out TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-{
-  TS SearchSpace { get; }
-  TP Problem { get; }
-  IRandomNumberGenerator Random { get; }
-}
+public interface IExecutionInstance;
 
-public record OptimizationContext<TG, TS, TP>(
-  TS SearchSpace,
-  TP Problem,
-  IRandomNumberGenerator Random
-) : IOptimizationContext<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public sealed class ExecutionScope
 {
+  private readonly Dictionary<object, object> cache = new();
+
+  public TInstance GetOrAdd<TOperator, TInstance>(TOperator @operator, Func<TInstance> factory)
+    where TOperator : IOperator<TInstance>
+    where TInstance : IExecutionInstance
+  {
+    if (cache.TryGetValue(@operator, out var existing)) {
+      return (TInstance)existing;
+    }
+
+    var instance = factory();
+    cache[@operator] = instance!;
+    return instance;
+  }
 }

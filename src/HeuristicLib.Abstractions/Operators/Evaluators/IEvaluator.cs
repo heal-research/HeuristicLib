@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public interface IEvaluator<TGenotype, in TSearchSpace, in TProblem>
-  : IOperator<IReadOnlyList<TGenotype>, IOptimizationContext<TGenotype, TSearchSpace, TProblem>, IReadOnlyList<ObjectiveVector>>
+  //: IOperator<IReadOnlyList<TGenotype>, IOptimizationContext<TGenotype, TSearchSpace, TProblem>, IReadOnlyList<ObjectiveVector>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
