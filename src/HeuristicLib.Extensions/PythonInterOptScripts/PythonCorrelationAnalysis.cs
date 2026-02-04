@@ -47,7 +47,7 @@ public static class PythonCorrelationAnalysis
 
   public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem)
   {
-    var random = new SystemRandomNumberGenerator();
+    var random = RandomNumberGenerator.Create(42);
     var evaluator = new DirectEvaluator<RealVector>();
 
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();

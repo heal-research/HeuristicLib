@@ -10,7 +10,6 @@ using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.Decoder;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
@@ -38,7 +37,7 @@ public class GeneticAlgorithmTests
     var creator = new UniformDistributedCreator(null, 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
-    var decoder = Decoder.Identity<RealVector>();
+    //var decoder = Decoder.Identity<RealVector>();
     // var DirectEvaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector<RealVector>();
     var replacement = new PlusSelectionReplacer<RealVector>();

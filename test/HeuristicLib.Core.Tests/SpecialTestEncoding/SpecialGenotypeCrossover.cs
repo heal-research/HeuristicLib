@@ -2,7 +2,7 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.Special;
+namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 
 public class SpecialGenotypeCrossover : SingleSolutionCrossover<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
 {

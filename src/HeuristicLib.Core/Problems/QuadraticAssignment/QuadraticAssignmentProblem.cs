@@ -2,6 +2,7 @@
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
 

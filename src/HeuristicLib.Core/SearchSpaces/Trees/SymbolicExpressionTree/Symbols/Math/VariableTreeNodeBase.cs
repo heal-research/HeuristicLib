@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
@@ -22,7 +23,7 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode
   public override void ResetLocalParameters(IRandomNumberGenerator random)
   {
     base.ResetLocalParameters(random);
-    Weight = random.NextGaussian(Symbol.WeightMu, Symbol.WeightSigma);
+    Weight = NormalDistribution.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
     VariableName = Symbol.VariableNames.SampleRandom(random, 1).Single();
   }
 
@@ -31,15 +32,15 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode
     base.ShakeLocalParameters(random, shakingFactor);
 
     // 50% additive & 50% multiplicative (TODO: BUG in if statement below -> fix in HL 4.0!)
-    if (random.Random() < 0) {
-      var x = random.NextGaussian(Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
+    if (random.NextDouble() < 0.5) {
+      var x = NormalDistribution.NextDouble(random, Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
       Weight += x * shakingFactor;
     } else {
-      var x = random.NextGaussian(Symbol.MultiplicativeWeightManipulatorSigma);
+      var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
       Weight *= x;
     }
 
-    if (random.Random() >= Symbol.VariableChangeProbability) {
+    if (random.NextDouble() >= Symbol.VariableChangeProbability) {
       return;
     }
 
@@ -47,7 +48,7 @@ public abstract class VariableTreeNodeBase : SymbolicExpressionTreeNode
     VariableName = Symbol.VariableNames.SampleRandom(random);
     if (oldName != VariableName) {
       // re-initialize weight if the variable is changed
-      Weight = random.NextGaussian(Symbol.WeightMu, Symbol.WeightSigma);
+      Weight = NormalDistribution.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
     }
   }
 

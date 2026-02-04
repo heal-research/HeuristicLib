@@ -1,6 +1,6 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems.Special;
+namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 
 public record SpecialSearchSpace : SearchSpace<SpecialGenotype>
 {

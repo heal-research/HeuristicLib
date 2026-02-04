@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Operators.Prototypes;
+﻿using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;

@@ -3,10 +3,10 @@ using HEAL.HeuristicLib.Algorithms.Evolutionary.EvolutionStrategy;
 using HEAL.HeuristicLib.Algorithms.Evolutionary.GeneticAlgorithm;
 using HEAL.HeuristicLib.Algorithms.Evolutionary.NSGA2;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
+using HEAL.HeuristicLib.GenealogyAnalysis;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Analyzers;
-using HEAL.HeuristicLib.Operators.Analyzers.Genealogy;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
@@ -172,7 +172,7 @@ public class PythonGenealogyAnalysis
     }
   }
 
-  public class SymRegExperimentParameters : ExperimentParameters<SymbolicExpressionTree, SymbolicExpressionSearchSpace>
+  public class SymRegExperimentParameters : ExperimentParameters<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
   {
     public int ParameterOptimizationIterations = 10;
     public double TrainingSplit = 0.66;
@@ -332,7 +332,7 @@ public class PythonGenealogyAnalysis
     return new MyAnalyzers<T>(qualities, rankAnalysis, qc, apt);
   }
 
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionSearchSpace> CreateSymRegAllMutator()
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> CreateSymRegAllMutator()
   {
     var symRegAllMutator = MultiMutator.Create(
     new ChangeNodeTypeManipulation(),

@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace HEAL.HeuristicLib.Executors;
+namespace HEAL.HeuristicLib.Algorithms.MultiStreamAlgorithms;
 
 public class Grid<T>
 {

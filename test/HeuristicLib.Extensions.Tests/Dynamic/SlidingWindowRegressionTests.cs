@@ -19,7 +19,7 @@ public class SlidingWindowRegressionTests
   dataset.DoubleVariables.Last(),
   trainingRange: ..dataset.Rows);
 
-  private static SymbolicExpressionTree MakeVariableTree(SymbolicExpressionSearchSpace enc, string varName)
+  private static SymbolicExpressionTree MakeVariableTree(SymbolicExpressionTreeSearchSpace enc, string varName)
   {
     var tree = enc.Grammar.MakeStump(NoRandomGenerator.Instance);
     tree.Root[0].AddSubtree(new Variable().CreateTreeNode(varName, 1));

@@ -6,18 +6,10 @@ namespace HEAL.HeuristicLib.Optimization;
 public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<ObjectiveVector>
 {
   private readonly double[] values;
-
-  public ObjectiveVector(params double[] values)
-    : this(values.AsSpan())
+  
+  // ToDo: think about creating a ctor that takes memory ownership to avoid reallocation
+  public ObjectiveVector(params IEnumerable<double> values)
   {
-  }
-
-  public ObjectiveVector(params IReadOnlyList<double> values)
-  {
-    if (values.Count == 0) {
-      throw new ArgumentException("Fitness vector must not be empty");
-    }
-
     this.values = values.ToArray();
   }
 
@@ -35,24 +27,7 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
 
   public bool IsSingleObjective => Count == 1;
   public ObjectiveValue? SingleFitness => values.SingleOrDefault();
-
-  public bool Equals(ObjectiveVector? other)
-  {
-    if (other is null) {
-      return false;
-    }
-
-    if (ReferenceEquals(this, other)) {
-      return true;
-    }
-
-    if (Count != other.Count) {
-      return false;
-    }
-
-    return values.SequenceEqual(other.values);
-  }
-
+  
   // public IEnumerator<SingleFitness> GetEnumerator() => ((IEnumerable<SingleFitness>)values).GetEnumerator();
   // IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
   // public int Count => values.Length;

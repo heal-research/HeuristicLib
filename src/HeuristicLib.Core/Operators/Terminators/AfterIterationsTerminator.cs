@@ -17,15 +17,6 @@ public class AfterIterationsTerminator<TGenotype>(int maximumIterations)
   }
 }
 
-public class TargetTerminator<TGenotype>(ObjectiveVector target)
-  : Terminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-{
-  public override Func<PopulationState<TGenotype>, bool> CreateShouldTerminatePredicate(ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-  {
-    return currentIterationState => currentIterationState.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
-  }
-}
-
 // public static class TerminationExtensions {
 //   extension<TG, TS, TP, TR, TA>(AlgorithmBuilder<TG, TS, TP, TR, TA> builder)
 //     where TG : class

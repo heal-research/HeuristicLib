@@ -10,10 +10,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   private readonly double[] elements = elements.ToArray();
 
   public double this[Index index] => elements[index];
-
-  public static implicit operator RealVector(double value) => new(value);
-
-  public static implicit operator RealVector(double[] values) => new(values);
+  
   //public static implicit operator RealVector?(double[]? values) => values is not null ? new RealVector(values) : null;
 
   //public static implicit operator RealVector(IntegerVector intVector) => new RealVector(intVector);

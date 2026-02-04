@@ -1,5 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Operators.Prototypes;
+using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -28,12 +28,14 @@ public class BestMedianWorstAnalysis<TGenotype> : AttachedAnalysis<TGenotype, Po
 
 public static class BestMedianWorstAnalysis
 {
-  public static BestMedianWorstAnalysis<TGenotype> Analyze<TGenotype, TE, TP, TR>(
-    IAlgorithmBuilder<TGenotype, TE, TP, TR> ga)
+  public static BestMedianWorstAnalysis<TGenotype> Analyze<TGenotype, TE, TP, TR, TAlg, TBuildSpec>(
+    IAlgorithmBuilder<TGenotype, TE, TP, TR, TAlg, TBuildSpec> ga)
     where TE : class, ISearchSpace<TGenotype>
     where TP : class, IProblem<TGenotype, TE>
     where TR : PopulationAlgorithmState<TGenotype>
     where TGenotype : class
+    where TAlg : class, IAlgorithm<TGenotype, TE, TP, TR>
+    where TBuildSpec : IBuildSpec
   {
     var r = new BestMedianWorstAnalysis<TGenotype>();
     ga.AddAttachment(r);

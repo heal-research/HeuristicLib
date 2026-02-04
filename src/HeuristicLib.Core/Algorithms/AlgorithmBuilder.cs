@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> : IAlgorithmBuilder<TG, TS, TP, TR, TAlg>
+public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> : IAlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec>
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -39,8 +39,8 @@ public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> : IAlg
     return BuildFromSpec(spec);
   }
 
-  protected abstract TBuildSpec CreateBuildSpec();
-  protected abstract TAlg BuildFromSpec(TBuildSpec buildSpec);
+  public abstract TBuildSpec CreateBuildSpec();
+  public abstract TAlg BuildFromSpec(TBuildSpec buildSpec);
 
   private void ApplyRewriters(TBuildSpec buildSpec)
   {

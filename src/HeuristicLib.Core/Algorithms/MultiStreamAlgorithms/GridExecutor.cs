@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Executors;
-using HEAL.HeuristicLib.Observation;
+﻿using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;

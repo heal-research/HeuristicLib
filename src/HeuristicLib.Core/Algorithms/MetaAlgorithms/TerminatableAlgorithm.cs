@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Algorithms;
+namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 public class TerminatableAlgorithm<TG, TS, TP, TR>
   : Algorithm<TG, TS, TP, TR>, ITerminatableAlgorithm<TG, TS, TP, TR>

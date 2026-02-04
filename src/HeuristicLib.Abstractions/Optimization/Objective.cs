@@ -2,16 +2,6 @@
 
 public sealed class Objective /*: IReadOnlyList<ObjectiveDirection>, IEquatable<Objective>*/
 {
-
-  public Objective(ObjectiveDirection[] directions, IComparer<ObjectiveVector> totalOrderComparer)
-  {
-    if (directions.Length == 0) {
-      throw new ArgumentException("Direction vector must not be empty");
-    }
-    Directions = directions;
-    TotalOrderComparer = totalOrderComparer;
-    Worst = new ObjectiveVector(directions.Select(d => d == ObjectiveDirection.Minimize ? double.PositiveInfinity : double.NegativeInfinity));
-  }
   public ObjectiveDirection[] Directions { get; }
   //public int Dimensions => Directions.Length;
 

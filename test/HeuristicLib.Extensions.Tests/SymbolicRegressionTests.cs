@@ -1,3 +1,55 @@
+using HEAL.HeuristicLib.GenealogyAnalysis;
+using HEAL.HeuristicLib.Problems.DataAnalysis;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using Addition=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Addition;
+using BalancedTreeCreator=HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.BalancedTreeCreator;
+using BestMedianWorstAnalysis=HEAL.HeuristicLib.Operators.Analyzers.BestMedianWorstAnalysis;
+using ChangeNodeTypeManipulation=HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.ChangeNodeTypeManipulation;
+using DataAnalysisProblemData=HEAL.HeuristicLib.Problems.DataAnalysis.DataAnalysisProblemData;
+using Division=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Division;
+using Exponential=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Exponential;
+using FullTreeCreator=HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.FullTreeCreator;
+using FullTreeShaker=HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.FullTreeShaker;
+using GrowTreeCreator=HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.GrowTreeCreator;
+using Logarithm=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Logarithm;
+using MaxAbsoluteErrorEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MaxAbsoluteErrorEvaluator;
+using MeanAbsoluteErrorEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MeanAbsoluteErrorEvaluator;
+using MeanLogErrorEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MeanLogErrorEvaluator;
+using MeanRelativeErrorEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MeanRelativeErrorEvaluator;
+using MeanSquaredErrorCalculator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MeanSquaredErrorCalculator;
+using ModifiableDataset=HEAL.HeuristicLib.Problems.DataAnalysis.ModifiableDataset;
+using MultiMutator=HEAL.HeuristicLib.Operators.Mutators.MultiMutator;
+using Multiplication=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Multiplication;
+using NormalizedMeanSquaredErrorEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.NormalizedMeanSquaredErrorEvaluator;
+using Number=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Number;
+using NumberOfVariablesEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.NumberOfVariablesEvaluator;
+using ObjectiveDirection=HEAL.HeuristicLib.Optimization.ObjectiveDirection;
+using OnePointShaker=HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.OnePointShaker;
+using PearsonR2Evaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.PearsonR2Evaluator;
+using ProbabilisticTreeCreator=HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.ProbabilisticTreeCreator;
+using ProblemGeneration=HEAL.HeuristicLib.PythonInterOptScripts.ProblemGeneration;
+using PythonCorrelationAnalysis=HEAL.HeuristicLib.PythonInterOptScripts.PythonCorrelationAnalysis;
+using PythonGenealogyAnalysis=HEAL.HeuristicLib.PythonInterOptScripts.PythonGenealogyAnalysis;
+using QualityCurveAnalysis=HEAL.HeuristicLib.Operators.Analyzers.QualityCurveAnalysis;
+using RampedHalfAndHalfTreeCreator=HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.RampedHalfAndHalfTreeCreator;
+using RandomNumberGenerator=HEAL.HeuristicLib.Random.RandomNumberGenerator;
+using RegressionProblemData=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.RegressionProblemData;
+using RemoveBranchManipulation=HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.RemoveBranchManipulation;
+using ReplaceBranchManipulation=HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.ReplaceBranchManipulation;
+using RootMeanSquaredErrorEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.RootMeanSquaredErrorEvaluator;
+using SquareRoot=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.SquareRoot;
+using Subtraction=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Subtraction;
+using SubtreeCrossover=HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers.SubtreeCrossover;
+using SymbolicExpressionTree=HEAL.HeuristicLib.Genotypes.Trees.SymbolicExpressionTree;
+using SymbolicExpressionTreeCreator=HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.SymbolicExpressionTreeCreator;
+using SymbolicExpressionTreeNode=HEAL.HeuristicLib.Genotypes.Trees.SymbolicExpressionTreeNode;
+using SymbolicExpressionTreeSearchSpace=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTreeSearchSpace;
+using SymbolicRegressionParameterOptimization=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.SymbolicRegressionParameterOptimization;
+using SymbolicRegressionProblem=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.SymbolicRegressionProblem;
+using TreeComplexityEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.TreeComplexityEvaluator;
+using TreeLengthEvaluator=HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.TreeLengthEvaluator;
+using Variable=HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variable;
+
 <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
 ﻿using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
@@ -32,17 +84,17 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
 <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
-namespace HEAL.HeuristicLib.Core.Tests;
-
+namespace HEAL.HeuristicLib.Extensions.Tests
+{
 public class SymbolicRegressionTests
 {
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
-========
-namespace HEAL.HeuristicLib.Extensions.Tests;
+    ========
+    namespace HEAL.HeuristicLib.Extensions.Tests;
 
-public class SymbolicRegressionTests
-{
->>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
+  public class SymbolicRegressionTests
+  {
+    >>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
   private const int AlgorithmRandomSeed = 42;
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
 
@@ -130,15 +182,15 @@ public class SymbolicRegressionTests
   [Fact]
   public void Creators()
   {
-<<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
+    <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
     var problem = CreateTestSymbolicRegressionProblem(12);
     var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator() };
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
-========
+      ========
     var problem = CreateTestSymbolicRegressionProblem(treeLength: 12);
     var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator() };
     var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
->>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
+      >>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
 
     foreach (var c in creators) {
       var tree = c.Create(r, problem.SearchSpace);
@@ -155,8 +207,8 @@ public class SymbolicRegressionTests
     }
   }
 
-<<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
-========
+  <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
+  ========
   [Fact]
   public void GeneticAlgorithmExecution()
   {
@@ -165,10 +217,10 @@ public class SymbolicRegressionTests
     var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
     ga.PopulationSize = 100;
     ga.MutationRate = 0.05;
-    ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+    ga.Selector = new Operators.Selectors.TournamentSelector<SymbolicExpressionTree>(3);
     ga.Elites = 1;
     ga.RandomSeed = AlgorithmRandomSeed;
-    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
+    ga.Terminator = new Operators.Terminators.AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
     var qualities = BestMedianWorstAnalysis.Analyze(ga);
     var res = ga.Execute(problem);
@@ -187,10 +239,10 @@ public class SymbolicRegressionTests
     var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
     ga.PopulationSize = popsize;
     ga.MutationRate = 0.05;
-    ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+    ga.Selector = new Operators.Selectors.TournamentSelector<SymbolicExpressionTree>(3);
     ga.Elites = 1;
     ga.RandomSeed = AlgorithmRandomSeed;
-    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
+    ga.Terminator = new Operators.Terminators.AfterIterationsTerminator<SymbolicExpressionTree>(gens);
 
     var evalQualities = QualityCurveAnalysis.Create(ga);
     var qualities = BestMedianWorstAnalysis.Analyze(ga);
@@ -210,7 +262,7 @@ public class SymbolicRegressionTests
     var problem = CreateTestSymbolicRegressionProblem();
     var ga = LocalSearch.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
     ga.RandomSeed = AlgorithmRandomSeed;
-    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
+    ga.Terminator = new Operators.Terminators.AfterIterationsTerminator<SymbolicExpressionTree>(100);
 
     var genealogy = GenealogyAnalysis.Create(ga);
     var res = ga.Execute(problem);
@@ -232,7 +284,7 @@ public class SymbolicRegressionTests
     new SubtreeCrossover(),
     symRegAllMutator);
     nsga2.PopulationSize = populationSize;
-    nsga2.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations);
+    nsga2.Terminator = new Operators.Terminators.AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations);
     nsga2.MutationRate = mutationRate;
 
     QualityCurveAnalysis.Create(nsga2);
@@ -290,12 +342,12 @@ public class SymbolicRegressionTests
     Assert.True(speed < TimeSpan.FromSeconds(10));
   }
 
->>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
+  >>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
   private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false, int constOptIteration = 5)
   {
     var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
 
-    IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
+    Problems.DataAnalysis.Regression.IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
       ? [
         new MaxAbsoluteErrorEvaluator(),
         new MeanAbsoluteErrorEvaluator(),
@@ -336,11 +388,11 @@ public class SymbolicRegressionTests
     return problem;
   }
 
-<<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
-========
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionSearchSpace>> CreateSymRegAllMutator()
->>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
+  <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
+  private static Operators.Mutators.MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, Problems.IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
+    ========
+  private static Operators.Mutators.MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, Problems.IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
+    >>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
   {
     return MultiMutator.Create(
     new ChangeNodeTypeManipulation(),
@@ -349,4 +401,5 @@ public class SymbolicRegressionTests
     new RemoveBranchManipulation(),
     new ReplaceBranchManipulation());
   }
+}
 }

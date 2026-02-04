@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
@@ -21,18 +22,18 @@ public sealed class NumberTreeNode : SymbolicExpressionTreeNode
   {
     base.ResetLocalParameters(random);
     var range = Symbol.MaxValue - Symbol.MinValue;
-    Value = random.Random() * range + Symbol.MinValue;
+    Value = random.NextDouble() * range + Symbol.MinValue;
   }
 
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
   {
     base.ShakeLocalParameters(random, shakingFactor);
     // 50% additive & 50% multiplicative
-    if (random.Random() < 0.5) {
-      var x = random.NextGaussian(Symbol.ManipulatorMu, Symbol.ManipulatorSigma);
-      Value = Value + x * shakingFactor;
+    if (random.NextDouble() < 0.5) {
+      var x = NormalDistribution.NextDouble(random, Symbol.ManipulatorMu, Symbol.ManipulatorSigma);
+      Value = Value + (x * shakingFactor);
     } else {
-      var x = random.NextGaussian(1.0, Symbol.MultiplicativeManipulatorSigma);
+      var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeManipulatorSigma);
       Value = Value * x;
     }
   }

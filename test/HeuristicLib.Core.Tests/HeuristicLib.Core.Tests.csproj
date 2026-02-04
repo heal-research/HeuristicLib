@@ -8,7 +8,7 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <AssemblyName>HEAL.HeuristicLib.Core.Tests</AssemblyName>
-    <RootNamespace>HEAL.HeuristicLib.Core.Tests</RootNamespace>
+    <RootNamespace>HEAL.HeuristicLib.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

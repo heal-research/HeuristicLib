@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:src/HeuristicLib.Core/SearchSpaces/CompositeEncoding.cs
-﻿namespace HEAL.HeuristicLib.SearchSpaces;
-========
-﻿//namespace HEAL.HeuristicLib.Encodings.CompositeEncoding;
->>>>>>>> main:src/HeuristicLib.Core/SearchSpaces/CompositeEncoding/CompositeEncoding.cs
+// namespace HEAL.HeuristicLib.SearchSpaces;
 
 // public interface IRecordSearchSpace<TGenotype, TSearchSpace1, TSearchSpace2> : IEncoding<TGenotype, IRecordSearchSpace<TGenotype, TSearchSpace1, TSearchSpace2>> {
 //   TSearchSpace1 Encoding1 { get; }

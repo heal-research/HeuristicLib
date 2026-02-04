@@ -15,9 +15,8 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
     double switchProbability = 0.1,
     UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
     int epochLength = int.MaxValue)
-    : base(updatePolicy, epochLength)
+    : base(environmentRandom, updatePolicy, epochLength)
   {
-    EnvironmentRandom = environmentRandom;
     SwitchProbability = switchProbability;
     CurrentState = Generate(tspData, activationProb, EnvironmentRandom);
     SearchSpace = new PermutationSearchSpace(tspData.NumberOfCities);
@@ -26,7 +25,6 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
   }
 
   public IReadOnlyList<bool> CurrentState { get; private set; }
-  private IRandomNumberGenerator EnvironmentRandom { get; }
   public double SwitchProbability { get; }
   public ITravelingSalesmanProblemData ProblemData { get; }
   public override PermutationSearchSpace SearchSpace { get; }

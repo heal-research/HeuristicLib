@@ -1,8 +1,6 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-<<<<<<<< HEAD:src/HeuristicLib.Core/SearchSpaces/Vectors/PermutationSearchSpace.cs
 namespace HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 public record PermutationSearchSpace(int Length) : SearchSpace<Permutation>, ISubSearchSpaceComparable<PermutationSearchSpace>
@@ -10,15 +8,6 @@ public record PermutationSearchSpace(int Length) : SearchSpace<Permutation>, ISu
   public override bool Contains(Permutation genotype) => genotype.Count == Length;
 
   public virtual bool IsSubspaceOf(PermutationSearchSpace other) => other.Length == Length;
-========
-namespace HEAL.HeuristicLib.Operators.Creators;
-
-public record PermutationSearchSpace(int Length) : SearchSpace<Permutation>, ISubencodingComparable<PermutationSearchSpace>
-{
-
-  public virtual bool IsSubspaceOf(PermutationSearchSpace other) => other.Length == Length;
-  public override bool Contains(Permutation genotype) => genotype.Count == Length;
->>>>>>>> main:src/HeuristicLib.Core/Operators/Creators/PermutationSearchSpace.cs
 
   public static implicit operator IntegerVectorSearchSpace(PermutationSearchSpace permutationSpace) => new(permutationSpace.Length, 0, permutationSpace.Length);
 }

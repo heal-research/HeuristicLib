@@ -1,10 +1,11 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
-public class TspCreator : Creator<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
+public class TspCreator : SingleSolutionCreator<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
 {
   public override Permutation Create(IRandomNumberGenerator random, PermutationSearchSpace searchSpace, TravelingSalesmanProblem problem)
   {

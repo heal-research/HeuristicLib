@@ -2,7 +2,7 @@
 using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Random;
-using MoreLinq;
+using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
@@ -107,7 +107,7 @@ public sealed class RegressionVariableImpactsCalculator(
     ReplacementMethodType replacementMethod = ReplacementMethodType.Shuffle)
   {
     var random = new System.Random(31475);
-    IRandomNumberGenerator r2 = new SystemRandomNumberGenerator(31475);
+    IRandomNumberGenerator r2 = RandomNumberGenerator.Create(31475);
     List<double> replacementValues;
     double replacementValue;
 
@@ -127,7 +127,7 @@ public sealed class RegressionVariableImpactsCalculator(
         // prepare a complete column for the dataset
         replacementValues = Enumerable.Repeat(double.NaN, modifiableDataset.Rows).ToList();
         // shuffle only the selected rows
-        var shuffledValues = rows.Select(r => originalValues[r]).Shuffle(random).ToList();
+        var shuffledValues = rows.Select(r => originalValues[r]).Shuffle(r2).ToList();
         var i = 0;
         // update column values 
         foreach (var r in rows) {
@@ -142,7 +142,7 @@ public sealed class RegressionVariableImpactsCalculator(
         replacementValues = Enumerable.Repeat(double.NaN, modifiableDataset.Rows).ToList();
         // update column values 
         foreach (var r in rows) {
-          replacementValues[r] = r2.NextGaussian(avg, stdDev);
+          replacementValues[r] = NormalDistribution.NextDouble(r2, avg, stdDev);
         }
 
         break;
@@ -163,7 +163,7 @@ public sealed class RegressionVariableImpactsCalculator(
     FactorReplacementMethodType factorReplacementMethod = FactorReplacementMethodType.Shuffle)
   {
     List<string> replacementValues = [];
-    var random = new System.Random(31415);
+    IRandomNumberGenerator random = RandomNumberGenerator.Create(31475);
 
     switch (factorReplacementMethod) {
       case FactorReplacementMethodType.Best:

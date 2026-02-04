@@ -8,5 +8,5 @@ public static class FitnessTotalOrderComparer
 
   public static LexicographicComparer CreateLexicographicComparer(ObjectiveDirection[] objectives, int[]? order = null) => new(objectives, order);
 
-  public static NoTotalOrderComparer CreateNoTotalOrderComparer(ObjectiveDirection[] objectives) => new();
+  public static NoTotalOrderComparer CreateNoTotalOrderComparer(ObjectiveDirection[] objectives) => NoTotalOrderComparer.Instance;
 }

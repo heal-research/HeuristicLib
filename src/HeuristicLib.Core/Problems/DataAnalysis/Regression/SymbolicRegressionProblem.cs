@@ -8,15 +8,15 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public class SymbolicRegressionProblem :
-  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionSearchSpace>
+  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
 {
 
   public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
-    this(data, objective, GetDefaultComparer(objective), new SymbolicExpressionSearchSpace(new SimpleSymbolicExpressionGrammar()))
+    this(data, objective, GetDefaultComparer(objective), new SymbolicExpressionTreeSearchSpace(new SimpleSymbolicExpressionGrammar()))
   {
   }
 
-  public SymbolicRegressionProblem(RegressionProblemData data, SymbolicExpressionSearchSpace encoding, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
+  public SymbolicRegressionProblem(RegressionProblemData data, SymbolicExpressionTreeSearchSpace encoding, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
     this(data, objective, GetDefaultComparer(objective), encoding)
   {
   }
@@ -24,7 +24,7 @@ public class SymbolicRegressionProblem :
   public SymbolicRegressionProblem(RegressionProblemData data,
     ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
     IComparer<ObjectiveVector> a,
-    SymbolicExpressionSearchSpace encoding) : base(data, objective, a, encoding)
+    SymbolicExpressionTreeSearchSpace encoding) : base(data, objective, a, encoding)
   {
   }
   public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
@@ -47,13 +47,13 @@ public class SymbolicRegressionProblem :
     return solution.PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets);
   }
 
-  public static SymbolicExpressionSearchSpace GetDefaultEncoding(IEnumerable<string> variableNames)
+  public static SymbolicExpressionTreeSearchSpace GetDefaultEncoding(IEnumerable<string> variableNames)
   {
     var grammar = new SimpleSymbolicExpressionGrammar();
     var root = grammar.AddLinearScaling();
     grammar.AddFullyConnectedSymbols(root, new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = variableNames });
 
-    return new SymbolicExpressionSearchSpace(grammar);
+    return new SymbolicExpressionTreeSearchSpace(grammar);
   }
 
   private static IComparer<ObjectiveVector>

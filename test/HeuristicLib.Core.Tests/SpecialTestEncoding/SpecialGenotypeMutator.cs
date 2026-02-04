@@ -1,7 +1,7 @@
 ﻿using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.Special;
+namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 
 public class SpecialGenotypeMutator : SingleSolutionMutator<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
 {

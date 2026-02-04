@@ -1,7 +1,8 @@
 ﻿using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.Special;
+namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 
 // This is an example problem that do not use any of the standard search spaces and needs to define its own operators
 

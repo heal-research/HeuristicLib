@@ -2,7 +2,6 @@ namespace HEAL.HeuristicLib.Genotypes.Trees;
 
 public class SymbolicExpressionTree(SymbolicExpressionTreeNode root)
 {
-  public SymbolicExpressionTree(SymbolicExpressionTree symbolicExpressionTree) : this(symbolicExpressionTree.Root.Clone()) {}
   public SymbolicExpressionTreeNode Root { get; set; } = root;
 
   public int Length => Root.GetLength();

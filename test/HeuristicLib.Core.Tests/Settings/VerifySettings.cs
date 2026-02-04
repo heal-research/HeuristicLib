@@ -1,7 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using Argon;
 
-namespace HEAL.HeuristicLib.Core.Tests.Settings;
+namespace HEAL.HeuristicLib.Tests.Settings;
 
 public static class VerifySettings
 {

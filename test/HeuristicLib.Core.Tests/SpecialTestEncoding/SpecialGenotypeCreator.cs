@@ -1,7 +1,7 @@
 ﻿using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.Special;
+namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 
 public class SpecialGenotypeCreator(int parameter) : SingleSolutionCreator<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
 {

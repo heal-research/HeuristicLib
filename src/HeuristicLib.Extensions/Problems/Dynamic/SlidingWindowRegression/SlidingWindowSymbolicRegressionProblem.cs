@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees;
 namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 
 public class SlidingWindowSymbolicRegressionProblem
-  : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionSearchSpace>
+  : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
 {
 
   private readonly SymbolicRegressionProblem innerProblem;
@@ -40,7 +40,7 @@ public class SlidingWindowSymbolicRegressionProblem
 
   public (int StartIndex, int EndIndex) CurrentState { get; private set; }
 
-  public override SymbolicExpressionSearchSpace SearchSpace => innerProblem.SearchSpace;
+  public override SymbolicExpressionTreeSearchSpace SearchSpace => innerProblem.SearchSpace;
   public override Objective Objective => innerProblem.Objective;
 
   public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) => innerProblem.Evaluate(solution, CachedRows, CachedTargets);

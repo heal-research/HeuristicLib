@@ -1,15 +1,67 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Collections;
+using HEAL.HeuristicLib.Observation;
+using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.MetaOperators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Prototypes;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Analyzers.Genealogy;
+namespace HEAL.HeuristicLib.GenealogyAnalysis;
 
 public static class GenealogyAnalysis
 {
+  public static GenealogyAnalysis<TG> BuildOperatorWrappers<TG, TS, TP, TR>(
+    ICreator<TG, TS, TP> creator,
+    ICrossover<TG, TS, TP> crossover,
+    IMutator<TG, TS, TP> mutator,
+    IIterationObserver<TG, TS, TP, TR> iteration,
+    out ICreator<TG, TS, TP> wrappedCreator,
+    out ICrossover<TG, TS, TP> wrappedCrossover,
+    out IMutator<TG, TS, TP> wrappedMutator,
+    out IIterationObserver<TG, TS, TP, TR> wrappedIteration,
+    IEqualityComparer<TG>? equality = null, bool saveSpace = false
+  )  
+    where TG : class
+    where TS : class, ISearchSpace<TG>
+    where TP : class, IProblem<TG, TS>
+    where TR : PopulationAlgorithmState<TG>
+  {
+    var graph = new GenealogyGraph<TG>(equality ?? EqualityComparer<TG>.Default);
+    
+    var analysis = new GenealogyAnalysis<TG>(equality, saveSpace);
+    
+    
+    wrappedCreator = creator.AddObservation(analysis);
+    wrappedCreator = creator.AddObservation(analysis);
+    wrappedCreator = creator.AddObservation(analysis);
+    wrappedCreator = creator.AddObservation(analysis);
+    
+    
+    
+    wrappedCreator = analysis.AttachTo(creator);
+    wrappedCrossover = analysis.AttachTo(crossover);
+    wrappedMutator = analysis.AttachTo(mutator);
+    
+    wrappedMutator = mutator.ObserveWith((parents, children) => {
+      for (int i = 0; i < parents.Count; i++) {
+        graph.AddConnection([parents[i]], children[i]);
+      }
+    }).AsMutator();
+    
+    // toDo: others
+    
+    wrappedIteration = analysis.AttachTo(iteration);
+    return graph;
+  }
+  
+  
   public static GenealogyAnalysis<TGenotype> Create<TGenotype, TE, TP, TRes>(IAlgorithmBuilder<TGenotype, TE, TP, TRes> prototype, IEqualityComparer<TGenotype>? equality = null, bool saveSpace = false)
     where TE : class, ISearchSpace<TGenotype>
     where TP : class, IProblem<TGenotype, TE>
@@ -24,6 +76,7 @@ public static class GenealogyAnalysis
 }
 
 public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool saveSpace = false) : AttachedAnalysis<T, PopulationAlgorithmState<T>>
+  , IMutatorObserver<>T, ICrossoverObserver<T>
   where T : class
 {
   public readonly GenealogyGraph<T> Graph = new(equality ?? EqualityComparer<T>.Default);
