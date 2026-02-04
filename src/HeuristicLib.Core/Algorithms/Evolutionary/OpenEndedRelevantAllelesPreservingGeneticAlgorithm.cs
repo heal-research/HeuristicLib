@@ -40,7 +40,7 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSear
       //CurrentIteration = 0
     };
   }
-  
+
   public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {
@@ -60,12 +60,12 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSear
 
       //Offspring Selection
       newPop = Population.From(population, fitnesses)
-        .Solutions
-        .Zip(selected.ToSolutionPairs())
-        .Where(f =>
-          f.Item1.ObjectiveVector.Dominates(Combine(f.Item2, problem.Objective, Strictness), problem.Objective))
-        .Select(f => f.Item1)
-        .ToArray();
+                         .Solutions
+                         .Zip(selected.ToSolutionPairs())
+                         .Where(f =>
+                           f.Item1.ObjectiveVector.Dominates(Combine(f.Item2, problem.Objective, Strictness), problem.Objective))
+                         .Select(f => f.Item1)
+                         .ToArray();
     }
 
     var r = new ElitismReplacer<TGenotype>(Elites, Elites + newPop.Count);
@@ -91,12 +91,12 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSear
 
   //AlgorithmBuilder<TG, TS, TP, PopulationState<TG>, GeneticAlgorithm<TG, TS, TP>, GeneticAlgorithmBuildSpec<TG, TS, TP>>
   public record Builder : AlgorithmBuilder<
-      TGenotype,
-      TSearchSpace,
-      TProblem,
-      PopulationState<TGenotype>,
-      OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>, 
-      OERAPGABuildSpec<TGenotype, TSearchSpace, TProblem>>
+    TGenotype,
+    TSearchSpace,
+    TProblem,
+    PopulationState<TGenotype>,
+    OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>,
+    OERAPGABuildSpec<TGenotype, TSearchSpace, TProblem>>
   {
     public double MutationRate { get; set; } = 0.05;
     public int Elites { get; set; } = 1;
@@ -106,25 +106,25 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSear
     public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; set; }
     public int PopulationSize { get; set; } = 100;
     public ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; set; } = new TournamentSelector<TGenotype>(2);
-    
-    protected override OERAPGABuildSpec<TGenotype, TSearchSpace, TProblem> CreateBuildSpec() => new(
+
+    public override OERAPGABuildSpec<TGenotype, TSearchSpace, TProblem> CreateBuildSpec() => new(
       Evaluator, Terminator, Interceptor, Observer, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites, MaxEffort
     );
-    
-    protected override OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem> BuildFromSpec(OERAPGABuildSpec<TGenotype, TSearchSpace, TProblem> spec) => 
+
+    public override OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem> BuildFromSpec(OERAPGABuildSpec<TGenotype, TSearchSpace, TProblem> spec) =>
       new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>() {
-      // ToDo: how to prevent accidentally reading from the builder instead of the spec here?
-      PopulationSize = spec.PopulationSize,
-      Creator = spec.Creator,
-      Crossover = spec.Crossover,
-      Selector = spec.Selector,
-      Evaluator = spec.Evaluator,
-      //Replacer = new ElitismReplacer<TGenotype>(spec.Elites),
-      //Terminator = spec.Terminator,
-      Interceptor = spec.Interceptor,
-      Mutator = spec.Mutator.WithRate(spec.MutationRate),
-      MaxEffort = spec.MaxEffort
-    };
+        // ToDo: how to prevent accidentally reading from the builder instead of the spec here?
+        PopulationSize = spec.PopulationSize,
+        Creator = spec.Creator,
+        Crossover = spec.Crossover,
+        Selector = spec.Selector,
+        Evaluator = spec.Evaluator,
+        //Replacer = new ElitismReplacer<TGenotype>(spec.Elites),
+        //Terminator = spec.Terminator,
+        Interceptor = spec.Interceptor,
+        Mutator = spec.Mutator.WithRate(spec.MutationRate),
+        MaxEffort = spec.MaxEffort
+      };
   }
 }
 
@@ -148,17 +148,17 @@ public sealed record OERAPGABuildSpec<TG, TS, TP>
   public int MaxEffort { get; set; }
 
   public OERAPGABuildSpec(IEvaluator<TG, TS, TP> Evaluator,
-    ITerminator<TG, PopulationState<TG>, TS, TP> Terminator,
-    IInterceptor<TG, PopulationState<TG>, TS, TP>? Interceptor,
-    IIterationObserver<TG, TS, TP, PopulationState<TG>>? Observer,
-    int PopulationSize,
-    ISelector<TG, TS, TP> Selector,
-    ICreator<TG, TS, TP> Creator,
-    ICrossover<TG, TS, TP> Crossover,
-    IMutator<TG, TS, TP> Mutator,
-    double MutationRate,
-    int Elites, 
-    int MaxEffort)
+                          ITerminator<TG, PopulationState<TG>, TS, TP> Terminator,
+                          IInterceptor<TG, PopulationState<TG>, TS, TP>? Interceptor,
+                          IIterationObserver<TG, TS, TP, PopulationState<TG>>? Observer,
+                          int PopulationSize,
+                          ISelector<TG, TS, TP> Selector,
+                          ICreator<TG, TS, TP> Creator,
+                          ICrossover<TG, TS, TP> Crossover,
+                          IMutator<TG, TS, TP> Mutator,
+                          double MutationRate,
+                          int Elites,
+                          int MaxEffort)
     : base(Evaluator, Terminator, Interceptor, Observer)
   {
     this.PopulationSize = PopulationSize;

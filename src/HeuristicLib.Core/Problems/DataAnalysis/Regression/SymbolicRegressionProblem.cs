@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
@@ -10,23 +11,20 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 public class SymbolicRegressionProblem :
   RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
 {
-
   public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
     this(data, objective, GetDefaultComparer(objective), new SymbolicExpressionTreeSearchSpace(new SimpleSymbolicExpressionGrammar()))
-  {
-  }
+  { }
 
   public SymbolicRegressionProblem(RegressionProblemData data, SymbolicExpressionTreeSearchSpace encoding, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
     this(data, objective, GetDefaultComparer(objective), encoding)
-  {
-  }
+  { }
 
   public SymbolicRegressionProblem(RegressionProblemData data,
-    ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
-    IComparer<ObjectiveVector> a,
-    SymbolicExpressionTreeSearchSpace encoding) : base(data, objective, a, encoding)
-  {
-  }
+                                   ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
+                                   IComparer<ObjectiveVector> a,
+                                   SymbolicExpressionTreeSearchSpace encoding) : base(data, objective, a, encoding)
+  { }
+
   public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
   public int ParameterOptimizationIterations { get; init; } = -1;
 
@@ -34,14 +32,14 @@ public class SymbolicRegressionProblem :
   {
     if (ParameterOptimizationIterations > 0) {
       _ = SymbolicRegressionParameterOptimization.OptimizeParameters(
-      Interpreter,
-      solution,
-      ProblemData,
-      rows,
-      ParameterOptimizationIterations,
-      true,
-      LowerPredictionBound,
-      UpperPredictionBound);
+        Interpreter,
+        solution,
+        ProblemData,
+        rows,
+        ParameterOptimizationIterations,
+        true,
+        LowerPredictionBound,
+        UpperPredictionBound);
     }
 
     return solution.PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets);
@@ -51,8 +49,8 @@ public class SymbolicRegressionProblem :
   {
     var grammar = new SimpleSymbolicExpressionGrammar();
     var root = grammar.AddLinearScaling();
-    grammar.AddFullyConnectedSymbols(root, new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = variableNames });
-
+    var symbols = new Symbol[] { new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = variableNames } };
+    grammar.AddFullyConnectedSymbols(root, symbols);
     return new SymbolicExpressionTreeSearchSpace(grammar);
   }
 
