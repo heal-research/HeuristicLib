@@ -3,6 +3,8 @@ using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random.Distributions;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
 
@@ -11,7 +13,7 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
 {
   private readonly QuadraticAssignmentProblemData baseProblemData;
 
-  private readonly double[,] noisyFlows;// current state
+  private readonly double[,] noisyFlows; // current state
   private readonly double sigma;
 
   public NoisyFlowQuadraticAssignmentProblem(
@@ -31,7 +33,7 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
     SearchSpace = new PermutationSearchSpace(problemData.Size);
 
     noisyFlows = (double[,])baseProblemData.Flows.Clone();
-    Update();// initialize state (or call RebuildNoisyFlows() directly)
+    Update(); // initialize state (or call RebuildNoisyFlows() directly)
   }
 
   public override PermutationSearchSpace SearchSpace { get; }

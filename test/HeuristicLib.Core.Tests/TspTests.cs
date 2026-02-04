@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
@@ -28,9 +29,9 @@ public class TspTests
 
     //GA
     var ga = GeneticAlgorithm.GetBuilder(
-    new RandomPermutationCreator(),
-    new EdgeRecombinationCrossover(),
-    new InversionMutator()
+      new RandomPermutationCreator(),
+      new EdgeRecombinationCrossover(),
+      new InversionMutator()
     );
 
     //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
@@ -39,16 +40,15 @@ public class TspTests
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<Permutation>(2);
     ga.Elites = 1;
-
     //execute
     var resGa = ga.Build()
-      .WithMaxIterations(1000)
-      .RunToCompletion(prob, RandomNumberGenerator.Create(42));
+                  .WithMaxIterations(1000)
+                  .RunToCompletion(prob, RandomNumberGenerator.Create(42));
 
     //look at results
     var objGa = resGa.Population
-      .OrderBy(x => x.ObjectiveVector[0])
-      .First();
+                     .OrderBy(x => x.ObjectiveVector[0])
+                     .First();
 
     //best possible 7542
   }

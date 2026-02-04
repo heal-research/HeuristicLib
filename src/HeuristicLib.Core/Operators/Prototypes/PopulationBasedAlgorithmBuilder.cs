@@ -11,10 +11,12 @@
 //   where TGenotype : class
 //   where TSearchSpace : class, ISearchSpace<TGenotype>
 //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-//   where TRes : PopulationAlgorithmState<TGenotype>
+//   where TRes : PopulationState<TGenotype>
 //   where TAlg : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TRes>
 //   
 // {
 //   public int PopulationSize { get; set; } = 100;
 //   public ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; set; } = new TournamentSelector<TGenotype>(2);
 // }
+
+

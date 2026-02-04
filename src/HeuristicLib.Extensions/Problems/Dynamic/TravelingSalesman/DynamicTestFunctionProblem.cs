@@ -2,6 +2,7 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 #pragma warning disable S2368
@@ -13,9 +14,9 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
   private readonly IProblem<RealVector, RealVectorSearchSpace> problem;
 
   public DynamicTestFunctionProblem(IRandomNumberGenerator environmentRandom,
-    IProblem<RealVector, RealVectorSearchSpace> problem,
-    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-    int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength)
+                                    IProblem<RealVector, RealVectorSearchSpace> problem,
+                                    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+                                    int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength)
   {
     this.problem = problem;
     var rot = new double[problem.SearchSpace.Length, problem.SearchSpace.Length];
@@ -119,6 +120,7 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
       for (var i = 0; i < n; i++) {
         norm += v[i] * v[i];
       }
+
       norm = Math.Sqrt(norm);
     } while (norm < 1e-8);
 

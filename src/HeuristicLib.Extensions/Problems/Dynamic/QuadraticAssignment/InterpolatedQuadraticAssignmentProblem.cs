@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
 
@@ -33,6 +34,7 @@ public sealed class InterpolatedQuadraticAssignmentProblem
     if (a.Size != b.Size) {
       throw new ArgumentException("Instances must have same size.");
     }
+
     ArgumentOutOfRangeException.ThrowIfLessThan(alphaStart, 0.0);
     ArgumentOutOfRangeException.ThrowIfGreaterThan(alphaStart, 1.0);
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(alphaStep);
@@ -85,9 +87,11 @@ public sealed class InterpolatedQuadraticAssignmentProblem
       if (next > 1.0) {
         next -= Math.Floor(next);
       }
+
       if (next < 0.0) {
         next -= Math.Floor(next);
       }
+
       Alpha = next;
     } else {
       // ping-pong 0..1..0..1...

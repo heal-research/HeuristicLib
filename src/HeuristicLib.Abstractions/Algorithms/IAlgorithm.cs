@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
+public interface IAlgorithm<in TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>

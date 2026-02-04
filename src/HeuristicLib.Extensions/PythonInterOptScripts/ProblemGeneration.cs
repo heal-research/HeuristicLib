@@ -12,17 +12,16 @@ using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using static HEAL.HeuristicLib.PythonInterOptScripts.PythonGenealogyAnalysis;
-using RastriginFunction=HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
-using SphereFunction=HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
+using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
+using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public class ProblemGeneration
 {
-
   public delegate double[] CustomFunc(RealVector solution);
 
   private static readonly ConcurrentDictionary<string, ITravelingSalesmanProblemData> TSPCache = [];
@@ -51,7 +50,8 @@ public class ProblemGeneration
       ParameterOptimizationIterations = parameters.ParameterOptimizationIterations
     };
     var root = problem.SearchSpace.Grammar.AddLinearScaling();
-    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(root, new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables });
+    var symbols = new Symbol[] { new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables } };
+    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(root, symbols);
 
     return problem;
   }
@@ -61,8 +61,8 @@ public class ProblemGeneration
   public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max, double shift)
   {
     var testFunction = new CombinedGradientTestFunction(
-    new ShiftedGradientTestFunction(-shift, new SphereFunction(dimensions)),
-    new RastriginFunction(dimensions));
+      new ShiftedGradientTestFunction(-shift, new SphereFunction(dimensions)),
+      new RastriginFunction(dimensions));
     var encoding = new RealVectorSearchSpace(dimensions, min, max);
     var prob = new MultiObjectiveTestFunctionProblem(testFunction, encoding);
 
@@ -79,9 +79,9 @@ public class ProblemGeneration
 
   public class MultiObjectiveTravellingSalesmanProblem(TravelingSalesmanProblem[] tsps) :
     RealVectorProblem(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
-    new RealVectorSearchSpace(
-    tsps.Max(x => x.ProblemData.NumberOfCities),
-    new RealVector(0.0), new RealVector(1.0)))
+      new RealVectorSearchSpace(
+        tsps.Max(x => x.ProblemData.NumberOfCities),
+        new RealVector(0.0), new RealVector(1.0)))
   {
     private readonly TravelingSalesmanProblem[] tsps = tsps.ToArray();
 

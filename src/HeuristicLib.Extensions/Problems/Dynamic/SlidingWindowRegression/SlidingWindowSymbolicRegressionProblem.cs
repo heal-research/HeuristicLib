@@ -10,11 +10,11 @@ namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 public class SlidingWindowSymbolicRegressionProblem
   : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
 {
-
   private readonly SymbolicRegressionProblem innerProblem;
 
   protected int[] CachedRows = [];
   protected double[] CachedTargets = [];
+
   public SlidingWindowSymbolicRegressionProblem(
     SymbolicRegressionProblem problem,
     int windowStart = 0,
@@ -22,7 +22,7 @@ public class SlidingWindowSymbolicRegressionProblem
     int stepSize = 10,
     UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
     int epochLength = int.MaxValue
-  ) : base(NoRandomGenerator.Instance, updatePolicy, epochLength)
+  ) : base(RandomNumberGenerator.Create(0), updatePolicy, epochLength)
   {
     ArgumentOutOfRangeException.ThrowIfNegative(windowStart);
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowLength);
@@ -69,8 +69,8 @@ public class SlidingWindowSymbolicRegressionProblem
     }
 
     var targets = innerProblem.ProblemData.Dataset
-      .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
-      .ToArray();
+                              .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
+                              .ToArray();
 
     CachedRows = rows;
     CachedTargets = targets;

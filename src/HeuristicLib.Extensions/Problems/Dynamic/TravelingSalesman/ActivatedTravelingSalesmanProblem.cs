@@ -4,17 +4,18 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
 
 public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, PermutationSearchSpace>
 {
   public ActivatedTravelingSalesmanProblem(ITravelingSalesmanProblemData tspData,
-    IRandomNumberGenerator environmentRandom,
-    double activationProb = 0.9,
-    double switchProbability = 0.1,
-    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-    int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength)
+                                           IRandomNumberGenerator environmentRandom,
+                                           double activationProb = 0.9,
+                                           double switchProbability = 0.1,
+                                           UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+                                           int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength)
   {
     SwitchProbability = switchProbability;
     CurrentState = Generate(tspData, activationProb, environmentRandom);
@@ -24,11 +25,11 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
   }
 
   public ActivatedTravelingSalesmanProblem(ITravelingSalesmanProblemData tspData,
-    IRandomNumberGenerator environmentRandom,
-    bool[] startState,
-    double switchProbability = 0.1,
-    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-    int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength)
+                                           IRandomNumberGenerator environmentRandom,
+                                           bool[] startState,
+                                           double switchProbability = 0.1,
+                                           UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+                                           int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength)
   {
     SwitchProbability = switchProbability;
     ArgumentOutOfRangeException.ThrowIfNotEqual(tspData.NumberOfCities, startState.Length);
@@ -47,9 +48,9 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
   public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
   {
     return solution
-      .Where(x => CurrentState[x])
-      .PairwiseRoundRobin(ProblemData.GetDistance)
-      .Sum();
+           .Where(x => CurrentState[x])
+           .PairwiseRoundRobin(ProblemData.GetDistance)
+           .Sum();
   }
 
   protected override void Update()
@@ -76,9 +77,10 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
     var next = CurrentState.ToArray();
 
     for (var i = 0; i < k; i++) {
-      if (!EnvironmentRandom.Boolean(SwitchProbability)) {
+      if (!EnvironmentRandom.NextBool(SwitchProbability)) {
         continue;
       }
+
       var a = active[i];
       var b = inactive[i];
       next[a] = false;
@@ -92,10 +94,11 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
   private static void ShuffleInPlace<T>(IList<T> list, IRandomNumberGenerator rng)
   {
     for (var i = list.Count - 1; i > 0; i--) {
-      var j = rng.Integer(0, i, true);
+      var j = rng.NextInt(0, i, true);
       (list[i], list[j]) = (list[j], list[i]);
     }
   }
 
-  private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb, IRandomNumberGenerator random) => Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.Boolean(activationProb)).ToArray();
+  private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb, IRandomNumberGenerator random)
+    => Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.NextBool(activationProb)).ToArray();
 }

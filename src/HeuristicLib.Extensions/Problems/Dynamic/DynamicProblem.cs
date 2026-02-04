@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Operators.Analyzers;
+using HEAL.HeuristicLib.Observers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,13 +8,12 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public abstract class DynamicProblem<TGenotype, TSearchSpace> : AttachedAnalysis<TGenotype>,
-  IDynamicProblem<TGenotype, TSearchSpace>,
-  IDisposable
+public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserver<TGenotype>, IInterceptorObserver<TGenotype>,
+                                                                IDynamicProblem<TGenotype, TSearchSpace>,
+                                                                IDisposable
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TGenotype : class
 {
-
   private readonly ConcurrentBag<(TGenotype solution, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
   private readonly ReaderWriterLockSlim rwLock = new();
 
@@ -27,6 +26,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : AttachedAnalysis
     EpochClock = new EvaluationClock(epochLength);
     EnvironmentRandom = environmentRandom;
   }
+
   public EvaluationClock EpochClock { get; }
   protected IRandomNumberGenerator EnvironmentRandom { get; }
 
@@ -64,8 +64,8 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : AttachedAnalysis
 
   public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing);
 
-  public override void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values,
-    ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values,
+                              ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
     evaluationLog.Clear();
@@ -74,12 +74,14 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : AttachedAnalysis
     }
   }
 
-  public override void AfterInterception(IAlgorithmState currentAlgorithmState, IAlgorithmState? previousIterationResult, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public void AfterInterception(IAlgorithmState currentAlgorithmState, IAlgorithmState? previousIterationResult, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     if (UpdatePolicy == UpdatePolicy.AfterInterception) {
       ResolvePendingUpdates();
     }
   }
+
+  public void AfterInterception(PopulationState<TGenotype> res, PopulationState<TGenotype>? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => throw new NotImplementedException();
 
   ~DynamicProblem() => Dispose(false);
 
@@ -96,8 +98,9 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : AttachedAnalysis
   private void ResolvePendingUpdates()
   {
     if (EpochClock.PendingEpochs == 0) {
-      return;//pre-check
+      return; //pre-check
     }
+
     rwLock.EnterWriteLock();
     try {
       EpochClock.ResolvePendingEpochs(Update);

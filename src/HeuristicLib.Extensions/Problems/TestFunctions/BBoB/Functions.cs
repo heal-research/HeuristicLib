@@ -68,12 +68,8 @@ public static class Functions
       tmp2 += x[i] * x[i];
     }
 
-<<<<<<<< HEAD:src/HeuristicLib.Core/Problems/TestFunctions/BBoB/Functions.cs
-    var result = (10.0 * (x.Count - tmp)) + tmp2;
-========
     var result = 10.0 * (x.Count - tmp) + tmp2;
 
->>>>>>>> main:src/HeuristicLib.Extensions/Problems/TestFunctions/BBoB/Functions.cs
     return result;
   }
 
@@ -82,11 +78,7 @@ public static class Functions
     var sum = 0.0;
 
     for (var i = 0; i < x.Count; i++) {
-<<<<<<<< HEAD:src/HeuristicLib.Core/Problems/TestFunctions/BBoB/Functions.cs
-      var exponent = 2.0 + (4.0 * i / (x.Count - 1.0));
-========
       var exponent = 2.0 + 4.0 * i / (x.Count - 1.0);
->>>>>>>> main:src/HeuristicLib.Extensions/Problems/TestFunctions/BBoB/Functions.cs
       sum += Math.Pow(Math.Abs(x[i]), exponent);
     }
 
@@ -194,24 +186,14 @@ public static class Functions
     if (f > 0.0) {
       fTrue = Math.Log(f) / a;
       fTrue = Math.Pow(
-<<<<<<<< HEAD:src/HeuristicLib.Core/Problems/TestFunctions/BBoB/Functions.cs
         Math.Exp(fTrue + (0.49 * (Math.Sin(fTrue) + Math.Sin(0.79 * fTrue)))),
         a
-========
-      Math.Exp(fTrue + 0.49 * (Math.Sin(fTrue) + Math.Sin(0.79 * fTrue))),
-      a
->>>>>>>> main:src/HeuristicLib.Extensions/Problems/TestFunctions/BBoB/Functions.cs
       );
     } else if (f < 0.0) {
       fTrue = Math.Log(-f) / a;
       fTrue = -Math.Pow(
-<<<<<<<< HEAD:src/HeuristicLib.Core/Problems/TestFunctions/BBoB/Functions.cs
         Math.Exp(fTrue + (0.49 * (Math.Sin(0.55 * fTrue) + Math.Sin(0.31 * fTrue)))),
         a
-========
-      Math.Exp(fTrue + 0.49 * (Math.Sin(0.55 * fTrue) + Math.Sin(0.31 * fTrue))),
-      a
->>>>>>>> main:src/HeuristicLib.Extensions/Problems/TestFunctions/BBoB/Functions.cs
       );
     } else {
       fTrue = f;
@@ -400,12 +382,7 @@ public static class Functions
       s2 += tmp2 * tmp2;
     }
 
-<<<<<<<< HEAD:src/HeuristicLib.Core/Problems/TestFunctions/BBoB/Functions.cs
     var result = (100.0 * s1) + s2;
-========
-    var result = 100.0 * s1 + s2;
-
->>>>>>>> main:src/HeuristicLib.Extensions/Problems/TestFunctions/BBoB/Functions.cs
     return result;
   }
 
@@ -500,7 +477,7 @@ public static class Functions
     // In this simplified version: number_of_variables <= 40 ? 1 : number_of_variables / 40.0;
     // But code fixes d_vars_40 to 1.0:
     const double dVars40 = 1.0;
-    var vars40 = (int)Math.Ceiling(dVars40);// always 1
+    var vars40 = (int)Math.Ceiling(dVars40); // always 1
 
     var result = 0.0;
 

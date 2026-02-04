@@ -33,3 +33,8 @@ public sealed class NormalDistribution(double mu = 0, double sigma = 1) : IDistr
     return d.ToArray();
   }
 }
+
+public static class NormalExtensions
+{
+  public static double NextGaussian(this IRandomNumberGenerator rng, double mu = 0, double sigma = 1) => NormalDistribution.NextDouble(rng, mu, sigma);
+}

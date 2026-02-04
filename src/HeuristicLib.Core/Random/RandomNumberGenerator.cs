@@ -16,6 +16,7 @@ public class RandomNumberGenerator : IRandomNumberGenerator
   }
 
   public static IRandomNumberGenerator Create(ulong seed) => Create(seed, RandomProfile.Default);
+  public static IRandomNumberGenerator Create(int seed) => Create((ulong)seed, RandomProfile.Default);
 
   public static IRandomNumberGenerator Create(ulong seed, RandomProfile profile) => new RandomNumberGenerator(seed, profile.KeyCombiner, profile.EngineFactory);
 

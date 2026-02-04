@@ -10,13 +10,13 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 public static class PythonCorrelationAnalysis
 {
-
-  public delegate void GenerationCallback(PopulationAlgorithmState<RealVector> current, RealVectorProblem problem);
+  public delegate void GenerationCallback(PopulationState<RealVector> current, RealVectorProblem problem);
 
   public static double[] GetPseudoCorrelations(IReadOnlyList<RealVector> solutions, MultiObjectiveTestFunctionProblem problem)
   {
@@ -53,7 +53,7 @@ public static class PythonCorrelationAnalysis
     return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
   }
 
-  public static PythonGenealogyAnalysis.ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)
+  public static ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)
   {
     //var prob = SphereRastriginProblem(dimensions, min, max);
 
@@ -69,17 +69,17 @@ public static class PythonCorrelationAnalysis
     //proto.MutationRate = 1;
 
     var res = PythonGenealogyAnalysis.RunAlgorithmConfigurable(problem, callback is null ? null : r => callback(r, problem),
-    new PythonGenealogyAnalysis.TestFunctionExperimentParameters {
-      AlgorithmName = "nsga2",
-      Creator = new UniformDistributedCreator(),
-      Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
-      Mutator = new PolynomialMutator().WithRate(0.9),
-      Iterations = generations,
-      PopulationSize = populationSize,
-      MutationRate = 1,
-      Seed = seed,
-      TrackPopulations = true
-    });
+      new TestFunctionExperimentParameters {
+        AlgorithmName = "nsga2",
+        Creator = new UniformDistributedCreator(),
+        Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
+        Mutator = new PolynomialMutator().WithRate(0.9),
+        Iterations = generations,
+        PopulationSize = populationSize,
+        MutationRate = 1,
+        Seed = seed,
+        TrackPopulations = true
+      });
 
     return res;
   }
