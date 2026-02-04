@@ -19,7 +19,12 @@ public abstract class CreatorInstance<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+  public IBatchExecutor BatchExecutor { get; init; } = BatchExecutors.Sequential;
+  
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+  
+  public virtual IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+    BatchExecutor.ExecuteBatch<TGenotype>(count, r => Create(r, searchSpace, problem), random);
 }
 
 public abstract class Creator<TGenotype, TSearchSpace>
@@ -35,7 +40,12 @@ public abstract class CreatorInstance<TGenotype, TSearchSpace>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
+  public IBatchExecutor BatchExecutor { get; init; } = BatchExecutors.Sequential;
+  
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
+  
+  public virtual IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+    BatchExecutor.ExecuteBatch<TGenotype>(count, r => Create(r, searchSpace), random);
 }
 
 public abstract class Creator<TGenotype>
@@ -49,10 +59,15 @@ public abstract class CreatorInstance<TGenotype>
   : ICreatorInstance<TGenotype>
   where TGenotype : class
 {
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random);
+  public IBatchExecutor BatchExecutor { get; init; } = BatchExecutors.Sequential;
+  
+  public abstract TGenotype Create(IRandomNumberGenerator random);
+
+  public virtual IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) =>
+    BatchExecutor.ExecuteBatch<TGenotype>(count, r => Create(r), random);
 }
 
-
+// ToDo: Since the stateless versions will be the most commonly used ones, think about naming them "Creator" and the other ones the "StatefulCreator".
 
 public abstract class StatelessCreator<TGenotype, TSearchSpace, TProblem> 
   : ICreator<TGenotype, TSearchSpace, TProblem>, ICreatorInstance<TGenotype, TSearchSpace, TProblem>
@@ -60,9 +75,14 @@ public abstract class StatelessCreator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
+  public IBatchExecutor BatchExecutor { get; init; } = BatchExecutors.Sequential;
+  
   public ICreatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionScope scope) => this;
   
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+  public virtual IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+    BatchExecutor.ExecuteBatch<TGenotype>(count, r => Create(r, searchSpace, problem), random);
 }
 
 public abstract class StatelessCreator<TGenotype, TSearchSpace> 
@@ -70,17 +90,27 @@ public abstract class StatelessCreator<TGenotype, TSearchSpace>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
+  public IBatchExecutor BatchExecutor { get; init; } = BatchExecutors.Sequential;
+  
   public ICreatorInstance<TGenotype, TSearchSpace> CreateExecutionInstance(ExecutionScope scope) => this;
   
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
+  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
+  
+  public virtual IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+    BatchExecutor.ExecuteBatch<TGenotype>(count, r => Create(r, searchSpace), random);
 }
 
 public abstract class StatelessCreator<TGenotype>
   : ICreator<TGenotype>, ICreatorInstance<TGenotype>
   where TGenotype : class
 {
+  public IBatchExecutor BatchExecutor { get; init; } = BatchExecutors.Sequential;
+  
   public ICreatorInstance<TGenotype> CreateExecutionInstance(ExecutionScope scope) => this;
   
-  public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random);
+  public abstract TGenotype Create(IRandomNumberGenerator random);
+  
+  public virtual IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) =>
+    BatchExecutor.ExecuteBatch<TGenotype>(count, r => Create(r), random);
 }
 

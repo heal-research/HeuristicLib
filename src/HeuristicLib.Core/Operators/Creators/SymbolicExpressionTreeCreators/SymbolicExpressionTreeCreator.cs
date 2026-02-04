@@ -3,4 +3,5 @@ using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
-public abstract class SymbolicExpressionTreeCreator : StatelessSingleSolutionCreator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>;
+public abstract class SymbolicExpressionTreeCreator 
+  : StatelessCreator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>;

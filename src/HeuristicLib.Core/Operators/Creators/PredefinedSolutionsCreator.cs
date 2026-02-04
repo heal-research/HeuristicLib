@@ -32,6 +32,8 @@ public class PredefinedSolutionsCreatorInstance<TGenotype, TSearchSpace, TProble
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
+  private int currentSolutionIndex;
+  
   private readonly IReadOnlyList<TGenotype> predefinedSolutions;
   private readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance;
     
@@ -40,9 +42,20 @@ public class PredefinedSolutionsCreatorInstance<TGenotype, TSearchSpace, TProble
     this.predefinedSolutions = predefinedSolutions;
     this.creatorForRemainingSolutionsInstance = creatorForRemainingSolutionsInstance;
   }
-  
-  private int currentSolutionIndex;
-  
+
+  public override TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+  {
+    if (currentSolutionIndex >= predefinedSolutions.Count) {
+      var remainingRandom = random.Fork(1);
+      return creatorForRemainingSolutionsInstance.Create(remainingRandom, searchSpace, problem);
+    }
+
+    var solution = predefinedSolutions[currentSolutionIndex];
+    currentSolutionIndex++;
+    return solution;
+
+  }
+
   public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
     var offspring = new TGenotype[count];
