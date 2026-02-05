@@ -28,14 +28,13 @@ public sealed record HillClimberBuildSpec<TG, TS, TP>
     IEvaluator<TG, TS, TP> Evaluator,
     ITerminator<TG, SingleSolutionState<TG>, TS, TP> Terminator,
     IInterceptor<TG, SingleSolutionState<TG>, TS, TP>? Interceptor,
-    IIterationObserver<TG, TS, TP, SingleSolutionState<TG>>? Observer,
     int MaxNeighbors,
     int BatchSize,
     LocalSearchDirection Direction,
     IMutator<TG, TS, TP> Mutator,
     ICreator<TG, TS, TP> Creator
   )
-    : base(Evaluator, Terminator, Interceptor, Observer)
+    : base(Evaluator, Terminator, Interceptor)
   {
     this.MaxNeighbors = MaxNeighbors;
     this.BatchSize = BatchSize;

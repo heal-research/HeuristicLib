@@ -25,6 +25,7 @@ public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace, TPr
     BatchExecution.Sequential(count, r => Create(r, searchSpace, problem), random);
 }
 
+
 public abstract class SingleSolutionCreator<TGenotype, TSearchSpace>
   : Creator<TGenotype, TSearchSpace>
   where TGenotype : class
@@ -43,6 +44,7 @@ public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace>
     BatchExecution.Sequential(count, r => Create(r, searchSpace), random);
 }
 
+
 public abstract class SingleSolutionCreator<TGenotype>
   : Creator<TGenotype>
   where TGenotype : class
@@ -58,6 +60,7 @@ public abstract class SingleSolutionCreatorInstance<TGenotype>
   public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) =>
     BatchExecution.Sequential(count, r => Create(r), random);
 }
+
 
 // ToDo: Since the stateless versions will be the most commonly used ones, think about naming them "Creator" and the other ones the "StatefulCreator".
 

@@ -49,7 +49,6 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
     return new EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,
       Evaluator,
-      Observer,
       PopulationSize,
       NumberOfChildren,
       Strategy,
@@ -77,8 +76,8 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly double InitialMutationStrength;
 
-  public EvolutionStrategyInstance(IInterceptor<TGenotype, EvolutionStrategyState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>>? observer, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ICrossover<TGenotype, TSearchSpace, TProblem>? crossover, ISelector<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength) 
-    : base(interceptor, evaluator, observer)
+  public EvolutionStrategyInstance(IInterceptor<TGenotype, EvolutionStrategyState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ICrossover<TGenotype, TSearchSpace, TProblem>? crossover, ISelector<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength) 
+    : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
     NumberOfChildren = numberOfChildren;

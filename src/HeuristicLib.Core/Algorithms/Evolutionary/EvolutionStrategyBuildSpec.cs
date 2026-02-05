@@ -33,7 +33,6 @@ public sealed record EvolutionStrategyBuildSpec<TG, TS, TP>
     IEvaluator<TG, TS, TP> Evaluator,
     ITerminator<TG, EvolutionStrategyState<TG>, TS, TP> Terminator,
     IInterceptor<TG, EvolutionStrategyState<TG>, TS, TP>? Interceptor,
-    IIterationObserver<TG, TS, TP, EvolutionStrategyState<TG>>? Observer,
     int PopulationSize,
     EvolutionStrategyType Strategy,
     IMutator<TG, TS, TP> Mutator,
@@ -43,7 +42,7 @@ public sealed record EvolutionStrategyBuildSpec<TG, TS, TP>
     int NumberOfChildren,
     ICreator<TG, TS, TP> Creator
   )
-    : base(Evaluator, Terminator, Interceptor, Observer)
+    : base(Evaluator, Terminator, Interceptor)
   {
     this.PopulationSize = PopulationSize;
     this.Strategy = Strategy;

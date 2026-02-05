@@ -51,7 +51,6 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     return new AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,
       Evaluator,
-      Observer,
       PopulationSize,
       creatorInstance,
       Crossover,
@@ -79,8 +78,8 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
   private readonly ISelector<TGenotype, TSearchSpace, TProblem> agedSelector;
   private readonly IReplacer<TGenotype, TSearchSpace, TProblem> agedReplacer;
 
-  public AlpsGeneticAlgorithmInstance(IInterceptor<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>>? observer, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossover<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutator<TGenotype, TSearchSpace, TProblem> agedMutator, ISelector<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacer<TGenotype, TSearchSpace, TProblem> agedReplacer) 
-    : base(interceptor, evaluator, observer)
+  public AlpsGeneticAlgorithmInstance(IInterceptor<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossover<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutator<TGenotype, TSearchSpace, TProblem> agedMutator, ISelector<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacer<TGenotype, TSearchSpace, TProblem> agedReplacer) 
+    : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
     this.agedCreator = agedCreator;

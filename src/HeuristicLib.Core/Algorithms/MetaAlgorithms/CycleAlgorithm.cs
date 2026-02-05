@@ -1,7 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -34,7 +33,6 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
   {
     return new CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
       Evaluator,
-      Observer,
       Algorithms.ToList(),
       MaximumCycles
     );
@@ -52,8 +50,8 @@ public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProble
   protected readonly IReadOnlyList<TAlgorithm> Algorithms;
   protected readonly int? MaximumCycles;
   
-  public CycleAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? observer, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles) 
-    : base(evaluator, observer)
+  public CycleAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles) 
+    : base(evaluator)
   {
     Algorithms = algorithms;
     MaximumCycles = maximumCycles;

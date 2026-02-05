@@ -42,15 +42,16 @@ public class ObservableCreator<TG, TS, TP>
   }
 }
 
-public interface ICreatorObserver<in T, in TS, in TP>
-  where T : class
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
+public interface ICreatorObserver<in TG, in TS, in TP>
+  where TG : class
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
 {
   // ToDo: probably remove the random for observation
-  void AfterCreation(IReadOnlyList<T> offspring, int count, IRandomNumberGenerator random, TS searchSpace, TP problem);
+  void AfterCreation(IReadOnlyList<TG> offspring, int count, IRandomNumberGenerator random, TS searchSpace, TP problem);
 }
 
+// ToDo: rename to make it clear that this is not a base-class to be inherited from
 public class CreatorObserver<TG, TS, TP> : ICreatorObserver<TG, TS, TP>
   where TG : class
   where TS : class, ISearchSpace<TG>
@@ -76,6 +77,11 @@ public static class ObservableCreatorExtensions
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {
+    public ICreator<TG, TS, TP> ObserveWith(ICreatorObserver<TG, TS, TP> observer)
+    {
+      return new ObservableCreator<TG, TS, TP>(creator, observer);
+    }
+    
     public ICreator<TG, TS, TP> ObserveWith(params IReadOnlyList<ICreatorObserver<TG, TS, TP>> observers)
     {
       return new ObservableCreator<TG, TS, TP>(creator, observers);

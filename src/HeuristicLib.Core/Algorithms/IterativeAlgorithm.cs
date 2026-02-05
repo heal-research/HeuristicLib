@@ -40,9 +40,8 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProbl
 
   protected readonly IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor;
 
-  protected IterativeAlgorithmInstance(IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor,
-    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? observer)
-    : base(evaluator, observer)
+  protected IterativeAlgorithmInstance(IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
+    : base(evaluator)
   {
     Interceptor = interceptor;
   }
@@ -65,8 +64,6 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProbl
       if (Interceptor is not null) {
         newState = Interceptor.Transform(newState, previousState, problem.SearchSpace, problem);
       }
-
-      Observer?.OnIterationCompleted(newState, previousState, problem.SearchSpace, problem);
 
       yield return newState;
       

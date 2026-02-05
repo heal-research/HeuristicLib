@@ -32,11 +32,9 @@ public class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TA
   {
     return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
       Evaluator,
-      Observer,
       Algorithms
     );
   }
-
 }
 
 public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
@@ -49,14 +47,16 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
 {
   protected readonly ImmutableList<TAlgorithm> Algorithms;
 
-  public PipelineAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? observer, ImmutableList<TAlgorithm> algorithms) 
-    : base(evaluator, observer) => Algorithms = algorithms;
+  public PipelineAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, ImmutableList<TAlgorithm> algorithms) 
+    : base(evaluator)
+  {
+    Algorithms = algorithms;
+  }
 
   public PipelineAlgorithmInstance(
     ImmutableList<TAlgorithm> algorithms,
-    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
-    IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? observer)
-    : base(evaluator, observer)
+    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
+    : base(evaluator)
   {
     Algorithms = algorithms;
   }

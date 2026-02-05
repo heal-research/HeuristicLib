@@ -32,7 +32,6 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
     return new HillClimberInstance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,
       Evaluator,
-      Observer,
       creatorInstance,
       Mutator,
       Direction,
@@ -55,8 +54,8 @@ public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly int MaxNeighbors;
   protected readonly int BatchSize;
 
-  public HillClimberInstance(IInterceptor<TGenotype, SingleSolutionState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>>? observer, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator, LocalSearchDirection direction, int maxNeighbors, int batchSize) 
-    : base(interceptor, evaluator, observer)
+  public HillClimberInstance(IInterceptor<TGenotype, SingleSolutionState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator, LocalSearchDirection direction, int maxNeighbors, int batchSize) 
+    : base(interceptor, evaluator)
   {
     Creator = creator;
     Mutator = mutator;

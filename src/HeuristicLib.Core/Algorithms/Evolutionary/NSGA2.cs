@@ -34,7 +34,6 @@ public class NSGA2<TGenotype, TSearchSpace, TProblem>
     return new NSGA2Instance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,
       Evaluator,
-      Observer,
       PopulationSize,
       creatorInstance,
       Crossover,
@@ -59,8 +58,8 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
   protected readonly IReplacer<TGenotype, TSearchSpace, TProblem> Replacer;
 
 
-  public NSGA2Instance(IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? observer, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossover<TGenotype, TSearchSpace, TProblem> crossover, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ISelector<TGenotype, TSearchSpace, TProblem> selector, IReplacer<TGenotype, TSearchSpace, TProblem> replacer) 
-    : base(interceptor, evaluator, observer)
+  public NSGA2Instance(IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossover<TGenotype, TSearchSpace, TProblem> crossover, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ISelector<TGenotype, TSearchSpace, TProblem> selector, IReplacer<TGenotype, TSearchSpace, TProblem> replacer) 
+    : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
     Creator = creator;

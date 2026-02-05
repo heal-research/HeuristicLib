@@ -34,7 +34,6 @@ public sealed record NSGA2BuildSpec<TG, TS, TP>
     IEvaluator<TG, TS, TP> Evaluator,
     ITerminator<TG, PopulationState<TG>, TS, TP> Terminator,
     IInterceptor<TG, PopulationState<TG>, TS, TP>? Interceptor,
-    IIterationObserver<TG, TS, TP, PopulationState<TG>>? Observer,
     int PopulationSize,
     ISelector<TG, TS, TP> Selector,
     ICreator<TG, TS, TP> Creator,
@@ -43,7 +42,7 @@ public sealed record NSGA2BuildSpec<TG, TS, TP>
     double MutationRate,
     int Elites
   )
-    : base(Evaluator, Terminator, Interceptor, Observer)
+    : base(Evaluator, Terminator, Interceptor)
   {
     this.PopulationSize = PopulationSize;
     this.Selector = Selector;

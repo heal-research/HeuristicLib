@@ -24,7 +24,7 @@ public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> : IAlg
 
   public IInterceptor<TG, TR, TS, TP>? Interceptor { get; set; }
 
-  public IIterationObserver<TG, TS, TP, TR>? Observer { get; set; }
+  // public IIterationObserver<TG, TS, TP, TR>? Observer { get; set; }
 
   public void AddRewriter<TRewriter>(TRewriter rewriter)
     where TRewriter : IAlgorithmBuilderRewriter<TBuildSpec>

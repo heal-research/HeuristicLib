@@ -24,7 +24,6 @@ public class TerminatableAlgorithm<TG, TS, TP, TR>
   {
     return new TerminatableAlgorithmInstance<TG, TS, TP, TR>(
       Evaluator,
-      Observer,
       Algorithm,
       Terminator
     );
@@ -40,8 +39,8 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<T
   protected readonly IAlgorithm<TG, TS, TP, TR> Algorithm;
   protected readonly ITerminator<TG, TR, TS, TP> Terminator;
 
-  public TerminatableAlgorithmInstance(IEvaluator<TG, TS, TP> evaluator, IIterationObserver<TG, TS, TP, TR>? observer, IAlgorithm<TG, TS, TP, TR> algorithm, ITerminator<TG, TR, TS, TP> terminator) 
-    : base(evaluator, observer)
+  public TerminatableAlgorithmInstance(IEvaluator<TG, TS, TP> evaluator, IAlgorithm<TG, TS, TP, TR> algorithm, ITerminator<TG, TR, TS, TP> terminator) 
+    : base(evaluator)
   {
     Algorithm = algorithm;
     Terminator = terminator;

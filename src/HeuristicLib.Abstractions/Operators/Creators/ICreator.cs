@@ -10,7 +10,6 @@ public interface ICreator<TGenotype, in TSearchSpace, in TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-
 }
 
 public interface ICreatorInstance<TGenotype, in TSearchSpace, in TProblem>

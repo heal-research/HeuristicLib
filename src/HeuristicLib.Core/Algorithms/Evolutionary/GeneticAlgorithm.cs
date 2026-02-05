@@ -49,7 +49,6 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
       Selector,
       Replacer,
       Evaluator,
-      Observer,
       Interceptor
     );
   }
@@ -79,10 +78,9 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
     ISelector<TGenotype, TSearchSpace, TProblem> selector,
     IReplacer<TGenotype, TSearchSpace, TProblem> replacer,
     IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
-    IIterationObserver<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? observer,
     IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor
   )
-    : base(interceptor, evaluator, observer)
+    : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
     Creator = creator;

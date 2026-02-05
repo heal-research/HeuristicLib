@@ -28,7 +28,7 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
   public int Elites { get; set; } = 1;
 
   public override GeneticAlgorithmBuildSpec<TG, TS, TP> CreateBuildSpec() => new(
-    Evaluator, Terminator, Interceptor, Observer, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites
+    Evaluator, Terminator, Interceptor, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites
   );
 
   public override GeneticAlgorithm<TG, TS, TP> BuildFromSpec(GeneticAlgorithmBuildSpec<TG, TS, TP> spec)
