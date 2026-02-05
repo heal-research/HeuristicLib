@@ -67,13 +67,13 @@ public interface ISelectorObserver<in T, in TS, in TP>
   void AfterSelection(IReadOnlyList<ISolution<T>> res, IReadOnlyList<ISolution<T>> population, Objective objective, int count, IRandomNumberGenerator random, TS searchSpace, TP problem);
 }
 
-public interface ICreatorObserver<in T, in TS, in TP>
-  where T : class
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
-{
-  void AfterCreation(IReadOnlyList<T> res, int count, IRandomNumberGenerator random, TS searchSpace, TP problem) { }
-}
+// public interface ICreatorObserver<in T, in TS, in TP>
+//   where T : class
+//   where TS : class, ISearchSpace<T>
+//   where TP : class, IProblem<T, TS>
+// {
+//   void AfterCreation(IReadOnlyList<T> res, int count, IRandomNumberGenerator random, TS searchSpace, TP problem) { }
+// }
 #endregion
 
 #region convenience Interfaces
@@ -161,13 +161,13 @@ public static class ObserverHelper
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS> => new ObserverSelector<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
 
-  public static ICreator<T1, TS1, TP1> WrapCreator<T1, TS1, TP1, T, TS, TP>(this ICreatorObserver<T, TS, TP> observer, ICreator<T1, TS1, TP1> interceptor)
-    where T1 : class, T
-    where TS1 : class, ISearchSpace<T1>, TS
-    where TP1 : class, IProblem<T1, TS1>, TP
-    where T : class
-    where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<T, TS> => new ObserverCreator<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
+  // public static ICreator<T1, TS1, TP1> WrapCreator<T1, TS1, TP1, T, TS, TP>(this ICreatorObserver<T, TS, TP> observer, ICreator<T1, TS1, TP1> interceptor)
+  //   where T1 : class, T
+  //   where TS1 : class, ISearchSpace<T1>, TS
+  //   where TP1 : class, IProblem<T1, TS1>, TP
+  //   where T : class
+  //   where TS : class, ISearchSpace<T>
+  //   where TP : class, IProblem<T, TS> => new ObserverCreator<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
   #endregion
 
   #region WrapperClasses
@@ -236,7 +236,7 @@ public static class ObserverHelper
       return q;
     }
 
-    public IReadOnlyList<ObjectiveVector> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Evaluate(input, context.Random, context.SearchSpace, context.Problem);
+    //public IReadOnlyList<ObjectiveVector> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Evaluate(input, context.Random, context.SearchSpace, context.Problem);
   }
 
   private sealed class ObserverMutator<T1, TS1, TP1, T, TS, TP>(
@@ -257,7 +257,7 @@ public static class ObserverHelper
       return res;
     }
 
-    public IReadOnlyList<T1> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Mutate(input, context.Random, context.SearchSpace, context.Problem);
+    //public IReadOnlyList<T1> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Mutate(input, context.Random, context.SearchSpace, context.Problem);
   }
 
   private sealed class ObserverCrossover<T1, TS1, TP1, T, TS, TP>(
@@ -297,24 +297,24 @@ public static class ObserverHelper
     }
   }
 
-  private sealed class ObserverCreator<T1, TS1, TP1, T, TS, TP>(
-    ICreatorObserver<T, TS, TP> analysis,
-    ICreator<T1, TS1, TP1> selector)
-    : ICreator<T1, TS1, TP1>
-    where T1 : class, T
-    where TS1 : class, ISearchSpace<T1>, TS
-    where TP1 : class, IProblem<T1, TS1>, TP
-    where T : class
-    where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<T, TS>
-  {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IReadOnlyList<T1> Create(int count, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem)
-    {
-      var res = selector.Create(count, random, searchSpace, problem);
-      analysis.AfterCreation(res, count, random, searchSpace, problem);
-      return res;
-    }
-  }
+  // private sealed class ObserverCreator<T1, TS1, TP1, T, TS, TP>(
+  //   ICreatorObserver<T, TS, TP> analysis,
+  //   ICreator<T1, TS1, TP1> selector)
+  //   : ICreator<T1, TS1, TP1>
+  //   where T1 : class, T
+  //   where TS1 : class, ISearchSpace<T1>, TS
+  //   where TP1 : class, IProblem<T1, TS1>, TP
+  //   where T : class
+  //   where TS : class, ISearchSpace<T>
+  //   where TP : class, IProblem<T, TS>
+  // {
+  //   [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  //   public IReadOnlyList<T1> Create(int count, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem)
+  //   {
+  //     var res = selector.Create(count, random, searchSpace, problem);
+  //     analysis.AfterCreation(res, count, random, searchSpace, problem);
+  //     return res;
+  //   }
+  // }
   #endregion
 }

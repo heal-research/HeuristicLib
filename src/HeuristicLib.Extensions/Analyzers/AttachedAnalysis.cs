@@ -84,7 +84,7 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
     hasAfterSelect ? new AnalysisSelector<T1, TS1, TP1>(this, selector) : selector;
 
   public override ICreator<T1, TS1, TP1> WrapCreator<T1, TS1, TP1>(ICreator<T1, TS1, TP1> creator) =>
-    hasAfterCreate ? new AnalysisCreator<T1, TS1, TP1>(this, creator) : creator;
+    hasAfterCreate ? creator.ObserveWith(AfterCreation) : creator;
   #endregion
 
   #region wrappers (unchanged behavior)
@@ -140,7 +140,7 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
       analysis.AfterEvaluation(genotypes, q, searchSpace, problem);
       return q;
     }
-    public IReadOnlyList<ObjectiveVector> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Evaluate(input, context.Random, context.SearchSpace, context.Problem);
+    //public IReadOnlyList<ObjectiveVector> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Evaluate(input, context.Random, context.SearchSpace, context.Problem);
   }
 
   private sealed class AnalysisMutator<T1, TS1, TP1>(
@@ -155,7 +155,7 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
       analysis.AfterMutation(res, parent, random, searchSpace, problem);
       return res;
     }
-    public IReadOnlyList<T1> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Mutate(input, context.Random, context.SearchSpace, context.Problem);
+    //public IReadOnlyList<T1> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Mutate(input, context.Random, context.SearchSpace, context.Problem);
   }
 
   private sealed class AnalysisCrossOver<T1, TS1, TP1>(AttachedAnalysis<T, TS, TP, TRes> analysis, ICrossover<T1, TS1, TP1> crossover)
@@ -184,18 +184,18 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
     }
   }
 
-  private sealed class AnalysisCreator<T1, TS1, TP1>(AttachedAnalysis<T, TS, TP, TRes> analysis, ICreator<T1, TS1, TP1> selector)
-    : ICreator<T1, TS1, TP1>
-    where T1 : class, T
-    where TS1 : class, ISearchSpace<T1>, TS
-    where TP1 : class, IProblem<T1, TS1>, TP {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IReadOnlyList<T1> Create(int count, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem) {
-      var res = selector.Create(count, random, searchSpace, problem);
-      analysis.AfterCreation(res, count, random, searchSpace, problem);
-      return res;
-    }
-  }
+  // private sealed class AnalysisCreator<T1, TS1, TP1>(AttachedAnalysis<T, TS, TP, TRes> analysis, ICreator<T1, TS1, TP1> selector)
+  //   : ICreator<T1, TS1, TP1>
+  //   where T1 : class, T
+  //   where TS1 : class, ISearchSpace<T1>, TS
+  //   where TP1 : class, IProblem<T1, TS1>, TP {
+  //   [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  //   public IReadOnlyList<T1> Create(int count, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem) {
+  //     var res = selector.Create(count, random, searchSpace, problem);
+  //     analysis.AfterCreation(res, count, random, searchSpace, problem);
+  //     return res;
+  //   }
+  // }
   #endregion
 
   // ---- default hooks (optionally overridden by users) ----
