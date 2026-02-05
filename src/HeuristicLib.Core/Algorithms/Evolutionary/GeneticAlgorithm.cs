@@ -34,7 +34,7 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   } = 0.1;
 
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
-  public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
+  public IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; } = new ElitismReplacer<TGenotype>(1);
 
   public override GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
