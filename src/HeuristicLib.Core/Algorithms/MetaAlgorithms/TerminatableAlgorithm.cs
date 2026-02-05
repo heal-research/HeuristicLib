@@ -1,4 +1,7 @@
-﻿using HEAL.HeuristicLib.Operators.Terminators;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Observation;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -15,6 +18,34 @@ public class TerminatableAlgorithm<TG, TS, TP, TR>
 {
   public required IAlgorithm<TG, TS, TP, TR> Algorithm { get; init; }
   public required ITerminator<TG, TR, TS, TP> Terminator { get; init; }
+
+
+  public override TerminatableAlgorithmInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    return new TerminatableAlgorithmInstance<TG, TS, TP, TR>(
+      Evaluator,
+      Observer,
+      Algorithm,
+      Terminator
+    );
+  }
+}
+
+public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<TG, TS, TP, TR>
+  where TG : class
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+  where TR : class, IAlgorithmState
+{
+  protected readonly IAlgorithm<TG, TS, TP, TR> Algorithm;
+  protected readonly ITerminator<TG, TR, TS, TP> Terminator;
+
+  public TerminatableAlgorithmInstance(IEvaluator<TG, TS, TP> evaluator, IIterationObserver<TG, TS, TP, TR>? observer, IAlgorithm<TG, TS, TP, TR> algorithm, ITerminator<TG, TR, TS, TP> terminator) 
+    : base(evaluator, observer)
+  {
+    Algorithm = algorithm;
+    Terminator = terminator;
+  }
 
   public override async IAsyncEnumerable<TR> RunStreamingAsync(TP problem, IRandomNumberGenerator random, TR? initialState, CancellationToken ct = default)
   {

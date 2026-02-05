@@ -1,4 +1,6 @@
-﻿using HEAL.HeuristicLib.Operators.Creators;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Observation;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
@@ -33,6 +35,64 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
   public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
+
+  public override GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
+
+    return new GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
+      PopulationSize,
+      creatorInstance,
+      Crossover,
+      Mutator,
+      MutationRate,
+      Selector,
+      Replacer,
+      Evaluator,
+      Observer,
+      Interceptor
+    );
+  }
+
+}
+
+public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TGenotype : class
+{
+  protected readonly int PopulationSize;
+  protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
+  protected readonly ICrossover<TGenotype, TSearchSpace, TProblem> Crossover;
+  protected readonly IMutator<TGenotype, TSearchSpace, TProblem> Mutator;
+  protected readonly double MutationRate;
+  protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
+  protected readonly IReplacer<TGenotype, TSearchSpace, TProblem> Replacer;
+  
+  public GeneticAlgorithmInstance(
+    int populationSize,
+    ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator,
+    ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
+    IMutator<TGenotype, TSearchSpace, TProblem> mutator,
+    double mutationRate,
+    ISelector<TGenotype, TSearchSpace, TProblem> selector,
+    IReplacer<TGenotype, TSearchSpace, TProblem> replacer,
+    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
+    IIterationObserver<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? observer,
+    IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor
+  )
+    : base(interceptor, evaluator, observer)
+  {
+    PopulationSize = populationSize;
+    Creator = creator;
+    Crossover = crossover;
+    Mutator = mutator;
+    MutationRate = mutationRate;
+    Selector = selector;
+    Replacer = replacer;
+  }
+  
 
   public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {

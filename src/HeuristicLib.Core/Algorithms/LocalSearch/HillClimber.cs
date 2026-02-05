@@ -1,4 +1,8 @@
-﻿using HEAL.HeuristicLib.Operators.Creators;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Observation;
+using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
@@ -21,10 +25,50 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
   public required int MaxNeighbors { get; init; }
   public required int BatchSize { get; init; }
 
+  public override HillClimberInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
+
+    return new HillClimberInstance<TGenotype, TSearchSpace, TProblem>(
+      Interceptor,
+      Evaluator,
+      Observer,
+      creatorInstance,
+      Mutator,
+      Direction,
+      MaxNeighbors,
+      BatchSize
+    );
+  }
+  
+}
+
+public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TGenotype : class
+{
+  protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
+  protected readonly IMutator<TGenotype, TSearchSpace, TProblem> Mutator;
+  protected readonly LocalSearchDirection Direction;
+  protected readonly int MaxNeighbors;
+  protected readonly int BatchSize;
+
+  public HillClimberInstance(IInterceptor<TGenotype, SingleSolutionState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>>? observer, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator, LocalSearchDirection direction, int maxNeighbors, int batchSize) 
+    : base(interceptor, evaluator, observer)
+  {
+    Creator = creator;
+    Mutator = mutator;
+    Direction = direction;
+    MaxNeighbors = maxNeighbors;
+    BatchSize = batchSize;
+  }
+  
   public override SingleSolutionState<TGenotype> ExecuteStep(SingleSolutionState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {
-      var initialSolution = Creator.Create(random, problem.SearchSpace, problem);
+      var initialSolution = Creator.Create(1, random, problem.SearchSpace, problem)[0];
       var initialFitness = Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
       return new SingleSolutionState<TGenotype> {
         Population = Population.From([initialSolution], [initialFitness]),

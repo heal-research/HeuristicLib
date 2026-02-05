@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Observation;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -31,6 +32,54 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSear
 
   public required int MaxEffort { get; init; }
 
+  public override OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
+    return new OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
+      Interceptor,
+      Evaluator,
+      Observer,
+      PopulationSize,
+      creatorInstance,
+      Crossover,
+      Mutator,
+      Selector,
+      Elites,
+      MaxEffort,
+      Strictness
+    );
+  }
+}
+
+public class OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TGenotype : class
+{
+  protected readonly int PopulationSize;
+  protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
+  protected readonly ICrossover<TGenotype, TSearchSpace, TProblem> Crossover;
+  protected readonly IMutator<TGenotype, TSearchSpace, TProblem> Mutator;
+  protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
+  protected readonly int Elites;
+  protected readonly int MaxEffort;
+  protected readonly double Strictness = 1.0;
+
+
+  public OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance(IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? observer, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossover<TGenotype, TSearchSpace, TProblem> crossover, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ISelector<TGenotype, TSearchSpace, TProblem> selector, int elites, int maxEffort, double strictness) 
+    : base(interceptor, evaluator, observer)
+  {
+    PopulationSize = populationSize;
+    Creator = creator;
+    Crossover = crossover;
+    Mutator = mutator;
+    Selector = selector;
+    Elites = elites;
+    MaxEffort = maxEffort;
+    Strictness = strictness;
+  }
+  
   private PopulationState<TGenotype> CreateInitialPopulation(TProblem problem, IRandomNumberGenerator random)
   {
     var initialSolutions = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
@@ -172,16 +221,16 @@ public sealed record OERAPGABuildSpec<TG, TS, TP>
   }
 }
 
-public static class OpenEndedRelevantAllelesPreservingGeneticAlgorithm
-{
-  public static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
-    ICreator<TGenotype, TSearchSpace, TProblem> creator,
-    ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
-    IMutator<TGenotype, TSearchSpace, TProblem> mutator)
-    where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class => new() {
-    Mutator = mutator,
-    Crossover = crossover,
-    Creator = creator,
-    MaxEffort = 200
-  };
-}
+// public static class OpenEndedRelevantAllelesPreservingGeneticAlgorithm
+// {
+//   public static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>.Builder GetBuilder<TGenotype, TSearchSpace, TProblem>(
+//     ICreator<TGenotype, TSearchSpace, TProblem> creator,
+//     ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
+//     IMutator<TGenotype, TSearchSpace, TProblem> mutator)
+//     where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class => new() {
+//     Mutator = mutator,
+//     Crossover = crossover,
+//     Creator = creator,
+//     MaxEffort = 200
+//   };
+// }

@@ -1,5 +1,4 @@
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.StateTransformers;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,7 +7,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms;
 
 public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
-  : IStateTransformer<TAlgorithmState, TGenotype, TSearchSpace, TProblem>
+  : IExecutable<IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -16,14 +15,14 @@ public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmS
 {
   new IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
   
-  IStateTransformerInstance<TAlgorithmState, TGenotype, TSearchSpace, TProblem> IOperator<IStateTransformerInstance<TAlgorithmState, TGenotype, TSearchSpace, TProblem>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => 
-    CreateExecutionInstance(instanceRegistry);
+  // IStateTransformerInstance<TAlgorithmState, TGenotype, TSearchSpace, TProblem> IExecutable<IStateTransformerInstance<TAlgorithmState, TGenotype, TSearchSpace, TProblem>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+  //   CreateExecutionInstance(instanceRegistry);
   
   //IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; }
 }
 
 public interface IAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
-  : IStateTransformerInstance<TAlgorithmState, TGenotype, TSearchSpace, TProblem>
+  : IExecutionInstance
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>

@@ -1,5 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Collections;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Observation;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -25,12 +28,46 @@ public class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TA
     Algorithms = new ImmutableList<TAlgorithm>(algorithms);
   }
 
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState, [EnumeratorCancellation] CancellationToken ct = default)
+  public override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
+      Evaluator,
+      Observer,
+      Algorithms
+    );
+  }
+
+}
+
+public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TAlgorithmState : class, IAlgorithmState
+  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+{
+  protected readonly ImmutableList<TAlgorithm> Algorithms;
+
+  public PipelineAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? observer, ImmutableList<TAlgorithm> algorithms) 
+    : base(evaluator, observer) => Algorithms = algorithms;
+
+  public PipelineAlgorithmInstance(
+    ImmutableList<TAlgorithm> algorithms,
+    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
+    IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? observer)
+    : base(evaluator, observer)
+  {
+    Algorithms = algorithms;
+  }
+
+public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 
     foreach (var (algorithm, index) in Algorithms.Select((a, i) => (Algorithm: a, Index: i))) {
       var algRng = random.Fork(index);
+      // run new fresh stream here
       await foreach (var newState in algorithm.RunStreamingAsync(problem, algRng, state, ct)) {
         state = newState;
         yield return newState;

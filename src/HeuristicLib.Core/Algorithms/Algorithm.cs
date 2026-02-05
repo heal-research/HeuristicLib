@@ -1,7 +1,6 @@
-﻿using HEAL.HeuristicLib.Observation;
-using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Operators.StateTransformers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -18,7 +17,7 @@ public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmSta
 {
   //public required ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> Terminator { get; init; }
   //public IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; init; }
-  //public IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; init; }
+  public IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; init; }
 
   public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TGenotype>();
 
@@ -33,13 +32,29 @@ public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgo
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
+  protected readonly IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator;
 
+  protected readonly IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer;
+
+  protected AlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? observer)
+  {
+    Evaluator = evaluator;
+    Observer = observer;
+  }
+  
   public abstract IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
     TProblem problem,
     IRandomNumberGenerator random,
     TAlgorithmState? initialState = null,
     CancellationToken ct = default);
+  
   //public TAlgorithmState Transform(TAlgorithmState? state, IRandomNumberGenerator randomNumberGenerator, TSearchSpace searchSpace, TProblem problem) => throw new NotImplementedException();
+
+  // public virtual TAlgorithmState Transform(TAlgorithmState? state, IRandomNumberGenerator randomNumberGenerator, TSearchSpace searchSpace, TProblem problem)
+  // {
+  //   // ToDo: should be abstract but some algorithms are easier to implement by override RunStreamingAsync instead of the Step function
+  //   throw new NotImplementedException();
+  // }
 }
 
 public static class AlgorithmExtensions

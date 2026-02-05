@@ -14,7 +14,7 @@ public interface ICreator<TGenotype, in TSearchSpace, in TProblem>
 }
 
 public interface ICreatorInstance<TGenotype, in TSearchSpace, in TProblem>
-  : IExecutionInstance
+  : IOperatorInstance
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>

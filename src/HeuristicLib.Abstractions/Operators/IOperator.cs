@@ -1,11 +1,13 @@
+using HEAL.HeuristicLib.Execution;
+
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IOperator<out TExecutionInstance>
-  where TExecutionInstance : IExecutionInstance
+public interface IOperator<out TExecutionInstance> : IExecutable<TExecutionInstance>
+  where TExecutionInstance : IOperatorInstance
 {
-  TExecutionInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+  new TExecutionInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
-public interface IExecutionInstance
+public interface IOperatorInstance : IExecutionInstance
 {
 }

@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators;
+namespace HEAL.HeuristicLib.Execution;
 
 // Note on usage: 
 // Per default, most operators will use the Sequential execution to simplify batch creation.

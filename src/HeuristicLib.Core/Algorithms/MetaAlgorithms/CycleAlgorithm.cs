@@ -1,5 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Collections;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Observation;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -18,7 +21,7 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
   where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
   public ImmutableList<TAlgorithm> Algorithms { get; }
-  
+
   // ToDo: think if better place outside and keep CycleAlgorithm as infinite cycles?
   public int? MaximumCycles { get; init; }
 
@@ -27,7 +30,36 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
     Algorithms = new ImmutableList<TAlgorithm>(algorithms);
   }
 
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState, [EnumeratorCancellation] CancellationToken ct = default)
+  public override CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    return new CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
+      Evaluator,
+      Observer,
+      Algorithms.ToList(),
+      MaximumCycles
+    );
+  }
+}
+
+public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TAlgorithmState : class, IAlgorithmState
+  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+{
+  protected readonly IReadOnlyList<TAlgorithm> Algorithms;
+  protected readonly int? MaximumCycles;
+  
+  public CycleAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? observer, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles) 
+    : base(evaluator, observer)
+  {
+    Algorithms = algorithms;
+    MaximumCycles = maximumCycles;
+  }
+
+  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 
@@ -39,6 +71,7 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
       var cycleRng = random.Fork(cycleCount);
       foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i))) {
         var algorithmRng = cycleRng.Fork(algorithmIndex);
+        // purposefully running the algorithm here to create a new stream
         await foreach (var newState in algorithm.RunStreamingAsync(problem, algorithmRng, state, ct)) {
           state = newState;
           yield return newState;

@@ -1,5 +1,9 @@
-﻿using HEAL.HeuristicLib.Operators.Creators;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Observation;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
@@ -24,6 +28,48 @@ public class NSGA2<TGenotype, TSearchSpace, TProblem>
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
   public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
 
+  public override NSGA2Instance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
+    return new NSGA2Instance<TGenotype, TSearchSpace, TProblem>(
+      Interceptor,
+      Evaluator,
+      Observer,
+      PopulationSize,
+      creatorInstance,
+      Crossover,
+      Mutator,
+      Selector,
+      Replacer
+    );
+  }
+}
+
+public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
+  : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TGenotype : class
+{
+  protected readonly int PopulationSize;
+  protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
+  protected readonly ICrossover<TGenotype, TSearchSpace, TProblem> Crossover;
+  protected readonly IMutator<TGenotype, TSearchSpace, TProblem> Mutator;
+  protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
+  protected readonly IReplacer<TGenotype, TSearchSpace, TProblem> Replacer;
+
+
+  public NSGA2Instance(IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IIterationObserver<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? observer, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossover<TGenotype, TSearchSpace, TProblem> crossover, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ISelector<TGenotype, TSearchSpace, TProblem> selector, IReplacer<TGenotype, TSearchSpace, TProblem> replacer) 
+    : base(interceptor, evaluator, observer)
+  {
+    PopulationSize = populationSize;
+    Creator = creator;
+    Crossover = crossover;
+    Mutator = mutator;
+    Selector = selector;
+    Replacer = replacer;
+  }
+  
   public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {
