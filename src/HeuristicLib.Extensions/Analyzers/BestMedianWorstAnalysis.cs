@@ -1,13 +1,40 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Observers;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analyzers;
 
 public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, ISolution<T> Worst);
+
+//public class MyAnalyzer<T> : IEvaluatorObserver<T> where T : class
+//{
+//  public void AfterEvaluation(IReadOnlyList<T> genotypes,
+//                              IReadOnlyList<ObjectiveVector> values,
+//                              ISearchSpace<T> searchSpace,
+//                              IProblem<T, ISearchSpace<T>> problem)
+//  {
+//    throw new NotImplementedException();
+//  }
+
+//  //public static void test()
+//  //{
+//  //  var p = new TestFunctionProblem(new AckleyFunction(2));
+//  //  IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> eval = null!;
+//  //  var countr = new MyAnalyzer<RealVector>();
+//  //  IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> wrapped = countr.WrapEvaluator(eval);
+//  //  wrapped.Evaluate([new RealVector([1,2])], RandomNumberGenerator.Create(0, RandomProfile.NoRandom), p.SearchSpace, p);
+//  //  IEvaluator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> x = eval;
+//  //}
+//}
 
 public class BestMedianWorstAnalysis<TGenotype> : IInterceptorObserver<TGenotype, PopulationState<TGenotype>> where TGenotype : class
 {
