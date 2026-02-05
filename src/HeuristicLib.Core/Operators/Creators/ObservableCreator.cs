@@ -20,9 +20,9 @@ public class ObservableCreator<TG, TS, TP>
     this.observers = observers;
   }
   
-  public ICreatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionScope scope)
+  public ICreatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = scope.GetOrAdd(creator, () => creator.CreateExecutionInstance(scope));
+    var creatorInstance = instanceRegistry.GetOrAdd(creator, () => creator.CreateExecutionInstance(instanceRegistry));
 
     return new ObservableCreatorInstance(creatorInstance, observers);
   }

@@ -19,9 +19,9 @@ public class PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
     this.creatorForRemainingSolutions = creatorForRemainingSolutions;
   }
 
-  public override PredefinedSolutionsCreatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionScope scope)
+  public override PredefinedSolutionsCreatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorForRemainingSolutionsInstance = scope.GetOrAdd(creatorForRemainingSolutions, () => this.creatorForRemainingSolutions.CreateExecutionInstance(scope));
+    var creatorForRemainingSolutionsInstance = instanceRegistry.GetOrAdd(creatorForRemainingSolutions, () => this.creatorForRemainingSolutions.CreateExecutionInstance(instanceRegistry));
     return new PredefinedSolutionsCreatorInstance<TGenotype, TSearchSpace, TProblem>(this.predefinedSolutions, creatorForRemainingSolutionsInstance);
   }
 }

@@ -84,7 +84,7 @@ public abstract class SingleSolutionStatelessCreator<TGenotype, TSearchSpace>
 }
 
 public abstract class SingleSolutionStatelessCreator<TGenotype>
-  : StatelessCreator<TGenotype>, ICreatorInstance<TGenotype>
+  : StatelessCreator<TGenotype>
   where TGenotype : class
 {
   public abstract TGenotype Create(IRandomNumberGenerator random);

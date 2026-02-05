@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Observation;
 
+[Obsolete("Better use the ObservableTransformer that is implemented on algorithms.")]
 public interface IIterationObserver<in TG, in TS, in TP, in TR>
   where TG : class
   where TS : class, ISearchSpace<TG>
