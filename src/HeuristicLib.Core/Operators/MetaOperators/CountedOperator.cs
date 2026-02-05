@@ -10,66 +10,66 @@ public sealed class InvocationCounter
 
   public int CurrentCount => currentCount;
   
-  public void Increment(int by = 1)
+  public void IncrementBy(int by)
   {
     Interlocked.Add(ref currentCount, by);
   }
 }
 
-[Obsolete("Can be handled via ObservedOperator that gets the counter as observer.")]
-public class CountedOperator<TInput, TContext, TOutput> : IOperator<TInput, TContext, TOutput>
-{
-  private readonly IOperator<TInput, TContext, TOutput> @operator;
-  private readonly InvocationCounter counter;
-
-  public CountedOperator(IOperator<TInput, TContext, TOutput> @operator, InvocationCounter counter)
-  {
-    this.@operator = @operator;
-    this.counter = counter;
-  }
-
-  public TOutput Execute(TInput input, TContext context)
-  {
-    var result = @operator.Execute(input, context);
-    // ToDo: figure out the internal counter?
-    counter.Increment();
-    return result;
-  }
-}
-
-public static class CountedOperator
-{
-  // Maybe move to Mutator namespace?
-  extension<TInput, TContext, TOutput>(IOperator<TInput, TContext, TOutput> @operator)
-  {
-    public CountedOperator<TInput, TContext, TOutput> CountInvocations(out InvocationCounter counter)
-    {
-      counter = new InvocationCounter();
-      return @operator.CountInvocations(counter);
-    }
-    
-    public CountedOperator<TInput, TContext, TOutput> CountInvocations(InvocationCounter counter)
-    {
-      return new CountedOperator<TInput, TContext, TOutput>(@operator, counter);
-    }
-  }
-  
-  // ToDo: think if we really want this to avoid combinatorial explosion of extension methods
-  extension<TG, TS, TP>(IMutator<TG, TS, TP> mutator)
-    where TS : class, ISearchSpace<TG>
-    where TP : class, IProblem<TG, TS>
-  {
-    public IMutator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
-    {
-      counter = new InvocationCounter();
-      return mutator.CountInvocations(counter);
-    }
-    
-    public IMutator<TG, TS, TP> CountInvocations(InvocationCounter counter)
-    {
-      var @operator = mutator.AsOperator().CountInvocations(counter);
-      return @operator.AsMutator();
-    }
-  }
-}
-
+// [Obsolete("Can be handled via ObservedOperator that gets the counter as observer.")]
+// public class CountedOperator<TInput, TContext, TOutput> : IOperator<TInput, TContext, TOutput>
+// {
+//   private readonly IOperator<TInput, TContext, TOutput> @operator;
+//   private readonly InvocationCounter counter;
+//
+//   public CountedOperator(IOperator<TInput, TContext, TOutput> @operator, InvocationCounter counter)
+//   {
+//     this.@operator = @operator;
+//     this.counter = counter;
+//   }
+//
+//   public TOutput Execute(TInput input, TContext context)
+//   {
+//     var result = @operator.Execute(input, context);
+//     // ToDo: figure out the internal counter?
+//     counter.IncrementBy();
+//     return result;
+//   }
+// }
+//
+// public static class CountedOperator
+// {
+//   // Maybe move to Mutator namespace?
+//   extension<TInput, TContext, TOutput>(IOperator<TInput, TContext, TOutput> @operator)
+//   {
+//     public CountedOperator<TInput, TContext, TOutput> CountInvocations(out InvocationCounter counter)
+//     {
+//       counter = new InvocationCounter();
+//       return @operator.CountInvocations(counter);
+//     }
+//     
+//     public CountedOperator<TInput, TContext, TOutput> CountInvocations(InvocationCounter counter)
+//     {
+//       return new CountedOperator<TInput, TContext, TOutput>(@operator, counter);
+//     }
+//   }
+//   
+//   // ToDo: think if we really want this to avoid combinatorial explosion of extension methods
+//   extension<TG, TS, TP>(IMutator<TG, TS, TP> mutator)
+//     where TS : class, ISearchSpace<TG>
+//     where TP : class, IProblem<TG, TS>
+//   {
+//     public IMutator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
+//     {
+//       counter = new InvocationCounter();
+//       return mutator.CountInvocations(counter);
+//     }
+//     
+//     public IMutator<TG, TS, TP> CountInvocations(InvocationCounter counter)
+//     {
+//       var @operator = mutator.AsOperator().CountInvocations(counter);
+//       return @operator.AsMutator();
+//     }
+//   }
+// }
+//
