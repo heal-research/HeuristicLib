@@ -20,20 +20,21 @@ public class PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
     this.creatorForRemainingSolutions = creatorForRemainingSolutions;
   }
 
-  public override PredefinedSolutionsCreatorInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorForRemainingSolutionsInstance = instanceRegistry.GetOrAdd(creatorForRemainingSolutions, () => this.creatorForRemainingSolutions.CreateExecutionInstance(instanceRegistry));
-    return new PredefinedSolutionsCreatorInstance(this.predefinedSolutions, creatorForRemainingSolutionsInstance);
+    return new Instance(this.predefinedSolutions, creatorForRemainingSolutionsInstance);
   }
   
-  public class PredefinedSolutionsCreatorInstance : CreatorInstance<TGenotype, TSearchSpace, TProblem>
+  public class Instance 
+    : CreatorInstance<TGenotype, TSearchSpace, TProblem>
   {
     private int currentSolutionIndex;
     
     private readonly IReadOnlyList<TGenotype> predefinedSolutions;
     private readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance;
     
-    public PredefinedSolutionsCreatorInstance(IReadOnlyList<TGenotype> predefinedSolutions, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance)
+    public Instance(IReadOnlyList<TGenotype> predefinedSolutions, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance)
     {
       this.predefinedSolutions = predefinedSolutions;
       this.creatorForRemainingSolutionsInstance = creatorForRemainingSolutionsInstance;

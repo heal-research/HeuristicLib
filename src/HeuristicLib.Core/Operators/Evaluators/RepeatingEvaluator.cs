@@ -1,38 +1,14 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-// public class DeterministicProblemEvaluator<TGenotype> : IEvaluator<TGenotype>
-// {
-//   private readonly IDeterministicProblem<TGenotype> problem;
-//   public DeterministicProblemEvaluator(IDeterministicProblem<TGenotype> problem) {
-//     this.problem = problem;
-//   }
-//
-//   public double Evaluate(TGenotype Solution) {
-//     return problem.Evaluate(Solution);
-//   }
-// }
-//
-// public class StochasticEvaluator<TGenotype> : IEvaluator<TGenotype>
-// {
-//   private readonly IStochasticProblem<TGenotype> problem;
-//   private readonly IRandomNumberGenerator random;
-//   
-//   public StochasticEvaluator(IStochasticProblem<TGenotype> problem, IRandomNumberGenerator random) {
-//     this.problem = problem;
-//     this.random = random;
-//   }
-//
-//   public double Evaluate(TGenotype Solution) {
-//     return problem.Evaluate(Solution, random);
-//   }
-// }
-
-public class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem> : Evaluator<TGenotype, TSearchSpace, TProblem>
+public class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
+  : Evaluator<TGenotype, TSearchSpace, TProblem>
+  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -47,17 +23,39 @@ public class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem> : Evaluator<T
     this.aggregator = aggregator;
   }
 
-  public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> solutions, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+  public override IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var results = evaluator.Evaluate(solutions, random, searchSpace, problem).ToArray();
+    // ToDo: think about if we want a fresh evaluation or the the same evaluation instance as the base for the repeated evaluations. 
+    // Currently we use the same instance to maintain state such as caches.
+    var evaluatorInstance = instanceRegistry.GetOrAdd(evaluator, () => this.evaluator.CreateExecutionInstance(instanceRegistry));
+    return new Instance(evaluatorInstance, repeats, aggregator);
+  }
 
-    for (var i = 0; i < repeats; i++) {
-      var reevaluationResult = evaluator.Evaluate(solutions, random, searchSpace, problem);
-      for (var j = 0; j < results.Length; j++) {
-        results[j] = aggregator(results[j], reevaluationResult[j]);
-      }
+  public class Instance : EvaluatorInstance<TGenotype, TSearchSpace, TProblem>
+  {
+    private readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator;
+    private readonly int repeats;
+    private readonly Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator;
+
+    public Instance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
+    {
+      this.evaluator = evaluator;
+      this.repeats = repeats;
+      this.aggregator = aggregator;
     }
 
-    return results;
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    {
+      var results = evaluator.Evaluate(genotypes, random, searchSpace, problem).ToArray();
+
+      for (var i = 0; i < repeats; i++) {
+        var reevaluationResult = evaluator.Evaluate(genotypes, random, searchSpace, problem);
+        for (var j = 0; j < results.Length; j++) {
+          results[j] = aggregator(results[j], reevaluationResult[j]);
+        }
+      }
+
+      return results;
+    }
   }
 }

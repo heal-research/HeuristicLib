@@ -11,9 +11,9 @@ namespace HEAL.HeuristicLib.Execution;
 
 public static class BatchExecution
 {
-  public static IReadOnlyList<T> Sequential<T>(int count, Func<IRandomNumberGenerator, T> func, IRandomNumberGenerator random)
+  public static IReadOnlyList<TOut> Sequential<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
   {
-    var result = new T[count];
+    var result = new TOut[count];
     for (int i = 0; i < count; i++) {
       var rng = random.Fork(i);
       result[i] = func(rng);
@@ -21,17 +21,17 @@ public static class BatchExecution
     return result;
   }
 
-  public static IReadOnlyList<T> Sequential<T>(IReadOnlyList<T> list, Func<IRandomNumberGenerator, T> func, IRandomNumberGenerator random)
+  public static IReadOnlyList<TOut> Sequential<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
   {
-    var result = new T[list.Count];
+    var result = new TOut[list.Count];
     for (int i = 0; i < list.Count; i++) {
       var rng = random.Fork(i);
-      result[i] = func(rng);
+      result[i] = func(list[i], rng);
     }
     return result;
   }
   
-  public static IReadOnlyList<T> Parallel<T>(int count, Func<IRandomNumberGenerator, T> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
+  public static IReadOnlyList<TOut> Parallel<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
   {
     ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, 1);
 
@@ -41,7 +41,7 @@ public static class BatchExecution
     
     var partitions = Partitioner.Create(0, count);
     var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
-    var result = new T[count];
+    var result = new TOut[count];
     System.Threading.Tasks.Parallel.ForEach(partitions, options, range => {
       var (start, end) = range;
       for (int i = start; i < end; i++) {
@@ -52,7 +52,7 @@ public static class BatchExecution
     return result;
   }
 
-  public static IReadOnlyList<T> Parallel<T>(IReadOnlyList<T> list, Func<IRandomNumberGenerator, T> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
+  public static IReadOnlyList<TOut> Parallel<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
   {
     ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, 1);
 
@@ -61,12 +61,12 @@ public static class BatchExecution
     }
     var partitions = Partitioner.Create(0, list.Count);
     var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
-    var result = new T[list.Count];
+    var result = new TOut[list.Count];
     System.Threading.Tasks.Parallel.ForEach(partitions, options, range => {
       var (start, end) = range;
       for (int i = start; i < end; i++) {
         var rng = random.Fork(i);
-        result[i] = func(rng);
+        result[i] = func(list[i], rng);
       }
     });
     return result;

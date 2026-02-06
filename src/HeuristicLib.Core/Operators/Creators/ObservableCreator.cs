@@ -24,11 +24,11 @@ public class ObservableCreator<TG, TS, TP>
   public ICreatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorInstance = instanceRegistry.GetOrAdd(creator, () => creator.CreateExecutionInstance(instanceRegistry));
-
     return new ObservableCreatorInstance(creatorInstance, observers);
   }
 
-  private sealed class ObservableCreatorInstance(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserver<TG, TS, TP>> observers) : CreatorInstance<TG, TS, TP>
+  private sealed class ObservableCreatorInstance(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserver<TG, TS, TP>> observers) 
+    : CreatorInstance<TG, TS, TP>
   {
     public override IReadOnlyList<TG> Create(int count, IRandomNumberGenerator random, TS searchSpace, TP problem)  {
       var result = creatorInstance.Create(count, random, searchSpace, problem);
@@ -99,16 +99,15 @@ public static class ObservableCreatorExtensions
       return creator.ObserveWith(observer);
     }
     
-    public ICreator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
-    {
-      var newCounter = new InvocationCounter();
-      counter = newCounter;
-      return creator.ObserveWith(offspring => newCounter.IncrementBy(offspring.Count));
-    }
-    
     public ICreator<TG, TS, TP> CountInvocations(InvocationCounter counter)
     {
       return creator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
+    }
+    
+    public ICreator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
+    {
+      counter = new InvocationCounter();
+      return creator.CountInvocations(counter);
     }
     
     // ToDo: think about how to implement this without knowing the start timing. Probably with a decorator on the CreatorInstance rather than a pure observer.
