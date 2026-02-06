@@ -1,5 +1,5 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators.MetaOperators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;

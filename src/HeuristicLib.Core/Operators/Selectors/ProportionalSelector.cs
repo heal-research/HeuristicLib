@@ -3,10 +3,16 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public class ProportionalSelector<TGenotype>(bool windowing = true) : Selector<TGenotype>
+public class ProportionalSelector<TGenotype> 
+  : StatelessSelector<TGenotype>
+  where TGenotype : class
 {
+  public ProportionalSelector(bool windowing = true) {
+    Windowing = windowing;
+  }
+
   // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
-  public bool Windowing { get; set; } = windowing;
+  public bool Windowing { get; set; }
 
   public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
   {

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -9,7 +10,7 @@ public class PipelineMutator<TG, TS, TP> : Mutator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  public IReadOnlyList<IMutator<TG, TS, TP>> Mutators { get; }
+  private IReadOnlyList<IMutator<TG, TS, TP>> mutators;
 
   public PipelineMutator(IReadOnlyList<IMutator<TG, TS, TP>> mutators)
   {
@@ -17,16 +18,31 @@ public class PipelineMutator<TG, TS, TP> : Mutator<TG, TS, TP>
       throw new ArgumentException("At least one crossover must be provided.", nameof(mutators));
     }
 
-    Mutators = mutators;
+    this.mutators = mutators;
   }
 
-  public override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) {
+    var mutatorInstances = mutators.Select(instanceRegistry.GetOrCreate).ToArray();
+    return new Instance(mutatorInstances);
+  }
+
+  public class Instance : MutatorInstance<TG, TS, TP>
   {
-    var current = parent;
-    foreach (var mutator in Mutators) {
-      current = mutator.Mutate(current, random, searchSpace, problem);
+    private readonly IReadOnlyList<IMutatorInstance<TG, TS, TP>> mutators;
+
+    public Instance(IReadOnlyList<IMutatorInstance<TG, TS, TP>> mutators)
+    {
+      this.mutators = mutators;
     }
 
-    return current;
+    public override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    {
+      var current = parent;
+      foreach (var mutator in mutators) {
+        current = mutator.Mutate(current, random, searchSpace, problem);
+      }
+
+      return current;
+    }
   }
 }

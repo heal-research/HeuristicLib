@@ -1,9 +1,7 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
-using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;

@@ -5,10 +5,17 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-public class GaussianMutator(double mutationRate, double mutationStrength) : SingleSolutionMutator<RealVector, RealVectorSearchSpace>, IVariableStrengthMutator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>
+public class GaussianMutator 
+  : SingleSolutionStatelessMutator<RealVector, RealVectorSearchSpace>,
+    IVariableStrengthMutator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>
 {
-  public double MutationRate { get; set; } = mutationRate;
-  public double MutationStrength { get; set; } = mutationStrength;
+  public GaussianMutator(double mutationRate, double mutationStrength)
+  {
+    MutationRate = mutationRate;
+    MutationStrength = mutationStrength;
+  }
+  public double MutationRate { get; set; }
+  public double MutationStrength { get; set; }
 
   public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
   {

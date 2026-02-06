@@ -1,38 +1,99 @@
-﻿using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public abstract class SingleSolutionCrossover<TGenotype, TSearchSpace, TProblem> : ICrossover<TGenotype, TSearchSpace, TProblem>
+public abstract class SingleSolutionCrossover<TGenotype, TSearchSpace, TProblem> 
+  : Crossover<TGenotype, TSearchSpace, TProblem>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+}
+
+public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace, TProblem>
+  : CrossoverInstance<TGenotype, TSearchSpace, TProblem>
+  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-  public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-  {
-    // ToDo: this should be a unified implementation acrosso all operators
-    return parents.ParallelSelect(random, (_, x, r) => Cross(x, r, searchSpace, problem));
-  }
+  
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+    BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace, problem), random);
 }
 
-public abstract class SingleSolutionCrossover<TGenotype, TSearchSpace> : ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+
+public abstract class SingleSolutionCrossover<TGenotype, TSearchSpace>
+  : Crossover<TGenotype, TSearchSpace>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+{
+}
+
+public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace> 
+  : CrossoverInstance<TGenotype, TSearchSpace>
+  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
-
-  public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) => parents.ParallelSelect(random, (_, x, r) => Cross(x, r, searchSpace));
-
-  IReadOnlyList<TGenotype> ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) => Cross(parents, random, searchSpace);
+  
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+    BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace), random);
 }
 
-public abstract class SingleSolutionCrossover<TGenotype> : ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+
+public abstract class SingleSolutionCrossover<TGenotype>
+  : Crossover<TGenotype>
+  where TGenotype : class
+{
+}
+
+public abstract class SingleSolutionCrossoverInstance<TGenotype>
+  : CrossoverInstance<TGenotype>
+  where TGenotype : class
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random);
+  
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) =>
+    BatchExecution.Sequential(parents, (p, r) => Cross(p, r), random);
+}
 
-  public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) => parents.ParallelSelect(random, (_, x, r) => Cross(x, r));
 
-  IReadOnlyList<TGenotype> ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => Cross(parents, random);
+// ToDo: Since the stateless versions will be the most commonly used ones, think about naming them "Crossover" and the other ones the "StatefulCrossover".
+
+public abstract class SingleSolutionStatelessCrossover<TGenotype, TSearchSpace, TProblem> 
+  : StatelessCrossover<TGenotype, TSearchSpace, TProblem>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+  
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+    BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace, problem), random);
+}
+
+public abstract class SingleSolutionStatelessCrossover<TGenotype, TSearchSpace> 
+  : StatelessCrossover<TGenotype, TSearchSpace>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+{
+  public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
+  
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+    BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace), random);
+}
+
+public abstract class SingleSolutionStatelessCrossover<TGenotype>
+  : StatelessCrossover<TGenotype>
+  where TGenotype : class
+{
+  public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random);
+  
+  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) =>
+    BatchExecution.Sequential(parents, (p, r) => Cross(p, r), random);
 }

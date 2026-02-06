@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public class SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
+public class SimulatedBinaryCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
 {
   /// <summary>
   ///   Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if
@@ -187,7 +187,7 @@ public static class Sbx
   }
 }
 
-public class SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
+public class SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
 {
   public double ProbVar { get; set; } = 0.5;
   public double Eta { get; set; } = 15.0;

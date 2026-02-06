@@ -1,6 +1,11 @@
 ﻿namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public class NeverTerminator<TGenotype> : Terminator<TGenotype>
+public class NeverTerminator<TGenotype>
+  : StatelessTerminator<TGenotype>
+  where TGenotype : class
 {
-  public override Func<bool> CreateShouldTerminatePredicate() => () => false;
+  public override bool ShouldTerminate()
+  {
+    return false;
+  }
 }

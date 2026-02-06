@@ -1,16 +1,22 @@
-using HEAL.HeuristicLib.Operators.MetaOperators;
+using HEAL.HeuristicLib.Analysis;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public class AfterOperatorCountTerminator<TGenotype>(InvocationCounter counter, int maximumCount /*, bool preventOverBudget = false*/)
-  : Terminator<TGenotype>
+public class AfterOperatorCountTerminator<TGenotype> : StatelessTerminator<TGenotype>
   where TGenotype : class
 {
-  public InvocationCounter Counter { get; } = counter;
-  public int MaximumCount { get; } = maximumCount;
-  //public bool PreventOverBudget { get; } = preventOverBudget;
-
-  public override Func<bool> CreateShouldTerminatePredicate() => () => Counter.CurrentCount >= MaximumCount;
+  public AfterOperatorCountTerminator(InvocationCounter counter, int maximumCount)
+  {
+    this.counter = counter;
+    this.maximumCount = maximumCount;
+  }
+  private readonly InvocationCounter counter;
+  private readonly int maximumCount;
+  
+  public override bool ShouldTerminate()
+  {
+    return counter.CurrentCount >= maximumCount;
+  }
 }
 
-// After evaluations terminator is not here because it actually a counting operator terminator wrapper. I am not sure if this is good.
+// ToDo: add extensions for common counter hooks, e.g. after evaluations count terminator.

@@ -6,6 +6,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public interface ISelector<TGenotype, in TSearchSpace, in TProblem>
+  : IOperator<ISelectorInstance<TGenotype, TSearchSpace, TProblem>>
+  where TGenotype : class
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+}
+
+public interface ISelectorInstance<TGenotype, in TSearchSpace, in TProblem>
+  : IOperatorInstance
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

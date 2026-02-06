@@ -3,8 +3,15 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public class TournamentSelector<TGenotype>(int tournamentSize) : Selector<TGenotype>
+public class TournamentSelector<TGenotype> 
+  : StatelessSelector<TGenotype>
+  where TGenotype : class
 {
+  private readonly int tournamentSize;
+  public TournamentSelector(int tournamentSize) {
+    this.tournamentSize = tournamentSize;
+  }
+
   public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
   {
     return Enumerable

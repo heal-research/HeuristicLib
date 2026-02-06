@@ -3,7 +3,9 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public class PlusSelectionReplacer<TGenotype> : Replacer<TGenotype>
+public class PlusSelectionReplacer<TGenotype> 
+  : StatelessReplacer<TGenotype>
+  where TGenotype : class
 {
   public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random)
   {

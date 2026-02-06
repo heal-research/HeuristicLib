@@ -4,15 +4,24 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ITerminator<in TGenotype, in TAlgorithmState, in TSearchSpace, in TProblem>
+public interface ITerminator<TGenotype, in TAlgorithmState, in TSearchSpace, in TProblem>
+  : IOperator<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>>
   where TAlgorithmState : IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : IProblem<TGenotype, TSearchSpace>
 {
-  Func<TAlgorithmState, bool> CreateShouldTerminatePredicate(TSearchSpace searchSpace, TProblem problem);
-  Func<TAlgorithmState, bool> CreateShouldContinuePredicate(TSearchSpace searchSpace, TProblem problem)
+}
+
+public interface ITerminatorInstance<TGenotype, in TAlgorithmState, in TSearchSpace, in TProblem>
+  : IOperatorInstance
+  where TAlgorithmState : IAlgorithmState
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : IProblem<TGenotype, TSearchSpace>
+{
+  bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem);
+  
+  bool ShouldContinue(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem)
   {
-    var predicate = CreateShouldTerminatePredicate(searchSpace, problem);
-    return state => !predicate(state);
+    return !ShouldTerminate(state, searchSpace, problem);
   }
 }

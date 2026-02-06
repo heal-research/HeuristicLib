@@ -1,43 +1,38 @@
-﻿namespace HEAL.HeuristicLib.Operators.Terminators;
+﻿using HEAL.HeuristicLib.Execution;
 
-public class AfterIterationsTerminator<TGenotype>(int maximumIterations)
+namespace HEAL.HeuristicLib.Operators.Terminators;
+
+public class AfterIterationsTerminator<TGenotype>
   : Terminator<TGenotype>
+  where TGenotype : class
 {
-  public int MaximumIterations { get; } = maximumIterations;
-  
-  public override Func<bool> CreateShouldTerminatePredicate()
+  private readonly int maximumIterations;
+
+  public AfterIterationsTerminator(int maximumIterations)
   {
-    var currentCounter = 0;
-    return () => currentCounter++ >= MaximumIterations;
+    this.maximumIterations = maximumIterations;
+  }
+
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    return new Instance(maximumIterations);
+  }
+
+  public class Instance : TerminatorInstance<TGenotype>
+  {
+    private readonly int maximumIterations;
+    private int currentCounter;
+
+    public Instance(int maximumIterations)
+    {
+      this.maximumIterations = maximumIterations;
+      currentCounter = 0;
+    }
+
+
+    public override bool ShouldTerminate()
+    {
+      return currentCounter++ >= maximumIterations;
+    }
   }
 }
-
-// public static class TerminationExtensions {
-//   extension<TG, TS, TP, TR, TA>(AlgorithmBuilder<TG, TS, TP, TR, TA> builder)
-//     where TG : class
-//     where TS : class, ISearchSpace<TG>
-//     where TP : class, IProblem<TG, TS>
-//     where TR : class, IAlgorithmState 
-//     where TA : Algorithm<TG, TS, TP, TR>
-//   {
-//     public void SetMaxEvaluations(int maxEvaluations, bool preventOverBudget = false) {
-//       builder.AddAttachment(new AfterEvaluationsTermination<TG>(maxEvaluations, preventOverBudget));
-//     }
-//
-//     public void SetMaxIterations(int maxIteration) {
-//       builder.Terminator = new AnyTerminator<TG, TR, TS, TP>(builder.Terminator, new AfterIterationsTerminator<TG>(maxIteration));
-//     }
-//   }
-//
-//   extension<TG, TS, TP, TR, TA>(AlgorithmBuilder<TG, TS, TP, TR, TA> builder)
-//     where TG : class
-//     where TS : class, ISearchSpace<TG>
-//     where TP : class, IProblem<TG, TS>
-//     where TR : PopulationIterationState<TG>
-//     where TA : IAlgorithm<TG, TS, TP, TR>
-//   {
-//     public void SetTargetObjective(ObjectiveVector target) {
-//       builder.Terminator = new AnyTerminator<TG, TR, TS, TP>(builder.Terminator, new TargetTerminator<TG>(target));
-//     }
-//   }
-// }

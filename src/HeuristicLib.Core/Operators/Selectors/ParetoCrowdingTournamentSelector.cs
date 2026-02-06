@@ -1,10 +1,12 @@
-﻿using HEAL.HeuristicLib.Operators.Selectors;
+﻿using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Operators.Replacers;
+namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public class ParetoCrowdingTournamentSelector<TGenotype> : Selector<TGenotype>
+public class ParetoCrowdingTournamentSelector<TGenotype> 
+  : StatelessSelector<TGenotype>
+  where TGenotype : class
 {
   private readonly int tournamentSize;
   private readonly bool dominateOnEqualities;

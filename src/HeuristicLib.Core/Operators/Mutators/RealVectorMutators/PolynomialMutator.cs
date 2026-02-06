@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-public class PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSearchSpace>
+public class PolynomialMutator : SingleSolutionStatelessMutator<RealVector, RealVectorSearchSpace>
 {
   private readonly bool atLeastOnce;
   private readonly double eta;

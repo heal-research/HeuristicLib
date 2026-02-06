@@ -2,9 +2,13 @@
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public class NoChangeMutator<TGenotype> : Mutator<TGenotype>
+public class NoChangeMutator<TGenotype> : SingleSolutionStatelessMutator<TGenotype>
+  where TGenotype : class
 {
   public static NoChangeMutator<TGenotype> Instance { get; } = new();
 
-  public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random) => parent;
+  public override TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random)
+  {
+    return parent;
+  }
 }

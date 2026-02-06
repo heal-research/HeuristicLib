@@ -5,9 +5,13 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public class AlphaBetaBlendCrossover(double alpha = 0.7) : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
+public class AlphaBetaBlendCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
 {
-  public double Alpha { get; set; } = alpha;
+  public AlphaBetaBlendCrossover(double alpha = 0.7) {
+    Alpha = alpha;
+  }
+
+  public double Alpha { get; }
   public double Beta => 1 - Alpha;
 
   public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)

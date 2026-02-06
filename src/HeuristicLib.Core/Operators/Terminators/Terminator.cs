@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Problems;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
@@ -6,42 +7,141 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 // Move Terminators out of Operators?
 
-public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
-  where TAlgorithmState : IAlgorithmState
+public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
+  : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public abstract Func<TAlgorithmState, bool> CreateShouldTerminatePredicate(TSearchSpace searchSpace, TProblem problem);
+  public abstract ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
-public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace> : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TAlgorithmState : IAlgorithmState
+public abstract class TerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
+  : ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+  where TGenotype : class
+ where TAlgorithmState : class, IAlgorithmState
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  public abstract bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem);
+}
+
+
+public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace> 
+  : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public abstract Func<TAlgorithmState, bool> CreateShouldTerminatePredicate(TSearchSpace searchSpace);
-
-  Func<TAlgorithmState, bool> ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.CreateShouldTerminatePredicate(TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) => CreateShouldTerminatePredicate(searchSpace);
+  public abstract ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
-public abstract class Terminator<TGenotype, TAlgorithmState> : ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TAlgorithmState : IAlgorithmState
+public abstract class TerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace> 
+  : ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
+  where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public abstract Func<TAlgorithmState, bool> CreateShouldTerminatePredicate();
-
-  Func<TAlgorithmState, bool> ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.CreateShouldTerminatePredicate(ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => CreateShouldTerminatePredicate();
+  public abstract bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace);
+  
+  bool ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) => 
+    ShouldTerminate(state, searchSpace);
 }
 
-public abstract class Terminator<TGenotype> : ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+
+public abstract class Terminator<TGenotype, TAlgorithmState> 
+  : ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
 {
-  public abstract Func<bool> CreateShouldTerminatePredicate();
-
-
-  public Func<IAlgorithmState, bool> CreateShouldTerminatePredicate(ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-  {
-    var predicate = CreateShouldTerminatePredicate();
-    return _ => predicate();
-  }
+  public abstract ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
+
+public abstract class TerminatorInstance<TGenotype, TAlgorithmState>
+  : ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
+{
+  public abstract bool ShouldTerminate(TAlgorithmState state);
+
+  bool ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(TAlgorithmState state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => 
+    ShouldTerminate(state);
+}
+
+public abstract class Terminator<TGenotype> 
+  : ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  where TGenotype : class
+{
+  public abstract ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+}
+
+public abstract class TerminatorInstance<TGenotype>
+  : ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  where TGenotype : class
+{
+  public abstract bool ShouldTerminate();
+
+  bool ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(IAlgorithmState state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => 
+    ShouldTerminate();
+}
+
+
+public abstract class StatelessTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
+  : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>,
+    ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+  public ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+  
+  public abstract bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem);
+}
+
+public abstract class StatelessTerminator<TGenotype, TAlgorithmState, TSearchSpace> 
+  : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>,
+    ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+{
+  public ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+  
+  public abstract bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace);
+  
+  bool ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) => 
+    ShouldTerminate(state, searchSpace);
+}
+
+public abstract class StatelessTerminator<TGenotype, TAlgorithmState> 
+  : ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>,
+    ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
+{
+  public ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+  
+  public abstract bool ShouldTerminate(TAlgorithmState state);
+
+  bool ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(TAlgorithmState state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => 
+    ShouldTerminate(state);
+}
+
+public abstract class StatelessTerminator<TGenotype> 
+  : ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>,
+    ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  where TGenotype : class
+{
+  public ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+  
+  public abstract bool ShouldTerminate();
+
+  bool ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.ShouldTerminate(IAlgorithmState state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => 
+    ShouldTerminate();
+}
+
 
 // public class OnMaximumIterationTerminator : AlgorithmStateBasedTerminator<IIterativeAlgorithm>
 // {

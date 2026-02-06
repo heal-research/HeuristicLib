@@ -1,10 +1,23 @@
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators;
 
+// ToDo: think about unifying generic argument order. Maybe State first, then the usual triple afterwards.
 public interface IInterceptor<TGenotype, TAlgorithmState, in TSearchSpace, in TProblem>
-  where TAlgorithmState : class
+  : IOperator<IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>>
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+{
+ }
+
+public interface IInterceptorInstance<TGenotype, TAlgorithmState, in TSearchSpace, in TProblem>
+  : IOperatorInstance
+  where TGenotype : class
+  where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

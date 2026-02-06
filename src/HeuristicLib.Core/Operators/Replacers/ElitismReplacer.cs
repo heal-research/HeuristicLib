@@ -3,7 +3,9 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public class ElitismReplacer<TGenotype> : Replacer<TGenotype>
+public class ElitismReplacer<TGenotype> 
+  : StatelessReplacer<TGenotype>
+  where TGenotype : class
 {
   public int Elites { get; }
 

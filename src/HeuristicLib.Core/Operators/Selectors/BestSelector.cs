@@ -3,6 +3,18 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
+public class BestSelector<TGenotype> 
+  : StatelessSelector<TGenotype>
+  where TGenotype : class
+{
+  public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+  {
+    return count == 1
+      ? [population.MinBy(x => x.ObjectiveVector, objective.TotalOrderComparer)!]
+      : population.GetMinBy(x => x.ObjectiveVector, objective.TotalOrderComparer, count);
+  }
+}
+
 public static class BestSelector
 {
   public static int Select(IReadOnlyList<ObjectiveVector> population, Objective objective, IRandomNumberGenerator random)
@@ -33,15 +45,5 @@ public static class BestSelector
     return count == 1
       ? [Enumerable.Range(0, population.Count).MinBy(x => population[x], objective.TotalOrderComparer)]
       : Enumerable.Range(0, population.Count).GetMinBy(x => population[x], objective.TotalOrderComparer, count);
-  }
-}
-
-public class BestSelector<TGenotype> : Selector<TGenotype>
-{
-  public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
-  {
-    return count == 1
-      ? [population.MinBy(x => x.ObjectiveVector, objective.TotalOrderComparer)!]
-      : population.GetMinBy(x => x.ObjectiveVector, objective.TotalOrderComparer, count);
   }
 }

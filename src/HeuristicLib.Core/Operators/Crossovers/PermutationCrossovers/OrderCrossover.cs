@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public class OrderCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>
+public class OrderCrossover : SingleSolutionStatelessCrossover<Permutation, PermutationSearchSpace>
 {
   public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng, Memory<int>? memory = null)
   {

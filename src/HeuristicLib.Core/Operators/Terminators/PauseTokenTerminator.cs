@@ -1,13 +1,14 @@
 ﻿namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public class PauseTokenTerminator<TGenotype>(PauseToken pauseToken) : Terminator<TGenotype>
+public class PauseTokenTerminator<TGenotype> : StatelessTerminator<TGenotype>
+  where TGenotype : class
 {
-  public override Func<bool> CreateShouldTerminatePredicate()
-  {
-    return ShouldTerminate;
+  private readonly PauseToken pauseToken;
+  public PauseTokenTerminator(PauseToken pauseToken) {
+    this.pauseToken = pauseToken;
   }
-  
-  private bool ShouldTerminate()
+
+  public override bool ShouldTerminate()
   {
     return pauseToken.IsPaused;
   }

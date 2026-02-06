@@ -3,8 +3,16 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public class ParetoCrowdingReplacer<TGenotype>(bool dominateOnEqualities) : Replacer<TGenotype>
+public class ParetoCrowdingReplacer<TGenotype> 
+  : StatelessReplacer<TGenotype>
+  where TGenotype : class
 {
+  private readonly bool dominateOnEqualities;
+  
+  public ParetoCrowdingReplacer(bool dominateOnEqualities) {
+    this.dominateOnEqualities = dominateOnEqualities;
+  }
+
   public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random)
   {
     var all = previousPopulation.Concat(offspringPopulation).ToArray();
