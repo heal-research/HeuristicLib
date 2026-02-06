@@ -1,7 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -30,8 +29,10 @@ public class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TA
 
   public override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
+    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    
     return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
-      Evaluator,
+      evaluatorInstance,
       Algorithms
     );
   }
@@ -47,7 +48,7 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
 {
   protected readonly ImmutableList<TAlgorithm> Algorithms;
 
-  public PipelineAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, ImmutableList<TAlgorithm> algorithms) 
+  public PipelineAlgorithmInstance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, ImmutableList<TAlgorithm> algorithms) 
     : base(evaluator)
   {
     Algorithms = algorithms;
@@ -55,7 +56,7 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
 
   public PipelineAlgorithmInstance(
     ImmutableList<TAlgorithm> algorithms,
-    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
+    IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
     : base(evaluator)
   {
     Algorithms = algorithms;

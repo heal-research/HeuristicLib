@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Observation;
-using HEAL.HeuristicLib.Operators.Evaluators;
+﻿using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;

@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -31,9 +30,11 @@ public class NSGA2<TGenotype, TSearchSpace, TProblem>
   public override NSGA2Instance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
+    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    
     return new NSGA2Instance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,
-      Evaluator,
+      evaluatorInstance,
       PopulationSize,
       creatorInstance,
       Crossover,
@@ -58,7 +59,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
   protected readonly IReplacer<TGenotype, TSearchSpace, TProblem> Replacer;
 
 
-  public NSGA2Instance(IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossover<TGenotype, TSearchSpace, TProblem> crossover, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ISelector<TGenotype, TSearchSpace, TProblem> selector, IReplacer<TGenotype, TSearchSpace, TProblem> replacer) 
+  public NSGA2Instance(IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossover<TGenotype, TSearchSpace, TProblem> crossover, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ISelector<TGenotype, TSearchSpace, TProblem> selector, IReplacer<TGenotype, TSearchSpace, TProblem> replacer) 
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;

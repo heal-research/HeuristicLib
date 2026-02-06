@@ -1,9 +1,4 @@
-﻿using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
-
-namespace HEAL.HeuristicLib.Operators.Terminators;
+﻿namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public class AfterIterationsTerminator<TGenotype>(int maximumIterations)
   : Terminator<TGenotype>

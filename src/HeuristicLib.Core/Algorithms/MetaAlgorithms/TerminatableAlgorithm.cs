@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
@@ -22,8 +21,10 @@ public class TerminatableAlgorithm<TG, TS, TP, TR>
 
   public override TerminatableAlgorithmInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
+    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    
     return new TerminatableAlgorithmInstance<TG, TS, TP, TR>(
-      Evaluator,
+      evaluatorInstance,
       Algorithm,
       Terminator
     );
@@ -39,7 +40,7 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<T
   protected readonly IAlgorithm<TG, TS, TP, TR> Algorithm;
   protected readonly ITerminator<TG, TR, TS, TP> Terminator;
 
-  public TerminatableAlgorithmInstance(IEvaluator<TG, TS, TP> evaluator, IAlgorithm<TG, TS, TP, TR> algorithm, ITerminator<TG, TR, TS, TP> terminator) 
+  public TerminatableAlgorithmInstance(IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithm<TG, TS, TP, TR> algorithm, ITerminator<TG, TR, TS, TP> terminator) 
     : base(evaluator)
   {
     Algorithm = algorithm;

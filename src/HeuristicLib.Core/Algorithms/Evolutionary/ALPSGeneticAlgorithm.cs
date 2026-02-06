@@ -1,6 +1,5 @@
 ﻿using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -8,7 +7,6 @@ using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -47,10 +45,11 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   public override AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
-
+    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    
     return new AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,
-      Evaluator,
+      evaluatorInstance,
       PopulationSize,
       creatorInstance,
       Crossover,
@@ -78,7 +77,7 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
   private readonly ISelector<TGenotype, TSearchSpace, TProblem> agedSelector;
   private readonly IReplacer<TGenotype, TSearchSpace, TProblem> agedReplacer;
 
-  public AlpsGeneticAlgorithmInstance(IInterceptor<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossover<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutator<TGenotype, TSearchSpace, TProblem> agedMutator, ISelector<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacer<TGenotype, TSearchSpace, TProblem> agedReplacer) 
+  public AlpsGeneticAlgorithmInstance(IInterceptor<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossover<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutator<TGenotype, TSearchSpace, TProblem> agedMutator, ISelector<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacer<TGenotype, TSearchSpace, TProblem> agedReplacer) 
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;

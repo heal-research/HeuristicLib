@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -39,6 +38,7 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   public override GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
+    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
 
     return new GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       PopulationSize,
@@ -48,7 +48,7 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
       MutationRate,
       Selector,
       Replacer,
-      Evaluator,
+      evaluatorInstance,
       Interceptor
     );
   }
@@ -77,7 +77,7 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
     double mutationRate,
     ISelector<TGenotype, TSearchSpace, TProblem> selector,
     IReplacer<TGenotype, TSearchSpace, TProblem> replacer,
-    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
+    IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator,
     IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor
   )
     : base(interceptor, evaluator)

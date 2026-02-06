@@ -27,9 +27,9 @@ public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgo
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  protected readonly IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator;
+  protected readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator;
 
-  protected AlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
+  protected AlgorithmInstance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
   {
     Evaluator = evaluator;
   }
@@ -39,14 +39,6 @@ public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgo
     IRandomNumberGenerator random,
     TAlgorithmState? initialState = null,
     CancellationToken ct = default);
-  
-  //public TAlgorithmState Transform(TAlgorithmState? state, IRandomNumberGenerator randomNumberGenerator, TSearchSpace searchSpace, TProblem problem) => throw new NotImplementedException();
-
-  // public virtual TAlgorithmState Transform(TAlgorithmState? state, IRandomNumberGenerator randomNumberGenerator, TSearchSpace searchSpace, TProblem problem)
-  // {
-  //   // ToDo: should be abstract but some algorithms are easier to implement by override RunStreamingAsync instead of the Step function
-  //   throw new NotImplementedException();
-  // }
 }
 
 public static class AlgorithmExtensions
@@ -74,7 +66,7 @@ public static class AlgorithmExtensions
       CancellationToken ct = default
     )
     {
-      return await algorithm.RunStreamingAsync(problem, random, initialState, ct).LastAsync(cancellationToken: ct);
+      return await algorithm.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
     }
 
     public IEnumerable<TAlgorithmState> RunStreaming(
@@ -84,7 +76,7 @@ public static class AlgorithmExtensions
       CancellationToken ct = default
     )
     {
-      return algorithm.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable();
+      return algorithm.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
     }
 
     public TAlgorithmState RunToCompletion(
@@ -113,7 +105,7 @@ public static class AlgorithmExtensions
       CancellationToken ct = default
     )
     {
-      return await algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).LastAsync(cancellationToken: ct);
+      return await algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
     }
 
     public IEnumerable<TAlgorithmState> RunStreaming(
@@ -123,7 +115,7 @@ public static class AlgorithmExtensions
       CancellationToken ct = default
     )
     {
-      return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable();
+      return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
     }
 
     public TAlgorithmState RunToCompletion(

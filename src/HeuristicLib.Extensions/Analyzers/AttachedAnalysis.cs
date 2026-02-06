@@ -72,7 +72,7 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
     : terminator;
 
   public override IEvaluator<T1, TS1, TP1> WrapEvaluator<T1, TS1, TP1>(IEvaluator<T1, TS1, TP1> evaluator) =>
-    hasAfterEval ? new AnalysisEvaluator<T1, TS1, TP1>(this, evaluator) : evaluator;
+    hasAfterEval ? evaluator.ObserveWith(AfterEvaluation) : evaluator;
 
   public override ICrossover<T1, TS1, TP1> WrapCrossover<T1, TS1, TP1>(ICrossover<T1, TS1, TP1> crossover) =>
     hasAfterCross ? new AnalysisCrossOver<T1, TS1, TP1>(this, crossover) : crossover;
@@ -128,20 +128,20 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
     }
   }
 
-  private sealed class AnalysisEvaluator<T1, TS1, TP1>(
-    AttachedAnalysis<T, TS, TP, TRes> analysis,
-    IEvaluator<T1, TS1, TP1> evaluator) : IEvaluator<T1, TS1, TP1>
-    where T1 : class, T
-    where TS1 : class, ISearchSpace<T1>, TS
-    where TP1 : class, IProblem<T1, TS1>, TP {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> genotypes, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem) {
-      var q = evaluator.Evaluate(genotypes, random, searchSpace, problem);
-      analysis.AfterEvaluation(genotypes, q, searchSpace, problem);
-      return q;
-    }
-    //public IReadOnlyList<ObjectiveVector> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Evaluate(input, context.Random, context.SearchSpace, context.Problem);
-  }
+  // private sealed class AnalysisEvaluator<T1, TS1, TP1>(
+  //   AttachedAnalysis<T, TS, TP, TRes> analysis,
+  //   IEvaluator<T1, TS1, TP1> evaluator) : IEvaluator<T1, TS1, TP1>
+  //   where T1 : class, T
+  //   where TS1 : class, ISearchSpace<T1>, TS
+  //   where TP1 : class, IProblem<T1, TS1>, TP {
+  //   [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  //   public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> genotypes, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem) {
+  //     var q = evaluator.Evaluate(genotypes, random, searchSpace, problem);
+  //     analysis.AfterEvaluation(genotypes, q, searchSpace, problem);
+  //     return q;
+  //   }
+  //   //public IReadOnlyList<ObjectiveVector> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Evaluate(input, context.Random, context.SearchSpace, context.Problem);
+  // }
 
   private sealed class AnalysisMutator<T1, TS1, TP1>(
     AttachedAnalysis<T, TS, TP, TRes> analysis,
@@ -199,7 +199,7 @@ public abstract class AttachedAnalysis<T, TS, TP, TRes>
   #endregion
 
   // ---- default hooks (optionally overridden by users) ----
-  public virtual void AfterEvaluation(IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> values, TS searchSpace, TP problem) { }
+  public virtual void AfterEvaluation(IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> values, IRandomNumberGenerator random, TS searchSpace, TP problem) { }
   public virtual void AfterInterception(TRes currentIterationState, TRes? previousIterationState, TS searchSpace, TP problem) { }
   public virtual void AfterTermination(bool res, TRes currentIterationState, TRes? previousIterationState, TS searchSpace, TP problem) { }
   public virtual void AfterMutation(IReadOnlyList<T> res, IReadOnlyList<T> parent, IRandomNumberGenerator random, TS searchSpace, TP problem) { }

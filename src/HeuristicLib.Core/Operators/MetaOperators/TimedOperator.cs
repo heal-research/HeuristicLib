@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace HEAL.HeuristicLib.Operators.MetaOperators;
 
 public sealed class InvocationTiming

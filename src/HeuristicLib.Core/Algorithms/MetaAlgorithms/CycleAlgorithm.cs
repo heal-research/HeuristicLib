@@ -34,8 +34,10 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
 
   public override CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
+    var evaluatorInstance = Evaluator.CreateExecutionInstance(instanceRegistry);
+    
     return new CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
-      Evaluator,
+      evaluatorInstance,
       Algorithms.ToList(),
       MaximumCycles,
       NewExecutionInstancesPerCycle
@@ -57,7 +59,7 @@ public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProble
 
   private readonly Dictionary<TAlgorithm, ExecutionInstanceRegistry> algorithmInstanceRegistries;
   
-  public CycleAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle) 
+  public CycleAlgorithmInstance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle) 
     : base(evaluator)
   {
     Algorithms = algorithms;

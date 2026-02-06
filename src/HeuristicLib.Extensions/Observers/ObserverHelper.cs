@@ -129,13 +129,13 @@ public static class ObserverHelper
     where TRes : class, IAlgorithmState
     => new ObserverTerminator<T1, TRes1, TS1, TP1, T, TS, TP, TRes>(observer, interceptor);
 
-  public static IEvaluator<T1, TS1, TP1> WrapEvaluator<T1, TS1, TP1, T, TS, TP>(this IEvaluatorObserver<T, TS, TP> observer, IEvaluator<T1, TS1, TP1> interceptor)
-    where T1 : class, T
-    where TS1 : class, ISearchSpace<T1>, TS
-    where TP1 : class, IProblem<T1, TS1>, TP
-    where T : class
-    where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<T, TS> => new ObserverEvaluator<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
+  // public static IEvaluator<T1, TS1, TP1> WrapEvaluator<T1, TS1, TP1, T, TS, TP>(this IEvaluatorObserver<T, TS, TP> observer, IEvaluator<T1, TS1, TP1> interceptor)
+  //   where T1 : class, T
+  //   where TS1 : class, ISearchSpace<T1>, TS
+  //   where TP1 : class, IProblem<T1, TS1>, TP
+  //   where T : class
+  //   where TS : class, ISearchSpace<T>
+  //   where TP : class, IProblem<T, TS> => new ObserverEvaluator<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
 
   public static IMutator<T1, TS1, TP1> WrapMutator<T1, TS1, TP1, T, TS, TP>(this IMutatorObserver<T, TS, TP> observer, IMutator<T1, TS1, TP1> interceptor)
     where T1 : class, T
@@ -218,26 +218,26 @@ public static class ObserverHelper
     }
   }
 
-  private sealed class ObserverEvaluator<T1, TS1, TP1, T, TS, TP>(
-    IEvaluatorObserver<T, TS, TP> analysis,
-    IEvaluator<T1, TS1, TP1> evaluator) : IEvaluator<T1, TS1, TP1>
-    where T1 : class, T
-    where TS1 : class, ISearchSpace<T1>, TS
-    where TP1 : class, IProblem<T1, TS1>, TP
-    where T : class
-    where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<T, TS>
-  {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> genotypes, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem)
-    {
-      var q = evaluator.Evaluate(genotypes, random, searchSpace, problem);
-      analysis.AfterEvaluation(genotypes, q, searchSpace, problem);
-      return q;
-    }
-
-    //public IReadOnlyList<ObjectiveVector> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Evaluate(input, context.Random, context.SearchSpace, context.Problem);
-  }
+  // private sealed class ObserverEvaluator<T1, TS1, TP1, T, TS, TP>(
+  //   IEvaluatorObserver<T, TS, TP> analysis,
+  //   IEvaluator<T1, TS1, TP1> evaluator) : IEvaluator<T1, TS1, TP1>
+  //   where T1 : class, T
+  //   where TS1 : class, ISearchSpace<T1>, TS
+  //   where TP1 : class, IProblem<T1, TS1>, TP
+  //   where T : class
+  //   where TS : class, ISearchSpace<T>
+  //   where TP : class, IProblem<T, TS>
+  // {
+  //   [MethodImpl(MethodImplOptions.AggressiveInlining)]
+  //   public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<T1> genotypes, IRandomNumberGenerator random, TS1 searchSpace, TP1 problem)
+  //   {
+  //     var q = evaluator.Evaluate(genotypes, random, searchSpace, problem);
+  //     analysis.AfterEvaluation(genotypes, q, searchSpace, problem);
+  //     return q;
+  //   }
+  //
+  //   //public IReadOnlyList<ObjectiveVector> Execute(IReadOnlyList<T1> input, IOptimizationContext<T1, TS1, TP1> context) => Evaluate(input, context.Random, context.SearchSpace, context.Problem);
+  // }
 
   private sealed class ObserverMutator<T1, TS1, TP1, T, TS, TP>(
     IMutatorObserver<T, TS, TP> analysis,

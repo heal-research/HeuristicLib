@@ -1,5 +1,4 @@
 ﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -45,10 +44,11 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   public override EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
-
+    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    
     return new EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,
-      Evaluator,
+      evaluatorInstance,
       PopulationSize,
       NumberOfChildren,
       Strategy,
@@ -76,7 +76,7 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly double InitialMutationStrength;
 
-  public EvolutionStrategyInstance(IInterceptor<TGenotype, EvolutionStrategyState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ICrossover<TGenotype, TSearchSpace, TProblem>? crossover, ISelector<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength) 
+  public EvolutionStrategyInstance(IInterceptor<TGenotype, EvolutionStrategyState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ICrossover<TGenotype, TSearchSpace, TProblem>? crossover, ISelector<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength) 
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;

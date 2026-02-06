@@ -21,7 +21,8 @@ public class DummyEvaluator
   public static readonly ObjectiveVector DummyObjectives = new(0.0);
 }
 
-public class DummyEvaluator<TGenotype, TSearchSpace, TProblem> : SingleSolutionEvaluator<TGenotype, TSearchSpace, TProblem>
+public class DummyEvaluator<TGenotype, TSearchSpace, TProblem> : SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace, TProblem>
+  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

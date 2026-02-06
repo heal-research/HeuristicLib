@@ -1,5 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Observation;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
@@ -40,7 +39,7 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProbl
 
   protected readonly IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor;
 
-  protected IterativeAlgorithmInstance(IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor, IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
+  protected IterativeAlgorithmInstance(IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
     : base(evaluator)
   {
     Interceptor = interceptor;
