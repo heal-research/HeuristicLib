@@ -1,14 +1,7 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Observers;
-using HEAL.HeuristicLib.Operators.Evaluators;
+﻿using HEAL.HeuristicLib.Observers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analyzers;
@@ -38,18 +31,20 @@ public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, IS
 
 public class BestMedianWorstAnalysis<TGenotype> : IInterceptorObserver<TGenotype, PopulationState<TGenotype>> where TGenotype : class
 {
-  public readonly List<BestMedianWorstEntry<TGenotype>> BestISolutions = [];
+  private readonly List<BestMedianWorstEntry<TGenotype>> bestSolutions = [];
+  
+  public IReadOnlyList<BestMedianWorstEntry<TGenotype>> BestSolutions => bestSolutions;
 
   public void AfterInterception(PopulationState<TGenotype> currentAlgorithmState, PopulationState<TGenotype>? previousIterationResult, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
     var ordered = currentAlgorithmState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
     if (ordered.Length == 0) {
-      BestISolutions.Add(null!);
+      bestSolutions.Add(null!);
 
       return;
     }
 
-    BestISolutions.Add(new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
+    bestSolutions.Add(new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
   }
 }

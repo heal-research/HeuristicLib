@@ -51,13 +51,13 @@ public interface ITerminatorObserver<in T, in TS, in TP, in TRes>
   void AfterTermination(bool res, TRes currentIterationState, TRes? previousIterationState, TS searchSpace, TP problem);
 }
 
-public interface IEvaluatorObserver<in T, in TS, in TP>
-  where T : class
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
-{
-  void AfterEvaluation(IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> values, TS searchSpace, TP problem);
-}
+// public interface IEvaluatorObserver<in T, in TS, in TP>
+//   where T : class
+//   where TS : class, ISearchSpace<T>
+//   where TP : class, IProblem<T, TS>
+// {
+//   void AfterEvaluation(IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> values, TS searchSpace, TP problem);
+// }
 
 public interface ISelectorObserver<in T, in TS, in TP>
   where T : class
