@@ -20,9 +20,12 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
   where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
   public ImmutableList<TAlgorithm> Algorithms { get; }
-
+  
   // ToDo: think if better place outside and keep CycleAlgorithm as infinite cycles?
   public int? MaximumCycles { get; init; }
+  
+  // ToDo: maybe we need a new concept of ExecutionScope for this, if this comes up more often.
+  public bool NewExecutionInstancesPerCycle { get; init; } = true;
 
   public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
   {
@@ -34,7 +37,8 @@ public class CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgo
     return new CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
       Evaluator,
       Algorithms.ToList(),
-      MaximumCycles
+      MaximumCycles,
+      NewExecutionInstancesPerCycle
     );
   }
 }
@@ -49,12 +53,18 @@ public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProble
 {
   protected readonly IReadOnlyList<TAlgorithm> Algorithms;
   protected readonly int? MaximumCycles;
+  protected readonly bool NewExecutionInstancesPerCycle;
+
+  private readonly Dictionary<TAlgorithm, ExecutionInstanceRegistry> algorithmInstanceRegistries;
   
-  public CycleAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles) 
+  public CycleAlgorithmInstance(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle) 
     : base(evaluator)
   {
     Algorithms = algorithms;
     MaximumCycles = maximumCycles;
+    NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle;
+    
+    algorithmInstanceRegistries = new Dictionary<TAlgorithm, ExecutionInstanceRegistry>(capacity: NewExecutionInstancesPerCycle ? Algorithms.Count : 0);
   }
 
   public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
@@ -69,12 +79,29 @@ public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProble
       var cycleRng = random.Fork(cycleCount);
       foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i))) {
         var algorithmRng = cycleRng.Fork(algorithmIndex);
-        // purposefully running the algorithm here to create a new stream
-        await foreach (var newState in algorithm.RunStreamingAsync(problem, algorithmRng, state, ct)) {
+        var registry = ExecutionInstanceRegistry(algorithm);
+        var algorithmInstance = algorithm.CreateExecutionInstance(registry);
+        
+        await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algorithmRng, state, ct)) {
           state = newState;
           yield return newState;
         }
       }
     }
+  }
+  
+  private ExecutionInstanceRegistry ExecutionInstanceRegistry(TAlgorithm algorithm)
+  {
+    if (NewExecutionInstancesPerCycle) {
+      return new ExecutionInstanceRegistry();
+    }
+    
+    if (algorithmInstanceRegistries.TryGetValue(algorithm, out var existingRegistry)) {
+      return existingRegistry;
+    }
+    
+    var newRegistry = new ExecutionInstanceRegistry();
+    algorithmInstanceRegistries[algorithm] = newRegistry;
+    return newRegistry;
   }
 }

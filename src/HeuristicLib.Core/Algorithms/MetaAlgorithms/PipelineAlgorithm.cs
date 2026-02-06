@@ -61,13 +61,13 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
     Algorithms = algorithms;
   }
 
-public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState, [EnumeratorCancellation] CancellationToken ct = default)
+  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 
-    foreach (var (algorithm, index) in Algorithms.Select((a, i) => (Algorithm: a, Index: i))) {
+    foreach (var (algorithm, index) in Algorithms.Select((a, i) => (a, i))) {
       var algRng = random.Fork(index);
-      // run new fresh stream here
+      // run a new fresh stream here
       await foreach (var newState in algorithm.RunStreamingAsync(problem, algRng, state, ct)) {
         state = newState;
         yield return newState;

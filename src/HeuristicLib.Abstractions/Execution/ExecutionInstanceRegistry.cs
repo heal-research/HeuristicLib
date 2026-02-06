@@ -2,7 +2,7 @@
 
 public sealed class ExecutionInstanceRegistry
 {
-  private readonly Dictionary<object, object> cache = new();
+  private readonly Dictionary<object, object> cache = new(ReferenceEqualityComparer.Instance);
 
   // ToDo: does not currently work since TExecutionInstance cannot be inferred
   // public TExecutionInstance GetOrCreate<TExecutable, TExecutionInstance>(TExecutable @operator)

@@ -65,7 +65,8 @@ public abstract class CreatorInstance<TGenotype>
 // ToDo: Since the stateless versions will be the most commonly used ones, think about naming them "Creator" and the other ones the "StatefulCreator".
 
 public abstract class StatelessCreator<TGenotype, TSearchSpace, TProblem> 
-  : ICreator<TGenotype, TSearchSpace, TProblem>, ICreatorInstance<TGenotype, TSearchSpace, TProblem>
+  : ICreator<TGenotype, TSearchSpace, TProblem>, 
+    ICreatorInstance<TGenotype, TSearchSpace, TProblem>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -76,7 +77,8 @@ public abstract class StatelessCreator<TGenotype, TSearchSpace, TProblem>
 }
 
 public abstract class StatelessCreator<TGenotype, TSearchSpace> 
-  : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>, ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>, 
+    ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
