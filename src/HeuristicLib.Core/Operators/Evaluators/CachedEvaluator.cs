@@ -27,7 +27,7 @@ public class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
 
   public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var evaluatorInstance = instanceRegistry.GetOrAdd(evaluator, () => this.evaluator.CreateExecutionInstance(instanceRegistry));
+    var evaluatorInstance = instanceRegistry.GetOrCreate(evaluator);
     return new Instance(evaluatorInstance, keySelector, sizeLimit);
   }
 

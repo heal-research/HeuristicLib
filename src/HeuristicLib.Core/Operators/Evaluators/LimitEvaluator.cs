@@ -31,7 +31,7 @@ public class LimitEvaluator<TG, TS, TP>
   {
     var countedEvaluator = evaluator.CountInvocations(out var counter);
     
-    var evaluatorInstance = instanceRegistry.GetOrAdd(countedEvaluator, () => countedEvaluator.CreateExecutionInstance(instanceRegistry));
+    var evaluatorInstance = instanceRegistry.GetOrCreate(countedEvaluator);
     return new Instance(evaluatorInstance, counter, maxEvaluations, alternativeValue, strict);
   }
 

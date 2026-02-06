@@ -22,7 +22,7 @@ public class PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
 
   public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorForRemainingSolutionsInstance = instanceRegistry.GetOrAdd(creatorForRemainingSolutions, () => this.creatorForRemainingSolutions.CreateExecutionInstance(instanceRegistry));
+    var creatorForRemainingSolutionsInstance = instanceRegistry.GetOrCreate(creatorForRemainingSolutions);
     return new Instance(this.predefinedSolutions, creatorForRemainingSolutionsInstance);
   }
   

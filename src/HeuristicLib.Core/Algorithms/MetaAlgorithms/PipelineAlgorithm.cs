@@ -29,7 +29,7 @@ public class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TA
 
   public override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     
     return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
       evaluatorInstance,

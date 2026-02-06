@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Creators;
 
 public class ObservableCreator<TG, TS, TP>
-  : ICreator<TG, TS, TP>
+  : Creator<TG, TS, TP>
   where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -21,9 +21,9 @@ public class ObservableCreator<TG, TS, TP>
     this.observers = observers;
   }
   
-  public ICreatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public override ICreatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrAdd(creator, () => creator.CreateExecutionInstance(instanceRegistry));
+    var creatorInstance = instanceRegistry.GetOrCreate(creator);
     return new ObservableCreatorInstance(creatorInstance, observers);
   }
 

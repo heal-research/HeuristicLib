@@ -38,8 +38,8 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
 
   public override EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
-    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     
     return new EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,

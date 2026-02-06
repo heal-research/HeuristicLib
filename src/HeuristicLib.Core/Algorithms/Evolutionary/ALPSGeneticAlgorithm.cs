@@ -40,8 +40,8 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
   public override AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
-    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     
     return new AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,

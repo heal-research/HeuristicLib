@@ -24,7 +24,7 @@ public class ObservableEvaluator<TG, TS, TP>
 
   public IEvaluatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var evaluatorInstance = instanceRegistry.GetOrAdd(evaluator, () => evaluator.CreateExecutionInstance(instanceRegistry));
+    var evaluatorInstance = instanceRegistry.GetOrCreate(evaluator);
     return new ObservableEvaluatorInstance(evaluatorInstance, observers);
   }
   

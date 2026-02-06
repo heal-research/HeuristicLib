@@ -27,7 +27,7 @@ public class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
   {
     // ToDo: think about if we want a fresh evaluation or the the same evaluation instance as the base for the repeated evaluations. 
     // Currently we use the same instance to maintain state such as caches.
-    var evaluatorInstance = instanceRegistry.GetOrAdd(evaluator, () => this.evaluator.CreateExecutionInstance(instanceRegistry));
+    var evaluatorInstance = instanceRegistry.GetOrCreate(evaluator);
     return new Instance(evaluatorInstance, repeats, aggregator);
   }
 

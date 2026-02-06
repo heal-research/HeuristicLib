@@ -29,8 +29,8 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSear
 
   public override OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrAdd(Creator, () => Creator.CreateExecutionInstance(instanceRegistry));
-    var evaluatorInstance = instanceRegistry.GetOrAdd(Evaluator, () => Evaluator.CreateExecutionInstance(instanceRegistry));
+    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     
     return new OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       Interceptor,
