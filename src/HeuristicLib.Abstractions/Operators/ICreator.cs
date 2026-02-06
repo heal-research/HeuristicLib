@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Creators;
+namespace HEAL.HeuristicLib.Operators;
 
 public interface ICreator<TGenotype, in TSearchSpace, in TProblem>
   : IOperator<ICreatorInstance<TGenotype, TSearchSpace, TProblem>>

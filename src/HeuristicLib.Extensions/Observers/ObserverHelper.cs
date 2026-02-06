@@ -1,13 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Creators;
-using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Operators.Interceptors;
-using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;

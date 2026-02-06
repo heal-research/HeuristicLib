@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Operators.Terminators;
+namespace HEAL.HeuristicLib.Operators;
 
 public interface ITerminator<in TGenotype, in TAlgorithmState, in TSearchSpace, in TProblem>
   where TAlgorithmState : IAlgorithmState

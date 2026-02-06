@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
-using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 

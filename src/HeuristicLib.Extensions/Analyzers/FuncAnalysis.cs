@@ -1,6 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Observers;
-using HEAL.HeuristicLib.Operators.Interceptors;
+﻿using HEAL.HeuristicLib.Observers;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;

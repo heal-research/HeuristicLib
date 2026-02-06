@@ -1,5 +1,5 @@
 ﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;

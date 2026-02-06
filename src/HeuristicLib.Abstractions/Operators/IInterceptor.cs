@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Operators.Interceptors;
+namespace HEAL.HeuristicLib.Operators;
 
 public interface IInterceptor<TGenotype, TAlgorithmState, in TSearchSpace, in TProblem>
   where TAlgorithmState : class

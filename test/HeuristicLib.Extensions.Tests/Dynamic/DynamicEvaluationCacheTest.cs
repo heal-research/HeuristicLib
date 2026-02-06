@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Operators.Evaluators;
+﻿using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.Dynamic.Operators;

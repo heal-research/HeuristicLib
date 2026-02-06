@@ -1,8 +1,6 @@
-using HEAL.HeuristicLib.Operators.Creators;
-using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
-using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
