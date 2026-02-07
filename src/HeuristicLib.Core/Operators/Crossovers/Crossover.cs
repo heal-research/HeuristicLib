@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 public abstract class Crossover<TGenotype, TSearchSpace, TProblem> 
   : ICrossover<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -17,7 +16,6 @@ public abstract class Crossover<TGenotype, TSearchSpace, TProblem>
 
 public abstract class CrossoverInstance<TGenotype, TSearchSpace, TProblem>
   : ICrossoverInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -27,7 +25,6 @@ public abstract class CrossoverInstance<TGenotype, TSearchSpace, TProblem>
 
 public abstract class Crossover<TGenotype, TSearchSpace>
   : ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract ICrossoverInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
@@ -35,7 +32,6 @@ public abstract class Crossover<TGenotype, TSearchSpace>
 
 public abstract class CrossoverInstance<TGenotype, TSearchSpace> 
   : ICrossoverInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -47,14 +43,12 @@ public abstract class CrossoverInstance<TGenotype, TSearchSpace>
 
 public abstract class Crossover<TGenotype>
   : ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public abstract ICrossoverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract class CrossoverInstance<TGenotype>
   : ICrossoverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random);
   
@@ -66,7 +60,6 @@ public abstract class CrossoverInstance<TGenotype>
 public abstract class StatelessCrossover<TGenotype, TSearchSpace, TProblem> 
   : ICrossover<TGenotype, TSearchSpace, TProblem>, 
     ICrossoverInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -78,7 +71,6 @@ public abstract class StatelessCrossover<TGenotype, TSearchSpace, TProblem>
 public abstract class StatelessCrossover<TGenotype, TSearchSpace> 
   : ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>, 
     ICrossoverInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public ICrossoverInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
@@ -92,7 +84,6 @@ public abstract class StatelessCrossover<TGenotype, TSearchSpace>
 public abstract class StatelessCrossover<TGenotype>
   : ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>, 
     ICrossoverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public ICrossoverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 

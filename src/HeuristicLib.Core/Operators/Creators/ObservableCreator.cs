@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 public class ObservableCreator<TG, TS, TP>
   : Creator<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -43,7 +42,6 @@ public class ObservableCreator<TG, TS, TP>
 }
 
 public interface ICreatorObserver<in TG, in TS, in TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -53,7 +51,6 @@ public interface ICreatorObserver<in TG, in TS, in TP>
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
 public class CreatorObserver<TG, TS, TP> : ICreatorObserver<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -73,7 +70,6 @@ public class CreatorObserver<TG, TS, TP> : ICreatorObserver<TG, TS, TP>
 public static class ObservableCreatorExtensions
 {
   extension<TG, TS, TP>(ICreator<TG, TS, TP> creator)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {

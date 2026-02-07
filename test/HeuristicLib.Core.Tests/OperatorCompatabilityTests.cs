@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -221,13 +222,12 @@ public class OperatorCompatabilityTests
 public abstract record AlgorithmState<TGenotype> : AlgorithmState;
 
 public class IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : Algorithm<TGenotype, TSearchSpace, TProblem, AlgorithmState<TGenotype>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<TGenotype>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<TGenotype>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, AlgorithmState<TGenotype>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
 public class IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
@@ -244,7 +244,7 @@ public class PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutat
 {
   public ICrossover<Permutation, PermutationSearchSpace, TProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<Permutation>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<Permutation>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAlgorithmInstance<Permutation, PermutationSearchSpace, TProblem, AlgorithmState<Permutation>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
 public class PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>
@@ -255,7 +255,7 @@ public class TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, 
 {
   public ICrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<Permutation>> RunStreamingAsync(TravelingSalesmanProblem problem, IRandomNumberGenerator random, AlgorithmState<Permutation>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAlgorithmInstance<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, AlgorithmState<Permutation>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorSearchSpace, TProblem, AlgorithmState<RealVector>>
@@ -263,7 +263,7 @@ public class RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVecto
 {
   public ICrossover<RealVector, RealVectorSearchSpace, TProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<RealVector>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, AlgorithmState<RealVector>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAlgorithmInstance<RealVector, RealVectorSearchSpace, TProblem, AlgorithmState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
 public class RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorSearchSpace>>
@@ -274,30 +274,30 @@ public class TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVe
 {
   public ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Crossover { get; set; }
 
-  public override IAsyncEnumerable<AlgorithmState<RealVector>> RunStreamingAsync(TestFunctionProblem problem, IRandomNumberGenerator random, AlgorithmState<RealVector>? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+  public override IAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, AlgorithmState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
-public class IndependentCrossover<TGenotype> : SingleSolutionCrossover<TGenotype>
+public class IndependentCrossover<TGenotype> : SingleSolutionStatelessCrossover<TGenotype>
 {
   public override TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
-public class PermutationSpecificCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>
+public class PermutationSpecificCrossover : SingleSolutionStatelessCrossover<Permutation, PermutationSearchSpace>
 {
   public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) => throw new NotImplementedException();
 }
 
-public class TspSpecificCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
+public class TspSpecificCrossover : SingleSolutionStatelessCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
 {
   public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace, TravelingSalesmanProblem problem) => throw new NotImplementedException();
 }
 
-public class RealVectorSpecificCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
+public class RealVectorSpecificCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
 {
   public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => throw new NotImplementedException();
 }
 
-public class TestFunctionProblemSpecificCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+public class TestFunctionProblemSpecificCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem>
 {
   public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) => throw new NotImplementedException();
 }

@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 
-public class SpecialGenotypeCrossover : SingleSolutionCrossover<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
+public class SpecialGenotypeCrossover : SingleSolutionStatelessCrossover<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
 {
   public override SpecialGenotype Cross(IParents<SpecialGenotype> parents, IRandomNumberGenerator random, SpecialSearchSpace searchSpace, SpecialProblem problem)
   {

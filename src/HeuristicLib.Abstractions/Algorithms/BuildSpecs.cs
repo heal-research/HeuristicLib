@@ -6,7 +6,6 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms;
 
 public abstract record AlgorithmBuildSpec<TG, TS, TP, TR> : IBuildSpec, ISpecWithEvaluator<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -31,7 +30,6 @@ public abstract record AlgorithmBuildSpec<TG, TS, TP, TR> : IBuildSpec, ISpecWit
 }
 
 public interface ISpecWithEvaluator<TG, TS, TP> : IBuildSpec
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -39,7 +37,6 @@ public interface ISpecWithEvaluator<TG, TS, TP> : IBuildSpec
 }
 
 public interface ISpecWithCreator<TG, TS, TP> : IBuildSpec
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -47,7 +44,6 @@ public interface ISpecWithCreator<TG, TS, TP> : IBuildSpec
 }
 
 public interface ISpecWithSelector<TG, TS, TP> : IBuildSpec
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -55,7 +51,6 @@ public interface ISpecWithSelector<TG, TS, TP> : IBuildSpec
 }
 
 public interface ISpecWithCrossover<TG, TS, TP> : IBuildSpec
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -63,7 +58,6 @@ public interface ISpecWithCrossover<TG, TS, TP> : IBuildSpec
 }
 
 public interface ISpecWithMutator<TG, TS, TP> : IBuildSpec
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {

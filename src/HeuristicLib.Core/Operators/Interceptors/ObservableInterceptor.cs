@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public class ObservableInterceptor<TG, TR, TS, TP>
   : Interceptor<TG, TR, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -45,7 +44,6 @@ public class ObservableInterceptor<TG, TR, TS, TP>
 }
 
 public interface IInterceptorObserver<in TG, in TR, in TS, in TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -56,7 +54,6 @@ public interface IInterceptorObserver<in TG, in TR, in TS, in TP>
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
 public class InterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG, TR, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -77,7 +74,6 @@ public class InterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG, TR, 
 public static class ObservableInterceptorExtensions
 {
   extension<TG, TR, TS, TP>(IInterceptor<TG, TR, TS, TP> interceptor)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : class, IAlgorithmState

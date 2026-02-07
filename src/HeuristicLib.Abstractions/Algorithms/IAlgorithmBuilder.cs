@@ -13,7 +13,6 @@ public interface IAlgorithmBuilder<TG, TS, TP, TR, out TA, out TBuildSpec> : IAl
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
-  where TG : class
 {
   // Actually i dont want this here only on implementation
   public void AddRewriter<TRewriter>(TRewriter rewriter) where TRewriter : IAlgorithmBuilderRewriter<TBuildSpec>;

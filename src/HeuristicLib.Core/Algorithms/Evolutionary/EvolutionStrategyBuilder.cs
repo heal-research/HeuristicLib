@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, EvolutionStrategyState<TG>, EvolutionStrategy<TG, TS, TP>, EvolutionStrategyBuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TG : class
 {
   public int PopulationSize { get; set; } = 100;
   public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;

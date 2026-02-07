@@ -12,7 +12,6 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
   : AlgorithmBuilder<TG, TS, TP, PopulationState<TG>, GeneticAlgorithm<TG, TS, TP>, GeneticAlgorithmBuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TG : class
 {
   public int PopulationSize { get; set; } = 100;
   public ISelector<TG, TS, TP> Selector { get; set; } = new TournamentSelector<TG>(2);

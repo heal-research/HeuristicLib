@@ -11,7 +11,6 @@ public record HillClimberBuilder<TG, TS, TP>
   : AlgorithmBuilder<TG, TS, TP, SingleSolutionState<TG>, HillClimber<TG, TS, TP>, HillClimberBuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TG : class
 {
   public int MaxNeighbors { get; set; } = 100;
   public int BatchSize { get; set; } = 100;

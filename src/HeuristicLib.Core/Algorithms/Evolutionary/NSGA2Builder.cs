@@ -11,7 +11,6 @@ namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, PopulationState<TG>, NSGA2<TG, TS, TP>, NSGA2BuildSpec<TG, TS, TP>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TG : class
 {
   public int PopulationSize { get; set; } = 100;
   public ISelector<TG, TS, TP> Selector { get; set; } = new ParetoCrowdingTournamentSelector<TG>(false, 2);

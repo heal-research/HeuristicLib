@@ -5,7 +5,6 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 
 public class ElitismReplacer<TGenotype> 
   : StatelessReplacer<TGenotype>
-  where TGenotype : class
 {
   public int Elites { get; }
 

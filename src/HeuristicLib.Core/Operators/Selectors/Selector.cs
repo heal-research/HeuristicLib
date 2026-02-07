@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public abstract class Selector<TGenotype, TSearchSpace, TProblem> 
   : ISelector<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -17,7 +16,6 @@ public abstract class Selector<TGenotype, TSearchSpace, TProblem>
 
 public abstract class SelectorInstance<TGenotype, TSearchSpace, TProblem> 
   : ISelectorInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -27,7 +25,6 @@ public abstract class SelectorInstance<TGenotype, TSearchSpace, TProblem>
 
 public abstract class Selector<TGenotype, TSearchSpace> 
   : ISelector<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract ISelectorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
@@ -35,7 +32,6 @@ public abstract class Selector<TGenotype, TSearchSpace>
 
 public abstract class SelectorInstance<TGenotype, TSearchSpace> 
   : ISelectorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -47,14 +43,12 @@ public abstract class SelectorInstance<TGenotype, TSearchSpace>
 
 public abstract class Selector<TGenotype> 
   : ISelector<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public abstract ISelectorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract class SelectorInstance<TGenotype>
   : ISelectorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random);
   
@@ -66,7 +60,6 @@ public abstract class SelectorInstance<TGenotype>
 public abstract class StatelessSelector<TGenotype, TSearchSpace, TProblem> 
   : ISelector<TGenotype, TSearchSpace, TProblem>,
     ISelectorInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -78,7 +71,6 @@ public abstract class StatelessSelector<TGenotype, TSearchSpace, TProblem>
 public abstract class StatelessSelector<TGenotype, TSearchSpace> 
   : ISelector<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>,
     ISelectorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public ISelectorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
@@ -92,7 +84,6 @@ public abstract class StatelessSelector<TGenotype, TSearchSpace>
 public abstract class StatelessSelector<TGenotype> 
   : ISelector<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>,
     ISelectorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public ISelectorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
   

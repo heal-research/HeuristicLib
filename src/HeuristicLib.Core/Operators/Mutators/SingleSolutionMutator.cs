@@ -7,7 +7,6 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 public abstract class SingleSolutionMutator<TGenotype, TSearchSpace, TProblem> 
   : Mutator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -15,7 +14,6 @@ public abstract class SingleSolutionMutator<TGenotype, TSearchSpace, TProblem>
 
 public abstract class SingleSolutionMutatorInstance<TGenotype, TSearchSpace, TProblem>
   : MutatorInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -28,14 +26,12 @@ public abstract class SingleSolutionMutatorInstance<TGenotype, TSearchSpace, TPr
 
 public abstract class SingleSolutionMutator<TGenotype, TSearchSpace>
   : Mutator<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
 }
 
 public abstract class SingleSolutionMutatorInstance<TGenotype, TSearchSpace> 
   : MutatorInstance<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -47,13 +43,11 @@ public abstract class SingleSolutionMutatorInstance<TGenotype, TSearchSpace>
 
 public abstract class SingleSolutionMutator<TGenotype>
   : Mutator<TGenotype>
-  where TGenotype : class
 {
 }
 
 public abstract class SingleSolutionMutatorInstance<TGenotype>
   : MutatorInstance<TGenotype>
-  where TGenotype : class
 {
   public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random);
   
@@ -64,7 +58,6 @@ public abstract class SingleSolutionMutatorInstance<TGenotype>
 
 public abstract class SingleSolutionStatelessMutator<TGenotype, TSearchSpace, TProblem> 
   : StatelessMutator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -76,7 +69,6 @@ public abstract class SingleSolutionStatelessMutator<TGenotype, TSearchSpace, TP
 
 public abstract class SingleSolutionStatelessMutator<TGenotype, TSearchSpace> 
   : StatelessMutator<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -87,7 +79,6 @@ public abstract class SingleSolutionStatelessMutator<TGenotype, TSearchSpace>
 
 public abstract class SingleSolutionStatelessMutator<TGenotype>
   : StatelessMutator<TGenotype>
-  where TGenotype : class
 {
   public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random);
   

@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 public class ObservableCrossover<TG, TS, TP>
   : Crossover<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -45,7 +44,6 @@ public class ObservableCrossover<TG, TS, TP>
 }
 
 public interface ICrossoverObserver<in TG, in TS, in TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -55,7 +53,6 @@ public interface ICrossoverObserver<in TG, in TS, in TP>
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
 public class CrossoverObserver<TG, TS, TP> : ICrossoverObserver<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -75,7 +72,6 @@ public class CrossoverObserver<TG, TS, TP> : ICrossoverObserver<TG, TS, TP>
 public static class ObservableCrossoverExtensions
 {
   extension<TG, TS, TP>(ICrossover<TG, TS, TP> crossover)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {

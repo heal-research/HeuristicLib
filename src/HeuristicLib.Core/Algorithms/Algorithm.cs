@@ -10,7 +10,6 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -23,7 +22,6 @@ public abstract class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmSta
 
 public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -45,7 +43,6 @@ public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgo
 public static class AlgorithmExtensions
 {
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
@@ -94,7 +91,6 @@ public static class AlgorithmExtensions
   
   
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithmInstance)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState

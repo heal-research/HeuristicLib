@@ -5,7 +5,6 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public class TournamentSelector<TGenotype> 
   : StatelessSelector<TGenotype>
-  where TGenotype : class
 {
   private readonly int tournamentSize;
   public TournamentSelector(int tournamentSize) {

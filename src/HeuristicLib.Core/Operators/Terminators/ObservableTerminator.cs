@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public class ObservableTerminator<TG, TR, TS, TP>
   : Terminator<TG, TR, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -45,7 +44,6 @@ public class ObservableTerminator<TG, TR, TS, TP>
 }
 
 public interface ITerminatorObserver<in TG, in TR, in TS, in TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -55,7 +53,6 @@ public interface ITerminatorObserver<in TG, in TR, in TS, in TP>
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
 public class TerminatorObserver<TG, TR, TS, TP> : ITerminatorObserver<TG, TR, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -76,7 +73,6 @@ public class TerminatorObserver<TG, TR, TS, TP> : ITerminatorObserver<TG, TR, TS
 public static class ObservableTerminatorExtensions
 {
   extension<TG, TR, TS, TP>(ITerminator<TG, TR, TS, TP> terminator)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : class, IAlgorithmState

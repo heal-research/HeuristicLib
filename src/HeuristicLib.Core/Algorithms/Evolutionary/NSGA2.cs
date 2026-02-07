@@ -13,7 +13,6 @@ public class NSGA2<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TGenotype : class
 {
   public required int PopulationSize { get; init; }
   public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
@@ -49,7 +48,6 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TGenotype : class
 {
   protected readonly int PopulationSize;
   protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;

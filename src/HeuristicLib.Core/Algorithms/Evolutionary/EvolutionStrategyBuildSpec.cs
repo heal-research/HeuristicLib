@@ -9,7 +9,6 @@ public sealed record EvolutionStrategyBuildSpec<TG, TS, TP>
     ISpecWithCreator<TG, TS, TP>,
     ISpecWithSelector<TG, TS, TP>,
     ISpecWithMutator<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {

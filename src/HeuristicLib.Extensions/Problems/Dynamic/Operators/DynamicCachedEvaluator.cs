@@ -11,8 +11,8 @@ public class DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
   : CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : DynamicProblem<TGenotype, TSearchSpace>
-  where TKey : notnull
   where TGenotype : class
+  where TKey : notnull
 {
   private readonly TProblem problem;
 
@@ -101,8 +101,9 @@ public static class DynamicCachedEvaluatorExtension
       Func<TGenotype, TKey>? keySelector = null)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : DynamicProblem<TGenotype, TSearchSpace>
-    where TKey : notnull
     where TGenotype : class
+    where TKey : notnull
+  
   {
     return new DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(evaluator, problem, keySelector);
   }

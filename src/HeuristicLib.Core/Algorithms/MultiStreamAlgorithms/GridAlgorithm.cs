@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Algorithms.MultiStreamAlgorithms;
 // ToDo: Think if we need a better name for this: "PortfolioAlgorithm" or something like this, since this algorithm is not an algorithm that is actually doing something on a grid.
 public class GridAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
   : MultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -25,7 +24,6 @@ public class GridAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, T
 
 public class GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
   : MultiStreamAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -51,7 +49,6 @@ public class GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithm
 public static class GridAlgorithmExtensions
 {
   extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> algorithm)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
@@ -61,7 +58,6 @@ public static class GridAlgorithmExtensions
   }
   
   // extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> executor)
-  //   where TGenotype : class
   //   where TSearchSpace : class, ISearchSpace<TGenotype>
   //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   //   where TAlgorithmState : class, IAlgorithmState
@@ -84,8 +80,7 @@ public static class GridAlgorithmExtensions
 //   public static GridExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> Create<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(
 //     TAlgorithm algorithm, Grid<TAlgorithm> grid
 //   )
-//     where TGenotype : class
-//     where TSearchSpace : class, ISearchSpace<TGenotype>
+////     where TSearchSpace : class, ISearchSpace<TGenotype>
 //     where TProblem : class, IProblem<TGenotype, TSearchSpace>
 //     where TAlgorithmState : class, IAlgorithmState
 //     where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>

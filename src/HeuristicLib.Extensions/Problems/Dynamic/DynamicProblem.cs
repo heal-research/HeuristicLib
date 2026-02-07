@@ -12,7 +12,6 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserv
                                                                 IDynamicProblem<TGenotype, TSearchSpace>,
                                                                 IDisposable
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TGenotype : class
 {
   private readonly ConcurrentBag<(TGenotype solution, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
   private readonly ReaderWriterLockSlim rwLock = new();

@@ -30,7 +30,6 @@ public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, IS
 //}
 
 public class BestMedianWorstAnalysis<TGenotype> : IInterceptorObserver<TGenotype, PopulationState<TGenotype>>
-  where TGenotype : class
 {
   private readonly List<BestMedianWorstEntry<TGenotype>> bestSolutions = [];
   

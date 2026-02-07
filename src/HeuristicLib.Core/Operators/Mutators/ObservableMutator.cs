@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 public class ObservableMutator<TG, TS, TP>
   : Mutator<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -44,7 +43,6 @@ public class ObservableMutator<TG, TS, TP>
 }
 
 public interface IMutatorObserver<in TG, in TS, in TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -54,7 +52,6 @@ public interface IMutatorObserver<in TG, in TS, in TP>
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
 public class MutatorObserver<TG, TS, TP> : IMutatorObserver<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -74,7 +71,6 @@ public class MutatorObserver<TG, TS, TP> : IMutatorObserver<TG, TS, TP>
 public static class ObservableMutatorExtensions
 {
   extension<TG, TS, TP>(IMutator<TG, TS, TP> mutator)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {

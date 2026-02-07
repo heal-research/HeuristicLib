@@ -15,7 +15,6 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class
 {
   public required int PopulationSize { get; init; }
   public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
@@ -64,7 +63,6 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class
 {
   protected readonly int PopulationSize;
   protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
@@ -139,7 +137,6 @@ public static class GeneticAlgorithm
     Interceptor<TG, PopulationState<TG>, TS, TP>? interceptor,
     ITerminator<TG, PopulationState<TG>, TS, TP> terminator
   )
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {

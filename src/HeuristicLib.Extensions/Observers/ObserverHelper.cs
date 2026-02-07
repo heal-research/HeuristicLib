@@ -71,28 +71,23 @@ namespace HEAL.HeuristicLib.Observers;
 #region convenience Interfaces
 public interface IInterceptorObserver<TGenotype> :
   IInterceptorObserver<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 { }
 
 public interface IInterceptorObserver<TGenotype, in TState> :
   IInterceptorObserver<TGenotype, TState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
   where TState : class, IAlgorithmState
 { }
 
 public interface IEvaluatorObserver<TGenotype> :
   IEvaluatorObserver<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 { }
 
 public interface ICrossoverObserver<TGenotype> :
   ICrossoverObserver<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 { }
 
 public interface IMutatorObserver<TGenotype> :
   IMutatorObserver<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 { }
 #endregion
 
@@ -100,7 +95,7 @@ public static class ObserverHelper
 {
   #region Wrapping Functions
   // public static IInterceptor<T1, TRes1, TS1, TP1> WrapInterceptor<T1, TRes1, TS1, TP1, T, TS, TP, TRes>(this IInterceptorObserver<T, TS, TP, TRes> observer, IInterceptor<T1, TRes1, TS1, TP1> interceptor)
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TRes1 : class, IAlgorithmState, TRes
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
@@ -111,7 +106,7 @@ public static class ObserverHelper
   //   => new ObserverInterceptor<T1, TRes1, TS1, TP1, T, TS, TP, TRes>(observer, interceptor);
 
   // public static ITerminator<T1, TRes1, TS1, TP1> WrapTerminator<T1, TRes1, TS1, TP1, T, TS, TP, TRes>(this ITerminatorObserver<T, TS, TP, TRes> observer, ITerminator<T1, TRes1, TS1, TP1> interceptor)
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TRes1 : class, IAlgorithmState, TRes
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
@@ -122,7 +117,7 @@ public static class ObserverHelper
   //   => new ObserverTerminator<T1, TRes1, TS1, TP1, T, TS, TP, TRes>(observer, interceptor);
 
   // public static IEvaluator<T1, TS1, TP1> WrapEvaluator<T1, TS1, TP1, T, TS, TP>(this IEvaluatorObserver<T, TS, TP> observer, IEvaluator<T1, TS1, TP1> interceptor)
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -130,7 +125,7 @@ public static class ObserverHelper
   //   where TP : class, IProblem<T, TS> => new ObserverEvaluator<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
 
   // public static IMutator<T1, TS1, TP1> WrapMutator<T1, TS1, TP1, T, TS, TP>(this IMutatorObserver<T, TS, TP> observer, IMutator<T1, TS1, TP1> interceptor)
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -138,7 +133,7 @@ public static class ObserverHelper
   //   where TP : class, IProblem<T, TS> => new ObserverMutator<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
 
   // public static ICrossover<T1, TS1, TP1> WrapCrossover<T1, TS1, TP1, T, TS, TP>(this ICrossoverObserver<T, TS, TP> observer, ICrossover<T1, TS1, TP1> interceptor)
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -146,7 +141,7 @@ public static class ObserverHelper
   //   where TP : class, IProblem<T, TS> => new ObserverCrossover<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
 
   // public static ISelector<T1, TS1, TP1> WrapSelector<T1, TS1, TP1, T, TS, TP>(this ISelectorObserver<T, TS, TP> observer, ISelector<T1, TS1, TP1> interceptor)
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -154,7 +149,7 @@ public static class ObserverHelper
   //   where TP : class, IProblem<T, TS> => new ObserverSelector<T1, TS1, TP1, T, TS, TP>(observer, interceptor);
 
   // public static ICreator<T1, TS1, TP1> WrapCreator<T1, TS1, TP1, T, TS, TP>(this ICreatorObserver<T, TS, TP> observer, ICreator<T1, TS1, TP1> interceptor)
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -166,7 +161,7 @@ public static class ObserverHelper
   // private sealed class ObserverInterceptor<T1, TRes1, TS1, TP1, T, TS, TP, TRes>(
   //   IInterceptorObserver<T, TS, TP, TRes> observer,
   //   IInterceptor<T1, TRes1, TS1, TP1>? interceptor) : IInterceptor<T1, TRes1, TS1, TP1>
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TRes1 : class, IAlgorithmState, TRes
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
@@ -189,7 +184,7 @@ public static class ObserverHelper
   // private sealed class ObserverTerminator<T1, TRes1, TS1, TP1, T, TS, TP, TRes>(
   //   ITerminatorObserver<T, TS, TP, TRes> analysis,
   //   ITerminator<T1, TRes1, TS1, TP1> terminator) : ITerminator<T1, TRes1, TS1, TP1>
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TRes1 : IAlgorithmState, TRes
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
@@ -213,7 +208,7 @@ public static class ObserverHelper
   // private sealed class ObserverEvaluator<T1, TS1, TP1, T, TS, TP>(
   //   IEvaluatorObserver<T, TS, TP> analysis,
   //   IEvaluator<T1, TS1, TP1> evaluator) : IEvaluator<T1, TS1, TP1>
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -234,7 +229,7 @@ public static class ObserverHelper
   // private sealed class ObserverMutator<T1, TS1, TP1, T, TS, TP>(
   //   IMutatorObserver<T, TS, TP> analysis,
   //   IMutator<T1, TS1, TP1> mutator) : IMutator<T1, TS1, TP1>
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -255,7 +250,7 @@ public static class ObserverHelper
   // private sealed class ObserverCrossover<T1, TS1, TP1, T, TS, TP>(
   //   ICrossoverObserver<T, TS, TP> analysis,
   //   ICrossover<T1, TS1, TP1> crossover) : ICrossover<T1, TS1, TP1>
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -273,7 +268,7 @@ public static class ObserverHelper
 
   // private sealed class ObserverSelector<T1, TS1, TP1, T, TS, TP>(ISelectorObserver<T, TS, TP> analysis, ISelector<T1, TS1, TP1> selector)
   //   : ISelector<T1, TS1, TP1>
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class
@@ -293,7 +288,7 @@ public static class ObserverHelper
   //   ICreatorObserver<T, TS, TP> analysis,
   //   ICreator<T1, TS1, TP1> selector)
   //   : ICreator<T1, TS1, TP1>
-  //   where T1 : class, T
+  //   where T1 : T
   //   where TS1 : class, ISearchSpace<T1>, TS
   //   where TP1 : class, IProblem<T1, TS1>, TP
   //   where T : class

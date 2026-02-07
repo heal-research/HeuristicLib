@@ -7,7 +7,6 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface ICrossover<TGenotype, in TSearchSpace, in TProblem>
   : IOperator<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -15,7 +14,6 @@ public interface ICrossover<TGenotype, in TSearchSpace, in TProblem>
 
 public interface ICrossoverInstance<TGenotype, in TSearchSpace, in TProblem>
   : IOperatorInstance
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

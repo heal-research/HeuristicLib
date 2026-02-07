@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public class ObservableEvaluator<TG, TS, TP>
   : IEvaluator<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -45,7 +44,6 @@ public class ObservableEvaluator<TG, TS, TP>
 }
 
 public interface IEvaluatorObserver<in TG, in TS, in TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -53,7 +51,6 @@ public interface IEvaluatorObserver<in TG, in TS, in TP>
 }
 
 public class FuncEvaluatorObserver<TG, TS, TP> : IEvaluatorObserver<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -71,7 +68,6 @@ public class FuncEvaluatorObserver<TG, TS, TP> : IEvaluatorObserver<TG, TS, TP>
 public static class ObservableEvaluatorExtensions
 {
   extension<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {
@@ -84,7 +80,7 @@ public static class ObservableEvaluatorExtensions
     {
       return new ObservableEvaluator<TG, TS, TP>(evaluator, observers);
     }
-
+    
     public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, IRandomNumberGenerator, TS, TP> afterEvaluation)
     {
       var observer = new FuncEvaluatorObserver<TG, TS, TP>(afterEvaluation);

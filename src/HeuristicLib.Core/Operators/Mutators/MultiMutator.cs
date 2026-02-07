@@ -7,7 +7,6 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 // ToDo: Think of a better name, maybe "ChooseOneMutator".
 public class MultiMutator<TGenotype, TSearchSpace, TProblem> : Mutator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -107,7 +106,6 @@ public class MultiMutator<TGenotype, TSearchSpace, TProblem> : Mutator<TGenotype
 public static class MultiMutator
 {
    public static MultiMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null) 
-     where TGenotype : class
      where TSearchSpace : class, ISearchSpace<TGenotype> 
      where TProblem : class, IProblem<TGenotype, TSearchSpace>
    {
@@ -115,20 +113,17 @@ public static class MultiMutator
    }
 
    // public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators, IReadOnlyList<double>? weights = null) 
-   //   where TGenotype : class
    //   where TSearchSpace : class, ISearchSpace<TGenotype>
    // {
    //   return new(mutators, weights);
    // }
 
    // public static MultiMutator<TGenotype> Create<TGenotype>(IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators, IReadOnlyList<double>? weights = null)
-   //    where TGenotype : class
    // {
    //   return new(mutators, weights);
    // }
 
    public static MultiMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators) 
-     where TGenotype : class
      where TSearchSpace : class, ISearchSpace<TGenotype> 
      where TProblem : class, IProblem<TGenotype, TSearchSpace>
    {
@@ -136,20 +131,17 @@ public static class MultiMutator
    }
 
    // public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators) 
-   //   where TGenotype : class
    //   where TSearchSpace : class, ISearchSpace<TGenotype>
    // {
    //   return new(mutators);
    // }
 
    // public static MultiMutator<TGenotype> Create<TGenotype>(params IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators)
-   //   where TGenotype : class
    // {
    //   return new(mutators);
    // }
 
    extension<TGenotype, TSearchSpace, TProblem>(IMutator<TGenotype, TSearchSpace, TProblem> mutator) 
-    where TGenotype : class 
     where TSearchSpace : class, ISearchSpace<TGenotype> 
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
   {

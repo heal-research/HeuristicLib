@@ -13,7 +13,6 @@ public class HillClimber<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class
 {
   public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
   public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
@@ -46,7 +45,6 @@ public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class
 {
   protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
   protected readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator;
@@ -108,7 +106,6 @@ public static class HillClimber
     ICreator<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-    where TGenotype : class
   {
     return new HillClimberBuilder<TGenotype, TSearchSpace, TProblem> {
       Mutator = mutator,

@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
   : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -19,7 +18,6 @@ public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProb
 
 public abstract class TerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
   : ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
-  where TGenotype : class
  where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -30,7 +28,6 @@ public abstract class TerminatorInstance<TGenotype, TAlgorithmState, TSearchSpac
 
 public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace> 
   : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -39,7 +36,6 @@ public abstract class Terminator<TGenotype, TAlgorithmState, TSearchSpace>
 
 public abstract class TerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace> 
   : ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -52,7 +48,6 @@ public abstract class TerminatorInstance<TGenotype, TAlgorithmState, TSearchSpac
 
 public abstract class Terminator<TGenotype, TAlgorithmState> 
   : ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
 {
   public abstract ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
@@ -60,7 +55,6 @@ public abstract class Terminator<TGenotype, TAlgorithmState>
 
 public abstract class TerminatorInstance<TGenotype, TAlgorithmState>
   : ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
 {
   public abstract bool ShouldTerminate(TAlgorithmState state);
@@ -71,14 +65,12 @@ public abstract class TerminatorInstance<TGenotype, TAlgorithmState>
 
 public abstract class Terminator<TGenotype> 
   : ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public abstract ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract class TerminatorInstance<TGenotype>
   : ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public abstract bool ShouldTerminate();
 
@@ -90,7 +82,6 @@ public abstract class TerminatorInstance<TGenotype>
 public abstract class StatelessTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
   : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>,
     ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -103,7 +94,6 @@ public abstract class StatelessTerminator<TGenotype, TAlgorithmState, TSearchSpa
 public abstract class StatelessTerminator<TGenotype, TAlgorithmState, TSearchSpace> 
   : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>,
     ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -118,7 +108,6 @@ public abstract class StatelessTerminator<TGenotype, TAlgorithmState, TSearchSpa
 public abstract class StatelessTerminator<TGenotype, TAlgorithmState> 
   : ITerminator<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>,
     ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
 {
   public ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
@@ -132,7 +121,6 @@ public abstract class StatelessTerminator<TGenotype, TAlgorithmState>
 public abstract class StatelessTerminator<TGenotype> 
   : ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>,
     ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
   

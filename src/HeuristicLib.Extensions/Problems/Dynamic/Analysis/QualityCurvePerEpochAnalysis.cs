@@ -4,7 +4,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Problems.Dynamic.Analysis;
 
 public abstract class DynamicAnalysis<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : IDynamicProblem<TGenotype, TSearchSpace>
 {
@@ -21,16 +20,13 @@ public abstract class DynamicAnalysis<TGenotype, TSearchSpace, TProblem>
 
 public abstract class DynamicAnalysis<TGenotype, TSearchSpace>(IDynamicProblem<TGenotype, TSearchSpace> problem) :
   DynamicAnalysis<TGenotype, TSearchSpace, IDynamicProblem<TGenotype, TSearchSpace>>(problem)
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>;
 
 public abstract class DynamicAnalysis<TGenotype>(IDynamicProblem<TGenotype, ISearchSpace<TGenotype>> problem) :
-  DynamicAnalysis<TGenotype, ISearchSpace<TGenotype>, IDynamicProblem<TGenotype, ISearchSpace<TGenotype>>>(problem)
-  where TGenotype : class;
+  DynamicAnalysis<TGenotype, ISearchSpace<TGenotype>, IDynamicProblem<TGenotype, ISearchSpace<TGenotype>>>(problem);
 
 public class QualityCurvePerEpochAnalysis<TGenotype>(IDynamicProblem<TGenotype, ISearchSpace<TGenotype>> problem) :
   DynamicAnalysis<TGenotype>(problem)
-  where TGenotype : class
 {
   private readonly List<(TGenotype solution, ObjectiveVector objectiveVector, EvaluationTiming timing)> bestPerEpoch = [];
   public IReadOnlyList<(TGenotype solution, ObjectiveVector objectiveVector, EvaluationTiming timing)> BestPerEpoch => bestPerEpoch;

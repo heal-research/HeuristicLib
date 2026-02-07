@@ -11,8 +11,7 @@
 // public static class TerminationExtensions
 // {
 //   extension<TG, TE, TP, TR>(IAlgorithmBuilder<TG, TE, TP, TR> builder)
-//     where TG : class
-//     where TE : class, ISearchSpace<TG>
+////     where TE : class, ISearchSpace<TG>
 //     where TP : class, IProblem<TG, TE>
 //     where TR : class, IAlgorithmState
 //   {
@@ -22,8 +21,7 @@
 //   }
 //
 //   extension<TG, TE, TP, TR>(IAlgorithmBuilder<TG, TE, TP, TR> builder)
-//     where TG : class
-//     where TE : class, ISearchSpace<TG>
+////     where TE : class, ISearchSpace<TG>
 //     where TP : class, IProblem<TG, TE>
 //     where TR : PopulationAlgorithmState<TG>
 //   {

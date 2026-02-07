@@ -6,7 +6,6 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public class ParetoCrowdingTournamentSelector<TGenotype> 
   : StatelessSelector<TGenotype>
-  where TGenotype : class
 {
   private readonly int tournamentSize;
   private readonly bool dominateOnEqualities;

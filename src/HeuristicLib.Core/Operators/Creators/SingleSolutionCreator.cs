@@ -7,7 +7,6 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 public abstract class SingleSolutionCreator<TGenotype, TSearchSpace, TProblem> 
   : Creator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -15,7 +14,6 @@ public abstract class SingleSolutionCreator<TGenotype, TSearchSpace, TProblem>
 
 public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace, TProblem>
   : CreatorInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -28,14 +26,12 @@ public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace, TPr
 
 public abstract class SingleSolutionCreator<TGenotype, TSearchSpace>
   : Creator<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
 }
 
 public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace> 
   : CreatorInstance<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -47,13 +43,11 @@ public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace>
 
 public abstract class SingleSolutionCreator<TGenotype>
   : Creator<TGenotype>
-  where TGenotype : class
 {
 }
 
 public abstract class SingleSolutionCreatorInstance<TGenotype>
   : CreatorInstance<TGenotype>
-  where TGenotype : class
 {
   public abstract TGenotype Create(IRandomNumberGenerator random);
 
@@ -66,7 +60,6 @@ public abstract class SingleSolutionCreatorInstance<TGenotype>
 
 public abstract class SingleSolutionStatelessCreator<TGenotype, TSearchSpace, TProblem> 
   : StatelessCreator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -78,7 +71,6 @@ public abstract class SingleSolutionStatelessCreator<TGenotype, TSearchSpace, TP
 
 public abstract class SingleSolutionStatelessCreator<TGenotype, TSearchSpace> 
   : StatelessCreator<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -89,7 +81,6 @@ public abstract class SingleSolutionStatelessCreator<TGenotype, TSearchSpace>
 
 public abstract class SingleSolutionStatelessCreator<TGenotype>
   : StatelessCreator<TGenotype>
-  where TGenotype : class
 {
   public abstract TGenotype Create(IRandomNumberGenerator random);
   

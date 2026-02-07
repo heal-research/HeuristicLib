@@ -11,7 +11,6 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 public class TerminatableAlgorithm<TG, TS, TP, TR>
   : Algorithm<TG, TS, TP, TR>, ITerminatableAlgorithm<TG, TS, TP, TR>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -35,7 +34,6 @@ public class TerminatableAlgorithm<TG, TS, TP, TR>
 }
 
 public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<TG, TS, TP, TR>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -70,7 +68,6 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<T
 public static class TerminatableAlgorithmExtensions
 {
   extension<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : class, IAlgorithmState

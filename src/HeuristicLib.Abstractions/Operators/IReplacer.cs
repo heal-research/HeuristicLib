@@ -7,7 +7,6 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface IReplacer<TGenotype, in TSearchSpace, in TProblem>
   : IOperator<IReplacerInstance<TGenotype, TSearchSpace, TProblem>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -15,7 +14,6 @@ public interface IReplacer<TGenotype, in TSearchSpace, in TProblem>
 
 public interface IReplacerInstance<TGenotype, in TSearchSpace, in TProblem>
   : IOperatorInstance
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

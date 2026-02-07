@@ -25,7 +25,6 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class
 {
   public required int PopulationSize { get; init; }
   public required int NumberOfChildren { get; init; }
@@ -72,7 +71,6 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TGenotype : class
 {
   protected readonly int PopulationSize;
   protected readonly int NumberOfChildren;

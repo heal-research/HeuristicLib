@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 // ToDo: think about another name, maybe PipelineInceptor or SequentialInterceptor.
 public class MultiInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
   : Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype> 
   where TProblem : class, IProblem<TGenotype, TSearchSpace>

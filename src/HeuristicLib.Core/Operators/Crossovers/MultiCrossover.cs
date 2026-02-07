@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 // ToDo: Think of a better name, maybe "ChooseOneCrossover".
 public class MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -149,7 +148,6 @@ public class MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGeno
 public static class MultiCrossover
 {
    public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(IReadOnlyList<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, IReadOnlyList<double>? weights = null) 
-     where TGenotype : class
      where TSearchSpace : class, ISearchSpace<TGenotype> 
      where TProblem : class, IProblem<TGenotype, TSearchSpace>
    {
@@ -157,20 +155,17 @@ public static class MultiCrossover
    }
 
    // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers, IReadOnlyList<double>? weights = null) 
-   //   where TGenotype : class
    //   where TSearchSpace : class, ISearchSpace<TGenotype>
    // {
    //   return new(crossovers, weights);
    // }
 
    // public static MultiCrossover<TGenotype> Create<TGenotype>(IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers, IReadOnlyList<double>? weights = null)
-   //    where TGenotype : class
    // {
    //   return new(crossovers, weights);
    // }
 
    public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params IReadOnlyList<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers) 
-     where TGenotype : class
      where TSearchSpace : class, ISearchSpace<TGenotype> 
      where TProblem : class, IProblem<TGenotype, TSearchSpace>
    {
@@ -178,20 +173,17 @@ public static class MultiCrossover
    }
 
    // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers) 
-   //   where TGenotype : class
    //   where TSearchSpace : class, ISearchSpace<TGenotype>
    // {
    //   return new(crossovers);
    // }
 
    // public static MultiCrossover<TGenotype> Create<TGenotype>(params IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers)
-   //   where TGenotype : class
    // {
    //   return new(crossovers);
    // }
 
    extension<TGenotype, TSearchSpace, TProblem>(ICrossover<TGenotype, TSearchSpace, TProblem> crossover) 
-    where TGenotype : class 
     where TSearchSpace : class, ISearchSpace<TGenotype> 
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
   {

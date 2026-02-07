@@ -5,7 +5,6 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public class BestSelector<TGenotype> 
   : StatelessSelector<TGenotype>
-  where TGenotype : class
 {
   public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
   {

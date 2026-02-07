@@ -7,7 +7,6 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 public abstract class Creator<TGenotype, TSearchSpace, TProblem> 
   : ICreator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -16,7 +15,6 @@ public abstract class Creator<TGenotype, TSearchSpace, TProblem>
 
 public abstract class CreatorInstance<TGenotype, TSearchSpace, TProblem>
   : ICreatorInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -26,7 +24,6 @@ public abstract class CreatorInstance<TGenotype, TSearchSpace, TProblem>
 
 public abstract class Creator<TGenotype, TSearchSpace>
   : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
@@ -34,7 +31,6 @@ public abstract class Creator<TGenotype, TSearchSpace>
 
 public abstract class CreatorInstance<TGenotype, TSearchSpace> 
   : ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -46,14 +42,12 @@ public abstract class CreatorInstance<TGenotype, TSearchSpace>
 
 public abstract class Creator<TGenotype>
   : ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public abstract ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract class CreatorInstance<TGenotype>
   : ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random);
   
@@ -67,7 +61,6 @@ public abstract class CreatorInstance<TGenotype>
 public abstract class StatelessCreator<TGenotype, TSearchSpace, TProblem> 
   : ICreator<TGenotype, TSearchSpace, TProblem>, 
     ICreatorInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -79,7 +72,6 @@ public abstract class StatelessCreator<TGenotype, TSearchSpace, TProblem>
 public abstract class StatelessCreator<TGenotype, TSearchSpace> 
   : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>, 
     ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
@@ -93,7 +85,6 @@ public abstract class StatelessCreator<TGenotype, TSearchSpace>
 public abstract class StatelessCreator<TGenotype>
   : ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>, 
     ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 

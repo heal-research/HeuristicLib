@@ -6,7 +6,6 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public class AnyTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> : Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
-  where TGenotype : class
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>

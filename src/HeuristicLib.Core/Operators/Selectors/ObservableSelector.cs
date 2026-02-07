@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public class ObservableSelector<TG, TS, TP>
   : Selector<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -45,7 +44,6 @@ public class ObservableSelector<TG, TS, TP>
 }
 
 public interface ISelectorObserver<in TG, in TS, in TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -54,7 +52,6 @@ public interface ISelectorObserver<in TG, in TS, in TP>
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
 public class SelectorObserver<TG, TS, TP> : ISelectorObserver<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -74,7 +71,6 @@ public class SelectorObserver<TG, TS, TP> : ISelectorObserver<TG, TS, TP>
 public static class ObservableSelectorExtensions
 {
   extension<TG, TS, TP>(ISelector<TG, TS, TP> selector)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {

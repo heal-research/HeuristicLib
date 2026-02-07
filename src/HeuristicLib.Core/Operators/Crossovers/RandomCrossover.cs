@@ -5,7 +5,6 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 public class RandomCrossover<TGenotype> 
   : SingleSolutionStatelessCrossover<TGenotype>
-  where TGenotype : class
 {
   public double Bias { get; }
 

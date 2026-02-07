@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
   : Evaluator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

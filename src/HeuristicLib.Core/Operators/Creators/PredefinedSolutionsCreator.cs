@@ -7,7 +7,6 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 public class PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
   : Creator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

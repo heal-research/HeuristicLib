@@ -5,7 +5,6 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public class ProportionalSelector<TGenotype> 
   : StatelessSelector<TGenotype>
-  where TGenotype : class
 {
   public ProportionalSelector(bool windowing = true) {
     Windowing = windowing;

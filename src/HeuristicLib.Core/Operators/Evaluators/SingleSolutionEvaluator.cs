@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public abstract class SingleSolutionEvaluator<TGenotype, TSearchSpace, TProblem>
   : Evaluator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -17,7 +16,6 @@ public abstract class SingleSolutionEvaluator<TGenotype, TSearchSpace, TProblem>
 
 public abstract class SingleSolutionEvaluatorInstance<TGenotype, TSearchSpace, TProblem>(int maxDegreeOfParallelism) 
   : EvaluatorInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -30,7 +28,6 @@ public abstract class SingleSolutionEvaluatorInstance<TGenotype, TSearchSpace, T
 
 public abstract class SingleSolutionEvaluator<TGenotype, TSearchSpace>
   : Evaluator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
@@ -38,7 +35,6 @@ public abstract class SingleSolutionEvaluator<TGenotype, TSearchSpace>
 
 public abstract class SingleSolutionEvaluatorInstance<TGenotype, TSearchSpace>(int maxDegreeOfParallelism) 
   : EvaluatorInstance<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
 
@@ -51,14 +47,12 @@ public abstract class SingleSolutionEvaluatorInstance<TGenotype, TSearchSpace>(i
 
 public abstract class SingleSolutionEvaluator<TGenotype>
   : Evaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
 }
 
 public abstract class SingleSolutionEvaluatorInstance<TGenotype>(int maxDegreeOfParallelism) 
   : EvaluatorInstance<TGenotype>
-  where TGenotype : class
 {
   public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random);
 
@@ -69,7 +63,6 @@ public abstract class SingleSolutionEvaluatorInstance<TGenotype>(int maxDegreeOf
 
 public abstract class SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace, TProblem>()
   : StatelessEvaluator<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -83,7 +76,6 @@ public abstract class SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace, 
 
 public abstract class SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace>(int maxDegreeOfParallelism)
   : StatelessEvaluator<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
@@ -96,7 +88,6 @@ public abstract class SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace>(
 
 public abstract class SingleSolutionStatelessEvaluator<TGenotype>(int maxDegreeOfParallelism)
   : StatelessEvaluator<TGenotype>
-  where TGenotype : class
 {
   public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
   

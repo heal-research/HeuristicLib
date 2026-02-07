@@ -10,7 +10,6 @@ namespace HEAL.HeuristicLib.Algorithms;
 public abstract class IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>,
     IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -30,7 +29,6 @@ public abstract class IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlg
 public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>,
     IIterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -75,7 +73,6 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProbl
 public static class IterativeAlgorithmExtensions
 {
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState

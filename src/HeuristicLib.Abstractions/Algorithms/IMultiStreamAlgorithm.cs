@@ -11,7 +11,6 @@ namespace HEAL.HeuristicLib.Algorithms;
 public interface IMultiStreamAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState, TAlgorithmKey>
   : IExecutable<IMultiStreamAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithmKey>>
   // : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -22,7 +21,6 @@ public interface IMultiStreamAlgorithm<TGenotype, in TSearchSpace, in TProblem, 
 
 public interface IMultiStreamAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState, TAlgorithmKey>
   : IExecutionInstance
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState

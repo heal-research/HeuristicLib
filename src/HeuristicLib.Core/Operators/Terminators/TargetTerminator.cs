@@ -7,7 +7,6 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public class TargetTerminator<TGenotype>
   : StatelessTerminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   private readonly ObjectiveVector target;
   

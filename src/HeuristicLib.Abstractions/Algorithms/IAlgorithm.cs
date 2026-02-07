@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
   : IExecutable<IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -23,7 +22,6 @@ public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmS
 
 public interface IAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
   : IExecutionInstance
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState

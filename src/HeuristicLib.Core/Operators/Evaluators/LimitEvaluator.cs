@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public class LimitEvaluator<TG, TS, TP>
   : Evaluator<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -91,7 +90,6 @@ public static class LimitEvaluatorExtensions
 // public class LimitingEvaluatorRewriter<TBuildSpec, TG, TS, TP>(int maxEvaluations, bool preventOverBudget)
 //   : IAlgorithmBuilderRewriter<TBuildSpec>
 //   where TBuildSpec : class, ISpecWithEvaluator<TG, TS, TP>
-//   where TG : class
 //   where TS : class, ISearchSpace<TG>
 //   where TP : class, IProblem<TG, TS>
 // {

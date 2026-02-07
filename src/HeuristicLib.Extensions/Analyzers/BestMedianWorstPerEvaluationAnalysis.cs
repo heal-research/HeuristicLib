@@ -15,7 +15,6 @@ public class BestMedianWorstPerEvaluationAnalysis<TGenotype>
   : IEvaluatorObserver<TGenotype>, 
     IInterceptorObserver<TGenotype, PopulationState<TGenotype>>
     //IAlgorithmObserver<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, PopulationState<TGenotype>>
-  where TGenotype : class
 {
   private int currentEvaluationsCount = 0;
   private readonly List<(int, BestMedianWorstEntry<TGenotype>)> bestSolutions = [];
@@ -53,7 +52,6 @@ public static class BestMedianWorstPerEvaluationAnalysis
     IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> interceptor,
     out IEvaluator<TGenotype, TSearchSpace, TProblem> observedEvaluator, out IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> observedInterceptor,
     out BestMedianWorstPerEvaluationAnalysis<TGenotype> analysis)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
@@ -64,7 +62,6 @@ public static class BestMedianWorstPerEvaluationAnalysis
   }
   
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(TAlgorithm algorithm)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState

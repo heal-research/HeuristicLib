@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Algorithms.MultiStreamAlgorithms;
 
 public class RepeatAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
   : MultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, int>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -25,7 +24,6 @@ public class RepeatAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState,
 
 public class RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
   : MultiStreamAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, int>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -54,7 +52,6 @@ public class RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgor
 public static class RepeatExecutionExtensions
 {
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(RepeatAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> algorithm)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
@@ -74,7 +71,6 @@ public static class RepeatExecutionExtensions
   }
   
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> algorithmInstance)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
@@ -93,7 +89,6 @@ public static class RepeatExecutionExtensions
   }
 
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(TAlgorithm algorithm)
-    where TGenotype : class
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState

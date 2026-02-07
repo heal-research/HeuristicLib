@@ -20,7 +20,6 @@ public record AlpsState<TGenotype> : AlgorithmState
 
 public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -69,7 +68,6 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
 public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

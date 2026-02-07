@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public class StagnationTerminator<TGenotype>
   : Terminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TGenotype : class
 {
   private readonly int window;
 

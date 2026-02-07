@@ -9,7 +9,6 @@ public sealed record HillClimberBuildSpec<TG, TS, TP>
   : AlgorithmBuildSpec<TG, TS, TP, SingleSolutionState<TG>>,
     ISpecWithCreator<TG, TS, TP>,
     ISpecWithMutator<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {

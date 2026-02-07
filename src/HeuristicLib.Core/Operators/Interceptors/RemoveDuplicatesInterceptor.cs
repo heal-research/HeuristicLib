@@ -5,7 +5,6 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public class RemoveDuplicatesInterceptor<TGenotype, TAlgorithmState> 
   : StatelessInterceptor<TGenotype, TAlgorithmState>
-  where TGenotype : class
   where TAlgorithmState : PopulationState<TGenotype>
 {
   private readonly IEqualityComparer<TGenotype> comparer;

@@ -5,7 +5,6 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 
 public class ParetoCrowdingReplacer<TGenotype> 
   : StatelessReplacer<TGenotype>
-  where TGenotype : class
 {
   private readonly bool dominateOnEqualities;
   

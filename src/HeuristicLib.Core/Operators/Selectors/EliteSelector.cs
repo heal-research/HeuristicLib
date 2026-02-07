@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public class EliteSelector<TGenotype, TSearchSpace, TProblem> 
   : Selector<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {

@@ -4,7 +4,6 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public class AfterIterationsTerminator<TGenotype>
   : Terminator<TGenotype>
-  where TGenotype : class
 {
   private readonly int maximumIterations;
 

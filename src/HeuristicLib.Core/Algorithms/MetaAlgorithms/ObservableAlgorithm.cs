@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 public class ObservableAlgorithm<TG, TS, TP, TR>
   : IAlgorithm<TG, TS, TP, TR>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -33,7 +32,6 @@ public class ObservableAlgorithm<TG, TS, TP, TR>
 
 public class ObservableAlgorithmInstance<TG, TS, TP, TR> 
   : IAlgorithmInstance<TG, TS, TP, TR>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -70,7 +68,6 @@ public class ObservableAlgorithmInstance<TG, TS, TP, TR>
 }
 
 public interface IAlgorithmObserver<TG, in TS, in TP, in TR>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -78,7 +75,6 @@ public interface IAlgorithmObserver<TG, in TS, in TP, in TR>
 }
 
 public class AlgorithmObserver<TG, TS, TP, TR> : IAlgorithmObserver<TG, TS, TP, TR>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -100,7 +96,6 @@ public class AlgorithmObserver<TG, TS, TP, TR> : IAlgorithmObserver<TG, TS, TP, 
 public static class ObservableAlgorithmExtensions
 {
   extension<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : class, IAlgorithmState

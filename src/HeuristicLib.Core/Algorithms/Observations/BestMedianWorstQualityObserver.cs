@@ -11,7 +11,6 @@ namespace HEAL.HeuristicLib.Observation;
 public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, ISolution<T> Worst);
 
 public class BestMedianWorstQualityObserver<TG, TS, TP, TR> : IAlgorithmObserver<TG, TS, TP, TR>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : PopulationState<TG>
@@ -34,7 +33,6 @@ public class BestMedianWorstQualityObserver<TG, TS, TP, TR> : IAlgorithmObserver
 public static class BestMedianWorstQualityObserver
 {
   extension<TG, TS, TP, TR>(IAlgorithm<TG, TS, TP, TR> algorithm)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : PopulationState<TG>

@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 
 public class ObservableReplacer<TG, TS, TP>
   : Replacer<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -47,7 +46,6 @@ public class ObservableReplacer<TG, TS, TP>
 }
 
 public interface IReplacerObserver<in TG, in TS, in TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -56,7 +54,6 @@ public interface IReplacerObserver<in TG, in TS, in TP>
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
 public class ReplacerObserver<TG, TS, TP> : IReplacerObserver<TG, TS, TP>
-  where TG : class
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -76,7 +73,6 @@ public class ReplacerObserver<TG, TS, TP> : IReplacerObserver<TG, TS, TP>
 public static class ObservableReplacerExtensions
 {
   extension<TG, TS, TP>(IReplacer<TG, TS, TP> replacer)
-    where TG : class
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {

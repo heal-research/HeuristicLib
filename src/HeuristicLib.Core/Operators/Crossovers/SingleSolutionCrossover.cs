@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 public abstract class SingleSolutionCrossover<TGenotype, TSearchSpace, TProblem> 
   : Crossover<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -16,7 +15,6 @@ public abstract class SingleSolutionCrossover<TGenotype, TSearchSpace, TProblem>
 
 public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace, TProblem>
   : CrossoverInstance<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -29,14 +27,12 @@ public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace, T
 
 public abstract class SingleSolutionCrossover<TGenotype, TSearchSpace>
   : Crossover<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
 }
 
 public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace> 
   : CrossoverInstance<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -48,13 +44,11 @@ public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace>
 
 public abstract class SingleSolutionCrossover<TGenotype>
   : Crossover<TGenotype>
-  where TGenotype : class
 {
 }
 
 public abstract class SingleSolutionCrossoverInstance<TGenotype>
   : CrossoverInstance<TGenotype>
-  where TGenotype : class
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random);
   
@@ -67,7 +61,6 @@ public abstract class SingleSolutionCrossoverInstance<TGenotype>
 
 public abstract class SingleSolutionStatelessCrossover<TGenotype, TSearchSpace, TProblem> 
   : StatelessCrossover<TGenotype, TSearchSpace, TProblem>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -79,7 +72,6 @@ public abstract class SingleSolutionStatelessCrossover<TGenotype, TSearchSpace, 
 
 public abstract class SingleSolutionStatelessCrossover<TGenotype, TSearchSpace> 
   : StatelessCrossover<TGenotype, TSearchSpace>
-  where TGenotype : class
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -90,7 +82,6 @@ public abstract class SingleSolutionStatelessCrossover<TGenotype, TSearchSpace>
 
 public abstract class SingleSolutionStatelessCrossover<TGenotype>
   : StatelessCrossover<TGenotype>
-  where TGenotype : class
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random);
   

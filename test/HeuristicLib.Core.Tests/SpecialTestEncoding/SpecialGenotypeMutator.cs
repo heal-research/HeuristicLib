@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 
-public class SpecialGenotypeMutator : SingleSolutionMutator<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
+public class SpecialGenotypeMutator : SingleSolutionStatelessMutator<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
 {
   public override SpecialGenotype Mutate(SpecialGenotype genotype, IRandomNumberGenerator random, SpecialSearchSpace searchSpace, SpecialProblem problem)
   {
