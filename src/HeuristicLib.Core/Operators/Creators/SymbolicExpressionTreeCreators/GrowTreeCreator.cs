@@ -36,7 +36,7 @@ public class GrowTreeCreator : SymbolicExpressionTreeCreator
     RecursiveCreate(random, seedNode, 0, maxDepth - 1, searchSpace, allowedSymbols);
   }
 
-  private static void RecursiveCreate(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, int currentDepth, int maxDepth, SymbolicExpressionTreeSearchSpace searchSpace, IReadOnlyCollection<Symbol> allowedSymbols)
+  private static void RecursiveCreate(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, int currentDepth, int maxDepth, SymbolicExpressionTreeSearchSpace searchSpace, IReadOnlyList<Symbol> allowedSymbols)
   {
     var arity = SampleArity(random, root, searchSpace);
     if (arity == 0) {

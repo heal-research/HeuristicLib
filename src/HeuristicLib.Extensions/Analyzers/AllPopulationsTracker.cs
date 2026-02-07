@@ -11,5 +11,8 @@ public class AllPopulationsTracker<T> : IInterceptorObserver<T, PopulationState<
 {
   public List<ISolution<T>[]> AllSolutions { get; } = [];
 
-  public void AfterInterception(PopulationState<T> currentAlgorithmState, PopulationState<T>? previousIterationResult, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem) => AllSolutions.Add(currentAlgorithmState.Population.ToArray());
+  public void AfterInterception(PopulationState<T> newState, PopulationState<T> currentState, PopulationState<T>? previousState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
+  {
+    AllSolutions.Add(currentState.Population.ToArray());
+  }
 }

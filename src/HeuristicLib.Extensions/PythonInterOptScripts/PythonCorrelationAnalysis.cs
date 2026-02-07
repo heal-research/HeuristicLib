@@ -1,7 +1,9 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -69,7 +71,7 @@ public static class PythonCorrelationAnalysis
       new TestFunctionExperimentParameters {
         AlgorithmName = "nsga2",
         Creator = new UniformDistributedCreator(),
-        Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
+        Crossover = new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithRate(0.9),
         Mutator = new PolynomialMutator().WithRate(0.9),
         Iterations = generations,
         PopulationSize = populationSize,

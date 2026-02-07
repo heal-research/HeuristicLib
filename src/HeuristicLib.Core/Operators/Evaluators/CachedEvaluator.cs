@@ -14,42 +14,42 @@ public class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TKey : notnull
 {
-  private readonly IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator;
-  private readonly Func<TGenotype, TKey> keySelector;
-  private readonly long? sizeLimit;
+  protected readonly IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator;
+  protected readonly Func<TGenotype, TKey> KeySelector;
+  protected readonly long? SizeLimit;
   
   public CachedEvaluator(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, Func<TGenotype, TKey>? keySelector = null, long? sizeLimit = null)
   {
-    this.evaluator = evaluator;
-    this.keySelector = keySelector ?? (g => (TKey)(object)g);
-    this.sizeLimit = sizeLimit;
+    this.Evaluator = evaluator;
+    this.KeySelector = keySelector ?? (g => (TKey)(object)g);
+    this.SizeLimit = sizeLimit;
   }
 
   public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var evaluatorInstance = instanceRegistry.GetOrCreate(evaluator);
-    return new Instance(evaluatorInstance, keySelector, sizeLimit);
+    var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
+    return new Instance(evaluatorInstance, KeySelector, SizeLimit);
   }
 
   public class Instance
     : EvaluatorInstance<TGenotype, TSearchSpace, TProblem>
   {
-    private readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator;
-    private readonly Func<TGenotype, TKey> keySelector;
-    private readonly MemoryCache cache;
+    protected readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator;
+    protected readonly Func<TGenotype, TKey> KeySelector;
+    protected readonly MemoryCache Cache;
 
     public Instance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, Func<TGenotype, TKey> keySelector, long? sizeLimit)
     {
-      this.evaluator = evaluator;
-      this.keySelector = keySelector;
+      this.Evaluator = evaluator;
+      this.KeySelector = keySelector;
       var cacheOptions = new MemoryCacheOptions { SizeLimit = sizeLimit };
-      cache = new MemoryCache(cacheOptions);
+      Cache = new MemoryCache(cacheOptions);
       
     }
     
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
-      var keys = genotypes.Select(keySelector).ToList();
+      var keys = genotypes.Select(KeySelector).ToList();
       var results = new ObjectiveVector[genotypes.Count];
       
       var uncachedSolutions = new List<TGenotype>();
@@ -58,7 +58,7 @@ public class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
       for (int i = 0; i < genotypes.Count; i++) {
         var genotype = genotypes[i];
         var key = keys[i];
-        if (cache.TryGetValue(key, out ObjectiveVector? cachedObjective)) {
+        if (Cache.TryGetValue(key, out ObjectiveVector? cachedObjective)) {
           results[i] = cachedObjective!;
         } else {
           uncachedSolutions.Add(genotype);
@@ -67,14 +67,14 @@ public class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
       }
       
       if (uncachedSolutions.Count > 0) {
-        var newObjectives = evaluator.Evaluate(uncachedSolutions, random, searchSpace, problem);
+        var newObjectives = Evaluator.Evaluate(uncachedSolutions, random, searchSpace, problem);
         for (int i = 0; i < uncachedSolutions.Count; i++) {
           var objective = newObjectives[i];
           
           var originalIndex = uncachedSolutionIndices[i];
           var key = keys[originalIndex];
           
-          cache.Set(key, objective, new MemoryCacheEntryOptions { Size = 1 });
+          Cache.Set(key, objective, new MemoryCacheEntryOptions { Size = 1 });
           
           results[originalIndex] = objective;
         }

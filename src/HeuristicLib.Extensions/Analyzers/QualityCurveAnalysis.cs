@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Observers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analyzers;
@@ -11,7 +12,7 @@ public class QualityCurveAnalysis<TGenotype> : IEvaluatorObserver<TGenotype> whe
   private ISolution<TGenotype>? best;
   private int evalCount;
 
-  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     for (var i = 0; i < genotypes.Count; i++) {
       var genotype = genotypes[i];

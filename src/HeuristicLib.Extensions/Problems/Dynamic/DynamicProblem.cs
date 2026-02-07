@@ -7,6 +7,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
+// ToDo: A DynamicProblem should be, foremost, a Problem. It "being" also an Observer, is an interesting way of implementing about it, but we have to think if this is really what we want.
 public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserver<TGenotype>, IInterceptorObserver<TGenotype>,
                                                                 IDynamicProblem<TGenotype, TSearchSpace>,
                                                                 IDisposable
@@ -63,8 +64,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserv
 
   public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing);
 
-  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values,
-                              ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
     evaluationLog.Clear();
@@ -73,15 +73,13 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserv
     }
   }
 
-  public void AfterInterception(IAlgorithmState currentAlgorithmState, IAlgorithmState? previousIterationResult, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public void AfterInterception(IAlgorithmState newState, IAlgorithmState currentState, IAlgorithmState? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     if (UpdatePolicy == UpdatePolicy.AfterInterception) {
       ResolvePendingUpdates();
     }
   }
-
-  public void AfterInterception(PopulationState<TGenotype> res, PopulationState<TGenotype>? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => throw new NotImplementedException();
-
+  
   ~DynamicProblem() => Dispose(false);
 
   protected virtual void Dispose(bool disposing) => rwLock.Dispose();

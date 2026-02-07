@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Collections;
+﻿using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Observers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -16,36 +15,36 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
   where T : class
 {
   public readonly GenealogyGraph<T> Graph = new(equality ?? EqualityComparer<T>.Default);
-
-  public void AfterCrossover(IReadOnlyList<T> res, IReadOnlyList<IParents<T>> parents, IRandomNumberGenerator random, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
+  
+  public void AfterCross(IReadOnlyList<T> offspring, IReadOnlyList<IParents<T>> parents, IRandomNumberGenerator random, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
-    foreach (var (parents1, child) in parents.Zip(res)) {
+    foreach (var (parents1, child) in parents.Zip(offspring)) {
       Graph.AddConnection([parents1.Item1, parents1.Item2], child);
     }
   }
 
-  public void AfterMutation(IReadOnlyList<T> res, IReadOnlyList<T> parent, IRandomNumberGenerator random, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
+  public void AfterMutate(IReadOnlyList<T> offspring, IReadOnlyList<T> parent, IRandomNumberGenerator random, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
-    foreach (var (parents1, child) in parent.Zip(res)) {
+    foreach (var (parents1, child) in parent.Zip(offspring)) {
       Graph.AddConnection([parents1], child);
     }
   }
 
-  public virtual void AfterInterception(PopulationState<T> currentAlgorithmState, PopulationState<T>? previousIterationResult, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
+  public virtual void AfterInterception(PopulationState<T> newState, PopulationState<T> currentState, PopulationState<T>? previousState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
-    var ordered = currentAlgorithmState.Population.OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
+    var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
     Graph.SetAsNewGeneration(ordered.Select(x => x.Genotype), saveSpace);
   }
 
-  public void AddtoAlg<TAlg, TG, TS, TP, TR>(TAlg alogrithm)
-    where TAlg : ISpecWithCreator<TG, TS, TP>, ISpecWithMutator<TG, TS, TP>
-    where TG : class, T
-    where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<TG, TS>, IProblem<T, ISearchSpace<T>>
-    where TR : class, IAlgorithmState
-  {
-    alogrithm.Mutator = this.WrapMutator(alogrithm.Mutator);
-  }
+  // public void AddtoAlg<TAlg, TG, TS, TP, TR>(TAlg alogrithm)
+  //   where TAlg : ISpecWithCreator<TG, TS, TP>, ISpecWithMutator<TG, TS, TP>
+  //   where TG : class, T
+  //   where TS : class, ISearchSpace<T>
+  //   where TP : class, IProblem<TG, TS>, IProblem<T, ISearchSpace<T>>
+  //   where TR : class, IAlgorithmState
+  // {
+  //   alogrithm.Mutator = this.WrapMutator(alogrithm.Mutator);
+  // }
 
   //public void BuildWrappers<TG, TS, TP, TR>(
   //  ICrossover<TG, TS, TP>? crossover,
@@ -63,15 +62,16 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
   //  wrappedCrossover = crossover == null ? null : this.WrapCrossover(crossover);
   //  wrappedMutator = mutator == null ? null : this.WrapMutator(mutator);
   //}
+  
 }
 
 public class RankAnalysis<T>(IEqualityComparer<T>? equality = null) : GenealogyAnalysis<T>(equality) where T : class
 {
   public List<List<double>> Ranks { get; } = [];
 
-  public override void AfterInterception(PopulationState<T> currentAlgorithmState, PopulationState<T>? previousIterationResult, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
+  public override void AfterInterception(PopulationState<T> newState, PopulationState<T> currentState, PopulationState<T>? previousState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem) 
   {
-    base.AfterInterception(currentAlgorithmState, previousIterationResult, searchSpace, problem);
+    base.AfterInterception(newState, currentState, previousState, searchSpace, problem);
     RecordRanks(Graph, Ranks);
   }
 

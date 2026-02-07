@@ -230,7 +230,7 @@ public class PythonGenealogyAnalysis
   //  return new MyAnalyzers<T>(qualities, rankAnalysis, qc, apt);
   //}
 
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace> CreateSymRegAllMutator()
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
   {
     var symRegAllMutator = MultiMutator.Create(
       new ChangeNodeTypeManipulation(),

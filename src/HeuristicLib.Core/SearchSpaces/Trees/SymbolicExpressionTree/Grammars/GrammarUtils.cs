@@ -24,7 +24,7 @@ public static class GrammarUtils
     return parents.Values.SelectMany(x => x).Distinct().Where(x => !parents.ContainsKey(x));
   }
 
-  private static IReadOnlyCollection<Symbol> IterateBreadthReverse(this SymbolicExpressionGrammarBase grammar, Symbol topSymbol)
+  private static IReadOnlyList<Symbol> IterateBreadthReverse(this SymbolicExpressionGrammarBase grammar, Symbol topSymbol)
   {
     // sort symbols in reverse breadth order (starting from the topSymbol)
     // each symbol is visited only once (this avoids infinite recursion)

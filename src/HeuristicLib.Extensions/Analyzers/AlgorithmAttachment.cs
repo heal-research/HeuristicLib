@@ -21,35 +21,35 @@ public static class AlgorithmAttachmentExtensions {
   }
 }
 
-public class ObserverRewriter<TG, TS, TP, TR, TSpec> : IAlgorithmBuilderRewriter<TSpec>
-  where TG : class
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
-  where TSpec : AlgorithmBuildSpec<TG, TS, TP, TR>
-{
-  //private readonly IEvaluatorObserver<TG, TS, TP>? evaluatorObserver;
-  private readonly IIterationObserver<TG, TS, TP, TR>? iterationObserver;
-  private readonly ICrossoverObserver<TG, TS, TP>? crossoverObserver;
-
-  public ObserverRewriter(IIterationObserver<TG, TS, TP, TR>? iterationObserver = null, ICrossoverObserver<TG, TS, TP>? crossoverObserver = null)
-  {
-    this.iterationObserver = iterationObserver;
-    this.crossoverObserver = crossoverObserver;
-  }
-
-
-  public void Rewrite(TSpec buildSpec)
-  {
-    if (iterationObserver is not null) {
-      buildSpec.Observer = buildSpec.Observer is not null ? new ObservationPipeline<TG, TS, TP, TR>(buildSpec.Observer, iterationObserver) : iterationObserver;
-    }
-
-    if (crossoverObserver is not null && buildSpec is ISpecWithCrossover<TG, TS, TP> crossoverSpec) {
-      crossoverSpec.Crossover = new ObservedCrossover<TG, TS, TP>(crossoverSpec.Crossover, crossoverObserver);
-    }
-  }
-}
+// public class ObserverRewriter<TG, TS, TP, TR, TSpec> : IAlgorithmBuilderRewriter<TSpec>
+//   where TG : class
+//   where TS : class, ISearchSpace<TG>
+//   where TP : class, IProblem<TG, TS>
+//   where TR : class, IAlgorithmState
+//   where TSpec : AlgorithmBuildSpec<TG, TS, TP, TR>
+// {
+//   //private readonly IEvaluatorObserver<TG, TS, TP>? evaluatorObserver;
+//   private readonly IIterationObserver<TG, TS, TP, TR>? iterationObserver;
+//   private readonly ICrossoverObserver<TG, TS, TP>? crossoverObserver;
+//
+//   public ObserverRewriter(IIterationObserver<TG, TS, TP, TR>? iterationObserver = null, ICrossoverObserver<TG, TS, TP>? crossoverObserver = null)
+//   {
+//     this.iterationObserver = iterationObserver;
+//     this.crossoverObserver = crossoverObserver;
+//   }
+//
+//
+//   public void Rewrite(TSpec buildSpec)
+//   {
+//     if (iterationObserver is not null) {
+//       buildSpec.Observer = buildSpec.Observer is not null ? new ObservationPipeline<TG, TS, TP, TR>(buildSpec.Observer, iterationObserver) : iterationObserver;
+//     }
+//
+//     if (crossoverObserver is not null && buildSpec is ISpecWithCrossover<TG, TS, TP> crossoverSpec) {
+//       crossoverSpec.Crossover = new ObservedCrossover<TG, TS, TP>(crossoverSpec.Crossover, crossoverObserver);
+//     }
+//   }
+// }
 
 // ToDo: Think about a different name. Maybe UniversalRewriter or something similar. 
 public abstract class AlgorithmAttachment<T, TS, TP, TRes> : IAlgorithmBuilderRewriter<AlgorithmBuildSpec<T, TS, TP, TRes>>
@@ -70,13 +70,13 @@ public abstract class AlgorithmAttachment<T, TS, TP, TRes> : IAlgorithmBuilderRe
     if (buildSpec is ISpecWithSelector<T, TS, TP> selectorSpec) selectorSpec.Selector = WrapSelector(selectorSpec.Selector);
   }
   
-  public virtual IInterceptor<T1, TRes1, TS1, TP1>? WrapInterceptor<T1, TRes1, TS1, TP1>(IInterceptor<T1, TRes1, TS1, TP1>? interceptor) where T1 : T
+  public virtual IInterceptor<T1, TRes1, TS1, TP1>? WrapInterceptor<T1, TRes1, TS1, TP1>(IInterceptor<T1, TRes1, TS1, TP1>? interceptor) where T1 : class, T
     where TRes1 : class, IAlgorithmState, TRes
     where TS1 : class, ISearchSpace<T1>, TS
     where TP1 : class, IProblem<T1, TS1>, TP => interceptor;
   
   public virtual ITerminator<T1, TRes1, TS1, TP1> WrapTerminator<T1, TRes1, TS1, TP1>(ITerminator<T1, TRes1, TS1, TP1> terminator) where T1 : class, T
-    where TRes1 : IAlgorithmState, TRes
+    where TRes1 : class, IAlgorithmState, TRes
     where TS1 : class, ISearchSpace<T1>, TS
     where TP1 : class, IProblem<T1, TS1>, TP => terminator;
   

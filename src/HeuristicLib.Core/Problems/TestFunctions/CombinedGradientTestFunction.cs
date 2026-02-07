@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
-public class CombinedGradientTestFunction(params IReadOnlyCollection<IGradientTestFunction> functions)
+public class CombinedGradientTestFunction(params IReadOnlyList<IGradientTestFunction> functions)
   : CombinedTestFunction(functions), IMultiObjectiveGradientTestFunction
 {
   private readonly IGradientTestFunction[] functions = functions.ToArray();

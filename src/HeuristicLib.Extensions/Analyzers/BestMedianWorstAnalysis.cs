@@ -29,16 +29,17 @@ public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, IS
 //  //}
 //}
 
-public class BestMedianWorstAnalysis<TGenotype> : IInterceptorObserver<TGenotype, PopulationState<TGenotype>> where TGenotype : class
+public class BestMedianWorstAnalysis<TGenotype> : IInterceptorObserver<TGenotype, PopulationState<TGenotype>>
+  where TGenotype : class
 {
   private readonly List<BestMedianWorstEntry<TGenotype>> bestSolutions = [];
   
   public IReadOnlyList<BestMedianWorstEntry<TGenotype>> BestSolutions => bestSolutions;
 
-  public void AfterInterception(PopulationState<TGenotype> currentAlgorithmState, PopulationState<TGenotype>? previousIterationResult, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public void AfterInterception(PopulationState<TGenotype> newState, PopulationState<TGenotype> currentState, PopulationState<TGenotype>? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
-    var ordered = currentAlgorithmState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
+    var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
     if (ordered.Length == 0) {
       bestSolutions.Add(null!);
 

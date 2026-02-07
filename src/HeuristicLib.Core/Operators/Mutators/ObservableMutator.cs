@@ -49,7 +49,7 @@ public interface IMutatorObserver<in TG, in TS, in TP>
   where TP : class, IProblem<TG, TS>
 {
   // ToDo: probably remove the random for observation
-  void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyCollection<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem);
+  void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem);
 }
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
@@ -58,14 +58,14 @@ public class MutatorObserver<TG, TS, TP> : IMutatorObserver<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  private readonly Action<IReadOnlyList<TG>, IReadOnlyCollection<TG>, IRandomNumberGenerator, TS, TP> afterMutate;
+  private readonly Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate;
   
-  public MutatorObserver(Action<IReadOnlyList<TG>, IReadOnlyCollection<TG>, IRandomNumberGenerator, TS, TP> afterMutate)
+  public MutatorObserver(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate)
   {
     this.afterMutate = afterMutate;
   }
   
-  public void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyCollection<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  public void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
     afterMutate.Invoke(offspring, parent, random, searchSpace, problem);
   }
@@ -88,7 +88,7 @@ public static class ObservableMutatorExtensions
       return new ObservableMutator<TG, TS, TP>(mutator, observers);
     }
     
-    public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyCollection<TG>, IRandomNumberGenerator, TS, TP> afterMutate)
+    public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate)
     {
       var observer = new MutatorObserver<TG, TS, TP>(afterMutate);
       return mutator.ObserveWith(observer);
