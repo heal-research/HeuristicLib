@@ -33,22 +33,31 @@ public class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
   public override GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    // ToDo: think about if this is the right way or if we break the instantiation process because we create a new operator here.
+    var mutator = MutationRate >= 1.0
+      ? Mutator
+      : Mutator.WithRate(MutationRate);
+    
+    var interceptorInstance = Interceptor is not null ? instanceRegistry.GetOrCreate(Interceptor) : null;
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
-
+    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var crossoverInstance = instanceRegistry.GetOrCreate(Crossover);
+    var mutatorInstance = instanceRegistry.GetOrCreate(mutator);
+    var selectorInstance = instanceRegistry.GetOrCreate(Selector);
+    var replacerInstance = instanceRegistry.GetOrCreate(Replacer);
+    
     return new GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       PopulationSize,
       creatorInstance,
-      Crossover,
-      Mutator,
+      crossoverInstance,
+      mutatorInstance,
       MutationRate,
-      Selector,
-      Replacer,
+      selectorInstance,
+      replacerInstance,
       evaluatorInstance,
-      Interceptor
+      interceptorInstance
     );
   }
-
 }
 
 public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
@@ -59,22 +68,22 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
 {
   protected readonly int PopulationSize;
   protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
-  protected readonly ICrossover<TGenotype, TSearchSpace, TProblem> Crossover;
-  protected readonly IMutator<TGenotype, TSearchSpace, TProblem> Mutator;
+  protected readonly ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover;
+  protected readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator;
   protected readonly double MutationRate;
-  protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
-  protected readonly IReplacer<TGenotype, TSearchSpace, TProblem> Replacer;
+  protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
+  protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
   
   public GeneticAlgorithmInstance(
     int populationSize,
     ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator,
-    ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
-    IMutator<TGenotype, TSearchSpace, TProblem> mutator,
+    ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover,
+    IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator,
     double mutationRate,
-    ISelector<TGenotype, TSearchSpace, TProblem> selector,
-    IReplacer<TGenotype, TSearchSpace, TProblem> replacer,
+    ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector,
+    IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer,
     IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator,
-    IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor
+    IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor
   )
     : base(interceptor, evaluator)
   {
@@ -104,9 +113,7 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
     var parents = Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, problem.SearchSpace, problem).ToGenotypePairs();
     var population = Crossover.Cross(parents, random, problem.SearchSpace, problem);
 
-    population = MutationRate >= 1.0
-      ? Mutator.Mutate(population, random, problem.SearchSpace, problem)
-      : Mutator.WithRate(MutationRate).Mutate(population, random, problem.SearchSpace, problem);
+    population = Mutator.Mutate(population, random, problem.SearchSpace, problem);
 
     var fitnesses = Evaluator.Evaluate(population, random, problem.SearchSpace, problem);
     var newPopulation = Replacer.Replace(oldPopulation, Population.From(population, fitnesses).Solutions, problem.Objective, random, problem.SearchSpace, problem);

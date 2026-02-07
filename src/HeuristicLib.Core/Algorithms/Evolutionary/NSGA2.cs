@@ -1,6 +1,6 @@
 ﻿using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Replacers;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -24,18 +24,23 @@ public class NSGA2<TGenotype, TSearchSpace, TProblem>
 
   public override NSGA2Instance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var interceptorInstance = Interceptor is not null ? instanceRegistry.GetOrCreate(Interceptor) : null;
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
+    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var crossoverInstance = instanceRegistry.GetOrCreate(Crossover);
+    var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
+    var selectorInstance = instanceRegistry.GetOrCreate(Selector);
+    var replacerInstance = instanceRegistry.GetOrCreate(Replacer);
     
     return new NSGA2Instance<TGenotype, TSearchSpace, TProblem>(
-      Interceptor,
+      interceptorInstance,
       evaluatorInstance,
       PopulationSize,
       creatorInstance,
-      Crossover,
-      Mutator,
-      Selector,
-      Replacer
+      crossoverInstance,
+      mutatorInstance,
+      selectorInstance,
+      replacerInstance
     );
   }
 }
@@ -48,13 +53,13 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
 {
   protected readonly int PopulationSize;
   protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
-  protected readonly ICrossover<TGenotype, TSearchSpace, TProblem> Crossover;
-  protected readonly IMutator<TGenotype, TSearchSpace, TProblem> Mutator;
-  protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
-  protected readonly IReplacer<TGenotype, TSearchSpace, TProblem> Replacer;
+  protected readonly ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover;
+  protected readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator;
+  protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
+  protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
 
 
-  public NSGA2Instance(IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossover<TGenotype, TSearchSpace, TProblem> crossover, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ISelector<TGenotype, TSearchSpace, TProblem> selector, IReplacer<TGenotype, TSearchSpace, TProblem> replacer) 
+  public NSGA2Instance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer) 
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;

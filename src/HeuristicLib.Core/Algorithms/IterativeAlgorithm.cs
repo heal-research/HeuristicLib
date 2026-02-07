@@ -36,9 +36,9 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProbl
   where TAlgorithmState : class, IAlgorithmState
 {
 
-  protected readonly IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor;
+  protected readonly IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor;
 
-  protected IterativeAlgorithmInstance(IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
+  protected IterativeAlgorithmInstance(IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
     : base(evaluator)
   {
     Interceptor = interceptor;

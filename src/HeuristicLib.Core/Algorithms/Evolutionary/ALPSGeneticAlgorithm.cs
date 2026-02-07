@@ -31,32 +31,39 @@ public class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   public required double MutationRate { get; init; }
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
-  public int Elites { get => internalReplacer.Elites; init => internalReplacer = new ElitismReplacer<TGenotype>(value); }
+  public int Elites { get; init; }
   // public IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; }
 
   // ToDo: this is not yet correctly set.
-  private readonly MultiMutator<TGenotype, TSearchSpace, TProblem> internalMutator = new([]); 
-  private readonly ElitismReplacer<TGenotype> internalReplacer = new(1);
+  // private readonly MultiMutator<TGenotype, TSearchSpace, TProblem> internalMutator = new([]); 
+  // private readonly ElitismReplacer<TGenotype> internalReplacer = new(1);
 
   public override AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var internalMutator = new MultiMutator<TGenotype, TSearchSpace, TProblem>([Mutator, new NoChangeMutator<TGenotype>()], [MutationRate, 1 - MutationRate]);
+    var internalReplacer = new ElitismReplacer<TGenotype>(Elites);
+    
+    var interceptorInstance = Interceptor is not null ? instanceRegistry.GetOrCreate(Interceptor) : null;
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
+    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var crossoverInstance = instanceRegistry.GetOrCreate(Crossover);
+    var mutatorInstance = instanceRegistry.GetOrCreate(internalMutator);
+    var selectorInstance = instanceRegistry.GetOrCreate(Selector);
+    var replacerInstance = instanceRegistry.GetOrCreate(internalReplacer);
     
     return new AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
-      Interceptor,
+      interceptorInstance,
       evaluatorInstance,
       PopulationSize,
       creatorInstance,
-      Crossover,
-      internalMutator,
-      Selector,
-      internalReplacer
+      crossoverInstance,
+      mutatorInstance,
+      selectorInstance,
+      replacerInstance
     );
   }
 
-  //internalMutator = new MultiMutator<TGenotype, TSearchSpace, TProblem>([mutator, new NoChangeMutator<TGenotype>()], [mutationRate, 1 - mutationRate]);
-  //  internalReplacer = new ElitismReplacer<TGenotype>(elites);
+
  
 }
 
@@ -68,12 +75,12 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
 {
   private readonly int PopulationSize;
   private readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator;
-  private readonly ICrossover<TGenotype, TSearchSpace, TProblem> agedCrossover;
-  private readonly IMutator<TGenotype, TSearchSpace, TProblem> agedMutator;
-  private readonly ISelector<TGenotype, TSearchSpace, TProblem> agedSelector;
-  private readonly IReplacer<TGenotype, TSearchSpace, TProblem> agedReplacer;
+  private readonly ICrossoverInstance<TGenotype, TSearchSpace, TProblem> agedCrossover;
+  private readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> agedMutator;
+  private readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector;
+  private readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer;
 
-  public AlpsGeneticAlgorithmInstance(IInterceptor<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossover<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutator<TGenotype, TSearchSpace, TProblem> agedMutator, ISelector<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacer<TGenotype, TSearchSpace, TProblem> agedReplacer) 
+  public AlpsGeneticAlgorithmInstance(IInterceptorInstance<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> agedMutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer) 
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;

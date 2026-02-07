@@ -29,17 +29,21 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSear
 
   public override OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var interceptorInstance = Interceptor is not null ? instanceRegistry.GetOrCreate(Interceptor) : null;
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
+    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var crossoverInstance = instanceRegistry.GetOrCreate(Crossover);
+    var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
+    var selectorInstance = instanceRegistry.GetOrCreate(Selector);
     
     return new OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
-      Interceptor,
+      interceptorInstance,
       evaluatorInstance,
       PopulationSize,
       creatorInstance,
-      Crossover,
-      Mutator,
-      Selector,
+      crossoverInstance,
+      mutatorInstance,
+      selectorInstance,
       Elites,
       MaxEffort,
       Strictness
@@ -55,15 +59,15 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotyp
 {
   protected readonly int PopulationSize;
   protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
-  protected readonly ICrossover<TGenotype, TSearchSpace, TProblem> Crossover;
-  protected readonly IMutator<TGenotype, TSearchSpace, TProblem> Mutator;
-  protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
+  protected readonly ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover;
+  protected readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator;
+  protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly int Elites;
   protected readonly int MaxEffort;
   protected readonly double Strictness = 1.0;
 
 
-  public OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance(IInterceptor<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossover<TGenotype, TSearchSpace, TProblem> crossover, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ISelector<TGenotype, TSearchSpace, TProblem> selector, int elites, int maxEffort, double strictness) 
+  public OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, int elites, int maxEffort, double strictness) 
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;

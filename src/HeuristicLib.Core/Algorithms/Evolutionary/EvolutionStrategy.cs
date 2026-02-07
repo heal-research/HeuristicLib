@@ -38,20 +38,32 @@ public class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
 
   public override EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var interceptorInstance = Interceptor is not null ? instanceRegistry.GetOrCreate(Interceptor) : null;
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
+    var creatorInstance = instanceRegistry.GetOrCreate(Creator);
+    var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
+    var crossoverInstance = Crossover is not null ? instanceRegistry.GetOrCreate(Crossover) : null;
+    var selectorInstance = instanceRegistry.GetOrCreate(Selector);
+    
+    IReplacer<TGenotype, TSearchSpace, TProblem> replacer = Strategy switch {
+      EvolutionStrategyType.Comma => new ElitismReplacer<TGenotype>(0),
+      EvolutionStrategyType.Plus => new PlusSelectionReplacer<TGenotype>(),
+      _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
+    };
+    var replacerInstance = instanceRegistry.GetOrCreate(replacer);
     
     return new EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>(
-      Interceptor,
+      interceptorInstance,
       evaluatorInstance,
       PopulationSize,
       NumberOfChildren,
       Strategy,
       creatorInstance,
-      Mutator,
-      Crossover,
-      Selector,
-      InitialMutationStrength
+      mutatorInstance,
+      crossoverInstance,
+      selectorInstance,
+      InitialMutationStrength,
+      replacerInstance
     );
   }
 }
@@ -66,12 +78,13 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly int NumberOfChildren;
   protected readonly EvolutionStrategyType Strategy;
   protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
-  protected readonly IMutator<TGenotype, TSearchSpace, TProblem> Mutator;
-  protected readonly ICrossover<TGenotype, TSearchSpace, TProblem>? Crossover;
-  protected readonly ISelector<TGenotype, TSearchSpace, TProblem> Selector;
+  protected readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator;
+  protected readonly ICrossoverInstance<TGenotype, TSearchSpace, TProblem>? Crossover;
+  protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly double InitialMutationStrength;
+  protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
 
-  public EvolutionStrategyInstance(IInterceptor<TGenotype, EvolutionStrategyState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator, ICrossover<TGenotype, TSearchSpace, TProblem>? crossover, ISelector<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength) 
+  public EvolutionStrategyInstance(IInterceptorInstance<TGenotype, EvolutionStrategyState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem>? crossover, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
@@ -82,6 +95,7 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
     Crossover = crossover;
     Selector = selector;
     InitialMutationStrength = initialMutationStrength;
+    Replacer = replacer;
   }
   
   public override EvolutionStrategyState<TGenotype> ExecuteStep(EvolutionStrategyState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
@@ -127,12 +141,8 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
     }
 
     var population = Population.From(children, fitnesses);
-    Replacer<TGenotype> replacer = Strategy switch {
-      EvolutionStrategyType.Comma => new ElitismReplacer<TGenotype>(0),
-      EvolutionStrategyType.Plus => new PlusSelectionReplacer<TGenotype>(),
-      _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
-    };
-    var newPopulation = replacer.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, random);
+
+    var newPopulation = Replacer.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, random, problem.SearchSpace, problem);
     return new EvolutionStrategyState<TGenotype> {
       Population = Population.From(newPopulation),
       //CurrentIteration = previousState.CurrentIteration + 1,

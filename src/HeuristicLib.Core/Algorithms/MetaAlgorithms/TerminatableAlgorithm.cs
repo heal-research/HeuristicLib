@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Execution;
+﻿using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
@@ -22,11 +23,13 @@ public class TerminatableAlgorithm<TG, TS, TP, TR>
   public override TerminatableAlgorithmInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
+    var terminatorInstance = instanceRegistry.GetOrCreate(Terminator);
+    var algorithmInstance = instanceRegistry.GetOrCreate(Algorithm);
     
     return new TerminatableAlgorithmInstance<TG, TS, TP, TR>(
       evaluatorInstance,
-      Algorithm,
-      Terminator
+      algorithmInstance,
+      terminatorInstance
     );
   }
 }
@@ -37,29 +40,27 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<T
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
 {
-  protected readonly IAlgorithm<TG, TS, TP, TR> Algorithm;
-  protected readonly ITerminator<TG, TR, TS, TP> Terminator;
+  protected readonly IAlgorithmInstance<TG, TS, TP, TR> Algorithm;
+  protected readonly ITerminatorInstance<TG, TR, TS, TP> Terminator;
 
-  public TerminatableAlgorithmInstance(IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithm<TG, TS, TP, TR> algorithm, ITerminator<TG, TR, TS, TP> terminator) 
+  public TerminatableAlgorithmInstance(IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithmInstance<TG, TS, TP, TR> algorithm, ITerminatorInstance<TG, TR, TS, TP> terminator) 
     : base(evaluator)
   {
     Algorithm = algorithm;
     Terminator = terminator;
   }
 
-  public override async IAsyncEnumerable<TR> RunStreamingAsync(TP problem, IRandomNumberGenerator random, TR? initialState, CancellationToken ct = default)
+  public override async IAsyncEnumerable<TR> RunStreamingAsync(TP problem, IRandomNumberGenerator random, TR? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
-    // this holds the local state of the terminator
-    var shouldTerminate = Terminator.CreateShouldTerminatePredicate(problem.SearchSpace, problem);
-
-    if (initialState is not null && shouldTerminate(initialState)) {
+    // ToDo: IMPORTANT: probably we should actually not check the termination condition here, as we advance terminator state on accident
+    if (initialState is not null && Terminator.ShouldTerminate(initialState, problem.SearchSpace, problem)) {
       yield break;
     }
     
     await foreach (var state in Algorithm.RunStreamingAsync(problem, random, initialState, ct)) {
       yield return state;
 
-      if (shouldTerminate(state)) {
+      if (Terminator.ShouldTerminate(state, problem.SearchSpace, problem)) {
         yield break;
       }
     }

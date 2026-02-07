@@ -104,19 +104,58 @@ public class MultiMutator<TGenotype, TSearchSpace, TProblem> : Mutator<TGenotype
   }
 }
 
-// public static class MultiMutator
-// {
-//   public static MultiMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> => new(mutators, weights);
-//
-//   public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators, IReadOnlyList<double>? weights = null) where TSearchSpace : class, ISearchSpace<TGenotype> => new(mutators, weights);
-//
-//   public static MultiMutator<TGenotype> Create<TGenotype>(IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators, IReadOnlyList<double>? weights = null) => new(mutators, weights);
-//
-//   public static MultiMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> => new(mutators);
-//
-//   public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators) where TSearchSpace : class, ISearchSpace<TGenotype> => new(mutators);
-//
-//   public static MultiMutator<TGenotype> Create<TGenotype>(params IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators) => new(mutators);
-//
-//   public static MultiMutator<TGenotype, TSearchSpace, TProblem> WithRate<TGenotype, TSearchSpace, TProblem>(this IMutator<TGenotype, TSearchSpace, TProblem> mutator, double mutationRate) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> => Create([mutator, NoChangeMutator<TGenotype>.Instance], [mutationRate, 1 - mutationRate]);
-// }
+public static class MultiMutator
+{
+   public static MultiMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null) 
+     where TGenotype : class
+     where TSearchSpace : class, ISearchSpace<TGenotype> 
+     where TProblem : class, IProblem<TGenotype, TSearchSpace>
+   {
+     return new MultiMutator<TGenotype, TSearchSpace, TProblem>(mutators, weights);
+   }
+
+   // public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators, IReadOnlyList<double>? weights = null) 
+   //   where TGenotype : class
+   //   where TSearchSpace : class, ISearchSpace<TGenotype>
+   // {
+   //   return new(mutators, weights);
+   // }
+
+   // public static MultiMutator<TGenotype> Create<TGenotype>(IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators, IReadOnlyList<double>? weights = null)
+   //    where TGenotype : class
+   // {
+   //   return new(mutators, weights);
+   // }
+
+   public static MultiMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace, TProblem>> mutators) 
+     where TGenotype : class
+     where TSearchSpace : class, ISearchSpace<TGenotype> 
+     where TProblem : class, IProblem<TGenotype, TSearchSpace>
+   {
+     return new MultiMutator<TGenotype, TSearchSpace, TProblem>(mutators);
+   }
+
+   // public static MultiMutator<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> mutators) 
+   //   where TGenotype : class
+   //   where TSearchSpace : class, ISearchSpace<TGenotype>
+   // {
+   //   return new(mutators);
+   // }
+
+   // public static MultiMutator<TGenotype> Create<TGenotype>(params IReadOnlyList<IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> mutators)
+   //   where TGenotype : class
+   // {
+   //   return new(mutators);
+   // }
+
+   extension<TGenotype, TSearchSpace, TProblem>(IMutator<TGenotype, TSearchSpace, TProblem> mutator) 
+    where TGenotype : class 
+    where TSearchSpace : class, ISearchSpace<TGenotype> 
+    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  {
+    public MultiMutator<TGenotype, TSearchSpace, TProblem> WithRate(double mutationRate)
+    {
+      return Create([mutator, NoChangeMutator<TGenotype>.Instance], [mutationRate, 1 - mutationRate]);
+    }
+  }
+}
