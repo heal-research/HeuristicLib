@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
@@ -28,11 +29,11 @@ public class MovingPeaksTests
   [Fact]
   public void Evaluate_AtPeakCenter_EqualsPeakHeight()
   {
-    var rng = new SystemRandomNumberGenerator(0);
+    var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     var x = new RealVector(10.0, 10.0);
-    var fx = p.Evaluate(x, NoRandomGenerator.Instance)[0];
+    var fx = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
 
     Assert.Equal(50.0, fx, 10);
   }
@@ -40,12 +41,12 @@ public class MovingPeaksTests
   [Fact]
   public void Evaluate_UsesMaximumOverPeaks()
   {
-    var rng = new SystemRandomNumberGenerator(0);
+    var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     // At (10,10) peak1 gives 50, peak2 gives 30 - 1*sqrt(80^2+80^2) which is negative
     var x = new RealVector(10.0, 10.0);
-    var fx = p.Evaluate(x, NoRandomGenerator.Instance)[0];
+    var fx = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
 
     Assert.Equal(50.0, fx, 10);
   }
@@ -53,13 +54,13 @@ public class MovingPeaksTests
   [Fact]
   public void Evaluate_FarAway_DecreasesWithDistance()
   {
-    var rng = new SystemRandomNumberGenerator(0);
+    var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     // Near the 50-peak
-    var near = p.Evaluate(new RealVector(10.0, 10.0), NoRandomGenerator.Instance)[0];
+    var near = p.Evaluate(new RealVector(10.0, 10.0), RandomNumberGenerator.NoRandom)[0];
     // Far from both peaks (roughly center-ish but far from 10,10 and 90,90)
-    var far = p.Evaluate(new RealVector(50.0, 50.0), NoRandomGenerator.Instance)[0];
+    var far = p.Evaluate(new RealVector(50.0, 50.0), RandomNumberGenerator.NoRandom)[0];
 
     Assert.True(far < near);
   }
@@ -67,18 +68,18 @@ public class MovingPeaksTests
   [Fact]
   public void Evaluate_DoesNotUseRandomGenerator()
   {
-    var rng = new SystemRandomNumberGenerator(0);
+    var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     // If Evaluate touches RNG, this test should throw
     var x = new RealVector(12.0, 12.0);
-    _ = p.Evaluate(x, NoRandomGenerator.Instance)[0];
+    _ = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
   }
 
   [Fact]
   public void Update_WithZeroSeverities_DoesNotChangeFitness()
   {
-    var rng = new SystemRandomNumberGenerator(0);
+    var rng = RandomNumberGenerator.Create(0);
     var staticParams = Parameters with {
       ShiftSeverity = 0,
       HeightSeverity = 0,
@@ -87,29 +88,29 @@ public class MovingPeaksTests
     var p = new MovingPeaksProblem(staticParams, rng, Peaks);
 
     var x = new RealVector(33.0, 33.0);
-    var before = p.Evaluate(x, NoRandomGenerator.Instance)[0];
+    var before = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
 
     for (var i = 0; i < 5; i++) {
       p.UpdateOnce();
     }
 
-    var after = p.Evaluate(x, NoRandomGenerator.Instance)[0];
+    var after = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
     Assert.Equal(before, after, 12);
   }
 
   [Fact]
   public void Update_WithNonzeroSeverities_ChangesFitnessEventually()
   {
-    var rng = new SystemRandomNumberGenerator(0);
+    var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     var x = new RealVector(33.0, 33.0);
-    var before = p.Evaluate(x, NoRandomGenerator.Instance)[0];
+    var before = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
 
     var changed = false;
     for (var i = 0; i < 50; i++) {
       p.UpdateOnce();
-      var now = p.Evaluate(x, NoRandomGenerator.Instance)[0];
+      var now = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
       if (now.IsAlmost(before, 1e-12)) {
         continue;
       }
@@ -127,7 +128,7 @@ public class MovingPeaksTests
   {
     // This test assumes your implementation clamps heights/widths after update.
     // If you don't clamp, either remove this test or change it to assert "can exceed".
-    var rng = new SystemRandomNumberGenerator(0);
+    var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     for (var i = 0; i < 200; i++) {
@@ -147,14 +148,14 @@ public class MovingPeaksTests
   {
     // Assumes: center movement step length is limited by ShiftSeverity,
     // and boundary handling can't increase it.
-    var rng = new SystemRandomNumberGenerator(0);
+    var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     var before = p.Peaks().Select(pk => pk.Center.ToArray()).ToArray();
 
     p.UpdateOnce();
 
-    var peaks = p.Peaks().ToArr();
+    var peaks = p.Peaks().ToArray();
     for (var i = 0; i < peaks.Length; i++) {
       var dist = Euclidean(before[i], peaks[i].Center);
       Assert.True(dist <= Parameters.ShiftSeverity + 1e-9);

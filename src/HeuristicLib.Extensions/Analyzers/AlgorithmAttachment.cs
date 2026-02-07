@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Analyzers;
 
 public static class AlgorithmAttachmentExtensions {
   extension<TG, TS, TP, TR, TA, TBuildSpec>(IAlgorithmBuilder<TG, TS, TP, TR, TA, TBuildSpec> builder)
-    where TG : class
+    where TG : notnull
     where TA : IAlgorithm<TG, TS, TP, TR>
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
@@ -52,21 +52,22 @@ public static class AlgorithmAttachmentExtensions {
 
 // ToDo: Think about a different name. Maybe UniversalRewriter or something similar. 
 public abstract class AlgorithmAttachment<TG, TS, TP, TRes> : IAlgorithmBuilderRewriter<AlgorithmBuildSpec<TG, TS, TP, TRes>>
+  where TG : notnull
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TRes : class, IAlgorithmState 
-  where TG : class
+
 {
 
   public void Rewrite(AlgorithmBuildSpec<TG, TS, TP, TRes> buildSpec) {
-    buildSpec.Evaluator = WrapEvaluator(buildSpec.Evaluator);
-    buildSpec.Terminator = WrapTerminator(buildSpec.Terminator);
-    buildSpec.Interceptor = WrapInterceptor(buildSpec.Interceptor);
-    
-    if (buildSpec is ISpecWithCreator<TG, TS, TP> creatorSpec) creatorSpec.Creator = WrapCreator(creatorSpec.Creator);
-    if (buildSpec is ISpecWithMutator<TG, TS, TP> mutatorSpec) mutatorSpec.Mutator = WrapMutator(mutatorSpec.Mutator);
-    if (buildSpec is ISpecWithCrossover<TG, TS, TP> crossoverSpec) crossoverSpec.Crossover = WrapCrossover(crossoverSpec.Crossover);
-    if (buildSpec is ISpecWithSelector<TG, TS, TP> selectorSpec) selectorSpec.Selector = WrapSelector(selectorSpec.Selector);
+    // buildSpec.Evaluator = WrapEvaluator(buildSpec.Evaluator);
+    // buildSpec.Terminator = WrapTerminator(buildSpec.Terminator);
+    // buildSpec.Interceptor = WrapInterceptor(buildSpec.Interceptor);
+    //
+    // if (buildSpec is ISpecWithCreator<TG, TS, TP> creatorSpec) creatorSpec.Creator = WrapCreator(creatorSpec.Creator);
+    // if (buildSpec is ISpecWithMutator<TG, TS, TP> mutatorSpec) mutatorSpec.Mutator = WrapMutator(mutatorSpec.Mutator);
+    // if (buildSpec is ISpecWithCrossover<TG, TS, TP> crossoverSpec) crossoverSpec.Crossover = WrapCrossover(crossoverSpec.Crossover);
+    // if (buildSpec is ISpecWithSelector<TG, TS, TP> selectorSpec) selectorSpec.Selector = WrapSelector(selectorSpec.Selector);
   }
   
   public virtual IInterceptor<T1, TRes1, TS1, TP1>? WrapInterceptor<T1, TRes1, TS1, TP1>(IInterceptor<T1, TRes1, TS1, TP1>? interceptor) 
@@ -108,10 +109,10 @@ public abstract class AlgorithmAttachment<TG, TS, TP, TRes> : IAlgorithmBuilderR
 }
 
 public abstract class AlgorithmAttachment<T> : AlgorithmAttachment<T, IAlgorithmState>
-  where T : class;
+  where T : notnull;
 
 public abstract class AlgorithmAttachment<T, TRes> : AlgorithmAttachment<T, ISearchSpace<T>, TRes>
-  where T : class where TRes : class, IAlgorithmState;
+  where T : notnull where TRes : class, IAlgorithmState;
 
 public abstract class AlgorithmAttachment<T, TS, TRes> : AlgorithmAttachment<T, TS, IProblem<T, TS>, TRes>
-  where T : class where TS : class, ISearchSpace<T> where TRes : class, IAlgorithmState;
+  where T : notnull where TS : class, ISearchSpace<T> where TRes : class, IAlgorithmState;

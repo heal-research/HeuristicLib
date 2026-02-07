@@ -1,4 +1,7 @@
-﻿namespace HEAL.HeuristicLib.Random;
+﻿using HEAL.HeuristicLib.Random.KeyCombiners;
+using HEAL.HeuristicLib.Random.RandomEngines;
+
+namespace HEAL.HeuristicLib.Random;
 
 public class RandomNumberGenerator : IRandomNumberGenerator
 {
@@ -19,6 +22,12 @@ public class RandomNumberGenerator : IRandomNumberGenerator
   public static IRandomNumberGenerator Create(int seed) => Create((ulong)seed, RandomProfile.Default);
 
   public static IRandomNumberGenerator Create(ulong seed, RandomProfile profile) => new RandomNumberGenerator(seed, profile.KeyCombiner, profile.EngineFactory);
+  
+  [Obsolete("Should be in the Testing namespace, not in the core library.")]
+  public static readonly IRandomNumberGenerator NoRandom = new RandomNumberGenerator(0, new NoKeyCombiner(), _ => new NoRandomEngine());
+
+  [Obsolete("Should be in the Testing namespace, not in the core library.")]
+  public static IRandomNumberGenerator System(ulong seed) => Create(seed, RandomProfile.SystemRandom);
 
   public IRandomNumberGenerator Fork(ulong forkKey)
   {

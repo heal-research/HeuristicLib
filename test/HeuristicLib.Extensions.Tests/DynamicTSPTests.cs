@@ -37,9 +37,9 @@ public class DynamicTSPTests
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<Permutation>(2);
     ga.Elites = 1;
-    ga.Evaluator = prob.WrapEvaluator(ga.Evaluator);
+    //ga.Evaluator = prob.WrapEvaluator(ga.Evaluator);
 
-    prob.AttachTo(ga);
+    //prob.AttachTo(ga);
 
     //execute
     var resGa = ga.Build().RunToCompletion(prob, RandomNumberGenerator.Create(42));

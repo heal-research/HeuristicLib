@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.Dynamic.Operators;
@@ -35,12 +36,12 @@ file sealed class DummyDynamicProblem : DynamicProblem<DummyGenotype, DummySearc
   protected override void Update() {}
 }
 
-file sealed class CountingEvaluator : IEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem>
+file sealed class CountingEvaluator : StatelessEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem>
 {
   public int Calls { get; private set; }
   public int LastBatchSize { get; private set; }
 
-  public IReadOnlyList<ObjectiveVector> Evaluate(
+  public override IReadOnlyList<ObjectiveVector> Evaluate(
     IReadOnlyList<DummyGenotype> solutions,
     IRandomNumberGenerator random,
     DummySearchSpace searchSpace,
@@ -58,17 +59,17 @@ public class DynamicEvaluationCacheTests
   [Fact]
   public void DeduplicatesWithinBatch_EvaluatesOnce()
   {
-    var env = new SystemRandomNumberGenerator(0);
+    var env = RandomNumberGenerator.Create(0);
     var problem = new DummyDynamicProblem(env, 10_000);// avoid boundary
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-    keySelector: s => s.Value, inner, problem
+       inner, problem, keySelector: s => s.Value
     );
 
-    var res = cached.Evaluate(
+    var res = cached.CreateNewExecutionInstance().Evaluate(
     [new DummyGenotype(1), new DummyGenotype(1), new DummyGenotype(1)],
-    NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
 
     Assert.Equal(1, inner.Calls);
     Assert.Equal(1, inner.LastBatchSize);
@@ -83,20 +84,22 @@ public class DynamicEvaluationCacheTests
   [Fact]
   public void CachesAcrossBatches_NoReevaluation_NoTick()
   {
-    var env = new SystemRandomNumberGenerator(0);
+    var env = RandomNumberGenerator.Create(0);
     var problem = new DummyDynamicProblem(env, 10_000);// avoid boundary
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-    keySelector: s => s.Value, inner, problem
-    );
+     inner, problem,  keySelector: s => s.Value
+    ).CreateNewExecutionInstance();
 
-    _ = cached.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    var noRandomGenerator = RandomNumberGenerator.Create(0, RandomProfile.NoRandom);
+    
+    _ = cached.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], noRandomGenerator, problem.SearchSpace, problem);
     Assert.Equal(1, inner.Calls);
     Assert.Equal(2L, problem.EpochClock.Ticks);
 
     // Fully cached => inner evaluator not called => no ticking
-    _ = cached.Evaluate([new DummyGenotype(2), new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(2), new DummyGenotype(1)], noRandomGenerator, problem.SearchSpace, problem);
     Assert.Equal(1, inner.Calls);
     Assert.Equal(2L, problem.EpochClock.Ticks);
   }
@@ -104,16 +107,16 @@ public class DynamicEvaluationCacheTests
   [Fact]
   public void EpochBoundary_ClearsCache_ThenRequiresReevaluation()
   {
-    var env = new SystemRandomNumberGenerator(0);
+    var env = RandomNumberGenerator.Create(0);;
     var problem = new DummyDynamicProblem(env, 2);// boundary every 2 evals
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-    keySelector: s => s.Value, inner, problem
+     inner, problem, keySelector: s => s.Value
     );
 
     // Evaluate two distinct keys -> 2 evaluations -> should hit boundary and schedule an epoch change
-    _ = cached.Evaluate([new DummyGenotype(1), new DummyGenotype(2)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.CreateNewExecutionInstance().Evaluate([new DummyGenotype(1), new DummyGenotype(2)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(1, inner.Calls);
     Assert.Equal(2L, problem.EpochClock.Ticks);
     Assert.True(problem.EpochClock.PendingEpochs > 0);
@@ -125,33 +128,33 @@ public class DynamicEvaluationCacheTests
     Assert.Equal(0, problem.EpochClock.PendingEpochs);
 
     // Previously cached: now must be reevaluated
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.CreateNewExecutionInstance().Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(2, inner.Calls);
   }
 
   [Fact]
   public void GraceCount_Reached_AdvancesEpoch_WithoutTicking()
   {
-    var env = new SystemRandomNumberGenerator(0);
+    var env = RandomNumberGenerator.Create(0);
     var problem = new DummyDynamicProblem(env, 10_000);// avoid natural boundary
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-    keySelector: s => s.Value, inner, problem
-    ) { GraceCount = 3 };
+     inner, problem, keySelector: s => s.Value
+    ) { GraceCount = 3 }.CreateNewExecutionInstance();
 
     // Prime cache (causes 1 tick)
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(1, inner.Calls);
     Assert.Equal(1L, problem.EpochClock.Ticks);
     Assert.Equal(0, problem.EpochClock.CurrentEpoch);
 
     // Now do 3 cached batches => no ticking, but should force AdvanceEpoch
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(1L, problem.EpochClock.Ticks);// still 1 => proves no ticking on cache hit
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(1L, problem.EpochClock.Ticks);// still 1 => proves no ticking on cache hit
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
 
     Assert.Equal(10_000L, problem.EpochClock.Ticks);// still 1 => proves no ticking on cache hit
     Assert.True(problem.EpochClock.PendingEpochs > 0);// epoch forced
@@ -162,36 +165,36 @@ public class DynamicEvaluationCacheTests
     Assert.Equal(1, problem.EpochClock.CurrentEpoch);
 
     // After clear, it must reevaluate
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(2, inner.Calls);
   }
 
   [Fact]
   public void HitStreakResets_WhenUncachedAppears()
   {
-    var env = new SystemRandomNumberGenerator(0);
+    var env = RandomNumberGenerator.Create(0);
     var problem = new DummyDynamicProblem(env, 10_000);// avoid natural boundary
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-    keySelector: s => s.Value, inner, problem
-    ) { GraceCount = 3 };
+      inner, problem, keySelector: s => s.Value
+    ) { GraceCount = 3 }.CreateNewExecutionInstance();
 
     // Prime cache
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(1L, problem.EpochClock.Ticks);
 
     // Two cached hits => hitCount=2
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(1L, problem.EpochClock.Ticks);
 
     // Uncached appears => tick increases and hitCount resets
-    _ = cached.Evaluate([new DummyGenotype(2)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(2)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(2L, problem.EpochClock.Ticks);
 
     // Another cached hit should not advance epoch (only 1 since reset)
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(2L, problem.EpochClock.Ticks);
 
     Assert.Equal(0, problem.EpochClock.CurrentEpoch);
@@ -201,18 +204,18 @@ public class DynamicEvaluationCacheTests
   [Fact]
   public void EmptyBatch_DoesNothing()
   {
-    var env = new SystemRandomNumberGenerator(0);
+    var env = RandomNumberGenerator.Create(0);
     var problem = new DummyDynamicProblem(env, 10_000);
     var inner = new CountingEvaluator();
 
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-    keySelector: s => s.Value, inner, problem
-    ) { GraceCount = 1 };
+      inner, problem, keySelector: s => s.Value
+    ) { GraceCount = 1 }.CreateNewExecutionInstance();
 
     var epochBefore = problem.EpochClock.CurrentEpoch;
     var ticksBefore = problem.EpochClock.Ticks;
 
-    var res = cached.Evaluate(Array.Empty<DummyGenotype>(), NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    var res = cached.Evaluate(Array.Empty<DummyGenotype>(), RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
 
     Assert.Empty(res);
     Assert.Equal(0, inner.Calls);
@@ -224,19 +227,19 @@ public class DynamicEvaluationCacheTests
   [Fact]
   public void AdvanceEpoch_JumpsTicksToNextEpochBoundary()
   {
-    var env = new SystemRandomNumberGenerator(0);
+    var env = RandomNumberGenerator.Create(0);
     var problem = new DummyDynamicProblem(env, 10_000);
     var inner = new CountingEvaluator();
     var cached = new DynamicCachedEvaluator<DummyGenotype, DummySearchSpace, DummyDynamicProblem, int>(
-    keySelector: s => s.Value, inner, problem
-    ) { GraceCount = 1 };
+      inner, problem, keySelector: s => s.Value
+    ) { GraceCount = 1 }.CreateNewExecutionInstance();
 
     // prime cache -> ticks=1
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
     Assert.Equal(1L, problem.EpochClock.Ticks);
 
     // next fully cached batch triggers AdvanceEpoch immediately (GraceCount=1)
-    _ = cached.Evaluate([new DummyGenotype(1)], NoRandomGenerator.Instance, problem.SearchSpace, problem);
+    _ = cached.Evaluate([new DummyGenotype(1)], RandomNumberGenerator.NoRandom, problem.SearchSpace, problem);
 
     Assert.Equal(10_000L, problem.EpochClock.Ticks);
     Assert.Equal(0L, problem.EpochClock.Ticks % problem.EpochClock.EpochLength);

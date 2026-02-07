@@ -17,7 +17,7 @@ namespace HEAL.HeuristicLib.Analyzers;
 
 public abstract class AttachedAnalysis<TG, TS, TP, TRes>
   : AlgorithmAttachment<TG, TS, TP, TRes>
-  where TG : class
+  where TG : notnull
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TRes : class, IAlgorithmState

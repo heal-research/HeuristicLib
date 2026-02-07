@@ -1,62 +1,8 @@
-using HEAL.HeuristicLib.GenealogyAnalysis;
-using HEAL.HeuristicLib.Problems.DataAnalysis;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
-using Addition = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Addition;
-using BalancedTreeCreator = HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.BalancedTreeCreator;
-using BestMedianWorstAnalysis = HEAL.HeuristicLib.Analyzers.BestMedianWorstAnalysis;
-using ChangeNodeTypeManipulation = HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.ChangeNodeTypeManipulation;
-using DataAnalysisProblemData = HEAL.HeuristicLib.Problems.DataAnalysis.DataAnalysisProblemData;
-using Division = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Division;
-using Exponential = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Exponential;
-using FullTreeCreator = HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.FullTreeCreator;
-using FullTreeShaker = HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.FullTreeShaker;
-using GrowTreeCreator = HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.GrowTreeCreator;
-using Logarithm = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Logarithm;
-using MaxAbsoluteErrorEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MaxAbsoluteErrorEvaluator;
-using MeanAbsoluteErrorEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MeanAbsoluteErrorEvaluator;
-using MeanLogErrorEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MeanLogErrorEvaluator;
-using MeanRelativeErrorEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MeanRelativeErrorEvaluator;
-using MeanSquaredErrorCalculator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.MeanSquaredErrorCalculator;
-using ModifiableDataset = HEAL.HeuristicLib.Problems.DataAnalysis.ModifiableDataset;
-using MultiMutator = HEAL.HeuristicLib.Operators.Mutators.MultiMutator;
-using Multiplication = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Multiplication;
-using NormalizedMeanSquaredErrorEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.NormalizedMeanSquaredErrorEvaluator;
-using Number = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Number;
-using NumberOfVariablesEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.NumberOfVariablesEvaluator;
-using ObjectiveDirection = HEAL.HeuristicLib.Optimization.ObjectiveDirection;
-using OnePointShaker = HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.OnePointShaker;
-using PearsonR2Evaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.PearsonR2Evaluator;
-using ProbabilisticTreeCreator = HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.ProbabilisticTreeCreator;
-using ProblemGeneration = HEAL.HeuristicLib.PythonInterOptScripts.ProblemGeneration;
-using PythonCorrelationAnalysis = HEAL.HeuristicLib.PythonInterOptScripts.PythonCorrelationAnalysis;
-using PythonGenealogyAnalysis = HEAL.HeuristicLib.PythonInterOptScripts.PythonGenealogyAnalysis;
-using QualityCurveAnalysis = HEAL.HeuristicLib.Analyzers.QualityCurveAnalysis;
-using RampedHalfAndHalfTreeCreator = HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.RampedHalfAndHalfTreeCreator;
-using RandomNumberGenerator = HEAL.HeuristicLib.Random.RandomNumberGenerator;
-using RegressionProblemData = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.RegressionProblemData;
-using RemoveBranchManipulation = HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.RemoveBranchManipulation;
-using ReplaceBranchManipulation = HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators.ReplaceBranchManipulation;
-using RootMeanSquaredErrorEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.RootMeanSquaredErrorEvaluator;
-using SquareRoot = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.SquareRoot;
-using Subtraction = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Subtraction;
-using SubtreeCrossover = HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers.SubtreeCrossover;
-using SymbolicExpressionTree = HEAL.HeuristicLib.Genotypes.Trees.SymbolicExpressionTree;
-using SymbolicExpressionTreeCreator = HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators.SymbolicExpressionTreeCreator;
-using SymbolicExpressionTreeNode = HEAL.HeuristicLib.Genotypes.Trees.SymbolicExpressionTreeNode;
-using SymbolicExpressionTreeSearchSpace = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTreeSearchSpace;
-using SymbolicRegressionParameterOptimization = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.SymbolicRegressionParameterOptimization;
-using SymbolicRegressionProblem = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.SymbolicRegressionProblem;
-using TreeComplexityEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.TreeComplexityEvaluator;
-using TreeLengthEvaluator = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators.TreeLengthEvaluator;
-using Variable = HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variable;
-
-<<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
-﻿using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
-========
-﻿using HEAL.HeuristicLib.Algorithms.Evolutionary.GeneticAlgorithm;
+using HEAL.HeuristicLib.Algorithms.Evolutionary.GeneticAlgorithm;
 using HEAL.HeuristicLib.Algorithms.Evolutionary.NSGA2;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Genotypes.Trees;
@@ -68,33 +14,23 @@ using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Operators.Terminators;
->>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
-<<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
-========
+
 using HEAL.HeuristicLib.PythonInterOptScripts;
->>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-<<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
-namespace HEAL.HeuristicLib.Extensions.Tests
-{
+
+namespace HEAL.HeuristicLib.Extensions.Tests;
+
 public class SymbolicRegressionTests
 {
-  public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
-    ========
-    namespace HEAL.HeuristicLib.Extensions.Tests;
-
-  public class SymbolicRegressionTests
-  {
-    >>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
   private const int AlgorithmRandomSeed = 42;
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
 
@@ -182,15 +118,10 @@ public class SymbolicRegressionTests
   [Fact]
   public void Creators()
   {
-    <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
     var problem = CreateTestSymbolicRegressionProblem(12);
     var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator() };
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
-      ========
-    var problem = CreateTestSymbolicRegressionProblem(treeLength: 12);
-    var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator() };
-    var r = new SystemRandomNumberGenerator(AlgorithmRandomSeed);
-      >>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
+   
 
     foreach (var c in creators) {
       var tree = c.Create(r, problem.SearchSpace);
@@ -206,193 +137,8 @@ public class SymbolicRegressionTests
       _ = problem.Evaluate(tree);
     }
   }
-
-  <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
-  ========
-  [Fact]
-  public void GeneticAlgorithmExecution()
-  {
-    var problem = CreateTestSymbolicRegressionProblem();
-
-    var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
-    ga.PopulationSize = 100;
-    ga.MutationRate = 0.05;
-    ga.Selector = new Operators.Selectors.TournamentSelector<SymbolicExpressionTree>(3);
-    ga.Elites = 1;
-    ga.RandomSeed = AlgorithmRandomSeed;
-    ga.Terminator = new Operators.Terminators.AfterIterationsTerminator<SymbolicExpressionTree>(100);
-
-    var qualities = BestMedianWorstAnalysis.Analyze(ga);
-    var res = ga.Execute(problem);
-
-    Assert.Equal(100, qualities.BestISolutions.Count);
-    Assert.Equal(100, res.Population.Solutions.Count);
-  }
-
-  [Fact]
-  public void GenealogyGraphOnGeneticAlgorithm()
-  {
-    var problem = CreateTestSymbolicRegressionProblem();
-
-    var gens = 100;
-    var popsize = 10;
-    var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
-    ga.PopulationSize = popsize;
-    ga.MutationRate = 0.05;
-    ga.Selector = new Operators.Selectors.TournamentSelector<SymbolicExpressionTree>(3);
-    ga.Elites = 1;
-    ga.RandomSeed = AlgorithmRandomSeed;
-    ga.Terminator = new Operators.Terminators.AfterIterationsTerminator<SymbolicExpressionTree>(gens);
-
-    var evalQualities = QualityCurveAnalysis.Create(ga);
-    var qualities = BestMedianWorstAnalysis.Analyze(ga);
-    var genealogy = GenealogyAnalysis.Create(ga);
-    var res = ga.Execute(problem);
-
-    Assert.Equal(gens, qualities.BestISolutions.Count);
-    Assert.Equal(popsize, res.Population.Solutions.Count);
-    var graphViz = genealogy.Graph.ToGraphViz();
-    Assert.True(graphViz.Length > 0);
-    Assert.Equal(qualities.BestISolutions[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
-  }
-
-  [Fact]
-  public void GenealogyGraphOnLocalSearch()
-  {
-    var problem = CreateTestSymbolicRegressionProblem();
-    var ga = LocalSearch.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
-    ga.RandomSeed = AlgorithmRandomSeed;
-    ga.Terminator = new Operators.Terminators.AfterIterationsTerminator<SymbolicExpressionTree>(100);
-
-    var genealogy = GenealogyAnalysis.Create(ga);
-    var res = ga.Execute(problem);
-    Assert.Single(res.Population.Solutions);
-    var graphViz = genealogy.Graph.ToGraphViz();
-    Assert.True(graphViz.Length > 0);
-  }
-
-  [Fact]
-  public void GenealogyGraphOnNSGA2()
-  {
-    var problem = CreateTestSymbolicRegressionProblem(multiObjective: true);
-    var symRegAllMutator = CreateSymRegAllMutator();
-    const int populationSize = 10;
-    const int maximumIterations = 50;
-    const double mutationRate = 0.05;
-    var nsga2 = Nsga2.GetBuilder(
-    new ProbabilisticTreeCreator(),
-    new SubtreeCrossover(),
-    symRegAllMutator);
-    nsga2.PopulationSize = populationSize;
-    nsga2.Terminator = new Operators.Terminators.AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations);
-    nsga2.MutationRate = mutationRate;
-
-    QualityCurveAnalysis.Create(nsga2);
-    var genealogy = GenealogyAnalysis.Create(nsga2);
-    var qualities = BestMedianWorstAnalysis.Analyze(nsga2);
-
-    var res = nsga2.Execute(problem);
-    Assert.Equal(maximumIterations, qualities.BestISolutions.Count);
-    Assert.Equal(populationSize, res.Population.Solutions.Count);
-    var graphViz = genealogy.Graph.ToGraphViz();
-    Assert.True(graphViz.Length > 0);
-  }
-
-  [Fact]
-  public void TestPlayground()
-  {
-    const int iterations = 200;
-    var i = 0;
-    var file = @"TestData\192_vineyard.tsv";
-    PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
-    new PythonGenealogyAnalysis.SymRegExperimentParameters {
-      Seed = AlgorithmRandomSeed,
-      Iterations = iterations
-    },
-    callback: _ => i++);
-    Assert.Equal(iterations, i);
-  }
-
-  [Fact]
-  public void TestPlayground2()
-  {
-    const int iterations = 4;
-    var i = 0;
-    PythonCorrelationAnalysis.RunCorrelationNsga2(callback: (_, _) => { i++; }, iterations, 100, ProblemGeneration.SphereRastriginProblem(10, -5, 5, 0.5));
-    Assert.Equal(iterations, i);
-  }
-
-  [Fact]
-  public void TestPlayground3()
-  {
-    var t = DateTime.Now;
-    const int it = 20;
-    PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(@"d:\Projekte\HCAI\HeuristicLib\HCAI-Scripts\data\FeynmanICh40Eq1.csv",
-    new PythonGenealogyAnalysis.SymRegExperimentParameters {
-      PopulationSize = 100,
-      Iterations = it,
-      TrackPopulations = true,
-      TrackGenealogy = false,
-      Seed = 42
-    },
-    5);
-
-    var t2 = DateTime.Now;
-    var speed = (t2 - t) / it;
-    Assert.True(speed < TimeSpan.FromSeconds(10));
-  }
-
-  >>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
-  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false, int constOptIteration = 5)
-  {
-    var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
-
-    Problems.DataAnalysis.Regression.IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
-      ? [
-        new MaxAbsoluteErrorEvaluator(),
-        new MeanAbsoluteErrorEvaluator(),
-        new MeanLogErrorEvaluator(),
-        new MeanRelativeErrorEvaluator(),
-        new MeanSquaredErrorCalculator(),
-        new NormalizedMeanSquaredErrorEvaluator(),
-        new NumberOfVariablesEvaluator(),
-        new PearsonR2Evaluator(),
-        new RootMeanSquaredErrorEvaluator(),
-        new TreeComplexityEvaluator(),
-        new TreeLengthEvaluator()
-      ]
-      : [new RootMeanSquaredErrorEvaluator()];
-    var problem = new SymbolicRegressionProblem(problemData, objectives) {
-      LowerPredictionBound = 0,
-      UpperPredictionBound = 100,
-      SearchSpace = {
-        TreeDepth = treeLength,
-        TreeLength = treeLength
-      },
-      ParameterOptimizationIterations = constOptIteration
-    };
-
-    var linearScalingRoot = problem.SearchSpace.Grammar.AddLinearScaling();
-    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(
-    linearScalingRoot,
-    new Addition(),
-    new Subtraction(),
-    new Multiplication(),
-    new Division(),
-    new Number(),
-    new SquareRoot(),
-    new Logarithm(),
-    new Exponential(),
-    new Variable { VariableNames = problemData.InputVariables });
-
-    return problem;
-  }
-
-  <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/SymbolicRegressionTests.cs
+  
   private static Operators.Mutators.MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, Problems.IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
-    ========
-  private static Operators.Mutators.MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, Problems.IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
-    >>>>>>>> main:test/HeuristicLib.Extensions.Tests/SymbolicRegressionTests.cs
   {
     return MultiMutator.Create(
     new ChangeNodeTypeManipulation(),
@@ -401,5 +147,4 @@ public class SymbolicRegressionTests
     new RemoveBranchManipulation(),
     new ReplaceBranchManipulation());
   }
-}
 }

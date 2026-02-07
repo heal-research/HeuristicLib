@@ -2,20 +2,11 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.PythonInterOptScripts;
 
-<<<<<<<< HEAD:test/HeuristicLib.Core.Tests/MultiObjectiveTests.cs
-namespace HEAL.HeuristicLib.Extensions.Tests
-{
-========
-}
-
 namespace HEAL.HeuristicLib.Extensions.Tests;
->>>>>>>> main:test/HeuristicLib.Extensions.Tests/MultiObjectiveTests.cs
 
 public class MultiObjectiveTests
 {
   [Fact]
-  <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/MultiObjectiveTests.cs
-  ========
   public void Angle()
   {
     var r = new RealVector(1, 2, 3);
@@ -32,7 +23,6 @@ public class MultiObjectiveTests
   }
 
   [Fact]
-  >>>>>>>> main:test/HeuristicLib.Extensions.Tests/MultiObjectiveTests.cs
   public void EmptyInput_ReturnsNoFronts_AndEmptyRank()
   {
     var solutions = Array.Empty<ISolution<object>>();
@@ -106,11 +96,7 @@ public class MultiObjectiveTests
     // Assert
     Assert.Equal(3, fronts.Count);
     var ids = FrontIds(fronts);
-      <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/MultiObjectiveTests.cs
     Assert.Equal(["A", "B"], ids[0].Concat(ids[1]).OrderBy(x => x)); // Implementation may break ties arbitrarily
-      ========
-    Assert.Equal(["A", "B"], ids[0].Append(ids[1]).OrderBy(x => x));// Implementation may break ties arbitrarily
-      >>>>>>>> main:test/HeuristicLib.Extensions.Tests/MultiObjectiveTests.cs
     Assert.Equal(["C"], ids[2]);
   }
 
@@ -118,9 +104,6 @@ public class MultiObjectiveTests
     => fronts.Select(f => f.Select(s => s.Genotype).OrderBy(x => x).ToArray()).ToArray();
 
   private static Solution<string> Sol(string id, params double[] values) => new(id, values);
-    <<<<<<<< HEAD:test/HeuristicLib.Core.Tests/MultiObjectiveTests.cs
-  private static Objective MinimizeAll(int i) => new(Enumerable.Repeat(ObjectiveDirection.Minimize, i).ToArray(), new NoTotalOrderComparer());
-    ========
+
   private static Objective MinimizeAll(int i) => new(Enumerable.Repeat(ObjectiveDirection.Minimize, i).ToArray(), NoTotalOrderComparer.Instance);
-    >>>>>>>> main:test/HeuristicLib.Extensions.Tests/MultiObjectiveTests.cs
 }
