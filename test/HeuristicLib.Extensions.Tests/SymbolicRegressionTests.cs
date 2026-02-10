@@ -175,6 +175,7 @@ public class SymbolicRegressionTests
       new FullTreeShaker(),
       new OnePointShaker(),
       new RemoveBranchManipulation(),
-      new ReplaceBranchManipulation()]);
+      new ReplaceBranchManipulation()
+    ]);
   }
 }

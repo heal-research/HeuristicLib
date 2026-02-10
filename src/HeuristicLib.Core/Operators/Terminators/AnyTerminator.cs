@@ -30,8 +30,9 @@ public partial record class AnyTerminator<TGenotype, TAlgorithmState, TSearchSpa
     : TerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
   {
     private readonly IReadOnlyList<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> terminators;
-    
-    public Instance(IReadOnlyList<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> terminators) {
+
+    public Instance(IReadOnlyList<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> terminators)
+    {
       this.terminators = terminators;
     }
 

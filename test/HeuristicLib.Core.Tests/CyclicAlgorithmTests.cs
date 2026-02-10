@@ -6,9 +6,9 @@
 // using HEAL.HeuristicLib.Operators.RealVectorOperators;
 // using HEAL.HeuristicLib.Problems;
 // using HEAL.HeuristicLib.Problems.TestFunctions;
-//
+// 
 // namespace HEAL.HeuristicLib.Core.Tests;
-//
+// 
 // public class CyclicAlgorithmTests {
 //   // [Fact]
 //   // public Task ConcatAlgorithm_ExecuteWithGAs() {
@@ -61,7 +61,7 @@
 //   [Fact]
 //   public Task ConcatAlgorithm_ExecuteStreamingWithGAs() {
 //     var problem = new TestFunctionProblem(new SphereFunction(2));
-//
+// 
 //     var ga1 = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
 //       populationSize: 2,
 //       creator: new UniformDistributedCreator(),
@@ -97,9 +97,9 @@
 //       randomSeed: 42,
 //       terminator: Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(4)
 //     );
-//
+// 
 //     var concatAlgorithm = new ConcatAlgorithm<RealVector, RealVectorEncoding, GeneticAlgorithmState<RealVector>, PopulationResult<RealVector>>([ga1, ga2, ga3]);
-//
+// 
 //     var states = concatAlgorithm.ExecuteStreaming(problem).ToList();
 //     var lastState = states[^1];
 //     var generations = states.Select(x => x.CurrentGeneration).ToList();

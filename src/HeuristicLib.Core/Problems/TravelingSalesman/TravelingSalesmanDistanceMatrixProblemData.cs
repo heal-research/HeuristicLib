@@ -14,7 +14,7 @@ public class TravelingSalesmanDistanceMatrixProblemData : ITravelingSalesmanProb
     if (distances.GetLength(0) < 1) {
       throw new ArgumentException("The distance matrix must have at least one city.");
     }
-    this.distances = (double[,])distances.Clone();// clone Distances to prevent modification
+    this.distances = (double[,])distances.Clone(); // clone Distances to prevent modification
   }
 #pragma warning restore S2368
   public IReadOnlyList<IReadOnlyList<double>> Distances => Clone(distances);

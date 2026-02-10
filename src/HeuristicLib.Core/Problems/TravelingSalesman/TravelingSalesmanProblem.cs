@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
-public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : PermutationProblem(SingleObjective.Minimize, GetEncoding(problemData))/*, IDeterministicProblem<Permutation>*/
+public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData) : PermutationProblem(SingleObjective.Minimize, GetEncoding(problemData)) /*, IDeterministicProblem<Permutation>*/
 {
 
   public TravelingSalesmanProblem() : this(new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates)) {}
@@ -18,7 +18,7 @@ public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
       totalDistance += ProblemData.GetDistance(solution[i], solution[i + 1]);
     }
 
-    totalDistance += ProblemData.GetDistance(solution[^1], solution[0]);// Return to the starting city
+    totalDistance += ProblemData.GetDistance(solution[^1], solution[0]); // Return to the starting city
 
     return totalDistance;
   }

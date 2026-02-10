@@ -105,7 +105,7 @@ public record class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator
       extensionPoints.Add(x);
     }
 
-    //necessary to use long data type as the extension point length could be int.MaxValue
+    // necessary to use long data type as the extension point length could be int.MaxValue
     var minExtensionPointsLength = extensionPoints.Select(x => (long)x.MinimumExtensionLength).Sum();
     var maxExtensionPointsLength = extensionPoints.Select(x => (long)x.MaximumExtensionLength).Sum();
 
@@ -125,7 +125,7 @@ public record class ProbabilisticTreeCreator : SymbolicExpressionTreeCreator
         minExtensionPointsLength -= insertedTreeLength;
         maxExtensionPointsLength -= insertedTreeLength;
       } else {
-        //remove currently chosen extension point from calculation
+        // remove currently chosen extension point from calculation
         minExtensionPointsLength -= nextExtension.MinimumExtensionLength;
         maxExtensionPointsLength -= nextExtension.MaximumExtensionLength;
 

@@ -38,8 +38,7 @@ public static class MultiStreamAlgorithmExtensions
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
       return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct);
     }
-    
-    
+
     public async Task<IReadOnlyList<KeyValuePair<TAlgorithmKey, TAlgorithmState>>> RunToCompletionAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
     {
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
@@ -48,7 +47,7 @@ public static class MultiStreamAlgorithmExtensions
         .ToList();
       return await Task.WhenAll(tasks);
     }
-    
+
     public IReadOnlyList<KeyValuePair<TAlgorithmKey, IEnumerable<TAlgorithmState>>> RunStreaming(
       TProblem problem,
       IRandomNumberGenerator random,
@@ -59,7 +58,7 @@ public static class MultiStreamAlgorithmExtensions
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
       return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).Select(kvp => KeyValuePair.Create(kvp.Key, kvp.Value.ToBlockingEnumerable(ct))).ToList();
     }
-    
+
     public IReadOnlyList<KeyValuePair<TAlgorithmKey, TAlgorithmState>> RunToCompletion(
       TProblem problem,
       IRandomNumberGenerator random,
@@ -71,7 +70,7 @@ public static class MultiStreamAlgorithmExtensions
       return algorithmInstance.RunToCompletionAsync<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm, TAlgorithmKey>(problem, random, initialState, ct).GetAwaiter().GetResult();
     }
   }
-  
+
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm, TAlgorithmKey>(IMultiStreamAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithmKey> algorithmInstance)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -85,7 +84,7 @@ public static class MultiStreamAlgorithmExtensions
         .ToList();
       return await Task.WhenAll(tasks);
     }
-    
+
     public IReadOnlyList<KeyValuePair<TAlgorithmKey, IEnumerable<TAlgorithmState>>> RunStreaming(
       TProblem problem,
       IRandomNumberGenerator random,
@@ -95,7 +94,7 @@ public static class MultiStreamAlgorithmExtensions
     {
       return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).Select(kvp => KeyValuePair.Create(kvp.Key, kvp.Value.ToBlockingEnumerable(ct))).ToList();
     }
-    
+
     public IReadOnlyList<KeyValuePair<TAlgorithmKey, TAlgorithmState>> RunToCompletion(
       TProblem problem,
       IRandomNumberGenerator random,

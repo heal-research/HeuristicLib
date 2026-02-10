@@ -15,10 +15,10 @@ public record FLunacekBiRastriginData(double[] XHat, double[] Z, double[] XOpt, 
 public record FSharpRidgeGeneralizedVersatileData(int ProportionOfLinearDims);
 
 public record FStepEllipsoidData(
-  double[] XOpt,// length = n
+  double[] XOpt, // length = n
   double FOpt,
-  double[][] Rot1,// [n][n]
-  double[][] Rot2// [n][n]
+  double[][] Rot1, // [n][n]
+  double[][] Rot2 // [n][n]
 );
 
 public class FWeierstrassData

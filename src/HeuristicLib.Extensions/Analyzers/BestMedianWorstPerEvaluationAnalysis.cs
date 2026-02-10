@@ -11,26 +11,26 @@ namespace HEAL.HeuristicLib.Analyzers;
 
 // ToDo: think about interceptor is the right hook here. Algorithm would be more intuitive but it is also more cumbersome.
 public class BestMedianWorstPerEvaluationAnalysis<TGenotype>
-  : IEvaluatorObserver<TGenotype>, 
+  : IEvaluatorObserver<TGenotype>,
     IInterceptorObserver<TGenotype, PopulationState<TGenotype>>
-    //IAlgorithmObserver<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, PopulationState<TGenotype>>
+// IAlgorithmObserver<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, PopulationState<TGenotype>>
 {
   private int currentEvaluationsCount = 0;
   private readonly List<(int, BestMedianWorstEntry<TGenotype>)> bestSolutions = [];
-  public  IReadOnlyList<(int, BestMedianWorstEntry<TGenotype>)> BestSolutions => bestSolutions;
-  
+  public IReadOnlyList<(int, BestMedianWorstEntry<TGenotype>)> BestSolutions => bestSolutions;
+
   public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     currentEvaluationsCount++;
   }
-  
+
   public void AfterInterception(PopulationState<TGenotype> newState, PopulationState<TGenotype> currentState, PopulationState<TGenotype>? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     if (currentState.Population.Solutions.Length == 0) throw new InvalidOperationException("Population is empty, cannot determine best/median/worst solution.");
-    
+
     var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
     var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
-  
+
     bestSolutions.Add((currentEvaluationsCount, new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
   }
 
@@ -40,7 +40,7 @@ public class BestMedianWorstPerEvaluationAnalysis<TGenotype>
   //   
   //   var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
   //   var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
-  //
+  // 
   //   bestSolutions.Add((currentEvaluationsCount, new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
   // }
 }
@@ -57,9 +57,9 @@ public static class BestMedianWorstPerEvaluationAnalysis
   {
     analysis = new BestMedianWorstPerEvaluationAnalysis<TGenotype>();
     observedEvaluator = evaluator.ObserveWith(analysis);
-    observedInterceptor = interceptor;// interceptor.ObserveWith((analysis);
+    observedInterceptor = interceptor; // interceptor.ObserveWith((analysis);
   }
-  
+
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(TAlgorithm algorithm)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>

@@ -15,7 +15,7 @@ namespace HEAL.HeuristicLib.Extensions.Tests;
 public class DynamicTSPTests
 {
   private const string TestDataBerlin52TSP = @"TestData\berlin52.tsp";
-  
+
   [Fact]
   public void GaWithDynamicTSP()
   {
@@ -26,9 +26,9 @@ public class DynamicTSPTests
 
     //GA
     var ga = GeneticAlgorithm.GetBuilder(
-    new RandomPermutationCreator(),
-    new EdgeRecombinationCrossover(),
-    new InversionMutator()
+      new RandomPermutationCreator(),
+      new EdgeRecombinationCrossover(),
+      new InversionMutator()
     );
 
     ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);

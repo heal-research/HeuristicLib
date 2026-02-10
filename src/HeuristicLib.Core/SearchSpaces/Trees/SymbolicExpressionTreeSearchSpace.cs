@@ -10,7 +10,7 @@ public record SymbolicExpressionTreeSearchSpace : SearchSpace<Genotypes.Trees.Sy
     this.TreeDepth = TreeDepth;
     this.Grammar = Grammar;
   }
-  
+
   public int TreeLength { get; set; }
 
   public int TreeDepth { get; set; }
@@ -24,8 +24,8 @@ public record SymbolicExpressionTreeSearchSpace : SearchSpace<Genotypes.Trees.Sy
   public override bool Contains(Genotypes.Trees.SymbolicExpressionTree genotype)
   {
     return genotype.Length <= TreeLength &&
-           genotype.Depth <= TreeDepth
-           && Grammar.Conforms(genotype)
+      genotype.Depth <= TreeDepth
+      && Grammar.Conforms(genotype)
       ;
   }
 }

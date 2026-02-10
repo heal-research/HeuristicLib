@@ -11,7 +11,7 @@ public interface IInterceptor<TGenotype, TAlgorithmState, in TSearchSpace, in TP
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
- }
+}
 
 public interface IInterceptorInstance<TGenotype, TAlgorithmState, in TSearchSpace, in TProblem>
   : IOperatorInstance

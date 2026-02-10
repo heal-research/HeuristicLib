@@ -8,11 +8,11 @@ public class SeedSequence
 
   private readonly int rootSeed;
 
-  //private readonly int[] spawnKey;
+  // private readonly int[] spawnKey;
   private readonly int spawnKey;
   private int numberOfSpawnedChildren;
 
-  //public SeedSequence(int rootSeed, params int[] spawnKey) {
+  // public SeedSequence(int rootSeed, params int[] spawnKey) {
   public SeedSequence(int rootSeed, int spawnKey = 0)
   {
     this.rootSeed = rootSeed;
@@ -24,7 +24,7 @@ public class SeedSequence
   {
     var children = Enumerable
       .Range(numberOfSpawnedChildren, numberOfChildren)
-      //.Select(index => new SeedSequence(rootSeed, Hash(spawnKey, index)))
+      // .Select(index => new SeedSequence(rootSeed, Hash(spawnKey, index)))
       .Select(index => new SeedSequence(rootSeed, HashCode.Combine(spawnKey, index)))
       .ToArray();
     numberOfSpawnedChildren += numberOfChildren;

@@ -29,7 +29,7 @@ public class OnlineNormalizedMeanSquaredErrorCalculator
     using var estimatedEnumerator = estimatedValues.GetEnumerator();
     var normalizedMseCalculator = new OnlineNormalizedMeanSquaredErrorCalculator();
 
-    //needed because otherwise the normalizedMSECalculator is in ErrorState.InsufficientValuesAdded
+    // needed because otherwise the normalizedMSECalculator is in ErrorState.InsufficientValuesAdded
     if (originalEnumerator.MoveNext() & estimatedEnumerator.MoveNext()) {
       var original = originalEnumerator.Current;
       var estimated = estimatedEnumerator.Current;
@@ -48,7 +48,7 @@ public class OnlineNormalizedMeanSquaredErrorCalculator
 
     // check if both enumerators are at the end to make sure both enumerations have the same length
     if (normalizedMseCalculator.ErrorState == OnlineCalculatorError.None &&
-        (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
+      (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumeration doesn't match.");
     }
 

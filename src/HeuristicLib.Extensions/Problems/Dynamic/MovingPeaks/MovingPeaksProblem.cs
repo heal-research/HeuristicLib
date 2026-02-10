@@ -24,9 +24,9 @@ public sealed class MovingPeaksProblem
     Parameters = parameters;
     Objective = SingleObjective.Maximize;
     SearchSpace = new RealVectorSearchSpace(
-    parameters.Dimension,
-    parameters.LowerBound,
-    parameters.UpperBound
+      parameters.Dimension,
+      parameters.LowerBound,
+      parameters.UpperBound
     );
 
     InitializePeaks();
@@ -43,9 +43,9 @@ public sealed class MovingPeaksProblem
     Parameters = parameters;
     Objective = SingleObjective.Maximize;
     SearchSpace = new RealVectorSearchSpace(
-    parameters.Dimension,
-    parameters.LowerBound,
-    parameters.UpperBound
+      parameters.Dimension,
+      parameters.LowerBound,
+      parameters.UpperBound
     );
     ArgumentOutOfRangeException.ThrowIfNotEqual(peaks.Length, parameters.NumberOfPeaks);
     peakPositions = new double[parameters.NumberOfPeaks][];
@@ -105,9 +105,9 @@ public sealed class MovingPeaksProblem
       var dir = RandomUnitVector(Parameters.Dimension);
       for (var d = 0; d < Parameters.Dimension; d++) {
         peakPositions[i][d] = ReflectIntoBounds(
-        peakPositions[i][d] + Parameters.ShiftSeverity * dir[d],
-        Parameters.LowerBound,
-        Parameters.UpperBound
+          peakPositions[i][d] + Parameters.ShiftSeverity * dir[d],
+          Parameters.LowerBound,
+          Parameters.UpperBound
         );
       }
     }

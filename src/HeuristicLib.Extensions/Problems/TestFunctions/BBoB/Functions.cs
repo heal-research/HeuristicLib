@@ -339,8 +339,8 @@ public static class Functions
     }
 
     var result = Math.Min(sum1, (d * n) + (s * sum2))
-                 + (10.0 * (n - sum3))
-                 + (1e4 * penalty);
+      + (10.0 * (n - sum3))
+      + (1e4 * penalty);
 
     return result;
   }
@@ -404,7 +404,7 @@ public static class Functions
       }
 
       var term = Math.Pow(tmp, 0.25) *
-                 (1.0 + Math.Pow(Math.Sin(sinArg), 2.0));
+        (1.0 + Math.Pow(Math.Sin(sinArg), 2.0));
 
       result += term;
     }

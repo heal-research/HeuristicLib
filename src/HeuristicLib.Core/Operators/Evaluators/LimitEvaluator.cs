@@ -25,11 +25,11 @@ public record class LimitEvaluator<TG, TS, TP>
     this.alternativeValue = alternativeValue;
     this.strict = strict;
   }
-  
+
   public override IEvaluatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var countedEvaluator = evaluator.CountInvocations(out var counter);
-    
+
     var evaluatorInstance = instanceRegistry.GetOrCreate(countedEvaluator);
     return new Instance(evaluatorInstance, counter, maxEvaluations, alternativeValue, strict);
   }
@@ -54,9 +54,9 @@ public record class LimitEvaluator<TG, TS, TP>
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
       var remainingEvaluations = maxEvaluations - counter.CurrentCount;
-      
+
       var alternative = alternativeValue ?? problem.Objective.Worst;
-      
+
       if (remainingEvaluations <= 0) {
         return Enumerable.Repeat(alternative, genotypes.Count).ToArray();
       }
@@ -70,7 +70,7 @@ public record class LimitEvaluator<TG, TS, TP>
 
         return evaluated.Concat(skipped).ToArray();
       }
-      
+
       return evaluator.Evaluate(genotypes, random, searchSpace, problem);
     }
   }

@@ -37,7 +37,7 @@ public class GeneticAlgorithmTests
     var creator = new UniformDistributedCreator(null, 3.0);
     var crossover = new SinglePointCrossover();
     var mutator = new GaussianMutator(0.1, 0.1);
-    //var decoder = Decoder.Identity<RealVector>();
+    // var decoder = Decoder.Identity<RealVector>();
     // var DirectEvaluator = new RealVectorMockEvaluator();
     var selector = new RandomSelector<RealVector>();
     var replacement = new PlusSelectionReplacer<RealVector>();
@@ -51,14 +51,14 @@ public class GeneticAlgorithmTests
       Evaluator = new DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>(),
       Selector = selector,
       Replacer = replacement,
-      //AlgorithmRandom = SystemRandomNumberGenerator.Default(42),
-      //Terminator = terminator
+      // AlgorithmRandom = SystemRandomNumberGenerator.Default(42),
+      // Terminator = terminator
     };
-    //SearchSpace = searchSpace,
+    // SearchSpace = searchSpace,
 
-    //RandomSource = randomSource, Terminator = terminator
+    // RandomSource = randomSource, Terminator = terminator
 
-    //return Verify(ga);
+    // return Verify(ga);
   }
 
   // [Fact]
@@ -79,7 +79,7 @@ public class GeneticAlgorithmTests
   //   };
   //   
   //   var ga = config.Build();
-  //
+  // 
   //   return Verify(ga);
   // }
 
@@ -95,7 +95,7 @@ public class GeneticAlgorithmTests
   //     Selector = null, Replacer = null, // missing
   //     RandomSeed = 42,
   //   };
-  //
+  // 
   //   Should.Throw<ValidationException>(() => GeneticAlgorithm.FromConfiguration(config));
   //   Should.Throw<ValidationException>(() => config.Build());
   // }
@@ -124,13 +124,13 @@ public class GeneticAlgorithmTests
   //     selector: selector, replacer: replacement,
   //     randomSeed: 42, terminator: terminator
   //   );
-  //
+  // 
   //   var finalState = ga.CreateExecution(problem).Execute();
   //   
   //   return Verify(finalState)
   //     .IgnoreMembersWithType<TimeSpan>();
   // }
-  //
+  // 
   // [Fact]
   // public Task GeneticAlgorithm_ExecuteStream() {
   //   var searchSpace = new RealVectorEncoding(3, -5, +5);
@@ -155,9 +155,9 @@ public class GeneticAlgorithmTests
   //     selector: selector, replacer: replacement,
   //     randomSeed: 42, terminator: terminator
   //   );
-  //
+  // 
   //   var stream = ga.ExecuteStreaming(problem);
-  //
+  // 
   //   var results = stream.Take(5).ToList();
   //   
   //   return Verify(results)
@@ -179,7 +179,7 @@ public class GeneticAlgorithmTests
   //   var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
   //     SearchSpace = searchSpace, Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize
   //   };
-  //
+  // 
   //   var firstAlg = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
   //     //SearchSpace = searchSpace,
   //     populationSize: 5,
@@ -190,13 +190,13 @@ public class GeneticAlgorithmTests
   //   );
   //   
   //   var task = Task.Run(() => firstAlg.Execute(problem));
-  //
+  // 
   //   await Task.Delay(200);
   //   
   //   task.Status.ShouldBe(TaskStatus.Running);
   //   
   //   pauseToken.RequestPause();
-  //
+  // 
   //   var finalState = await task;
   //   
   //   
@@ -217,7 +217,7 @@ public class GeneticAlgorithmTests
   //   var selector = new ProportionalSelector();
   //   var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
   //   var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
-  //
+  // 
   //   var problem = new RealVectorMockOptimizable();
   //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
   //   //   SearchSpace = searchSpace, Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize
@@ -229,21 +229,21 @@ public class GeneticAlgorithmTests
   //     selector: selector, replacer: replacement, 
   //     randomSeed: 42, terminator: terminator
   //   );
-  //
+  // 
   //   var firstResult = firstAlg.ExecuteStreaming(problem).Last();
-  //
+  // 
   //   var newTerminationCriterion = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(12);
   //   var continuationState = firstResult.GetContinuationState();
   //   var secondAlg = firstAlg with {
   //     PopulationSize = 8, Terminator = newTerminationCriterion
   //   };
-  //
+  // 
   //   var finalState = secondAlg.CreateExecution(problem).Execute(initialState: continuationState);
-  //
+  // 
   //   await Verify(new { firstResult, finalState })
   //     .IgnoreMembersWithType<TimeSpan>();
   // }
-  //
+  // 
   // [Fact]
   // public void GeneticAlgorithm_ExecutingWithInitialStateThatShouldImmediatelyTerminate_DoesNotIterate() {
   //   var searchSpace = new RealVectorEncoding(3, -5, +5);
@@ -255,7 +255,7 @@ public class GeneticAlgorithmTests
   //   var selector = new ProportionalSelector();
   //   var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
   //   var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
-  //
+  // 
   //   var problem = new RealVectorMockOptimizable();
   //   // var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
   //   //   SearchSpace = searchSpace, Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize
@@ -269,7 +269,7 @@ public class GeneticAlgorithmTests
   //   var initialState = new GeneticAlgorithmState<RealVector> {
   //     Generation = 100, Population = []
   //   };
-  //
+  // 
   //   var iterationResults = alg.ExecuteStreaming(problem, initialState).ToList();
   //   iterationResults.ShouldBeEmpty();
   // }
@@ -279,7 +279,7 @@ public class GeneticAlgorithmTests
   //   public Objective Objective => SingleObjective.Minimize;
   //   public RealVectorSearchSpace ProblemContext => new RealVectorSearchSpace(3, -5, +5);
   // }
-//
+// 
 //   [Fact]
 //   public async Task GeneticAlgorithm_WithMultiChromosomeGenotype() {
 //     var randomSource = new RandomSource(42);
@@ -296,19 +296,19 @@ public class GeneticAlgorithmTests
 //     var terminationCriterion = Terminator.OnGeneration(10);
 //     
 //     var ga = new GeneticAlgorithm<MultiGenotype, MultiGenotypeSearchSpace>(searchSpace, 5, creator, crossover, mutator, 0.05, DirectEvaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
-//
+// 
 //     var finalState = ga.Execute();
-//
+// 
 //     await Verify(finalState);
 //   }
-//
+// 
 //   private record MultiGenotypeSearchSpace(RealVectorSearchSpace RealVectorSearchSpace, PermutationSearchSpace PermutationSearchSpace) : ISearchSpace<MultiGenotype, MultiGenotypeSearchSpace>> {
-//
+// 
 //     public bool IsValidGenotype(MultiGenotype genotype) {
 //       return RealVectorSearchSpace.IsValidGenotype(genotype.RealVector) && PermutationSearchSpace.IsValidGenotype(genotype.Permutation);
 //     }
 //   }
-//
+// 
 //   private record MultiGenotype(RealVector RealVector, Permutation Permutation);/* : IRecordGenotypeBase<MultiGenotype, RealVector, Permutation> {
 //     public static MultiGenotype Construct(RealVector realVector, Permutation permutation) => new MultiGenotype(realVector, permutation);
 //     public void Deconstruct(out RealVector realVector, out Permutation permutation) { realVector = RealVector; permutation = Permutation; }
@@ -329,7 +329,7 @@ public class GeneticAlgorithmTests
 //       return new MultiGenotype(realVectorMutator.Mutate(genotype.RealVector), permutationMutator.Mutate(genotype.Permutation));
 //     }
 //   }
-//
+// 
 //   [Fact]
 //   public async Task GeneticAlgorithm_WithMultiChromosomeGenotypeWithRecordOperators() {
 //     var randomSource = new RandomSource(42);
@@ -344,9 +344,9 @@ public class GeneticAlgorithmTests
 //     var terminationCriterion = Terminator.OnGeneration(10);
 //     
 //     var ga = new GeneticAlgorithm<MultiGenotype>(5, creator, crossover, mutator, 0.05, DirectEvaluator, Goal.Minimize, selector, replacement, randomSource, terminationCriterion);
-//
+// 
 //     var finalState = ga.Execute();
-//
+// 
 //     await Verify(finalState);
 //   }
 }

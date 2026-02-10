@@ -34,9 +34,9 @@ public sealed record class RemoveBranchManipulation : SymbolicExpressionTreeMani
       foreach (var symbol in searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)) {
         // check basic properties that the new symbol must have
         if (symbol != child.Symbol &&
-            symbol.InitialFrequency > 0 &&
-            searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth &&
-            searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength) {
+          symbol.InitialFrequency > 0 &&
+          searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth &&
+          searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength) {
           allowedSymbols.Add(symbol);
         }
       }

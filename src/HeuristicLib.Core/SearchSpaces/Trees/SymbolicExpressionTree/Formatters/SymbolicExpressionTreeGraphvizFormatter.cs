@@ -62,16 +62,16 @@ public sealed class SymbolicExpressionTreeGraphvizFormatter : ISymbolicExpressio
       _ => nodeLabel
     };
 
-    //switch (node) {
+    // switch (node) {
     // match Koza style
     //  case(ProgramRootSymbol): return "Prog";
-    ////  {nameof(StartSymbol), "RPB"},
+    // //  {nameof(StartSymbol), "RPB"},
 
-    ////  // short form 
-    ////  {"Subtraction", "-" },
-    ////  {"Addition", "+" },
+    // //  // short form 
+    // //  {"Subtraction", "-" },
+    // //  {"Addition", "+" },
 
-    ////}; 
+    // //}; 
     //  default: return "unknown";
 
     strBuilder.Append(nameof(node) + currentNodeId + "[label=\"" + nodeLabel + "\"");

@@ -27,7 +27,7 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
     var dst = instr.Buf;
     var w = instr.Weight;
     for (var i = 0; i < batchSize; ++i) {
-      var row = rows[startIndex + i];// ✅ use the i-th selected row
+      var row = rows[startIndex + i]; // ✅ use the i-th selected row
       dst[i] = w * data[row];
     }
   }
@@ -47,9 +47,9 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
 
           break;
         }
-        case OpCodes.Constant:// fall through
+        case OpCodes.Constant: // fall through
         case OpCodes.Number:
-          break;// nothing to do here, don't remove because we want to prevent falling into the default case here.
+          break; // nothing to do here, don't remove because we want to prevent falling into the default case here.
         case OpCodes.Add: {
           Load(instr.Buf, childInstruction.Buf);
           for (var j = 1; j < n; ++j) {

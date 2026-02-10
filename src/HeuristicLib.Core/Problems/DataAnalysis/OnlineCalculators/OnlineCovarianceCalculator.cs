@@ -27,7 +27,7 @@ public class OnlineCovarianceCalculator
 
     // check if both enumerators are at the end to make sure both enumerations have the same length
     if (covarianceCalculator.ErrorState == OnlineCalculatorError.None &&
-        (secondEnumerator.MoveNext() || firstEnumerator.MoveNext())) {
+      (secondEnumerator.MoveNext() || firstEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in first and second enumeration doesn't match.");
     }
 
@@ -56,15 +56,15 @@ public class OnlineCovarianceCalculator
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
     } else {
       n++;
-      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
 
       // online calculation of tMean
       xMean += (x - xMean) / n;
-      var delta = y - yMean;// delta = (y - yMean(n-1))
+      var delta = y - yMean; // delta = (y - yMean(n-1))
       yMean += delta / n;
 
       // online calculation of covariance
-      cn += delta * (x - xMean);// C(n) = C(n-1) + (y - yMean(n-1)) (t - tMean(n))       
+      cn += delta * (x - xMean); // C(n) = C(n-1) + (y - yMean(n-1)) (t - tMean(n))       
     }
   }
 

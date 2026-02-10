@@ -27,7 +27,7 @@ public class OnlineMeanSquaredErrorCalculator
 
     // check if both enumerators are at the end to make sure both enumerations have the same length
     if (mseCalculator.ErrorState == OnlineCalculatorError.None &&
-        (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
+      (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
     }
 
@@ -51,7 +51,7 @@ public class OnlineMeanSquaredErrorCalculator
   public void Add(double original, double estimated)
   {
     if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
-        double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
+      double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
 
       return;
@@ -60,7 +60,7 @@ public class OnlineMeanSquaredErrorCalculator
     var error = estimated - original;
     sse += error * error;
     n++;
-    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+    ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
   }
 
   #endregion

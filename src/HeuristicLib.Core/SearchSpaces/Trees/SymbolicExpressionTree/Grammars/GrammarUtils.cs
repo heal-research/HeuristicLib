@@ -61,7 +61,7 @@ public static class GrammarUtils
     Dictionary<Symbol, int> minimumExpressionLengths)
   {
     minimumExpressionLengths.Clear();
-    //terminal symbols => minimum expression length = 1
+    // terminal symbols => minimum expression length = 1
     foreach (var s in grammar.Symbols) {
       if (grammar.GetMinimumSubtreeCount(s) == 0) {
         minimumExpressionLengths[s] = 1;
@@ -110,7 +110,7 @@ public static class GrammarUtils
     Dictionary<Symbol, int> minimumExpressionDepths)
   {
     minimumExpressionDepths.Clear();
-    //terminal symbols => minimum expression depth = 1
+    // terminal symbols => minimum expression depth = 1
     foreach (var s in grammar.Symbols) {
       if (grammar.GetMinimumSubtreeCount(s) == 0) {
         minimumExpressionDepths[s] = 1;

@@ -7,11 +7,11 @@
 // using HEAL.HeuristicLib.Optimization;
 // using HEAL.HeuristicLib.Problems;
 // using HEAL.HeuristicLib.Problems.TestFunctions;
-//
+// 
 // namespace HEAL.HeuristicLib.Core.Tests;
-//
+// 
 // public class GeneticAlgorithmSolvingTests {
-//
+// 
 //   [Fact]
 //   public Task GeneticAlgorithm_SolveTestFunction() {
 //     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
@@ -20,7 +20,7 @@
 //     var selector = new RandomSelector();
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
 //     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
-//
+// 
 //     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
 //       populationSize: 5, 
 //       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
@@ -28,7 +28,7 @@
 //       randomSeed: 42, terminator: terminator
 //     );
 //     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
-//
+// 
 //     Solution<RealVector>? result = ga.Solve(problem);
 //     //Solution<RealVector, RealVector>? result = AlgorithmSolveExtensions.Solve<RealVector, RealVector, RealVectorSearchSpace, TestFunctionProblem, GeneticAlgorithmState<RealVector>, PopulationResult<RealVector>>(ga, problem);
 //     
@@ -44,7 +44,7 @@
 //     var selector = new RandomSelector();
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
 //     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
-//
+// 
 //     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
 //       populationSize: 5, 
 //       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
@@ -52,13 +52,13 @@
 //       randomSeed: 42, terminator: terminator
 //     );
 //     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
-//
+// 
 //     List<Solution<RealVector>> results = ga.SolveStreaming(problem).ToList();
 //     
 //     return Verify(results)
 //       .IgnoreMembersWithType<TimeSpan>();
 //   }
-//
+// 
 //   [Fact]
 //   public void GeneticAlgorithm_SolveAndSolveStreaming_HaveSameResults() {
 //     var creator = new UniformDistributedCreator(minimum: null, maximum: 3.0);
@@ -67,7 +67,7 @@
 //     var selector = new RandomSelector();
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
 //     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, PopulationResult<RealVector>>(5);
-//
+// 
 //     var ga = new GeneticAlgorithm<RealVector, RealVectorEncoding>(
 //       populationSize: 5, 
 //       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
@@ -75,7 +75,7 @@
 //       randomSeed: 42, terminator: terminator
 //     );
 //     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
-//
+// 
 //     var result = ga.Solve(problem);
 //     var streamingResult = ga.SolveStreaming(problem).Last();
 //     //var bestStreamingResult = streamingResults.MinBy(x => x.Fitness, problem.Objective.TotalOrderComparer);

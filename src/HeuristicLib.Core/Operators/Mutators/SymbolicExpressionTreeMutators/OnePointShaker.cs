@@ -6,6 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
 public sealed record class OnePointShaker : SymbolicExpressionTreeManipulator
 {
+
   #region properties
 
   public double ShakingFactor

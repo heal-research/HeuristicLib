@@ -246,7 +246,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
               var paramName = "c_{" + paramIdx + "}";
               strBuilder.Append(paramName + " ");
               foreach (var e in factorNode.Symbol.GetVariableValues(factorNode.VariableName)
-                         .Zip(factorNode.Weights!, Tuple.Create)) {
+                .Zip(factorNode.Weights!, Tuple.Create)) {
                 parameters.Add(new KeyValuePair<string, double>("c_{" + paramIdx + ", " + EscapeLatexString(factorNode.VariableName) + "=" + EscapeLatexString(e.Item1) + "}", e.Item2));
               }
 
@@ -301,18 +301,18 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
                         .AppendLine("\\nonumber");
 
                       break;
-                    //else if (node.Symbol is Defun) {
+                    // else if (node.Symbol is Defun) {
                     //  var defunNode = node as DefunTreeNode;
                     //  strBuilder.Append(defunNode.FunctionName + " & = ");
-                    //} else if (node.Symbol is InvokeFunction) {
+                    // } else if (node.Symbol is InvokeFunction) {
                     //  var invokeNode = node as InvokeFunctionTreeNode;
                     //  strBuilder.Append(invokeNode.Symbol.FunctionName + @" \left( ");
-                    //} else if (node.Symbol is StartSymbol) {
+                    // } else if (node.Symbol is StartSymbol) {
                     //  FormatStartSymbol(strBuilder);
-                    //} else if (node.Symbol is Argument) {
+                    // } else if (node.Symbol is Argument) {
                     //  var argSym = node.Symbol as Argument;
                     //  strBuilder.Append(" ARG+" + argSym.ArgumentIndex + " ");
-                    //} 
+                    // } 
                     case Derivative:
                       strBuilder.Append(@" \cfrac{d \left( ");
 
@@ -454,10 +454,10 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
 
         break;
       default: {
-        //if (node.Symbol is Defun) { } else if (node.Symbol is InvokeFunction) {
+        // if (node.Symbol is Defun) { } else if (node.Symbol is InvokeFunction) {
         //  strBuilder.Append(" , ");
         //  break;
-        //}
+        // }
         switch (node.Symbol) {
           case StartSymbol:
             strBuilder.Append(@"\\" + Environment.NewLine);
@@ -599,7 +599,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
             if (!paramStr.Contains(".")) {
               paramStr = paramStr + ".0";
             }
-            paramStr = paramStr.Replace(".", "&.");// fix problem in rendering of aligned expressions
+            paramStr = paramStr.Replace(".", "&."); // fix problem in rendering of aligned expressions
             strBuilder.Append(param.Key + "& = & " + paramStr);
             strBuilder.Append(@"\\");
           }
@@ -610,7 +610,7 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
         break;
       }
       default: {
-        //if (node.Symbol is Defun) { } else 
+        // if (node.Symbol is Defun) { } else 
         switch (node.Symbol) {
           case InvokeFunction:
             strBuilder.Append(@" \right) ");
@@ -677,10 +677,10 @@ public sealed class SymbolicDataAnalysisExpressionLatexFormatter : ISymbolicExpr
   private static string EscapeLatexString(string s)
   {
     return "\\text{" +
-           s
-             .Replace("\\", @"\\")
-             .Replace("{", "\\{")
-             .Replace("}", "\\}")
-           + "}";
+      s
+        .Replace("\\", @"\\")
+        .Replace("{", "\\{")
+        .Replace("}", "\\}")
+      + "}";
   }
 }

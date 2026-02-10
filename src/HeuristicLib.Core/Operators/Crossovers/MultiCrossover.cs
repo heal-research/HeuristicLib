@@ -15,12 +15,13 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
 {
   [OrderedEquality]
   public ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers { get; }
-  
+
   [OrderedEquality]
   public ImmutableArray<double> Weights { get; }
-  
-  [IgnoreEquality] 
+
+  [IgnoreEquality]
   private readonly double sumWeights;
+
   [IgnoreEquality]
   private readonly double[] cumulativeSumWeights;
 
@@ -51,7 +52,7 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
       cumulativeSumWeights[i] = sumWeights;
     }
   }
-  
+
   public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var crossoverInstances = Crossovers.Select(instanceRegistry.GetOrCreate).ToArray();
@@ -63,7 +64,7 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
     private readonly IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers;
     private readonly double[] cumulativeSumWeights;
     private readonly double sumWeights;
-    
+
     public Instance(IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers, double[] cumulativeSumWeights, double sumWeights)
     {
       this.crossovers = crossovers;
@@ -110,7 +111,7 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
 
     // public override void Cross(ReadOnlySpan<TGenotype> parent1, ReadOnlySpan<TGenotype> parent2, IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem, Span<TGenotype> offspring) {
     //   if (parent1.Length != parent2.Length || offspring.Length != parent1.Length) throw new ArgumentException("Parent arrays and offspring array must have the same length.", nameof(parent1));
-    //
+    // 
     //   // Compute cumulative weights for roulette wheel selection
     //   double[] cumulative = new double[Weights.Count];
     //   double sum = 0;
@@ -118,7 +119,7 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
     //     sum += Weights[i];
     //     cumulative[i] = sum;
     //   }
-    //
+    // 
     //   int n = offspring.Length;
     //   int[] operatorIndices = new int[n];
     //   for (int i = 0; i < n; i++) {
@@ -126,14 +127,14 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
     //     int idx = Array.FindIndex(cumulative, w => r < w);
     //     operatorIndices[i] = idx;
     //   }
-    //
+    // 
     //   // Batch indices by operator
     //   for (int op = 0; op < Crossovers.Count; op++) {
     //     // Find all indices for this operator
     //     var indices = Enumerable.Range(0, n).Where(i => operatorIndices[i] == op).ToArray();
-    //
+    // 
     //     if (indices.Length == 0) continue;
-    //
+    // 
     //     // GetEvaluator temporary arrays for this batch
     //     TGenotype[] p1 = new TGenotype[indices.Length];
     //     TGenotype[] p2 = new TGenotype[indices.Length];
@@ -142,9 +143,9 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
     //       p2[j] = parent2[indices[j]];
     //     }
     //     TGenotype[] off = new TGenotype[indices.Length];
-    //
+    // 
     //     Crossovers[op].Cross(p1, p2, random, encoding, problem, off);
-    //
+    // 
     //     for (int j = 0; j < indices.Length; j++) {
     //       offspring[indices[j]] = off[j];
     //     }
@@ -155,44 +156,44 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
 
 public static class MultiCrossover
 {
-   public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null) 
-     where TSearchSpace : class, ISearchSpace<TGenotype> 
-     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-   {
-     return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers, weights);
-   }
+  public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  {
+    return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers, weights);
+  }
 
-   // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers, IReadOnlyList<double>? weights = null) 
-   //   where TSearchSpace : class, ISearchSpace<TGenotype>
-   // {
-   //   return new(crossovers, weights);
-   // }
+  // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers, IReadOnlyList<double>? weights = null) 
+  //   where TSearchSpace : class, ISearchSpace<TGenotype>
+  // {
+  //   return new(crossovers, weights);
+  // }
 
-   // public static MultiCrossover<TGenotype> Create<TGenotype>(IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers, IReadOnlyList<double>? weights = null)
-   // {
-   //   return new(crossovers, weights);
-   // }
+  // public static MultiCrossover<TGenotype> Create<TGenotype>(IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers, IReadOnlyList<double>? weights = null)
+  // {
+  //   return new(crossovers, weights);
+  // }
 
-   // public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers) 
-   //   where TSearchSpace : class, ISearchSpace<TGenotype> 
-   //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-   // {
-   //   return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers);
-   // }
+  // public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers) 
+  //   where TSearchSpace : class, ISearchSpace<TGenotype> 
+  //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  // {
+  //   return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers);
+  // }
 
-   // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers) 
-   //   where TSearchSpace : class, ISearchSpace<TGenotype>
-   // {
-   //   return new(crossovers);
-   // }
+  // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers) 
+  //   where TSearchSpace : class, ISearchSpace<TGenotype>
+  // {
+  //   return new(crossovers);
+  // }
 
-   // public static MultiCrossover<TGenotype> Create<TGenotype>(params IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers)
-   // {
-   //   return new(crossovers);
-   // }
+  // public static MultiCrossover<TGenotype> Create<TGenotype>(params IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers)
+  // {
+  //   return new(crossovers);
+  // }
 
-   extension<TGenotype, TSearchSpace, TProblem>(ICrossover<TGenotype, TSearchSpace, TProblem> crossover) 
-    where TSearchSpace : class, ISearchSpace<TGenotype> 
+  extension<TGenotype, TSearchSpace, TProblem>(ICrossover<TGenotype, TSearchSpace, TProblem> crossover)
+    where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
   {
     public MultiCrossover<TGenotype, TSearchSpace, TProblem> WithRate(double crossoverRate)

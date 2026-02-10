@@ -8,9 +8,9 @@
 // using HEAL.HeuristicLib.Operators.RealVectorOperators;
 // using HEAL.HeuristicLib.Optimization;
 // using HEAL.HeuristicLib.Problems;
-//
+// 
 // namespace HEAL.HeuristicLib.Core.Tests;
-//
+// 
 // public class GeneticAlgorithmObservableTests {
 //   [Fact]
 //   public Task GeneticAlgorithm_ObservableFromExecutionStream() {
@@ -32,9 +32,9 @@
 //       //Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize,
 //       selector, replacement, randomSeed: 42, terminator
 //     );
-//
+// 
 //     var stream = ga.ExecuteStreaming(problem);
-//
+// 
 //     var subject = new Subject<PopulationResult<RealVector>>();
 //     var observableResult = new List<PopulationResult<RealVector>>();
 //     subject
@@ -49,7 +49,7 @@
 //       .ToList();
 //     
 //     observableResult.ShouldBe(result);
-//
+// 
 //     return Verify(result)
 //       .IgnoreMembersWithType<TimeSpan>();
 //   }

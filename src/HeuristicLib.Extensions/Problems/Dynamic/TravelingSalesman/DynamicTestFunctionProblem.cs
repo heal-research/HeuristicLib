@@ -14,9 +14,9 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
   private readonly IProblem<RealVector, RealVectorSearchSpace> problem;
 
   public DynamicTestFunctionProblem(IRandomNumberGenerator environmentRandom,
-                                    IProblem<RealVector, RealVectorSearchSpace> problem,
-                                    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                    int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength)
+    IProblem<RealVector, RealVectorSearchSpace> problem,
+    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+    int epochLength = int.MaxValue) : base(environmentRandom, updatePolicy, epochLength)
   {
     this.problem = problem;
     var rot = new double[problem.SearchSpace.Length, problem.SearchSpace.Length];
@@ -55,8 +55,8 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
     var outScale = CurrentState.OutputScaling + EnvironmentRandom.NextGaussian(sigma: DeviationSigma.OutputScalingStrength);
     CurrentState = new State(shift, rot, inScale, outScale);
 
-    //Note: the scaling factors could become zero or negative, which may lead to degenerate situations.
-    //This is intentional to increase the dynamics of the problem.
+    // Note: the scaling factors could become zero or negative, which may lead to degenerate situations.
+    // This is intentional to increase the dynamics of the problem.
   }
 
   private static double[] RandomUnitVector(int n, IRandomNumberGenerator rng)
@@ -142,7 +142,7 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
     for (var i = 0; i < n; i++) {
       for (var j = 0; j < n; j++) {
         p[i, j] += (cos - 1) * (u[i] * u[j] + v[i] * v[j])
-                   + sin * (v[i] * u[j] - u[i] * v[j]);
+          + sin * (v[i] * u[j] - u[i] * v[j]);
       }
     }
 

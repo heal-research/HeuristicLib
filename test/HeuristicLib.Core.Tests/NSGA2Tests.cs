@@ -7,9 +7,9 @@
 // using HEAL.HeuristicLib.Optimization;
 // using HEAL.HeuristicLib.Problems;
 // using HEAL.HeuristicLib.Problems.TestFunctions;
-//
+// 
 // namespace HEAL.HeuristicLib.Core.Tests;
-//
+// 
 // public class NSGA2Tests {
 //   [Fact]
 //   public Task NSGA2_SolveTestFunction() {
@@ -18,7 +18,7 @@
 //     var mutator = new GaussianMutator(0.1, 0.1);
 //     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
 //     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, NSGA2Result<RealVector>>(5);
-//
+// 
 //     var nsga = new NSGA2<RealVector, RealVectorEncoding>(
 //       populationSize: 5, 
 //       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
@@ -26,11 +26,13 @@
 //       randomSeed: 42, terminator: terminator
 //     );
 //     var problem = new MultiObjectiveTestFunctionProblem(new ZDT1(dimension: 3));
-//
+// 
 //     var result = nsga.SolvePareto(problem);
 //     
 //     return Verify(result)
 //       .IgnoreMembersWithType<TimeSpan>();
 //   }
 // }
+
+
 

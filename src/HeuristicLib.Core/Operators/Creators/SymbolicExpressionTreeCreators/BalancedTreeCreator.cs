@@ -40,7 +40,7 @@ public record class BalancedTreeCreator : SymbolicExpressionTreeCreator
       weights.Add(s.InitialFrequency);
     }
 
-    if (candidates.Count == 0) { }
+    if (candidates.Count == 0) {}
 
     var symbol = candidates.Count == 1 ? candidates[0] : candidates.SampleProportional(random, 1, weights).First();
     var node = symbol.CreateTreeNode();

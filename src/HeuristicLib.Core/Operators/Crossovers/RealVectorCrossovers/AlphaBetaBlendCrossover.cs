@@ -7,7 +7,8 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
 public record class AlphaBetaBlendCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
 {
-  public AlphaBetaBlendCrossover(double alpha = 0.7) {
+  public AlphaBetaBlendCrossover(double alpha = 0.7)
+  {
     Alpha = alpha;
   }
 

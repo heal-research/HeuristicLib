@@ -20,7 +20,7 @@ public class ObservableAlgorithm<TG, TS, TP, TR>
     this.algorithm = algorithm;
     this.observers = observers;
   }
-  
+
   public IAlgorithmInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     return new ObservableAlgorithmInstance<TG, TS, TP, TR>(
@@ -30,7 +30,7 @@ public class ObservableAlgorithm<TG, TS, TP, TR>
   }
 }
 
-public class ObservableAlgorithmInstance<TG, TS, TP, TR> 
+public class ObservableAlgorithmInstance<TG, TS, TP, TR>
   : IAlgorithmInstance<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -38,13 +38,13 @@ public class ObservableAlgorithmInstance<TG, TS, TP, TR>
 {
   private readonly IAlgorithmInstance<TG, TS, TP, TR> algorithmInstance;
   private readonly IReadOnlyList<IAlgorithmObserver<TG, TS, TP, TR>> observers;
-  
+
   public ObservableAlgorithmInstance(IAlgorithmInstance<TG, TS, TP, TR> algorithmInstance, IReadOnlyList<IAlgorithmObserver<TG, TS, TP, TR>> observers)
   {
     this.algorithmInstance = algorithmInstance;
     this.observers = observers;
   }
-  
+
   public IAsyncEnumerable<TR> RunStreamingAsync(
     TP problem,
     IRandomNumberGenerator random,
@@ -80,18 +80,17 @@ public class AlgorithmObserver<TG, TS, TP, TR> : IAlgorithmObserver<TG, TS, TP, 
   where TR : class, IAlgorithmState
 {
   private readonly Action<TR, TR?, IRandomNumberGenerator, TP> afterIteration;
-  
+
   public AlgorithmObserver(Action<TR, TR?, IRandomNumberGenerator, TP> afterIteration)
   {
     this.afterIteration = afterIteration;
   }
-  
+
   public void AfterIteration(TR currentState, TR? previousState, IRandomNumberGenerator random, TP problem)
   {
     afterIteration(currentState, previousState, random, problem);
   }
 }
-
 
 public static class ObservableAlgorithmExtensions
 {
@@ -104,20 +103,20 @@ public static class ObservableAlgorithmExtensions
     {
       return new ObservableAlgorithm<TG, TS, TP, TR>(algorithm, observer);
     }
-    public IAlgorithm<TG, TS, TP, TR>  ObserveWith(params IReadOnlyList<IAlgorithmObserver<TG, TS, TP, TR>> observers)
+    public IAlgorithm<TG, TS, TP, TR> ObserveWith(params IReadOnlyList<IAlgorithmObserver<TG, TS, TP, TR>> observers)
     {
       return new ObservableAlgorithm<TG, TS, TP, TR>(algorithm, observers);
     }
-    
+
     public IAlgorithm<TG, TS, TP, TR> ObserveWith(Action<TR, TR?, IRandomNumberGenerator, TP> afterIteration)
     {
       var observer = new AlgorithmObserver<TG, TS, TP, TR>(afterIteration);
       return algorithm.ObserveWith(observer);
     }
-    
+
     public IAlgorithm<TG, TS, TP, TR> ObserveWith(Action<TR> afterIteration)
     {
-      var observer = new AlgorithmObserver<TG, TS, TP, TR>((state,  _, _, _) => afterIteration(state));
+      var observer = new AlgorithmObserver<TG, TS, TP, TR>((state, _, _, _) => afterIteration(state));
       return algorithm.ObserveWith(observer);
     }
   }

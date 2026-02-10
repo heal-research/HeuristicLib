@@ -63,7 +63,7 @@ public sealed record Permutation : IReadOnlyList<int>
 
     public bool MoveNext() => ++index < memory.Length;
     public void Reset() => index = -1;
-    public void Dispose() { }
+    public void Dispose() {}
   }
 
   public static Permutation CreateRandom(int length, IRandomNumberGenerator rng)

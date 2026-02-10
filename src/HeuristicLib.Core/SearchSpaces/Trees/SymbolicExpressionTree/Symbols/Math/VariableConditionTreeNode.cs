@@ -47,7 +47,7 @@ public sealed class VariableConditionTreeNode : SymbolicExpressionTreeNode
     }
 
     return VariableName + " > " + Threshold.ToString("E4") + Environment.NewLine +
-           "slope: " + Slope.ToString("E4");
+      "slope: " + Slope.ToString("E4");
   }
 
   #region properties

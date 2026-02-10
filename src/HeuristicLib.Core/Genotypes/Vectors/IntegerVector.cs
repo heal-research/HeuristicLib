@@ -31,7 +31,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
     }
 
     return ReferenceEquals(this, other)
-           || elements.SequenceEqual(other.elements);
+      || elements.SequenceEqual(other.elements);
   }
 
   public override int GetHashCode()

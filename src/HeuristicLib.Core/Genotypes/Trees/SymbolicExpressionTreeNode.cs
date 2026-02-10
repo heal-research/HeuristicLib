@@ -104,8 +104,8 @@ public class SymbolicExpressionTreeNode
     return int.MaxValue;
   }
 
-  public virtual void ResetLocalParameters(IRandomNumberGenerator random) { }
-  public virtual void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) { }
+  public virtual void ResetLocalParameters(IRandomNumberGenerator random) {}
+  public virtual void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor) {}
 
   public int SubtreeCount => subtrees?.Count ?? 0;
 
@@ -186,7 +186,7 @@ public class SymbolicExpressionTreeNode
       return;
     }
 
-    //avoid linq to reduce memory pressure
+    // avoid linq to reduce memory pressure
     // ReSharper disable once ForCanBeConvertedToForeach
     for (var i = 0; i < subtrees.Count; i++) {
       subtrees[i].ForEachNodePrefix(a);
@@ -203,7 +203,7 @@ public class SymbolicExpressionTreeNode
   public void ForEachNodePostfix(Action<SymbolicExpressionTreeNode> a)
   {
     if (subtrees != null)
-      //avoid linq to reduce memory pressure
+      // avoid linq to reduce memory pressure
       // ReSharper disable once ForCanBeConvertedToForeach
     {
       for (var i = 0; i < subtrees.Count; i++) {

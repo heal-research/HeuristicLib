@@ -9,19 +9,21 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 // ToDo: think about another name, maybe PipelineInceptor or SequentialInterceptor.
 [Equatable]
 public partial record class MultiInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
-  : Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> 
+  : Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
   where TAlgorithmState : class, IAlgorithmState
-  where TSearchSpace : class, ISearchSpace<TGenotype> 
+  where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   [OrderedEquality]
   public ImmutableArray<IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> Interceptors { get; }
 
-  public MultiInterceptor(ImmutableArray<IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> interceptors) {
+  public MultiInterceptor(ImmutableArray<IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> interceptors)
+  {
     this.Interceptors = interceptors;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) {
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
     var interceptorInstances = Interceptors.Select(i => i.CreateExecutionInstance(instanceRegistry)).ToList();
     return new Instance(interceptorInstances);
   }
@@ -30,8 +32,9 @@ public partial record class MultiInterceptor<TGenotype, TAlgorithmState, TSearch
     : InterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
   {
     private readonly IReadOnlyList<IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> interceptors;
-    
-    public Instance(IReadOnlyList<IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> interceptors) {
+
+    public Instance(IReadOnlyList<IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> interceptors)
+    {
       this.interceptors = interceptors;
     }
 
@@ -41,20 +44,3 @@ public partial record class MultiInterceptor<TGenotype, TAlgorithmState, TSearch
     }
   }
 }
-
-// public static class MultiInterceptor
-// {
-//   public static MultiInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Create<TGenotype, TAlgorithmState, TSearchSpace, TProblem>(
-//     IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor)
-//     where TSearchSpace : class, ISearchSpace<TGenotype>
-//     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-//     where TAlgorithmState : class, IAlgorithmState
-//   {
-//     var list = new List<IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>>();
-//     if (interceptor != null) {
-//       list.Add(interceptor);
-//     }
-//
-//     return list.Count == 0 ? null : new MultiInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>(list);
-//   }
-// }

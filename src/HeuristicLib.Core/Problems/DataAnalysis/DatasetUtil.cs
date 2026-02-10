@@ -59,7 +59,7 @@ public static class DatasetUtil
     return shuffled;
   }
 
-  //public static Dictionary<string, Interval> GetVariableRanges(IDataset dataset, IEnumerable<int> rows = null) {
+  // public static Dictionary<string, Interval> GetVariableRanges(IDataset dataset, IEnumerable<int> rows = null) {
   //  var variableRanges = new Dictionary<string, Interval>();
 
   //  foreach (var variable in dataset.VariableNames) {
@@ -72,9 +72,9 @@ public static class DatasetUtil
   //  }
 
   //  return variableRanges;
-  //}
+  // }
 
-  //private static bool GetEqualValues(this Dictionary<ValuesType, ValuesType> variableValuesMapping, ValuesType originalValues, out ValuesType matchingValues) {
+  // private static bool GetEqualValues(this Dictionary<ValuesType, ValuesType> variableValuesMapping, ValuesType originalValues, out ValuesType matchingValues) {
   //  if (variableValuesMapping.TryGetValue(originalValues, out var value)) {
   //    matchingValues = value;
   //    return true;
@@ -89,9 +89,9 @@ public static class DatasetUtil
 
   //  variableValuesMapping[originalValues] = matchingValues;
   //  return result;
-  //}
+  // }
 
-  //private static bool EqualVariableValues(ValuesType values1, ValuesType values2) {
+  // private static bool EqualVariableValues(ValuesType values1, ValuesType values2) {
   //  //compare variable names for equality
   //  if (!values1.Keys.SequenceEqual(values2.Keys)) return false;
   //  foreach (var key in values1.Keys) {
@@ -104,5 +104,5 @@ public static class DatasetUtil
   //  }
 
   //  return true;
-  //}
+  // }
 }

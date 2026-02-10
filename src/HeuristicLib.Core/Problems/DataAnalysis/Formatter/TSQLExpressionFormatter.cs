@@ -33,7 +33,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     var strBuilder = new StringBuilder();
     GenerateHeader(strBuilder, symbolicExpressionTree);
 
-    //generate function body
+    // generate function body
     FormatRecursively(1, symbolicExpressionTree.Root.GetSubtree(0).GetSubtree(0), strBuilder);
 
     GenerateFooter(strBuilder);
@@ -57,7 +57,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
 
     var sortedVarcharIdentifiers = varcharVarNames.OrderBy(keySelector: n => n, new NaturalStringComparer()).Select(n => VariableName2Identifier(n)).ToList();
 
-    //Generate comment and instructions
+    // Generate comment and instructions
     strBuilder.Append("-- generated. created function can be used like 'SELECT dbo.REGRESSIONMODEL(");
     strBuilder.Append(string.Join(", ", sortedVarcharIdentifiers));
     if (varcharVarNames.Any() && floatVarNames.Any()) {
@@ -67,7 +67,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.AppendLine(")'");
     strBuilder.AppendLine("-- use the expression after the RETURN statement if you want to incorporate the model in a query without creating a function.");
 
-    //Generate function header
+    // Generate function header
     strBuilder.Append("CREATE FUNCTION dbo.REGRESSIONMODEL(");
     strBuilder.Append(string.Join(", ", sortedVarcharIdentifiers.Select(n => $"{n} NVARCHAR(max)")));
     if (varcharVarNames.Any() && floatVarNames.Any()) {
@@ -76,11 +76,11 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     strBuilder.Append(string.Join(", ", sortedFloatIdentifiers.Select(n => $"{n} FLOAT")));
     strBuilder.AppendLine(")");
 
-    //start function body
+    // start function body
     strBuilder.AppendLine("RETURNS FLOAT");
     strBuilder.AppendLine("BEGIN");
 
-    //add variable declaration for convenience
+    // add variable declaration for convenience
     strBuilder.AppendLineIndented(1, "-- added variable declaration for convenience");
     foreach (var name in sortedVarcharIdentifiers) {
       strBuilder.AppendLineIndented(1, $"-- DECLARE {name} NVARCHAR(max) = ''");
@@ -306,7 +306,7 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
       return;
     }
 
-    //Default case: more than 1 child
+    // Default case: more than 1 child
     FormatOperator(level, node, "-", strBuilder);
   }
 

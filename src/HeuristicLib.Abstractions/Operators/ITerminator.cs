@@ -21,7 +21,7 @@ public interface ITerminatorInstance<TGenotype, in TAlgorithmState, in TSearchSp
   bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem);
 }
 
-public static class TerminatorExtension 
+public static class TerminatorExtension
 {
   extension<TGenotype, TAlgorithmState, TSearchSpace, TProblem>(ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> terminatorInstance)
     where TAlgorithmState : IAlgorithmState
@@ -29,7 +29,7 @@ public static class TerminatorExtension
     where TProblem : IProblem<TGenotype, TSearchSpace>
   {
     public bool ShouldContinue(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem)
-    { 
+    {
       return !terminatorInstance.ShouldTerminate(state, searchSpace, problem);
     }
   }

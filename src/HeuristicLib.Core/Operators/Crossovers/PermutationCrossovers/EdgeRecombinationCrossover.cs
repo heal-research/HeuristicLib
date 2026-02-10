@@ -86,8 +86,7 @@ public record class EdgeRecombinationCrossover : SingleSolutionStatelessCrossove
           }
         }
 
-        if (currentEdgeCount >= minEdgeCount &&
-            (currentEdgeCount != minEdgeCount || random.NextBool())) {
+        if (currentEdgeCount >= minEdgeCount && (currentEdgeCount != minEdgeCount || random.NextBool())) {
           continue;
         }
 

@@ -43,13 +43,13 @@ public sealed class RegressionVariableImpactsCalculator(
     return problemData.InputVariables
       .Select(x => (x,
         CalculateImpact(x,
-        solution,
-        problemData,
-        modifiableDataset,
-        rows,
-        replacementMethod,
-        factorReplacementMethod,
-        targetValues, originalQuality)))
+          solution,
+          problemData,
+          modifiableDataset,
+          rows,
+          replacementMethod,
+          factorReplacementMethod,
+          targetValues, originalQuality)))
       .ToArray();
   }
 
@@ -171,7 +171,7 @@ public sealed class RegressionVariableImpactsCalculator(
         var bestQuality = double.NegativeInfinity;
         foreach (var repl in modifiableDataset.GetStringValues(variableName, rows).Distinct()) {
           var curReplacementValues = Enumerable.Repeat(repl, modifiableDataset.Rows).ToList();
-          //fholzing: this result could be used later on (theoretically), but is neglected for better readability/method consistency 
+          // fholzing: this result could be used later on (theoretically), but is neglected for better readability/method consistency 
           var newValue = CalculateQualityForReplacement(solution, modifiableDataset, variableName, originalValues, rows, curReplacementValues, targetValues);
 
           if (newValue <= bestQuality) {
@@ -221,7 +221,7 @@ public sealed class RegressionVariableImpactsCalculator(
     IEnumerable<double> targetValues)
   {
     modifiableDataset.ReplaceVariable(variableName, replacementValues);
-    //mkommend: ToList is used on purpose to avoid lazy evaluation that could result in wrong estimates due to variable replacements
+    // mkommend: ToList is used on purpose to avoid lazy evaluation that could result in wrong estimates due to variable replacements
     var ret = CalculateQuality(targetValues, solution.Predict(modifiableDataset, rows));
     modifiableDataset.ReplaceVariable(variableName, originalValues);
 

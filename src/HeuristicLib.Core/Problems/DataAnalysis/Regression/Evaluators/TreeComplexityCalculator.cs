@@ -17,7 +17,7 @@ public static class TreeComplexityCalculator
       case ProgramRootSymbol:
       case StartSymbol:
         return CalculateComplexity(treeNode[0]);
-      case Number:// fall through
+      case Number: // fall through
       case Constant:
         return 1;
       case Variable:

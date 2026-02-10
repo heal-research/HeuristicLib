@@ -3,7 +3,8 @@
 public record class PauseTokenTerminator<TGenotype> : StatelessTerminator<TGenotype>
 {
   private readonly PauseToken pauseToken;
-  public PauseTokenTerminator(PauseToken pauseToken) {
+  public PauseTokenTerminator(PauseToken pauseToken)
+  {
     this.pauseToken = pauseToken;
   }
 

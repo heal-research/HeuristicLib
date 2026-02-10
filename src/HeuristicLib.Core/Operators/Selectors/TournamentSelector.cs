@@ -3,11 +3,12 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record class TournamentSelector<TGenotype> 
+public record class TournamentSelector<TGenotype>
   : StatelessSelector<TGenotype>
 {
   private readonly int tournamentSize;
-  public TournamentSelector(int tournamentSize) {
+  public TournamentSelector(int tournamentSize)
+  {
     this.tournamentSize = tournamentSize;
   }
 

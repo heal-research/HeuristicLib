@@ -18,7 +18,7 @@ public record class RepeatAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorith
 
   public override RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    return new RepeatedAlgorithmInstance<TGenotype,TSearchSpace,TProblem,TAlgorithmState,TAlgorithm>(Algorithm, Repetitions);
+    return new RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(Algorithm, Repetitions);
   }
 }
 
@@ -62,14 +62,14 @@ public static class RepeatExecutionExtensions
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
       return algorithmInstance.RunInterleavedStreamingAsync(problem, random, initialState, cancellationToken);
     }
-    
+
     public IEnumerable<KeyValuePair<(int Repetition, int Iteration), TAlgorithmState>> RunInterleavedStreaming(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
     {
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
       return algorithmInstance.RunInterleavedStreaming(problem, random, initialState, cancellationToken);
     }
   }
-  
+
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> algorithmInstance)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>

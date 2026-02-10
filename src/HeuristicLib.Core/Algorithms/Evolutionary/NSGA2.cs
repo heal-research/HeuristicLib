@@ -30,7 +30,7 @@ public record class NSGA2<TGenotype, TSearchSpace, TProblem>
     var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
     var replacerInstance = instanceRegistry.GetOrCreate(Replacer);
-    
+
     return new NSGA2Instance<TGenotype, TSearchSpace, TProblem>(
       interceptorInstance,
       evaluatorInstance,
@@ -57,7 +57,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
   protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
 
 
-  public NSGA2Instance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer) 
+  public NSGA2Instance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
@@ -67,15 +67,14 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
     Selector = selector;
     Replacer = replacer;
   }
-  
+
   public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {
       var initialSolutions = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
       var initialFitnesses = Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
       return new PopulationState<TGenotype> {
-        Population = Population.From(initialSolutions, initialFitnesses),
-        //CurrentIteration = 0
+        Population = Population.From(initialSolutions, initialFitnesses)
       };
     }
 
@@ -87,8 +86,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
     var nextPop = Replacer.Replace(previousState.Population.Solutions, newPop.Solutions, problem.Objective, random, problem.SearchSpace, problem);
 
     return new PopulationState<TGenotype> {
-      Population = Population.From(nextPop),
-      //CurrentIteration = previousState.CurrentIteration + 1
+      Population = Population.From(nextPop)
     };
   }
 }

@@ -33,11 +33,11 @@ public record class StagnationTerminator<TGenotype>
     {
       this.window = window;
     }
-    
+
     public override bool ShouldTerminate(PopulationState<TGenotype> state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
     {
       bestQualitySoFar ??= problem.Objective.Worst;
-      
+
       var comparer = problem.Objective.TotalOrderComparer;
 
       var currentBestQuality = state.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
@@ -55,4 +55,3 @@ public record class StagnationTerminator<TGenotype>
     }
   }
 }
-

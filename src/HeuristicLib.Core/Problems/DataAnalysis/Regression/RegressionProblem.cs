@@ -8,7 +8,7 @@ public abstract class RegressionProblem<TProblemData, TSolution, TSearchSpace> :
   where TSearchSpace : class, ISearchSpace<TSolution>
 {
   public const double PunishmentFactor = 10.0;
-  private readonly int[] rowIndicesCache;//unsure if this is faster than using the enumerable directly
+  private readonly int[] rowIndicesCache; // unsure if this is faster than using the enumerable directly
 
   private readonly double[] trainingTargetCache;
 

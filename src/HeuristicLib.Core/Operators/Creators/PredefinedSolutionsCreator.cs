@@ -29,21 +29,21 @@ public partial record class PredefinedSolutionsCreator<TGenotype, TSearchSpace, 
     var creatorForRemainingSolutionsInstance = instanceRegistry.GetOrCreate(CreatorForRemainingSolutions);
     return new Instance(this.PredefinedSolutions, creatorForRemainingSolutionsInstance);
   }
-  
-  public class Instance 
+
+  public class Instance
     : CreatorInstance<TGenotype, TSearchSpace, TProblem>
   {
     private int currentSolutionIndex;
-    
+
     private readonly IReadOnlyList<TGenotype> predefinedSolutions;
     private readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance;
-    
+
     public Instance(IReadOnlyList<TGenotype> predefinedSolutions, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance)
     {
       this.predefinedSolutions = predefinedSolutions;
       this.creatorForRemainingSolutionsInstance = creatorForRemainingSolutionsInstance;
     }
-  
+
     public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
       var offspring = new TGenotype[count];
@@ -62,7 +62,7 @@ public partial record class PredefinedSolutionsCreator<TGenotype, TSearchSpace, 
         return offspring;
       }
 
-      var remainingRandom = random.Fork(1); 
+      var remainingRandom = random.Fork(1);
       var remaining = creatorForRemainingSolutionsInstance.Create(countRemaining, remainingRandom, searchSpace, problem);
       for (var i = 0; i < remaining.Count; i++) {
         offspring[countPredefined + i] = remaining[i];
@@ -72,5 +72,3 @@ public partial record class PredefinedSolutionsCreator<TGenotype, TSearchSpace, 
     }
   }
 }
-
-

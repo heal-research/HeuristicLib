@@ -11,7 +11,7 @@ public record class AfterOperatorCountTerminator<TGenotype> : StatelessTerminato
   }
   private readonly InvocationCounter counter;
   private readonly int maximumCount;
-  
+
   public override bool ShouldTerminate()
   {
     return counter.CurrentCount >= maximumCount;

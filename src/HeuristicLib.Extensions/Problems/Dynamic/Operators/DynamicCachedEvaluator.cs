@@ -24,7 +24,7 @@ public record class DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TK
   {
     this.problem = problem;
   }
-  
+
   public long GraceCount { get; init; } = long.MaxValue;
 
   public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
@@ -42,13 +42,13 @@ public record class DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TK
       : base(evaluator, keySelector, sizeLimit)
     {
       this.graceCount = graceCount;
-      
+
       problem.EpochClock.OnEpochChange += (_, _) => {
         ClearCache();
         hitCount = 0;
       };
     }
-    
+
     public override IReadOnlyList<ObjectiveVector> Evaluate(
       IReadOnlyList<TGenotype> solutions,
       IRandomNumberGenerator random,
@@ -60,19 +60,19 @@ public record class DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TK
       var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
 
       var results = base.Evaluate(solutions, random, encoding, problem);
-      
+
       var afterCacheStatistics = Cache.GetCurrentStatistics();
       var afterHits = afterCacheStatistics?.TotalHits ?? 0;
       var afterMisses = afterCacheStatistics?.TotalMisses ?? 0;
-      
-      
+
+
       var uniqueEvaluatedCount = afterMisses - beforeMisses;
       var cachedSolutionsCount = afterHits - beforeHits;
-      
+
       if (solutions.Count == 0) {
         return results;
       }
-    
+
       if (uniqueEvaluatedCount == 0) {
         // Everything was cached in this batch
         hitCount += cachedSolutionsCount;
@@ -83,11 +83,12 @@ public record class DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TK
         // We had to actually evaluate something – reset streak
         hitCount = 0;
       }
-    
+
       return results;
     }
-    
-    private void ClearCache() {
+
+    private void ClearCache()
+    {
       Cache.Clear();
     }
   }
@@ -103,11 +104,11 @@ public static class DynamicCachedEvaluatorExtension
     where TProblem : DynamicProblem<TGenotype, TSearchSpace>
     where TGenotype : class
     where TKey : notnull
-  
+
   {
     return new DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(evaluator, problem, keySelector);
   }
-  
+
   public static DynamicCachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
     GetCachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(this TProblem problem, Func<TGenotype, TKey>? keySelector = null)
     where TSearchSpace : class, ISearchSpace<TGenotype>

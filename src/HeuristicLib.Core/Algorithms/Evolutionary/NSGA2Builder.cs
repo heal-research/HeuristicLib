@@ -33,7 +33,6 @@ public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, Population
     Selector = spec.Selector,
     Evaluator = spec.Evaluator,
     Replacer = new ElitismReplacer<TG>(spec.Elites),
-    //Terminator = spec.Terminator,
     Interceptor = spec.Interceptor,
     Mutator = spec.Mutator.WithRate(spec.MutationRate)
   };

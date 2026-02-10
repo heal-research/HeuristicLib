@@ -10,7 +10,7 @@ public static class FuncProblem
 }
 
 public class FuncProblem<TGenotype, TSearchSpace>(Func<TGenotype, double> evaluateFunc, TSearchSpace searchSpace, Objective objective)
-  : Problem<TGenotype, TSearchSpace>(objective, searchSpace)/*, IDeterministicProblem<TGenotype>*/
+  : Problem<TGenotype, TSearchSpace>(objective, searchSpace) /*, IDeterministicProblem<TGenotype>*/
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public Func<TGenotype, double> EvaluateFunc { get; } = evaluateFunc;

@@ -46,9 +46,9 @@ public static class SymbolicRegressionParameterOptimization
     ArgumentNullException.ThrowIfNull(funcGrad);
 
     if (parameters.Count == 0) {
-      return 0.0;// constant expressions always have an R� of 0.0 
+      return 0.0; // constant expressions always have an R� of 0.0 
     }
-    var parameterEntries = parameters.ToArray();// order of entries must be the same for x
+    var parameterEntries = parameters.ToArray(); // order of entries must be the same for x
 
     // extract initial parameters
 
@@ -56,7 +56,7 @@ public static class SymbolicRegressionParameterOptimization
 
     interpreter.GetSymbolicExpressionTreeValues(tree, problemData.Dataset, rows);
 
-    //var model = new BoundedSymbolicRegressionModel(tree, interpreter, lowerEstimationLimit, upperEstimationLimit); // applyLinearScaling, lowerEstimationLimit, upperEstimationLimit;
+    // var model = new BoundedSymbolicRegressionModel(tree, interpreter, lowerEstimationLimit, upperEstimationLimit); // applyLinearScaling, lowerEstimationLimit, upperEstimationLimit;
     var model = new SymbolicRegressionModel(tree, interpreter);
     var originalQuality = problemData.Evaluate(model, rows, Evaluator, lowerEstimationLimit, upperEstimationLimit)[0];
 
@@ -106,7 +106,7 @@ public static class SymbolicRegressionParameterOptimization
     }
 
     try {
-      (cOpt, status) = (cOpt1, ExitCondition.None);//MathNetLevenbergMarquardt(maxIterations, n, y, m, x, func, rowEvaluationsCounter, funcGrad, c.ToArray(), k);
+      (cOpt, status) = (cOpt1, ExitCondition.None); // MathNetLevenbergMarquardt(maxIterations, n, y, m, x, func, rowEvaluationsCounter, funcGrad, c.ToArray(), k);
     } catch (NonConvergenceException) {
       if (retVal != -7 && retVal != -8) {
         throw;
@@ -124,7 +124,7 @@ public static class SymbolicRegressionParameterOptimization
     counter.FunctionEvaluations += rowEvaluationsCounter.FunctionEvaluations / n;
     counter.GradientEvaluations += rowEvaluationsCounter.GradientEvaluations / n;
 
-    //retVal == -7  => parameter optimization failed due to wrong gradient
+    // retVal == -7  => parameter optimization failed due to wrong gradient
     //          -8  => optimizer detected  NAN / INF  in  the target
     //                 function and/ or gradient
     if (retVal is -7 or -8) {
@@ -135,7 +135,7 @@ public static class SymbolicRegressionParameterOptimization
     try {
       quality = problemData.Evaluate(model, rows, Evaluator)[0];
     } catch (InvalidOperationException) {
-      //this happens when the new parameters produce invalid results (e.g. catastrophic cancellation)
+      // this happens when the new parameters produce invalid results (e.g. catastrophic cancellation)
       UpdateParameters(tree, initialParameters, updateVariableWeights);
 
       return originalQuality;
@@ -149,13 +149,13 @@ public static class SymbolicRegressionParameterOptimization
     var improvement = originalQuality - quality <= 0.001 && !double.IsNaN(quality);
 
     if (!improvement) {
-      UpdateParameters(tree, initialParameters, updateVariableWeights);//reset tree parameters
+      UpdateParameters(tree, initialParameters, updateVariableWeights); // reset tree parameters
 
       return originalQuality;
     }
 
     if (!updateParametersInTree) {
-      UpdateParameters(tree, initialParameters, updateVariableWeights);//reset tree parameters
+      UpdateParameters(tree, initialParameters, updateVariableWeights); // reset tree parameters
     }
 
     return quality;
@@ -167,8 +167,8 @@ public static class SymbolicRegressionParameterOptimization
     alglib.lsfitsetcond(state, 0.0, maxIterations);
     alglib.lsfitsetxrep(state, iterationCallback != null);
     alglib.lsfitfit(state,
-    new alglib.ndimensional_pfunc(functionCx1Func),
-    new alglib.ndimensional_pgrad(functionCx1Grad), Callback, rowEvaluationsCounter);
+      new alglib.ndimensional_pfunc(functionCx1Func),
+      new alglib.ndimensional_pgrad(functionCx1Grad), Callback, rowEvaluationsCounter);
     alglib.lsfitresults(state, out var retVal, out c, out _);
 
     return (c, retVal);
@@ -194,7 +194,7 @@ public static class SymbolicRegressionParameterOptimization
       var xRow = new double[m];
 
       for (var j = 0; j < idx.Count; j++) {
-        var i = (int)idx[j];// observation index
+        var i = (int)idx[j]; // observation index
 
         for (var col = 0; col < m; col++) {
           xRow[col] = x[i, col];
@@ -234,11 +234,11 @@ public static class SymbolicRegressionParameterOptimization
 
     var objective =
       ObjectiveFunction.NonlinearModel(
-      ModelN,
-      Jacobian,
-      xIdx,// "X" (here just indices; real X is in closure)
-      yVec,// observed Y
-      wVec// weights
+        ModelN,
+        Jacobian,
+        xIdx, // "X" (here just indices; real X is in closure)
+        yVec, // observed Y
+        wVec // weights
       );
 
 // Bounds/scales: “no bounds, all free”
@@ -247,21 +247,21 @@ public static class SymbolicRegressionParameterOptimization
 
 // Configure LM similarly to your ALGLIB maxIterations limit
     var lm = new LevenbergMarquardtMinimizer(
-    1e-3,
-    1e-12,
-    1e-12,
-    1e-12,
-    maxIterations
+      1e-3,
+      1e-12,
+      1e-12,
+      1e-12,
+      maxIterations
     );
 
 // Solve
     var result = lm.FindMinimum(objective,
-    c,// initialGuess
-    scales: scales,
-    isFixed: isFixed);
+      c, // initialGuess
+      scales: scales,
+      isFixed: isFixed);
 
     var cOpt = result.MinimizingPoint.ToArray();
-    var status = result.ReasonForExit;// similar to retVal
+    var status = result.ReasonForExit; // similar to retVal
 
     #endregion
 
@@ -274,7 +274,7 @@ public static class SymbolicRegressionParameterOptimization
     foreach (var node in tree.Root.IterateNodesPrefix()) {
       switch (node) {
         case NumberTreeNode { Parent.Symbol: Power } numberTreeNode when (numberTreeNode.Parent?[1] ?? null) == numberTreeNode:
-          continue;// exponents in powers are not optimized (see TreeToAutoDiffTermConverter)
+          continue; // exponents in powers are not optimized (see TreeToAutoDiffTermConverter)
         case NumberTreeNode numberTreeNode:
           numberTreeNode.Value = parameters[i++];
 

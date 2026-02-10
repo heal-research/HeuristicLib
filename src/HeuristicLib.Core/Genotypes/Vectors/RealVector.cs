@@ -10,10 +10,10 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   private readonly double[] elements = elements.ToArray();
 
   public double this[Index index] => elements[index];
-  
-  //public static implicit operator RealVector?(double[]? values) => values is not null ? new RealVector(values) : null;
 
-  //public static implicit operator RealVector(IntegerVector intVector) => new RealVector(intVector);
+  // public static implicit operator RealVector?(double[]? values) => values is not null ? new RealVector(values) : null;
+
+  // public static implicit operator RealVector(IntegerVector intVector) => new RealVector(intVector);
 
   public double this[int index] => elements[index];
 
@@ -133,7 +133,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     }
 
     return ReferenceEquals(this, other)
-           || elements.SequenceEqual(other.elements);
+      || elements.SequenceEqual(other.elements);
   }
 
   public override bool Equals(object? obj)
@@ -191,7 +191,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
     u2 = new RealVector(random.NextDoubles(length));
 
     var mag = std * Sqrt(-2.0 * Log(u1));
-    //var z0 = mag * Cos(2.0 * Math.PI * u2) + mean;
+    // var z0 = mag * Cos(2.0 * Math.PI * u2) + mean;
     var z1 = (mag * Sin(2.0 * Math.PI * u2)) + mean;
 
     return z1;
@@ -373,8 +373,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
   public double Angle(RealVector other)
   {
-    var r = Dot(other) / (Norm() * other.Norm()
- );
+    var r = Dot(other) / (Norm() * other.Norm());
 
     return Math.Acos(r);
   }

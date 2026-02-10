@@ -3,12 +3,13 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public record class RemoveDuplicatesInterceptor<TGenotype, TAlgorithmState> 
+public record class RemoveDuplicatesInterceptor<TGenotype, TAlgorithmState>
   : StatelessInterceptor<TGenotype, TAlgorithmState>
   where TAlgorithmState : PopulationState<TGenotype>
 {
   private readonly IEqualityComparer<TGenotype> comparer;
-  public RemoveDuplicatesInterceptor(IEqualityComparer<TGenotype> comparer) {
+  public RemoveDuplicatesInterceptor(IEqualityComparer<TGenotype> comparer)
+  {
     this.comparer = comparer;
   }
 

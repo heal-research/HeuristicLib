@@ -10,7 +10,7 @@ public sealed class ExecutionInstanceRegistry
     if (cache.TryGetValue(@operator, out var existing)) {
       return (TExecutionInstance)existing;
     }
-  
+
     var instance = @operator.CreateExecutionInstance(this);
     cache[@operator] = instance;
     return instance;

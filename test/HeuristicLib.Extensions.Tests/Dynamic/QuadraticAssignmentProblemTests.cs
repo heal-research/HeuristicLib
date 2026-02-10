@@ -43,9 +43,9 @@ public class QuadraticAssignmentProblemTests
     // Compute expected manually for the default matrices you used
     // expected = sum_i sum_j F[i,j] * D[i,j]
     const double expected = 0 * 0 + 2 * 1 + 0 * 2 + 1 * 3
-                            + 2 * 1 + 0 * 0 + 3 * 1 + 0 * 2
-                            + 0 * 2 + 3 * 1 + 0 * 0 + 4 * 1
-                            + 1 * 3 + 0 * 2 + 4 * 1 + 0 * 0;
+      + 2 * 1 + 0 * 0 + 3 * 1 + 0 * 2
+      + 0 * 2 + 3 * 1 + 0 * 0 + 4 * 1
+      + 1 * 3 + 0 * 2 + 4 * 1 + 0 * 0;
 
     Assert.Equal(expected, cost, 10);
   }

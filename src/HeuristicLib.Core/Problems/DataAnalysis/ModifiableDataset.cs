@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-#pragma warning disable S2368//multidimensional parameters are explicitly allowed
+#pragma warning disable S2368 // multidimensional parameters are explicitly allowed
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 

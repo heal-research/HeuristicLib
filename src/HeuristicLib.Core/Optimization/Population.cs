@@ -15,9 +15,9 @@ public partial record Population<TGenotype> : IISolutionLayout<TGenotype>
 {
   [OrderedEquality]
   public ImmutableArray<ISolution<TGenotype>> Solutions { get; init; }
-  
+
   public IEnumerable<TGenotype> Genotypes => Solutions.Select(x => x.Genotype);
-  
+
   public Population(params ImmutableArray<ISolution<TGenotype>> Solutions)
   {
     this.Solutions = Solutions;

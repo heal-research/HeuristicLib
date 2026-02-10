@@ -2,7 +2,7 @@
 
 public static class Extensions
 {
-  
+
   // ToDo: pack the extensions to the actual classes they belong to, not in a global extensions class.
   extension<TGenotype>(IReadOnlyList<ISolution<TGenotype>> parents)
   {
@@ -38,7 +38,7 @@ public static class Extensions
     if (dict.TryGetValue(key, out var v)) {
       return v;
     }
-    
+
     dict[key] = defaultValue;
 
     return defaultValue;

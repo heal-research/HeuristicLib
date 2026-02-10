@@ -36,9 +36,9 @@ public class OnlineMeanAndVarianceCalculator
       if (Count == 1) {
         mOldM = mNewM = x;
         mOldS = 0.0;
-        PopulationVarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+        PopulationVarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
       } else {
-        VarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 2
+        VarianceErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 2
         mNewM = mOldM + (x - mOldM) / Count;
         mNewS = mOldS + (x - mOldM) * (x - mNewM);
 

@@ -1,6 +1,6 @@
 using System.Collections;
 
-#pragma warning disable S2368//The work with 2-dimensional rectangular  arrays is explicitly wanted here 
+#pragma warning disable S2368 // The work with 2-dimensional rectangular  arrays is explicitly wanted here 
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
@@ -216,7 +216,7 @@ public abstract class Dataset
         variableNames.GroupBy(v => v).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
       var message = "The dataset cannot contain duplicate variables names: " + Environment.NewLine;
       message = duplicateVariableNames.Aggregate(message,
-      func: (current, duplicateVariableName) => current + duplicateVariableName + Environment.NewLine);
+        func: (current, duplicateVariableName) => current + duplicateVariableName + Environment.NewLine);
 
       throw new ArgumentException(message);
     }

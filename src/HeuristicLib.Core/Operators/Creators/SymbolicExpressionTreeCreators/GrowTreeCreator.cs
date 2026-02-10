@@ -44,8 +44,9 @@ public record class GrowTreeCreator : SymbolicExpressionTreeCreator
     }
 
     for (var i = 0; i < arity; i++) {
-      var possibleSymbols = allowedSymbols.Where(s => searchSpace.Grammar.IsAllowedChildSymbol(root.Symbol, s, i) &&
-                                                      searchSpace.Grammar.GetMinimumExpressionDepth(s) - 1 <= maxDepth - currentDepth).ToList();
+      var possibleSymbols = allowedSymbols
+        .Where(s => searchSpace.Grammar.IsAllowedChildSymbol(root.Symbol, s, i) && searchSpace.Grammar.GetMinimumExpressionDepth(s) - 1 <= maxDepth - currentDepth)
+        .ToList();
 
       if (possibleSymbols.Count == 0) {
         throw new InvalidOperationException("No symbols are available for the tree.");

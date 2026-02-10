@@ -15,7 +15,7 @@ public static class FOneScoreCalculator
       return double.NaN;
     }
 
-    //only one class has been present => F1 score cannot be calculated
+    // only one class has been present => F1 score cannot be calculated
     if (confusionMatrix.GetLength(0) != 2 || confusionMatrix.GetLength(1) != 2) {
       return double.NaN;
     }

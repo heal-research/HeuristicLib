@@ -15,7 +15,7 @@ public partial record class ObservableEvaluator<TG, TS, TP>
   where TP : class, IProblem<TG, TS>
 {
   public IEvaluator<TG, TS, TP> Evaluator { get; }
-  
+
   [OrderedEquality]
   public ImmutableArray<IEvaluatorObserver<TG, TS, TP>> Observers { get; }
 
@@ -30,7 +30,7 @@ public partial record class ObservableEvaluator<TG, TS, TP>
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     return new ObservableEvaluatorInstance(evaluatorInstance, Observers);
   }
-  
+
   private sealed class ObservableEvaluatorInstance(IEvaluatorInstance<TG, TS, TP> evaluatorInstance, IReadOnlyList<IEvaluatorObserver<TG, TS, TP>> observers)
     : EvaluatorInstance<TG, TS, TP>
   {
@@ -41,7 +41,7 @@ public partial record class ObservableEvaluator<TG, TS, TP>
       foreach (var observer in observers) {
         observer.AfterEvaluation(genotypes, results, random, searchSpace, problem);
       }
-      
+
       return results;
     }
   }
@@ -84,7 +84,7 @@ public static class ObservableEvaluatorExtensions
     {
       return new ObservableEvaluator<TG, TS, TP>(evaluator, observers);
     }
-    
+
     public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, IRandomNumberGenerator, TS, TP> afterEvaluation)
     {
       var observer = new FuncEvaluatorObserver<TG, TS, TP>(afterEvaluation);
@@ -101,7 +101,7 @@ public static class ObservableEvaluatorExtensions
     {
       return evaluator.ObserveWith((solutions, objectives) => counter.IncrementBy(objectives.Count));
     }
-    
+
     public IEvaluator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
     {
       counter = new InvocationCounter();

@@ -50,7 +50,7 @@ public class OnlinePearsonsRCalculator
 
     // check if both enumerators are at the end to make sure both enumerations have the same length
     if (calculator.ErrorState == OnlineCalculatorError.None &&
-        (secondEnumerator.MoveNext() || firstEnumerator.MoveNext())) {
+      (secondEnumerator.MoveNext() || firstEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in first and second enumeration doesn't match.");
     }
 

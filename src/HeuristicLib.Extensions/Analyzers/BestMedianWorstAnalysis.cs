@@ -7,8 +7,8 @@ namespace HEAL.HeuristicLib.Analyzers;
 
 public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, ISolution<T> Worst);
 
-//public class MyAnalyzer<T> : IEvaluatorObserver<T> where T : class
-//{
+// public class MyAnalyzer<T> : IEvaluatorObserver<T> where T : class
+// {
 //  public void AfterEvaluation(IReadOnlyList<T> genotypes,
 //                              IReadOnlyList<ObjectiveVector> values,
 //                              ISearchSpace<T> searchSpace,
@@ -26,12 +26,12 @@ public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, IS
 //  //  wrapped.Evaluate([new RealVector([1,2])], RandomNumberGenerator.Create(0, RandomProfile.NoRandom), p.SearchSpace, p);
 //  //  IEvaluator<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> x = eval;
 //  //}
-//}
+// }
 
 public class BestMedianWorstAnalysis<TGenotype> : IInterceptorObserver<TGenotype, PopulationState<TGenotype>>
 {
   private readonly List<BestMedianWorstEntry<TGenotype>> bestSolutions = [];
-  
+
   public IReadOnlyList<BestMedianWorstEntry<TGenotype>> BestSolutions => bestSolutions;
 
   public void AfterInterception(PopulationState<TGenotype> newState, PopulationState<TGenotype> currentState, PopulationState<TGenotype>? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)

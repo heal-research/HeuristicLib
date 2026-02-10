@@ -8,7 +8,7 @@ public class SymbolicExpressionTree(SymbolicExpressionTreeNode root)
 
   public int Depth => Root.GetDepth();
 
-  public SymbolicExpressionTree(SymbolicExpressionTree symbolicExpressionTree) : this(symbolicExpressionTree.Root.Clone()) { }
+  public SymbolicExpressionTree(SymbolicExpressionTree symbolicExpressionTree) : this(symbolicExpressionTree.Root.Clone()) {}
 
   public IEnumerable<SymbolicExpressionTreeNode> IterateNodesBreadth() => Root.IterateNodesBreadth();
 

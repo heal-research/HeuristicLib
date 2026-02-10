@@ -80,7 +80,7 @@ public record class FullTreeCreator : SymbolicExpressionTreeCreator
       root.AddSubtree(tree);
     }
 
-    //additional levels should only be added if the maximum depth is not reached yet
+    // additional levels should only be added if the maximum depth is not reached yet
     if (maxDepth <= currentDepth) {
       return;
     }
@@ -96,7 +96,7 @@ public record class FullTreeCreator : SymbolicExpressionTreeCreator
   {
     var suballowed = allowedSymbols.Where(s => grammar.IsAllowedChildSymbol(root.Symbol, s, position));
     var possibleSymbols = suballowed.Where(s => grammar.GetMinimumExpressionDepth(s) - 1 <= remainingDepth);
-    //prefer symbols that can fill the remaining depth
+    // prefer symbols that can fill the remaining depth
     var preferredSymbols = possibleSymbols.GroupBy(x => grammar.GetMaximumExpressionDepth(x) > remainingDepth ? 0 : 1).OrderBy(g => g.Key).First().ToList();
     switch (preferredSymbols.Count) {
       case 0:

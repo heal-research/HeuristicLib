@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Optimization;
 
-public sealed class Objective /*: IReadOnlyList<ObjectiveDirection>, IEquatable<Objective>*/
+public sealed class Objective
 {
   public ObjectiveDirection[] Directions { get; }
   //public int Dimensions => Directions.Length;

@@ -61,15 +61,15 @@ public class CrowdingDistanceTests
     // p2 is max in obj0
     // p1 is min in obj1  -> should become infinity even though it's interior in obj0
     var pop = new[] {
-      OV(0.0, 5.0),// extreme in obj0
-      OV(5.0, 0.0),// extreme in obj1 (min)
-      OV(10.0, 10.0)// extreme in obj0 and obj1 (max)
+      OV(0.0, 5.0), // extreme in obj0
+      OV(5.0, 0.0), // extreme in obj1 (min)
+      OV(10.0, 10.0) // extreme in obj0 and obj1 (max)
     };
 
     var d = CrowdingDistance.CalculateCrowdingDistances(pop);
 
     Assert.True(double.IsPositiveInfinity(d[0]));
-    Assert.True(double.IsPositiveInfinity(d[1]));// key check
+    Assert.True(double.IsPositiveInfinity(d[1])); // key check
     Assert.True(double.IsPositiveInfinity(d[2]));
   }
 
@@ -80,16 +80,16 @@ public class CrowdingDistanceTests
     // it only sets infinity for indices[0] and indices[^1],
     // not for all points that share the min or max.
     var pop = new[] {
-      OV(0.0), OV(0.0),// tied min
-      OV(5.0), OV(10.0), OV(10.0)// tied max
+      OV(0.0), OV(0.0), // tied min
+      OV(5.0), OV(10.0), OV(10.0) // tied max
     };
 
     var d = CrowdingDistance.CalculateCrowdingDistances(pop);
 
     Assert.True(double.IsPositiveInfinity(d[0]));
-    //Assert.True(double.IsPositiveInfinity(d[1])); // expected if "all extremes" should be infinite
+    // Assert.True(double.IsPositiveInfinity(d[1])); // expected if "all extremes" should be infinite
     Assert.False(double.IsPositiveInfinity(d[2]));
-    //Assert.True(double.IsPositiveInfinity(d[3]));
+    // Assert.True(double.IsPositiveInfinity(d[3]));
     Assert.True(double.IsPositiveInfinity(d[4]));
   }
 
@@ -100,17 +100,17 @@ public class CrowdingDistanceTests
   {
     // Need to select 3 individuals in total
     var previous = new[] {
-      Sol<int>(11, 12),// dominated by all (put junk here)
+      Sol<int>(11, 12), // dominated by all (put junk here)
       Sol<int>(34, 23), Sol<int>(14, 11)
     };
 
     // A trade-off front of 4 mutually non-dominated points (for minimization):
     // extremes: (0,10) and (10,0) should get ∞ crowding distance
     var offspring = new[] {
-      Sol<int>(0.0, 10.0),// extreme
-      Sol<int>(3.0, 7.0),// internal
-      Sol<int>(7.0, 3.0),// internal
-      Sol<int>(10.0, 0.0)// extreme
+      Sol<int>(0.0, 10.0), // extreme
+      Sol<int>(3.0, 7.0), // internal
+      Sol<int>(7.0, 3.0), // internal
+      Sol<int>(10.0, 0.0) // extreme
     };
 
     var replacer = new ParetoCrowdingReplacer<int>(true);

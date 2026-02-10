@@ -31,7 +31,7 @@ public partial record class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpac
   public override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
-    
+
     return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
       evaluatorInstance,
       Algorithms
@@ -48,7 +48,7 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
 {
   protected readonly IReadOnlyList<TAlgorithm> Algorithms;
 
-  public PipelineAlgorithmInstance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms) 
+  public PipelineAlgorithmInstance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms)
     : base(evaluator)
   {
     Algorithms = algorithms;

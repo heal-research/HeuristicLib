@@ -57,8 +57,8 @@ public static class BBoBSuite
       24 => CreateLunacekBiRastriginProblem(function, dimension, instance, randomSeed),
 
       _ => throw new ArgumentOutOfRangeException(
-      nameof(function),
-      $"Cannot retrieve BBoB problem f{function} i{instance} d{dimension}.")
+        nameof(function),
+        $"Cannot retrieve BBoB problem f{function} i{instance} d{dimension}.")
     };
   }
 
@@ -82,10 +82,10 @@ public static class BBoBSuite
   private static StepEllipsoidFunction CreateStepEllipsoidProblem(int function, int dimension, int instance, long randomSeed)
   {
     var data = new FStepEllipsoidData(
-    CreateXOpt(dimension, randomSeed),
-    Bbob2009ComputeFOpt(function, instance),
-    CreateRotationMatrix(dimension, randomSeed + 1000000),
-    CreateRotationMatrix(dimension, randomSeed));
+      CreateXOpt(dimension, randomSeed),
+      Bbob2009ComputeFOpt(function, instance),
+      CreateRotationMatrix(dimension, randomSeed + 1000000),
+      CreateRotationMatrix(dimension, randomSeed));
 
     return new StepEllipsoidFunction(data) { Dimension = dimension };
   }
@@ -99,14 +99,14 @@ public static class BBoBSuite
   private static RosenbrockFunction CreateRosenbrockRotatedProblem(int function, int dimension, int instance, long randomSeed)
   {
     // NOTE: BBOB has a rotated Rosenbrock variant.
-    //var M = CreateRotationMatrix(dimension, randomSeed);
+    // var M = CreateRotationMatrix(dimension, randomSeed);
     return new RosenbrockFunction { Dimension = dimension };
   }
 
   private static EllipsoidFunction CreateEllipsoidRotatedProblem(int function, int dimension, int instance, long randomSeed)
   {
     // Similar comment as above: BBOB's rotated ellipsoid.
-    //var M = CreateRotationMatrix(dimension, randomSeed);
+    // var M = CreateRotationMatrix(dimension, randomSeed);
     return new EllipsoidFunction { Dimension = dimension };
   }
 
@@ -142,10 +142,10 @@ public static class BBoBSuite
     // BBOB has two Schaffers F7 variants:
     // - f17 with condition 10
     // - f18 with condition 1000
-    //
+    // 
     // In COCO, that condition influences the transformations / scaling,
     // not the raw Schaffers function itself.
-    //
+    // 
     return new SchaffersFunction { Dimension = dimension };
   }
 
@@ -175,23 +175,23 @@ public static class BBoBSuite
         break;
       default:
         throw new ArgumentException(
-        $"Unsupported number of Gallagher peaks: {numberOfPeaks}",
-        nameof(numberOfPeaks));
+          $"Unsupported number of Gallagher peaks: {numberOfPeaks}",
+          nameof(numberOfPeaks));
     }
 
     var data = new FGallagherData(randomSeed,
-    NumberOfPeaks: numberOfPeaks,
-    XOpt: new double[dimension],
-    Rotation: AllocateMatrix(dimension, dimension),
-    XLocal: AllocateMatrix(dimension, numberOfPeaks),
-    ArrScales: AllocateMatrix(numberOfPeaks, dimension),
-    PeakValues: new double[numberOfPeaks]);
+      NumberOfPeaks: numberOfPeaks,
+      XOpt: new double[dimension],
+      Rotation: AllocateMatrix(dimension, dimension),
+      XLocal: AllocateMatrix(dimension, numberOfPeaks),
+      ArrScales: AllocateMatrix(numberOfPeaks, dimension),
+      PeakValues: new double[numberOfPeaks]);
 
     // 1) Random rotation
     ComputeRotation(data.Rotation, randomSeed, dimension);
 
     // 2) Build arrCondition and peak_values using a permutation of peaks-1
-    var randomNumbers = new double[numberOfPeaks * dimension];// large enough buffer
+    var randomNumbers = new double[numberOfPeaks * dimension]; // large enough buffer
     Bbob2009Unif(randomNumbers, numberOfPeaks - 1, data.RandomSeed);
 
     var rpermPeaks = new FGallagherPermutation[numberOfPeaks - 1];
@@ -207,8 +207,8 @@ public static class BBoBSuite
 
     for (var i = 1; i < numberOfPeaks; i++) {
       arrCondition[i] = Math.Pow(
-      maxCondition,
-      (double)rpermPeaks[i - 1].Index / (numberOfPeaks - 2));
+        maxCondition,
+        (double)rpermPeaks[i - 1].Index / (numberOfPeaks - 2));
 
       data.PeakValues[i] =
         (double)(i - 1) / (numberOfPeaks - 2) * (fitvalues[1] - fitvalues[0])
@@ -231,8 +231,8 @@ public static class BBoBSuite
       for (var j = 0; j < dimension; j++) {
         data.ArrScales[i][j] =
           Math.Pow(
-          arrCondition[i],
-          (double)rpermDims[j].Index / (dimension - 1) - 0.5);
+            arrCondition[i],
+            (double)rpermDims[j].Index / (dimension - 1) - 0.5);
       }
     }
 
@@ -278,11 +278,11 @@ public static class BBoBSuite
 
     // Allocate and fill data (mirrors f_lunacek_bi_rastrigin_bbob_problem_allocate)
     var data = new FLunacekBiRastriginData(
-    new double[dimension],
-    new double[dimension],
-    new double[dimension],
-    AllocateMatrix(dimension, dimension),
-    AllocateMatrix(dimension, dimension)
+      new double[dimension],
+      new double[dimension],
+      new double[dimension],
+      AllocateMatrix(dimension, dimension),
+      AllocateMatrix(dimension, dimension)
     );
 
     // These two lines are in the original C code.
@@ -410,7 +410,7 @@ public static class BBoBSuite
       aktrand = rgrand[tmp];
       rgrand[tmp] = aktseed;
 
-      r[i] = aktrand / 2.147483647e9;// exactly the same divisor as COCO
+      r[i] = aktrand / 2.147483647e9; // exactly the same divisor as COCO
 
       if (r[i] == 0.0) {
         r[i] = 1e-99;
@@ -530,7 +530,7 @@ public static class BBoBSuite
 
   private static double[] CreateXOpt(int dimension, long randomSeed)
   {
-    var bestParameter = new double[dimension];// placeholder
+    var bestParameter = new double[dimension]; // placeholder
     ComputeXOpt(bestParameter, randomSeed);
 
     return bestParameter;

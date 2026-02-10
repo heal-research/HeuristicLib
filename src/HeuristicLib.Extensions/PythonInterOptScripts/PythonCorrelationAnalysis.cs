@@ -54,18 +54,18 @@ public static class PythonCorrelationAnalysis
 
   public static ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)
   {
-    //var prob = SphereRastriginProblem(dimensions, min, max);
+    // var prob = SphereRastriginProblem(dimensions, min, max);
 
-    //var proto = Nsga2.GetBuilder(
+    // var proto = Nsga2.GetBuilder(
     //  //new UniformDistributedCreator(),
     //  //new SelfAdaptiveSimulatedBinaryCrossover { Eta = 15 }.WithProbability(0.9),
     //  //new PolynomialMutator().WithRate(0.9)
     //  );
 
-    //proto.Terminator = new AfterIterationsTerminator<RealVector>(generations);
-    //proto.RandomSeed = seed;
-    //proto.PopulationSize = populationSize;
-    //proto.MutationRate = 1;
+    // proto.Terminator = new AfterIterationsTerminator<RealVector>(generations);
+    // proto.RandomSeed = seed;
+    // proto.PopulationSize = populationSize;
+    // proto.MutationRate = 1;
 
     var res = PythonGenealogyAnalysis.RunAlgorithmConfigurable(problem, callback is null ? null : r => callback(r, problem),
       new TestFunctionExperimentParameters {

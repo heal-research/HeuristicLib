@@ -30,7 +30,6 @@ public record EvolutionStrategyBuilder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP
     Crossover = spec.Crossover,
     Selector = spec.Selector,
     Evaluator = spec.Evaluator,
-    //Terminator = spec.Terminator,
     InitialMutationStrength = spec.InitialMutationStrength,
     Interceptor = spec.Interceptor,
     NumberOfChildren = spec.NumberOfChildren

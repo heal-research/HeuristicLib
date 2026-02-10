@@ -253,7 +253,7 @@ public class TsplibParser
     switch (nodeCoordType) {
       case TslplibNodeCoordTypes.NO_COORDS:
         return;
-      case TslplibNodeCoordTypes.Unknown:// It's a pity that there is a documented standard which is ignored in most files.
+      case TslplibNodeCoordTypes.Unknown: // It's a pity that there is a documented standard which is ignored in most files.
       case TslplibNodeCoordTypes.Twod_Coords:
         Vertices = new double[Dimension, 2];
 
@@ -428,9 +428,9 @@ public class TsplibParser
       foreach (var nodeString in nodes) {
         var node = int.Parse(nodeString, CultureInfo.InvariantCulture.NumberFormat);
         if (node == -1) {
-          finished = tours.Count > 0 && tours[^1].Count == 0// -1 followed by -1
-                     || source.BaseStream.CanSeek && source.Peek() == -1
-                     || source.Peek() == 'E';
+          finished = tours.Count > 0 && tours[^1].Count == 0 // -1 followed by -1
+            || source.BaseStream.CanSeek && source.Peek() == -1
+            || source.Peek() == 'E';
           if (finished) {
             break;
           }
@@ -502,7 +502,7 @@ public class TsplibParser
               } else {
                 dim2 = dim1 + 1;
               }
-            } else {// column-wise
+            } else { // column-wise
               dim1++;
               if ((!diagonal || dim1 != dim2 + 1) && (diagonal || dim1 != dim2)) {
                 continue;
@@ -511,17 +511,17 @@ public class TsplibParser
               dim2++;
               dim1 = 0;
             }
-          } else {// lower-triangular
+          } else { // lower-triangular
             if (rowWise) {
               dim2++;
               if ((!diagonal || dim2 != dim1 + 1)
-                  && (diagonal || dim2 != dim1)) {
+                && (diagonal || dim2 != dim1)) {
                 continue;
               }
 
               dim1++;
               dim2 = 0;
-            } else {// column-wise
+            } else { // column-wise
               dim1++;
               if (dim1 != Dimension) {
                 continue;
@@ -535,7 +535,7 @@ public class TsplibParser
               }
             }
           }
-        } else {// full-matrix
+        } else { // full-matrix
           dim2++;
           if (dim2 != Dimension) {
             continue;
@@ -589,7 +589,7 @@ public class TsplibParser
     LOWER_DIAG_ROW = 6,
     UPPER_COLUMN = 7,
 
-    //LowerColumn = 8,
+    // LowerColumn = 8,
     Upper_Diag_Column = 9,
     Lower_Diag_Column = 10
   }

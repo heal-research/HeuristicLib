@@ -3,12 +3,13 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public record class ParetoCrowdingReplacer<TGenotype> 
+public record class ParetoCrowdingReplacer<TGenotype>
   : StatelessReplacer<TGenotype>
 {
   private readonly bool dominateOnEqualities;
-  
-  public ParetoCrowdingReplacer(bool dominateOnEqualities) {
+
+  public ParetoCrowdingReplacer(bool dominateOnEqualities)
+  {
     this.dominateOnEqualities = dominateOnEqualities;
   }
 

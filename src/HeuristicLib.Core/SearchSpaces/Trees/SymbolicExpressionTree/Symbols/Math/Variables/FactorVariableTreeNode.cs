@@ -45,7 +45,7 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode
     // 50% additive & 50% multiplicative
     if (random.NextDouble() < 0.5) {
       var x = NormalDistribution.NextDouble(random, Symbol.WeightManipulatorMu,
-      Symbol.WeightManipulatorSigma);
+        Symbol.WeightManipulatorSigma);
       Weights[idx] += x * shakingFactor;
     } else {
       var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
@@ -71,9 +71,9 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode
   public override string ToString()
   {
     var weightStr = string.Join("; ",
-    Symbol.GetVariableValues(VariableName).Select(value => value + ": " + GetValue(value).ToString("E4")));
+      Symbol.GetVariableValues(VariableName).Select(value => value + ": " + GetValue(value).ToString("E4")));
 
     return VariableName + " (factor) "
-                        + "[" + weightStr + "]";
+      + "[" + weightStr + "]";
   }
 }

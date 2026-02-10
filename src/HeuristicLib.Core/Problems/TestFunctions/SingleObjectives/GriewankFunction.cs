@@ -58,7 +58,7 @@ public class GriewankFunction(int dimension) : IGradientTestFunction
       // product over j != i of cos(x_j/sqrt(j+1))
       var prodExcl = prefix[i] * suffix[i + 1];
 
-      var termProd = prodExcl * (sin / root);// this is -dP/dx_i with the outer minus already applied
+      var termProd = prodExcl * (sin / root); // this is -dP/dx_i with the outer minus already applied
       var termSum = 2.0 * d / A;
 
       res[i] = termSum + termProd;

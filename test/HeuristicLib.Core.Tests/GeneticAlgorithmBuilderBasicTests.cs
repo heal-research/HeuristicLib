@@ -7,9 +7,9 @@
 // using HEAL.HeuristicLib.Problems;
 // using HEAL.HeuristicLib.Random;
 // using Decoder=HEAL.HeuristicLib.Operators.Decoder;
-//
+// 
 // namespace HEAL.HeuristicLib.Core.Tests;
-//
+// 
 // public class GeneticAlgorithmBuilderBasicTests {
 //   [Fact]
 //   public Task GeneticAlgorithmBuilder_WithBuilder() {
@@ -31,9 +31,9 @@
 //       Replacer = new PlusSelectionReplacer()
 //     };
 //     //.WithTerminator(Terminator.OnGeneration(20));
-//
+// 
 //     var ga = builder.Build();
-//
+// 
 //     return Verify(ga);
 //   }
 //   //
@@ -119,7 +119,7 @@
 //   //   
 //   //   return Verify(ga);
 //   // }
-//
+// 
 //   private class MockEvaluator : EvaluatorBase<RealVector> {
 //     public override Fitness PredictAndTrain(RealVector phenotype) {
 //       return phenotype.Sum();

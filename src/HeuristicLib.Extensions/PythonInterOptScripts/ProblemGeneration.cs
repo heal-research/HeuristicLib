@@ -15,8 +15,8 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
-using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
+using RastriginFunction=HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
+using SphereFunction=HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 

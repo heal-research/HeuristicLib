@@ -69,8 +69,8 @@ public class SlidingWindowSymbolicRegressionProblem
     }
 
     var targets = innerProblem.ProblemData.Dataset
-                              .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
-                              .ToArray();
+      .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
+      .ToArray();
 
     CachedRows = rows;
     CachedTargets = targets;

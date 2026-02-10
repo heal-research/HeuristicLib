@@ -9,8 +9,9 @@ public record class TargetTerminator<TGenotype>
   : StatelessTerminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   private readonly ObjectiveVector target;
-  
-  public TargetTerminator(ObjectiveVector target) {
+
+  public TargetTerminator(ObjectiveVector target)
+  {
     this.target = target;
   }
 

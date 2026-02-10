@@ -13,17 +13,20 @@ public class SymbolicRegressionProblem :
 {
   public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
     this(data, objective, GetDefaultComparer(objective), new SymbolicExpressionTreeSearchSpace(new SimpleSymbolicExpressionGrammar()))
-  { }
+  {
+  }
 
   public SymbolicRegressionProblem(RegressionProblemData data, SymbolicExpressionTreeSearchSpace encoding, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
     this(data, objective, GetDefaultComparer(objective), encoding)
-  { }
+  {
+  }
 
   public SymbolicRegressionProblem(RegressionProblemData data,
-                                   ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
-                                   IComparer<ObjectiveVector> a,
-                                   SymbolicExpressionTreeSearchSpace encoding) : base(data, objective, a, encoding)
-  { }
+    ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
+    IComparer<ObjectiveVector> a,
+    SymbolicExpressionTreeSearchSpace encoding) : base(data, objective, a, encoding)
+  {
+  }
 
   public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
   public int ParameterOptimizationIterations { get; init; } = -1;

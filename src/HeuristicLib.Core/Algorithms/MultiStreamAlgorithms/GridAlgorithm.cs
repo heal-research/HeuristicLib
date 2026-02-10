@@ -33,12 +33,12 @@ public class GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithm
   where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
   protected readonly Grid<TAlgorithm> ParameterGrid;
-  
+
   public GridAlgorithmInstance(Grid<TAlgorithm> parameterGrid)
   {
     ParameterGrid = parameterGrid;
   }
-  
+
   public override IReadOnlyList<KeyValuePair<TAlgorithm, IAsyncEnumerable<TAlgorithmState>>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default)
   {
     var algorithms = ParameterGrid.GetConfigurations();
@@ -57,39 +57,7 @@ public static class GridAlgorithmExtensions
     where TAlgorithmState : class, IAlgorithmState
     where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   {
-   
+
   }
-  
-  // extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> executor)
-  //   where TSearchSpace : class, ISearchSpace<TGenotype>
-  //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  //   where TAlgorithmState : class, IAlgorithmState
-  //   where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  // {
-  //   public IReadOnlyList<(TAlgorithm, IAsyncEnumerable<TAlgorithmState>)> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
-  //   {
-  //     return executor.CreateExecution().ExecuteStreamingAsync(problem, random, initialState, cancellationToken);
-  //   } 
-  //   
-  //   public IReadOnlyList<(TAlgorithm, TAlgorithmState)> Execute(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
-  //   {
-  //     return executor.CreateExecution().Execute(problem, random, initialState, cancellationToken);
-  //   }
-  // }
 }
 
-// public static class GridExecutor
-// {
-//   public static GridExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> Create<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>(
-//     TAlgorithm algorithm, Grid<TAlgorithm> grid
-//   )
-////     where TSearchSpace : class, ISearchSpace<TGenotype>
-//     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-//     where TAlgorithmState : class, IAlgorithmState
-//     where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-//   {
-//     return new GridExecutor<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> {
-//       ParameterGrid = grid
-//     };
-//   }
-// }

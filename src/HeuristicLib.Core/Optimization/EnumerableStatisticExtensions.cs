@@ -95,7 +95,7 @@ public static class EnumerableStatisticExtensions
       }
 
       if (arr[l] > arr[l + 1]) {
-        //if (arr[l].CompareTo(arr[l + 1]) > 0) {
+        // if (arr[l].CompareTo(arr[l + 1]) > 0) {
         // SWAP(arr[l], arr[l + 1]);
         (arr[l], arr[l + 1]) = (arr[l + 1], arr[l]);
       }

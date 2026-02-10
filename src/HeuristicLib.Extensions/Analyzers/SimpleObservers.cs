@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analyzers;
 
-//shortening interfaces for simple cases where the search space and problem are not relevant for the analysis
+// shortening interfaces for simple cases where the search space and problem are not relevant for the analysis
 
 public interface IInterceptorObserver<TGenotype> :
   IInterceptorObserver<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>;

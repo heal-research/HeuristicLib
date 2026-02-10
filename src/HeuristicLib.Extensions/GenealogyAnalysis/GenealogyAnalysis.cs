@@ -14,7 +14,7 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
   where T : class
 {
   public readonly GenealogyGraph<T> Graph = new(equality ?? EqualityComparer<T>.Default);
-  
+
   public void AfterCross(IReadOnlyList<T> offspring, IReadOnlyList<IParents<T>> parents, IRandomNumberGenerator random, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
     foreach (var (parents1, child) in parents.Zip(offspring)) {
@@ -45,7 +45,7 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
   //   alogrithm.Mutator = this.WrapMutator(alogrithm.Mutator);
   // }
 
-  //public void BuildWrappers<TG, TS, TP, TR>(
+  // public void BuildWrappers<TG, TS, TP, TR>(
   //  ICrossover<TG, TS, TP>? crossover,
   //  IMutator<TG, TS, TP>? mutator,
   //  IInterceptor<TG, TR, TS, TP> iteration,
@@ -56,19 +56,19 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
   //  where TS : class, ISearchSpace<T>
   //  where TP : class, IProblem<T, TS>
   //  where TR : PopulationState<T>
-  //{
+  // {
   //  wrappedIteration = this.WrapInterceptor(iteration);
   //  wrappedCrossover = crossover == null ? null : this.WrapCrossover(crossover);
   //  wrappedMutator = mutator == null ? null : this.WrapMutator(mutator);
-  //}
-  
+  // }
+
 }
 
 public class RankAnalysis<T>(IEqualityComparer<T>? equality = null) : GenealogyAnalysis<T>(equality) where T : class
 {
   public List<List<double>> Ranks { get; } = [];
 
-  public override void AfterInterception(PopulationState<T> newState, PopulationState<T> currentState, PopulationState<T>? previousState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem) 
+  public override void AfterInterception(PopulationState<T> newState, PopulationState<T> currentState, PopulationState<T>? previousState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
     base.AfterInterception(newState, currentState, previousState, searchSpace, problem);
     RecordRanks(Graph, Ranks);
@@ -81,10 +81,10 @@ public class RankAnalysis<T>(IEqualityComparer<T>? equality = null) : GenealogyA
     }
 
     var line = graph.Nodes[^2].Values
-                    .Where(x => x.Layer == 0)
-                    .OrderBy(x => x.Rank)
-                    .Select(node => node.GetAllDescendants().Where(x => x.Rank >= 0).Select(x => (double)x.Rank).DefaultIfEmpty(double.NaN).Average())
-                    .ToList();
+      .Where(x => x.Layer == 0)
+      .OrderBy(x => x.Rank)
+      .Select(node => node.GetAllDescendants().Where(x => x.Rank >= 0).Select(x => (double)x.Rank).DefaultIfEmpty(double.NaN).Average())
+      .ToList();
     if (line.Count > 0) {
       ranks.Add(line);
     }

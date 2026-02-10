@@ -9,7 +9,7 @@
 //   static abstract TSelf Construct(T1 item1, T2 item2);
 //   void Deconstruct(out T1 item1, out T2 item2);
 // }
-//
+// 
 // public class RecordCrossover<TGenotype, TSearchSpace, TGenotype1, TSearchSpace1, TGenotype2, TSearchSpace2> : CrossoverBase<TGenotype, TSearchSpace>
 //   where TSearchSpace : IRecordSearchSpace<TGenotype, TSearchSpace1, TSearchSpace2>
 //   where TGenotype : IRecordGenotypeBase<TGenotype, TGenotype1, TGenotype2>
@@ -18,12 +18,12 @@
 // {
 //   private readonly ICrossover<TGenotype1, TSearchSpace1> crossover1;
 //   private readonly ICrossover<TGenotype2, TSearchSpace2> crossover2;
-//
+// 
 //   public RecordCrossover(ICrossover<TGenotype1, TSearchSpace1> crossover1, ICrossover<TGenotype2, TSearchSpace2> crossover2) {
 //     this.crossover1 = crossover1;
 //     this.crossover2 = crossover2;
 //   }
-//
+// 
 //   public override TGenotype Cross<TContext>(TGenotype parent1, TGenotype parent2, TContext context)
 //   //where TContext : ISearchSpaceContext<TSearchSpace1>, IRandomContext
 //   {

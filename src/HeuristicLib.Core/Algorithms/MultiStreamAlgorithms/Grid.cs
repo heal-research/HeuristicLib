@@ -15,7 +15,7 @@ public partial class Grid<T> : IEnumerable<T>
   {
     Prototype = prototype;
   }
-  
+
   public Grid(T prototype, ImmutableArray<IGridParameter<T>> parameters)
   {
     Prototype = prototype;
@@ -33,11 +33,10 @@ public partial class Grid<T> : IEnumerable<T>
 
     return Parameters.Aggregate(configurations, (current, parameter) => parameter.GetConfigurations(current)).ToList();
   }
-  
+
   public IEnumerator<T> GetEnumerator() => GetConfigurations().GetEnumerator();
   IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
-
 
 public interface IGridParameter<T>
 {
@@ -48,7 +47,7 @@ public interface IGridParameter<T>
 public record GridParameter<T, TParam>(IReadOnlyList<TParam> Values, Func<T, TParam, T> Configurator) : IGridParameter<T>
 {
   public int Count => Values.Count;
-  
+
   public IEnumerable<T> GetConfigurations(IEnumerable<T> prototypes)
   {
     return prototypes.SelectMany(prototype => Values.Select(value => Configurator(prototype, value)));
@@ -62,7 +61,7 @@ public static class Grid
   {
     return new Grid<T>(prototype);
   }
-  
+
   extension<T>(T prototype)
   {
     public Grid<T> AsGrid() => Create(prototype);

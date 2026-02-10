@@ -171,7 +171,7 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
           var weights = varValues.Select(factorNode.GetValue).ToArray();
 
           var weightStr = string.Join(", ",
-          varValues.Zip(weights, resultSelector: (s, d) => string.Format(CultureInfo.InvariantCulture, "\"{0}\", {1:G17}", s, d)));
+            varValues.Zip(weights, resultSelector: (s, d) => string.Format(CultureInfo.InvariantCulture, "\"{0}\", {1:G17}", s, d)));
           strBuilder.Append(weightStr);
           strBuilder.Append(']');
 

@@ -28,7 +28,6 @@ public record HillClimberBuilder<TG, TS, TP>
   );
 
   public override HillClimber<TG, TS, TP> BuildFromSpec(HillClimberBuildSpec<TG, TS, TP> spec) => new() {
-    //Terminator = spec.Terminator,
     Interceptor = spec.Interceptor,
     Creator = spec.Creator,
     Mutator = spec.Mutator,

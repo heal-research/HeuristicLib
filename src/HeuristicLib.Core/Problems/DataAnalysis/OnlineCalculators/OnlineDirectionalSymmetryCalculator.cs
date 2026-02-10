@@ -31,8 +31,8 @@ public class OnlineDirectionalSymmetryCalculator
         } else {
           // count a prediction correct if the trend (positive/negative/no change) is predicted correctly
           if ((actual - startValue) * (predicted - startValue) > 0.0 ||
-              (actual - startValue).IsAlmost(predicted - startValue)
-             ) {
+            (actual - startValue).IsAlmost(predicted - startValue)
+          ) {
             nCorrect++;
           }
 
@@ -44,7 +44,7 @@ public class OnlineDirectionalSymmetryCalculator
       if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext()) {
         ErrorState |= OnlineCalculatorError.InvalidValueAdded;
       } else {
-        ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+        ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
       }
     }
   }
@@ -82,7 +82,7 @@ public class OnlineDirectionalSymmetryCalculator
 
     // check if all enumerators are at the end to make sure both enumerations have the same length
     if (dsCalculator.ErrorState == OnlineCalculatorError.None &&
-        (startValueEnumerator.MoveNext() || actualContinuationsEnumerator.MoveNext() || predictedContinuationsEnumerator.MoveNext())) {
+      (startValueEnumerator.MoveNext() || actualContinuationsEnumerator.MoveNext() || predictedContinuationsEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in startValues, actualContinuations and estimatedValues predictedContinuations doesn't match.");
     }
 

@@ -86,7 +86,7 @@ public static class DominationCalculator
       }
 
       for (var qI = pI + 1; qI < populationSize; qI++) {
-        var test = solutions[pI].ObjectiveVector.CompareTo(solutions[qI].ObjectiveVector, objective); //Dominates(qualities[pI], qualities[qI], maximization, dominateOnEqualQualities);
+        var test = solutions[pI].ObjectiveVector.CompareTo(solutions[qI].ObjectiveVector, objective); // Dominates(qualities[pI], qualities[qI], maximization, dominateOnEqualQualities);
         if (test == DominanceRelation.Equivalent) {
           test = dominateOnEquals ? DominanceRelation.Dominates : DominanceRelation.Incomparable;
         }
@@ -113,8 +113,8 @@ public static class DominationCalculator
         }
 
         if (pI != populationSize - 2
-            || qI != populationSize - 1
-            || dominationCounter[qI] != 0) {
+          || qI != populationSize - 1
+          || dominationCounter[qI] != 0) {
           continue;
         }
 

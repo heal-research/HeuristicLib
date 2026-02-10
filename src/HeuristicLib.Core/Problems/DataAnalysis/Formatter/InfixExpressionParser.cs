@@ -143,16 +143,16 @@ public sealed class InfixExpressionParser
         sb.Append(str[pos]);
         pos++;
         while (pos < str.Length && !char.IsWhiteSpace(str[pos])
-                                && (str[pos] != '+' || str[pos - 1] == 'e' || str[pos - 1] == 'E')// continue reading exponents
-                                && (str[pos] != '-' || str[pos - 1] == 'e' || str[pos - 1] == 'E')
-                                && str[pos] != '*'
-                                && str[pos] != '/'
-                                && str[pos] != '^'
-                                && str[pos] != ')'
-                                && str[pos] != ']'
-                                && str[pos] != '}'
-                                && str[pos] != ','
-                                && str[pos] != '>') {
+          && (str[pos] != '+' || str[pos - 1] == 'e' || str[pos - 1] == 'E') // continue reading exponents
+          && (str[pos] != '-' || str[pos - 1] == 'e' || str[pos - 1] == 'E')
+          && str[pos] != '*'
+          && str[pos] != '/'
+          && str[pos] != '^'
+          && str[pos] != ')'
+          && str[pos] != ']'
+          && str[pos] != '}'
+          && str[pos] != ','
+          && str[pos] != '>') {
           sb.Append(str[pos]);
           pos++;
         }
@@ -175,7 +175,7 @@ public sealed class InfixExpressionParser
         sb.Append(str[pos]);
         pos++;
         while (pos < str.Length &&
-               (char.IsLetter(str[pos]) || str[pos] == '_' || char.IsDigit(str[pos]))) {
+          (char.IsLetter(str[pos]) || str[pos] == '_' || char.IsDigit(str[pos]))) {
           sb.Append(str[pos]);
           pos++;
         }
@@ -194,7 +194,7 @@ public sealed class InfixExpressionParser
         }
 
         if (pos < str.Length && str[pos] == '"') {
-          pos++;// skip "
+          pos++; // skip "
 
           yield return new Token {
             TokenType = TokenType.Identifier,
@@ -213,7 +213,7 @@ public sealed class InfixExpressionParser
         }
 
         if (pos < str.Length && str[pos] == '\'') {
-          pos++;// skip '
+          pos++; // skip '
 
           yield return new Token {
             TokenType = TokenType.Identifier,
@@ -464,7 +464,7 @@ public sealed class InfixExpressionParser
       return expr;
     }
 
-    tokens.Dequeue();// skip;
+    tokens.Dequeue(); // skip;
 
     var p = GetSymbol("^").CreateTreeNode();
     p.AddSubtree(expr);
@@ -505,7 +505,7 @@ public sealed class InfixExpressionParser
     var next = tokens.Peek();
     switch (next.TokenType) {
       case TokenType.LeftPar: {
-        var initPar = tokens.Dequeue();// match par type
+        var initPar = tokens.Dequeue(); // match par type
         var expr = ParseExpr(tokens);
         var rPar = tokens.Dequeue();
         if (rPar.TokenType != TokenType.RightPar) {
@@ -591,7 +591,7 @@ public sealed class InfixExpressionParser
     var numNode = (NumberTreeNode)number.CreateTreeNode();
 
     if (tokens.Peek().TokenType == TokenType.Eq) {
-      tokens.Dequeue();// skip "="
+      tokens.Dequeue(); // skip "="
       var next = tokens.Peek();
       if (next.StrVal != "+" && next.StrVal != "-" && next.TokenType != TokenType.Number) {
         throw new ArgumentException("Expected '+', '-' or number.");
@@ -620,7 +620,7 @@ public sealed class InfixExpressionParser
     // variable
     if (tokens.Peek().TokenType == TokenType.Eq) {
       // binary factor
-      tokens.Dequeue();// skip Eq
+      tokens.Dequeue(); // skip Eq
       var valTok = tokens.Dequeue();
       if (valTok.TokenType != TokenType.Identifier) {
         throw new ArgumentException("expected identifier");
@@ -638,7 +638,7 @@ public sealed class InfixExpressionParser
       var factorVariableNode = (FactorVariableTreeNode)factorVar.CreateTreeNode();
       factorVariableNode.VariableName = idTok.StrVal;
 
-      tokens.Dequeue();// skip [
+      tokens.Dequeue(); // skip [
       var weights = new List<double>();
       // at least one weight is necessary
       var sign = 1.0;
@@ -708,7 +708,7 @@ public sealed class InfixExpressionParser
         ParseLaggedVariable(tokens, funcNode);
 
         break;
-      case SubFunctionSymbol: {// SubFunction
+      case SubFunctionSymbol: { // SubFunction
         var subFunction = (SubFunctionTreeNode)funcNode;
         subFunction.Name = idTok.StrVal;
         // input arguments
@@ -795,8 +795,8 @@ public sealed class InfixExpressionParser
   private static bool IsAssociative(Symbol sy)
   {
     return sy == GetSymbol("+") || sy == GetSymbol("-") ||
-           sy == GetSymbol("*") || sy == GetSymbol("/") ||
-           sy == GetSymbol("AND") || sy == GetSymbol("OR") || sy == GetSymbol("XOR");
+      sy == GetSymbol("*") || sy == GetSymbol("/") ||
+      sy == GetSymbol("AND") || sy == GetSymbol("OR") || sy == GetSymbol("XOR");
   }
 
   private enum TokenType { Operator, Identifier, Number, LeftPar, RightPar, LeftBracket, RightBracket, LeftAngleBracket, RightAngleBracket, Comma, Eq, End, Na }

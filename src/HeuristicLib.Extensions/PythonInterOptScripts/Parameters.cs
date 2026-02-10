@@ -10,6 +10,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
 
 #region Parameters
+
 public class ExperimentParameters<T, TE> where TE : class, ISearchSpace<T> where T : class
 {
   public string AlgorithmName = "ga";
@@ -27,7 +28,7 @@ public class ExperimentParameters<T, TE> where TE : class, ISearchSpace<T> where
   public bool TrackGenealogy;
   public bool TrackPopulations;
   public bool WithCrossover;
-  public ExperimentParameters() { }
+  public ExperimentParameters() {}
 
   public ExperimentParameters(ExperimentParameters<T, TE> parameters)
   {
@@ -56,7 +57,7 @@ public class SymRegExperimentParameters : ExperimentParameters<SymbolicExpressio
   public int TreeDepth = 40;
   public int TreeLength = 40;
 
-  public SymRegExperimentParameters() { }
+  public SymRegExperimentParameters() {}
 
   public SymRegExperimentParameters(SymRegExperimentParameters parameters) : base(parameters)
   {
@@ -69,9 +70,9 @@ public class SymRegExperimentParameters : ExperimentParameters<SymbolicExpressio
 
 public class TravelingSalesmanExperimentParameters : ExperimentParameters<Permutation, PermutationSearchSpace>
 {
-  public TravelingSalesmanExperimentParameters() { }
+  public TravelingSalesmanExperimentParameters() {}
 
-  public TravelingSalesmanExperimentParameters(TravelingSalesmanExperimentParameters parameters) : base(parameters) { }
+  public TravelingSalesmanExperimentParameters(TravelingSalesmanExperimentParameters parameters) : base(parameters) {}
 }
 
 public class TestFunctionExperimentParameters : ExperimentParameters<RealVector, RealVectorSearchSpace>
@@ -79,8 +80,9 @@ public class TestFunctionExperimentParameters : ExperimentParameters<RealVector,
   public int Dimension = 10;
   public int Instance = 1;
   public int Problem = 1;
-  public TestFunctionExperimentParameters() { }
+  public TestFunctionExperimentParameters() {}
 
-  public TestFunctionExperimentParameters(TestFunctionExperimentParameters parameters) : base(parameters) { }
+  public TestFunctionExperimentParameters(TestFunctionExperimentParameters parameters) : base(parameters) {}
 }
+
 #endregion

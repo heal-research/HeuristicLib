@@ -21,8 +21,6 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
   public required IMutator<TG, TS, TP> Mutator { get; set; }
   public double MutationRate { get; set; } = 0.05;
 
-  //public ITerminator<TG, PopulationIterationState<TG>, TS, TP> Terminator { get; set; } = new AfterIterationsTerminator<TG>(100);
-
   public int Elites { get; set; } = 1;
 
   public override GeneticAlgorithmBuildSpec<TG, TS, TP> CreateBuildSpec() => new(
@@ -39,7 +37,6 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
       Selector = spec.Selector,
       Evaluator = spec.Evaluator,
       Replacer = new ElitismReplacer<TG>(spec.Elites),
-      //Terminator = spec.Terminator,
       Interceptor = spec.Interceptor,
       Mutator = spec.Mutator.WithRate(spec.MutationRate)
     };

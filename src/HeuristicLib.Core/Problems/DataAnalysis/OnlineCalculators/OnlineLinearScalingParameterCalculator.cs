@@ -29,7 +29,7 @@ public class OnlineLinearScalingParameterCalculator
   public double Beta => originalMeanAndVarianceCalculator.PopulationVariance.IsAlmost(0.0) ? 1 : originalTargetCovarianceCalculator.Covariance / originalMeanAndVarianceCalculator.PopulationVariance;
 
   public OnlineCalculatorError ErrorState => targetMeanCalculator.MeanErrorState | originalMeanAndVarianceCalculator.MeanErrorState |
-                                             originalMeanAndVarianceCalculator.PopulationVarianceErrorState | originalTargetCovarianceCalculator.ErrorState;
+    originalMeanAndVarianceCalculator.PopulationVarianceErrorState | originalTargetCovarianceCalculator.ErrorState;
 
   public void Reset()
   {
@@ -78,7 +78,7 @@ public class OnlineLinearScalingParameterCalculator
 
     // check if both enumerators are at the end to make sure both enumerations have the same length
     if (calculator.ErrorState == OnlineCalculatorError.None &&
-        (originalEnumerator.MoveNext() || targetEnumerator.MoveNext())) {
+      (originalEnumerator.MoveNext() || targetEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in original and target enumeration do not match.");
     }
 

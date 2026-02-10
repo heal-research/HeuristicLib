@@ -90,7 +90,7 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
         } else if (xsArr[j] > xi) {
           cx = 0.0;
         } else {
-          cx = 0.5;// eq
+          cx = 0.5; // eq
         }
         double cy;
         if (ysArr[j] < yi) {
@@ -98,7 +98,7 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
         } else if (ysArr[j] > yi) {
           cy = 0.0;
         } else {
-          cy = 0.5;// eq
+          cy = 0.5; // eq
         }
         ri += cx * cy;
       }
@@ -119,26 +119,26 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
     var i = 0;
     var n = w.Length;
     while (i < n - 1) {
-      if (w[i + 1] > w[i]) {// w[i+1] must be larger or equal w[i] as w must be sorted
+      if (w[i + 1] > w[i]) { // w[i+1] must be larger or equal w[i] as w must be sorted
         // not a tie
         w[i] = i + 1;
         i++;
       } else {
         int j;
         for (j = i + 1; j < n && w[j] <= w[i]; j++) {
-          ;// how far does it go (<= effectively means == as w must be sorted, side-step equality for double values)
+          ; // how far does it go (<= effectively means == as w must be sorted, side-step equality for double values)
         }
         var rank = 1 + 0.5 * (i + j - 1);
         int k;
         for (k = i; k < j; k++) {
-          w[k] = rank;// set the rank for all tied entries
+          w[k] = rank; // set the rank for all tied entries
         }
         i = j;
       }
     }
 
     if (i == n - 1) {
-      w[n - 1] = n;// if the last element was not tied, this is its rank
+      w[n - 1] = n; // if the last element was not tied, this is its rank
     }
   }
 }

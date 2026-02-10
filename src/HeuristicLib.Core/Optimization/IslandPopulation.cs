@@ -8,7 +8,7 @@ public partial record IslandPopulation<TGenotype> : IISolutionLayout<TGenotype>
 {
   [OrderedEquality]
   public IReadOnlyList<Population<TGenotype>> Islands { get; init; }
-  
+
   public IslandPopulation(IReadOnlyList<Population<TGenotype>> Islands)
   {
     this.Islands = Islands;

@@ -63,7 +63,7 @@ public static class DatasetExtensions
     return matrix;
   }
 
-  //public static IntervalCollection GetVariableRanges(this Dataset dataset, bool ignoreNaNs = true) {
+  // public static IntervalCollection GetVariableRanges(this Dataset dataset, bool ignoreNaNs = true) {
   //  var variableRanges = new IntervalCollection();
   //  foreach (var variable in dataset.DoubleVariables) { // ranges can only be calculated for double variables
   //    var values = dataset.GetDoubleValues(variable);
@@ -83,7 +83,7 @@ public static class DatasetExtensions
   //  }
 
   //  return variableRanges;
-  //}
+  // }
 
   public static IEnumerable<KeyValuePair<string, IEnumerable<string>>> GetFactorVariableValues(
     this Dataset ds, IEnumerable<string> factorVariables, IEnumerable<int> rows)

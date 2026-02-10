@@ -43,14 +43,14 @@ public record class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
     var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
     var crossoverInstance = Crossover is not null ? instanceRegistry.GetOrCreate(Crossover) : null;
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
-    
+
     IReplacer<TGenotype, TSearchSpace, TProblem> replacer = Strategy switch {
       EvolutionStrategyType.Comma => new ElitismReplacer<TGenotype>(0),
       EvolutionStrategyType.Plus => new PlusSelectionReplacer<TGenotype>(),
       _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
     };
     var replacerInstance = instanceRegistry.GetOrCreate(replacer);
-    
+
     return new EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>(
       interceptorInstance,
       evaluatorInstance,
@@ -95,7 +95,7 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
     InitialMutationStrength = initialMutationStrength;
     Replacer = replacer;
   }
-  
+
   public override EvolutionStrategyState<TGenotype> ExecuteStep(EvolutionStrategyState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {
@@ -103,7 +103,6 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
       var objectives = Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
       return new EvolutionStrategyState<TGenotype> {
         Population = Population.From(initialPopulation, objectives),
-        //CurrentIteration = 0,
         // ToDo: Actually, mutation strength is not used in initial population creation.
         MutationStrength = InitialMutationStrength
       };
@@ -127,7 +126,7 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
 
     var newMutationStrength = previousState.MutationStrength;
     if (Mutator is IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem> vm) {
-      //adapt Mutation Strength based on 1/5th rule
+      // adapt Mutation Strength based on 1/5th rule
       var successes = parentQualities.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1, problem.Objective) == DominanceRelation.Dominates);
       var successRate = successes / (double)PopulationSize;
       newMutationStrength *= successRate switch {
@@ -143,7 +142,6 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
     var newPopulation = Replacer.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, random, problem.SearchSpace, problem);
     return new EvolutionStrategyState<TGenotype> {
       Population = Population.From(newPopulation),
-      //CurrentIteration = previousState.CurrentIteration + 1,
       MutationStrength = newMutationStrength
     };
   }

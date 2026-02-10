@@ -15,7 +15,7 @@ public partial record class ObservableTerminator<TG, TR, TS, TP>
   where TR : class, IAlgorithmState
 {
   public ITerminator<TG, TR, TS, TP> Interceptor { get; }
-  
+
   [OrderedEquality]
   public ImmutableArray<ITerminatorObserver<TG, TR, TS, TP>> Observers { get; }
 
@@ -24,14 +24,14 @@ public partial record class ObservableTerminator<TG, TR, TS, TP>
     this.Interceptor = interceptor;
     this.Observers = observers;
   }
-  
+
   public override ITerminatorInstance<TG, TR, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var interceptorInstance = instanceRegistry.GetOrCreate(Interceptor);
     return new ObservableTerminatorInstance(interceptorInstance, Observers);
   }
 
-  private sealed class ObservableTerminatorInstance(ITerminatorInstance<TG, TR, TS, TP> terminatorInstance, IReadOnlyList<ITerminatorObserver<TG, TR, TS, TP>> observers) 
+  private sealed class ObservableTerminatorInstance(ITerminatorInstance<TG, TR, TS, TP> terminatorInstance, IReadOnlyList<ITerminatorObserver<TG, TR, TS, TP>> observers)
     : TerminatorInstance<TG, TR, TS, TP>
   {
     public override bool ShouldTerminate(TR state, TS searchSpace, TP problem)
@@ -41,7 +41,7 @@ public partial record class ObservableTerminator<TG, TR, TS, TP>
       foreach (var observer in observers) {
         observer.AfterTerminationCheck(result, state, searchSpace, problem);
       }
-      
+
       return result;
     }
   }
@@ -62,13 +62,13 @@ public class TerminatorObserver<TG, TR, TS, TP> : ITerminatorObserver<TG, TR, TS
   where TR : class, IAlgorithmState
 {
   private readonly Action<bool, TR, TS, TP> afterTerminateCheck;
-  
+
   public TerminatorObserver(Action<bool, TR, TS, TP> afterTerminateCheck)
   {
     this.afterTerminateCheck = afterTerminateCheck;
   }
 
-  public void AfterTerminationCheck(bool shouldTerminate, TR state, TS searchSpace, TP problem) 
+  public void AfterTerminationCheck(bool shouldTerminate, TR state, TS searchSpace, TP problem)
   {
     afterTerminateCheck.Invoke(shouldTerminate, state, searchSpace, problem);
   }
@@ -85,29 +85,29 @@ public static class ObservableTerminatorExtensions
     {
       return new ObservableTerminator<TG, TR, TS, TP>(terminator, observer);
     }
-    
+
     public ITerminator<TG, TR, TS, TP> ObserveWith(params ImmutableArray<ITerminatorObserver<TG, TR, TS, TP>> observers)
     {
       return new ObservableTerminator<TG, TR, TS, TP>(terminator, observers);
     }
-    
+
     public ITerminator<TG, TR, TS, TP> ObserveWith(Action<bool, TR, TS, TP> afterTerminationCheck)
     {
       var observer = new TerminatorObserver<TG, TR, TS, TP>(afterTerminationCheck);
       return terminator.ObserveWith(observer);
     }
-    
+
     public ITerminator<TG, TR, TS, TP> ObserveWith(Action<bool> afterTerminationCheck)
     {
       var observer = new TerminatorObserver<TG, TR, TS, TP>((shouldTerminate, _, _, _) => afterTerminationCheck(shouldTerminate));
       return terminator.ObserveWith(observer);
     }
-    
+
     public ITerminator<TG, TR, TS, TP> CountInvocations(InvocationCounter counter)
     {
       return terminator.ObserveWith(_ => counter.IncrementBy(1));
     }
-    
+
     public ITerminator<TG, TR, TS, TP> CountInvocations(out InvocationCounter counter)
     {
       counter = new InvocationCounter();

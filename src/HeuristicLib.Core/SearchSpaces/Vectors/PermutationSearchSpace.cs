@@ -2,7 +2,8 @@
 
 namespace HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-public record PermutationSearchSpace(int Length) : SearchSpace<Permutation> {
+public record PermutationSearchSpace(int Length) : SearchSpace<Permutation>
+{
   public override bool Contains(Permutation genotype) => genotype.Count == Length;
 
   public virtual bool IsSubspaceOf(PermutationSearchSpace other) => other.Length == Length;

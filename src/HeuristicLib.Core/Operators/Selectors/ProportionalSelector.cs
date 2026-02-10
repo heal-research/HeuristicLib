@@ -3,10 +3,11 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record class ProportionalSelector<TGenotype> 
+public record class ProportionalSelector<TGenotype>
   : StatelessSelector<TGenotype>
 {
-  public ProportionalSelector(bool windowing = true) {
+  public ProportionalSelector(bool windowing = true)
+  {
     Windowing = windowing;
   }
 

@@ -28,25 +28,25 @@ public class ClassificationPerformanceMeasuresCalculator
     }
 
     if (originalClassValue.IsAlmost(PositiveClassValue)
-        || estimatedClassValue.IsAlmost(PositiveClassValue)) {//positive class/positive class estimation
+      || estimatedClassValue.IsAlmost(PositiveClassValue)) { // positive class/positive class estimation
       if (estimatedClassValue.IsAlmost(originalClassValue)) {
         truePositiveCount++;
       } else {
-        if (estimatedClassValue.IsAlmost(PositiveClassValue))//misclassification of the negative class
+        if (estimatedClassValue.IsAlmost(PositiveClassValue)) // misclassification of the negative class
         {
           falsePositiveCount++;
-        } else//misclassification of the positive class
+        } else // misclassification of the positive class
         {
           falseNegativeCount++;
         }
       }
-    } else {//negative class/negative class estimation
-      //In a multiclass classification all misclassifications of the negative class
-      //will be treated as true negatives except on positive class estimations
+    } else { // negative class/negative class estimation
+      // In a multiclass classification all misclassifications of the negative class
+      // will be treated as true negatives except on positive class estimations
       trueNegativeCount++;
     }
 
-    ErrorState = OnlineCalculatorError.None;// number of (non-NaN) samples >= 1
+    ErrorState = OnlineCalculatorError.None; // number of (non-NaN) samples >= 1
   }
 
   public void Calculate(IEnumerable<double> originalClassValues, IEnumerable<double> estimatedClassValues)

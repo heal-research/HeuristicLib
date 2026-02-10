@@ -303,7 +303,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         return Evaluate(dataset, ref row, state) > 0.0 ? -1.0 : 1.0;
       }
       case OpCodes.Xor: {
-        //mkommend: XOR on multiple inputs is defined as true if the number of positive signals is odd
+        // mkommend: XOR on multiple inputs is defined as true if the number of positive signals is odd
         // this is equal to a consecutive execution of binary XOR operations.
         var positiveSignals = 0;
         for (var i = 0; i < currentInstr.NArguments; i++) {
@@ -350,9 +350,9 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         return sum;
       }
 
-      //mkommend: derivate calculation taken from: 
-      //http://www.holoborodko.com/pavel/numerical-methods/numerical-derivative/smooth-low-noise-differentiators/
-      //one sided smooth differentiatior, N = 4
+      // mkommend: derivate calculation taken from: 
+      // http://www.holoborodko.com/pavel/numerical-methods/numerical-derivative/smooth-low-noise-differentiators/
+      // one sided smooth differentiatior, N = 4
       // y' = 1/8h (f_i + 2f_i-1, -2 f_i-3 - f_i-4)
       case OpCodes.Derivative: {
         var savedPc = state.ProgramCounter;
@@ -368,7 +368,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         var f4 = Evaluate(dataset, ref row, state);
         row += 4;
 
-        return (f0 + 2 * f1 - 2 * f3 - f4) / 8;// h = 1
+        return (f0 + 2 * f1 - 2 * f3 - f4) / 8; // h = 1
       }
       case OpCodes.Call: {
         // evaluate sub-trees
@@ -429,15 +429,15 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
 
         return ((IList<double>)currentInstr.Data)[actualRow] * laggedVariableTreeNode.Weight;
       }
-      case OpCodes.Constant:// fall through
+      case OpCodes.Constant: // fall through
       case OpCodes.Number: {
         var numericTreeNode = (NumberTreeNode)currentInstr.DynamicNode;
 
         return numericTreeNode.Value;
       }
 
-      //mkommend: this symbol uses the logistic function f(x) = 1 / (1 + e^(-alpha * x) ) 
-      //to determine the relative amounts of the true and false branch see http://en.wikipedia.org/wiki/Logistic_function
+      // mkommend: this symbol uses the logistic function f(x) = 1 / (1 + e^(-alpha * x) ) 
+      // to determine the relative amounts of the true and false branch see http://en.wikipedia.org/wiki/Logistic_function
       case OpCodes.VariableCondition: {
         if (row < 0 || row >= dataset.Rows) {
           return double.NaN;

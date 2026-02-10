@@ -4,13 +4,13 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 
-public record class NormalDistributedCreator(RealVector means, RealVector sigmas) 
+public record class NormalDistributedCreator(RealVector means, RealVector sigmas)
   : SingleSolutionStatelessCreator<RealVector, RealVectorSearchSpace>
 {
   public RealVector Means { get; set; } = means;
   public RealVector Sigmas { get; set; } = sigmas;
 
-  //if (!RealVector.AreCompatible(searchSpace.Length, means, sigmas, searchSpace.Minimum, searchSpace.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
+  // if (!RealVector.AreCompatible(searchSpace.Length, means, sigmas, searchSpace.Minimum, searchSpace.Maximum)) throw new ArgumentException("Vectors must have compatible lengths");
 
   public override RealVector Create(IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
   {

@@ -22,11 +22,11 @@ public static class MovingPeaksDefaults
   public static int[] Scenario2_Dimensions = [5, 10, 20, 50];
   // Canonical “scenario 2”
   public static MovingPeaksParameters Scenario2() => new(
-  5, 10,
-  0, 100,
-  30, 70,
-  1, 12,
-  1.0, 7.0, 1.0
+    5, 10,
+    0, 100,
+    30, 70,
+    1, 12,
+    1.0, 7.0, 1.0
   );
 
   // “Static landscape” control

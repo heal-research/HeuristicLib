@@ -18,7 +18,7 @@ public record class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
   protected readonly IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator;
   protected readonly Func<TGenotype, TKey> KeySelector;
   protected readonly long? SizeLimit;
-  
+
   public CachedEvaluator(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, Func<TGenotype, TKey>? keySelector = null, long? sizeLimit = null)
   {
     this.Evaluator = evaluator;
@@ -46,15 +46,15 @@ public record class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
       var cacheOptions = new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true };
       Cache = new MemoryCache(cacheOptions);
     }
-    
+
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
       var keys = genotypes.Select(KeySelector).ToList();
       var results = new ObjectiveVector[genotypes.Count];
-      
+
       var uncachedSolutions = new List<TGenotype>();
       var uncachedSolutionIndices = new List<int>();
-      
+
       for (int i = 0; i < genotypes.Count; i++) {
         var genotype = genotypes[i];
         var key = keys[i];
@@ -65,17 +65,17 @@ public record class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
           uncachedSolutionIndices.Add(i);
         }
       }
-      
+
       if (uncachedSolutions.Count > 0) {
         var newObjectives = Evaluator.Evaluate(uncachedSolutions, random, searchSpace, problem);
         for (int i = 0; i < uncachedSolutions.Count; i++) {
           var objective = newObjectives[i];
-          
+
           var originalIndex = uncachedSolutionIndices[i];
           var key = keys[originalIndex];
-          
+
           Cache.Set(key, objective, new MemoryCacheEntryOptions { Size = 1 });
-          
+
           results[originalIndex] = objective;
         }
       }
@@ -87,8 +87,8 @@ public record class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
 
 public static class CachedEvaluatorExtensions
 {
-  extension<TGenotype, TSearchSpace, TProblem>(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator) 
-    where TGenotype : notnull 
+  extension<TGenotype, TSearchSpace, TProblem>(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
+    where TGenotype : notnull
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
   {
@@ -97,7 +97,7 @@ public static class CachedEvaluatorExtensions
     {
       return new CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(evaluator, keySelector, sizeLimit);
     }
-    
+
     public CachedEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype> WithCache(long? sizeLimit = null)
     {
       return new CachedEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>(evaluator, sizeLimit: sizeLimit);

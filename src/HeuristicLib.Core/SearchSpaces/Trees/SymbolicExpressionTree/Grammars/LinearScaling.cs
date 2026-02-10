@@ -60,7 +60,7 @@ public static class LinearScaling
     }
     var add = start[0];
     if (add.Symbol != Add) {
-      return predictions;// not a tree with linear scaling
+      return predictions; // not a tree with linear scaling
     }
     var offsetNode = (NumberTreeNode)add[1];
     var interceptNode = (NumberTreeNode)add[0][1];
@@ -74,7 +74,7 @@ public static class LinearScaling
       interceptNode.Value = bNew;
     }
 
-    //reuse unscaled array
+    // reuse unscaled array
     for (var i = 0; i < unscaled.Length; i++) {
       unscaled[i] = unscaled[i] * bNew + oNew;
     }
@@ -90,7 +90,7 @@ public static class LinearScaling
     }
     var add = start[0];
     if (add.Symbol != Add) {
-      return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows);// not a tree with linear scaling
+      return interpreter.GetSymbolicExpressionTreeValues(tree, dataset, rows); // not a tree with linear scaling
     }
     var offsetNode = (NumberTreeNode)add[1];
     var interceptNode = (NumberTreeNode)add[0][1];
@@ -103,7 +103,7 @@ public static class LinearScaling
       interceptNode.Value = bNew;
     }
 
-    //reuse unscaled array
+    // reuse unscaled array
     for (var i = 0; i < unscaled.Length; i++) {
       unscaled[i] = unscaled[i] * bNew + oNew;
     }

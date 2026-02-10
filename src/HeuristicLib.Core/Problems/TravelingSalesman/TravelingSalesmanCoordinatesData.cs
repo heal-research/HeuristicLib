@@ -9,7 +9,7 @@ public class TravelingSalesmanCoordinatesData : ITravelingSalesmanProblemData
     if (coordinates.Length < 1) {
       throw new ArgumentException("The coordinates must have at least one city.");
     }
-    Coordinates = coordinates.ToArray();// clone coordinates to prevent modification
+    Coordinates = coordinates.ToArray(); // clone coordinates to prevent modification
     DistanceMeasure = measure;
   }
 

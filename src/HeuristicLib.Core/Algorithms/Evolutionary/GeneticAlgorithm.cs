@@ -36,7 +36,7 @@ public record class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var mutator = MutationRate >= 1.0
       ? Mutator
       : Mutator.WithRate(MutationRate);
-    
+
     var interceptorInstance = Interceptor is not null ? instanceRegistry.GetOrCreate(Interceptor) : null;
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     var creatorInstance = instanceRegistry.GetOrCreate(Creator);
@@ -44,7 +44,7 @@ public record class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var mutatorInstance = instanceRegistry.GetOrCreate(mutator);
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
     var replacerInstance = instanceRegistry.GetOrCreate(Replacer);
-    
+
     return new GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       PopulationSize,
       creatorInstance,
@@ -71,7 +71,7 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly double MutationRate;
   protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
-  
+
   public GeneticAlgorithmInstance(
     int populationSize,
     ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator,
@@ -93,7 +93,7 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
     Selector = selector;
     Replacer = replacer;
   }
-  
+
 
   public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
@@ -101,8 +101,7 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
       var initialSolutions = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
       var initialFitnesses = Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
       return new PopulationState<TGenotype> {
-        Population = Population.From(initialSolutions, initialFitnesses),
-        //CurrentIteration = 0
+        Population = Population.From(initialSolutions, initialFitnesses)
       };
     }
 
@@ -117,8 +116,7 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
     var newPopulation = Replacer.Replace(oldPopulation, Population.From(population, fitnesses).Solutions, problem.Objective, random, problem.SearchSpace, problem);
 
     return new PopulationState<TGenotype> {
-      Population = Population.From(newPopulation),
-      //CurrentIteration = previousState.CurrentIteration + 1
+      Population = Population.From(newPopulation)
     };
   }
 }
@@ -150,8 +148,7 @@ public static class GeneticAlgorithm
       Replacer = replacer,
       PopulationSize = populationSize,
       Evaluator = evaluator,
-      Interceptor = interceptor,
-      //Terminator = terminator
+      Interceptor = interceptor
     };
   }
 

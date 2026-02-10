@@ -4,11 +4,11 @@
 // using HEAL.HeuristicLib.Operators;
 // using HEAL.HeuristicLib.Operators.PermutationOperators;
 // using HEAL.HeuristicLib.Problems.TravelingSalesman;
-//
+// 
 // namespace HEAL.HeuristicLib.Core.Tests;
-//
+// 
 // public class ProblemSpecificOperatorTests {
-//
+// 
 //   [Fact]
 //   public void TestOperatorCompatability() {
 //     var problemAgnosticCreator = new RandomPermutationCreator();
@@ -33,7 +33,7 @@
 //       selector: new RandomSelector(), replacer: new ElitismReplacer<Permutation, PermutationEncoding>(0),
 //       randomSeed: 42, terminator: Terminator.OnGeneration<Permutation, PermutationEncoding, PopulationResult<Permutation>>(5)
 //     );
-//
+// 
 //     var problem = TravelingSalesmanProblem.CreateDefault();
 //     
 //     var finalState = ga.CreateExecution(problem).Execute();
@@ -42,4 +42,6 @@
 //       .IgnoreMembersWithType<TimeSpan>();
 //   }
 // }
+
+
 

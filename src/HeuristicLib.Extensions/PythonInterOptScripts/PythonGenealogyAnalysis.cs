@@ -31,13 +31,15 @@ public class PythonGenealogyAnalysis
   public delegate void GenerationCallback(object current);
 
   #region public methods
+
   #region BatchRuns
+
   private static ExperimentResult<T>[]
     RunConfigurableRepeated<T>(int repetitions, Func<int, ExperimentResult<T>> experiment, int seed)
     where T : class
   {
-    return BatchExecution.Parallel<ExperimentResult<T>>(repetitions, r => experiment( r.NextInt()), RandomNumberGenerator.Create(seed), maxDegreeOfParallelism: -1)
-    .ToArray();
+    return BatchExecution.Parallel<ExperimentResult<T>>(repetitions, r => experiment(r.NextInt()), RandomNumberGenerator.Create(seed), maxDegreeOfParallelism: -1)
+      .ToArray();
   }
 
   public static ExperimentResult<SymbolicExpressionTree>[] RunSymbolicRegressionConfigurable(string file, SymRegExperimentParameters parameters, int repetitions) =>
@@ -57,6 +59,7 @@ public class PythonGenealogyAnalysis
       repetitions,
       experiment: seed => RunTestFunctionConfigurable(file, new TestFunctionExperimentParameters(parameters) { Seed = seed }),
       parameters.Seed);
+
   #endregion
 
   public static ExperimentResult<SymbolicExpressionTree> RunSymbolicRegressionConfigurable(
@@ -107,9 +110,11 @@ public class PythonGenealogyAnalysis
 
     return RunAlgorithmConfigurable(problem, actionCallback, parameters);
   }
+
   #endregion
 
   #region generic helpers
+
   public static ExperimentResult<T> RunAlgorithmConfigurable<T, TE>(
     IProblem<T, TE> problem,
     Action<PopulationState<T>>? callback,
@@ -120,7 +125,7 @@ public class PythonGenealogyAnalysis
       parameters.NoChildren = parameters.PopulationSize;
     }
 
-    //MyAnalyzers<T> analyzers;
+    // MyAnalyzers<T> analyzers;
 
     switch (parameters.AlgorithmName.ToLower()) {
       case "ga":
@@ -133,7 +138,7 @@ public class PythonGenealogyAnalysis
         }
 
         ga.Terminator = terminator;
-        //analyzers = AddAnalyzers(callback, ga, parameters);
+        // analyzers = AddAnalyzers(callback, ga, parameters);
         IAlgorithm<T, TE, IProblem<T, TE>, PopulationState<T>> t1 = ga.Build();
         ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
@@ -152,7 +157,7 @@ public class PythonGenealogyAnalysis
           es.Crossover = parameters.Crossover;
         }
 
-        //analyzers = AddAnalyzers(callback, es, parameters);
+        // analyzers = AddAnalyzers(callback, es, parameters);
 
         var t = es.Build().RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
@@ -162,7 +167,7 @@ public class PythonGenealogyAnalysis
         ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
         ls.Terminator = terminator;
 
-        //analyzers = AddAnalyzers(callback, ls, parameters);
+        // analyzers = AddAnalyzers(callback, ls, parameters);
         ls.Build().RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
         break;
@@ -175,22 +180,22 @@ public class PythonGenealogyAnalysis
         }
 
         nsga2.Terminator = terminator;
-        //analyzers = AddAnalyzers(callback, nsga2, parameters);
+        // analyzers = AddAnalyzers(callback, nsga2, parameters);
         _ = nsga2.Build().RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
         break;
       default:
         throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");
     }
 
-    return new ExperimentResult<T>("", [], [], []); //TODO analyzers.ToExperimentResult();
+    return new ExperimentResult<T>("", [], [], []); // TODO analyzers.ToExperimentResult();
   }
 
-  //private sealed record MyAnalyzers<T>(
+  // private sealed record MyAnalyzers<T>(
   //  BestMedianWorstAnalysis<T> Qualities,
   //  RankAnalysis<T>? RankAnalysis,
   //  QualityCurveAnalysis<T> QualityCurve,
   //  AllPopulationsTracker<T>? AllPopulations) where T : class
-  //{
+  // {
   //  public ExperimentResult<T> ToExperimentResult()
   //    => new(
   //      RankAnalysis?.Graph.ToGraphViz() ?? "",
@@ -198,9 +203,9 @@ public class PythonGenealogyAnalysis
   //      Qualities.BestISolutions,
   //      AllPopulations?.AllSolutions ?? []
   //    );
-  //}
+  // }
 
-  //private static MyAnalyzers<T> AddAnalyzers<T, TE, TP, TRes, TA, TBS>(
+  // private static MyAnalyzers<T> AddAnalyzers<T, TE, TP, TRes, TA, TBS>(
   //  Action<TRes>? callback,
   //  IAlgorithmBuilder<T, TE, TP, TRes, TA, TBS> builder,
   //  ExperimentParameters<T, TE> parameters)
@@ -210,7 +215,7 @@ public class PythonGenealogyAnalysis
   //  where TP : class, IProblem<T, TE>
   //  where TBS : IBuildSpec
   //  where TA : IAlgorithm<T, TE, TP, TRes>
-  //{
+  // {
   //  builder.AddRewriter();
   //  var qualities = BestMedianWorstAnalysis.Analyze(builder);
   //  if (callback != null) {
@@ -226,7 +231,7 @@ public class PythonGenealogyAnalysis
   //  apt?.AttachTo(builder);
 
   //  return new MyAnalyzers<T>(qualities, rankAnalysis, qc, apt);
-  //}
+  // }
 
   private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
   {
@@ -235,9 +240,12 @@ public class PythonGenealogyAnalysis
       new FullTreeShaker(),
       new OnePointShaker(),
       new RemoveBranchManipulation(),
-      new ReplaceBranchManipulation()]);
+      new ReplaceBranchManipulation()
+    ]);
 
     return symRegAllMutator;
   }
+
   #endregion
+
 }

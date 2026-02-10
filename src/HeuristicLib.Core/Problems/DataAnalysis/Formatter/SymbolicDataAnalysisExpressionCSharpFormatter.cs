@@ -57,8 +57,8 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     var invalidIdentifierParts = new Regex(@"[^\p{Lu}\p{Ll}\p{Lt}\p{Lm}\p{Lo}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\p{Cf}]");
 
     return "@" +
-           (invalidIdentifierStarts.IsMatch(name.AsSpan(0, 1)) ? "_" : "") +// prepend '_' if necessary
-           invalidIdentifierParts.Replace(name, "_");
+      (invalidIdentifierStarts.IsMatch(name.AsSpan(0, 1)) ? "_" : "") + // prepend '_' if necessary
+      invalidIdentifierParts.Replace(name, "_");
   }
 
   private void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
@@ -268,7 +268,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
       return;
     }
 
-    //Default case: more than 1 child
+    // Default case: more than 1 child
     FormatOperator(node, "-", strBuilder);
   }
 
@@ -368,8 +368,8 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
   {
     strBuilder.AppendLine("private static double EvaluateFactor(string factorValue, string[] factorValues, double[] parameters) {");
     strBuilder.AppendLine("   for(int i=0;i<factorValues.Length;i++) " +
-                          "      if(factorValues[i] == factorValue) return parameters[i];" +
-                          "   throw new ArgumentException();");
+      "      if(factorValues[i] == factorValue) return parameters[i];" +
+      "   throw new ArgumentException();");
     strBuilder.AppendLine("}");
   }
 

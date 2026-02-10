@@ -5,7 +5,8 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms;
 
 public interface IAlgorithmBuilder
-{ }
+{
+}
 
 public interface IAlgorithmBuilder<TG, TS, TP, TR, out TA, out TBuildSpec> : IAlgorithmBuilder
   where TA : IAlgorithm<TG, TS, TP, TR>

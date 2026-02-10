@@ -258,7 +258,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
       return;
     }
 
-    //Default case: more than 1 child
+    // Default case: more than 1 child
     FormatNode(node, strBuilder, infixSymbol: " - ");
   }
 

@@ -15,7 +15,7 @@ public class EvaluationClock : IEpochClock
   public int EpochLength { get; }
   public int CurrentEpoch => (int)(Ticks / EpochLength);
 
-  //returns whether no unresolved epoch changes are pending
+  // returns whether no unresolved epoch changes are pending
   public EvaluationTiming IncreaseCount()
   {
     lock (epochLocker) {

@@ -17,7 +17,7 @@ public abstract record class Algorithm<TGenotype, TSearchSpace, TProblem, TAlgor
   // ToDo: Since we have an evaluator, should we rename the class to "Optimization-Algorithm" or "Solver" or something like this?
   public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TGenotype>();
 
- public abstract IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+  public abstract IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
@@ -32,7 +32,7 @@ public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgo
   {
     Evaluator = evaluator;
   }
-  
+
   public abstract IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
     TProblem problem,
     IRandomNumberGenerator random,
@@ -56,7 +56,7 @@ public static class AlgorithmExtensions
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
       return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct);
     }
-    
+
     public async Task<TAlgorithmState> RunToCompletionAsync(
       TProblem problem,
       IRandomNumberGenerator random,
@@ -87,9 +87,7 @@ public static class AlgorithmExtensions
       return algorithm.RunToCompletionAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
     }
   }
-  
-  
-  
+
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithmInstance)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>

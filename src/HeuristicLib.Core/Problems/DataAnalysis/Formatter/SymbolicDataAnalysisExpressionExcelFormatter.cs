@@ -248,9 +248,9 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
       case BinaryFactorVariable: {
         var binFactorNode = (BinaryFactorVariableTreeNode)node;
         stringBuilder.AppendFormat("IF({0}=\"{1}\", {2}, 0)",
-        GetColumnToVariableName(binFactorNode.VariableName),
-        binFactorNode.VariableValue,
-        binFactorNode.Weight.ToString(CultureInfo.InvariantCulture)
+          GetColumnToVariableName(binFactorNode.VariableName),
+          binFactorNode.VariableValue,
+          binFactorNode.Weight.ToString(CultureInfo.InvariantCulture)
         );
 
         break;
@@ -264,8 +264,8 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
           stringBuilder.Append($"IF({GetColumnToVariableName(factorNode.VariableName)}=\"{values[i]}\", {w![i].ToString(CultureInfo.InvariantCulture)}, ");
         }
 
-        stringBuilder.Append("\"\"");// return empty string on unknown value
-        stringBuilder.Append(')', values.Length);// add closing parenthesis
+        stringBuilder.Append("\"\""); // return empty string on unknown value
+        stringBuilder.Append(')', values.Length); // add closing parenthesis
 
         break;
       }
@@ -301,8 +301,8 @@ public sealed class SymbolicDataAnalysisExpressionExcelFormatter : ISymbolicExpr
           var threshold = variableConditionTreeNode.Threshold;
           var slope = variableConditionTreeNode.Slope;
           var p = "(1 / (1 + EXP(-" + slope.ToString(CultureInfo.InvariantCulture) + " * (" +
-                  GetColumnToVariableName(variableConditionTreeNode.VariableName) + "-" +
-                  threshold.ToString(CultureInfo.InvariantCulture) + "))))";
+            GetColumnToVariableName(variableConditionTreeNode.VariableName) + "-" +
+            threshold.ToString(CultureInfo.InvariantCulture) + "))))";
           stringBuilder.Append("((");
           stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
           stringBuilder.Append('*');

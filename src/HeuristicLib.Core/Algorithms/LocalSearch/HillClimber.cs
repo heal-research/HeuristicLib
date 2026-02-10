@@ -26,8 +26,7 @@ public record class HillClimber<TGenotype, TSearchSpace, TProblem>
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     var creatorInstance = instanceRegistry.GetOrCreate(Creator);
     var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
-    
-    
+
     return new HillClimberInstance<TGenotype, TSearchSpace, TProblem>(
       interceptorInstance,
       evaluatorInstance,
@@ -38,7 +37,6 @@ public record class HillClimber<TGenotype, TSearchSpace, TProblem>
       BatchSize
     );
   }
-  
 }
 
 public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
@@ -52,7 +50,7 @@ public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly int MaxNeighbors;
   protected readonly int BatchSize;
 
-  public HillClimberInstance(IInterceptorInstance<TGenotype, SingleSolutionState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, LocalSearchDirection direction, int maxNeighbors, int batchSize) 
+  public HillClimberInstance(IInterceptorInstance<TGenotype, SingleSolutionState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, LocalSearchDirection direction, int maxNeighbors, int batchSize)
     : base(interceptor, evaluator)
   {
     Creator = creator;
@@ -61,15 +59,14 @@ public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
     MaxNeighbors = maxNeighbors;
     BatchSize = batchSize;
   }
-  
+
   public override SingleSolutionState<TGenotype> ExecuteStep(SingleSolutionState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {
       var initialSolution = Creator.Create(1, random, problem.SearchSpace, problem)[0];
       var initialFitness = Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
       return new SingleSolutionState<TGenotype> {
-        Population = Population.From([initialSolution], [initialFitness]),
-        //CurrentIteration = 0
+        Population = Population.From([initialSolution], [initialFitness])
       };
     }
 
@@ -87,15 +84,13 @@ public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
       newISolution = new Solution<TGenotype>(child[best], res[best]);
       if (Direction == LocalSearchDirection.FirstImprovement) {
         return new SingleSolutionState<TGenotype> {
-          Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector]),
-          //CurrentIteration = previousState.CurrentIteration + 1
+          Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector])
         };
       }
     }
 
     return new SingleSolutionState<TGenotype> {
-      Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector]),
-      //CurrentIteration = previousState.CurrentIteration + 1
+      Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector])
     };
   }
 }

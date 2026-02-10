@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public interface IIterativeAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
   : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-    //IStateTransformer<TAlgorithmState, TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -18,7 +17,6 @@ public interface IIterativeAlgorithm<TGenotype, in TSearchSpace, in TProblem, TA
 
 public interface IIterativeAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
   : IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-    //IStateTransformerInstance<TAlgorithmState, TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState

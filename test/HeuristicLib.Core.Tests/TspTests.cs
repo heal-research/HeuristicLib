@@ -21,34 +21,34 @@ public class TspTests
   [Fact]
   public void GaWithTSP()
   {
-    //Load Problem
+    // Load Problem
     var data = TsplibTspInstanceProvider.LoadData(TestDataBerlin52TSP);
     var cdata = data.ToCoordinatesData();
     var prob = new TravelingSalesmanProblem(cdata);
 
-    //GA
+    // GA
     var ga = GeneticAlgorithm.GetBuilder(
       new RandomPermutationCreator(),
       new EdgeRecombinationCrossover(),
       new InversionMutator()
     );
 
-    //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-    //ga.RandomSeed = 42;
+    // ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
+    // ga.RandomSeed = 42;
     ga.PopulationSize = 100;
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<Permutation>(2);
     ga.Elites = 1;
-    //execute
+    // execute
     var resGa = ga.Build()
-                  .WithMaxIterations(1000)
-                  .RunToCompletion(prob, RandomNumberGenerator.Create(42));
+      .WithMaxIterations(1000)
+      .RunToCompletion(prob, RandomNumberGenerator.Create(42));
 
-    //look at results
+    // look at results
     var objGa = resGa.Population
-                     .OrderBy(x => x.ObjectiveVector[0])
-                     .First();
+      .OrderBy(x => x.ObjectiveVector[0])
+      .First();
 
-    //best possible 7542
+    // best possible 7542
   }
 }

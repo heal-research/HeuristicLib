@@ -89,8 +89,8 @@ public abstract class SymbolicExpressionGrammarBase
         return result;
       }
       var state = SymbolConfigurations.TryGetValue(parent, out var config)
-                  && config.AllowedChildSymbolsPerIndex.TryGetValue(argumentIndex, out var l)
-                  && l.SelectMany(x => x.Flatten()).Contains(child);
+        && config.AllowedChildSymbolsPerIndex.TryGetValue(argumentIndex, out var l)
+        && l.SelectMany(x => x.Flatten()).Contains(child);
 
       cachedIsAllowedChildSymbolIndex.Add(key, state);
 
@@ -168,7 +168,7 @@ public abstract class SymbolicExpressionGrammarBase
       return temp;
     }
 
-    tempMaxExpressionLength[key] = int.MaxValue;// prevent infinite recursion
+    tempMaxExpressionLength[key] = int.MaxValue; // prevent infinite recursion
     var sumOfMaxTrees = 1 + (from argIndex in Enumerable.Range(0, GetMaximumSubtreeCount(symbol))
       let maxForSlot = (long)(from s in GetAllowedChildSymbols(symbol, argIndex)
         where s.InitialFrequency > 0.0
@@ -226,7 +226,7 @@ public abstract class SymbolicExpressionGrammarBase
       return temp;
     }
 
-    tempCachedMaxExpressionDepth[symbol] = int.MaxValue;// prevent infinite recursion
+    tempCachedMaxExpressionDepth[symbol] = int.MaxValue; // prevent infinite recursion
     var maxDepth = 1 + (from argIndex in Enumerable.Range(0, GetMaximumSubtreeCount(symbol))
       let maxForSlot = (long)(from s in GetAllowedChildSymbols(symbol, argIndex)
         where s.InitialFrequency > 0.0

@@ -30,7 +30,7 @@ public static class BatchExecution
     }
     return result;
   }
-  
+
   public static IReadOnlyList<TOut> Parallel<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
   {
     ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, 1);
@@ -38,7 +38,7 @@ public static class BatchExecution
     if (maxDegreeOfParallelism == 1) {
       return Sequential(count, func, random);
     }
-    
+
     var partitions = Partitioner.Create(0, count);
     var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
     var result = new TOut[count];

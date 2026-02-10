@@ -15,7 +15,7 @@ public partial record class ObservableSelector<TG, TS, TP>
   where TP : class, IProblem<TG, TS>
 {
   public ISelector<TG, TS, TP> Selector { get; }
-  
+
   [OrderedEquality]
   public ImmutableArray<ISelectorObserver<TG, TS, TP>> Observers { get; }
 
@@ -24,14 +24,14 @@ public partial record class ObservableSelector<TG, TS, TP>
     this.Selector = selector;
     this.Observers = observers;
   }
-  
+
   public override ISelectorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
     return new ObservableSelectorInstance(selectorInstance, Observers);
   }
 
-  private sealed class ObservableSelectorInstance(ISelectorInstance<TG, TS, TP> selectorInstance, IReadOnlyList<ISelectorObserver<TG, TS, TP>> observers) 
+  private sealed class ObservableSelectorInstance(ISelectorInstance<TG, TS, TP> selectorInstance, IReadOnlyList<ISelectorObserver<TG, TS, TP>> observers)
     : SelectorInstance<TG, TS, TP>
   {
     public override IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
@@ -41,7 +41,7 @@ public partial record class ObservableSelector<TG, TS, TP>
       foreach (var observer in observers) {
         observer.AfterSelection(result, population, objective, count, searchSpace, problem);
       }
-      
+
       return result;
     }
   }
@@ -60,13 +60,13 @@ public class SelectorObserver<TG, TS, TP> : ISelectorObserver<TG, TS, TP>
   where TP : class, IProblem<TG, TS>
 {
   private readonly Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection;
-  
+
   public SelectorObserver(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection)
   {
     this.afterSelection = afterSelection;
   }
 
-  public void AfterSelection(IReadOnlyList<ISolution<TG>> selected, IReadOnlyList<ISolution<TG>> population, Objective objective, int count,  TS searchSpace, TP problem) 
+  public void AfterSelection(IReadOnlyList<ISolution<TG>> selected, IReadOnlyList<ISolution<TG>> population, Objective objective, int count, TS searchSpace, TP problem)
   {
     afterSelection.Invoke(selected, population, objective, count, searchSpace, problem);
   }
@@ -82,29 +82,29 @@ public static class ObservableSelectorExtensions
     {
       return new ObservableSelector<TG, TS, TP>(selector, observer);
     }
-    
+
     public ISelector<TG, TS, TP> ObserveWith(params ImmutableArray<ISelectorObserver<TG, TS, TP>> observers)
     {
       return new ObservableSelector<TG, TS, TP>(selector, observers);
     }
-    
+
     public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection)
     {
       var observer = new SelectorObserver<TG, TS, TP>(afterSelection);
       return selector.ObserveWith(observer);
     }
-    
+
     public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterSelection)
     {
       var observer = new SelectorObserver<TG, TS, TP>((selected, _, _, _, _, _) => afterSelection(selected));
       return selector.ObserveWith(observer);
     }
-    
+
     public ISelector<TG, TS, TP> CountInvocations(InvocationCounter counter)
     {
       return selector.ObserveWith(_ => counter.IncrementBy(1));
     }
-    
+
     public ISelector<TG, TS, TP> CountInvocations(out InvocationCounter counter)
     {
       counter = new InvocationCounter();

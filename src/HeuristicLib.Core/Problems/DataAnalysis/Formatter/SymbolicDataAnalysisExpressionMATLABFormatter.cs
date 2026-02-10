@@ -232,7 +232,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         stringBuilder.Append(laggedVariableTreeNode.Weight.ToString(CultureInfo.InvariantCulture));
         stringBuilder.Append('*');
         stringBuilder.Append(laggedVariableTreeNode.VariableName +
-                             LagToString(currentLag + laggedVariableTreeNode.Lag));
+          LagToString(currentLag + laggedVariableTreeNode.Lag));
 
         break;
       }
@@ -392,7 +392,7 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
         } else if (symbol is BinaryFactorVariable) {
           var factorNode = (BinaryFactorVariableTreeNode)node;
           stringBuilder.Append(CultureInfo.InvariantCulture,
-          $"((strcmp({factorNode.VariableName},\"{factorNode.VariableValue}\")==1) * {factorNode.Weight:G17})");
+            $"((strcmp({factorNode.VariableName},\"{factorNode.VariableValue}\")==1) * {factorNode.Weight:G17})");
         } else if (symbol is Power) {
           stringBuilder.Append('(');
           stringBuilder.Append(FormatRecursively(node.GetSubtree(0)));
@@ -428,8 +428,8 @@ public sealed class SymbolicDataAnalysisExpressionMatlabFormatter : ISymbolicExp
           var prevCounterVariable = CurrentIndexVariable;
           var counterVariable = AllocateIndexVariable();
           stringBuilder.AppendLine(" sum (map(@(" + counterVariable + ") " + FormatRecursively(node.GetSubtree(0)) +
-                                   ", (" + prevCounterVariable + "+" + laggedNode.Lag + "):" + prevCounterVariable +
-                                   "))");
+            ", (" + prevCounterVariable + "+" + laggedNode.Lag + "):" + prevCounterVariable +
+            "))");
           ReleaseIndexVariable();
         } else if (symbol is TimeLag) {
           var laggedNode = (LaggedTreeNode)node;

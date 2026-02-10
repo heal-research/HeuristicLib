@@ -47,7 +47,7 @@ public class OnlineWeightedClassificationMeanSquaredErrorCalculator
 
     // check if both enumerators are at the end to make sure both enumerations have the same length
     if (calculator.ErrorState == OnlineCalculatorError.None &&
-        (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
+      (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
     }
 
@@ -71,12 +71,12 @@ public class OnlineWeightedClassificationMeanSquaredErrorCalculator
   public void Add(double original, double estimated)
   {
     if (double.IsNaN(estimated) || double.IsInfinity(estimated) ||
-        double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
+      double.IsNaN(original) || double.IsInfinity(original) || (ErrorState & OnlineCalculatorError.InvalidValueAdded) > 0) {
       ErrorState |= OnlineCalculatorError.InvalidValueAdded;
     } else {
       var error = estimated - original;
       double weight;
-      //apply weight
+      // apply weight
       if (estimated > ClassValuesMax || estimated < ClassValuesMin) {
         weight = DefiniteResidualsWeight;
       } else if (original.IsAlmost(PositiveClassValue)) {
@@ -87,7 +87,7 @@ public class OnlineWeightedClassificationMeanSquaredErrorCalculator
 
       sse += error * error * weight;
       n++;
-      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+      ErrorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
     }
   }
 

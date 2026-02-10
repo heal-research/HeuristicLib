@@ -33,12 +33,12 @@ public class CutPoint
     if (newChild == null) {
       // make sure that one subtree can be removed and that only the last subtree is removed 
       return grammar.GetMinimumSubtreeCount(Parent.Symbol) < Parent.SubtreeCount &&
-             ChildIndex == Parent.SubtreeCount - 1;
+        ChildIndex == Parent.SubtreeCount - 1;
     }
 
     // check syntax constraints of direct parent - child relation
     if (!grammar.ContainsSymbol(newChild.Symbol) ||
-        !grammar.IsAllowedChildSymbol(Parent.Symbol, newChild.Symbol, ChildIndex)) {
+      !grammar.IsAllowedChildSymbol(Parent.Symbol, newChild.Symbol, ChildIndex)) {
       return false;
     }
 

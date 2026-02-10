@@ -37,7 +37,7 @@ public class TreeToAutoDiffTermConverter
     out ParametricFunctionGradient? funcGrad)
   {
     return TryConvertToAutoDiff(tree, makeVariableWeightsVariable, [],
-    out parameters, out initialParamValues, out func, out funcGrad);
+      out parameters, out initialParamValues, out func, out funcGrad);
   }
 
   public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable, IEnumerable<SymbolicExpressionTreeNode> excludedNodes,
@@ -49,9 +49,9 @@ public class TreeToAutoDiffTermConverter
     var transformator = new TreeToAutoDiffTermConverter(makeVariableWeightsVariable, excludedNodes);
     try {
       var term = transformator.ConvertToAutoDiff(tree.Root[0]);
-      var parameterEntries = transformator.parameters.ToArray();// guarantee same order for keys and values
+      var parameterEntries = transformator.parameters.ToArray(); // guarantee same order for keys and values
       var compiledTerm = term.Compile(transformator.variables.ToArray(),
-      parameterEntries.Select(kvp => kvp.Value).ToArray());
+        parameterEntries.Select(kvp => kvp.Value).ToArray());
       parameters = [..parameterEntries.Select(kvp => kvp.Key)];
       initialParamValues = transformator.initialParamValues.ToArray();
       func = compiledTerm.Evaluate;
@@ -172,19 +172,19 @@ public class TreeToAutoDiffTermConverter
       }
       case Logarithm:
         return TermBuilder.Log(
-        ConvertToAutoDiff(node[0]));
+          ConvertToAutoDiff(node[0]));
       case Exponential:
         return TermBuilder.Exp(
-        ConvertToAutoDiff(node[0]));
+          ConvertToAutoDiff(node[0]));
       case Square:
         return TermBuilder.Power(
-        ConvertToAutoDiff(node[0]), 2.0);
+          ConvertToAutoDiff(node[0]), 2.0);
       case SquareRoot:
         return TermBuilder.Power(
-        ConvertToAutoDiff(node[0]), 0.5);
+          ConvertToAutoDiff(node[0]), 0.5);
       case Cube:
         return TermBuilder.Power(
-        ConvertToAutoDiff(node[0]), 3.0);
+          ConvertToAutoDiff(node[0]), 3.0);
       case CubeRoot:
         return Cbrt(ConvertToAutoDiff(node[0]));
       case Power: {
@@ -200,22 +200,22 @@ public class TreeToAutoDiffTermConverter
       }
       case Sine:
         return Sin(
-        ConvertToAutoDiff(node[0]));
+          ConvertToAutoDiff(node[0]));
       case Cosine:
         return Cos(
-        ConvertToAutoDiff(node[0]));
+          ConvertToAutoDiff(node[0]));
       case Tangent:
         return Tan(
-        ConvertToAutoDiff(node[0]));
+          ConvertToAutoDiff(node[0]));
       case HyperbolicTangent:
         return Tanh(
-        ConvertToAutoDiff(node[0]));
+          ConvertToAutoDiff(node[0]));
       case SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Erf:
         return Erf(
-        ConvertToAutoDiff(node[0]));
+          ConvertToAutoDiff(node[0]));
       case SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Norm:
         return Norm(
-        ConvertToAutoDiff(node[0]));
+          ConvertToAutoDiff(node[0]));
       case StartSymbol:
       case SubFunctionSymbol:
         return ConvertToAutoDiff(node[0]);
@@ -283,7 +283,7 @@ public class TreeToAutoDiffTermConverter
   {
     public readonly int Lag = lag;
     public readonly string VariableName = varName;
-    public readonly string VariableValue = varValue;// for factor vars
+    public readonly string VariableValue = varValue; // for factor vars
 
     public override bool Equals(object? obj)
     {
@@ -292,8 +292,8 @@ public class TreeToAutoDiffTermConverter
       }
 
       return other.VariableName.Equals(VariableName) &&
-             other.VariableValue.Equals(VariableValue) &&
-             other.Lag == Lag;
+        other.VariableValue.Equals(VariableValue) &&
+        other.Lag == Lag;
     }
 
     public override int GetHashCode() => VariableName.GetHashCode() ^ VariableValue.GetHashCode() ^ Lag;
@@ -318,45 +318,45 @@ public class TreeToAutoDiffTermConverter
 
   // create function factory for arctangent
   private static readonly Func<Term, UnaryFunc> Arctan = UnaryFunc.Factory(
-  Math.Atan,
-  diff: x => 1 / (1 + x * x));
+    Math.Atan,
+    diff: x => 1 / (1 + x * x));
 
   private static readonly Func<Term, UnaryFunc> Sin = UnaryFunc.Factory(
-  Math.Sin,
-  Math.Cos);
+    Math.Sin,
+    Math.Cos);
 
   private static readonly Func<Term, UnaryFunc> Cos = UnaryFunc.Factory(
-  Math.Cos,
-  diff: x => -Math.Sin(x));
+    Math.Cos,
+    diff: x => -Math.Sin(x));
 
   private static readonly Func<Term, UnaryFunc> Tan = UnaryFunc.Factory(
-  Math.Tan,
-  diff: x => 1 + Math.Tan(x) * Math.Tan(x));
+    Math.Tan,
+    diff: x => 1 + Math.Tan(x) * Math.Tan(x));
 
   private static readonly Func<Term, UnaryFunc> Tanh = UnaryFunc.Factory(
-  Math.Tanh,
-  diff: x => 1 - Math.Tanh(x) * Math.Tanh(x));
+    Math.Tanh,
+    diff: x => 1 - Math.Tanh(x) * Math.Tanh(x));
 
   private static readonly Func<Term, UnaryFunc> Erf = UnaryFunc.Factory(
-  eval: _ => throw new NotImplementedException("Error function is currently not implemented"),//errorfunction,
-  diff: x => 2.0 * Math.Exp(-(x * x)) / Math.Sqrt(Math.PI));
+    eval: _ => throw new NotImplementedException("Error function is currently not implemented"), // errorfunction,
+    diff: x => 2.0 * Math.Exp(-(x * x)) / Math.Sqrt(Math.PI));
 
   private static readonly Func<Term, UnaryFunc> Norm = UnaryFunc.Factory(
-  eval: _ => throw new NotImplementedException("Normal distribution function is currently not implemented"),//normaldistribution,
-  diff: x => -(Math.Exp(-(x * x)) * Math.Sqrt(Math.Exp(x * x)) * x) / Math.Sqrt(2 * Math.PI));
+    eval: _ => throw new NotImplementedException("Normal distribution function is currently not implemented"), // normaldistribution,
+    diff: x => -(Math.Exp(-(x * x)) * Math.Sqrt(Math.Exp(x * x)) * x) / Math.Sqrt(2 * Math.PI));
 
   private static readonly Func<Term, UnaryFunc> Abs = UnaryFunc.Factory(
-  Math.Abs,
-  diff: x => Math.Sign(x)
+    Math.Abs,
+    diff: x => Math.Sign(x)
   );
 
   private static readonly Func<Term, UnaryFunc> Cbrt = UnaryFunc.Factory(
-  eval: x => x < 0 ? -Math.Pow(-x, 1.0 / 3) : Math.Pow(x, 1.0 / 3),
-  diff: x => {
-    var cbrtX = x < 0 ? -Math.Pow(-x, 1.0 / 3) : Math.Pow(x, 1.0 / 3);
+    eval: x => x < 0 ? -Math.Pow(-x, 1.0 / 3) : Math.Pow(x, 1.0 / 3),
+    diff: x => {
+      var cbrtX = x < 0 ? -Math.Pow(-x, 1.0 / 3) : Math.Pow(x, 1.0 / 3);
 
-    return 1.0 / (3 * cbrtX * cbrtX);
-  }
+      return 1.0 / (3 * cbrtX * cbrtX);
+    }
   );
 
   #endregion

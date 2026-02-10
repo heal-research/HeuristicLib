@@ -46,7 +46,7 @@ public class OnlineTheilsUStatisticCalculator
 
     // check if all enumerators are at the end to make sure both enumerations have the same length
     if (calculator.ErrorState == OnlineCalculatorError.None &&
-        (startValueEnumerator.MoveNext() || actualContinuationsEnumerator.MoveNext() || referenceContinuationsEnumerator.MoveNext() || predictedContinuationsEnumerator.MoveNext())) {
+      (startValueEnumerator.MoveNext() || actualContinuationsEnumerator.MoveNext() || referenceContinuationsEnumerator.MoveNext() || predictedContinuationsEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in startValues, actualContinuations, referenceContinuation and estimatedValues predictedContinuations doesn't match.");
     }
 
@@ -71,7 +71,7 @@ public class OnlineTheilsUStatisticCalculator
     using var predictedEnumerator = predictedContinuation.GetEnumerator();
     using var referenceEnumerator = referenceContinuation.GetEnumerator();
     while (actualEnumerator.MoveNext() & predictedEnumerator.MoveNext() & referenceEnumerator.MoveNext()
-           & ErrorState != OnlineCalculatorError.InvalidValueAdded) {
+      & ErrorState != OnlineCalculatorError.InvalidValueAdded) {
       var actual = actualEnumerator.Current;
       var predicted = predictedEnumerator.Current;
       var reference = referenceEnumerator.Current;
@@ -91,7 +91,7 @@ public class OnlineTheilsUStatisticCalculator
     if (actualEnumerator.MoveNext() || predictedEnumerator.MoveNext() || referenceEnumerator.MoveNext()) {
       errorState |= OnlineCalculatorError.InvalidValueAdded;
     } else {
-      errorState &= ~OnlineCalculatorError.InsufficientElementsAdded;// n >= 1
+      errorState &= ~OnlineCalculatorError.InsufficientElementsAdded; // n >= 1
     }
   }
 

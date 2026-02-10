@@ -13,11 +13,6 @@ public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmS
   where TAlgorithmState : class, IAlgorithmState
 {
   new IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
-  // IStateTransformerInstance<TAlgorithmState, TGenotype, TSearchSpace, TProblem> IExecutable<IStateTransformerInstance<TAlgorithmState, TGenotype, TSearchSpace, TProblem>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-  //   CreateExecutionInstance(instanceRegistry);
-  
-  //IIterationObserver<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Observer { get; }
 }
 
 public interface IAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>

@@ -25,7 +25,7 @@ public class OnlineMeanErrorCalculator
 
     // check if both enumerators are at the end to make sure both enumerations have the same length
     if (meCalculator.ErrorState == OnlineCalculatorError.None &&
-        (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
+      (estimatedEnumerator.MoveNext() || originalEnumerator.MoveNext())) {
       throw new ArgumentException("Number of elements in originalValues and estimatedValues enumerations doesn't match.");
     }
 

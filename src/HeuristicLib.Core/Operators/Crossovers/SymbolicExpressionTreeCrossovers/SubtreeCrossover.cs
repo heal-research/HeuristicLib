@@ -32,8 +32,7 @@ public record class SubtreeCrossover : SymbolicExpressionTreeCrossover
 
     var allowedBranches = new List<SymbolicExpressionTreeNode?>();
     parent1.Root.ForEachNodePostfix(n => {
-      if (n.GetLength() <= maxInsertedBranchLength &&
-          n.GetDepth() <= maxInsertedBranchDepth && crossoverPoint0.IsMatchingPointType(n)) {
+      if (n.GetLength() <= maxInsertedBranchLength && n.GetDepth() <= maxInsertedBranchDepth && crossoverPoint0.IsMatchingPointType(n)) {
         allowedBranches.Add(n);
       }
     });
@@ -63,9 +62,9 @@ public record class SubtreeCrossover : SymbolicExpressionTreeCrossover
         crossoverPoint0.Parent.AddSubtree(selectedBranch);
       }
     }
-    
+
     Debug.Assert(searchSpace.Contains(parent0), "Generated Invalid Child");
-    
+
     return parent0;
   }
 
@@ -82,11 +81,10 @@ public record class SubtreeCrossover : SymbolicExpressionTreeCrossover
           return;
         }
 
-        //avoid linq to reduce memory pressure
+        // avoid linq to reduce memory pressure
         for (var i = 0; i < n.SubtreeCount; i++) {
           var child = n[i];
-          if (child.GetLength() > maxBranchLength ||
-              child.GetDepth() > maxBranchDepth) {
+          if (child.GetLength() > maxBranchLength || child.GetDepth() > maxBranchDepth) {
             continue;
           }
 

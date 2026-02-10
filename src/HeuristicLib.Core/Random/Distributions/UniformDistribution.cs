@@ -12,7 +12,7 @@ public class UniformRealDistribution(double low, double high) : IDistribution<do
   {
   }
 
-  public double Sample(IRandomNumberGenerator rng) => NextDouble(rng, low, high); 
+  public double Sample(IRandomNumberGenerator rng) => NextDouble(rng, low, high);
 
   public static double NextDouble(IRandomNumberGenerator rng, double low, double high)
   {
@@ -32,11 +32,10 @@ public class UniformIntegerDistribution(int low, int high, bool inclusiveHigh = 
   {
   }
 
-  public int Sample(IRandomNumberGenerator rng) => NextInt(rng, low, high, inclusiveHigh); 
-  
+  public int Sample(IRandomNumberGenerator rng) => NextInt(rng, low, high, inclusiveHigh);
+
   public static int NextInt(IRandomNumberGenerator rng, int low, int high, bool inclusiveHigh = false)
   {
     return rng.NextInt(low, high, inclusiveHigh);
-    
   }
 }

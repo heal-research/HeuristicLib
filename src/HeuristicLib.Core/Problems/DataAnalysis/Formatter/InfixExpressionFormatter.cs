@@ -27,7 +27,7 @@ public static class BaseInfixExpressionFormatter
   {
     // recurse post-order
     foreach (var subtree in n.Subtrees.ToArray()) {
-      ConvertToBinaryLeftAssocRec(n, subtree);// ToArray required as n.Subtrees is changed in method
+      ConvertToBinaryLeftAssocRec(n, subtree); // ToArray required as n.Subtrees is changed in method
     }
 
     if (n is VariableTreeNode varTreeNode && !varTreeNode.Weight.IsAlmost(1.0)) {
@@ -58,7 +58,7 @@ public static class BaseInfixExpressionFormatter
 
           var additionalTrees = n.Subtrees.Skip(2).ToArray();
           while (n.SubtreeCount > 2) {
-            n.RemoveSubtree(2);// keep only the first two arguments
+            n.RemoveSubtree(2); // keep only the first two arguments
           }
 
           var childIdx = parent.IndexOfSubtree(n);
@@ -77,8 +77,8 @@ public static class BaseInfixExpressionFormatter
           break;
         }
         case 2 when n.GetSubtree(1).SubtreeCount == 2 &&
-                    IsAssocOp(n.Symbol) && IsOperator(n.GetSubtree(1).Symbol) &&
-                    Priority(n.Symbol) == Priority(n.GetSubtree(1).Symbol): {
+          IsAssocOp(n.Symbol) && IsOperator(n.GetSubtree(1).Symbol) &&
+          Priority(n.Symbol) == Priority(n.GetSubtree(1).Symbol): {
           // f(x) <op> (g(x) <op> h(x))) is the same as  (f(x) <op> g(x)) <op> h(x) for associative <op>
           // which is the same as f(x) <op> g(x) <op> h(x) for left-associative <op>
           // The latter version is preferred because we do not need to write the parentheses.
@@ -273,7 +273,7 @@ public static class BaseInfixExpressionFormatter
     }
     if (parentPrio == childPrio) {
       if (IsLeftAssocOp(child.Symbol)) {
-        return parent.GetSubtree(0) != child;// (..) required only for right child for left-assoc op
+        return parent.GetSubtree(0) != child; // (..) required only for right child for left-assoc op
       }
 
       if (IsRightAssocOp(child.Symbol)) {
@@ -311,7 +311,7 @@ public static class BaseInfixExpressionFormatter
     // a <op> b <op> c = a <op> (b <op> c)
     // Negation (single-argument subtraction) is also right-assoc, but we do not have a separate symbol for negation.
     return symbol is Not ||
-           symbol is Power;// x^y^z = x^(y^z) (as in Fortran or Mathematica)
+      symbol is Power; // x^y^z = x^(y^z) (as in Fortran or Mathematica)
   }
 
   private static void AppendNumber(StringBuilder strBuilder, List<KeyValuePair<string, double>>? parameters, double value, string formatString, NumberFormatInfo numberFormat)
@@ -359,7 +359,7 @@ public sealed class InfixExpressionFormatter : SymbolicExpressionTreeStringForma
     var cleanTree = new SymbolicExpressionTree(symbolicExpressionTree);
     BaseInfixExpressionFormatter.ConvertToBinaryLeftAssoc(cleanTree);
     BaseInfixExpressionFormatter.FormatRecursively(cleanTree.Root.GetSubtree(0).GetSubtree(0),
-    strBuilder, numberFormat, formatString);
+      strBuilder, numberFormat, formatString);
 
     return strBuilder.ToString();
   }
@@ -376,15 +376,15 @@ public sealed class InfixExpressionStringFormatter : SymbolicExpressionTreeStrin
     var cleanTree = new SymbolicExpressionTree(symbolicExpressionTree);
     BaseInfixExpressionFormatter.ConvertToBinaryLeftAssoc(cleanTree);
     BaseInfixExpressionFormatter.FormatRecursively(cleanTree.Root.GetSubtree(0).GetSubtree(0),
-    strBuilder, NumberFormatInfo.InvariantInfo, "G", parameters);
+      strBuilder, NumberFormatInfo.InvariantInfo, "G", parameters);
     strBuilder.Append($"{Environment.NewLine}{Environment.NewLine}");
     var maxDigits = GetDigits(parameters.Count);
     var padding = parameters.Max(x => x.Value.ToString("F12", CultureInfo.InvariantCulture).Length);
     foreach (var param in parameters) {
       var digits = GetDigits(int.Parse(param.Key[2..]));
       strBuilder.Append($"{param.Key}{new string(' ', maxDigits - digits)} = " +
-                        string.Format($"{{0,{padding}:F12}}", param.Value, CultureInfo.InvariantCulture) +
-                        Environment.NewLine);
+        string.Format($"{{0,{padding}:F12}}", param.Value, CultureInfo.InvariantCulture) +
+        Environment.NewLine);
     }
 
     return strBuilder.ToString();

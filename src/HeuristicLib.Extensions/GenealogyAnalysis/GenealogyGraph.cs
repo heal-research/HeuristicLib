@@ -34,7 +34,7 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull
   public void AddConnection(ICollection<TGenotype> parent, TGenotype child)
   {
     if (CurrentGeneration.TryGetValue(child, out var cNode) && parent.Any(x => equality.Equals(x, child))) {
-      return; //operators sometimes just "give up" and return one of the parents as child
+      return; // operators sometimes just "give up" and return one of the parents as child
     }
 
     var pNodes = parent.Where(x => !equality.Equals(x, child)).Select(x => CurrentGeneration[x]).ToArray();
@@ -61,7 +61,7 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull
       newNode.Parents.Add(oldNode);
     }
 
-    //only keep parents for the last generation to save space
+    // only keep parents for the last generation to save space
     if (saveSpace && Nodes.Count > 1) {
       foreach (var node in Nodes[^1].Values.Where(x => x.Layer == 0)) {
         node.Parents.Clear();
@@ -108,7 +108,7 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull
             sb.AppendLine($"\"{t.Id}\" [label = {t.Id}, shape={shape}]");
           }
 
-          //set invisible edges to help ranked-layout
+          // set invisible edges to help ranked-layout
           for (var i = 0; i < ranked.Length - 1; i++) {
             sb.AppendLine($"\"{ranked[i].Id}\"->\"{ranked[i + 1].Id}\" [style=invis]");
           }

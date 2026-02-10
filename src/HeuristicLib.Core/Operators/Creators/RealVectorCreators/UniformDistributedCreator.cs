@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 
-public record class UniformDistributedCreator(RealVector? minimum = null, RealVector? maximum = null) 
+public record class UniformDistributedCreator(RealVector? minimum = null, RealVector? maximum = null)
   : SingleSolutionStatelessCreator<RealVector, RealVectorSearchSpace>
 {
   public UniformDistributedCreator(RealVectorSearchSpace searchSpace)
