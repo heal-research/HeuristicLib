@@ -9,6 +9,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
 namespace HEAL.HeuristicLib.Extensions.Tests;
@@ -17,6 +18,7 @@ public class SymbolicRegressionTests
 {
   private const int AlgorithmRandomSeed = 42;
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
+
   private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false, int constOptIteration = 5)
   {
     var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
@@ -47,20 +49,22 @@ public class SymbolicRegressionTests
     };
 
     var linearScalingRoot = problem.SearchSpace.Grammar.AddLinearScaling();
-    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(
-    linearScalingRoot,
-    new Addition(),
-    new Subtraction(),
-    new Multiplication(),
-    new Division(),
-    new Number(),
-    new SquareRoot(),
-    new Logarithm(),
-    new Exponential(),
-    new Variable { VariableNames = problemData.InputVariables });
+    var symbols = new Symbol[] {
+      new Addition(),
+      new Subtraction(),
+      new Multiplication(),
+      new Division(),
+      new Number(),
+      new SquareRoot(),
+      new Logarithm(),
+      new Exponential(),
+      new Variable { VariableNames = problemData.InputVariables }
+    };
+
+    problem.SearchSpace.Grammar.AddFullyConnectedSymbols(linearScalingRoot, symbols);
     return problem;
   }
-  
+
   [Fact]
   public void MultiObjectiveConstant()
   {
@@ -137,7 +141,7 @@ public class SymbolicRegressionTests
     add.AddSubtree(numberTreeNode);
     tree.Root[0].AddSubtree(add);
     SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData,
-    problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(), 10);
+      problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(), 10);
     var y = problem.Evaluate(tree)[0];
     Assert.Equal(0, y, 1.0e-15);
   }
@@ -148,7 +152,6 @@ public class SymbolicRegressionTests
     var problem = CreateTestSymbolicRegressionProblem(12);
     var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator() };
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
-   
 
     foreach (var c in creators) {
       var tree = c.Create(r, problem.SearchSpace);
@@ -164,14 +167,14 @@ public class SymbolicRegressionTests
       _ = problem.Evaluate(tree);
     }
   }
-  
-  private static Operators.Mutators.MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, Problems.IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
+
+  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, Problems.IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
   {
     return MultiMutator.Create(
-    new ChangeNodeTypeManipulation(),
-    new FullTreeShaker(),
-    new OnePointShaker(),
-    new RemoveBranchManipulation(),
-    new ReplaceBranchManipulation());
+      new ChangeNodeTypeManipulation(),
+      new FullTreeShaker(),
+      new OnePointShaker(),
+      new RemoveBranchManipulation(),
+      new ReplaceBranchManipulation());
   }
 }

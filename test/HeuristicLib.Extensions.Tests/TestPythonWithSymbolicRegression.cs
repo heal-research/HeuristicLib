@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Extensions.Tests;
 public class TestPythonWithSymbolicRegression
 {
   private const int AlgorithmRandomSeed = 42;
-  
+
   [Fact]
   public void TestPlayground()
   {
@@ -13,11 +13,11 @@ public class TestPythonWithSymbolicRegression
     var i = 0;
     var file = @"TestData\192_vineyard.tsv";
     var res = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
-    new SymRegExperimentParameters {
-      Seed = AlgorithmRandomSeed,
-      Iterations = iterations
-    },
-    callback: _ => i++);
+      new SymRegExperimentParameters {
+        Seed = AlgorithmRandomSeed,
+        Iterations = iterations
+      },
+      callback: _ => i++);
     Assert.Equal(iterations, i);
   }
 
@@ -26,8 +26,7 @@ public class TestPythonWithSymbolicRegression
   {
     const int iterations = 4;
     var i = 0;
-    PythonCorrelationAnalysis.RunCorrelationNsga2((_, _) => { i++; }, iterations, 100);
+    PythonCorrelationAnalysis.RunCorrelationNsga2((_, _) => { i++; }, iterations, 100, ProblemGeneration.SphereRastriginProblem(10, -5, 5, 0.5));
     Assert.Equal(iterations, i);
   }
-
 }
