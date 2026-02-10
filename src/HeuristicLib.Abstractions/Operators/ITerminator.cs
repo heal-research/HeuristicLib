@@ -19,9 +19,18 @@ public interface ITerminatorInstance<TGenotype, in TAlgorithmState, in TSearchSp
   where TProblem : IProblem<TGenotype, TSearchSpace>
 {
   bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem);
-  
-  bool ShouldContinue(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem)
+}
+
+public static class TerminatorExtension 
+{
+  extension<TGenotype, TAlgorithmState, TSearchSpace, TProblem>(ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> terminatorInstance)
+    where TAlgorithmState : IAlgorithmState
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : IProblem<TGenotype, TSearchSpace>
   {
-    return !ShouldTerminate(state, searchSpace, problem);
+    public bool ShouldContinue(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem)
+    { 
+      return !terminatorInstance.ShouldTerminate(state, searchSpace, problem);
+    }
   }
 }

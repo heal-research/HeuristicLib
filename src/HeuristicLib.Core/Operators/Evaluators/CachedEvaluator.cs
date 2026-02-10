@@ -43,7 +43,7 @@ public record class CachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
     {
       this.Evaluator = evaluator;
       this.KeySelector = keySelector;
-      var cacheOptions = new MemoryCacheOptions { SizeLimit = sizeLimit };
+      var cacheOptions = new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true };
       Cache = new MemoryCache(cacheOptions);
     }
     
