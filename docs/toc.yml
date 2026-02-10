@@ -22,5 +22,9 @@
       href: algorithm-state.md
     - name: Execution model
       href: execution-model.md
+    - name: Definition vs execution instances
+      href: execution-instances.md
+    - name: Observability & analysis
+      href: observability-and-analysis.md
     - name: Randomness (RNG) design
       href: randomness.md
