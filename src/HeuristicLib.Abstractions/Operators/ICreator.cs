@@ -4,14 +4,12 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ICreator<TGenotype, in TSearchSpace, in TProblem>
+public interface ICreator<out TGenotype, in TSearchSpace, in TProblem>
   : IOperator<ICreatorInstance<TGenotype, TSearchSpace, TProblem>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
-}
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
 
-public interface ICreatorInstance<TGenotype, in TSearchSpace, in TProblem>
+public interface ICreatorInstance<out TGenotype, in TSearchSpace, in TProblem>
   : IOperatorInstance
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>

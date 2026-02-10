@@ -2,23 +2,24 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Tests;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
 public class MovingPeaksTests
 {
   public static readonly MovingPeaksParameters Parameters = new(
-  2,
-  2,
-  0,
-  100,
-  0,
-  100,
-  0,
-  10,
-  10,
-  5,
-  1
+    2,
+    2,
+    0,
+    100,
+    0,
+    100,
+    0,
+    10,
+    10,
+    5,
+    1
   );
 
   private static readonly (double[] center, double height, double width)[] Peaks = [
@@ -33,7 +34,7 @@ public class MovingPeaksTests
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     var x = new RealVector(10.0, 10.0);
-    var fx = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
+    var fx = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
     Assert.Equal(50.0, fx, 10);
   }
@@ -46,7 +47,7 @@ public class MovingPeaksTests
 
     // At (10,10) peak1 gives 50, peak2 gives 30 - 1*sqrt(80^2+80^2) which is negative
     var x = new RealVector(10.0, 10.0);
-    var fx = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
+    var fx = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
     Assert.Equal(50.0, fx, 10);
   }
@@ -58,9 +59,9 @@ public class MovingPeaksTests
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     // Near the 50-peak
-    var near = p.Evaluate(new RealVector(10.0, 10.0), RandomNumberGenerator.NoRandom)[0];
+    var near = p.Evaluate(new RealVector(10.0, 10.0), TestRandoms.NoRandom)[0];
     // Far from both peaks (roughly center-ish but far from 10,10 and 90,90)
-    var far = p.Evaluate(new RealVector(50.0, 50.0), RandomNumberGenerator.NoRandom)[0];
+    var far = p.Evaluate(new RealVector(50.0, 50.0), TestRandoms.NoRandom)[0];
 
     Assert.True(far < near);
   }
@@ -73,7 +74,7 @@ public class MovingPeaksTests
 
     // If Evaluate touches RNG, this test should throw
     var x = new RealVector(12.0, 12.0);
-    _ = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
+    _ = p.Evaluate(x, TestRandoms.NoRandom)[0];
   }
 
   [Fact]
@@ -88,13 +89,13 @@ public class MovingPeaksTests
     var p = new MovingPeaksProblem(staticParams, rng, Peaks);
 
     var x = new RealVector(33.0, 33.0);
-    var before = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
+    var before = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
     for (var i = 0; i < 5; i++) {
       p.UpdateOnce();
     }
 
-    var after = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
+    var after = p.Evaluate(x, TestRandoms.NoRandom)[0];
     Assert.Equal(before, after, 12);
   }
 
@@ -105,12 +106,12 @@ public class MovingPeaksTests
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     var x = new RealVector(33.0, 33.0);
-    var before = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
+    var before = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
     var changed = false;
     for (var i = 0; i < 50; i++) {
       p.UpdateOnce();
-      var now = p.Evaluate(x, RandomNumberGenerator.NoRandom)[0];
+      var now = p.Evaluate(x, TestRandoms.NoRandom)[0];
       if (now.IsAlmost(before, 1e-12)) {
         continue;
       }

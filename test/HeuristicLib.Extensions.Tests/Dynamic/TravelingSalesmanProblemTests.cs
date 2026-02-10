@@ -32,11 +32,11 @@ public class TravelingSalesmanProblemTests
     var p = new ActivatedTravelingSalesmanProblem(data, env, 1.0, 0.0);
     Assert.Equal([true, true, true, true], p.CurrentState);
     var tour = new Permutation([0, 1, 2, 3]);
-    var cost = p.Evaluate(tour, RandomNumberGenerator.NoRandom)[0];
+    var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     // Full cycle: 0->1->2->3->0 = 1 + 4 + 6 + 3 = 14
     Assert.Equal(14.0, cost, 10);
     p.UpdateOnce();
-    var cost1 = p.Evaluate(tour, RandomNumberGenerator.NoRandom)[0];
+    var cost1 = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     Assert.Equal(14.0, cost1, 10);
   }
 
@@ -47,7 +47,7 @@ public class TravelingSalesmanProblemTests
     var env = RandomNumberGenerator.Create(0);// irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, true], 0.0);
     var tour = new Permutation([0, 1, 2, 3]);
-    var cost = p.Evaluate(tour, RandomNumberGenerator.NoRandom)[0];
+    var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     // 0->2 (2) + 2->3 (6) + 3->0 (3) = 11
     Assert.Equal(11.0, cost, 10);
     p.UpdateOnce();
@@ -63,10 +63,10 @@ public class TravelingSalesmanProblemTests
     var p = new ActivatedTravelingSalesmanProblem(data, env, [false, false, false, false], 0.0);
     var tour = new Permutation([0, 1, 2, 3]);
 
-    var cost = p.Evaluate(tour, RandomNumberGenerator.NoRandom)[0];
+    var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     Assert.Equal(0.0, cost, 10);
     p.UpdateOnce();
-    var cost1 = p.Evaluate(tour, RandomNumberGenerator.NoRandom)[0];
+    var cost1 = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     Assert.Equal(0.0, cost1, 10);
   }
 
@@ -79,10 +79,10 @@ public class TravelingSalesmanProblemTests
 
     var tour = new Permutation([0, 1, 2, 3]);
 
-    var cost = p.Evaluate(tour, RandomNumberGenerator.NoRandom)[0];
+    var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     Assert.Equal(0.0, cost, 10);
     p.UpdateOnce();
-    var cost1 = p.Evaluate(tour, RandomNumberGenerator.NoRandom)[0];
+    var cost1 = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     Assert.Equal(0.0, cost1, 10);
   }
 
@@ -104,7 +104,7 @@ public class TravelingSalesmanProblemTests
     var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 0.0);
 
     var tour = new Permutation([0, 1, 2, 3]);
-    var cost = p.Evaluate(tour, RandomNumberGenerator.NoRandom)[0];
+    var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
 
     // filtered tour: [0,3] => 0->3 (3) + 3->0 (3) = 6
     Assert.Equal(6.0, cost, 10);
@@ -120,14 +120,14 @@ public class TravelingSalesmanProblemTests
     var cachedEval = p.GetCachedEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem, Permutation>().CreateNewExecutionInstance();
     Assert.Equal(0, p.EpochClock.CurrentEpoch);
 
-    var r1 = cachedEval.Evaluate([tour], RandomNumberGenerator.NoRandom, p.SearchSpace, p)[0];
-    var r2 = cachedEval.Evaluate([tour], RandomNumberGenerator.NoRandom, p.SearchSpace, p)[0];
+    var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
+    var r2 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
     Assert.Equal(r1.ToArray(), r2.ToArray());
 
     p.UpdateOnce();
     Assert.Equal(1, p.EpochClock.CurrentEpoch);
 
-    var r3 = cachedEval.Evaluate([tour], RandomNumberGenerator.NoRandom, p.SearchSpace, p)[0];
+    var r3 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
 
     Assert.NotNull(r3);
   }

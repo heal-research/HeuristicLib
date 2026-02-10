@@ -2,6 +2,7 @@
 using HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Tests;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
@@ -32,12 +33,12 @@ public class QuadraticAssignmentProblemTests
   public void Evaluate_KnownToyInstance_ReturnsExpectedCost()
   {
     var problem = QuadraticAssignmentProblem.CreateDefault();
-    var rng = RandomNumberGenerator.System(1);
+    var rng = TestRandoms.SystemRandomGenerator(1);
 
     // identity assignment: facility i -> location i
-    var sol = new Permutation([0, 1, 2, 3]);// adapt ctor if needed
+    var sol = new Permutation([0, 1, 2, 3]); // adapt ctor if needed
 
-    var cost = problem.Evaluate(sol, rng)[0];// adapt cast if ObjectiveVector differs
+    var cost = problem.Evaluate(sol, rng)[0]; // adapt cast if ObjectiveVector differs
 
     // Compute expected manually for the default matrices you used
     // expected = sum_i sum_j F[i,j] * D[i,j]
@@ -52,28 +53,28 @@ public class QuadraticAssignmentProblemTests
   [Fact]
   public void Alpha0_EqualsInstanceA()
   {
-    var rng = RandomNumberGenerator.System(1);
+    var rng = TestRandoms.SystemRandomGenerator(1);
     var a = QuadraticAssignmentProblemHelper.CreateDefaultA();
     var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
     var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 0.1, true);
     var sol = new Permutation(Enumerable.Range(0, a.Size).ToArray());
-    var costDyn = dyn.Evaluate(sol, RandomNumberGenerator.NoRandom);
-    var costA = new QuadraticAssignmentProblem(a).Evaluate(sol, RandomNumberGenerator.NoRandom);
+    var costDyn = dyn.Evaluate(sol, TestRandoms.NoRandom);
+    var costA = new QuadraticAssignmentProblem(a).Evaluate(sol, TestRandoms.NoRandom);
     Assert.Equal(costA, costDyn);
   }
 
   [Fact]
   public void Alpha1_EqualsInstanceB_AfterSteps()
   {
-    var rng = RandomNumberGenerator.System(1);
+    var rng = TestRandoms.SystemRandomGenerator(1);
     var a = QuadraticAssignmentProblemHelper.CreateDefaultA();
     var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
     var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 1.0, true, false);
 
     dyn.UpdateOnce();
     var sol = new Permutation(Enumerable.Range(0, a.Size).ToArray());
-    var costDyn = dyn.Evaluate(sol, RandomNumberGenerator.NoRandom);
-    var costB = new QuadraticAssignmentProblem(b).Evaluate(sol, RandomNumberGenerator.NoRandom);
+    var costDyn = dyn.Evaluate(sol, TestRandoms.NoRandom);
+    var costB = new QuadraticAssignmentProblem(b).Evaluate(sol, TestRandoms.NoRandom);
     Assert.Equal(costB, costDyn);
   }
 
@@ -81,14 +82,14 @@ public class QuadraticAssignmentProblemTests
   public void SigmaZero_EqualsBaseCost_Always()
   {
     var baseData = QuadraticAssignmentProblemHelper.CreateDefaultA();
-    var env = RandomNumberGenerator.System(123);
+    var env = TestRandoms.SystemRandomGenerator(123);
 
     var dyn = new NoisyFlowQuadraticAssignmentProblem(baseData, env, 0.0);
     var stat = new QuadraticAssignmentProblem(baseData);
 
     var sol = new Permutation(Enumerable.Range(0, baseData.Size).ToArray());
-    var c1 = dyn.Evaluate(sol, RandomNumberGenerator.NoRandom);
-    var c2 = stat.Evaluate(sol, RandomNumberGenerator.NoRandom);
+    var c1 = dyn.Evaluate(sol, TestRandoms.NoRandom);
+    var c2 = stat.Evaluate(sol, TestRandoms.NoRandom);
 
     Assert.Equal(c2, c1);
 
@@ -97,7 +98,7 @@ public class QuadraticAssignmentProblemTests
       dyn.EpochClock.AdvanceEpoch();
     }
 
-    var c3 = dyn.Evaluate(sol, RandomNumberGenerator.NoRandom);
+    var c3 = dyn.Evaluate(sol, TestRandoms.NoRandom);
     Assert.Equal(c2, c3);
   }
 }

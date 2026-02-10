@@ -21,7 +21,7 @@ public class SlidingWindowRegressionTests
 
   private static SymbolicExpressionTree MakeVariableTree(SymbolicExpressionTreeSearchSpace enc, string varName)
   {
-    var tree = enc.Grammar.MakeStump(RandomNumberGenerator.NoRandom);
+    var tree = enc.Grammar.MakeStump(TestRandoms.NoRandom);
     tree.Root[0].AddSubtree(new Variable().CreateTreeNode(varName, 1));
 
     return tree;
@@ -35,7 +35,7 @@ public class SlidingWindowRegressionTests
     var inner = new SymbolicRegressionProblem(data, SymbolicRegressionProblem.GetDefaultEncoding(data.InputVariables), spy);
     var p = new SlidingWindowSymbolicRegressionProblem(inner, 2, 4, 1);
     var tree = MakeVariableTree(p.SearchSpace, "x1");
-    _ = p.Evaluate(tree, RandomNumberGenerator.NoRandom)[0];
+    _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
     Assert.Equal([7.0, 10, 13.0, 16.0], spy.LastPredictions[0]);
   }
 
@@ -47,7 +47,7 @@ public class SlidingWindowRegressionTests
     var inner = new SymbolicRegressionProblem(data, SymbolicRegressionProblem.GetDefaultEncoding(data.InputVariables), spy);
     var p = new SlidingWindowSymbolicRegressionProblem(inner, 8, 5, 1);
     var tree = MakeVariableTree(p.SearchSpace, "x1");
-    _ = p.Evaluate(tree, RandomNumberGenerator.NoRandom)[0];
+    _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
     Assert.Equal([25.0, 28.0, 1.0, 4.0, 7.0], spy.LastPredictions[0]);
   }
 
@@ -59,10 +59,10 @@ public class SlidingWindowRegressionTests
     var inner = new SymbolicRegressionProblem(data, SymbolicRegressionProblem.GetDefaultEncoding(data.InputVariables), spy);
     var p = new SlidingWindowSymbolicRegressionProblem(inner, 1, 4, 3);
     var tree = MakeVariableTree(p.SearchSpace, "x1");
-    _ = p.Evaluate(tree, RandomNumberGenerator.NoRandom)[0];
+    _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
     Assert.Equal([4.0, 7.0, 10.0, 13.0], spy.LastPredictions[0]);
     p.UpdateOnce();
-    _ = p.Evaluate(tree, RandomNumberGenerator.NoRandom)[0];
+    _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
     Assert.Equal([13.0, 16.0, 19.0, 22.0], spy.LastPredictions[1]);
   }
 
@@ -74,7 +74,7 @@ public class SlidingWindowRegressionTests
     var inner = new SymbolicRegressionProblem(data, SymbolicRegressionProblem.GetDefaultEncoding(data.InputVariables), spy);
     var p = new SlidingWindowSymbolicRegressionProblem(inner, 9, 7, 1);
     var tree = MakeVariableTree(p.SearchSpace, "x1");
-    _ = p.Evaluate(tree, RandomNumberGenerator.NoRandom)[0];
+    _ = p.Evaluate(tree, TestRandoms.NoRandom)[0];
     Assert.Equal(7, spy.LastPredictions[0].Length);
   }
 
