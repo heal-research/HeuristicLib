@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using HEAL.HeuristicLib.Observers;
+using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;

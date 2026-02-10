@@ -170,11 +170,11 @@ public class SymbolicRegressionTests
 
   private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, Problems.IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
   {
-    return MultiMutator.Create(
+    return MultiMutator.Create([
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
       new OnePointShaker(),
       new RemoveBranchManipulation(),
-      new ReplaceBranchManipulation());
+      new ReplaceBranchManipulation()]);
   }
 }

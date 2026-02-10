@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Observers;
+﻿using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
