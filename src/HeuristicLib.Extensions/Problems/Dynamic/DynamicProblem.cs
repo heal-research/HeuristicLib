@@ -1,5 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using HEAL.HeuristicLib.Analyzers;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,8 +11,12 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 // ToDo: A DynamicProblem should be, foremost, a Problem. It "being" also an Observer, is an interesting way of implementing about it, but we have to think if this is really what we want.
-public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserver<TGenotype>, IInterceptorObserver<TGenotype>,
+public abstract class DynamicProblem<TGenotype, TSearchSpace> :
+  IEvaluatorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
+  IInterceptorObserver<TGenotype, IAlgorithmState, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
   IDynamicProblem<TGenotype, TSearchSpace>,
+  IEvaluatorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
+  IInterceptorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>,
   IDisposable
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -63,7 +70,15 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserv
 
   public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing);
 
-  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  IEvaluatorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>
+    IExecutable<IEvaluatorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    => this;
+
+  IInterceptorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>
+    IExecutable<IInterceptorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    => this;
+
+  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
   {
     OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
     evaluationLog.Clear();
@@ -72,7 +87,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserv
     }
   }
 
-  public void AfterInterception(IAlgorithmState newState, IAlgorithmState currentState, IAlgorithmState? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public void AfterInterception(IAlgorithmState newState, IAlgorithmState currentState, IAlgorithmState? previousState, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
   {
     if (UpdatePolicy == UpdatePolicy.AfterInterception) {
       ResolvePendingUpdates();
