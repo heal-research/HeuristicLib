@@ -56,9 +56,8 @@ public static class GridAlgorithmExtensions
     where TAlgorithmState : class, IAlgorithmState
     where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   {
-   
   }
-  
+
   // extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> executor)
   //   where TSearchSpace : class, ISearchSpace<TGenotype>
   //   where TProblem : class, IProblem<TGenotype, TSearchSpace>

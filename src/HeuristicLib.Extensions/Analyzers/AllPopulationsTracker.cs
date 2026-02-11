@@ -2,7 +2,6 @@
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
-using HEAL.HeuristicLib.Operators.Interceptors;
 
 namespace HEAL.HeuristicLib.Analyzers;
 

@@ -86,10 +86,10 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
   }
 }
 
-public record CachingEvaluator<TGenotype, TSearchSpace, TProblem> 
-  : CachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype> 
-  where TGenotype : notnull 
-  where TSearchSpace : class, ISearchSpace<TGenotype> 
+public record CachingEvaluator<TGenotype, TSearchSpace, TProblem>
+  : CachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>
+  where TGenotype : notnull
+  where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public CachingEvaluator(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, long? sizeLimit = null) : base(evaluator, x => x, sizeLimit) { }

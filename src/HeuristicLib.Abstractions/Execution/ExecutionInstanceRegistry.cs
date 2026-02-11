@@ -2,7 +2,7 @@
 
 public sealed class ExecutionInstanceRegistry
 {
-  private readonly Dictionary<object, object> cache = new(ReferenceEqualityComparer.Instance);
+  private readonly Dictionary<IExecutable<IExecutionInstance>, IExecutionInstance> cache = new(ReferenceEqualityComparer.Instance);
 
   public TExecutionInstance Resolve<TExecutionInstance>(IExecutable<TExecutionInstance> executable)
     where TExecutionInstance : class, IExecutionInstance

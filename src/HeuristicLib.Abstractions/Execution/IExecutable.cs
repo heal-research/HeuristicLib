@@ -10,11 +10,13 @@ public interface IExecutionInstance;
 
 public static class ExecutableExtensions
 {
-  extension<TExecutionInstance>(IExecutable<TExecutionInstance> executable) where TExecutionInstance : class, IExecutionInstance
+  extension<TExecutionInstance>(IExecutable<TExecutionInstance> executable)
+    where TExecutionInstance : class, IExecutionInstance
   {
     public TExecutionInstance CreateExecutionInstance()
     {
-      return executable.CreateExecutionInstance(new ExecutionInstanceRegistry());
+      var registry = new ExecutionInstanceRegistry();
+      return registry.Resolve(executable);
     }
   }
 }
