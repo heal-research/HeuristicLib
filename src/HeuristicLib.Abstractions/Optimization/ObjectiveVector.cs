@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Optimization;
 public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<ObjectiveVector>
 {
   private readonly double[] values;
-  
+
   // ToDo: think about creating a ctor that takes memory ownership to avoid reallocation
   public ObjectiveVector(params IEnumerable<double> values)
   {
@@ -27,7 +27,7 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
 
   public bool IsSingleObjective => Count == 1;
   public ObjectiveValue? SingleFitness => values.SingleOrDefault();
-  
+
   // public IEnumerator<SingleFitness> GetEnumerator() => ((IEnumerable<SingleFitness>)values).GetEnumerator();
   // IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
   // public int Count => values.Length;
@@ -53,7 +53,7 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
 
     return values.SequenceEqual(other.values);
   }
-  
+
   //public static implicit operator Fitness(SingleFitness[] values) => new(values);
   public static implicit operator ObjectiveVector(double[] values) => new(values/*.Select(v => new SingleFitness(v))*/);
 

@@ -36,8 +36,8 @@ public class PythonGenealogyAnalysis
     RunConfigurableRepeated<T>(int repetitions, Func<int, ExperimentResult<T>> experiment, int seed)
     where T : class
   {
-    return BatchExecution.Parallel<ExperimentResult<T>>(repetitions, r => experiment( r.NextInt()), RandomNumberGenerator.Create(seed), maxDegreeOfParallelism: -1)
-    .ToArray();
+    return BatchExecution.Parallel<ExperimentResult<T>>(repetitions, r => experiment(r.NextInt()), RandomNumberGenerator.Create(seed), maxDegreeOfParallelism: -1)
+                         .ToArray();
   }
 
   public static ExperimentResult<SymbolicExpressionTree>[] RunSymbolicRegressionConfigurable(string file, SymRegExperimentParameters parameters, int repetitions) =>
@@ -230,12 +230,12 @@ public class PythonGenealogyAnalysis
 
   private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
   {
-    var symRegAllMutator = MultiMutator.Create([
+    var symRegAllMutator = MultiMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
       new OnePointShaker(),
       new RemoveBranchManipulation(),
-      new ReplaceBranchManipulation()]);
+      new ReplaceBranchManipulation());
 
     return symRegAllMutator;
   }

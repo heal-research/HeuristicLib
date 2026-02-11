@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record class AfterIterationsTerminator<TGenotype>
+public record AfterIterationsTerminator<TGenotype>
   : Terminator<TGenotype>
 {
   private readonly int maximumIterations;
@@ -27,7 +27,6 @@ public record class AfterIterationsTerminator<TGenotype>
       this.maximumIterations = maximumIterations;
       currentCounter = 0;
     }
-
 
     public override bool ShouldTerminate()
     {

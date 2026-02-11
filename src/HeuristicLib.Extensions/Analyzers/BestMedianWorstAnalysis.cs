@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Observers;
+﻿using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -32,7 +32,7 @@ public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, IS
 public class BestMedianWorstAnalysis<TGenotype> : IInterceptorObserver<TGenotype, PopulationState<TGenotype>>
 {
   private readonly List<BestMedianWorstEntry<TGenotype>> bestSolutions = [];
-  
+
   public IReadOnlyList<BestMedianWorstEntry<TGenotype>> BestSolutions => bestSolutions;
 
   public void AfterInterception(PopulationState<TGenotype> newState, PopulationState<TGenotype> currentState, PopulationState<TGenotype>? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)

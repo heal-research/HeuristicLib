@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public record class ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator
+public record ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator
 {
   private const int MaxTries = 100;
 

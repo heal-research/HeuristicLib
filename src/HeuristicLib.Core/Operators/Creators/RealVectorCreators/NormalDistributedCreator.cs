@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 
-public record class NormalDistributedCreator(RealVector means, RealVector sigmas) 
+public record NormalDistributedCreator(RealVector means, RealVector sigmas)
   : SingleSolutionStatelessCreator<RealVector, RealVectorSearchSpace>
 {
   public RealVector Means { get; set; } = means;

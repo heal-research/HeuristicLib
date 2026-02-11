@@ -21,7 +21,7 @@ public record EvolutionStrategyState<TGenotype> : PopulationState<TGenotype>
   public required double MutationStrength { get; init; }
 }
 
-public record class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
+public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -43,14 +43,14 @@ public record class EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
     var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
     var crossoverInstance = Crossover is not null ? instanceRegistry.GetOrCreate(Crossover) : null;
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
-    
+
     IReplacer<TGenotype, TSearchSpace, TProblem> replacer = Strategy switch {
       EvolutionStrategyType.Comma => new ElitismReplacer<TGenotype>(0),
       EvolutionStrategyType.Plus => new PlusSelectionReplacer<TGenotype>(),
       _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
     };
     var replacerInstance = instanceRegistry.GetOrCreate(replacer);
-    
+
     return new EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>(
       interceptorInstance,
       evaluatorInstance,
@@ -95,7 +95,7 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
     InitialMutationStrength = initialMutationStrength;
     Replacer = replacer;
   }
-  
+
   public override EvolutionStrategyState<TGenotype> ExecuteStep(EvolutionStrategyState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {

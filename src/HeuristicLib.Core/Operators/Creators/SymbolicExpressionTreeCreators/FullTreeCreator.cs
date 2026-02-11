@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
-public record class FullTreeCreator : SymbolicExpressionTreeCreator
+public record FullTreeCreator : SymbolicExpressionTreeCreator
 {
   /// <summary>
   ///   GetEvaluator a symbolic expression tree using the 'Full' method.
@@ -41,8 +41,8 @@ public record class FullTreeCreator : SymbolicExpressionTreeCreator
     }
 
     var allowedSymbols = searchSpace.Grammar.AllowedSymbols
-      .Where(s => s.InitialFrequency > 0.0 && searchSpace.Grammar.GetMaximumSubtreeCount(s) > 0)
-      .ToList();
+                                    .Where(s => s.InitialFrequency > 0.0 && searchSpace.Grammar.GetMaximumSubtreeCount(s) > 0)
+                                    .ToList();
 
     for (var i = 0; i < arity; i++) {
       var selectedSymbol = SelectSymbol(random, seedNode, maxDepth, allowedSymbols, searchSpace.Grammar, i);

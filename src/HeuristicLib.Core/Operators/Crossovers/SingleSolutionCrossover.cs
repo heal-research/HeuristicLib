@@ -6,12 +6,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public abstract record class SingleSolutionCrossover<TGenotype, TSearchSpace, TProblem> 
+public abstract record SingleSolutionCrossover<TGenotype, TSearchSpace, TProblem>
   : Crossover<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
-}
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
 
 public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace, TProblem>
   : CrossoverInstance<TGenotype, TSearchSpace, TProblem>
@@ -19,72 +17,65 @@ public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace, T
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-  
+
   public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
     BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace, problem), random);
 }
 
-
-public abstract record class SingleSolutionCrossover<TGenotype, TSearchSpace>
+public abstract record SingleSolutionCrossover<TGenotype, TSearchSpace>
   : Crossover<TGenotype, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-{
-}
+  where TSearchSpace : class, ISearchSpace<TGenotype>;
 
-public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace> 
+public abstract class SingleSolutionCrossoverInstance<TGenotype, TSearchSpace>
   : CrossoverInstance<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
-  
+
   public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
     BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace), random);
 }
 
-
-public abstract record class SingleSolutionCrossover<TGenotype>
-  : Crossover<TGenotype>
-{
-}
+public abstract record SingleSolutionCrossover<TGenotype>
+  : Crossover<TGenotype>;
 
 public abstract class SingleSolutionCrossoverInstance<TGenotype>
   : CrossoverInstance<TGenotype>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random);
-  
+
   public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) =>
     BatchExecution.Sequential(parents, (p, r) => Cross(p, r), random);
 }
 
-
 // ToDo: Since the stateless versions will be the most commonly used ones, think about naming them "Crossover" and the other ones the "StatefulCrossover".
 
-public abstract record class SingleSolutionStatelessCrossover<TGenotype, TSearchSpace, TProblem> 
+public abstract record SingleSolutionStatelessCrossover<TGenotype, TSearchSpace, TProblem>
   : StatelessCrossover<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-  
+
   public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
     BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace, problem), random);
 }
 
-public abstract record class SingleSolutionStatelessCrossover<TGenotype, TSearchSpace> 
+public abstract record SingleSolutionStatelessCrossover<TGenotype, TSearchSpace>
   : StatelessCrossover<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
-  
+
   public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
     BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace), random);
 }
 
-public abstract record class SingleSolutionStatelessCrossover<TGenotype>
+public abstract record SingleSolutionStatelessCrossover<TGenotype>
   : StatelessCrossover<TGenotype>
 {
   public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random);
-  
+
   public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) =>
     BatchExecution.Sequential(parents, (p, r) => Cross(p, r), random);
 }

@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
 namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
-public record class RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator
+public record RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator
 {
   /// <summary>
   ///   GetEvaluator a symbolic expression tree using 'RampedHalfAndHalf' strategy.

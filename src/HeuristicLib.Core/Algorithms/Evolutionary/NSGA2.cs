@@ -9,7 +9,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record class NSGA2<TGenotype, TSearchSpace, TProblem>
+public record NSGA2<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
@@ -30,7 +30,7 @@ public record class NSGA2<TGenotype, TSearchSpace, TProblem>
     var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
     var replacerInstance = instanceRegistry.GetOrCreate(Replacer);
-    
+
     return new NSGA2Instance<TGenotype, TSearchSpace, TProblem>(
       interceptorInstance,
       evaluatorInstance,
@@ -56,8 +56,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
   protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
 
-
-  public NSGA2Instance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer) 
+  public NSGA2Instance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
@@ -67,7 +66,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
     Selector = selector;
     Replacer = replacer;
   }
-  
+
   public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {

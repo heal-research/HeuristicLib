@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms;
 
 // ToDo: think about how to offer better parallel execution.
-public abstract record class MultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithmKey>
+public abstract record MultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithmKey>
   : IMultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithmKey>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -38,17 +38,16 @@ public static class MultiStreamAlgorithmExtensions
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
       return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct);
     }
-    
-    
+
     public async Task<IReadOnlyList<KeyValuePair<TAlgorithmKey, TAlgorithmState>>> RunToCompletionAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
     {
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
       var tasks = algorithmInstance.RunStreamingAsync(problem, random, initialState, cancellationToken)
-        .Select(async kvp => KeyValuePair.Create(kvp.Key, await kvp.Value.LastAsync(cancellationToken)))
-        .ToList();
+                                   .Select(async kvp => KeyValuePair.Create(kvp.Key, await kvp.Value.LastAsync(cancellationToken)))
+                                   .ToList();
       return await Task.WhenAll(tasks);
     }
-    
+
     public IReadOnlyList<KeyValuePair<TAlgorithmKey, IEnumerable<TAlgorithmState>>> RunStreaming(
       TProblem problem,
       IRandomNumberGenerator random,
@@ -59,7 +58,7 @@ public static class MultiStreamAlgorithmExtensions
       var algorithmInstance = algorithm.CreateExecutionInstance(new ExecutionInstanceRegistry());
       return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).Select(kvp => KeyValuePair.Create(kvp.Key, kvp.Value.ToBlockingEnumerable(ct))).ToList();
     }
-    
+
     public IReadOnlyList<KeyValuePair<TAlgorithmKey, TAlgorithmState>> RunToCompletion(
       TProblem problem,
       IRandomNumberGenerator random,
@@ -71,7 +70,7 @@ public static class MultiStreamAlgorithmExtensions
       return algorithmInstance.RunToCompletionAsync<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm, TAlgorithmKey>(problem, random, initialState, ct).GetAwaiter().GetResult();
     }
   }
-  
+
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm, TAlgorithmKey>(IMultiStreamAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithmKey> algorithmInstance)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -81,11 +80,11 @@ public static class MultiStreamAlgorithmExtensions
     public async Task<IReadOnlyList<KeyValuePair<TAlgorithmKey, TAlgorithmState>>> RunToCompletionAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken cancellationToken = default)
     {
       var tasks = algorithmInstance.RunStreamingAsync(problem, random, initialState, cancellationToken)
-        .Select(async kvp => KeyValuePair.Create(kvp.Key, await kvp.Value.LastAsync(cancellationToken)))
-        .ToList();
+                                   .Select(async kvp => KeyValuePair.Create(kvp.Key, await kvp.Value.LastAsync(cancellationToken)))
+                                   .ToList();
       return await Task.WhenAll(tasks);
     }
-    
+
     public IReadOnlyList<KeyValuePair<TAlgorithmKey, IEnumerable<TAlgorithmState>>> RunStreaming(
       TProblem problem,
       IRandomNumberGenerator random,
@@ -95,7 +94,7 @@ public static class MultiStreamAlgorithmExtensions
     {
       return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).Select(kvp => KeyValuePair.Create(kvp.Key, kvp.Value.ToBlockingEnumerable(ct))).ToList();
     }
-    
+
     public IReadOnlyList<KeyValuePair<TAlgorithmKey, TAlgorithmState>> RunToCompletion(
       TProblem problem,
       IRandomNumberGenerator random,

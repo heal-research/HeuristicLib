@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 // ToDo: Think about if we really want to handle termination via decorators. Maybe as additional mechanism for algorithms that do not hav inner termination criterion, but otherwise, this feels overcomplicated.
-public record class TerminatableAlgorithm<TG, TS, TP, TR>
+public record TerminatableAlgorithm<TG, TS, TP, TR>
   : Algorithm<TG, TS, TP, TR>, ITerminatableAlgorithm<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -19,13 +19,12 @@ public record class TerminatableAlgorithm<TG, TS, TP, TR>
   public required IAlgorithm<TG, TS, TP, TR> Algorithm { get; init; }
   public required ITerminator<TG, TR, TS, TP> Terminator { get; init; }
 
-
   public override TerminatableAlgorithmInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     var terminatorInstance = instanceRegistry.GetOrCreate(Terminator);
     var algorithmInstance = instanceRegistry.GetOrCreate(Algorithm);
-    
+
     return new TerminatableAlgorithmInstance<TG, TS, TP, TR>(
       evaluatorInstance,
       algorithmInstance,
@@ -42,7 +41,7 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<T
   protected readonly IAlgorithmInstance<TG, TS, TP, TR> Algorithm;
   protected readonly ITerminatorInstance<TG, TR, TS, TP> Terminator;
 
-  public TerminatableAlgorithmInstance(IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithmInstance<TG, TS, TP, TR> algorithm, ITerminatorInstance<TG, TR, TS, TP> terminator) 
+  public TerminatableAlgorithmInstance(IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithmInstance<TG, TS, TP, TR> algorithm, ITerminatorInstance<TG, TR, TS, TP> terminator)
     : base(evaluator)
   {
     Algorithm = algorithm;
@@ -55,7 +54,7 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<T
     if (initialState is not null && Terminator.ShouldTerminate(initialState, problem.SearchSpace, problem)) {
       yield break;
     }
-    
+
     await foreach (var state in Algorithm.RunStreamingAsync(problem, random, initialState, ct)) {
       yield return state;
 

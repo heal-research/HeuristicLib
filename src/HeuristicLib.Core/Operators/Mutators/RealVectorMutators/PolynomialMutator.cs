@@ -4,11 +4,11 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-public record class PolynomialMutator : SingleSolutionStatelessMutator<RealVector, RealVectorSearchSpace>
+public record PolynomialMutator : SingleSolutionStatelessMutator<RealVector, RealVectorSearchSpace>
 {
   private readonly bool atLeastOnce;
   private readonly double eta;
-  public double GetVarProb(RealVectorSearchSpace searchSpace) => Math.Min(0.5, 1.0 / searchSpace.Length);
+  private static double GetVarProb(RealVectorSearchSpace searchSpace) => Math.Min(0.5, 1.0 / searchSpace.Length);
 
   public PolynomialMutator(double eta = 20, bool atLeastOnce = false)
   {

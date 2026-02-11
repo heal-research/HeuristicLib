@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public record class NoCrossover<TGenotype>
+public record NoCrossover<TGenotype>
   : SingleSolutionStatelessCrossover<TGenotype>
 {
   public static readonly NoCrossover<TGenotype> Instance = new();

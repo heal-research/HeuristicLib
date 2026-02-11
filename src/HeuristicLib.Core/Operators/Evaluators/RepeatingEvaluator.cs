@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public record class RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
+public record RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
   : Evaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>

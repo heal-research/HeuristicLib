@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public record class RandomCrossover<TGenotype> 
+public record RandomCrossover<TGenotype>
   : SingleSolutionStatelessCrossover<TGenotype>
 {
   public double Bias { get; }
@@ -12,7 +12,7 @@ public record class RandomCrossover<TGenotype>
   {
     ArgumentOutOfRangeException.ThrowIfLessThan(bias, 0);
     ArgumentOutOfRangeException.ThrowIfGreaterThan(bias, 1);
-    
+
     Bias = bias;
   }
 

@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
-public record class BalancedTreeCreator : SymbolicExpressionTreeCreator
+public record BalancedTreeCreator : SymbolicExpressionTreeCreator
 {
   public double IrregularityBias { get; set; }
 
@@ -39,8 +39,6 @@ public record class BalancedTreeCreator : SymbolicExpressionTreeCreator
       candidates.Add(s);
       weights.Add(s.InitialFrequency);
     }
-
-    if (candidates.Count == 0) { }
 
     var symbol = candidates.Count == 1 ? candidates[0] : candidates.SampleProportional(random, 1, weights).First();
     var node = symbol.CreateTreeNode();
@@ -117,12 +115,10 @@ public record class BalancedTreeCreator : SymbolicExpressionTreeCreator
   }
 
   #region helpers
-
   private sealed record NodeInfo(SymbolicExpressionTreeNode Node, int Depth, int Arity);
 
   public void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeSearchSpace searchSpace, int maxTreeLength, int maxTreeDepth)
     => CreateExpression(random, seedNode, searchSpace, maxTreeLength, maxTreeDepth, IrregularityBias);
-
   #endregion
 
   public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)

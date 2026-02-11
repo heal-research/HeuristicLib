@@ -7,6 +7,7 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Tests;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
@@ -15,9 +16,9 @@ public class SlidingWindowRegressionTests
   public static Dataset GetDataset() => new ModifiableDataset(["x1", "x2", "y"], new[,] { { 1.0, 2.0, 3.0 }, { 4.0, 5.0, 6.0 }, { 7.0, 8.0, 9.0 }, { 10.0, 11.0, 12.0 }, { 13.0, 14.0, 15.0 }, { 16.0, 17.0, 18.0 }, { 19.0, 20.0, 21.0 }, { 22.0, 23.0, 24.0 }, { 25.0, 26.0, 27.0 }, { 28.0, 29.0, 30.0 } });
 
   public static RegressionProblemData GetProblemData(Dataset dataset) => new(
-  dataset,
-  dataset.DoubleVariables.Last(),
-  trainingRange: ..dataset.Rows);
+    dataset,
+    dataset.DoubleVariables.Last(),
+    trainingRange: ..dataset.Rows);
 
   private static SymbolicExpressionTree MakeVariableTree(SymbolicExpressionTreeSearchSpace enc, string varName)
   {
@@ -80,7 +81,6 @@ public class SlidingWindowRegressionTests
 
   public class SpyEvaluator : RegressionEvaluator
   {
-
     public List<double[]> LastPredictions = [];
     public override ObjectiveDirection Direction => ObjectiveDirection.Minimize;
 

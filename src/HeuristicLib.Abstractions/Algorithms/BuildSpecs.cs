@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record AlgorithmBuildSpec<TG, TS, TP, TR> : IBuildSpec, ISpecWithEvaluator<TG, TS, TP>
+public abstract record AlgorithmBuildSpec<TG, TS, TP, TR> : ISpecWithEvaluator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState

@@ -9,9 +9,7 @@ public interface IInterceptor<TGenotype, TAlgorithmState, in TSearchSpace, in TP
   : IOperator<IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>>
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
- }
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
 
 public interface IInterceptorInstance<TGenotype, TAlgorithmState, in TSearchSpace, in TProblem>
   : IOperatorInstance

@@ -7,43 +7,41 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
-public partial record class PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
+public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
   : Creator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-
-  [OrderedEquality]
-  public ImmutableArray<TGenotype> PredefinedSolutions { get; init; }
+  [OrderedEquality] public ImmutableArray<TGenotype> PredefinedSolutions { get; init; }
 
   public ICreator<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutions { get; init; }
 
   public PredefinedSolutionsCreator(ImmutableArray<TGenotype> predefinedSolutions, ICreator<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutions)
   {
-    this.PredefinedSolutions = predefinedSolutions;
-    this.CreatorForRemainingSolutions = creatorForRemainingSolutions;
+    PredefinedSolutions = predefinedSolutions;
+    CreatorForRemainingSolutions = creatorForRemainingSolutions;
   }
 
   public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorForRemainingSolutionsInstance = instanceRegistry.GetOrCreate(CreatorForRemainingSolutions);
-    return new Instance(this.PredefinedSolutions, creatorForRemainingSolutionsInstance);
+    return new Instance(PredefinedSolutions, creatorForRemainingSolutionsInstance);
   }
-  
-  public class Instance 
+
+  public class Instance
     : CreatorInstance<TGenotype, TSearchSpace, TProblem>
   {
     private int currentSolutionIndex;
-    
+
     private readonly IReadOnlyList<TGenotype> predefinedSolutions;
     private readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance;
-    
+
     public Instance(IReadOnlyList<TGenotype> predefinedSolutions, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance)
     {
       this.predefinedSolutions = predefinedSolutions;
       this.creatorForRemainingSolutionsInstance = creatorForRemainingSolutionsInstance;
     }
-  
+
     public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
       var offspring = new TGenotype[count];
@@ -62,7 +60,7 @@ public partial record class PredefinedSolutionsCreator<TGenotype, TSearchSpace, 
         return offspring;
       }
 
-      var remainingRandom = random.Fork(1); 
+      var remainingRandom = random.Fork(1);
       var remaining = creatorForRemainingSolutionsInstance.Create(countRemaining, remainingRandom, searchSpace, problem);
       for (var i = 0; i < remaining.Count; i++) {
         offspring[countPredefined + i] = remaining[i];
@@ -72,5 +70,3 @@ public partial record class PredefinedSolutionsCreator<TGenotype, TSearchSpace, 
     }
   }
 }
-
-

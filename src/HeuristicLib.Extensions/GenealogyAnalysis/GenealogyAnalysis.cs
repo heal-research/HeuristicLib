@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Observers;
+﻿using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -14,7 +14,7 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
   where T : class
 {
   public readonly GenealogyGraph<T> Graph = new(equality ?? EqualityComparer<T>.Default);
-  
+
   public void AfterCross(IReadOnlyList<T> offspring, IReadOnlyList<IParents<T>> parents, IRandomNumberGenerator random, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
     foreach (var (parents1, child) in parents.Zip(offspring)) {
@@ -61,14 +61,13 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
   //  wrappedCrossover = crossover == null ? null : this.WrapCrossover(crossover);
   //  wrappedMutator = mutator == null ? null : this.WrapMutator(mutator);
   //}
-  
 }
 
 public class RankAnalysis<T>(IEqualityComparer<T>? equality = null) : GenealogyAnalysis<T>(equality) where T : class
 {
   public List<List<double>> Ranks { get; } = [];
 
-  public override void AfterInterception(PopulationState<T> newState, PopulationState<T> currentState, PopulationState<T>? previousState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem) 
+  public override void AfterInterception(PopulationState<T> newState, PopulationState<T> currentState, PopulationState<T>? previousState, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
     base.AfterInterception(newState, currentState, previousState, searchSpace, problem);
     RecordRanks(Graph, Ranks);

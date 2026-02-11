@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
-public record class GrowTreeCreator : SymbolicExpressionTreeCreator
+public record GrowTreeCreator : SymbolicExpressionTreeCreator
 {
   /// <summary>
   ///   GetEvaluator a symbolic expression tree using the 'Grow' method.
@@ -62,10 +62,8 @@ public record class GrowTreeCreator : SymbolicExpressionTreeCreator
       return;
     }
 
-    foreach (var subTree in root.Subtrees) {
-      if (searchSpace.Grammar.GetMaximumSubtreeCount(subTree.Symbol) != 0) {
-        RecursiveCreate(random, subTree, currentDepth + 1, maxDepth, searchSpace, allowedSymbols);
-      }
+    foreach (var subTree in root.Subtrees.Where(subTree => searchSpace.Grammar.GetMaximumSubtreeCount(subTree.Symbol) > 0)) {
+      RecursiveCreate(random, subTree, currentDepth + 1, maxDepth, searchSpace, allowedSymbols);
     }
   }
 

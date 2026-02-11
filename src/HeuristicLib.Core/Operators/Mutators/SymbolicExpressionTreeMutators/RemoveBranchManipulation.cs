@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public sealed record class RemoveBranchManipulation : SymbolicExpressionTreeManipulator
+public sealed record RemoveBranchManipulation : SymbolicExpressionTreeManipulator
 {
   private const int MaxTries = 100;
 
@@ -56,11 +56,11 @@ public sealed record class RemoveBranchManipulation : SymbolicExpressionTreeMani
   {
     // determine possible symbols that will lead to the smallest possible tree
     var possibleSymbols = (from s in searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
-      where s.InitialFrequency > 0.0
-      group s by searchSpace.Grammar.GetMinimumExpressionLength(s)
-      into g
-      orderby g.Key
-      select g).First().ToList();
+                           where s.InitialFrequency > 0.0
+                           group s by searchSpace.Grammar.GetMinimumExpressionLength(s)
+                           into g
+                           orderby g.Key
+                           select g).First().ToList();
     var weights = possibleSymbols.Select(x => x.InitialFrequency).ToList();
 
     var selectedSymbol = possibleSymbols.SampleProportional(random, 1, weights).First();

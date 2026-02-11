@@ -1,6 +1,6 @@
 ﻿namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record class NeverTerminator<TGenotype>
+public record NeverTerminator<TGenotype>
   : StatelessTerminator<TGenotype>
 {
   public override bool ShouldTerminate()

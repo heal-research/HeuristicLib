@@ -7,12 +7,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
-public partial record class PipelineMutator<TG, TS, TP> : Mutator<TG, TS, TP>
+public partial record PipelineMutator<TG, TS, TP> : Mutator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  [OrderedEquality]
-  public ImmutableArray<IMutator<TG, TS, TP>> Mutators { get; }
+  [OrderedEquality] public ImmutableArray<IMutator<TG, TS, TP>> Mutators { get; }
 
   public PipelineMutator(ImmutableArray<IMutator<TG, TS, TP>> mutators)
   {
@@ -20,10 +19,11 @@ public partial record class PipelineMutator<TG, TS, TP> : Mutator<TG, TS, TP>
       throw new ArgumentException("At least one crossover must be provided.", nameof(mutators));
     }
 
-    this.Mutators = mutators;
+    Mutators = mutators;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) {
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
     var mutatorInstances = Mutators.Select(instanceRegistry.GetOrCreate).ToArray();
     return new Instance(mutatorInstances);
   }

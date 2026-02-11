@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record class ParetoCrowdingTournamentSelector<TGenotype> 
+public record ParetoCrowdingTournamentSelector<TGenotype>
   : StatelessSelector<TGenotype>
 {
   private readonly int tournamentSize;

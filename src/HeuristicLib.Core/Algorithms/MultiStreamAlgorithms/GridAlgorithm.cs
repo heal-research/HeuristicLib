@@ -9,15 +9,14 @@ namespace HEAL.HeuristicLib.Algorithms.MultiStreamAlgorithms;
 
 // ToDo: Think if we need a better name for this: "PortfolioAlgorithm" or something like this, since this algorithm is not an algorithm that is actually doing something on a grid.
 [Equatable]
-public partial record class GridAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
+public partial record GridAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
   : MultiStreamAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
   where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
-  [OrderedEquality]
-  public required Grid<TAlgorithm> ParameterGrid { get; init; }
+  [OrderedEquality] public required Grid<TAlgorithm> ParameterGrid { get; init; }
 
   public override GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
@@ -33,12 +32,12 @@ public class GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithm
   where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
   protected readonly Grid<TAlgorithm> ParameterGrid;
-  
+
   public GridAlgorithmInstance(Grid<TAlgorithm> parameterGrid)
   {
     ParameterGrid = parameterGrid;
   }
-  
+
   public override IReadOnlyList<KeyValuePair<TAlgorithm, IAsyncEnumerable<TAlgorithmState>>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default)
   {
     var algorithms = ParameterGrid.GetConfigurations();
@@ -55,11 +54,8 @@ public static class GridAlgorithmExtensions
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
-    where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  {
-   
-  }
-  
+    where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>;
+
   // extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> executor)
   //   where TSearchSpace : class, ISearchSpace<TGenotype>
   //   where TProblem : class, IProblem<TGenotype, TSearchSpace>

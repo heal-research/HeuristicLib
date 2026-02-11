@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record class BestSelector<TGenotype> 
+public record BestSelector<TGenotype>
   : StatelessSelector<TGenotype>
 {
   public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)

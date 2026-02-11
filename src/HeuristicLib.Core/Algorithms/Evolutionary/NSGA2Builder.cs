@@ -8,7 +8,11 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
+#pragma warning disable S101
+// ReSharper disable once IdentifierTypo
+// ReSharper disable once InconsistentNaming
 public record NSGA2Builder<TG, TS, TP> : AlgorithmBuilder<TG, TS, TP, PopulationState<TG>, NSGA2<TG, TS, TP>, NSGA2BuildSpec<TG, TS, TP>>
+#pragma warning restore S101
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {

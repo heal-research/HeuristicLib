@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record class IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>,
     IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
@@ -17,8 +17,6 @@ public abstract record class IterativeAlgorithm<TGenotype, TSearchSpace, TProble
   //public int? MaximumIterations { get; init; }
   //public ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> Terminator { get; init; } = new NeverTerminator<TGenotype>();
   public IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; init; }
-
-  
 
   // private ValueTask<TAlgorithmState> ExecuteStepAsync(TProblem problem, TAlgorithmState? previousState, IRandomNumberGenerator random)
   // {
@@ -33,7 +31,6 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProbl
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-
   protected readonly IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor;
 
   protected IterativeAlgorithmInstance(IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
@@ -62,9 +59,9 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProbl
       }
 
       yield return newState;
-      
+
       await Task.Yield();
-      
+
       previousState = newState;
     }
   }
@@ -75,8 +72,5 @@ public static class IterativeAlgorithmExtensions
   extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-    where TAlgorithmState : class, IAlgorithmState
-  {
-   
-  }
+    where TAlgorithmState : class, IAlgorithmState;
 }

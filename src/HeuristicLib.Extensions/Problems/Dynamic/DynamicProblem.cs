@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using HEAL.HeuristicLib.Observers;
+using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -78,7 +78,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> : IEvaluatorObserv
       ResolvePendingUpdates();
     }
   }
-  
+
   ~DynamicProblem() => Dispose(false);
 
   protected virtual void Dispose(bool disposing) => rwLock.Dispose();

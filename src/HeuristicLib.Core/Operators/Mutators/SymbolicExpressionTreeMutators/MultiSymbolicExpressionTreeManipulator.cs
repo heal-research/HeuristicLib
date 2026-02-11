@@ -6,10 +6,9 @@ using HEAL.HeuristicLib.SearchSpaces.Trees;
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
 [Equatable]
-public sealed partial record class MultiSymbolicExpressionTreeManipulator : SymbolicExpressionTreeManipulator
+public sealed partial record MultiSymbolicExpressionTreeManipulator : SymbolicExpressionTreeManipulator
 {
-  [OrderedEquality]
-  public IReadOnlyList<SymbolicExpressionTreeManipulator> SubOperators { get; } = [];
+  [OrderedEquality] public IReadOnlyList<SymbolicExpressionTreeManipulator> SubOperators { get; } = [];
 
   public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
   {

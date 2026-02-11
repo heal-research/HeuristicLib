@@ -5,12 +5,13 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record class TargetTerminator<TGenotype>
+public record TargetTerminator<TGenotype>
   : StatelessTerminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   private readonly ObjectiveVector target;
-  
-  public TargetTerminator(ObjectiveVector target) {
+
+  public TargetTerminator(ObjectiveVector target)
+  {
     this.target = target;
   }
 

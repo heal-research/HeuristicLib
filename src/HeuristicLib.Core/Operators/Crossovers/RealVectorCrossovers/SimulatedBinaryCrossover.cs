@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public record class SimulatedBinaryCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
+public record SimulatedBinaryCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
 {
   /// <summary>
   ///   Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if
@@ -124,7 +124,10 @@ public static class Sbx
       var x2 = p2[v];
 
       // skip fixed variables (equal bounds)
+#pragma warning disable S1244
+      // ReSharper disable once CompareOfFloatsByEqualityOperator
       if (xl[v % xl.Count] == xu[v % xu.Count]) {
+#pragma warning restore S1244
         continue;
       }
 
@@ -187,7 +190,7 @@ public static class Sbx
   }
 }
 
-public record class SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
+public record SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
 {
   public double ProbVar { get; set; } = 0.5;
   public double Eta { get; set; } = 15.0;

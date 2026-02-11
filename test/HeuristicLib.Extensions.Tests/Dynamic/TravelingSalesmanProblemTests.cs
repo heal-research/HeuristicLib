@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.Tests;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
 
@@ -28,7 +29,7 @@ public class TravelingSalesmanProblemTests
   public void Evaluate_AllActive_EqualsFullCycleCost()
   {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = RandomNumberGenerator.Create(0);// irrelevant for evaluation
+    var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, 1.0, 0.0);
     Assert.Equal([true, true, true, true], p.CurrentState);
     var tour = new Permutation([0, 1, 2, 3]);
@@ -44,7 +45,7 @@ public class TravelingSalesmanProblemTests
   public void Evaluate_SkipsInactiveCities_ReconnectsTour()
   {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = RandomNumberGenerator.Create(0);// irrelevant for evaluation
+    var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, true], 0.0);
     var tour = new Permutation([0, 1, 2, 3]);
     var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
@@ -59,7 +60,7 @@ public class TravelingSalesmanProblemTests
   public void Evaluate_NoActiveCities_ReturnsZero()
   {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = RandomNumberGenerator.Create(0);// irrelevant for evaluation
+    var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, [false, false, false, false], 0.0);
     var tour = new Permutation([0, 1, 2, 3]);
 
@@ -74,7 +75,7 @@ public class TravelingSalesmanProblemTests
   public void Evaluate_OneActiveCity_ReturnsZero()
   {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = RandomNumberGenerator.Create(0);// irrelevant for evaluation
+    var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, [false, true, false, false], 0.0);
 
     var tour = new Permutation([0, 1, 2, 3]);
@@ -90,7 +91,7 @@ public class TravelingSalesmanProblemTests
   public void Update_SwitchProbOne_FlipsAllBits()
   {
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
-    var env = RandomNumberGenerator.Create(0);// irrelevant for evaluation
+    var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, false], 1.0);
     p.UpdateOnce();
     Assert.Equal([false, true, false, true], p.CurrentState);

@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public record class EdgeRecombinationCrossover : SingleSolutionStatelessCrossover<Permutation>
+public record EdgeRecombinationCrossover : SingleSolutionStatelessCrossover<Permutation>
 {
   public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random)
   {

@@ -8,9 +8,7 @@ namespace HEAL.HeuristicLib.Operators;
 public interface IReplacer<TGenotype, in TSearchSpace, in TProblem>
   : IOperator<IReplacerInstance<TGenotype, TSearchSpace, TProblem>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
-}
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
 
 public interface IReplacerInstance<TGenotype, in TSearchSpace, in TProblem>
   : IOperatorInstance
@@ -18,6 +16,6 @@ public interface IReplacerInstance<TGenotype, in TSearchSpace, in TProblem>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-  
+
   int GetOffspringCount(int populationSize);
 }

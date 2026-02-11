@@ -4,16 +4,14 @@ using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public sealed record class OnePointShaker : SymbolicExpressionTreeManipulator
+public sealed record OnePointShaker : SymbolicExpressionTreeManipulator
 {
   #region properties
-
   public double ShakingFactor
   {
     get;
     set;
   } = 1.0;
-
   #endregion
 
   public static SymbolicExpressionTree Shake(IRandomNumberGenerator random, SymbolicExpressionTree tree, double shakingFactor)

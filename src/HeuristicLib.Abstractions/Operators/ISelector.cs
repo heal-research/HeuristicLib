@@ -8,9 +8,7 @@ namespace HEAL.HeuristicLib.Operators;
 public interface ISelector<TGenotype, in TSearchSpace, in TProblem>
   : IOperator<ISelectorInstance<TGenotype, TSearchSpace, TProblem>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
-}
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
 
 public interface ISelectorInstance<TGenotype, in TSearchSpace, in TProblem>
   : IOperatorInstance

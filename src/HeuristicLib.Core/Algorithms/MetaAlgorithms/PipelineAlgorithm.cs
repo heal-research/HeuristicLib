@@ -13,15 +13,14 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 // ToDo: Add support for Transformation between different (or the same typed) states.
 
 [Equatable]
-public partial record class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public partial record PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
   where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
-  [OrderedEquality]
-  public ImmutableArray<TAlgorithm> Algorithms { get; }
+  [OrderedEquality] public ImmutableArray<TAlgorithm> Algorithms { get; }
 
   public PipelineAlgorithm(ImmutableArray<TAlgorithm> algorithms)
   {
@@ -31,7 +30,7 @@ public partial record class PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpac
   public override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
-    
+
     return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
       evaluatorInstance,
       Algorithms
@@ -48,7 +47,7 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
 {
   protected readonly IReadOnlyList<TAlgorithm> Algorithms;
 
-  public PipelineAlgorithmInstance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms) 
+  public PipelineAlgorithmInstance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms)
     : base(evaluator)
   {
     Algorithms = algorithms;

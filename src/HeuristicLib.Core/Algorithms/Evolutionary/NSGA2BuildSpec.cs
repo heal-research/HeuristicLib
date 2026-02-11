@@ -5,7 +5,9 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
+#pragma warning disable S101
 public sealed record NSGA2BuildSpec<TG, TS, TP>
+#pragma warning restore S101
   : AlgorithmBuildSpec<TG, TS, TP, PopulationState<TG>>,
     ISpecWithCreator<TG, TS, TP>,
     ISpecWithSelector<TG, TS, TP>,

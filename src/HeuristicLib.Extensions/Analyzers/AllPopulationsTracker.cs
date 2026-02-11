@@ -1,8 +1,8 @@
-﻿using HEAL.HeuristicLib.Observers;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.Operators.Interceptors;
 
 namespace HEAL.HeuristicLib.Analyzers;
 

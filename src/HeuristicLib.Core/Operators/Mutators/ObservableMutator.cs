@@ -8,29 +8,28 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
-public partial record class ObservableMutator<TG, TS, TP>
+public partial record ObservableMutator<TG, TS, TP>
   : Mutator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
   public IMutator<TG, TS, TP> Mutator { get; }
-  
-  [OrderedEquality]
-  public ImmutableArray<IMutatorObserver<TG, TS, TP>> Observers { get; }
+
+  [OrderedEquality] public ImmutableArray<IMutatorObserver<TG, TS, TP>> Observers { get; }
 
   public ObservableMutator(IMutator<TG, TS, TP> mutator, params ImmutableArray<IMutatorObserver<TG, TS, TP>> observers)
   {
-    this.Mutator = mutator;
-    this.Observers = observers;
+    Mutator = mutator;
+    Observers = observers;
   }
-  
+
   public override IMutatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
     return new ObservableMutatorInstance(mutatorInstance, Observers);
   }
 
-  private sealed class ObservableMutatorInstance(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserver<TG, TS, TP>> observers) 
+  private sealed class ObservableMutatorInstance(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserver<TG, TS, TP>> observers)
     : MutatorInstance<TG, TS, TP>
   {
     public override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
@@ -40,7 +39,7 @@ public partial record class ObservableMutator<TG, TS, TP>
       foreach (var observer in observers) {
         observer.AfterMutate(result, parent, random, searchSpace, problem);
       }
-      
+
       return result;
     }
   }
@@ -60,12 +59,12 @@ public class MutatorObserver<TG, TS, TP> : IMutatorObserver<TG, TS, TP>
   where TP : class, IProblem<TG, TS>
 {
   private readonly Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate;
-  
+
   public MutatorObserver(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate)
   {
     this.afterMutate = afterMutate;
   }
-  
+
   public void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
     afterMutate.Invoke(offspring, parent, random, searchSpace, problem);
@@ -82,29 +81,29 @@ public static class ObservableMutatorExtensions
     {
       return new ObservableMutator<TG, TS, TP>(mutator, observer);
     }
-    
+
     public IMutator<TG, TS, TP> ObserveWith(params ImmutableArray<IMutatorObserver<TG, TS, TP>> observers)
     {
       return new ObservableMutator<TG, TS, TP>(mutator, observers);
     }
-    
+
     public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate)
     {
       var observer = new MutatorObserver<TG, TS, TP>(afterMutate);
       return mutator.ObserveWith(observer);
     }
-    
+
     public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterMutate)
     {
       var observer = new MutatorObserver<TG, TS, TP>((offspring, _, _, _, _) => afterMutate(offspring));
       return mutator.ObserveWith(observer);
     }
-    
+
     public IMutator<TG, TS, TP> CountInvocations(InvocationCounter counter)
     {
       return mutator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
     }
-    
+
     public IMutator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
     {
       counter = new InvocationCounter();

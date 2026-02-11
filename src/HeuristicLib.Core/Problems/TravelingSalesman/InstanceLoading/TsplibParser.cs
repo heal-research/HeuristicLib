@@ -6,7 +6,6 @@ namespace HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 
 public class TsplibParser
 {
-
   private const char SectionSeparator = ':';
   private static readonly char[] ItemSeparator = [' ', '\t'];
 
@@ -36,6 +35,7 @@ public class TsplibParser
   public TsplibParser(Stream stream)
     : this() =>
     source = new StreamReader(stream);
+
   public string Name { get; private set; }
   public TSPLIBTypes Type { get; private set; }
   public string Comment { get; private set; }
@@ -250,10 +250,11 @@ public class TsplibParser
     if (Dimension == 0) {
       throw new InvalidDataException("Input file does not contain dimension information.");
     }
+
     switch (nodeCoordType) {
       case TslplibNodeCoordTypes.NO_COORDS:
         return;
-      case TslplibNodeCoordTypes.Unknown:// It's a pity that there is a documented standard which is ignored in most files.
+      case TslplibNodeCoordTypes.Unknown: // It's a pity that there is a documented standard which is ignored in most files.
       case TslplibNodeCoordTypes.Twod_Coords:
         Vertices = new double[Dimension, 2];
 
@@ -296,6 +297,7 @@ public class TsplibParser
       if (node == -1) {
         break;
       }
+
       depots.Add(node);
     } while (true);
 
@@ -307,6 +309,7 @@ public class TsplibParser
     if (Dimension == 0) {
       throw new InvalidDataException("Input file does not contain dimension information.");
     }
+
     Demands = new double[Dimension];
     for (var i = 0; i < Dimension; i++) {
       var tokens = NextLine()!.Split(ItemSeparator, StringSplitOptions.RemoveEmptyEntries);
@@ -339,11 +342,13 @@ public class TsplibParser
         if (number != -1) {
           throw new InvalidDataException("Input file must end the fixed edges section with a -1 in line " + currentLineNumber + ".");
         }
+
         finished = true;
       } else {
         if (tokens.Length != 2) {
           throw new InvalidDataException("Input file contains an error in line " + currentLineNumber + ", exactly two nodes need to be given in each line.");
         }
+
         var node1 = int.Parse(tokens[0], CultureInfo.InvariantCulture.NumberFormat) - 1;
         var node2 = int.Parse(tokens[1], CultureInfo.InvariantCulture.NumberFormat) - 1;
         edges.Add(Tuple.Create(node1, node2));
@@ -419,6 +424,7 @@ public class TsplibParser
       if (IsNullOrEmpty(line)) {
         break;
       }
+
       var nodes = line.Split(ItemSeparator, StringSplitOptions.RemoveEmptyEntries);
       if (nodes.Length == 0) {
         break;
@@ -428,17 +434,19 @@ public class TsplibParser
       foreach (var nodeString in nodes) {
         var node = int.Parse(nodeString, CultureInfo.InvariantCulture.NumberFormat);
         if (node == -1) {
-          finished = tours.Count > 0 && tours[^1].Count == 0// -1 followed by -1
+          finished = tours.Count > 0 && tours[^1].Count == 0 // -1 followed by -1
                      || source.BaseStream.CanSeek && source.Peek() == -1
                      || source.Peek() == 'E';
           if (finished) {
             break;
           }
+
           tours.Add([]);
         } else {
           if (tours.Count == 0) {
             tours.Add([]);
           }
+
           tours[^1].Add(node - 1);
         }
       }
@@ -451,6 +459,7 @@ public class TsplibParser
     if (tours[^1].Count == 0) {
       tours.RemoveAt(tours.Count - 1);
     }
+
     Tour = tours.Select(x => x.ToArray()).ToArray();
   }
 
@@ -502,7 +511,7 @@ public class TsplibParser
               } else {
                 dim2 = dim1 + 1;
               }
-            } else {// column-wise
+            } else { // column-wise
               dim1++;
               if ((!diagonal || dim1 != dim2 + 1) && (diagonal || dim1 != dim2)) {
                 continue;
@@ -511,7 +520,7 @@ public class TsplibParser
               dim2++;
               dim1 = 0;
             }
-          } else {// lower-triangular
+          } else { // lower-triangular
             if (rowWise) {
               dim2++;
               if ((!diagonal || dim2 != dim1 + 1)
@@ -521,7 +530,7 @@ public class TsplibParser
 
               dim1++;
               dim2 = 0;
-            } else {// column-wise
+            } else { // column-wise
               dim1++;
               if (dim1 != Dimension) {
                 continue;
@@ -535,7 +544,7 @@ public class TsplibParser
               }
             }
           }
-        } else {// full-matrix
+        } else { // full-matrix
           dim2++;
           if (dim2 != Dimension) {
             continue;
@@ -551,7 +560,6 @@ public class TsplibParser
   }
 
   #region Private Enums
-
   private enum TSPLIBSections
   {
     Unknown = 0,
@@ -594,7 +602,7 @@ public class TsplibParser
     Lower_Diag_Column = 10
   }
 
-  private enum TSPLIBEdgeWeightDataFormats {}
+  private enum TSPLIBEdgeWeightDataFormats;
 
   private enum TslplibNodeCoordTypes
   {
@@ -603,7 +611,5 @@ public class TsplibParser
     Threed_Coords = 2,
     NO_COORDS = 3
   }
-
   #endregion
-
 }

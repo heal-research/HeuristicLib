@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
+public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -36,7 +36,7 @@ public record class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var mutator = MutationRate >= 1.0
       ? Mutator
       : Mutator.WithRate(MutationRate);
-    
+
     var interceptorInstance = Interceptor is not null ? instanceRegistry.GetOrCreate(Interceptor) : null;
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     var creatorInstance = instanceRegistry.GetOrCreate(Creator);
@@ -44,7 +44,7 @@ public record class GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var mutatorInstance = instanceRegistry.GetOrCreate(mutator);
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
     var replacerInstance = instanceRegistry.GetOrCreate(Replacer);
-    
+
     return new GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       PopulationSize,
       creatorInstance,
@@ -71,7 +71,7 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly double MutationRate;
   protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
-  
+
   public GeneticAlgorithmInstance(
     int populationSize,
     ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator,
@@ -93,7 +93,6 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
     Selector = selector;
     Replacer = replacer;
   }
-  
 
   public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
@@ -124,9 +123,9 @@ public class GeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
 }
 
 // ToDo: Do we want this, and if yes, do we want it for all algorithms?
-public record class GeneticAlgorithm<TGenotype, TSearchSpace> : GeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> where TGenotype : class where TSearchSpace : class, ISearchSpace<TGenotype>;
+public record GeneticAlgorithm<TGenotype, TSearchSpace> : GeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> where TGenotype : class where TSearchSpace : class, ISearchSpace<TGenotype>;
 
-public record class GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>> where TGenotype : class;
+public record GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>> where TGenotype : class;
 
 public static class GeneticAlgorithm
 {

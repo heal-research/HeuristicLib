@@ -9,20 +9,16 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 // ToDo: Think of a better name, maybe "ChooseOneCrossover".
 [Equatable]
-public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGenotype, TSearchSpace, TProblem>
+public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  [OrderedEquality]
-  public ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers { get; }
-  
-  [OrderedEquality]
-  public ImmutableArray<double> Weights { get; }
-  
-  [IgnoreEquality] 
-  private readonly double sumWeights;
-  [IgnoreEquality]
-  private readonly double[] cumulativeSumWeights;
+  [OrderedEquality] public ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers { get; }
+
+  [OrderedEquality] public ImmutableArray<double> Weights { get; }
+
+  [IgnoreEquality] private readonly double sumWeights;
+  [IgnoreEquality] private readonly double[] cumulativeSumWeights;
 
   public MultiCrossover(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
   {
@@ -51,7 +47,7 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
       cumulativeSumWeights[i] = sumWeights;
     }
   }
-  
+
   public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var crossoverInstances = Crossovers.Select(instanceRegistry.GetOrCreate).ToArray();
@@ -63,7 +59,7 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
     private readonly IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers;
     private readonly double[] cumulativeSumWeights;
     private readonly double sumWeights;
-    
+
     public Instance(IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers, double[] cumulativeSumWeights, double sumWeights)
     {
       this.crossovers = crossovers;
@@ -155,44 +151,44 @@ public partial record class MultiCrossover<TGenotype, TSearchSpace, TProblem> : 
 
 public static class MultiCrossover
 {
-   public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null) 
-     where TSearchSpace : class, ISearchSpace<TGenotype> 
-     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-   {
-     return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers, weights);
-   }
+  public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  {
+    return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers, weights);
+  }
 
-   // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers, IReadOnlyList<double>? weights = null) 
-   //   where TSearchSpace : class, ISearchSpace<TGenotype>
-   // {
-   //   return new(crossovers, weights);
-   // }
+  // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers, IReadOnlyList<double>? weights = null) 
+  //   where TSearchSpace : class, ISearchSpace<TGenotype>
+  // {
+  //   return new(crossovers, weights);
+  // }
 
-   // public static MultiCrossover<TGenotype> Create<TGenotype>(IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers, IReadOnlyList<double>? weights = null)
-   // {
-   //   return new(crossovers, weights);
-   // }
+  // public static MultiCrossover<TGenotype> Create<TGenotype>(IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers, IReadOnlyList<double>? weights = null)
+  // {
+  //   return new(crossovers, weights);
+  // }
 
-   // public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers) 
-   //   where TSearchSpace : class, ISearchSpace<TGenotype> 
-   //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-   // {
-   //   return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers);
-   // }
+  // public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers) 
+  //   where TSearchSpace : class, ISearchSpace<TGenotype> 
+  //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  // {
+  //   return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers);
+  // }
 
-   // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers) 
-   //   where TSearchSpace : class, ISearchSpace<TGenotype>
-   // {
-   //   return new(crossovers);
-   // }
+  // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers) 
+  //   where TSearchSpace : class, ISearchSpace<TGenotype>
+  // {
+  //   return new(crossovers);
+  // }
 
-   // public static MultiCrossover<TGenotype> Create<TGenotype>(params IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers)
-   // {
-   //   return new(crossovers);
-   // }
+  // public static MultiCrossover<TGenotype> Create<TGenotype>(params IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers)
+  // {
+  //   return new(crossovers);
+  // }
 
-   extension<TGenotype, TSearchSpace, TProblem>(ICrossover<TGenotype, TSearchSpace, TProblem> crossover) 
-    where TSearchSpace : class, ISearchSpace<TGenotype> 
+  extension<TGenotype, TSearchSpace, TProblem>(ICrossover<TGenotype, TSearchSpace, TProblem> crossover)
+    where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
   {
     public MultiCrossover<TGenotype, TSearchSpace, TProblem> WithRate(double crossoverRate)

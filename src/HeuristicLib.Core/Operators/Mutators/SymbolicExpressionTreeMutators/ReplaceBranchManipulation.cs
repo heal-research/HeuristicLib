@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public sealed record class ReplaceBranchManipulation : SymbolicExpressionTreeManipulator
+public sealed record ReplaceBranchManipulation : SymbolicExpressionTreeManipulator
 {
   private const int MaxTries = 100;
 
@@ -31,10 +31,10 @@ public sealed record class ReplaceBranchManipulation : SymbolicExpressionTreeMan
 
       allowedSymbols.Clear();
       allowedSymbols.AddRange(searchSpace.Grammar.GetAllowedChildSymbols(parent.Symbol, childIndex)
-        .Where(symbol => symbol != child.Symbol
-                         && symbol.InitialFrequency > 0
-                         && searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
-                         && searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
+                                         .Where(symbol => symbol != child.Symbol
+                                                          && symbol.InitialFrequency > 0
+                                                          && searchSpace.Grammar.GetMinimumExpressionDepth(symbol) + 1 <= maxDepth
+                                                          && searchSpace.Grammar.GetMinimumExpressionLength(symbol) <= maxLength));
 
       tries++;
     } while (tries < MaxTries && allowedSymbols.Count == 0);

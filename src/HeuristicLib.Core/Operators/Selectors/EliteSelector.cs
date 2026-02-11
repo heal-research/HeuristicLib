@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record class EliteSelector<TGenotype, TSearchSpace, TProblem> 
+public record EliteSelector<TGenotype, TSearchSpace, TProblem>
   : Selector<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -14,7 +14,7 @@ public record class EliteSelector<TGenotype, TSearchSpace, TProblem>
   private readonly ISelector<TGenotype, TSearchSpace, TProblem> selector;
   private readonly BestSelector<TGenotype> best = new();
   private readonly int elites;
-  
+
   public EliteSelector(ISelector<TGenotype, TSearchSpace, TProblem> selector, int elites = 1)
   {
     this.selector = selector;

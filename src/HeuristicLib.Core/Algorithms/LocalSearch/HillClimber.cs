@@ -9,7 +9,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
-public record class HillClimber<TGenotype, TSearchSpace, TProblem>
+public record HillClimber<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -26,8 +26,7 @@ public record class HillClimber<TGenotype, TSearchSpace, TProblem>
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     var creatorInstance = instanceRegistry.GetOrCreate(Creator);
     var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
-    
-    
+
     return new HillClimberInstance<TGenotype, TSearchSpace, TProblem>(
       interceptorInstance,
       evaluatorInstance,
@@ -38,7 +37,6 @@ public record class HillClimber<TGenotype, TSearchSpace, TProblem>
       BatchSize
     );
   }
-  
 }
 
 public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
@@ -52,7 +50,7 @@ public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly int MaxNeighbors;
   protected readonly int BatchSize;
 
-  public HillClimberInstance(IInterceptorInstance<TGenotype, SingleSolutionState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, LocalSearchDirection direction, int maxNeighbors, int batchSize) 
+  public HillClimberInstance(IInterceptorInstance<TGenotype, SingleSolutionState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, LocalSearchDirection direction, int maxNeighbors, int batchSize)
     : base(interceptor, evaluator)
   {
     Creator = creator;
@@ -61,7 +59,7 @@ public class HillClimberInstance<TGenotype, TSearchSpace, TProblem>
     MaxNeighbors = maxNeighbors;
     BatchSize = batchSize;
   }
-  
+
   public override SingleSolutionState<TGenotype> ExecuteStep(SingleSolutionState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     if (previousState is null) {

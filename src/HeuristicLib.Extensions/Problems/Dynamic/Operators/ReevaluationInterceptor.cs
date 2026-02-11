@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
 
-public record class ReevaluationInterceptor<T, TR, TE, TP> 
+public record ReevaluationInterceptor<T, TR, TE, TP>
   : Interceptor<T, TR, TE, TP>
   where TR : PopulationState<T>
   where TE : class, ISearchSpace<T>
@@ -16,7 +16,7 @@ public record class ReevaluationInterceptor<T, TR, TE, TP>
 {
   private readonly IEvaluator<T, TE, TP> evaluator;
   private readonly TP problem;
-  
+
   public ReevaluationInterceptor(IEvaluator<T, TE, TP> evaluator, TP problem)
   {
     this.evaluator = evaluator;
@@ -32,12 +32,13 @@ public record class ReevaluationInterceptor<T, TR, TE, TP>
   public class Instance : InterceptorInstance<T, TR, TE, TP>
   {
     private readonly IEvaluatorInstance<T, TE, TP> evaluator;
-    
+
     private int requireReevaluation;
-    
-    public Instance(IEvaluatorInstance<T, TE, TP> evaluator, TP problem) {
+
+    public Instance(IEvaluatorInstance<T, TE, TP> evaluator, TP problem)
+    {
       this.evaluator = evaluator;
-      
+
       // ToDo: maybe we have a memory leak here?
       problem.EpochClock.OnEpochChange += (_, _) => Interlocked.Increment(ref requireReevaluation);
     }
@@ -58,9 +59,7 @@ public record class ReevaluationInterceptor<T, TR, TE, TP>
       return r;
     }
   }
-
 }
-
 
 // public class ReevaluationInterceptor<T, TR, TE, TP> : Interceptor<T, TR, TE, TP>
 //   where TR : PopulationState<T>

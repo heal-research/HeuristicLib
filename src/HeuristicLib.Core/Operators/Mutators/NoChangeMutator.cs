@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public record class NoChangeMutator<TGenotype> : SingleSolutionStatelessMutator<TGenotype>
+public record NoChangeMutator<TGenotype> : SingleSolutionStatelessMutator<TGenotype>
 {
   public static NoChangeMutator<TGenotype> Instance { get; } = new();
 

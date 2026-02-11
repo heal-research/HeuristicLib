@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 
-public sealed record class FullTreeShaker : SymbolicExpressionTreeManipulator
+public sealed record FullTreeShaker : SymbolicExpressionTreeManipulator
 {
   public double ShakingFactor
   {

@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record class StagnationTerminator<TGenotype>
+public record StagnationTerminator<TGenotype>
   : Terminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   private readonly int window;
@@ -18,7 +18,7 @@ public record class StagnationTerminator<TGenotype>
 
   public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    return new Instance(this.window);
+    return new Instance(window);
   }
 
   public class Instance
@@ -33,11 +33,11 @@ public record class StagnationTerminator<TGenotype>
     {
       this.window = window;
     }
-    
+
     public override bool ShouldTerminate(PopulationState<TGenotype> state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
     {
       bestQualitySoFar ??= problem.Objective.Worst;
-      
+
       var comparer = problem.Objective.TotalOrderComparer;
 
       var currentBestQuality = state.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
@@ -55,4 +55,3 @@ public record class StagnationTerminator<TGenotype>
     }
   }
 }
-

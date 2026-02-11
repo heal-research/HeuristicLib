@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
+public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -34,7 +34,7 @@ public record class OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype
     var crossoverInstance = instanceRegistry.GetOrCreate(Crossover);
     var mutatorInstance = instanceRegistry.GetOrCreate(Mutator);
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
-    
+
     return new OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       interceptorInstance,
       evaluatorInstance,
@@ -62,10 +62,9 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotyp
   protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly int Elites;
   protected readonly int MaxEffort;
-  protected readonly double Strictness = 1.0;
+  protected readonly double Strictness;
 
-
-  public OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, int elites, int maxEffort, double strictness) 
+  public OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, int elites, int maxEffort, double strictness)
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
@@ -77,7 +76,7 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotyp
     MaxEffort = maxEffort;
     Strictness = strictness;
   }
-  
+
   private PopulationState<TGenotype> CreateInitialPopulation(TProblem problem, IRandomNumberGenerator random)
   {
     var initialSolutions = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
@@ -175,7 +174,10 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotyp
   }
 }
 
+#pragma warning disable S101
 public sealed record OERAPGABuildSpec<TG, TS, TP>
+#pragma warning restore S101
+#pragma warning restore S101
   : AlgorithmBuildSpec<TG, TS, TP, PopulationState<TG>>,
     ISpecWithCreator<TG, TS, TP>,
     ISpecWithSelector<TG, TS, TP>,

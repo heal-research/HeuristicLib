@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-public record class GaussianMutator 
+public record GaussianMutator
   : SingleSolutionStatelessMutator<RealVector, RealVectorSearchSpace>,
     IVariableStrengthMutator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>
 {
@@ -14,6 +14,7 @@ public record class GaussianMutator
     MutationRate = mutationRate;
     MutationStrength = mutationStrength;
   }
+
   public double MutationRate { get; set; }
   public double MutationStrength { get; set; }
 

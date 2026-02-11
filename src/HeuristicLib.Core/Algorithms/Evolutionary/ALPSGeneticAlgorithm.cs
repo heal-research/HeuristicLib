@@ -10,14 +10,13 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-
 public record AlpsState<TGenotype> : AlgorithmState
 {
   public required IReadOnlyList<Population<TGenotype>> Population { get; init; }
   public required IReadOnlyList<IReadOnlyList<int>> Ages { get; init; }
 }
 
-public record class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
+public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -40,7 +39,7 @@ public record class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   {
     var internalMutator = new MultiMutator<TGenotype, TSearchSpace, TProblem>([Mutator, new NoChangeMutator<TGenotype>()], [MutationRate, 1 - MutationRate]);
     var internalReplacer = new ElitismReplacer<TGenotype>(Elites);
-    
+
     var interceptorInstance = Interceptor is not null ? instanceRegistry.GetOrCreate(Interceptor) : null;
     var evaluatorInstance = instanceRegistry.GetOrCreate(Evaluator);
     var creatorInstance = instanceRegistry.GetOrCreate(Creator);
@@ -48,7 +47,7 @@ public record class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var mutatorInstance = instanceRegistry.GetOrCreate(internalMutator);
     var selectorInstance = instanceRegistry.GetOrCreate(Selector);
     var replacerInstance = instanceRegistry.GetOrCreate(internalReplacer);
-    
+
     return new AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
       interceptorInstance,
       evaluatorInstance,
@@ -60,9 +59,6 @@ public record class AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
       replacerInstance
     );
   }
-
-
- 
 }
 
 public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
@@ -77,7 +73,7 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
   private readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector;
   private readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer;
 
-  public AlpsGeneticAlgorithmInstance(IInterceptorInstance<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> agedMutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer) 
+  public AlpsGeneticAlgorithmInstance(IInterceptorInstance<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> agedMutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer)
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
@@ -97,7 +93,7 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
       //var iteration = previousState?.CurrentIteration + 1 ?? 0;
 
       var initialLayerPopulation = agedCreator.Create(PopulationSize, random, agedSearchSpace, agedProblem);
-      
+
       var initialFitnesses = Evaluator.Evaluate(initialLayerPopulation, random, agedSearchSpace, agedProblem);
 
       return new AlpsState<TGenotype> {
@@ -106,11 +102,11 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
         //CurrentIteration = 0
       };
     }
-    
+
     var offspringCount = agedReplacer.GetOffspringCount(PopulationSize);
 
     // ToDo: implement actual ALPS logic with layers
-    
+
     var oldPopulation = previousState.Population[0].ToArray();
 
     var parents = agedSelector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, agedSearchSpace, agedProblem);
