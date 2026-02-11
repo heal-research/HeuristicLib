@@ -1,4 +1,5 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -31,7 +32,7 @@ public interface IMutatorObserver<TGenotype> :
 
 public static class BuilderExtensions
 {
-  public static void AttachObserver<TG, TS, TP, TR, TAlg, TBuildSpec>(this AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> builder, object analysis) where TS : class, ISearchSpace<TG>
+  public static void AttachObserver<TG, TS, TP, TR, TAlg, TBuildSpec>(this AlgorithmBuilder<TG, TS, TP, TR, TAlg, TBuildSpec> builder, IExecutable<IExecutionInstance> analysis) where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : class, IAlgorithmState
     where TAlg : IAlgorithm<TG, TS, TP, TR>
@@ -42,7 +43,7 @@ public static class BuilderExtensions
     builder.BuildFromSpec(spec);
   }
 
-  public static void AttachObserver<TG, TR, TS, TP>(this AlgorithmBuildSpec<TG, TS, TP, TR> spec, object analysis)
+  public static void AttachObserver<TG, TR, TS, TP>(this AlgorithmBuildSpec<TG, TS, TP, TR> spec, IExecutable<IExecutionInstance> analysis)
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : class, IAlgorithmState
@@ -87,4 +88,6 @@ public static class BuilderExtensions
     if (!t)
       throw new InvalidOperationException($"this observer {analysis} could not attach to {spec}");
   }
+
+  public static IExecutionInstance RetrieveAnalysis(this IExecutable<IExecutionInstance> analysis, ExecutionInstanceRegistry instanceRegistry) => instanceRegistry.Resolve(analysis);
 }

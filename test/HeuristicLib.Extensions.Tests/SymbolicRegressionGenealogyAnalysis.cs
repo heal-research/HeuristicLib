@@ -3,26 +3,25 @@ using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analyzers;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.GenealogyAnalysis;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.States;
+using RandomNumberGenerator = HEAL.HeuristicLib.Random.RandomNumberGenerator;
 
 namespace HEAL.HeuristicLib.Extensions.Tests;
 
@@ -63,9 +62,11 @@ public class UnitTest1
 
     ga = ga with { Interceptor = wrappedInterceptor };
 
-    var res = ga.WithMaxIterations(100).RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: TestContext.Current.CancellationToken);
+    var algorithmInstance = ga.WithMaxIterations(100).CreateExecutionInstance(out var registry);
+    var res = algorithmInstance.RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: TestContext.Current.CancellationToken);
+    var ares = (BestMedianWorstAnalysis<SymbolicExpressionTree>.Instance)analysis.RetrieveAnalysis(registry);
 
-    Assert.Equal(100, analysis.BestSolutions.Count);
+    Assert.Equal(100, ares.BestSolutions.Count);
     Assert.Equal(100, res.Population.Solutions.Count());
   }
 
@@ -91,13 +92,18 @@ public class UnitTest1
     var genealogyAnalysis = new GenealogyAnalysis<SymbolicExpressionTree>();
     ga.AttachObserver(genealogyAnalysis);
 
-    var res = ga.Build().WithMaxIterations(gens).RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
+    var ai = ga.Build().WithMaxIterations(gens).CreateExecutionInstance(out var registry);
+    var res = ai.RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
 
-    Assert.Equal(gens, qualities.BestSolutions.Count);
+    var qres = (BestMedianWorstAnalysis<SymbolicExpressionTree>.Instance)qualities.RetrieveAnalysis(registry);
+    var eres = (QualityCurveAnalysis<SymbolicExpressionTree>.Instance)evalQualities.RetrieveAnalysis(registry);
+    var gres = (GenealogyAnalysis<SymbolicExpressionTree>.Instance)genealogyAnalysis.RetrieveAnalysis(registry);
+
+    Assert.Equal(gens, qres.BestSolutions.Count);
     Assert.Equal(popsize, res.Population.Solutions.Length);
-    var graphViz = genealogyAnalysis.Graph.ToGraphViz();
+    var graphViz = gres.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
-    Assert.Equal(qualities.BestSolutions[^1].Best.ObjectiveVector, evalQualities.CurrentState[^1].best.ObjectiveVector);
+    Assert.Equal(qres.BestSolutions[^1].Best.ObjectiveVector, eres.CurrentState[^1].best.ObjectiveVector);
   }
 
   [Fact]
@@ -106,13 +112,13 @@ public class UnitTest1
     var problem = CreateTestSymbolicRegressionProblem();
     var ga = HillClimber.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
     //ga.RandomSeed = AlgorithmRandomSeed;
-    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
-
     var genealogy = new GenealogyAnalysis<SymbolicExpressionTree>();
     ga.AttachObserver(genealogy);
-    var res = ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: TestContext.Current.CancellationToken);
+    var ai = ga.Build().WithMaxIterations(100).CreateExecutionInstance(out var registry);
+    var res = ai.RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
+    var gres = (GenealogyAnalysis<SymbolicExpressionTree>.Instance)genealogy.RetrieveAnalysis(registry);
     Assert.Single(res.Population.Solutions);
-    var graphViz = genealogy.Graph.ToGraphViz();
+    var graphViz = gres.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
   }
 
@@ -136,10 +142,13 @@ public class UnitTest1
     var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree>();
     nsga2.AttachObserver(qualities);
 
-    var res = nsga2.Build().WithMaxIterations(maximumIterations).RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: TestContext.Current.CancellationToken);
-    Assert.Equal(maximumIterations, qualities.BestSolutions.Count);
+    var res = nsga2.Build().WithMaxIterations(maximumIterations).CreateExecutionInstance(out var registry).RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: TestContext.Current.CancellationToken);
+    var gres = (GenealogyAnalysis<SymbolicExpressionTree>.Instance)genealogy.RetrieveAnalysis(registry);
+    var qres = (BestMedianWorstAnalysis<SymbolicExpressionTree>.Instance)qualities.RetrieveAnalysis(registry);
+
+    Assert.Equal(maximumIterations, qres.BestSolutions.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Length);
-    var graphViz = genealogy.Graph.ToGraphViz();
+    var graphViz = gres.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
   }
 

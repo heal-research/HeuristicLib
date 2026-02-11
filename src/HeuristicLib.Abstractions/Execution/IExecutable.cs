@@ -18,5 +18,11 @@ public static class ExecutableExtensions
       var registry = new ExecutionInstanceRegistry();
       return registry.Resolve(executable);
     }
+
+    public TExecutionInstance CreateExecutionInstance(out ExecutionInstanceRegistry registry)
+    {
+      registry = new ExecutionInstanceRegistry();
+      return registry.Resolve(executable);
+    }
   }
 }
