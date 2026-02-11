@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
@@ -31,7 +32,7 @@ public class DynamicTSPTests
       new InversionMutator()
     );
 
-    ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
+    //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
     //ga.RandomSeed = 42;
     ga.PopulationSize = 100;
     ga.MutationRate = 0.05;
@@ -42,7 +43,7 @@ public class DynamicTSPTests
     //prob.AttachTo(ga);
 
     //execute
-    var resGa = ga.Build().RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: CancellationToken.None);
+    var resGa = ga.Build().WithMaxIterations(1000).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
     //look at results
     var objGa = resGa.Population

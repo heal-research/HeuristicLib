@@ -132,8 +132,7 @@ public static class GeneticAlgorithm
     double mutationRate,
     ISelector<TG, TS, TP> selector, IReplacer<TG, TS, TP> replacer, int populationSize,
     IEvaluator<TG, TS, TP> evaluator,
-    Interceptor<TG, PopulationState<TG>, TS, TP>? interceptor,
-    ITerminator<TG, PopulationState<TG>, TS, TP> terminator
+    Interceptor<TG, PopulationState<TG>, TS, TP>? interceptor
   )
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>

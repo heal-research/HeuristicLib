@@ -5,7 +5,6 @@ using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
@@ -43,7 +42,10 @@ public static class BuilderExtensions
     builder.BuildFromSpec(spec);
   }
 
-  public static void AttachObserver<TG, TR, TS, TP>(this AlgorithmBuildSpec<TG, TS, TP, TR> spec, object analysis) where TS : class, ISearchSpace<TG> where TP : class, IProblem<TG, TS> where TR : class, IAlgorithmState
+  public static void AttachObserver<TG, TR, TS, TP>(this AlgorithmBuildSpec<TG, TS, TP, TR> spec, object analysis)
+    where TS : class, ISearchSpace<TG>
+    where TP : class, IProblem<TG, TS>
+    where TR : class, IAlgorithmState
   {
     var t = false;
     if (analysis is IEvaluatorObserver<TG, TS, TP> evaluatorObserver) {
@@ -57,10 +59,10 @@ public static class BuilderExtensions
       t = true;
     }
 
-    if (analysis is ITerminatorObserver<TG, TR, TS, TP> terminatorObserver) {
-      spec.Terminator = spec.Terminator.ObserveWith(terminatorObserver);
-      t = true;
-    }
+    // if (analysis is ITerminatorObserver<TG, TR, TS, TP> terminatorObserver) {
+    //   spec.Terminator = spec.Terminator.ObserveWith(terminatorObserver);
+    //   t = true;
+    // }
 
     if (analysis is ICreatorObserver<TG, TS, TP> cAnalysis && spec is ISpecWithCreator<TG, TS, TP> cspec) {
       cspec.Creator = cspec.Creator.ObserveWith(cAnalysis);

@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
+using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Genotypes.Vectors;
@@ -120,7 +121,7 @@ public class PythonGenealogyAnalysis
     Action<PopulationState<T>>? callback,
     ExperimentParameters<T, TE> parameters) where TE : class, ISearchSpace<T> where T : class
   {
-    var terminator = new AfterIterationsTerminator<T>(parameters.Iterations);
+    //var terminator = new AfterIterationsTerminator<T>(parameters.Iterations);
     if (parameters.NoChildren < 0) {
       parameters.NoChildren = parameters.PopulationSize;
     }
@@ -137,10 +138,10 @@ public class PythonGenealogyAnalysis
           ga.Selector = parameters.Selector;
         }
 
-        ga.Terminator = terminator;
+        //ga.Terminator = terminator;
         // analyzers = AddAnalyzers(callback, ga, parameters);
         IAlgorithm<T, TE, IProblem<T, TE>, PopulationState<T>> t1 = ga.Build();
-        ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        ga.Build().WithMaxIterations(parameters.Iterations).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
         break;
       case "es":
@@ -148,7 +149,7 @@ public class PythonGenealogyAnalysis
         es.PopulationSize = parameters.PopulationSize;
         es.NumberOfChildren = parameters.NoChildren;
         es.Strategy = parameters.Strategy;
-        es.Terminator = terminator;
+        //es.Terminator = terminator;
         if (parameters.Selector != null) {
           es.Selector = parameters.Selector;
         }
@@ -159,16 +160,16 @@ public class PythonGenealogyAnalysis
 
         // analyzers = AddAnalyzers(callback, es, parameters);
 
-        var t = es.Build().RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        var t = es.Build().WithMaxIterations(parameters.Iterations).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
         break;
       case "ls":
         var ls = HillClimber.GetBuilder(parameters.Creator!, parameters.Mutator!);
         ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
-        ls.Terminator = terminator;
+        //ls.Terminator = terminator;
 
         // analyzers = AddAnalyzers(callback, ls, parameters);
-        ls.Build().RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        ls.Build().WithMaxIterations(parameters.Iterations).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
         break;
       case "nsga2":
@@ -179,9 +180,9 @@ public class PythonGenealogyAnalysis
           nsga2.Selector = parameters.Selector;
         }
 
-        nsga2.Terminator = terminator;
+        //nsga2.Terminator = terminator;
         // analyzers = AddAnalyzers(callback, nsga2, parameters);
-        _ = nsga2.Build().RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        _ = nsga2.Build().WithMaxIterations(parameters.Iterations).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
         break;
       default:
         throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");

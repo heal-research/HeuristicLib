@@ -20,7 +20,7 @@ public record HillClimberBuilder<TG, TS, TP>
   public required ICreator<TG, TS, TP> Creator { get; set; }
 
   public override HillClimberBuildSpec<TG, TS, TP> CreateBuildSpec() => new(
-    Evaluator, Terminator, Interceptor, MaxNeighbors, BatchSize, Direction, Mutator, Creator
+    Evaluator, Interceptor, MaxNeighbors, BatchSize, Direction, Mutator, Creator
   );
 
   public override HillClimber<TG, TS, TP> BuildFromSpec(HillClimberBuildSpec<TG, TS, TP> spec) => new() {

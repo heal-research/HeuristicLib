@@ -20,7 +20,6 @@ public sealed record HillClimberBuildSpec<TG, TS, TP>
 
   public HillClimberBuildSpec(
     IEvaluator<TG, TS, TP> Evaluator,
-    ITerminator<TG, SingleSolutionState<TG>, TS, TP> Terminator,
     IInterceptor<TG, SingleSolutionState<TG>, TS, TP>? Interceptor,
     int MaxNeighbors,
     int BatchSize,
@@ -28,7 +27,7 @@ public sealed record HillClimberBuildSpec<TG, TS, TP>
     IMutator<TG, TS, TP> Mutator,
     ICreator<TG, TS, TP> Creator
   )
-    : base(Evaluator, Terminator, Interceptor)
+    : base(Evaluator, Interceptor)
   {
     this.MaxNeighbors = MaxNeighbors;
     this.BatchSize = BatchSize;

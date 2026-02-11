@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
+using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.GenealogyAnalysis;
 using HEAL.HeuristicLib.Genotypes.Trees;
@@ -51,7 +52,7 @@ public class UnitTest1
     builder.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
     builder.Elites = 1;
     //ga.RandomSeed = AlgorithmRandomSeed;
-    builder.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
+    //builder.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
     var ga = builder.Build();
 
     //var qualities = BestMedianWorstAnalysis<>.Analyze(ga);
@@ -62,7 +63,7 @@ public class UnitTest1
 
     ga = ga with { Interceptor = wrappedInterceptor };
 
-    var res = ga.RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: CancellationToken.None);
+    var res = ga.WithMaxIterations(100).RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: TestContext.Current.CancellationToken);
 
     Assert.Equal(100, analysis.BestSolutions.Count);
     Assert.Equal(100, res.Population.Solutions.Count());
@@ -80,7 +81,7 @@ public class UnitTest1
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
     ga.Elites = 1;
-    ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
+    //ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
     ga.CreateBuildSpec();
 
     var evalQualities = new QualityCurveAnalysis<SymbolicExpressionTree>();
@@ -90,7 +91,7 @@ public class UnitTest1
     var genealogyAnalysis = new GenealogyAnalysis<SymbolicExpressionTree>();
     ga.AttachObserver(genealogyAnalysis);
 
-    var res = ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
+    var res = ga.Build().WithMaxIterations(gens).RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
 
     Assert.Equal(gens, qualities.BestSolutions.Count);
     Assert.Equal(popsize, res.Population.Solutions.Length);
@@ -109,7 +110,7 @@ public class UnitTest1
 
     var genealogy = new GenealogyAnalysis<SymbolicExpressionTree>();
     ga.AttachObserver(genealogy);
-    var res = ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: CancellationToken.None);
+    var res = ga.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: TestContext.Current.CancellationToken);
     Assert.Single(res.Population.Solutions);
     var graphViz = genealogy.Graph.ToGraphViz();
     Assert.True(graphViz.Length > 0);
@@ -128,7 +129,6 @@ public class UnitTest1
       new SubtreeCrossover(),
       symRegAllMutator);
     nsga2.PopulationSize = populationSize;
-    nsga2.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(maximumIterations);
     nsga2.MutationRate = mutationRate;
 
     var genealogy = new GenealogyAnalysis<SymbolicExpressionTree>();
@@ -136,7 +136,7 @@ public class UnitTest1
     var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree>();
     nsga2.AttachObserver(qualities);
 
-    var res = nsga2.Build().RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: CancellationToken.None);
+    var res = nsga2.Build().WithMaxIterations(maximumIterations).RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), ct: TestContext.Current.CancellationToken);
     Assert.Equal(maximumIterations, qualities.BestSolutions.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Length);
     var graphViz = genealogy.Graph.ToGraphViz();

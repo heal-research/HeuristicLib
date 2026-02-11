@@ -24,7 +24,6 @@ public sealed record GeneticAlgorithmBuildSpec<TG, TS, TP>
 
   public GeneticAlgorithmBuildSpec(
     IEvaluator<TG, TS, TP> Evaluator,
-    ITerminator<TG, PopulationState<TG>, TS, TP> Terminator,
     IInterceptor<TG, PopulationState<TG>, TS, TP>? Interceptor,
     int PopulationSize,
     ISelector<TG, TS, TP> Selector,
@@ -34,7 +33,7 @@ public sealed record GeneticAlgorithmBuildSpec<TG, TS, TP>
     double MutationRate,
     int Elites
   )
-    : base(Evaluator, Terminator, Interceptor)
+    : base(Evaluator, Interceptor)
   {
     this.PopulationSize = PopulationSize;
     this.Selector = Selector;

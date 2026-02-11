@@ -155,7 +155,7 @@ public class OpenEndedRelevantAllelesPreservingGeneticAlgorithmInstance<TGenotyp
     public ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; set; } = new TournamentSelector<TGenotype>(2);
 
     public override OERAPGABuildSpec<TGenotype, TSearchSpace, TProblem> CreateBuildSpec() => new(
-      Evaluator, Terminator, Interceptor, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites, MaxEffort
+      Evaluator, Interceptor, PopulationSize, Selector, Creator, Crossover, Mutator, MutationRate, Elites, MaxEffort
     );
 
     public override OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem> BuildFromSpec(OERAPGABuildSpec<TGenotype, TSearchSpace, TProblem> spec) =>
@@ -196,7 +196,6 @@ public sealed record OERAPGABuildSpec<TG, TS, TP>
 
   public OERAPGABuildSpec(
     IEvaluator<TG, TS, TP> Evaluator,
-    ITerminator<TG, PopulationState<TG>, TS, TP> Terminator,
     IInterceptor<TG, PopulationState<TG>, TS, TP>? Interceptor,
     int PopulationSize,
     ISelector<TG, TS, TP> Selector,
@@ -206,7 +205,7 @@ public sealed record OERAPGABuildSpec<TG, TS, TP>
     double MutationRate,
     int Elites,
     int MaxEffort)
-    : base(Evaluator, Terminator, Interceptor)
+    : base(Evaluator, Interceptor)
   {
     this.PopulationSize = PopulationSize;
     this.Selector = Selector;
