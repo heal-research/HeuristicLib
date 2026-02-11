@@ -12,7 +12,7 @@ public abstract record Evaluator<TGenotype, TSearchSpace, TProblem>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>
   {
@@ -25,7 +25,7 @@ public abstract record Evaluator<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract IEvaluatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : IEvaluatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   {
@@ -41,7 +41,7 @@ public abstract record Evaluator<TGenotype>
   : IEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   public abstract IEvaluatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : IEvaluatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   {

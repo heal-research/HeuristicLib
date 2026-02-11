@@ -12,7 +12,7 @@ public abstract record Selector<TGenotype, TSearchSpace, TProblem>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract ISelectorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ISelectorInstance<TGenotype, TSearchSpace, TProblem>
   {
@@ -25,7 +25,7 @@ public abstract record Selector<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract ISelectorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ISelectorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   {
@@ -40,7 +40,7 @@ public abstract record Selector<TGenotype>
   : ISelector<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   public abstract ISelectorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ISelectorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   {

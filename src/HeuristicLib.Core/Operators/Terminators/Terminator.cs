@@ -14,7 +14,7 @@ public abstract record Terminator<TGenotype, TAlgorithmState, TSearchSpace, TPro
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
   {
@@ -29,7 +29,7 @@ public abstract record Terminator<TGenotype, TAlgorithmState, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   {
@@ -47,7 +47,7 @@ public abstract record Terminator<TGenotype, TAlgorithmState>
   where TAlgorithmState : class, IAlgorithmState
 {
   public abstract ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ITerminatorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   {
@@ -62,7 +62,7 @@ public abstract record Terminator<TGenotype>
   : ITerminator<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   public abstract ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ITerminatorInstance<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   {

@@ -38,7 +38,7 @@ public record ProbabilisticTreeCreator : SymbolicExpressionTreeCreator
     return new SymbolicExpressionTree(rootNode);
   }
 
-  private class TreeExtensionPoint(SymbolicExpressionTreeNode parent, int childIndex, int extensionPointDepth)
+  public class TreeExtensionPoint(SymbolicExpressionTreeNode parent, int childIndex, int extensionPointDepth)
   {
     public SymbolicExpressionTreeNode Parent { get; } = parent;
     public int ChildIndex { get; } = childIndex;

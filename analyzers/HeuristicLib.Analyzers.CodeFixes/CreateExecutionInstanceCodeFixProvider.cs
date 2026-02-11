@@ -83,7 +83,7 @@ public sealed class CreateExecutionInstanceCodeFixProvider : CodeFixProvider
     var newInvocation = SyntaxFactory.InvocationExpression(
         SyntaxFactory.MemberAccessExpression(
           SyntaxKind.SimpleMemberAccessExpression,
-          SyntaxFactory.IdentifierName(registryParamName),
+          SyntaxFactory.IdentifierName(registryParamName!),
           SyntaxFactory.IdentifierName("Resolve")))
       .WithArgumentList(
         SyntaxFactory.ArgumentList(

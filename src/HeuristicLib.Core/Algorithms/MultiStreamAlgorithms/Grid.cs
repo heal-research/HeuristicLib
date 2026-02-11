@@ -4,7 +4,7 @@ using Generator.Equals;
 namespace HEAL.HeuristicLib.Algorithms.MultiStreamAlgorithms;
 
 [Equatable]
-public partial class Grid<T> : IEnumerable<T>
+public sealed partial class Grid<T> : IEnumerable<T>
 {
   public T Prototype { get; }
 

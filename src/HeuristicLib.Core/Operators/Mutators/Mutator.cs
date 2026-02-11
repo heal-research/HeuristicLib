@@ -11,7 +11,7 @@ public abstract record Mutator<TGenotype, TSearchSpace, TProblem>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract IMutatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : IMutatorInstance<TGenotype, TSearchSpace, TProblem>
   {
@@ -24,7 +24,7 @@ public abstract record Mutator<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   {
@@ -39,7 +39,7 @@ public abstract record Mutator<TGenotype>
   : IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   public abstract IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   {

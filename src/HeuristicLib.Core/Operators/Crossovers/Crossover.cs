@@ -12,7 +12,7 @@ public abstract record Crossover<TGenotype, TSearchSpace, TProblem>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract ICrossoverInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ICrossoverInstance<TGenotype, TSearchSpace, TProblem>
   {
@@ -25,7 +25,7 @@ public abstract record Crossover<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract ICrossoverInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ICrossoverInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   {
@@ -40,7 +40,7 @@ public abstract record Crossover<TGenotype>
   : ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   public abstract ICrossoverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : ICrossoverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   {

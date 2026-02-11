@@ -11,7 +11,7 @@ public sealed class PhiloxEngine : IRandomEngine
     counter = 0;
   }
 
-  private ulong PhiloxRound(ulong counter, ulong key)
+  private static ulong PhiloxRound(ulong counter, ulong key)
   {
     unchecked {
       var hi = Math.BigMul(counter, 0xD2B74407B1CE6E93UL, out var lo);

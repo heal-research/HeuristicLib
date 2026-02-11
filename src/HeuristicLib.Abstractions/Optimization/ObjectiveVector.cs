@@ -37,6 +37,12 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
   public int Count => values.Length;
   public double this[int index] => values[index];
 
+  //public static implicit operator Fitness(SingleFitness[] values) => new(values);
+  public static implicit operator ObjectiveVector(double[] values) => new(values/*.Select(v => new SingleFitness(v))*/);
+
+  //public static implicit operator Fitness(SingleFitness value) => new(value);
+  public static implicit operator ObjectiveVector(double value) => new(value);
+
   public bool Equals(ObjectiveVector? other)
   {
     if (other is null) {
@@ -53,12 +59,6 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
 
     return values.SequenceEqual(other.values);
   }
-
-  //public static implicit operator Fitness(SingleFitness[] values) => new(values);
-  public static implicit operator ObjectiveVector(double[] values) => new(values/*.Select(v => new SingleFitness(v))*/);
-
-  //public static implicit operator Fitness(SingleFitness value) => new(value);
-  public static implicit operator ObjectiveVector(double value) => new(value);
 
   public override bool Equals(object? obj) => Equals(obj as ObjectiveVector);
   public override int GetHashCode() => values.Aggregate(0, HashCode.Combine);

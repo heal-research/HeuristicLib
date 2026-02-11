@@ -2,8 +2,7 @@
 
 namespace HEAL.HeuristicLib.Optimization;
 
-// ToDo: look if there is another library that can do all this instead
-[Obsolete]
+[Obsolete("We should switch to a library that provides this functionality instead of maintaining our own implementation.")]
 public static class EnumerableStatisticExtensions
 {
   /// <param name="values"></param>

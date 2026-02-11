@@ -12,7 +12,7 @@ public abstract record Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TPr
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public abstract IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
   {
@@ -42,7 +42,7 @@ public abstract record Interceptor<TGenotype, TAlgorithmState>
   where TAlgorithmState : class, IAlgorithmState
 {
   public abstract IInterceptorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-  
+
   public abstract class Instance
     : IInterceptorInstance<TGenotype, TAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   {

@@ -101,39 +101,11 @@ public class BoolVector : IReadOnlyList<bool>
   public static BoolVector operator !(BoolVector a) => Not(a);
 
   // Utility methods
-  public bool All()
-  {
-    foreach (var element in elements) {
-      if (!element) {
-        return false;
-      }
-    }
+  public bool All() => elements.All(x => x);
 
-    return true;
-  }
+  public bool Any() => elements.Any(x => x);
 
-  public bool Any()
-  {
-    foreach (var element in elements) {
-      if (element) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  public int TrueCount()
-  {
-    var count = 0;
-    foreach (var element in elements) {
-      if (element) {
-        count++;
-      }
-    }
-
-    return count;
-  }
+  public int TrueCount() => elements.Count(x => x);
 
   public override string ToString() => $"[{string.Join(", ", elements.Select(b => b ? "True" : "False"))}]";
 }

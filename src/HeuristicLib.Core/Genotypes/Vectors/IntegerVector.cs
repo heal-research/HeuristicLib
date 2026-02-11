@@ -30,18 +30,18 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       return false;
     }
 
-    return ReferenceEquals(this, other)
-      || elements.SequenceEqual(other.elements);
+    if (ReferenceEquals(this, other)) {
+      return true;
+    }
+
+    return elements.SequenceEqual(other.elements);
   }
+
+  public override bool Equals(object? obj) => ReferenceEquals(this, obj) || obj is IntegerVector other && Equals(other);
 
   public override int GetHashCode()
   {
-    var hash = new HashCode();
-    foreach (var element in elements) {
-      hash.Add(element);
-    }
-
-    return hash.ToHashCode();
+    return elements.GetHashCode();
   }
 
   public static implicit operator RealVector(IntegerVector integerVector)
