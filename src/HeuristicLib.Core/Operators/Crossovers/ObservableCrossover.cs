@@ -39,7 +39,7 @@ public partial record ObservableCrossover<TG, TS, TP>
       var result = crossoverInstance.Cross(parents, random, searchSpace, problem);
 
       foreach (var observer in observers) {
-        observer.AfterCross(result, parents, random, searchSpace, problem);
+        observer.AfterCross(result, parents, searchSpace, problem);
       }
 
       return result;
@@ -52,7 +52,7 @@ public interface ICrossoverObserver<in TG, in TS, in TP>
   where TP : class, IProblem<TG, TS>
 {
   // ToDo: probably remove the random for observation
-  void AfterCross(IReadOnlyList<TG> offspring, IReadOnlyList<IParents<TG>> parents, IRandomNumberGenerator random, TS searchSpace, TP problem);
+  void AfterCross(IReadOnlyList<TG> offspring, IReadOnlyList<IParents<TG>> parents, TS searchSpace, TP problem);
 }
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
@@ -60,16 +60,16 @@ public class CrossoverObserver<TG, TS, TP> : ICrossoverObserver<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  private readonly Action<IReadOnlyList<TG>, IReadOnlyList<IParents<TG>>, IRandomNumberGenerator, TS, TP> afterCross;
+  private readonly Action<IReadOnlyList<TG>, IReadOnlyList<IParents<TG>>, TS, TP> afterCross;
 
-  public CrossoverObserver(Action<IReadOnlyList<TG>, IReadOnlyList<IParents<TG>>, IRandomNumberGenerator, TS, TP> afterCross)
+  public CrossoverObserver(Action<IReadOnlyList<TG>, IReadOnlyList<IParents<TG>>, TS, TP> afterCross)
   {
     this.afterCross = afterCross;
   }
 
-  public void AfterCross(IReadOnlyList<TG> offspring, IReadOnlyList<IParents<TG>> parents, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  public void AfterCross(IReadOnlyList<TG> offspring, IReadOnlyList<IParents<TG>> parents, TS searchSpace, TP problem)
   {
-    afterCross.Invoke(offspring, parents, random, searchSpace, problem);
+    afterCross.Invoke(offspring, parents, searchSpace, problem);
   }
 }
 
@@ -89,7 +89,7 @@ public static class ObservableCrossoverExtensions
       return new ObservableCrossover<TG, TS, TP>(crossover, observers);
     }
 
-    public ICrossover<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<IParents<TG>>, IRandomNumberGenerator, TS, TP> afterCross)
+    public ICrossover<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<IParents<TG>>, TS, TP> afterCross)
     {
       var observer = new CrossoverObserver<TG, TS, TP>(afterCross);
       return crossover.ObserveWith(observer);
@@ -97,7 +97,7 @@ public static class ObservableCrossoverExtensions
 
     public ICrossover<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterCross)
     {
-      var observer = new CrossoverObserver<TG, TS, TP>((offspring, _, _, _, _) => afterCross(offspring));
+      var observer = new CrossoverObserver<TG, TS, TP>((offspring, _, _, _) => afterCross(offspring));
       return crossover.ObserveWith(observer);
     }
 

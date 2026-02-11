@@ -11,7 +11,7 @@ public class QualityCurveAnalysis<TGenotype> : IEvaluatorObserver<TGenotype> whe
   private ISolution<TGenotype>? best;
   private int evalCount;
 
-  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
     for (var i = 0; i < genotypes.Count; i++) {
       var genotype = genotypes[i];

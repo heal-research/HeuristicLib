@@ -15,14 +15,14 @@ public class GenealogyAnalysis<T>(IEqualityComparer<T>? equality = null, bool sa
 {
   public readonly GenealogyGraph<T> Graph = new(equality ?? EqualityComparer<T>.Default);
 
-  public void AfterCross(IReadOnlyList<T> offspring, IReadOnlyList<IParents<T>> parents, IRandomNumberGenerator random, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
+  public void AfterCross(IReadOnlyList<T> offspring, IReadOnlyList<IParents<T>> parents, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
     foreach (var (parents1, child) in parents.Zip(offspring)) {
       Graph.AddConnection([parents1.Item1, parents1.Item2], child);
     }
   }
 
-  public void AfterMutate(IReadOnlyList<T> offspring, IReadOnlyList<T> parent, IRandomNumberGenerator random, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
+  public void AfterMutate(IReadOnlyList<T> offspring, IReadOnlyList<T> parent, ISearchSpace<T> searchSpace, IProblem<T, ISearchSpace<T>> problem)
   {
     foreach (var (parents1, child) in parent.Zip(offspring)) {
       Graph.AddConnection([parents1], child);
