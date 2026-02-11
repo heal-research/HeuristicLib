@@ -1,6 +1,7 @@
 using Generator.Equals;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
@@ -16,8 +17,7 @@ public partial record ObservableInterceptor<TG, TR, TS, TP>
 {
   public IInterceptor<TG, TR, TS, TP> Interceptor { get; }
 
-  [OrderedEquality]
-  public ImmutableArray<IInterceptorObserver<TG, TR, TS, TP>> Observers { get; }
+  [OrderedEquality] public ImmutableArray<IInterceptorObserver<TG, TR, TS, TP>> Observers { get; }
 
   public ObservableInterceptor(IInterceptor<TG, TR, TS, TP> interceptor, params ImmutableArray<IInterceptorObserver<TG, TR, TS, TP>> observers)
   {
@@ -28,10 +28,11 @@ public partial record ObservableInterceptor<TG, TR, TS, TP>
   public override IInterceptorInstance<TG, TR, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var interceptorInstance = instanceRegistry.Resolve(Interceptor);
-    return new ObservableInterceptorInstance(interceptorInstance, Observers);
+    var interceptorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
+    return new ObservableInterceptorInstance(interceptorInstance, interceptorObserverInstances);
   }
 
-  private sealed class ObservableInterceptorInstance(IInterceptorInstance<TG, TR, TS, TP> interceptorInstance, IReadOnlyList<IInterceptorObserver<TG, TR, TS, TP>> observers)
+  private sealed class ObservableInterceptorInstance(IInterceptorInstance<TG, TR, TS, TP> interceptorInstance, IReadOnlyList<IInterceptorObserverInstance<TG, TS, TP, TR>> observers)
     : InterceptorInstance<TG, TR, TS, TP>
   {
     public override TR Transform(TR currentState, TR? previousState, TS searchSpace, TP problem)
@@ -47,17 +48,21 @@ public partial record ObservableInterceptor<TG, TR, TS, TP>
   }
 }
 
-public interface IInterceptorObserver<in TG, in TR, in TS, in TP>
+public interface IInterceptorObserver<in TG, in TR, in TS, in TP> : IExecutable<IInterceptorObserverInstance<TG, TS, TP, TR>>
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+  where TR : class, IAlgorithmState;
+
+public interface IInterceptorObserverInstance<in TG, in TS, in TP, in TR> : IExecutionInstance
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
 {
-  // ToDo: probably remove the random for observation
   void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem);
 }
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
-public class InterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG, TR, TS, TP>
+public class InterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG, TR, TS, TP>, IInterceptorObserverInstance<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -73,6 +78,8 @@ public class InterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG, TR, 
   {
     afterInterception.Invoke(newState, currentState, previousState, searchSpace, problem);
   }
+
+  public IInterceptorObserverInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 }
 
 public static class ObservableInterceptorExtensions

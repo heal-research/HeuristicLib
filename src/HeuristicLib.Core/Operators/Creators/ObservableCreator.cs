@@ -15,8 +15,7 @@ public partial record ObservableCreator<TG, TS, TP>
 {
   public ICreator<TG, TS, TP> Creator { get; }
 
-  [OrderedEquality]
-  public ImmutableArray<ICreatorObserver<TG, TS, TP>> Observers { get; }
+  [OrderedEquality] public ImmutableArray<ICreatorObserver<TG, TS, TP>> Observers { get; }
 
   public ObservableCreator(ICreator<TG, TS, TP> creator, params ImmutableArray<ICreatorObserver<TG, TS, TP>> observers)
   {
@@ -27,10 +26,10 @@ public partial record ObservableCreator<TG, TS, TP>
   public override ICreatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorInstance = instanceRegistry.Resolve(Creator);
-    return new ObservableCreatorInstance(creatorInstance, Observers);
+    return new ObservableCreatorInstance(creatorInstance, Observers.Select(instanceRegistry.Resolve).ToArray());
   }
 
-  private sealed class ObservableCreatorInstance(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserver<TG, TS, TP>> observers)
+  private sealed class ObservableCreatorInstance(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserverInstance<TG, TS, TP>> observers)
     : CreatorInstance<TG, TS, TP>
   {
     public override IReadOnlyList<TG> Create(int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
@@ -38,7 +37,7 @@ public partial record ObservableCreator<TG, TS, TP>
       var result = creatorInstance.Create(count, random, searchSpace, problem);
 
       foreach (var observer in observers) {
-        observer.AfterCreation(result, count, random, searchSpace, problem);
+        observer.AfterCreation(result, count, searchSpace, problem);
       }
 
       return result;
@@ -46,30 +45,35 @@ public partial record ObservableCreator<TG, TS, TP>
   }
 }
 
-public interface ICreatorObserver<in TG, in TS, in TP>
+public interface ICreatorObserver<in TG, in TS, in TP> : IExecutable<ICreatorObserverInstance<TG, TS, TP>>
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+{ }
+
+public interface ICreatorObserverInstance<in TG, in TS, in TP> : IExecutionInstance
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  // ToDo: probably remove the random for observation
-  void AfterCreation(IReadOnlyList<TG> offspring, int count, IRandomNumberGenerator random, TS searchSpace, TP problem);
+  void AfterCreation(IReadOnlyList<TG> offspring, int count, TS searchSpace, TP problem);
 }
 
-// ToDo: rename to make it clear that this is not a base-class to be inherited from
-public class CreatorObserver<TG, TS, TP> : ICreatorObserver<TG, TS, TP>
+public sealed class ActionCreatorObserver<TG, TS, TP> : ICreatorObserver<TG, TS, TP>, ICreatorObserverInstance<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  private readonly Action<IReadOnlyList<TG>, int, IRandomNumberGenerator, TS, TP> afterCreation;
+  private readonly Action<IReadOnlyList<TG>, int, TS, TP> afterCreation;
 
-  public CreatorObserver(Action<IReadOnlyList<TG>, int, IRandomNumberGenerator, TS, TP> afterCreation)
+  public ActionCreatorObserver(Action<IReadOnlyList<TG>, int, TS, TP> afterCreation)
   {
     this.afterCreation = afterCreation;
   }
 
-  public void AfterCreation(IReadOnlyList<TG> offspring, int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  public void AfterCreation(IReadOnlyList<TG> offspring, int count, TS searchSpace, TP problem)
   {
-    afterCreation.Invoke(offspring, count, random, searchSpace, problem);
+    afterCreation.Invoke(offspring, count, searchSpace, problem);
   }
+
+  public ICreatorObserverInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 }
 
 public static class ObservableCreatorExtensions
@@ -88,15 +92,15 @@ public static class ObservableCreatorExtensions
       return new ObservableCreator<TG, TS, TP>(creator, observers);
     }
 
-    public ICreator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, int, IRandomNumberGenerator, TS, TP> afterCreation)
+    public ICreator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, int, TS, TP> afterCreation)
     {
-      var observer = new CreatorObserver<TG, TS, TP>(afterCreation);
+      var observer = new ActionCreatorObserver<TG, TS, TP>(afterCreation);
       return creator.ObserveWith(observer);
     }
 
     public ICreator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterCreation)
     {
-      var observer = new CreatorObserver<TG, TS, TP>((offspring, _, _, _, _) => afterCreation(offspring));
+      var observer = new ActionCreatorObserver<TG, TS, TP>((offspring, _, _, _) => afterCreation(offspring));
       return creator.ObserveWith(observer);
     }
 

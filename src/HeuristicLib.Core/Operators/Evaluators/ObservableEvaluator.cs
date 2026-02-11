@@ -16,8 +16,7 @@ public partial record ObservableEvaluator<TG, TS, TP>
 {
   public IEvaluator<TG, TS, TP> Evaluator { get; }
 
-  [OrderedEquality]
-  public ImmutableArray<IEvaluatorObserver<TG, TS, TP>> Observers { get; }
+  [OrderedEquality] public ImmutableArray<IEvaluatorObserver<TG, TS, TP>> Observers { get; }
 
   public ObservableEvaluator(IEvaluator<TG, TS, TP> evaluator, params ImmutableArray<IEvaluatorObserver<TG, TS, TP>> observers)
   {
@@ -28,10 +27,11 @@ public partial record ObservableEvaluator<TG, TS, TP>
   public IEvaluatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
-    return new ObservableEvaluatorInstance(evaluatorInstance, Observers);
+    var evaluatorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
+    return new ObservableEvaluatorInstance(evaluatorInstance, evaluatorObserverInstances);
   }
 
-  private sealed class ObservableEvaluatorInstance(IEvaluatorInstance<TG, TS, TP> evaluatorInstance, IReadOnlyList<IEvaluatorObserver<TG, TS, TP>> observers)
+  private sealed class ObservableEvaluatorInstance(IEvaluatorInstance<TG, TS, TP> evaluatorInstance, IReadOnlyList<IEvaluatorObserverInstance<TG, TS, TP>> observers)
     : EvaluatorInstance<TG, TS, TP>
   {
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, IRandomNumberGenerator random, TS searchSpace, TP problem)
@@ -39,7 +39,7 @@ public partial record ObservableEvaluator<TG, TS, TP>
       var results = evaluatorInstance.Evaluate(genotypes, random, searchSpace, problem);
 
       foreach (var observer in observers) {
-        observer.AfterEvaluation(genotypes, results, random, searchSpace, problem);
+        observer.AfterEvaluation(genotypes, results, searchSpace, problem);
       }
 
       return results;
@@ -47,26 +47,32 @@ public partial record ObservableEvaluator<TG, TS, TP>
   }
 }
 
-public interface IEvaluatorObserver<in TG, in TS, in TP>
+public interface IEvaluatorObserver<in TG, in TS, in TP> : IExecutable<IEvaluatorObserverInstance<TG, TS, TP>>
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>;
+
+public interface IEvaluatorObserverInstance<in TG, in TS, in TP> : IExecutionInstance
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  void AfterEvaluation(IReadOnlyList<TG> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IRandomNumberGenerator random, TS searchSpace, TP problem);
+  void AfterEvaluation(IReadOnlyList<TG> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TS searchSpace, TP problem);
 }
 
-public class FuncEvaluatorObserver<TG, TS, TP> : IEvaluatorObserver<TG, TS, TP>
+public class ActionEvaluatorObserver<TG, TS, TP> : IEvaluatorObserver<TG, TS, TP>, IEvaluatorObserverInstance<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  private readonly Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, IRandomNumberGenerator, TS, TP> afterEvaluation;
+  private readonly Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, TS, TP> afterEvaluation;
 
-  public FuncEvaluatorObserver(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, IRandomNumberGenerator, TS, TP> afterEvaluation)
+  public ActionEvaluatorObserver(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, TS, TP> afterEvaluation)
   {
     this.afterEvaluation = afterEvaluation;
   }
 
-  public void AfterEvaluation(IReadOnlyList<TG> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IRandomNumberGenerator random, TS searchSpace, TP problem) =>
-    afterEvaluation(genotypes, objectiveVectors, random, searchSpace, problem);
+  public void AfterEvaluation(IReadOnlyList<TG> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TS searchSpace, TP problem) =>
+    afterEvaluation(genotypes, objectiveVectors, searchSpace, problem);
+
+  public IEvaluatorObserverInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 }
 
 public static class ObservableEvaluatorExtensions
@@ -85,15 +91,15 @@ public static class ObservableEvaluatorExtensions
       return new ObservableEvaluator<TG, TS, TP>(evaluator, observers);
     }
 
-    public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, IRandomNumberGenerator, TS, TP> afterEvaluation)
+    public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, TS, TP> afterEvaluation)
     {
-      var observer = new FuncEvaluatorObserver<TG, TS, TP>(afterEvaluation);
+      var observer = new ActionEvaluatorObserver<TG, TS, TP>(afterEvaluation);
       return new ObservableEvaluator<TG, TS, TP>(evaluator, observer);
     }
 
     public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>> afterEvaluation)
     {
-      var observer = new FuncEvaluatorObserver<TG, TS, TP>((genotypes, objectiveVectors, _, _, _) => afterEvaluation(genotypes, objectiveVectors));
+      var observer = new ActionEvaluatorObserver<TG, TS, TP>((genotypes, objectiveVectors, _, _) => afterEvaluation(genotypes, objectiveVectors));
       return new ObservableEvaluator<TG, TS, TP>(evaluator, observer);
     }
 

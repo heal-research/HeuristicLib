@@ -28,10 +28,11 @@ public partial record ObservableTerminator<TG, TR, TS, TP>
   public override ITerminatorInstance<TG, TR, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var interceptorInstance = instanceRegistry.Resolve(Interceptor);
-    return new ObservableTerminatorInstance(interceptorInstance, Observers);
+    var terminatorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
+    return new ObservableTerminatorInstance(interceptorInstance, terminatorObserverInstances);
   }
 
-  private sealed class ObservableTerminatorInstance(ITerminatorInstance<TG, TR, TS, TP> terminatorInstance, IReadOnlyList<ITerminatorObserver<TG, TR, TS, TP>> observers)
+  private sealed class ObservableTerminatorInstance(ITerminatorInstance<TG, TR, TS, TP> terminatorInstance, IReadOnlyList<ITerminatorObserverInstance<TG, TS, TP, TR>> observers)
     : TerminatorInstance<TG, TR, TS, TP>
   {
     public override bool ShouldTerminate(TR state, TS searchSpace, TP problem)
@@ -47,7 +48,12 @@ public partial record ObservableTerminator<TG, TR, TS, TP>
   }
 }
 
-public interface ITerminatorObserver<in TG, in TR, in TS, in TP>
+public interface ITerminatorObserver<in TG, in TR, in TS, in TP> : IExecutable<ITerminatorObserverInstance<TG, TS, TP, TR>>
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>
+  where TR : class, IAlgorithmState;
+
+public interface ITerminatorObserverInstance<in TG, in TS, in TP, in TR> : IExecutionInstance
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -56,7 +62,7 @@ public interface ITerminatorObserver<in TG, in TR, in TS, in TP>
 }
 
 // ToDo: rename to make it clear that this is not a base-class to be inherited from
-public class TerminatorObserver<TG, TR, TS, TP> : ITerminatorObserver<TG, TR, TS, TP>
+public class TerminatorObserver<TG, TR, TS, TP> : ITerminatorObserver<TG, TR, TS, TP>, ITerminatorObserverInstance<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -72,6 +78,8 @@ public class TerminatorObserver<TG, TR, TS, TP> : ITerminatorObserver<TG, TR, TS
   {
     afterTerminateCheck.Invoke(shouldTerminate, state, searchSpace, problem);
   }
+
+  public ITerminatorObserverInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 }
 
 public static class ObservableTerminatorExtensions

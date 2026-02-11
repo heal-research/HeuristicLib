@@ -27,10 +27,11 @@ public partial record ObservableReplacer<TG, TS, TP>
   public override IReplacerInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var replacerInstance = instanceRegistry.Resolve(Replacer);
-    return new ObservableReplacerInstance(replacerInstance, Observers);
+    var replacerObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
+    return new ObservableReplacerInstance(replacerInstance, replacerObserverInstances);
   }
 
-  private sealed class ObservableReplacerInstance(IReplacerInstance<TG, TS, TP> replacerInstance, IReadOnlyList<IReplacerObserver<TG, TS, TP>> observers)
+  private sealed class ObservableReplacerInstance(IReplacerInstance<TG, TS, TP> replacerInstance, IReadOnlyList<IReplacerObserverInstance<TG, TS, TP>> observers)
     : ReplacerInstance<TG, TS, TP>
   {
     public override IReadOnlyList<ISolution<TG>> Replace(IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, IRandomNumberGenerator random, TS searchSpace, TP problem)
@@ -48,21 +49,24 @@ public partial record ObservableReplacer<TG, TS, TP>
   }
 }
 
-public interface IReplacerObserver<in TG, in TS, in TP>
+public interface IReplacerObserver<in TG, in TS, in TP> : IExecutable<IReplacerObserverInstance<TG, TS, TP>>
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>;
+
+public interface IReplacerObserverInstance<in TG, in TS, in TP> : IExecutionInstance
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
   void AfterReplacement(IReadOnlyList<ISolution<TG>> newPopulation, IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, TS searchSpace, TP problem);
 }
 
-// ToDo: rename to make it clear that this is not a base-class to be inherited from
-public class ReplacerObserver<TG, TS, TP> : IReplacerObserver<TG, TS, TP>
+public class ActionReplacerObserver<TG, TS, TP> : IReplacerObserver<TG, TS, TP>, IReplacerObserverInstance<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
   private readonly Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, TS, TP> afterReplacement;
 
-  public ReplacerObserver(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, TS, TP> afterReplacement)
+  public ActionReplacerObserver(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, TS, TP> afterReplacement)
   {
     this.afterReplacement = afterReplacement;
   }
@@ -71,6 +75,8 @@ public class ReplacerObserver<TG, TS, TP> : IReplacerObserver<TG, TS, TP>
   {
     afterReplacement.Invoke(newPopulation, previousPopulation, offspringPopulation, searchSpace, problem);
   }
+
+  public IReplacerObserverInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 }
 
 public static class ObservableReplacerExtensions
@@ -91,13 +97,13 @@ public static class ObservableReplacerExtensions
 
     public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, TS, TP> afterReplacement)
     {
-      var observer = new ReplacerObserver<TG, TS, TP>(afterReplacement);
+      var observer = new ActionReplacerObserver<TG, TS, TP>(afterReplacement);
       return replacer.ObserveWith(observer);
     }
 
     public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterReplacement)
     {
-      var observer = new ReplacerObserver<TG, TS, TP>((newPopulation, _, _, _, _) => afterReplacement(newPopulation));
+      var observer = new ActionReplacerObserver<TG, TS, TP>((newPopulation, _, _, _, _) => afterReplacement(newPopulation));
       return replacer.ObserveWith(observer);
     }
 

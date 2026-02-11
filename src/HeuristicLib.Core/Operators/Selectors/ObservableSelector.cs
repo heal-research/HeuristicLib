@@ -28,10 +28,11 @@ public partial record ObservableSelector<TG, TS, TP>
   public override ISelectorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var selectorInstance = instanceRegistry.Resolve(Selector);
-    return new ObservableSelectorInstance(selectorInstance, Observers);
+    var selectorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
+    return new ObservableSelectorInstance(selectorInstance, selectorObserverInstances);
   }
 
-  private sealed class ObservableSelectorInstance(ISelectorInstance<TG, TS, TP> selectorInstance, IReadOnlyList<ISelectorObserver<TG, TS, TP>> observers)
+  private sealed class ObservableSelectorInstance(ISelectorInstance<TG, TS, TP> selectorInstance, IReadOnlyList<ISelectorObserverInstance<TG, TS, TP>> observers)
     : SelectorInstance<TG, TS, TP>
   {
     public override IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
@@ -47,21 +48,24 @@ public partial record ObservableSelector<TG, TS, TP>
   }
 }
 
-public interface ISelectorObserver<in TG, in TS, in TP>
+public interface ISelectorObserver<in TG, in TS, in TP> : IExecutable<ISelectorObserverInstance<TG, TS, TP>>
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>;
+
+public interface ISelectorObserverInstance<in TG, in TS, in TP> : IExecutionInstance
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
   void AfterSelection(IReadOnlyList<ISolution<TG>> selected, IReadOnlyList<ISolution<TG>> population, Objective objective, int count, TS searchSpace, TP problem);
 }
 
-// ToDo: rename to make it clear that this is not a base-class to be inherited from
-public class SelectorObserver<TG, TS, TP> : ISelectorObserver<TG, TS, TP>
+public sealed class ActionSelectorObserver<TG, TS, TP> : ISelectorObserver<TG, TS, TP>, ISelectorObserverInstance<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
   private readonly Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection;
 
-  public SelectorObserver(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection)
+  public ActionSelectorObserver(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection)
   {
     this.afterSelection = afterSelection;
   }
@@ -70,6 +74,8 @@ public class SelectorObserver<TG, TS, TP> : ISelectorObserver<TG, TS, TP>
   {
     afterSelection.Invoke(selected, population, objective, count, searchSpace, problem);
   }
+
+  public ISelectorObserverInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 }
 
 public static class ObservableSelectorExtensions
@@ -90,13 +96,13 @@ public static class ObservableSelectorExtensions
 
     public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection)
     {
-      var observer = new SelectorObserver<TG, TS, TP>(afterSelection);
+      var observer = new ActionSelectorObserver<TG, TS, TP>(afterSelection);
       return selector.ObserveWith(observer);
     }
 
     public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterSelection)
     {
-      var observer = new SelectorObserver<TG, TS, TP>((selected, _, _, _, _, _) => afterSelection(selected));
+      var observer = new ActionSelectorObserver<TG, TS, TP>((selected, _, _, _, _, _) => afterSelection(selected));
       return selector.ObserveWith(observer);
     }
 

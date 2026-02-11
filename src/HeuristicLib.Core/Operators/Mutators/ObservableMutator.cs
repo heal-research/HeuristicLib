@@ -15,8 +15,7 @@ public partial record ObservableMutator<TG, TS, TP>
 {
   public IMutator<TG, TS, TP> Mutator { get; }
 
-  [OrderedEquality]
-  public ImmutableArray<IMutatorObserver<TG, TS, TP>> Observers { get; }
+  [OrderedEquality] public ImmutableArray<IMutatorObserver<TG, TS, TP>> Observers { get; }
 
   public ObservableMutator(IMutator<TG, TS, TP> mutator, params ImmutableArray<IMutatorObserver<TG, TS, TP>> observers)
   {
@@ -27,10 +26,11 @@ public partial record ObservableMutator<TG, TS, TP>
   public override IMutatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var mutatorInstance = instanceRegistry.Resolve(Mutator);
-    return new ObservableMutatorInstance(mutatorInstance, Observers);
+    var mutatorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
+    return new ObservableMutatorInstance(mutatorInstance, mutatorObserverInstances);
   }
 
-  private sealed class ObservableMutatorInstance(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserver<TG, TS, TP>> observers)
+  private sealed class ObservableMutatorInstance(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserverInstance<TG, TS, TP>> observers)
     : MutatorInstance<TG, TS, TP>
   {
     public override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
@@ -38,7 +38,7 @@ public partial record ObservableMutator<TG, TS, TP>
       var result = mutatorInstance.Mutate(parent, random, searchSpace, problem);
 
       foreach (var observer in observers) {
-        observer.AfterMutate(result, parent, random, searchSpace, problem);
+        observer.AfterMutate(result, parent, searchSpace, problem);
       }
 
       return result;
@@ -46,30 +46,34 @@ public partial record ObservableMutator<TG, TS, TP>
   }
 }
 
-public interface IMutatorObserver<in TG, in TS, in TP>
+public interface IMutatorObserver<in TG, in TS, in TP> : IExecutable<IMutatorObserverInstance<TG, TS, TP>>
+  where TS : class, ISearchSpace<TG>
+  where TP : class, IProblem<TG, TS>;
+
+public interface IMutatorObserverInstance<in TG, in TS, in TP> : IExecutionInstance
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  // ToDo: probably remove the random for observation
-  void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem);
+  void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, TS searchSpace, TP problem);
 }
 
-// ToDo: rename to make it clear that this is not a base-class to be inherited from
-public class MutatorObserver<TG, TS, TP> : IMutatorObserver<TG, TS, TP>
+public sealed class ActionMutatorObserver<TG, TS, TP> : IMutatorObserver<TG, TS, TP>, IMutatorObserverInstance<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  private readonly Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate;
+  private readonly Action<IReadOnlyList<TG>, IReadOnlyList<TG>, TS, TP> afterMutate;
 
-  public MutatorObserver(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate)
+  public ActionMutatorObserver(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, TS, TP> afterMutate)
   {
     this.afterMutate = afterMutate;
   }
 
-  public void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  public void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, TS searchSpace, TP problem)
   {
-    afterMutate.Invoke(offspring, parent, random, searchSpace, problem);
+    afterMutate.Invoke(offspring, parent, searchSpace, problem);
   }
+
+  public IMutatorObserverInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 }
 
 public static class ObservableMutatorExtensions
@@ -88,15 +92,15 @@ public static class ObservableMutatorExtensions
       return new ObservableMutator<TG, TS, TP>(mutator, observers);
     }
 
-    public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, IRandomNumberGenerator, TS, TP> afterMutate)
+    public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, TS, TP> afterMutate)
     {
-      var observer = new MutatorObserver<TG, TS, TP>(afterMutate);
+      var observer = new ActionMutatorObserver<TG, TS, TP>(afterMutate);
       return mutator.ObserveWith(observer);
     }
 
     public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterMutate)
     {
-      var observer = new MutatorObserver<TG, TS, TP>((offspring, _, _, _, _) => afterMutate(offspring));
+      var observer = new ActionMutatorObserver<TG, TS, TP>((offspring, _, _, _) => afterMutate(offspring));
       return mutator.ObserveWith(observer);
     }
 
