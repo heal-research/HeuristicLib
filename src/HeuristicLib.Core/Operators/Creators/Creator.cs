@@ -22,7 +22,6 @@ public abstract class CreatorInstance<TGenotype, TSearchSpace, TProblem>
 }
 
 public abstract record Creator<TGenotype, TSearchSpace>
-public abstract record class Creator<TGenotype, TSearchSpace>
   : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -38,8 +37,8 @@ public abstract class CreatorInstance<TGenotype, TSearchSpace>
   IReadOnlyList<TGenotype> ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) =>
     Create(count, random, searchSpace);
 }
+
 public abstract record Creator<TGenotype>
-public abstract record class Creator<TGenotype>
   : ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   public abstract ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
@@ -57,7 +56,6 @@ public abstract class CreatorInstance<TGenotype>
 // ToDo: Since the stateless versions will be the most commonly used ones, think about naming them "Creator" and the other ones the "StatefulCreator".
 public abstract record StatelessCreator<TGenotype, TSearchSpace, TProblem>
   : ICreator<TGenotype, TSearchSpace, TProblem>,
-  : ICreator<TGenotype, TSearchSpace, TProblem>, 
     ICreatorInstance<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -66,9 +64,9 @@ public abstract record StatelessCreator<TGenotype, TSearchSpace, TProblem>
 
   public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
+
 public abstract record StatelessCreator<TGenotype, TSearchSpace>
   : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>,
-  : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>, 
     ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -79,9 +77,9 @@ public abstract record StatelessCreator<TGenotype, TSearchSpace>
   IReadOnlyList<TGenotype> ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) =>
     Create(count, random, searchSpace);
 }
+
 public abstract record StatelessCreator<TGenotype>
   : ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>,
-  : ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>, 
     ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   public ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
