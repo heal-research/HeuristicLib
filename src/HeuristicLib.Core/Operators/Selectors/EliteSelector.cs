@@ -28,8 +28,8 @@ public record EliteSelector<TGenotype, TSearchSpace, TProblem>
     return new Instance(selectorInstance, bestInstance, elites);
   }
 
-  public class Instance
-    : SelectorInstance<TGenotype, TSearchSpace, TProblem>
+  public new class Instance
+    : Selector<TGenotype, TSearchSpace, TProblem>.Instance
   {
     private readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector;
     private readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> best;

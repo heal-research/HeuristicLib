@@ -21,8 +21,8 @@ public record StagnationTerminator<TGenotype>
     return new Instance(window);
   }
 
-  public class Instance
-    : TerminatorInstance<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  public new class Instance
+    : Terminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Instance
   {
     private readonly int window;
 

@@ -28,7 +28,7 @@ public partial record PipelineMutator<TG, TS, TP> : Mutator<TG, TS, TP>
     return new Instance(mutatorInstances);
   }
 
-  public class Instance : MutatorInstance<TG, TS, TP>
+  public new class Instance : Mutator<TG, TS, TP>.Instance
   {
     private readonly IReadOnlyList<IMutatorInstance<TG, TS, TP>> mutators;
 

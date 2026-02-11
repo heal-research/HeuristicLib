@@ -25,14 +25,14 @@ public partial record ObservableTerminator<TG, TR, TS, TP>
     Observers = observers;
   }
 
-  public override ITerminatorInstance<TG, TR, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var interceptorInstance = instanceRegistry.Resolve(Interceptor);
-    return new ObservableTerminatorInstance(interceptorInstance, Observers);
+    return new Instance(interceptorInstance, Observers);
   }
 
-  private sealed class ObservableTerminatorInstance(ITerminatorInstance<TG, TR, TS, TP> terminatorInstance, IReadOnlyList<ITerminatorObserver<TG, TR, TS, TP>> observers)
-    : TerminatorInstance<TG, TR, TS, TP>
+  public new sealed class Instance(ITerminatorInstance<TG, TR, TS, TP> terminatorInstance, IReadOnlyList<ITerminatorObserver<TG, TR, TS, TP>> observers)
+    : Terminator<TG, TR, TS, TP>.Instance
   {
     public override bool ShouldTerminate(TR state, TS searchSpace, TP problem)
     {

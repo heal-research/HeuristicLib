@@ -24,14 +24,14 @@ public partial record ObservableReplacer<TG, TS, TP>
     Observers = observers;
   }
 
-  public override IReplacerInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var replacerInstance = instanceRegistry.Resolve(Replacer);
-    return new ObservableReplacerInstance(replacerInstance, Observers);
+    return new Instance(replacerInstance, Observers);
   }
 
-  private sealed class ObservableReplacerInstance(IReplacerInstance<TG, TS, TP> replacerInstance, IReadOnlyList<IReplacerObserver<TG, TS, TP>> observers)
-    : ReplacerInstance<TG, TS, TP>
+  public new sealed class Instance(IReplacerInstance<TG, TS, TP> replacerInstance, IReadOnlyList<IReplacerObserver<TG, TS, TP>> observers)
+    : Replacer<TG, TS, TP>.Instance
   {
     public override IReadOnlyList<ISolution<TG>> Replace(IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {

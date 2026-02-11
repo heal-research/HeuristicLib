@@ -25,8 +25,8 @@ public partial record AnyTerminator<TGenotype, TAlgorithmState, TSearchSpace, TP
     return new Instance(terminatorInstances);
   }
 
-  public class Instance
-    : TerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+  public new class Instance
+    : Terminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>.Instance
   {
     private readonly IReadOnlyList<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> terminators;
 

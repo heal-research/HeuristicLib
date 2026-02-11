@@ -27,8 +27,8 @@ public partial record MultiInterceptor<TGenotype, TAlgorithmState, TSearchSpace,
     return new Instance(interceptorInstances);
   }
 
-  public class Instance
-    : InterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+  public new class Instance
+    : Interceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>.Instance
   {
     private readonly IReadOnlyList<IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> interceptors;
 

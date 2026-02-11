@@ -8,73 +8,41 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 public abstract record SingleSolutionCreator<TGenotype, TSearchSpace, TProblem>
   : Creator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
-
-public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace, TProblem>
-  : CreatorInstance<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+  public new abstract class Instance
+    : Creator<TGenotype, TSearchSpace, TProblem>.Instance
+  {
+    public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-    BatchExecution.Sequential(count, r => Create(r, searchSpace, problem), random);
+    public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+      BatchExecution.Sequential(count, r => Create(r, searchSpace, problem), random);
+  }
 }
 
 public abstract record SingleSolutionCreator<TGenotype, TSearchSpace>
   : Creator<TGenotype, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TGenotype>;
-
-public abstract class SingleSolutionCreatorInstance<TGenotype, TSearchSpace>
-  : CreatorInstance<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
+  public new abstract class Instance
+    : Creator<TGenotype, TSearchSpace>.Instance
+  {
+    public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-  public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
-    BatchExecution.Sequential(count, r => Create(r, searchSpace), random);
+    public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+      BatchExecution.Sequential(count, r => Create(r, searchSpace), random);
+  }
 }
 
 public abstract record SingleSolutionCreator<TGenotype>
-  : Creator<TGenotype>;
-
-public abstract class SingleSolutionCreatorInstance<TGenotype>
-  : CreatorInstance<TGenotype>
+  : Creator<TGenotype>
 {
-  public abstract TGenotype Create(IRandomNumberGenerator random);
+  public new abstract class Instance
+    : Creator<TGenotype>.Instance
+  {
+    public abstract TGenotype Create(IRandomNumberGenerator random);
 
-  public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) =>
-    BatchExecution.Sequential(count, r => Create(r), random);
-}
-
-// ToDo: Since the stateless versions will be the most commonly used ones, think about naming them "Creator" and the other ones the "StatefulCreator".
-
-public abstract record SingleSolutionStatelessCreator<TGenotype, TSearchSpace, TProblem>
-  : StatelessCreator<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
-  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-  public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-    BatchExecution.Sequential(count, r => Create(r, searchSpace, problem), random);
-}
-
-public abstract record SingleSolutionStatelessCreator<TGenotype, TSearchSpace>
-  : StatelessCreator<TGenotype, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-{
-  public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
-
-  public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
-    BatchExecution.Sequential(count, r => Create(r, searchSpace), random);
-}
-
-public abstract record SingleSolutionStatelessCreator<TGenotype>
-  : StatelessCreator<TGenotype>
-{
-  public abstract TGenotype Create(IRandomNumberGenerator random);
-
-  public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) =>
-    BatchExecution.Sequential(count, r => Create(r), random);
+    public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random) =>
+      BatchExecution.Sequential(count, r => Create(r), random);
+  }
 }

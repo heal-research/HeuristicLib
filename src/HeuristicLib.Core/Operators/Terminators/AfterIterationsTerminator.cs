@@ -17,7 +17,7 @@ public record AfterIterationsTerminator<TGenotype>
     return new Instance(maximumIterations);
   }
 
-  public class Instance : TerminatorInstance<TGenotype>
+  public new class Instance : Terminator<TGenotype>.Instance
   {
     private readonly int maximumIterations;
     private int currentCounter;

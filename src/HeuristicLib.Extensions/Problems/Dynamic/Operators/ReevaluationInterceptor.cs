@@ -29,7 +29,7 @@ public record ReevaluationInterceptor<T, TR, TE, TP>
     return new Instance(evaluatorInstance, problem);
   }
 
-  public class Instance : InterceptorInstance<T, TR, TE, TP>
+  public new class Instance : Interceptor<T, TR, TE, TP>.Instance
   {
     private readonly IEvaluatorInstance<T, TE, TP> evaluator;
 

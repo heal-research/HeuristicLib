@@ -59,7 +59,7 @@ public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crosso
     return new Instance(crossoverInstances, cumulativeSumWeights, sumWeights);
   }
 
-  public class Instance : CrossoverInstance<TGenotype, TSearchSpace, TProblem>
+  public new class Instance : Crossover<TGenotype, TSearchSpace, TProblem>.Instance
   {
     private readonly IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers;
     private readonly double[] cumulativeSumWeights;

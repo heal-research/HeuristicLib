@@ -28,11 +28,11 @@ public partial record ObservableCrossover<TG, TS, TP>
   public override ICrossoverInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var crossoverInstance = instanceRegistry.Resolve(Crossover);
-    return new ObservableCrossoverInstance(crossoverInstance, Observers);
+    return new Instance(crossoverInstance, Observers);
   }
 
-  private sealed class ObservableCrossoverInstance(ICrossoverInstance<TG, TS, TP> crossoverInstance, IReadOnlyList<ICrossoverObserver<TG, TS, TP>> observers)
-    : CrossoverInstance<TG, TS, TP>
+  private new sealed class Instance(ICrossoverInstance<TG, TS, TP> crossoverInstance, IReadOnlyList<ICrossoverObserver<TG, TS, TP>> observers)
+    : Crossover<TG, TS, TP>.Instance
   {
     public override IReadOnlyList<TG> Cross(IReadOnlyList<IParents<TG>> parents, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {

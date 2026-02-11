@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 [Equatable]
 public partial record ObservableEvaluator<TG, TS, TP>
-  : IEvaluator<TG, TS, TP>
+  : Evaluator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -25,14 +25,14 @@ public partial record ObservableEvaluator<TG, TS, TP>
     Observers = observers;
   }
 
-  public IEvaluatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
-    return new ObservableEvaluatorInstance(evaluatorInstance, Observers);
+    return new Instance(evaluatorInstance, Observers);
   }
 
-  private sealed class ObservableEvaluatorInstance(IEvaluatorInstance<TG, TS, TP> evaluatorInstance, IReadOnlyList<IEvaluatorObserver<TG, TS, TP>> observers)
-    : EvaluatorInstance<TG, TS, TP>
+  public new class Instance(IEvaluatorInstance<TG, TS, TP> evaluatorInstance, IReadOnlyList<IEvaluatorObserver<TG, TS, TP>> observers)
+    : Evaluator<TG, TS, TP>.Instance
   {
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {

@@ -34,7 +34,7 @@ public record LimitEvaluator<TG, TS, TP>
     return new Instance(evaluatorInstance, counter, maxEvaluations, alternativeValue, strict);
   }
 
-  public class Instance : EvaluatorInstance<TG, TS, TP>
+  public new class Instance : Evaluator<TG, TS, TP>.Instance
   {
     private readonly IEvaluatorInstance<TG, TS, TP> evaluator;
     private readonly InvocationCounter counter;

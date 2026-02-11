@@ -27,11 +27,11 @@ public partial record ObservableCreator<TG, TS, TP>
   public override ICreatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorInstance = instanceRegistry.Resolve(Creator);
-    return new ObservableCreatorInstance(creatorInstance, Observers);
+    return new Instance(creatorInstance, Observers);
   }
 
-  private sealed class ObservableCreatorInstance(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserver<TG, TS, TP>> observers)
-    : CreatorInstance<TG, TS, TP>
+  private new sealed class Instance(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserver<TG, TS, TP>> observers)
+    : Creator<TG, TS, TP>.Instance
   {
     public override IReadOnlyList<TG> Create(int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {

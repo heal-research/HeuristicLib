@@ -31,8 +31,8 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
     return new Instance(evaluatorInstance, KeySelector, SizeLimit);
   }
 
-  public class Instance
-    : EvaluatorInstance<TGenotype, TSearchSpace, TProblem>
+  public new class Instance
+    : Evaluator<TGenotype, TSearchSpace, TProblem>.Instance
   {
     protected readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator;
     protected readonly Func<TGenotype, TKey> KeySelector;

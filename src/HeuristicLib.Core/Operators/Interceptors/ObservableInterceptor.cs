@@ -25,14 +25,14 @@ public partial record ObservableInterceptor<TG, TR, TS, TP>
     Observers = observers;
   }
 
-  public override IInterceptorInstance<TG, TR, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var interceptorInstance = instanceRegistry.Resolve(Interceptor);
-    return new ObservableInterceptorInstance(interceptorInstance, Observers);
+    return new Instance(interceptorInstance, Observers);
   }
 
-  private sealed class ObservableInterceptorInstance(IInterceptorInstance<TG, TR, TS, TP> interceptorInstance, IReadOnlyList<IInterceptorObserver<TG, TR, TS, TP>> observers)
-    : InterceptorInstance<TG, TR, TS, TP>
+  public new sealed class Instance(IInterceptorInstance<TG, TR, TS, TP> interceptorInstance, IReadOnlyList<IInterceptorObserver<TG, TR, TS, TP>> observers)
+    : Interceptor<TG, TR, TS, TP>.Instance
   {
     public override TR Transform(TR currentState, TR? previousState, TS searchSpace, TP problem)
     {

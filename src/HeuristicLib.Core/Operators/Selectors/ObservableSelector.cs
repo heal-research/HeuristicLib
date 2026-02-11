@@ -25,14 +25,14 @@ public partial record ObservableSelector<TG, TS, TP>
     Observers = observers;
   }
 
-  public override ISelectorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var selectorInstance = instanceRegistry.Resolve(Selector);
-    return new ObservableSelectorInstance(selectorInstance, Observers);
+    return new Instance(selectorInstance, Observers);
   }
 
-  private sealed class ObservableSelectorInstance(ISelectorInstance<TG, TS, TP> selectorInstance, IReadOnlyList<ISelectorObserver<TG, TS, TP>> observers)
-    : SelectorInstance<TG, TS, TP>
+  public new sealed class Instance(ISelectorInstance<TG, TS, TP> selectorInstance, IReadOnlyList<ISelectorObserver<TG, TS, TP>> observers)
+    : Selector<TG, TS, TP>.Instance
   {
     public override IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {

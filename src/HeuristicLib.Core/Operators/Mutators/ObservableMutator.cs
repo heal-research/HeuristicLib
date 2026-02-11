@@ -24,14 +24,14 @@ public partial record ObservableMutator<TG, TS, TP>
     Observers = observers;
   }
 
-  public override IMutatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var mutatorInstance = instanceRegistry.Resolve(Mutator);
-    return new ObservableMutatorInstance(mutatorInstance, Observers);
+    return new Instance(mutatorInstance, Observers);
   }
 
-  private sealed class ObservableMutatorInstance(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserver<TG, TS, TP>> observers)
-    : MutatorInstance<TG, TS, TP>
+  public new sealed class Instance(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserver<TG, TS, TP>> observers)
+    : Mutator<TG, TS, TP>.Instance
   {
     public override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {

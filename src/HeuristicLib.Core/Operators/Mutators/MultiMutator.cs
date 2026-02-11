@@ -59,7 +59,7 @@ public partial record MultiMutator<TGenotype, TSearchSpace, TProblem>
     return new Instance(mutatorInstances, cumulativeSumWeights, sumWeights);
   }
 
-  public class Instance : MutatorInstance<TGenotype, TSearchSpace, TProblem>
+  public new class Instance : Mutator<TGenotype, TSearchSpace, TProblem>.Instance
   {
     private readonly IReadOnlyList<IMutatorInstance<TGenotype, TSearchSpace, TProblem>> mutator;
     private readonly double[] cumulativeSumWeights;

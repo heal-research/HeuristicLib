@@ -28,8 +28,8 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
     return new Instance(PredefinedSolutions, creatorForRemainingSolutionsInstance);
   }
 
-  public class Instance
-    : CreatorInstance<TGenotype, TSearchSpace, TProblem>
+  public new class Instance
+    : Creator<TGenotype, TSearchSpace, TProblem>.Instance
   {
     private int currentSolutionIndex;
 

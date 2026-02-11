@@ -30,7 +30,7 @@ public record RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
     return new Instance(evaluatorInstance, repeats, aggregator);
   }
 
-  public class Instance : EvaluatorInstance<TGenotype, TSearchSpace, TProblem>
+  public new class Instance : Evaluator<TGenotype, TSearchSpace, TProblem>.Instance
   {
     private readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator;
     private readonly int repeats;
