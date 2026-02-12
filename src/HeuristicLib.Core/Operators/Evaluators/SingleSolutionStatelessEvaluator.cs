@@ -6,12 +6,12 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public abstract record SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace, TProblem>()
+public abstract record SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace, TProblem>
   : StatelessEvaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
+  public int MaxDegreeOfParallelism { get; init; } = -1;
 
   public abstract ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
@@ -20,11 +20,11 @@ public abstract record SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace,
 }
 
 
-public abstract record SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace>(int maxDegreeOfParallelism)
+public abstract record SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace>
   : StatelessEvaluator<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
+  public int MaxDegreeOfParallelism { get; init; } = -1;
 
   public abstract ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
@@ -32,10 +32,10 @@ public abstract record SingleSolutionStatelessEvaluator<TGenotype, TSearchSpace>
     BatchExecution.Parallel(genotypes, (g, r) => Evaluate(g, r, searchSpace), random, MaxDegreeOfParallelism);
 }
 
-public abstract record SingleSolutionStatelessEvaluator<TGenotype>(int maxDegreeOfParallelism)
+public abstract record SingleSolutionStatelessEvaluator<TGenotype>
   : StatelessEvaluator<TGenotype>
 {
-  public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
+  public int MaxDegreeOfParallelism { get; init; } = -1;
 
   public abstract ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random);
 

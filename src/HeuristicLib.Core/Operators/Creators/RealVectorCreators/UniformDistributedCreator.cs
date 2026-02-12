@@ -4,15 +4,20 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 
-public record UniformDistributedCreator(RealVector? minimum = null, RealVector? maximum = null)
-  : SingleSolutionStatelessCreator<RealVector, RealVectorSearchSpace>
+public record UniformDistributedCreator : SingleSolutionStatelessCreator<RealVector, RealVectorSearchSpace>
 {
   public UniformDistributedCreator(RealVectorSearchSpace searchSpace)
     : this(searchSpace.Minimum, searchSpace.Maximum)
   { }
 
-  public RealVector? Minimum { get; set; } = minimum;
-  public RealVector? Maximum { get; set; } = maximum;
+  public UniformDistributedCreator(RealVector? minimum = null, RealVector? maximum = null)
+  {
+    Minimum = minimum;
+    Maximum = maximum;
+  }
+
+  public RealVector? Minimum { get; init; }
+  public RealVector? Maximum { get; init; }
 
   public override RealVector Create(IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
   {

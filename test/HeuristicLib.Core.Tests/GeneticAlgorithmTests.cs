@@ -31,34 +31,20 @@ public record DummyEvaluator<TGenotype, TSearchSpace, TProblem> : SingleSolution
 public class GeneticAlgorithmTests
 {
   [Fact]
-  public void GeneticAlgorithm_Create_WithConstructor()
+  public Task GeneticAlgorithm_Create_WithConstructor()
   {
-    var searchSpace = new RealVectorSearchSpace(10, -5, +5);
-    var creator = new UniformDistributedCreator(null, 3.0);
-    var crossover = new SinglePointCrossover();
-    var mutator = new GaussianMutator(0.1, 0.1);
-    // var decoder = Decoder.Identity<RealVector>();
-    // var DirectEvaluator = new RealVectorMockEvaluator();
-    var selector = new RandomSelector<RealVector>();
-    var replacement = new PlusSelectionReplacer<RealVector>();
-    var terminator = new AfterIterationsTerminator<RealVector>(5);
-
     var ga = new GeneticAlgorithm<RealVector, RealVectorSearchSpace> {
-      PopulationSize = 200,
-      Creator = creator,
-      Crossover = crossover,
-      Mutator = mutator.WithRate(0.05),
+      PopulationSize = 250,
+      Creator = new UniformDistributedCreator(null, 3.0),
+      Crossover = new SinglePointCrossover(),
+      Mutator = new GaussianMutator(0.1, 0.1),
+      MutationRate = 0.15,
       Evaluator = new DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>(),
-      Selector = selector,
-      Replacer = replacement,
-      // AlgorithmRandom = SystemRandomNumberGenerator.Default(42),
-      // Terminator = terminator
+      Selector = new RandomSelector<RealVector>(),
+      Replacer = new PlusSelectionReplacer<RealVector>(),
     };
-    // SearchSpace = searchSpace,
 
-    // RandomSource = randomSource, Terminator = terminator
-
-    // return Verify(ga);
+    return Verify(ga);
   }
 
   // [Fact]

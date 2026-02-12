@@ -1,47 +1,30 @@
 ﻿{
-  PopulationSize: 200,
+  PopulationSize: 250,
   Creator: {
-    $type: ProblemSpecificCreator<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,
-    ProblemAgnosticCreator: {
-      $type: UniformDistributedCreator,
-      Minimum: null,
-      Maximum: [
-        3.0
-      ]
-    }
+    $type: UniformDistributedCreator,
+    Minimum: null,
+    Maximum: [
+      3.0
+    ]
   },
   Crossover: {
-    $type: ProblemSpecificCrossover<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,
-    ProblemAgnosticCrossover: {
-      $type: SinglePointCrossover
-    }
+    $type: SinglePointCrossover
   },
   Mutator: {
-    $type: ProblemSpecificMutator<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>
+    $type: GaussianMutator,
+    MutationRate: 0.1,
+    MutationStrength: 0.1
   },
-  MutationRate: 0.05,
+  MutationRate: 0.15,
   Selector: {
-    $type: ProblemSpecificSelector<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,
-    ProblemAgnosticSelector: {
-      $type: SimpleSelector<RealVector, RealVectorSearchSpace>,
-      ProblemAgnosticSelector: {
-        $type: RandomSelector
-      }
-    }
+    $type: RandomSelector<RealVector>
   },
   Replacer: {
-    $type: ProblemSpecificReplacer<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,
-    ProblemAgnosticReplacer: {
-      $type: PlusSelectionReplacer<RealVector, RealVectorSearchSpace>
-    }
+    $type: PlusSelectionReplacer<RealVector>
   },
-  RandomSeed: 42,
   Interceptor: null,
-  Terminator: {
-    $type: ProblemSpecificTerminator<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>, GeneticAlgorithmResult<RealVector>>,
-    ProblemAgnosticTerminator: {
-      $type: OnMaximumGenerationTerminator<RealVector, RealVectorSearchSpace, GeneticAlgorithmResult<RealVector>>,
-      MaximumGeneration: 5
-    }
+  Evaluator: {
+    $type: DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>,
+    MaxDegreeOfParallelism: -1
   }
 }

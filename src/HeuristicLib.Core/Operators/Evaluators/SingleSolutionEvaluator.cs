@@ -11,7 +11,7 @@ public abstract record SingleSolutionEvaluator<TGenotype, TSearchSpace, TProblem
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
+  public int MaxDegreeOfParallelism { get; init; } = -1;
 
   public new abstract class Instance(int maxDegreeOfParallelism)
     : Evaluator<TGenotype, TSearchSpace, TProblem>.Instance
@@ -27,7 +27,7 @@ public abstract record SingleSolutionEvaluator<TGenotype, TSearchSpace>
   : Evaluator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
+  public int MaxDegreeOfParallelism { get; init; } = -1;
 
   public new abstract class Instance(int maxDegreeOfParallelism)
     : Evaluator<TGenotype, TSearchSpace>.Instance
@@ -42,7 +42,7 @@ public abstract record SingleSolutionEvaluator<TGenotype, TSearchSpace>
 public abstract record SingleSolutionEvaluator<TGenotype>
   : Evaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
-  public int MaxDegreeOfParallelism { get; init; } = Environment.ProcessorCount;
+  public int MaxDegreeOfParallelism { get; init; } = -1;
 
   public new abstract class Instance(int maxDegreeOfParallelism)
     : Evaluator<TGenotype>.Instance
