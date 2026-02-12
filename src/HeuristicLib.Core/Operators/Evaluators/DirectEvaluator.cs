@@ -5,7 +5,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-// ToDo: probably rename to ProblemEvaluator or DirectProblemEvaluator, to make it more clear that this evaluator talks to the Problem directly.
 public record DirectEvaluator<TGenotype>
   : SingleSolutionStatelessEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
@@ -13,4 +12,9 @@ public record DirectEvaluator<TGenotype>
   {
     return problem.Evaluate(genotype, random);
   }
+}
+
+public static class DirectEvaluatorExtensions
+{
+  public static DirectEvaluator<TGenotype> CreateEvaluator<TGenotype>(this IProblem<TGenotype, ISearchSpace<TGenotype>> algorithm) => new();
 }

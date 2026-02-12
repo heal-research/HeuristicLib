@@ -108,13 +108,28 @@ public static class DynamicCachedEvaluatorExtension
     return new DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(evaluator, problem, keySelector);
   }
 
-  public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-    GetCachedEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(this TProblem problem, Func<TGenotype, TKey>? keySelector = null)
+  public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>
+    WithCache<TGenotype, TSearchSpace, TProblem>(this IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
+                                                 TProblem problem)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : DynamicProblem<TGenotype, TSearchSpace>
     where TGenotype : class
-    where TKey : notnull
+
   {
-    return new DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(new DirectEvaluator<TGenotype>(), problem, keySelector);
+    return new DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>(evaluator, problem, x => x);
   }
+
+  public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
+    WithCache<TGenotype, TSearchSpace, TProblem, TKey>(this TProblem problem, Func<TGenotype, TKey> keySelector)
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : DynamicProblem<TGenotype, TSearchSpace>
+    where TGenotype : class
+    where TKey : notnull => new(new DirectEvaluator<TGenotype>(), problem, keySelector);
+
+  public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>
+    WithCache<TGenotype, TSearchSpace, TProblem>(this TProblem problem)
+    where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TProblem : DynamicProblem<TGenotype, TSearchSpace>
+    where TGenotype : class
+    => new(new DirectEvaluator<TGenotype>(), problem, x => x);
 }

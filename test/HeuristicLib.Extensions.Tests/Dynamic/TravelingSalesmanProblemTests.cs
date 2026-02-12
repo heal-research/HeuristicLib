@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems.Dynamic.Operators;
 using HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
@@ -118,7 +119,7 @@ public class TravelingSalesmanProblemTests
     var env = RandomNumberGenerator.Create(0);
     var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 1.0, epochLength: 200);
     var tour = new Permutation([0, 1, 2, 3]);
-    var cachedEval = p.GetCachedEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem, Permutation>().CreateExecutionInstance();
+    var cachedEval = p.CreateEvaluator().WithCache().CreateExecutionInstance();
     Assert.Equal(0, p.EpochClock.CurrentEpoch);
 
     var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
