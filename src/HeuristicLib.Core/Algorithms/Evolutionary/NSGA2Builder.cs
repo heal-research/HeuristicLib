@@ -29,15 +29,13 @@ public record NSGA2Builder<TG, TS, TP>
   public required IMutator<TG, TS, TP> Mutator { get; set; }
   public double MutationRate { get; set; } = 0.05;
 
-  public int Elites { get; set; } = 1;
-
   public override NSGA2<TG, TS, TP> Build() => new() {
     PopulationSize = PopulationSize,
     Creator = Creator,
     Crossover = Crossover,
     Selector = Selector,
     Evaluator = Evaluator,
-    Replacer = new ElitismReplacer<TG>(Elites),
+    Replacer = new ParetoCrowdingReplacer<TG>(true),
     Interceptor = Interceptor,
     Mutator = Mutator.WithRate(MutationRate)
   };

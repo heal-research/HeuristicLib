@@ -9,7 +9,9 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
+#pragma warning disable S101
 public record NSGA2<TGenotype, TSearchSpace, TProblem>
+#pragma warning restore S101
   : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
@@ -44,7 +46,9 @@ public record NSGA2<TGenotype, TSearchSpace, TProblem>
   }
 }
 
+#pragma warning disable S101
 public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
+#pragma warning restore S101
   : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
@@ -90,7 +94,9 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
   }
 }
 
+#pragma warning disable S101
 public static class NSGA2
+#pragma warning restore S101
 {
   public static NSGA2Builder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
     ICreator<TGenotype, TSearchSpace, TProblem> creator,
@@ -98,7 +104,7 @@ public static class NSGA2
     IMutator<TGenotype, TSearchSpace, TProblem> mutator, bool dominateOnEquals = true)
     where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> where TGenotype : class
   {
-    return new() {
+    return new NSGA2Builder<TGenotype, TSearchSpace, TProblem> {
       Mutator = mutator,
       Crossover = crossover,
       Creator = creator,

@@ -182,7 +182,7 @@ public class PythonGenealogyAnalysis
         }
 
         //nsga2.Terminator = terminator;
-        // analyzers = AddAnalyzers(callback, nsga2, parameters);
+        analyzers = AddAnalyzers(callback, nsga2, parameters);
         _ = nsga2.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
         break;
       default:

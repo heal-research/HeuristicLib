@@ -29,13 +29,13 @@ public class GenealogyGraphTests
 {
   private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
   {
-    var symRegAllMutator = MultiMutator.Create([
+    var symRegAllMutator = MultiMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
       new OnePointShaker(),
       new RemoveBranchManipulation(),
       new ReplaceBranchManipulation()
-    ]);
+    );
 
     return symRegAllMutator;
   }
