@@ -76,7 +76,7 @@ public static class DominationCalculator
   private static List<ISolution<T>> CalculateBestFront<T>(IReadOnlyList<ISolution<T>> solutions, Objective objective, int populationSize, bool dominateOnEquals, out Dictionary<ISolution<T>, List<int>> dominatedIndividuals, out int[] dominationCounter, out int[] rank)
   {
     var front = new List<ISolution<T>>();
-    dominatedIndividuals = new Dictionary<ISolution<T>, List<int>>();
+    dominatedIndividuals = new Dictionary<ISolution<T>, List<int>>(ReferenceEqualityComparer.Instance);
     dominationCounter = new int[populationSize];
     rank = new int[populationSize];
     for (var pI = 0; pI < populationSize - 1; pI++) {

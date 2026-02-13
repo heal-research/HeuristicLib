@@ -25,7 +25,7 @@ public record ParetoCrowdingTournamentSelector<TGenotype>
     var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
 
     // Key by solution instead of ObjectiveVector
-    var crowdingBySolution = new Dictionary<ISolution<TGenotype>, double>();
+    var crowdingBySolution = new Dictionary<ISolution<TGenotype>, double>(ReferenceEqualityComparer.Instance);
     var res = new ISolution<TGenotype>[count];
 
     var calculatedFront = new HashSet<int>();
@@ -48,7 +48,6 @@ public record ParetoCrowdingTournamentSelector<TGenotype>
         }
 
         // equal rank -> compare crowding
-
         // ensure we have distances for this front
         if (!calculatedFront.Contains(bestRank)) {
           var frontSolutions = fronts[bestRank];
