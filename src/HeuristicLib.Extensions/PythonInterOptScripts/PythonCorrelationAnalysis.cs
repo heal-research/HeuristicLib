@@ -37,7 +37,7 @@ public static class PythonCorrelationAnalysis
     var evaluator = new DirectEvaluator<RealVector>();
     var res = new double[solutions.Count];
     Parallel.ForEach(solutions, (vector, state, i) => {
-      var r = random.Fork(i);
+      var r = random.Fork((int)i);
       var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, delta, vector.Count, false)).ToArray();
       var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
       var d = OnlinePearsonsRCalculator.Calculate(

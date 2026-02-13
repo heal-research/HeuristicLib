@@ -46,19 +46,19 @@ public class PythonGenealogyAnalysis
     RunConfigurableRepeated(
       repetitions,
       experiment: seed => RunSymbolicRegressionConfigurable(file, new SymRegExperimentParameters(parameters) { Seed = seed }),
-      parameters.Seed);
+      (int)parameters.Seed);
 
   public static ExperimentResult<Permutation>[] RunTravelingSalesmanConfigurable(string file, TravelingSalesmanExperimentParameters parameters, int repetitions) =>
     RunConfigurableRepeated(
       repetitions,
       experiment: seed => RunTravelingSalesmanConfigurable(file, new TravelingSalesmanExperimentParameters(parameters) { Seed = seed }),
-      parameters.Seed);
+      (int)parameters.Seed);
 
   public static ExperimentResult<RealVector>[] RunTestFunctionConfigurable(string file, TestFunctionExperimentParameters parameters, int repetitions) =>
     RunConfigurableRepeated(
       repetitions,
       experiment: seed => RunTestFunctionConfigurable(file, new TestFunctionExperimentParameters(parameters) { Seed = seed }),
-      parameters.Seed);
+      (int)parameters.Seed);
   #endregion
 
   public static ExperimentResult<SymbolicExpressionTree> RunSymbolicRegressionConfigurable(
@@ -156,8 +156,8 @@ public class PythonGenealogyAnalysis
 
         analyzers = AddAnalyzers(callback, es, parameters);
 
-        var t = es.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry)
-                  .RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        es.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry)
+          .RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
         break;
       case "ls":
@@ -166,7 +166,8 @@ public class PythonGenealogyAnalysis
         //ls.Terminator = terminator;
 
         // analyzers = AddAnalyzers(callback, ls, parameters);
-        ls.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        ls.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry)
+          .RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
         break;
       case "nsga2":
@@ -179,7 +180,8 @@ public class PythonGenealogyAnalysis
 
         //nsga2.Terminator = terminator;
         analyzers = AddAnalyzers(callback, nsga2, parameters);
-        _ = nsga2.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        _ = nsga2.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry)
+                 .RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
         break;
       default:
         throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");

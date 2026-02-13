@@ -14,7 +14,8 @@ public sealed class RandomProfile
     EngineFactory = engineFactory;
   }
 
-  public static RandomProfile Default { get; } = new(new SplitMix64KeyCombiner(), seed => new Pcg64Engine(seed));
+  public static RandomProfile Default { get; } = new(new SplitMix64KeyCombiner(), seed => new Pcg32Engine(seed));
+  public static RandomProfile System { get; } = new(new SplitMix64KeyCombiner(), seed => new SystemRandomEngine(seed));
 
   public static RandomProfile Philox { get; } = new(new Fmix64KeyCombiner(), seed => new PhiloxEngine(seed));
 }

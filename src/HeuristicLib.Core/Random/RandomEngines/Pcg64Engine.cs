@@ -1,27 +1,35 @@
 namespace HEAL.HeuristicLib.Random.RandomEngines;
 
-public sealed class Pcg64Engine : IRandomEngine
+public sealed class Pcg32Engine : IRandomEngine
 {
   private ulong state;
   private const ulong Multiplier = 6364136223846793005UL;
+  private const ulong Increment = 0xDA3E39CB94B95BDBUL; // must be odd (it is)
 
-  public Pcg64Engine(ulong seed)
+  public Pcg32Engine(ulong seed)
   {
     state = seed + 0x853C49E6748FEA9BUL;
-    NextUInt64();
+    NextUInt32(); // warm up
   }
 
-  private ulong NextUInt64()
+  private uint NextUInt32()
   {
-    var old = state;
-    state = unchecked((old * Multiplier) + 0xDA3E39CB94B95BDBUL);
+    ulong old = state;
+    state = unchecked(old * Multiplier + Increment);
 
-    var xorshifted = ((old >> 18) ^ old) >> 27;
-    var rot = (int)(old >> 59);
-    return (xorshifted >> rot) | (xorshifted << (-rot & 31));
+    uint xorshifted = (uint)(((old >> 18) ^ old) >> 27);
+    int rot = (int)(old >> 59);
+    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
   }
 
-  public int NextInt() => (int)(NextUInt64() & 0x7FFFFFFF);
+  public int NextInt() => (int)(NextUInt32() & 0x7FFFFFFF);
 
-  public double NextDouble() => (NextUInt64() >> 11) * (1.0 / (1UL << 53));
+  // Make a proper [0,1) double with 53 random bits from TWO 32-bit draws
+  public double NextDouble()
+  {
+    ulong a = NextUInt32();
+    ulong b = NextUInt32();
+    ulong x = (a << 21) ^ b; // mix to get >=53 bits available
+    return (x & ((1UL << 53) - 1)) * (1.0 / (1UL << 53));
+  }
 }
