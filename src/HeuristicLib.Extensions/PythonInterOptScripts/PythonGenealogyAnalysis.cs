@@ -123,7 +123,7 @@ public class PythonGenealogyAnalysis
     }
 
     MyAnalyzers<T> analyzers = null!;
-    ExecutionInstanceRegistry registry = new ExecutionInstanceRegistry();
+    ExecutionInstanceRegistry registry;
 
     switch (parameters.AlgorithmName.ToLower()) {
       case "ga":
@@ -135,11 +135,9 @@ public class PythonGenealogyAnalysis
           ga.Selector = parameters.Selector;
         }
 
-        //ga.Terminator = terminator;
         analyzers = AddAnalyzers(callback, ga, parameters);
-        IAlgorithm<T, TE, IProblem<T, TE>, PopulationState<T>> t1 = ga.Build();
-
-        ga.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        ga.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry)
+          .RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
         break;
       case "es":
@@ -158,7 +156,8 @@ public class PythonGenealogyAnalysis
 
         analyzers = AddAnalyzers(callback, es, parameters);
 
-        var t = es.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry).RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
+        var t = es.Build().WithMaxIterations(parameters.Iterations).CreateExecutionInstance(out registry)
+                  .RunToCompletion(problem, RandomNumberGenerator.Create(parameters.Seed));
 
         break;
       case "ls":
