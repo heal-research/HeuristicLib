@@ -14,12 +14,11 @@ public record BalancedTreeCreator : SymbolicExpressionTreeCreator
 
   public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, double irregularityBias = 1)
   {
-    // even lengths cannot be achieved without symbols of odd arity
-    // therefore we randomly pick a neighbouring odd length value
     var tree = searchSpace.Grammar.MakeStump(random); // create a stump consisting of just a ProgramRootSymbol and a StartSymbol
-
-    var targetLength = random.NextInt(searchSpace.Grammar.GetMinimumExpressionLength(tree.Root[0].Symbol), searchSpace.TreeLength);
-    CreateExpression(random, tree.Root[0], searchSpace, targetLength - tree.Length, searchSpace.TreeDepth - tree.Depth, irregularityBias); // -2 because the stump has length 2 and depth 2
+    var minLength = searchSpace.Grammar.GetMinimumExpressionLength(tree.Root.Symbol);
+    var targetLength = random.NextInt(minLength, searchSpace.TreeLength) - tree.Length;
+    var targetDepth = searchSpace.TreeDepth - tree.Depth;
+    CreateExpression(random, tree.Root[0], searchSpace, targetLength, targetDepth, irregularityBias);
     return tree;
   }
 
