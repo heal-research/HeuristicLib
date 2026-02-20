@@ -8,6 +8,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
+using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
@@ -41,7 +42,8 @@ public class ProblemGeneration
 
   public static SymbolicRegressionProblem CreateSymbolicRegressionProblem(string file, SymRegExperimentParameters parameters)
   {
-    var problemData = SymRegCache.GetOrAdd((file, parameters.TrainingSplit), valueFactory: key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
+    var problemData = SymRegCache.GetOrAdd((file, parameters.TrainingSplit),
+      valueFactory: key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
     var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator(), new TreeLengthEvaluator()) {
       SearchSpace = {
         TreeDepth = parameters.TreeDepth,
@@ -75,6 +77,18 @@ public class ProblemGeneration
     : RealVectorProblem(MultiObjective.Create(maximization), new RealVectorSearchSpace(dimensions, min, max))
   {
     public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => cfunc(solution);
+  }
+
+  public static MultiObjectiveTestFunctionProblem CreateZdt(int number, int dim)
+  {
+    return (number switch {
+      1 => new Zdt1(dim).AsProblem(),
+      2 => new Zdt2(dim).AsProblem(),
+      3 => new Zdt3(dim).AsProblem(),
+      4 => new Zdt4(dim).AsProblem(),
+      6 => new Zdt6(dim).AsProblem(),
+      _ => throw new ArgumentException($"Invalid ZDT function number: {number}")
+    });
   }
 
   public class MultiObjectiveTravellingSalesmanProblem(TravelingSalesmanProblem[] tsps) :

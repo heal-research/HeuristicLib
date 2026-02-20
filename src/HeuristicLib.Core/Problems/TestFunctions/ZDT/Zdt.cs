@@ -1,5 +1,6 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 
@@ -53,4 +54,6 @@ public abstract class Zdt : IMultiObjectiveGradientTestFunction
   protected abstract RealVector GGradient(RealVector solution);
   protected abstract double H(double f1, double g);
   protected abstract (double dh_df1, double dh_dg) HGradient(double f1, double g);
+
+  public MultiObjectiveTestFunctionProblem AsProblem() => new(this, new RealVectorSearchSpace(Dimension, Min, Max));
 }
