@@ -23,7 +23,16 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
 
   public bool Equals(IntegerVector? other) => other is not null && (ReferenceEquals(this, other) || elements.SequenceEqual(other.elements));
   public override bool Equals(object? obj) => ReferenceEquals(this, obj) || obj is IntegerVector other && Equals(other);
-  public override int GetHashCode() => elements.GetHashCode();
+
+  public override int GetHashCode()
+  {
+    var hash = new HashCode();
+    foreach (var element in elements) {
+      hash.Add(element);
+    }
+
+    return hash.ToHashCode();
+  }
 
   public static implicit operator RealVector(IntegerVector integerVector) => new(integerVector.elements.Select(i => (double)i));
 
