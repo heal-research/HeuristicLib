@@ -29,10 +29,18 @@ public static class QuadraticAssignmentProblemHelper
 
 public class QuadraticAssignmentProblemTests
 {
+  public static QuadraticAssignmentProblem CreateDefault()
+  {
+    var flows = new double[,] { { 0, 2, 0, 1 }, { 2, 0, 3, 0 }, { 0, 3, 0, 4 }, { 1, 0, 4, 0 } };
+    var distances = new double[,] { { 0, 1, 2, 3 }, { 1, 0, 1, 2 }, { 2, 1, 0, 1 }, { 3, 2, 1, 0 } };
+
+    return new QuadraticAssignmentProblem(new QuadraticAssignmentProblemData(flows, distances));
+  }
+
   [Fact]
   public void Evaluate_KnownToyInstance_ReturnsExpectedCost()
   {
-    var problem = QuadraticAssignmentProblem.CreateDefault();
+    var problem = CreateDefault();
     var rng = TestRandoms.SystemRandomGenerator(1);
 
     // identity assignment: facility i -> location i
@@ -43,9 +51,9 @@ public class QuadraticAssignmentProblemTests
     // Compute expected manually for the default matrices you used
     // expected = sum_i sum_j F[i,j] * D[i,j]
     const double expected = 0 * 0 + 2 * 1 + 0 * 2 + 1 * 3
-      + 2 * 1 + 0 * 0 + 3 * 1 + 0 * 2
-      + 0 * 2 + 3 * 1 + 0 * 0 + 4 * 1
-      + 1 * 3 + 0 * 2 + 4 * 1 + 0 * 0;
+                            + 2 * 1 + 0 * 0 + 3 * 1 + 0 * 2
+                            + 0 * 2 + 3 * 1 + 0 * 0 + 4 * 1
+                            + 1 * 3 + 0 * 2 + 4 * 1 + 0 * 0;
 
     Assert.Equal(expected, cost, 10);
   }

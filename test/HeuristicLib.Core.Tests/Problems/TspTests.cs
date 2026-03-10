@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.Random;
 
 #pragma warning disable S1481
 
-namespace HEAL.HeuristicLib.Tests;
+namespace HEAL.HeuristicLib.Tests.Problems;
 
 public class TspTests
 {
@@ -41,13 +41,13 @@ public class TspTests
     ga.Elites = 1;
     // execute
     var resGa = ga.Build()
-      .WithMaxIterations(1000)
-      .RunToCompletion(prob, RandomNumberGenerator.Create(42));
+                  .WithMaxIterations(1000)
+                  .RunToCompletion(prob, RandomNumberGenerator.Create(42));
 
     // look at results
     var objGa = resGa.Population
-      .OrderBy(x => x.ObjectiveVector[0])
-      .First();
+                     .OrderBy(x => x.ObjectiveVector[0])
+                     .First();
 
     // best possible 7542
   }
