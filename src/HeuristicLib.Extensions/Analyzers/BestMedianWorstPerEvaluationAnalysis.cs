@@ -24,7 +24,7 @@ public class BestMedianWorstPerEvaluationAnalysis<TGenotype>
     private readonly List<(int, BestMedianWorstEntry<TGenotype>)> bestSolutions = [];
     public IReadOnlyList<(int, BestMedianWorstEntry<TGenotype>)> BestSolutions => bestSolutions;
 
-    public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> values, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+    public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
     {
       currentEvaluationsCount++;
     }

@@ -5,9 +5,15 @@ public static class DistanceHelper
 {
   public static double[,] GetDistanceMatrix(DistanceMeasure distanceMeasure, double[,]? coordinates, double[,]? distances, int dimension)
   {
-    if (distances != null) {
+    if (distances != null)
       return distances;
-    }
+
+    if (distanceMeasure == DistanceMeasure.Direct)
+      throw new ArgumentException("Direct distance measure requires a distance matrix.", nameof(distances));
+
+    if (coordinates == null)
+      throw new ArgumentNullException(nameof(coordinates), "Neither distances nor coordinates are provided");
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(coordinates.GetLength(0), dimension);
 
     distances = new double[dimension, dimension];
     for (var i = 0; i < dimension - 1; i++) {
@@ -39,7 +45,6 @@ public static class DistanceHelper
   private static double ChebyshevDistance(double x1, double y1, double x2, double y2) => Math.Max(Math.Abs(x1 - x2), Math.Abs(y1 - y2));
 
   #region Private Helpers
-
   private static double GetDistance(int i, int j, DistanceMeasure distanceMeasure, double[,]? coordinates, double[,]? distances)
   {
     return distanceMeasure switch {
@@ -63,6 +68,9 @@ public static class DistanceHelper
   private const double Pi = 3.141592;
   private const double Radius = 6378.388;
 
+  //mimicking TSPLIB’s GEO convention exactly
+  //strictly speaking this is not a distance 
+  //since it returns 1.0 on equal coordinates
   private static double GeoDistance(double x1, double y1, double x2, double y2)
   {
     var latitude1 = ConvertToRadian(x1);
@@ -82,7 +90,5 @@ public static class DistanceHelper
   private static double ManhattanDistance(double x1, double y1, double x2, double y2) => Math.Round(Math.Abs(x1 - x2) + Math.Abs(y1 - y2), MidpointRounding.AwayFromZero);
 
   private static double MaximumDistance(double x1, double y1, double x2, double y2) => Math.Max(Math.Round(Math.Abs(x1 - x2), MidpointRounding.AwayFromZero), Math.Round(Math.Abs(y1 - y2), MidpointRounding.AwayFromZero));
-
   #endregion
-
 }

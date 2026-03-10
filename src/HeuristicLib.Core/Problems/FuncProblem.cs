@@ -10,13 +10,10 @@ public static class FuncProblem
 }
 
 public class FuncProblem<TGenotype, TSearchSpace>(Func<TGenotype, double> evaluateFunc, TSearchSpace searchSpace, Objective objective)
-  : Problem<TGenotype, TSearchSpace>(objective, searchSpace) /*, IDeterministicProblem<TGenotype>*/
+  : Problem<TGenotype, TSearchSpace>(objective, searchSpace)
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public Func<TGenotype, double> EvaluateFunc { get; } = evaluateFunc;
-  // public IEvaluator<TGenotype> GetEvaluator() {
-  //   return new DeterministicProblemEvaluator<TGenotype>(this);
-  // }
+  private Func<TGenotype, double> EvaluateFunc { get; } = evaluateFunc;
 
   public override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random) => EvaluateFunc(solution);
 }

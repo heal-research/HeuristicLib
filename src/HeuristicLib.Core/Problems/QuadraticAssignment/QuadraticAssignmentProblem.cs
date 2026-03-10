@@ -25,17 +25,4 @@ public class QuadraticAssignmentProblem(IQuadraticAssignmentProblemData problemD
 
     return cost;
   }
-
-  #region Default Instance
-
-  public static QuadraticAssignmentProblem CreateDefault()
-  {
-    var flows = new double[,] { { 0, 2, 0, 1 }, { 2, 0, 3, 0 }, { 0, 3, 0, 4 }, { 1, 0, 4, 0 } };
-    var distances = new double[,] { { 0, 1, 2, 3 }, { 1, 0, 1, 2 }, { 2, 1, 0, 1 }, { 3, 2, 1, 0 } };
-
-    return new QuadraticAssignmentProblem(new QuadraticAssignmentProblemData(flows, distances));
-  }
-
-  #endregion
-
 }
