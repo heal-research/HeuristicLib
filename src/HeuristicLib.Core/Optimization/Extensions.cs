@@ -28,7 +28,10 @@ public static class Extensions
       for (int i = 0, j = 0; i < offspringCount; i++, j += 2) {
         var p1 = parents[j];
         var p2 = parents[j + 1];
-        if (objective is not null && objective.TotalOrderComparer.Compare(p1.ObjectiveVector, p2.ObjectiveVector) > 0) (p1, p2) = (p2, p1);
+        if (objective is not null
+            && objective.TotalOrderComparer is not NoTotalOrderComparer
+            && objective.TotalOrderComparer.Compare(p1.ObjectiveVector, p2.ObjectiveVector) > 0)
+          (p1, p2) = (p2, p1);
         parentPairs[i] = new Parents<TGenotype>(p1.Genotype, p2.Genotype);
       }
 

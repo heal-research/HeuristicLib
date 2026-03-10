@@ -1,4 +1,6 @@
-﻿namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
+﻿#pragma warning disable S2368
+#pragma warning disable S3887
+namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
 
 public sealed class QuadraticAssignmentProblemData(double[,] flows, double[,] distances) : IQuadraticAssignmentProblemData
 {

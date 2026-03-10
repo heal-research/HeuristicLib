@@ -28,7 +28,9 @@ public static class CrowdingDistance
       var maxVal = population[indices[^1]][obj];
       var range = maxVal - minVal;
 
+#pragma warning disable S1244
       if (range == 0.0) {
+#pragma warning restore S1244
         continue; // avoid division by zero
       }
 

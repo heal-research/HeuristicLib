@@ -16,10 +16,10 @@ namespace HEAL.HeuristicLib.Analyzers;
 // shortening interfaces for simple cases where the search space and problem are not relevant for the analysis
 
 public interface IInterceptorObserver<TGenotype> :
-  IInterceptorObserver<TGenotype, IAlgorithmState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>;
+  IInterceptorObserver<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, IAlgorithmState>;
 
 public interface IInterceptorObserver<TGenotype, in TState> :
-  IInterceptorObserver<TGenotype, TState, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  IInterceptorObserver<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TState>
   where TState : class, IAlgorithmState;
 
 public interface IEvaluatorObserver<TGenotype> :
@@ -45,7 +45,7 @@ public static class BuilderExtensions
       hasAttached = true;
     }
 
-    if (analysis is IInterceptorObserver<TG, TR, TS, TP> interceptorObserver && builder is IBuilderWithInterceptor<TG, TR, TS, TP> builderWithInterceptor) {
+    if (analysis is IInterceptorObserver<TG, TS, TP, TR> interceptorObserver && builder is IBuilderWithInterceptor<TG, TR, TS, TP> builderWithInterceptor) {
       var interceptor = builderWithInterceptor.Interceptor ?? new IdentityInterceptor<TG, TR>();
       builderWithInterceptor.Interceptor = interceptor.ObserveWith(interceptorObserver);
       hasAttached = true;

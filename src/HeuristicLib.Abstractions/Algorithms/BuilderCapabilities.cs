@@ -60,5 +60,5 @@ public interface IBuilderWithInterceptor<TG, TR, TS, TP> : IAlgorithmBuilder
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
 {
-  IInterceptor<TG, TR, TS, TP>? Interceptor { get; set; }
+  IInterceptor<TG, TS, TP, TR>? Interceptor { get; set; }
 }

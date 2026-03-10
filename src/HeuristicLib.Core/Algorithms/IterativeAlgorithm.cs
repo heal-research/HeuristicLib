@@ -14,7 +14,7 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAl
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  public IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; init; }
+  public IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Interceptor { get; init; }
 }
 
 public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
@@ -24,9 +24,9 @@ public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProbl
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  protected readonly IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor;
+  protected readonly IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Interceptor;
 
-  protected IterativeAlgorithmInstance(IInterceptorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
+  protected IterativeAlgorithmInstance(IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
     : base(evaluator)
   {
     Interceptor = interceptor;

@@ -82,7 +82,7 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
   protected readonly double InitialMutationStrength;
   protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
 
-  public EvolutionStrategyInstance(IInterceptorInstance<TGenotype, EvolutionStrategyState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem>? crossover, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
+  public EvolutionStrategyInstance(IInterceptorInstance<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem>? crossover, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;

@@ -1,4 +1,7 @@
-﻿namespace HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
+﻿using System.Collections.Immutable;
+using System.Collections.ObjectModel;
+
+namespace HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
 
 public readonly record struct MovingPeaksParameters(
   int Dimension,
@@ -16,10 +19,10 @@ public readonly record struct MovingPeaksParameters(
 
 public static class MovingPeaksDefaults
 {
+  public static readonly ImmutableArray<int> Scenario2PeakCounts = [5, 10, 20, 50];
 
-  public static int[] Scenario2_PeakCounts = [5, 10, 20, 50];
+  public static readonly ImmutableArray<int> Scenario2Dimensions = [5, 10, 20, 50];
 
-  public static int[] Scenario2_Dimensions = [5, 10, 20, 50];
   // Canonical “scenario 2”
   public static MovingPeaksParameters Scenario2() => new(
     5, 10,

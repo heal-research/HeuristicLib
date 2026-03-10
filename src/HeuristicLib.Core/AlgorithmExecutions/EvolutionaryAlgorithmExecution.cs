@@ -19,7 +19,7 @@ public class EvolutionaryAlgorithmExecution<TGenotype, TSearchSpace, TProblem>
   protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly IVariationInstance<TGenotype, TSearchSpace, TProblem> Variator;
   protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
-  
+
   public EvolutionaryAlgorithmExecution(
     int populationSize,
     int offspringSize,
@@ -28,7 +28,7 @@ public class EvolutionaryAlgorithmExecution<TGenotype, TSearchSpace, TProblem>
     IVariationInstance<TGenotype, TSearchSpace, TProblem> variator,
     IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer,
     IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator,
-    IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor
+    IInterceptorInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? interceptor
   ) : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
@@ -50,15 +50,15 @@ public class EvolutionaryAlgorithmExecution<TGenotype, TSearchSpace, TProblem>
     }
 
     var oldPopulation = previousState.Population.Solutions;
-    
+
     var parents = Selector.Select(oldPopulation, problem.Objective, OffspringSize, random, problem.SearchSpace, problem)
-      .Select(x => x.Genotype).ToList();
-    
+                          .Select(x => x.Genotype).ToList();
+
     var offspring = Variator.Alter(parents, random, problem.SearchSpace, problem);
 
     var fitnesses = Evaluator.Evaluate(offspring, random, problem.SearchSpace, problem);
     var offspringPopulation = Population.From(offspring, fitnesses).Solutions;
-    
+
     var newPopulation = Replacer.Replace(oldPopulation, offspringPopulation, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
 
     return new PopulationState<TGenotype> {

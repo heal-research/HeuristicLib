@@ -40,7 +40,7 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     var crossover = Crossover; // ToDo: crossover probability
 
     var variation = new CrossoverAndMutationVariation<TGenotype, TSearchSpace, TProblem>(crossover, mutator);
-    
+
     var replacer = new ElitismReplacer<TGenotype>(Elites);
 
     return new EvolutionaryAlgorithmExecution<TGenotype, TSearchSpace, TProblem>(
@@ -69,7 +69,7 @@ public static class GeneticAlgorithm
     ISelector<TG, TS, TP> selector, int populationSize,
     IEvaluator<TG, TS, TP> evaluator,
     int elites = 1,
-    Interceptor<TG, PopulationState<TG>, TS, TP>? interceptor = null
+    Interceptor<TG, TS, TP, PopulationState<TG>>? interceptor = null
   )
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>

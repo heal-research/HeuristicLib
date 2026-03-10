@@ -16,7 +16,7 @@ public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg>
 {
   public IEvaluator<TG, TS, TP> Evaluator { get; set; } = new DirectEvaluator<TG>();
 
-  public IInterceptor<TG, TR, TS, TP>? Interceptor { get; set; }
+  public IInterceptor<TG, TS, TP, TR>? Interceptor { get; set; }
 
   public abstract TAlg Build();
 }

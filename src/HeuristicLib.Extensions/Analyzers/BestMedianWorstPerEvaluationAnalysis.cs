@@ -5,7 +5,6 @@ using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
@@ -40,16 +39,6 @@ public class BestMedianWorstPerEvaluationAnalysis<TGenotype>
 
       bestSolutions.Add((currentEvaluationsCount, new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
     }
-
-    // public void AfterIteration(PopulationState<TGenotype> currentState, PopulationState<TGenotype>? previousState, IRandomNumberGenerator random, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-    // {
-    //   if (currentState.Population.Solutions.Count == 0) throw new InvalidOperationException("Population is empty, cannot determine best/median/worst solution.");
-    //   
-    //   var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
-    //   var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
-    // 
-    //   bestSolutions.Add((currentEvaluationsCount, new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
-    // }
   }
 
   IEvaluatorObserverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
@@ -65,9 +54,11 @@ public class BestMedianWorstPerEvaluationAnalysis<TGenotype>
 
 public static class BestMedianWorstPerEvaluationAnalysis
 {
-  public static void CreateOperators<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
-    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> interceptor,
-    out IEvaluator<TGenotype, TSearchSpace, TProblem> observedEvaluator, out IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> observedInterceptor,
+  private static void CreateOperators<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
+    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
+    IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState> interceptor,
+    out IEvaluator<TGenotype, TSearchSpace, TProblem> observedEvaluator,
+    out IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState> observedInterceptor,
     out BestMedianWorstPerEvaluationAnalysis<TGenotype> analysis)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -85,8 +76,8 @@ public static class BestMedianWorstPerEvaluationAnalysis
     where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   {
     public TAlgorithm AnalyzeBestMedianWorstPerEvaluation(
-      IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem> interceptor,
-      Func<TAlgorithm, IEvaluator<TGenotype, TSearchSpace, TProblem>, IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>, TAlgorithm> algorithmAdapter,
+      IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState> interceptor,
+      Func<TAlgorithm, IEvaluator<TGenotype, TSearchSpace, TProblem>, IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>, TAlgorithm> algorithmAdapter,
       out BestMedianWorstPerEvaluationAnalysis<TGenotype> analysis)
     {
       CreateOperators(evaluator, interceptor, out var observedEvaluator, out var observedInterceptor, out analysis);

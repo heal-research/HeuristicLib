@@ -6,7 +6,9 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public interface IAlgorithmBuilder;
 
+#pragma warning disable S2326
 public interface IAlgorithmBuilder<TG, TS, TP, TR>
+#pragma warning restore S2326
   : IAlgorithmBuilder
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>

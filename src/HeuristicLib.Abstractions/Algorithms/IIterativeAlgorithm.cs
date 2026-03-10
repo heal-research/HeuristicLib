@@ -12,7 +12,7 @@ public interface IIterativeAlgorithm<TGenotype, in TSearchSpace, in TProblem, TA
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  IInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>? Interceptor { get; }
+  IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Interceptor { get; }
 }
 
 public interface IIterativeAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>

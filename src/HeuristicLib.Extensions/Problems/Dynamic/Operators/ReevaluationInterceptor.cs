@@ -7,8 +7,8 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
 
-public record ReevaluationInterceptor<T, TR, TE, TP>
-  : Interceptor<T, TR, TE, TP>
+public record ReevaluationInterceptor<T, TE, TP, TR>
+  : Interceptor<T, TE, TP, TR>
   where TR : PopulationState<T>
   where TE : class, ISearchSpace<T>
   where TP : DynamicProblem<T, TE>
@@ -28,7 +28,7 @@ public record ReevaluationInterceptor<T, TR, TE, TP>
     return new Instance(evaluatorInstance, problem);
   }
 
-  public new class Instance : Interceptor<T, TR, TE, TP>.Instance
+  public new class Instance : Interceptor<T, TE, TP, TR>.Instance
   {
     private readonly IEvaluatorInstance<T, TE, TP> evaluator;
 
@@ -42,9 +42,9 @@ public record ReevaluationInterceptor<T, TR, TE, TP>
       problem.EpochClock.OnEpochChange += (_, _) => Interlocked.Increment(ref requireReevaluation);
     }
 
-    public override TR Transform(TR currentIterationResult, TR? previousIterationResult, TE encoding, TP problem)
+    public override TR Transform(TR currentState, TR? previousState, TE searchSpace, TP problem)
     {
-      var r = currentIterationResult;
+      var r = currentState;
 
       var wasTrue = Interlocked.Exchange(ref requireReevaluation, 0) != 0;
       if (!wasTrue) {
@@ -52,7 +52,7 @@ public record ReevaluationInterceptor<T, TR, TE, TP>
       }
 
       var genotypes = r.Population.Genotypes.ToArray();
-      var fitnesses = evaluator.Evaluate(genotypes, null!, encoding, problem); // TODO: pass random?
+      var fitnesses = evaluator.Evaluate(genotypes, null!, searchSpace, problem); // TODO: pass random?
       r = r with { Population = Population.From(genotypes, fitnesses) };
 
       return r;

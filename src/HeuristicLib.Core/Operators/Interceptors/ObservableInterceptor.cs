@@ -1,7 +1,6 @@
 using Generator.Equals;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
@@ -9,18 +8,18 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 [Equatable]
-public partial record ObservableInterceptor<TG, TR, TS, TP>
-  : Interceptor<TG, TR, TS, TP>
+public partial record ObservableInterceptor<TG, TS, TP, TR>
+  : Interceptor<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
 {
-  public IInterceptor<TG, TR, TS, TP> Interceptor { get; }
+  public IInterceptor<TG, TS, TP, TR> Interceptor { get; }
 
   [OrderedEquality]
-  public ImmutableArray<IInterceptorObserver<TG, TR, TS, TP>> Observers { get; }
+  public ImmutableArray<IInterceptorObserver<TG, TS, TP, TR>> Observers { get; }
 
-  public ObservableInterceptor(IInterceptor<TG, TR, TS, TP> interceptor, params ImmutableArray<IInterceptorObserver<TG, TR, TS, TP>> observers)
+  public ObservableInterceptor(IInterceptor<TG, TS, TP, TR> interceptor, params ImmutableArray<IInterceptorObserver<TG, TS, TP, TR>> observers)
   {
     Interceptor = interceptor;
     Observers = observers;
@@ -33,8 +32,8 @@ public partial record ObservableInterceptor<TG, TR, TS, TP>
     return new Instance(interceptorInstance, interceptorObserverInstances);
   }
 
-  public new sealed class Instance(IInterceptorInstance<TG, TR, TS, TP> interceptorInstance, IReadOnlyList<IInterceptorObserverInstance<TG, TS, TP, TR>> observers)
-    : Interceptor<TG, TR, TS, TP>.Instance
+  public new sealed class Instance(IInterceptorInstance<TG, TS, TP, TR> interceptorInstance, IReadOnlyList<IInterceptorObserverInstance<TG, TS, TP, TR>> observers)
+    : Interceptor<TG, TS, TP, TR>.Instance
   {
     public override TR Transform(TR currentState, TR? previousState, TS searchSpace, TP problem)
     {
@@ -49,7 +48,7 @@ public partial record ObservableInterceptor<TG, TR, TS, TP>
   }
 }
 
-public interface IInterceptorObserver<in TG, in TR, in TS, in TP> : IExecutable<IInterceptorObserverInstance<TG, TS, TP, TR>>
+public interface IInterceptorObserver<in TG, in TS, in TP, in TR> : IExecutable<IInterceptorObserverInstance<TG, TS, TP, TR>>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState;
@@ -62,7 +61,7 @@ public interface IInterceptorObserverInstance<in TG, in TS, in TP, in TR> : IExe
   void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem);
 }
 
-public class ActionInterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG, TR, TS, TP>, IInterceptorObserverInstance<TG, TS, TP, TR>
+public class ActionInterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG, TS, TP, TR>, IInterceptorObserverInstance<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -84,39 +83,39 @@ public class ActionInterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG
 
 public static class ObservableInterceptorExtensions
 {
-  extension<TG, TR, TS, TP>(IInterceptor<TG, TR, TS, TP> interceptor)
+  extension<TG, TS, TP, TR>(IInterceptor<TG, TS, TP, TR> interceptor)
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : class, IAlgorithmState
   {
-    public IInterceptor<TG, TR, TS, TP> ObserveWith(IInterceptorObserver<TG, TR, TS, TP> observer)
+    public IInterceptor<TG, TS, TP, TR> ObserveWith(IInterceptorObserver<TG, TS, TP, TR> observer)
     {
-      return new ObservableInterceptor<TG, TR, TS, TP>(interceptor, observer);
+      return new ObservableInterceptor<TG, TS, TP, TR>(interceptor, observer);
     }
 
-    public IInterceptor<TG, TR, TS, TP> ObserveWith(params ImmutableArray<IInterceptorObserver<TG, TR, TS, TP>> observers)
+    public IInterceptor<TG, TS, TP, TR> ObserveWith(params ImmutableArray<IInterceptorObserver<TG, TS, TP, TR>> observers)
     {
-      return new ObservableInterceptor<TG, TR, TS, TP>(interceptor, observers);
+      return new ObservableInterceptor<TG, TS, TP, TR>(interceptor, observers);
     }
 
-    public IInterceptor<TG, TR, TS, TP> ObserveWith(Action<TR, TR, TR?, TS, TP> afterInterception)
+    public IInterceptor<TG, TS, TP, TR> ObserveWith(Action<TR, TR, TR?, TS, TP> afterInterception)
     {
       var observer = new ActionInterceptorObserver<TG, TR, TS, TP>(afterInterception);
       return interceptor.ObserveWith(observer);
     }
 
-    public IInterceptor<TG, TR, TS, TP> ObserveWith(Action<TR> afterInterception)
+    public IInterceptor<TG, TS, TP, TR> ObserveWith(Action<TR> afterInterception)
     {
       var observer = new ActionInterceptorObserver<TG, TR, TS, TP>((newState, _, _, _, _) => afterInterception(newState));
       return interceptor.ObserveWith(observer);
     }
 
-    public IInterceptor<TG, TR, TS, TP> CountInvocations(InvocationCounter counter)
+    public IInterceptor<TG, TS, TP, TR> CountInvocations(InvocationCounter counter)
     {
       return interceptor.ObserveWith(_ => counter.IncrementBy(1));
     }
 
-    public IInterceptor<TG, TR, TS, TP> CountInvocations(out InvocationCounter counter)
+    public IInterceptor<TG, TS, TP, TR> CountInvocations(out InvocationCounter counter)
     {
       counter = new InvocationCounter();
       return interceptor.CountInvocations(counter);

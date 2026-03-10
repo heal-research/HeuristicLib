@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using HEAL.HeuristicLib.Analyzers;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
@@ -13,7 +12,7 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 // ToDo: A DynamicProblem should be, foremost, a Problem. It "being" also an Observer, is an interesting way of implementing about it, but we have to think if this is really what we want.
 public abstract class DynamicProblem<TGenotype, TSearchSpace> :
   IEvaluatorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
-  IInterceptorObserver<TGenotype, IAlgorithmState, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
+  IInterceptorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>,
   IDynamicProblem<TGenotype, TSearchSpace>,
   IEvaluatorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
   IInterceptorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>,
@@ -96,7 +95,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
 
   ~DynamicProblem() => Dispose(false);
 
-  protected virtual void Dispose(bool disposing) => rwLock.Dispose();
+  protected void Dispose(bool disposing) => rwLock.Dispose();
 
   protected abstract void Update();
 

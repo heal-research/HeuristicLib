@@ -60,7 +60,7 @@ public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
   protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
   protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
 
-  public NSGA2Instance(IInterceptorInstance<TGenotype, PopulationState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
+  public NSGA2Instance(IInterceptorInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;

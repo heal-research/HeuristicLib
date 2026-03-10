@@ -19,9 +19,9 @@ public class TableFileParser : Progress<long>
 
   public Encoding Encoding { get; set; } = Encoding.Default;
 
-  public int Rows { get; set; }
+  public int Rows { get; private set; }
 
-  public int Columns { get; set; }
+  public int Columns { get; private set; }
 
   public List<IList> Values { get; private set; } = null!;
 
@@ -31,6 +31,7 @@ public class TableFileParser : Progress<long>
       if (variableNames.Count > 0) {
         return variableNames;
       }
+
       var names = new string[Columns];
       for (var i = 0; i < names.Length; i++) {
         names[i] = "X" + i.ToString("000");
@@ -58,7 +59,7 @@ public class TableFileParser : Progress<long>
   }
 
   public bool AreColumnNamesInFirstLine(string fileName, NumberFormatInfo numberFormat,
-    DateTimeFormatInfo dateTimeFormatInfo, char separator)
+                                        DateTimeFormatInfo dateTimeFormatInfo, char separator)
   {
     using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
@@ -66,7 +67,7 @@ public class TableFileParser : Progress<long>
   }
 
   public bool AreColumnNamesInFirstLine(Stream stream, NumberFormatInfo numberFormat,
-    DateTimeFormatInfo dateTimeFormatInfo, char separator)
+                                        DateTimeFormatInfo dateTimeFormatInfo, char separator)
   {
     using var reader = new StreamReader(stream, Encoding);
     tokenizer = new Tokenizer(reader, numberFormat, dateTimeFormatInfo, separator);
@@ -150,7 +151,7 @@ public class TableFileParser : Progress<long>
           if (colIdx > 0 && Values.Count != colIdx) {
             // read at least one value in the row (support for skipping empty lines)
             Error("The first row of the dataset has " + Values.Count + " columns." + Environment.NewLine +
-              "Line " + tokenizer.CurrentLineNumber + " has " + colIdx + " columns.", "",
+                  "Line " + tokenizer.CurrentLineNumber + " has " + colIdx + " columns.", "",
               tokenizer.CurrentLineNumber);
           }
 
@@ -164,7 +165,7 @@ public class TableFileParser : Progress<long>
 
           if (colIdx == Values.Count) {
             Error("The first row of the dataset has " + Values.Count + " columns." + Environment.NewLine +
-              "Line " + tokenizer.CurrentLineNumber + " has more columns.", "",
+                  "Line " + tokenizer.CurrentLineNumber + " has more columns.", "",
               tokenizer.CurrentLineNumber);
           }
 
@@ -185,7 +186,7 @@ public class TableFileParser : Progress<long>
 
     if (Values.Count == 0 || Values[0].Count == 0) {
       Error("Couldn't parse data values. Probably because of incorrect number format " +
-        "(the parser expects english number format with a '.' as decimal separator).", "", tokenizer.CurrentLineNumber);
+            "(the parser expects english number format with a '.' as decimal separator).", "", tokenizer.CurrentLineNumber);
     }
 
     Rows = Values[0].Count;
@@ -245,6 +246,7 @@ public class TableFileParser : Progress<long>
       if (numNewLine == 0) {
         charsInFirstLine = charsInCurrentLine; // store the number of chars in the first line
       }
+
       charsInCurrentLine = 0;
       numNewLine++;
     }
@@ -288,6 +290,7 @@ public class TableFileParser : Progress<long>
       if (type != TokenType.String) {
         strValues[colIdx].Add(strVal);
       }
+
       colIdx++;
     }
 
@@ -306,8 +309,8 @@ public class TableFileParser : Progress<long>
     var charsRead = reader.ReadBlock(buffer, 0, BufferSize);
     // count frequency of special characters
     var charCounts = buffer.Take(charsRead)
-      .GroupBy(c => c)
-      .ToDictionary(keySelector: g => g.Key, elementSelector: g => g.Count());
+                           .GroupBy(c => c)
+                           .ToDictionary(keySelector: g => g.Key, elementSelector: g => g.Count());
 
     // depending on the characters occuring in the block 
     // we distinguish a number of different cases based on the following rules:
@@ -323,26 +326,26 @@ public class TableFileParser : Progress<long>
       numberFormat = NumberFormatInfo.InvariantInfo;
       dateTimeFormatInfo = DateTimeFormatInfo.InvariantInfo;
       separator = PossibleSeparators
-        .Where(c => OccurrencesOf(charCounts, c) > 10)
-        .OrderBy(c => -OccurrencesOf(charCounts, c))
-        .DefaultIfEmpty(' ')
-        .First();
+                  .Where(c => OccurrencesOf(charCounts, c) > 10)
+                  .OrderBy(c => -OccurrencesOf(charCounts, c))
+                  .DefaultIfEmpty(' ')
+                  .First();
     } else {
       // no points and many commas
       // count the number of tokens (chains of only digits and commas) that contain multiple comma characters
       var tokensWithMultipleCommas = 0;
-      for (var i = 0; i < charsRead; i++) {
+      int i = 0;
+      while (i < charsRead) {
         var nCommas = 0;
         while (i < charsRead && (buffer[i] == ',' || char.IsDigit(buffer[i]))) {
-          if (buffer[i] == ',') {
+          if (buffer[i] == ',')
             nCommas++;
-          }
           i++;
         }
 
-        if (nCommas > 2) {
+        if (nCommas > 2)
           tokensWithMultipleCommas++;
-        }
+        i++;
       }
 
       if (tokensWithMultipleCommas > 1) {
@@ -356,11 +359,11 @@ public class TableFileParser : Progress<long>
         numberFormat = NumberFormatInfo.GetInstance(new CultureInfo("de-DE"));
         dateTimeFormatInfo = DateTimeFormatInfo.GetInstance(new CultureInfo("de-DE"));
         separator = PossibleSeparators
-          .Except(disallowedSeparators)
-          .Where(c => OccurrencesOf(charCounts, c) > 10)
-          .OrderBy(c => -OccurrencesOf(charCounts, c))
-          .DefaultIfEmpty(' ')
-          .First();
+                    .Except(disallowedSeparators)
+                    .Where(c => OccurrencesOf(charCounts, c) > 10)
+                    .OrderBy(c => -OccurrencesOf(charCounts, c))
+                    .DefaultIfEmpty(' ')
+                    .First();
       }
     }
   }
@@ -368,14 +371,13 @@ public class TableFileParser : Progress<long>
   private static int OccurrencesOf(Dictionary<char, int> charCounts, char c) => charCounts.GetValueOrDefault(c, 0);
 
   #region type-dependent dispatch
-
   private static bool IsColumnTypeCompatible(IList list, TokenType tokenType)
   {
     return list is List<object> || // unknown lists are compatible to everything (potential conversion)
-      list is List<string> || // all tokens can be added to a string list
-      tokenType == TokenType.Missing || // empty entries are allowed in all columns
-      tokenType == TokenType.Double && list is List<double> ||
-      tokenType == TokenType.DateTime && list is List<DateTime>;
+           list is List<string> || // all tokens can be added to a string list
+           tokenType == TokenType.Missing || // empty entries are allowed in all columns
+           tokenType == TokenType.Double && list is List<double> ||
+           tokenType == TokenType.DateTime && list is List<DateTime>;
   }
 
   private void AddValue(TokenType type, IList list, string strVal, double dblVal, DateTime dateTimeVal)
@@ -468,11 +470,9 @@ public class TableFileParser : Progress<long>
         throw new ArgumentOutOfRangeException("type", type, "No missing value defined");
     }
   }
-
   #endregion
 
   #region tokenizer
-
   // the tokenizer reads full lines and returns separated tokens in the line as well as a terminating end-of-line character
   internal enum TokenType
   {
@@ -563,8 +563,8 @@ public class TableFileParser : Progress<long>
             type = TokenType.Double;
             doubleVals[i] = doubleVal;
           } else if (DateTime.TryParse(tok, dateTimeFormatInfo, DateTimeStyles.NoCurrentDateDefault, out var dateTimeValue)
-            && (dateTimeValue.Year > 1 || dateTimeValue.Month > 1 || dateTimeValue.Day > 1) // if no date is given it is returned as 1.1.0001 -> don't allow this
-          ) {
+                     && (dateTimeValue.Year > 1 || dateTimeValue.Month > 1 || dateTimeValue.Day > 1) // if no date is given it is returned as 1.1.0001 -> don't allow this
+                    ) {
             type = TokenType.DateTime;
             dateTimeVals[i] = dateTimeValue;
           } else if (string.IsNullOrWhiteSpace(tok)) {
@@ -601,11 +601,9 @@ public class TableFileParser : Progress<long>
       arr = arr2;
     }
   }
-
   #endregion
 
   #region parsing
-
   private void ParseVariableNames()
   {
     // the first line must contain variable names
@@ -617,6 +615,7 @@ public class TableFileParser : Progress<long>
     if (type != TokenType.String) {
       throw new ArgumentException("Error: Expected " + TokenType.String + " got " + type);
     }
+
     varNames.Add(strVal);
 
     while (tokenizer.HasNext() && tokenizer.PeekType() != TokenType.NewLine) {
@@ -634,11 +633,10 @@ public class TableFileParser : Progress<long>
     if (tokenizer.PeekType() != expectedToken) {
       throw new ArgumentException("Error: Expected " + expectedToken + " got " + tokenizer.PeekType());
     }
+
     tokenizer.Skip();
   }
 
   private static void Error(string message, string token, int lineNumber) => throw new IOException($"Error while parsing. {message} (token: {token} lineNumber: {lineNumber}).");
-
   #endregion
-
 }

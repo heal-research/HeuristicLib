@@ -73,7 +73,7 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
   private readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector;
   private readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer;
 
-  public AlpsGeneticAlgorithmInstance(IInterceptorInstance<TGenotype, AlpsState<TGenotype>, TSearchSpace, TProblem>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> agedMutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer)
+  public AlpsGeneticAlgorithmInstance(IInterceptorInstance<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> agedMutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer)
     : base(interceptor, evaluator)
   {
     PopulationSize = populationSize;
