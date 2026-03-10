@@ -13,7 +13,7 @@ public static class MetaOptimizationProblemExamples
   public record HyperParameterSearchSpace(RealVectorSearchSpace SearchSpace, IntegerVectorSearchSpace SearchSpace2) :
     CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(SearchSpace, SearchSpace2);
 
-  public class MetaOptimzationSearchSpaceBuilder
+  public class MetaOptimizationSearchSpaceBuilder
   {
     public readonly List<int> IntegerMinimum = [];
     public readonly List<int> IntegerMaximum = [];
@@ -68,7 +68,7 @@ public static class MetaOptimizationProblemExamples
     (double min, double max) mutationRate)
     where TE : class, ISearchSpace<T> where TP : class, IProblem<T, TE> where T : class
   {
-    var b = new MetaOptimzationSearchSpaceBuilder();
+    var b = new MetaOptimizationSearchSpaceBuilder();
     var creatorExtractor = b.AddChoiceParameter(creators);
     var crossoversExtractor = b.AddChoiceParameter(crossovers);
     var evaluatorsExtractor = b.AddChoiceParameter(evaluators);
