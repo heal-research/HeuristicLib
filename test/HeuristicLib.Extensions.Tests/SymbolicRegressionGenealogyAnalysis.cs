@@ -91,8 +91,10 @@ public class GenealogyGraphTests
     var genealogyAnalysis = new GenealogyAnalysis<SymbolicExpressionTree>();
     ga.AttachObserver(genealogyAnalysis);
 
-    var ai = ga.Build().WithMaxIterations(gens).CreateExecutionInstance(out var registry);
-    var res = ai.RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
+    var res = ga.Build()
+                .WithMaxIterations(gens)
+                .CreateExecutionInstance(out var registry)
+                .RunToCompletion(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
 
     var qres = (BestMedianWorstAnalysis<SymbolicExpressionTree>.Instance)qualities.RetrieveAnalysis(registry);
     var eres = (QualityCurveAnalysis<SymbolicExpressionTree>.Instance)evalQualities.RetrieveAnalysis(registry);

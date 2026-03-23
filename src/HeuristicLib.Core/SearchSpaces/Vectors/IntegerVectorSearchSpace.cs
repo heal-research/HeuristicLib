@@ -5,71 +5,39 @@ namespace HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
 {
-  public IntegerVectorSearchSpace(int Length, IntegerVector Minimum, IntegerVector Maximum)
+  public IntegerVectorSearchSpace(int Length, IntegerVector Minimum, IntegerVector Maximum, IntegerVector? Step = null)
   {
+    if (Minimum.Count != Length && Minimum.Count != 1)
+      throw new ArgumentException("Minium is compatible with Length");
+    if (Maximum.Count != Length && Maximum.Count != 1)
+      throw new ArgumentException("Maximum is compatible with Length");
+    if (Step is not null && Step.Count != Length && Step.Count != 1)
+      throw new ArgumentException("Step is compatible with Length");
+    if ((Minimum > Maximum).Any())
+      throw new ArgumentException("Minium and Maximum are not compatible");
+    if (Step is not null && Step.Any(x => x < 1))
+      throw new ArgumentException("Steps may not be zero or negative");
     this.Length = Length;
     this.Minimum = Minimum;
     this.Maximum = Maximum;
-
-    //TODO align maximum with step width
+    this.Step = Step ?? new IntegerVector(1);
   }
 
-  public IntegerVector Step { get; } = new(1); //TODO make configurable
-  public int Length { get; init; }
-  public IntegerVector Minimum { get; init; }
-  public IntegerVector Maximum { get; init; }
+  public IntegerVector Step { get; }
+  public int Length { get; }
+  public IntegerVector Minimum { get; }
+  public IntegerVector Maximum { get; }
 
-  public override bool Contains(IntegerVector genotype)
-  {
-    return genotype.Count == Length
-           && (genotype >= Minimum).All()
-           && (genotype <= Maximum).All();
-  }
+  public override bool Contains(IntegerVector genotype) => genotype.Count == Length
+                                                           && (genotype >= Minimum).All()
+                                                           && (genotype <= Maximum).All();
 
-  public static implicit operator RealVectorSearchSpace(IntegerVectorSearchSpace integerVectorSpace)
-  {
-    return new RealVectorSearchSpace(integerVectorSpace.Length, integerVectorSpace.Minimum, integerVectorSpace.Maximum);
-  }
+  public static implicit operator RealVectorSearchSpace(IntegerVectorSearchSpace integerVectorSpace) =>
+    new(integerVectorSpace.Length, integerVectorSpace.Minimum, integerVectorSpace.Maximum);
 
   public int FloorFeasible(double x, int dim)
   {
-    return FloorFeasible(
-      Minimum.Count == 1 ? Minimum[0] : Minimum[dim],
-      Maximum.Count == 1 ? Maximum[0] : Maximum[dim],
-      Step.Count == 1 ? Step[0] : Step[dim], x);
-  }
-
-  public int CeilingFeasible(double x, int dim)
-  {
-    return CeilingFeasible(
-      Minimum.Count == 1 ? Minimum[0] : Minimum[dim],
-      Maximum.Count == 1 ? Maximum[0] : Maximum[dim],
-      Step.Count == 1 ? Step[0] : Step[dim], x);
-  }
-
-  public int RoundFeasible(double x, int dim)
-  {
-    return RoundFeasible(
-      Minimum.Count == 1 ? Minimum[0] : Minimum[dim],
-      Maximum.Count == 1 ? Maximum[0] : Maximum[dim],
-      Step.Count == 1 ? Step[0] : Step[dim], x);
-  }
-
-  public IntegerVector RoundFeasible(RealVector x)
-  {
-    var res = new int[x.Count];
-    for (var i = 0; i < res.Length; i++) {
-      res[i] = RoundFeasible(x[i], i);
-    }
-
-    return res;
-  }
-
-  public const double Tolerance = 1e-12;
-
-  // Largest feasible value <= x on grid, clamped to [minBound,maxBound]
-  public static int FloorFeasible(int minBound, int maxBound, int step, double x)
-  {
+    var (minBound, maxBound, step) = GetDimInfo(dim);
     if (x <= minBound)
       return minBound;
     if (x >= maxBound)
@@ -86,9 +54,9 @@ public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
     return (int)v;
   }
 
-  // Smallest feasible value >= x on grid, clamped to [minBound,maxBound]
-  public static int CeilingFeasible(int minBound, int maxBound, int step, double x)
+  public int CeilingFeasible(double x, int dim)
   {
+    var (minBound, maxBound, step) = GetDimInfo(dim);
     if (x <= minBound)
       return minBound;
     if (x >= maxBound)
@@ -105,9 +73,9 @@ public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
     return (int)v;
   }
 
-  // Nearest feasible grid value to x (ties: away from zero-ish, but on a shifted grid)
-  private static int RoundFeasible(int minBound, int maxBound, int step, double x)
+  public int RoundFeasible(double x, int dim)
   {
+    var (minBound, maxBound, step) = GetDimInfo(dim);
     if (x <= minBound)
       return minBound;
     if (x >= maxBound)
@@ -126,23 +94,32 @@ public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
     return (int)v;
   }
 
-  public int UniformRandom(IRandomNumberGenerator random, int idx)
+  public IntegerVector RoundFeasible(RealVector x)
   {
-    int min = Minimum[Minimum.Count == 1 ? 0 : idx];
-    int max = Maximum[Maximum.Count == 1 ? 0 : idx];
-    int step = Step[Step.Count == 1 ? 0 : idx];
+    var res = new int[x.Count];
+    for (var i = 0; i < res.Length; i++) {
+      res[i] = RoundFeasible(x[i], i);
+    }
 
-    // min/max are guaranteed feasible by the search space ctor.
-    int nSteps = (max - min) / step; // inclusive count-1
+    return res;
+  }
+
+  public int UniformRandom(IRandomNumberGenerator random, int dim)
+  {
+    var (minBound, maxBound, step) = GetDimInfo(dim);
+    int nSteps = (maxBound - minBound) / step; // inclusive count-1
     int k = random.NextInt(0, nSteps, true); // inclusive
-    var v = min + k * step;
+    var v = minBound + k * step;
     return v;
   }
 
-  public void Deconstruct(out int Length, out IntegerVector Minimum, out IntegerVector Maximum)
+  private (int minBound, int maxBound, int step) GetDimInfo(int dim)
   {
-    Length = this.Length;
-    Minimum = this.Minimum;
-    Maximum = this.Maximum;
+    int minBound = Minimum.Count == 1 ? Minimum[0] : Minimum[dim];
+    int maxBound = Maximum.Count == 1 ? Maximum[0] : Maximum[dim];
+    int step = Step.Count == 1 ? Step[0] : Step[dim];
+    return (minBound, maxBound, step);
   }
+
+  private const double Tolerance = 1e-12;
 }

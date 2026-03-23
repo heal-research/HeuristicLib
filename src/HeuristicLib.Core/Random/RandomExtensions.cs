@@ -6,7 +6,23 @@ public static class RandomExtensions
   {
     public int NextInt(int high, bool inclusiveHigh = false) => random.NextInt(0, high, inclusiveHigh);
 
-    public int NextInt(int low, int high, bool inclusiveHigh = false) => (random.NextInt() % (high - low + (inclusiveHigh ? 1 : 0))) + low;
+    public int NextInt(int low, int high, bool inclusiveHigh = false)
+    {
+      var range = checked(high - low + (inclusiveHigh ? 1 : 0));
+      ;
+      if (range <= 0)
+        throw new ArgumentOutOfRangeException(nameof(high));
+
+      var urange = (uint)range;
+      var limit = uint.MaxValue - (uint.MaxValue % urange);
+
+      uint value;
+      do {
+        value = (uint)random.NextInt();
+      } while (value >= limit);
+
+      return (int)(value % urange) + low;
+    }
 
     public bool NextBool(double probability = 0.5) => random.NextDouble() < probability;
 
