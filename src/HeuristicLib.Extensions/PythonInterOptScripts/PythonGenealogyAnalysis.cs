@@ -46,19 +46,19 @@ public class PythonGenealogyAnalysis
     RunConfigurableRepeated(
       repetitions,
       experiment: seed => RunSymbolicRegressionConfigurable(file, new SymRegExperimentParameters(parameters) { Seed = seed }),
-      (int)parameters.Seed);
+      parameters.Seed);
 
   public static ExperimentResult<Permutation>[] RunTravelingSalesmanConfigurable(string file, TravelingSalesmanExperimentParameters parameters, int repetitions) =>
     RunConfigurableRepeated(
       repetitions,
       experiment: seed => RunTravelingSalesmanConfigurable(file, new TravelingSalesmanExperimentParameters(parameters) { Seed = seed }),
-      (int)parameters.Seed);
+      parameters.Seed);
 
   public static ExperimentResult<RealVector>[] RunTestFunctionConfigurable(string file, TestFunctionExperimentParameters parameters, int repetitions) =>
     RunConfigurableRepeated(
       repetitions,
       experiment: seed => RunTestFunctionConfigurable(file, new TestFunctionExperimentParameters(parameters) { Seed = seed }),
-      (int)parameters.Seed);
+      parameters.Seed);
   #endregion
 
   public static ExperimentResult<SymbolicExpressionTree> RunSymbolicRegressionConfigurable(
