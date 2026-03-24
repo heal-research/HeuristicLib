@@ -16,3 +16,29 @@ Noticeable differences to HeuristicLab:
   - Write algorithms in plain C# code.
 - No serialization
   - Only key datastructures (e.g., algorithm configurations or ISolutions) are serializable.
+
+## Development Setup
+
+This project supports multiple development environments:
+
+- **Visual Studio**: Full IDE support for .NET development.
+- **.NET Dev Container**: A containerized environment with .NET SDK, Node.js, npm, ESLint, Git, and common CLI tools pre-installed.
+
+
+### Setting DevContainer
+
+Use the "Dev Containers: Open Folder in Container" command and wait for the container to build and initialize.
+
+**Prerequisites:**
+  - Docker container environment set up
+  - Visual Studio Code or compatible IDE
+  - C# (.NET) extension installed
+
+
+**Quick Start:**
+
+```bash
+dotnet build
+dotnet test
+dotnet publish
+```
