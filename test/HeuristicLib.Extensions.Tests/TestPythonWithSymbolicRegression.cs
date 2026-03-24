@@ -11,7 +11,7 @@ public class TestPythonWithSymbolicRegression
   {
     const int iterations = 200;
     var i = 0;
-    var file = @"TestData\192_vineyard.tsv";
+    var file = Path.Combine("TestData", "192_vineyard.tsv");
     var res = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
       new SymRegExperimentParameters {
         Seed = AlgorithmRandomSeed,

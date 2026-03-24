@@ -10,7 +10,7 @@ public class ExtendedSymbolicRegressionProblemTest
   [Fact]
   public void RunMagicProblem()
   {
-    var file = @"TestData\192_vineyard.tsv";
+    var file = Path.Combine("TestData", "192_vineyard.tsv");
     var p = ExtendedSymbolicRegressionProblem.DefaultConf(file, x => [1, 4.2, 1.3]);
     var pop = ExtendedSymbolicRegressionProblem.RunDefault(p, 43);
     Assert.Equal(300, pop.Solutions.Length);

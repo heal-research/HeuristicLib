@@ -14,13 +14,11 @@ namespace HEAL.HeuristicLib.Extensions.Tests;
 
 public class DynamicTSPTests
 {
-  private const string TestDataBerlin52TSP = @"TestData\berlin52.tsp";
-
   [Fact]
   public void GaWithDynamicTSP()
   {
     //Load Problem
-    var data = TsplibTspInstanceProvider.LoadData(TestDataBerlin52TSP);
+    var data = TsplibTspInstanceProvider.LoadData(Path.Combine("TestData", "berlin52.tsp"));
     var cdata = data.ToCoordinatesData();
     var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
 
