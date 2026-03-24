@@ -1,0 +1,5 @@
+ipython # for interactive computing
+ipykernel # Jupyter kernel support
+ipympl # for interactive matplotlib in Jupyter
+
+pythonnet
