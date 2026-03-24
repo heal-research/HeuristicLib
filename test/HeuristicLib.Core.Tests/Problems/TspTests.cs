@@ -16,13 +16,11 @@ namespace HEAL.HeuristicLib.Tests.Problems;
 
 public class TspTests
 {
-  private const string TestDataBerlin52TSP = @"TestData\berlin52.tsp";
-
   [Fact]
   public void GaWithTSP()
   {
     // Load Problem
-    var data = TsplibTspInstanceProvider.LoadData(TestDataBerlin52TSP);
+    var data = TsplibTspInstanceProvider.LoadData(Path.Combine("TestData", "berlin52.tsp"));
     var cdata = data.ToCoordinatesData();
     var prob = new TravelingSalesmanProblem(cdata);
 
