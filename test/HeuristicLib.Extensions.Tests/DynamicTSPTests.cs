@@ -18,7 +18,8 @@ public class DynamicTSPTests
   public void GaWithDynamicTSP()
   {
     //Load Problem
-    var data = TsplibTspInstanceProvider.LoadData(Path.Combine("TestData", "berlin52.tsp"));
+    var file = Path.Combine("TestData", "berlin52.tsp");
+    var data = TsplibTspInstanceProvider.LoadData(file);
     var cdata = data.ToCoordinatesData();
     var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
 
