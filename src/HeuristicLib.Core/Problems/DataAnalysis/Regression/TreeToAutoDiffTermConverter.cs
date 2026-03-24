@@ -9,9 +9,9 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public class TreeToAutoDiffTermConverter
 {
-  public delegate double ParametricFunction(double[] vars, double[] @params);
+  public delegate double CompiledModel(double[] vars, double[] @params);
 
-  public delegate Tuple<double[], double> ParametricFunctionGradient(double[] vars, double[] @params);
+  public delegate Tuple<double[], double> CompiledModelGradient(double[] vars, double[] @params);
 
   private readonly HashSet<SymbolicExpressionTreeNode> excludedNodes;
 
@@ -32,18 +32,15 @@ public class TreeToAutoDiffTermConverter
   }
 
   public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable,
-    out List<DataForVariable>? parameters, out double[]? initialParamValues,
-    out ParametricFunction? func,
-    out ParametricFunctionGradient? funcGrad)
-  {
-    return TryConvertToAutoDiff(tree, makeVariableWeightsVariable, [],
-      out parameters, out initialParamValues, out func, out funcGrad);
-  }
+                                          out List<DataForVariable>? parameters, out double[]? initialParamValues,
+                                          out CompiledModel? func,
+                                          out CompiledModelGradient? funcGrad)
+    => TryConvertToAutoDiff(tree, makeVariableWeightsVariable, [], out parameters, out initialParamValues, out func, out funcGrad);
 
   public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable, IEnumerable<SymbolicExpressionTreeNode> excludedNodes,
-    out List<DataForVariable>? parameters, out double[]? initialParamValues,
-    out ParametricFunction? func,
-    out ParametricFunctionGradient? funcGrad)
+                                          out List<DataForVariable>? parameters, out double[]? initialParamValues,
+                                          out CompiledModel? func,
+                                          out CompiledModelGradient? funcGrad)
   {
     // use a transformator object which holds the state (variable list, parameter list, ...) for recursive transformation of the tree
     var transformator = new TreeToAutoDiffTermConverter(makeVariableWeightsVariable, excludedNodes);
@@ -58,7 +55,7 @@ public class TreeToAutoDiffTermConverter
       funcGrad = compiledTerm.Differentiate;
 
       return true;
-    } catch (ConversionException) {
+    } catch (NotSupportedException) {
       func = null;
       funcGrad = null;
       parameters = null;
@@ -68,108 +65,95 @@ public class TreeToAutoDiffTermConverter
     return false;
   }
 
+  private Term CreateWeightedTerm(Term parameterTerm, double initialWeight, bool optimizeWeight)
+  {
+    if (!optimizeWeight)
+      return initialWeight * parameterTerm;
+    var wVar = new AutoDiff.Variable();
+    variables.Add(wVar);
+    initialParamValues.Add(initialWeight);
+    return TermBuilder.Product(wVar, parameterTerm);
+  }
+
+  private AutoDiff.Variable CreateWeightTerm(double initialWeight)
+  {
+    var wVar = new AutoDiff.Variable();
+    variables.Add(wVar);
+    initialParamValues.Add(initialWeight);
+    return wVar;
+  }
+
   private Term ConvertToAutoDiff(SymbolicExpressionTreeNode node)
   {
     switch (node.Symbol) {
       case Number: {
-          initialParamValues.Add(((NumberTreeNode)node).Value);
-          var var = new AutoDiff.Variable();
-          variables.Add(var);
-
-          return var;
-        }
+        var numberTreeNode = (NumberTreeNode)node;
+        return CreateWeightTerm(numberTreeNode.Value);
+      }
       case Variable:
       case BinaryFactorVariable: {
-          var varNode = (VariableTreeNodeBase)node;
-          // factor variable values are only 0 or 1 and set in x accordingly
-          var varValue = node is BinaryFactorVariableTreeNode factorVarNode ? factorVarNode.VariableValue : string.Empty;
-          var par = FindOrCreateParameter(parameters, varNode.VariableName, varValue);
-
-          if (!makeVariableWeightsVariable || excludedNodes.Contains(node)) {
-            return varNode.Weight * par;
-          }
-
-          initialParamValues.Add(varNode.Weight);
-          var w = new AutoDiff.Variable();
-          variables.Add(w);
-
-          return TermBuilder.Product(w, par);
-        }
+        var varNode = (VariableTreeNodeBase)node;
+        // factor variable values are only 0 or 1 and set in x accordingly
+        var varValue = node is BinaryFactorVariableTreeNode factorVarNode ? factorVarNode.VariableValue : string.Empty;
+        var par = FindOrCreateParameter(parameters, varNode.VariableName, varValue);
+        var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
+        return CreateWeightedTerm(par, varNode.Weight, optimizeWeight);
+      }
       case FactorVariable: {
-          var factorVarNode = (FactorVariableTreeNode)node;
-          var products = new List<Term>();
-          foreach (var variableValue in factorVarNode.Symbol.GetVariableValues(factorVarNode.VariableName)) {
-            var par = FindOrCreateParameter(parameters, factorVarNode.VariableName, variableValue);
-
-            if (makeVariableWeightsVariable && !excludedNodes.Contains(node)) {
-              initialParamValues.Add(factorVarNode.GetValue(variableValue));
-              var wVar = new AutoDiff.Variable();
-              variables.Add(wVar);
-
-              products.Add(TermBuilder.Product(wVar, par));
-            } else {
-              var weight = factorVarNode.GetValue(variableValue);
-              products.Add(weight * par);
-            }
-          }
-
-          return TermBuilder.Sum(products);
-        }
+        var factorVarNode = (FactorVariableTreeNode)node;
+        var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
+        var products = factorVarNode.Symbol.GetVariableValues(factorVarNode.VariableName).Select(variableValue => {
+          var par = FindOrCreateParameter(parameters, factorVarNode.VariableName, variableValue);
+          return CreateWeightedTerm(par, factorVarNode.GetValue(variableValue), optimizeWeight);
+        });
+        return TermBuilder.Sum(products);
+      }
       case LaggedVariable: {
-          var varNode = (LaggedVariableTreeNode)node;
-          var par = FindOrCreateParameter(parameters, varNode.VariableName, string.Empty, varNode.Lag);
-
-          if (!makeVariableWeightsVariable || excludedNodes.Contains(node)) {
-            return varNode.Weight * par;
-          }
-
-          initialParamValues.Add(varNode.Weight);
-          var w = new AutoDiff.Variable();
-          variables.Add(w);
-
-          return TermBuilder.Product(w, par);
-        }
+        var varNode = (LaggedVariableTreeNode)node;
+        var par = FindOrCreateParameter(parameters, varNode.VariableName, string.Empty, varNode.Lag);
+        var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
+        return CreateWeightedTerm(par, varNode.Weight, optimizeWeight);
+      }
       case Addition: {
-          var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
-
-          return TermBuilder.Sum(terms);
-        }
+        var s = node.Subtrees.Select(ConvertToAutoDiff).ToArray();
+        return TermBuilder.Sum(s);
+      }
       case Subtraction: {
-          var terms = new List<Term>();
-          for (var i = 0; i < node.SubtreeCount; i++) {
-            var t = ConvertToAutoDiff(node[i]);
-            if (i > 0) {
-              t = -t;
-            }
-            terms.Add(t);
+        var terms = new List<Term>();
+        for (var i = 0; i < node.SubtreeCount; i++) {
+          var t = ConvertToAutoDiff(node[i]);
+          if (i > 0) {
+            t = -t;
           }
 
-          return terms.Count == 1 ? -terms[0] : TermBuilder.Sum(terms);
+          terms.Add(t);
         }
+
+        return terms.Count == 1 ? -terms[0] : TermBuilder.Sum(terms);
+      }
       case Multiplication: {
-          var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
-
-          return terms.Count == 1 ? terms[0] : terms.Aggregate((a, b) => new Product(a, b));
-        }
+        var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
+        return terms.Count == 1 ? terms[0] : terms.Aggregate((a, b) => new Product(a, b));
+      }
       case Division: {
-          var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
-          if (terms.Count == 1) {
-            return 1.0 / terms[0];
-          }
-
-          return terms.Aggregate((a, b) => new Product(a, 1.0 / b));
+        var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
+        if (terms.Count == 1) {
+          return 1.0 / terms[0];
         }
+
+        return terms.Aggregate((a, b) => new Product(a, 1.0 / b));
+      }
       case Absolute: {
-          var x1 = ConvertToAutoDiff(node[0]);
+        var x1 = ConvertToAutoDiff(node[0]);
 
-          return Abs(x1);
-        }
+        return Abs(x1);
+      }
       case AnalyticQuotient: {
-          var x1 = ConvertToAutoDiff(node[0]);
-          var x2 = ConvertToAutoDiff(node[1]);
+        var x1 = ConvertToAutoDiff(node[0]);
+        var x2 = ConvertToAutoDiff(node[1]);
 
-          return x1 / TermBuilder.Power(1 + x2 * x2, 0.5);
-        }
+        return x1 / TermBuilder.Power(1 + x2 * x2, 0.5);
+      }
       case Logarithm:
         return TermBuilder.Log(
           ConvertToAutoDiff(node[0]));
@@ -188,16 +172,11 @@ public class TreeToAutoDiffTermConverter
       case CubeRoot:
         return Cbrt(ConvertToAutoDiff(node[0]));
       case Power: {
-          if (node[1] is not NumberTreeNode powerNode) {
-            throw new NotSupportedException("Only numeric powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
-          }
-          var intPower = Math.Truncate(powerNode.Value);
-          if (Math.Abs(intPower - powerNode.Value) > 1e-15) {
-            throw new NotSupportedException("Only integer powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
-          }
-
-          return TermBuilder.Power(ConvertToAutoDiff(node[0]), intPower);
-        }
+        if (node[1] is not NumberTreeNode powerNode)
+          throw new NotSupportedException("Only numeric powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
+        var intPower = Math.Truncate(powerNode.Value);
+        return Math.Abs(intPower - powerNode.Value) > 1e-15 ? throw new NotSupportedException("Only integer powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.") : TermBuilder.Power(ConvertToAutoDiff(node[0]), intPower);
+      }
       case Sine:
         return Sin(
           ConvertToAutoDiff(node[0]));
@@ -220,7 +199,7 @@ public class TreeToAutoDiffTermConverter
       case SubFunctionSymbol:
         return ConvertToAutoDiff(node[0]);
       default:
-        throw new ConversionException();
+        throw new NotSupportedException($"could not convert tree because symbol {node.Symbol} is not supported");
     }
   }
 
@@ -241,77 +220,41 @@ public class TreeToAutoDiffTermConverter
     return par;
   }
 
-  public static bool IsCompatible(SymbolicExpressionTree tree)
-  {
-    var containsUnknownSymbol = (
-      from n in tree.Root[0].IterateNodesPrefix()
-      where
-        n.Symbol is not Variable &&
-        n.Symbol is not BinaryFactorVariable &&
-        n.Symbol is not FactorVariable &&
-        n.Symbol is not LaggedVariable &&
-        n.Symbol is not Number &&
-        n.Symbol is not Addition &&
-        n.Symbol is not Subtraction &&
-        n.Symbol is not Multiplication &&
-        n.Symbol is not Division &&
-        n.Symbol is not Logarithm &&
-        n.Symbol is not Exponential &&
-        n.Symbol is not SquareRoot &&
-        n.Symbol is not Square &&
-        n.Symbol is not Sine &&
-        n.Symbol is not Cosine &&
-        n.Symbol is not Tangent &&
-        n.Symbol is not HyperbolicTangent &&
-        n.Symbol is not SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Erf &&
-        n.Symbol is not SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Norm &&
-        n.Symbol is not StartSymbol &&
-        n.Symbol is not Absolute &&
-        n.Symbol is not AnalyticQuotient &&
-        n.Symbol is not Cube &&
-        n.Symbol is not CubeRoot &&
-        n.Symbol is not Power &&
-        n.Symbol is not SubFunctionSymbol
-      select n).Any();
+  public static bool IsCompatible(SymbolicExpressionTree tree) => tree.Root[0].IterateNodesPrefix().All(n => IsSupportedSymbol(n.Symbol));
 
-    return !containsUnknownSymbol;
-  }
+  public static bool IsSupportedSymbol(Symbol symbol) =>
+    symbol is Variable or
+      BinaryFactorVariable or
+      FactorVariable or
+      LaggedVariable or
+      Number or
+      Addition or
+      Subtraction or
+      Multiplication or
+      Division or
+      Logarithm or
+      Exponential or
+      SquareRoot or
+      Square or
+      Sine or
+      Cosine or
+      Tangent or
+      HyperbolicTangent or
+      SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Erf or
+      SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Norm or
+      StartSymbol or
+      Absolute or
+      AnalyticQuotient or
+      Cube or
+      CubeRoot or
+      Power or
+      SubFunctionSymbol;
 
   #region helper class
-
-  public class DataForVariable(string varName, string varValue, int lag)
-  {
-    public readonly int Lag = lag;
-    public readonly string VariableName = varName;
-    public readonly string VariableValue = varValue; // for factor vars
-
-    public override bool Equals(object? obj)
-    {
-      if (obj is not DataForVariable other) {
-        return false;
-      }
-
-      return other.VariableName.Equals(VariableName) &&
-        other.VariableValue.Equals(VariableValue) &&
-        other.Lag == Lag;
-    }
-
-    public override int GetHashCode() => VariableName.GetHashCode() ^ VariableValue.GetHashCode() ^ Lag;
-  }
-
+  public readonly record struct DataForVariable(string VariableName, string VariableValue, int Lag);
   #endregion
 
   #region exception class
-
-  public class ConversionException : Exception
-  {
-    public ConversionException() { }
-
-    public ConversionException(string message) : base(message) { }
-
-    public ConversionException(string message, Exception inner) : base(message, inner) { }
-  }
-
   private static readonly Func<Term, UnaryFunc> Sin = UnaryFunc.Factory(
     Math.Sin,
     Math.Cos);
@@ -349,7 +292,5 @@ public class TreeToAutoDiffTermConverter
       return 1.0 / (3 * cbrtX * cbrtX);
     }
   );
-
   #endregion
-
 }

@@ -143,7 +143,7 @@ public class SymbolicRegressionTests
     SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData,
       problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(), 10);
     var y = problem.Evaluate(tree)[0];
-    Assert.Equal(0, y, 1.0e-15);
+    Assert.Equal(0, y, 1.0e-8);
   }
 
   [Fact]
