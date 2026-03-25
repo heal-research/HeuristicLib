@@ -440,3 +440,4 @@ Desktop.ini
 /api/
 /.idea/
 *.DotSettings
+examples/PythonInteroperability/PythonInteroperability.sln
