@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 
-public record RandomPermutationCreator : SingleSolutionStatelessCreator<Permutation, PermutationSearchSpace>
+public record RandomPermutationCreator : SingleSolutionCreator<Permutation, PermutationSearchSpace>
 {
   public override Permutation Create(IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
   {

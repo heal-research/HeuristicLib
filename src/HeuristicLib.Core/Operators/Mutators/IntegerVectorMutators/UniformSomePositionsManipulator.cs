@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
 /// replacing it with a uniformly sampled feasible value from the search space bounds.
 /// </summary>
 public record UniformSomePositionsManipulator
-  : SingleSolutionStatelessMutator<IntegerVector, IntegerVectorSearchSpace>
+  : SingleSolutionMutator<IntegerVector, IntegerVectorSearchSpace>
 {
   public double Probability
   {

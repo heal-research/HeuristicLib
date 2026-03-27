@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 
-public record SwapSingleSolutionMutator : SingleSolutionStatelessMutator<Permutation>
+public record SwapSingleSolutionMutator : SingleSolutionMutator<Permutation>
 {
   public override Permutation Mutate(Permutation solution, IRandomNumberGenerator random)
   {

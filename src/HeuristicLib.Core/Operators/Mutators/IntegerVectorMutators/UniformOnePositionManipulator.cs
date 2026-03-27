@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
 
 public record UniformOnePositionManipulator
-  : SingleSolutionStatelessMutator<IntegerVector, IntegerVectorSearchSpace>
+  : SingleSolutionMutator<IntegerVector, IntegerVectorSearchSpace>
 {
   public override IntegerVector Mutate(IntegerVector parent, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
     => Manipulate(random, parent, searchSpace);

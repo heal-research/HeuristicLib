@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
 public partial record ObservableMutator<TG, TS, TP>
-  : Mutator<TG, TS, TP>
+  : StatefulMutator<TG, TS, TP, ObservableMutator<TG, TS, TP>.State>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -23,26 +23,28 @@ public partial record ObservableMutator<TG, TS, TP>
     Observers = observers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry)
   {
     var mutatorInstance = instanceRegistry.Resolve(Mutator);
     var mutatorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
-    return new Instance(mutatorInstance, mutatorObserverInstances);
+    return new State(mutatorInstance, mutatorObserverInstances);
   }
 
-  public new sealed class Instance(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserverInstance<TG, TS, TP>> observers)
-    : Mutator<TG, TS, TP>.Instance
+  protected override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, State state, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    public override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
-    {
-      var result = mutatorInstance.Mutate(parent, random, searchSpace, problem);
+    var result = state.MutatorInstance.Mutate(parents, random, searchSpace, problem);
 
-      foreach (var observer in observers) {
-        observer.AfterMutate(result, parent, searchSpace, problem);
-      }
-
-      return result;
+    foreach (var observerInstance in state.ObserverInstances) {
+      observerInstance.AfterMutate(result, parents, searchSpace, problem);
     }
+
+    return result;
+  }
+  
+  public sealed class State(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserverInstance<TG, TS, TP>> observerInstances)
+  {
+    public IMutatorInstance<TG, TS, TP> MutatorInstance { get; } = mutatorInstance;
+    public IReadOnlyList<IMutatorObserverInstance<TG, TS, TP>> ObserverInstances { get; } = observerInstances;
   }
 }
 

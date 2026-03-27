@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
 public partial record ObservableCreator<TG, TS, TP>
-  : Creator<TG, TS, TP>
+  : StatefulCreator<TG, TS, TP, ObservableCreator<TG, TS, TP>.State>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -24,25 +24,27 @@ public partial record ObservableCreator<TG, TS, TP>
     Observers = observers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry)
   {
     var creatorInstance = instanceRegistry.Resolve(Creator);
-    return new Instance(creatorInstance, Observers.Select(instanceRegistry.Resolve).ToArray());
+    return new State(creatorInstance, Observers.Select(instanceRegistry.Resolve).ToArray());
+  }
+  
+  protected override IReadOnlyList<TG> Create(int count, State state, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  {
+    var result = state.CreatorInstance.Create(count, random, searchSpace, problem);
+
+    foreach (var observerInstance in state.ObserverInstances) {
+      observerInstance.AfterCreation(result, count, searchSpace, problem);
+    }
+
+    return result;
   }
 
-  public new sealed class Instance(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserverInstance<TG, TS, TP>> observers)
-    : Creator<TG, TS, TP>.Instance
+  public sealed class State(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserverInstance<TG, TS, TP>> observerInstances) 
   {
-    public override IReadOnlyList<TG> Create(int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
-    {
-      var result = creatorInstance.Create(count, random, searchSpace, problem);
-
-      foreach (var observer in observers) {
-        observer.AfterCreation(result, count, searchSpace, problem);
-      }
-
-      return result;
-    }
+    public ICreatorInstance<TG, TS, TP> CreatorInstance { get; } = creatorInstance;
+    public IReadOnlyList<ICreatorObserverInstance<TG, TS, TP>> ObserverInstances { get; } = observerInstances;
   }
 }
 

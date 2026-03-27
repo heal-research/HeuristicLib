@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
 
 public record RoundedNormalOnePositionManipulator
-  : SingleSolutionStatelessMutator<IntegerVector, IntegerVectorSearchSpace>
+  : SingleSolutionMutator<IntegerVector, IntegerVectorSearchSpace>
 {
   /// <summary>
   /// Standard deviations per dimension (cycled if shorter than the vector).

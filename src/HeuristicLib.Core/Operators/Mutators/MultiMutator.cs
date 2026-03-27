@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 // ToDo: Think of a better name, maybe "ChooseOneMutator".
 [Equatable]
 public partial record MultiMutator<TGenotype, TSearchSpace, TProblem>
-  : Mutator<TGenotype, TSearchSpace, TProblem>
+  : StatefulMutator<TGenotype, TSearchSpace, TProblem, MultiMutator<TGenotype, TSearchSpace, TProblem>.State>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -25,13 +25,13 @@ public partial record MultiMutator<TGenotype, TSearchSpace, TProblem>
   [IgnoreEquality]
   private readonly double[] cumulativeSumWeights;
 
-  public MultiMutator(ImmutableArray<IMutator<TGenotype, TSearchSpace, TProblem>> mutator, ImmutableArray<double>? weights = null)
+  public MultiMutator(ImmutableArray<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
   {
-    if (mutator.Length == 0) {
-      throw new ArgumentException("At least one mutator must be provided.", nameof(mutator));
+    if (mutators.Length == 0) {
+      throw new ArgumentException("At least one mutator must be provided.", nameof(mutators));
     }
 
-    if (weights is not null && weights.Value.Length != mutator.Length) {
+    if (weights is not null && weights.Value.Length != mutators.Length) {
       throw new ArgumentException("Weights must have the same length as mutator.", nameof(weights));
     }
 
@@ -43,8 +43,8 @@ public partial record MultiMutator<TGenotype, TSearchSpace, TProblem>
       throw new ArgumentException("At least one weight must be greater than zero.", nameof(weights));
     }
 
-    Mutators = mutator;
-    Weights = weights ?? [.. Enumerable.Repeat(1.0, mutator.Length)];
+    Mutators = mutators;
+    Weights = weights ?? [.. Enumerable.Repeat(1.0, mutators.Length)];
 
     cumulativeSumWeights = new double[Weights.Length];
     for (var i = 0; i < Weights.Length; i++) {
@@ -53,63 +53,58 @@ public partial record MultiMutator<TGenotype, TSearchSpace, TProblem>
     }
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry)
   {
     var mutatorInstances = Mutators.Select(instanceRegistry.Resolve).ToArray();
-    return new Instance(mutatorInstances, cumulativeSumWeights, sumWeights);
+    return new State(mutatorInstances, cumulativeSumWeights, sumWeights);
   }
 
-  public new class Instance : Mutator<TGenotype, TSearchSpace, TProblem>.Instance
+  protected override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, State state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
-    private readonly IReadOnlyList<IMutatorInstance<TGenotype, TSearchSpace, TProblem>> mutator;
-    private readonly double[] cumulativeSumWeights;
-    private readonly double sumWeights;
+    // ToDo: Unify the logic for MultiOperators to avoid duplication.
 
-    public Instance(IReadOnlyList<IMutatorInstance<TGenotype, TSearchSpace, TProblem>> mutator, double[] cumulativeSumWeights, double sumWeights)
-    {
-      this.mutator = mutator;
-      this.cumulativeSumWeights = cumulativeSumWeights;
-      this.sumWeights = sumWeights;
+    var offspringCount = parents.Count;
+    var mutators = state.MutatorInstances;
+
+    // determine which mutator to use for each offspring
+    var operatorAssignment = new int[offspringCount];
+    var operatorCounts = new int[mutators.Count];
+    var randoms = random.NextDoubles(offspringCount);
+    for (var i = 0; i < offspringCount; i++) {
+      var r = randoms[i] * sumWeights;
+      var idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
+      operatorAssignment[i] = idx;
+      operatorCounts[idx]++;
     }
 
-    public override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parent, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-      // ToDo: Unify the logic for MultiOperators to avoid duplication.
-
-      var offspringCount = parent.Count;
-
-      // determine which mutator to use for each offspring
-      var operatorAssignment = new int[offspringCount];
-      var operatorCounts = new int[mutator.Count];
-      var randoms = random.NextDoubles(offspringCount);
-      for (var i = 0; i < offspringCount; i++) {
-        var r = randoms[i] * sumWeights;
-        var idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
-        operatorAssignment[i] = idx;
-        operatorCounts[idx]++;
-      }
-
-      // batch parent by operator
-      var parentBatches = new List<TGenotype>[mutator.Count];
-      for (var i = 0; i < mutator.Count; i++) {
-        parentBatches[i] = new List<TGenotype>(operatorCounts[i]);
-      }
-
-      for (var i = 0; i < offspringCount; i++) {
-        var opIdx = operatorAssignment[i];
-        parentBatches[opIdx].Add(parent[i]);
-      }
-
-      // batch-create for each operator and collect
-      var offspring = new List<TGenotype>(offspringCount);
-
-      for (var i = 0; i < mutator.Count; i++) {
-        var batchOffspring = mutator[i].Mutate(parentBatches[i], random, searchSpace, problem);
-        offspring.AddRange(batchOffspring);
-      }
-
-      return offspring;
+    // batch parent by operator
+    var parentBatches = new List<TGenotype>[mutators.Count];
+    for (var i = 0; i < mutators.Count; i++) {
+      parentBatches[i] = new List<TGenotype>(operatorCounts[i]);
     }
+
+    for (var i = 0; i < offspringCount; i++) {
+      var opIdx = operatorAssignment[i];
+      parentBatches[opIdx].Add(parents[i]);
+    }
+
+    // batch-create for each operator and collect
+    var offspring = new List<TGenotype>(offspringCount);
+
+    for (var i = 0; i < mutators.Count; i++) {
+      var batchOffspring = mutators[i].Mutate(parentBatches[i], random, searchSpace, problem);
+      offspring.AddRange(batchOffspring);
+    }
+
+    return offspring;
+  }
+  
+  // ToDo: probably this can be in a base class on ensemble operators
+  public sealed class State(IReadOnlyList<IMutatorInstance<TGenotype, TSearchSpace, TProblem>> mutatorInstances, IReadOnlyList<double> cumulativeSumWeights, double sumWeights)
+  {
+    public IReadOnlyList<IMutatorInstance<TGenotype, TSearchSpace, TProblem>> MutatorInstances { get; } = mutatorInstances;
+    public IReadOnlyList<double> CumulativeSumWeights { get; } = cumulativeSumWeights;
+    public double SumWeights { get; } = sumWeights;
   }
 }
 

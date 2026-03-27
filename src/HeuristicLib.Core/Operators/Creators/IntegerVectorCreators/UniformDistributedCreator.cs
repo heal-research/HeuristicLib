@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators;
 
-public record UniformDistributedCreator : SingleSolutionStatelessCreator<IntegerVector, IntegerVectorSearchSpace>
+public record UniformDistributedCreator : SingleSolutionCreator<IntegerVector, IntegerVectorSearchSpace>
 {
   public override IntegerVector Create(IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
   {
