@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Creators;
 
 public abstract record SingleSolutionCreator<TGenotype, TSearchSpace, TProblem>
-  : Creator<TGenotype, TSearchSpace, TProblem>
+  : StatelessCreator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -17,7 +17,7 @@ public abstract record SingleSolutionCreator<TGenotype, TSearchSpace, TProblem>
 }
 
 public abstract record SingleSolutionCreator<TGenotype, TSearchSpace>
-  : Creator<TGenotype, TSearchSpace>
+  : StatelessCreator<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Create(IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -27,7 +27,7 @@ public abstract record SingleSolutionCreator<TGenotype, TSearchSpace>
 }
 
 public abstract record SingleSolutionCreator<TGenotype>
-  : Creator<TGenotype>
+  : StatelessCreator<TGenotype>
 {
   public abstract TGenotype Create(IRandomNumberGenerator random);
 

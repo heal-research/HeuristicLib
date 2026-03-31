@@ -11,12 +11,12 @@ public abstract record StatefulCreator<TGenotype, TSearchSpace, TProblem, TState
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TState : class
 {
-  protected abstract TState CreateInitialState(ExecutionInstanceRegistry instanceRegistry);
+  protected abstract TState CreateInitialState();
 
   protected abstract IReadOnlyList<TGenotype> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
   public ICreatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new StatefulCreatorInstance(this, CreateInitialState(instanceRegistry));
+    new StatefulCreatorInstance(this, CreateInitialState());
 
   private sealed class StatefulCreatorInstance : ICreatorInstance<TGenotype, TSearchSpace, TProblem>
   {

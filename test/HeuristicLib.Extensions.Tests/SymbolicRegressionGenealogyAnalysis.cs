@@ -27,7 +27,7 @@ namespace HEAL.HeuristicLib.Extensions.Tests;
 
 public class GenealogyGraphTests
 {
-  private static MultiMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
+  private static ChooseOneMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
   {
     var symRegAllMutator = MultiMutator.Create(
       new ChangeNodeTypeManipulation(),

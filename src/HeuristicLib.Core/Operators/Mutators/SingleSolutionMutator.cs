@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
 public abstract record SingleSolutionMutator<TGenotype, TSearchSpace, TProblem>
-  : Mutator<TGenotype, TSearchSpace, TProblem>
+  : StatelessMutator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -17,7 +17,7 @@ public abstract record SingleSolutionMutator<TGenotype, TSearchSpace, TProblem>
 }
 
 public abstract record SingleSolutionMutator<TGenotype, TSearchSpace>
-  : Mutator<TGenotype, TSearchSpace>
+  : StatelessMutator<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
   public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random, TSearchSpace searchSpace);
@@ -27,7 +27,7 @@ public abstract record SingleSolutionMutator<TGenotype, TSearchSpace>
 }
 
 public abstract record SingleSolutionMutator<TGenotype>
-  : Mutator<TGenotype>
+  : StatelessMutator<TGenotype>
 {
   public abstract TGenotype Mutate(TGenotype parent, IRandomNumberGenerator random);
 

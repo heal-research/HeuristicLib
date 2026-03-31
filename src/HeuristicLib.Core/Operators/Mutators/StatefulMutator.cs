@@ -11,25 +11,17 @@ public abstract record StatefulMutator<TGenotype, TSearchSpace, TProblem, TState
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TState : class
 {
-  protected abstract TState CreateInitialState(ExecutionInstanceRegistry instanceRegistry);
+  protected abstract TState CreateInitialState();
 
   protected abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, TState state,
     IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
   
   public IMutatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new StatefulMutatorInstance(this, CreateInitialState(instanceRegistry));
+    new StatefulMutatorInstance(this, CreateInitialState());
   
-  private sealed class StatefulMutatorInstance : IMutatorInstance<TGenotype, TSearchSpace, TProblem>
+  private sealed class StatefulMutatorInstance(StatefulMutator<TGenotype, TSearchSpace, TProblem, TState> mutator, TState state)
+    : IMutatorInstance<TGenotype, TSearchSpace, TProblem>
   {
-    private readonly StatefulMutator<TGenotype, TSearchSpace, TProblem, TState> mutator;
-    private readonly TState state;
-
-    public StatefulMutatorInstance(StatefulMutator<TGenotype, TSearchSpace, TProblem, TState> mutator, TState initialState)
-    {
-      this.mutator = mutator;
-      state = initialState;
-    }
-
     public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
       return mutator.Mutate(parents, state, random, searchSpace, problem);

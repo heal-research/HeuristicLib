@@ -1,5 +1,4 @@
 ﻿using Generator.Equals;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,24 +7,23 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
 public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
-  : StatefulCreator<TGenotype, TSearchSpace, TProblem, PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>.State>
+  : DecoratorCreator<TGenotype, TSearchSpace, TProblem, PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>.State>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
+  public ICreator<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutions => InnerCreator;
+  
   [OrderedEquality] public ImmutableArray<TGenotype> PredefinedSolutions { get; init; }
 
-  public ICreator<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutions { get; init; }
-
   public PredefinedSolutionsCreator(ImmutableArray<TGenotype> predefinedSolutions, ICreator<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutions)
-  {
+    : base(creatorForRemainingSolutions)
+  { 
     PredefinedSolutions = predefinedSolutions;
-    CreatorForRemainingSolutions = creatorForRemainingSolutions;
   }
 
-  protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry) 
-    => new (instanceRegistry.Resolve(CreatorForRemainingSolutions));
+  protected override State CreateInitialState() => new ();
   
-  protected override IReadOnlyList<TGenotype> Create(int count, State state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+  protected override IReadOnlyList<TGenotype> Create(int count, State state, ICreatorInstance<TGenotype, TSearchSpace, TProblem> innerCreator, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
     var offspring = new TGenotype[count];
 
@@ -44,7 +42,7 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
     }
 
     var remainingRandom = random.Fork(1);
-    var remaining = state.CreatorForRemainingSolutionsInstance.Create(countRemaining, remainingRandom, searchSpace, problem);
+    var remaining = innerCreator.Create(countRemaining, remainingRandom, searchSpace, problem);
     for (var i = 0; i < remaining.Count; i++) {
       offspring[countPredefined + i] = remaining[i];
     }
@@ -52,9 +50,7 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
     return offspring;
   }
 
-  public sealed class State(ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance)
-  {
+  public new sealed class State {
     public int CurrentSolutionIndex { get; set; } = 0;
-    public ICreatorInstance<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutionsInstance { get; } = creatorForRemainingSolutionsInstance;
   }
 }

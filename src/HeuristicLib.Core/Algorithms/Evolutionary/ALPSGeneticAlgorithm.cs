@@ -37,7 +37,7 @@ public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
   public override AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var internalMutator = new MultiMutator<TGenotype, TSearchSpace, TProblem>([Mutator, new NoChangeMutator<TGenotype>()], [MutationRate, 1 - MutationRate]);
+    var internalMutator = new ChooseOneMutator<TGenotype, TSearchSpace, TProblem>([Mutator, new NoChangeMutator<TGenotype>()], [MutationRate, 1 - MutationRate]);
     var internalReplacer = new ElitismReplacer<TGenotype>(Elites);
 
     var interceptorInstance = Interceptor is not null ? instanceRegistry.Resolve(Interceptor) : null;

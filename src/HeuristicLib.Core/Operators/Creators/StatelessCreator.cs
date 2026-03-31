@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creators;
 
-public abstract record Creator<TGenotype, TSearchSpace, TProblem>
+public abstract record StatelessCreator<TGenotype, TSearchSpace, TProblem>
   : ICreator<TGenotype, TSearchSpace, TProblem>,
     ICreatorInstance<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
@@ -16,7 +16,7 @@ public abstract record Creator<TGenotype, TSearchSpace, TProblem>
   public abstract IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract record Creator<TGenotype, TSearchSpace>
+public abstract record StatelessCreator<TGenotype, TSearchSpace>
   : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>,
     ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
@@ -29,7 +29,7 @@ public abstract record Creator<TGenotype, TSearchSpace>
     Create(count, random, searchSpace);
 }
 
-public abstract record Creator<TGenotype>
+public abstract record StatelessCreator<TGenotype>
   : ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>,
     ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {

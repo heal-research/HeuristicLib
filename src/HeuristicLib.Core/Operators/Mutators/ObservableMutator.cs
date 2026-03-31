@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
 public partial record ObservableMutator<TG, TS, TP>
-  : StatefulMutator<TG, TS, TP, ObservableMutator<TG, TS, TP>.State>
+  : IMutator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -23,28 +23,26 @@ public partial record ObservableMutator<TG, TS, TP>
     Observers = observers;
   }
 
-  protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry)
+  public IMutatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var mutatorInstance = instanceRegistry.Resolve(Mutator);
-    var mutatorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
-    return new State(mutatorInstance, mutatorObserverInstances);
-  }
-
-  protected override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, State state, IRandomNumberGenerator random, TS searchSpace, TP problem)
-  {
-    var result = state.MutatorInstance.Mutate(parents, random, searchSpace, problem);
-
-    foreach (var observerInstance in state.ObserverInstances) {
-      observerInstance.AfterMutate(result, parents, searchSpace, problem);
-    }
-
-    return result;
+    var observerInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
+    return new Instance(mutatorInstance, observerInstances);
   }
   
-  public sealed class State(IMutatorInstance<TG, TS, TP> mutatorInstance, IReadOnlyList<IMutatorObserverInstance<TG, TS, TP>> observerInstances)
+  private sealed class Instance(IMutatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<IMutatorObserverInstance<TG, TS, TP>> observerInstances)
+    : IMutatorInstance<TG, TS, TP>
   {
-    public IMutatorInstance<TG, TS, TP> MutatorInstance { get; } = mutatorInstance;
-    public IReadOnlyList<IMutatorObserverInstance<TG, TS, TP>> ObserverInstances { get; } = observerInstances;
+    public IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    {
+      var result = creatorInstance.Mutate(parents, random, searchSpace, problem);
+
+      foreach (var observerInstance in observerInstances) {
+        observerInstance.AfterMutate(result, parents, searchSpace, problem);
+      }
+
+      return result;
+    }
   }
 }
 
