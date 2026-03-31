@@ -1,11 +1,11 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-public record RoundedLocalCrossover : SingleSolutionStatelessCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedLocalCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
   public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
   {

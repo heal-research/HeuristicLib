@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 [Equatable]
 public partial record ObservableCrossover<TG, TS, TP>
-  : Crossover<TG, TS, TP>
+  : ICrossover<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -24,17 +24,17 @@ public partial record ObservableCrossover<TG, TS, TP>
     Observers = observers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public ICrossoverInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var crossoverInstance = instanceRegistry.Resolve(Crossover);
     var observerInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
     return new Instance(crossoverInstance, observerInstances);
   }
 
-  public new sealed class Instance(ICrossoverInstance<TG, TS, TP> crossoverInstance, IReadOnlyList<ICrossoverObserverInstance<TG, TS, TP>> observers)
-    : Crossover<TG, TS, TP>.Instance
+  private sealed class Instance(ICrossoverInstance<TG, TS, TP> crossoverInstance, IReadOnlyList<ICrossoverObserverInstance<TG, TS, TP>> observers)
+    : ICrossoverInstance<TG, TS, TP>
   {
-    public override IReadOnlyList<TG> Cross(IReadOnlyList<IParents<TG>> parents, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    public IReadOnlyList<TG> Cross(IReadOnlyList<IParents<TG>> parents, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
       var result = crossoverInstance.Cross(parents, random, searchSpace, problem);
 

@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 [Equatable]
 public partial record ObservableInterceptor<TG, TS, TP, TR>
-  : Interceptor<TG, TS, TP, TR>
+  : IInterceptor<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -25,17 +25,17 @@ public partial record ObservableInterceptor<TG, TS, TP, TR>
     Observers = observers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public IInterceptorInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var interceptorInstance = instanceRegistry.Resolve(Interceptor);
     var interceptorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
     return new Instance(interceptorInstance, interceptorObserverInstances);
   }
 
-  public new sealed class Instance(IInterceptorInstance<TG, TS, TP, TR> interceptorInstance, IReadOnlyList<IInterceptorObserverInstance<TG, TS, TP, TR>> observers)
-    : Interceptor<TG, TS, TP, TR>.Instance
+  private sealed class Instance(IInterceptorInstance<TG, TS, TP, TR> interceptorInstance, IReadOnlyList<IInterceptorObserverInstance<TG, TS, TP, TR>> observers)
+    : IInterceptorInstance<TG, TS, TP, TR>
   {
-    public override TR Transform(TR currentState, TR? previousState, TS searchSpace, TP problem)
+    public TR Transform(TR currentState, TR? previousState, TS searchSpace, TP problem)
     {
       var result = interceptorInstance.Transform(currentState, previousState, searchSpace, problem);
 

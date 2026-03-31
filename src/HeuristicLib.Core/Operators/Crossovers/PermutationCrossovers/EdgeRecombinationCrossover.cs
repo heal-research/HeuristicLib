@@ -1,10 +1,10 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public record EdgeRecombinationCrossover : SingleSolutionStatelessCrossover<Permutation>
+public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
 {
   public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random)
   {

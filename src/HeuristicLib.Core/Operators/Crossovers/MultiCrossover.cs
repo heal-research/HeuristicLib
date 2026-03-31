@@ -9,13 +9,13 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 // ToDo: Think of a better name, maybe "ChooseOneCrossover".
 [Equatable]
-public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGenotype, TSearchSpace, TProblem>
+public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem>
+  : CompositeCrossover<TGenotype, TSearchSpace, TProblem, object>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  [OrderedEquality]
-  public ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers { get; }
-
+  public ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers => InnerCrossovers;
+  
   [OrderedEquality]
   public ImmutableArray<double> Weights { get; }
 
@@ -26,6 +26,7 @@ public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crosso
   private readonly double[] cumulativeSumWeights;
 
   public MultiCrossover(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+    : base(crossovers)
   {
     if (crossovers.Length == 0) {
       throw new ArgumentException("At least one crossover must be provided.", nameof(crossovers));
@@ -43,7 +44,6 @@ public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crosso
       throw new ArgumentException("At least one weight must be greater than zero.", nameof(weights));
     }
 
-    Crossovers = crossovers;
     Weights = weights ?? [.. Enumerable.Repeat(1.0, crossovers.Length)];
 
     cumulativeSumWeights = new double[Weights.Length];
@@ -53,61 +53,46 @@ public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crosso
     }
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override object CreateInitialState() => new();
+
+  protected override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, object state,
+    IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> innerCrossovers,
+    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
-    var crossoverInstances = Crossovers.Select(instanceRegistry.Resolve).ToArray();
-    return new Instance(crossoverInstances, cumulativeSumWeights, sumWeights);
+    var offspringCount = parents.Count;
+
+    // determine which crossover to use for each offspring
+    var operatorAssignment = new int[offspringCount];
+    var operatorCounts = new int[innerCrossovers.Count];
+    var randoms = random.NextDoubles(offspringCount);
+    for (var i = 0; i < offspringCount; i++) {
+      var r = randoms[i] * sumWeights;
+      var idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
+      operatorAssignment[i] = idx;
+      operatorCounts[idx]++;
+    }
+
+    // batch parents by operator
+    var parentBatches = new List<IParents<TGenotype>>[innerCrossovers.Count];
+    for (var i = 0; i < innerCrossovers.Count; i++) {
+      parentBatches[i] = new List<IParents<TGenotype>>(operatorCounts[i]);
+    }
+
+    for (var i = 0; i < offspringCount; i++) {
+      var opIdx = operatorAssignment[i];
+      parentBatches[opIdx].Add(parents[i]);
+    }
+
+    // batch-create for each operator and collect
+    var offspring = new List<TGenotype>(offspringCount);
+
+    for (var i = 0; i < innerCrossovers.Count; i++) {
+      var batchOffspring = innerCrossovers[i].Cross(parentBatches[i], random, searchSpace, problem);
+      offspring.AddRange(batchOffspring);
+    }
+
+    return offspring;
   }
-
-  public new class Instance : Crossover<TGenotype, TSearchSpace, TProblem>.Instance
-  {
-    private readonly IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers;
-    private readonly double[] cumulativeSumWeights;
-    private readonly double sumWeights;
-
-    public Instance(IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers, double[] cumulativeSumWeights, double sumWeights)
-    {
-      this.crossovers = crossovers;
-      this.cumulativeSumWeights = cumulativeSumWeights;
-      this.sumWeights = sumWeights;
-    }
-
-    public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-      var offspringCount = parents.Count;
-
-      // determine which crossover to use for each offspring
-      var operatorAssignment = new int[offspringCount];
-      var operatorCounts = new int[crossovers.Count];
-      var randoms = random.NextDoubles(offspringCount);
-      for (var i = 0; i < offspringCount; i++) {
-        var r = randoms[i] * sumWeights;
-        var idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
-        operatorAssignment[i] = idx;
-        operatorCounts[idx]++;
-      }
-
-      // batch parents by operator
-      var parentBatches = new List<IParents<TGenotype>>[crossovers.Count];
-      for (var i = 0; i < crossovers.Count; i++) {
-        parentBatches[i] = new List<IParents<TGenotype>>(operatorCounts[i]);
-      }
-
-      for (var i = 0; i < offspringCount; i++) {
-        var opIdx = operatorAssignment[i];
-        parentBatches[opIdx].Add(parents[i]);
-      }
-
-      // batch-create for each operator and collect
-      var offspring = new List<TGenotype>(offspringCount);
-
-      for (var i = 0; i < crossovers.Count; i++) {
-        var batchOffspring = crossovers[i].Cross(parentBatches[i], random, searchSpace, problem);
-        offspring.AddRange(batchOffspring);
-      }
-
-      return offspring;
-    }
 
     // public override void Cross(ReadOnlySpan<TGenotype> parent1, ReadOnlySpan<TGenotype> parent2, IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem, Span<TGenotype> offspring) {
     //   if (parent1.Length != parent2.Length || offspring.Length != parent1.Length) throw new ArgumentException("Parent arrays and offspring array must have the same length.", nameof(parent1));
@@ -151,7 +136,6 @@ public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crosso
     //     }
     //   }
     // }
-  }
 }
 
 public static class MultiCrossover

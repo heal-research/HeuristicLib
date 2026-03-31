@@ -1,11 +1,11 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public record AlphaBetaBlendCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
+public record AlphaBetaBlendCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
 {
   public AlphaBetaBlendCrossover(double alpha = 0.7)
   {

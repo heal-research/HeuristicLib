@@ -44,7 +44,7 @@ They implement both the definition interface and the instance interface, and typ
 public TInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 ```
 
-Example: `OrderCrossover` inherits from `SingleSolutionStatelessCrossover<...>` and therefore its execution instance is the same object.
+Example: `OrderCrossover` inherits from `SingleSolutionCrossover<...>` and therefore its execution instance is the same object.
 
 ### 2) Stateful execution (definition creates a new instance)
 

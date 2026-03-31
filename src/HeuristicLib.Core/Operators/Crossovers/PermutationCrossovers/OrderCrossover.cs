@@ -1,11 +1,11 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-public record OrderCrossover : SingleSolutionStatelessCrossover<Permutation, PermutationSearchSpace>
+public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>
 {
   public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng, Memory<int>? memory = null)
   {

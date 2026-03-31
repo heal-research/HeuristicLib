@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
@@ -7,8 +6,14 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record StagnationTerminator<TGenotype>
-  : Terminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  : StatefulTerminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, StagnationTerminator<TGenotype>.State>
 {
+  public sealed class State
+  {
+    public ObjectiveVector? BestQualitySoFar { get; set; }
+    public int StagnationCounter { get; set; }
+  }
+
   private readonly int window;
 
   public StagnationTerminator(int window = 20)
@@ -16,42 +21,25 @@ public record StagnationTerminator<TGenotype>
     this.window = window;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override State CreateInitialState() => new();
+
+  protected override bool ShouldTerminate(PopulationState<TGenotype> algorithmState, State terminatorState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
   {
-    return new Instance(window);
-  }
+    terminatorState.BestQualitySoFar ??= problem.Objective.Worst;
 
-  public new class Instance
-    : Terminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Instance
-  {
-    private readonly int window;
+    var comparer = problem.Objective.TotalOrderComparer;
 
-    private ObjectiveVector? bestQualitySoFar;
-    private int stagnationCounter;
-
-    public Instance(int window)
-    {
-      this.window = window;
-    }
-
-    public override bool ShouldTerminate(PopulationState<TGenotype> state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-    {
-      bestQualitySoFar ??= problem.Objective.Worst;
-
-      var comparer = problem.Objective.TotalOrderComparer;
-
-      var currentBestQuality = state.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
-      if (comparer.Compare(currentBestQuality, bestQualitySoFar) < 0) {
-        bestQualitySoFar = currentBestQuality;
-        stagnationCounter = 0;
-      } else {
-        stagnationCounter++;
-        if (stagnationCounter >= window) {
-          return true;
-        }
+    var currentBestQuality = algorithmState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
+    if (comparer.Compare(currentBestQuality, terminatorState.BestQualitySoFar) < 0) {
+      terminatorState.BestQualitySoFar = currentBestQuality;
+      terminatorState.StagnationCounter = 0;
+    } else {
+      terminatorState.StagnationCounter++;
+      if (terminatorState.StagnationCounter >= window) {
+        return true;
       }
-
-      return false;
     }
+
+    return false;
   }
 }

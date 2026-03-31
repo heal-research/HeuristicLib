@@ -270,27 +270,27 @@ public record TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealV
   public override IAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, AlgorithmState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
-public record IndependentCrossover<TGenotype> : SingleSolutionStatelessCrossover<TGenotype>
+public record IndependentCrossover<TGenotype> : SingleSolutionCrossover<TGenotype>
 {
   public override TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
-public record PermutationSpecificCrossover : SingleSolutionStatelessCrossover<Permutation, PermutationSearchSpace>
+public record PermutationSpecificCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>
 {
   public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace) => throw new NotImplementedException();
 }
 
-public record TspSpecificCrossover : SingleSolutionStatelessCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
+public record TspSpecificCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
 {
   public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace, TravelingSalesmanProblem problem) => throw new NotImplementedException();
 }
 
-public record RealVectorSpecificCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
+public record RealVectorSpecificCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
 {
   public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => throw new NotImplementedException();
 }
 
-public record TestFunctionProblemSpecificCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+public record TestFunctionProblemSpecificCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem>
 {
   public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) => throw new NotImplementedException();
 }

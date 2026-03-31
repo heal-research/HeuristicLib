@@ -1,11 +1,11 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-public record RoundedUniformArithmeticCrossover : SingleSolutionStatelessCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedUniformArithmeticCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
   public double Alpha
   {

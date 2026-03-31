@@ -1,10 +1,13 @@
-﻿using HEAL.HeuristicLib.Execution;
-
-namespace HEAL.HeuristicLib.Operators.Terminators;
+﻿namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record AfterIterationsTerminator<TGenotype>
-  : Terminator<TGenotype>
+  : StatefulTerminator<TGenotype, AfterIterationsTerminator<TGenotype>.State>
 {
+  public sealed class State
+  {
+    public int CurrentCounter { get; set; }
+  }
+
   private readonly int maximumIterations;
 
   public AfterIterationsTerminator(int maximumIterations)
@@ -12,25 +15,11 @@ public record AfterIterationsTerminator<TGenotype>
     this.maximumIterations = maximumIterations;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override State CreateInitialState() => new();
+
+  protected override bool ShouldTerminate(State terminatorState)
   {
-    return new Instance(maximumIterations);
-  }
-
-  public new class Instance : Terminator<TGenotype>.Instance
-  {
-    private readonly int maximumIterations;
-    private int currentCounter;
-
-    public Instance(int maximumIterations)
-    {
-      this.maximumIterations = maximumIterations;
-      currentCounter = 0;
-    }
-
-    public override bool ShouldTerminate()
-    {
-      return ++currentCounter >= maximumIterations;
-    }
+    terminatorState.CurrentCounter += 1;
+    return terminatorState.CurrentCounter >= maximumIterations;
   }
 }

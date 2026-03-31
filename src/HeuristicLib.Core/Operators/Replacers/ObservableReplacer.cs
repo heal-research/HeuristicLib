@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 
 [Equatable]
 public partial record ObservableReplacer<TG, TS, TP>
-  : Replacer<TG, TS, TP>
+  : IReplacer<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -24,17 +24,17 @@ public partial record ObservableReplacer<TG, TS, TP>
     Observers = observers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public IReplacerInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var replacerInstance = instanceRegistry.Resolve(Replacer);
     var replacerObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
     return new Instance(replacerInstance, replacerObserverInstances);
   }
 
-  public new sealed class Instance(IReplacerInstance<TG, TS, TP> replacerInstance, IReadOnlyList<IReplacerObserverInstance<TG, TS, TP>> observers)
-    : Replacer<TG, TS, TP>.Instance
+  private sealed class Instance(IReplacerInstance<TG, TS, TP> replacerInstance, IReadOnlyList<IReplacerObserverInstance<TG, TS, TP>> observers)
+    : IReplacerInstance<TG, TS, TP>
   {
-    public override IReadOnlyList<ISolution<TG>> Replace(IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    public IReadOnlyList<ISolution<TG>> Replace(IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
       var result = replacerInstance.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
 

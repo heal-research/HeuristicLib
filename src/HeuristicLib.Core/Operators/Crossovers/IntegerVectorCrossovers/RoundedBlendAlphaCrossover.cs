@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 /// It creates new offspring by sampling a new value in the range [min_i - d * alpha, max_i + d * alpha) at each position i
 /// Here min_i and max_i are the smaller and larger value of the two parents at position i and d is max_i - min_i.
 /// </summary>
-public record RoundedBlendAlphaCrossover : SingleSolutionStatelessCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedBlendAlphaCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
   public double Alpha
   {

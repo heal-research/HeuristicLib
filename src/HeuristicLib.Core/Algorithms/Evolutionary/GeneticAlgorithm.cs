@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.AlgorithmExecutions;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Variations;
@@ -69,7 +68,7 @@ public static class GeneticAlgorithm
     ISelector<TG, TS, TP> selector, int populationSize,
     IEvaluator<TG, TS, TP> evaluator,
     int elites = 1,
-    Interceptor<TG, TS, TP, PopulationState<TG>>? interceptor = null
+    IInterceptor<TG, TS, TP, PopulationState<TG>>? interceptor = null
   )
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>

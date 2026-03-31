@@ -1,10 +1,10 @@
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 public record NoCrossover<TGenotype>
-  : SingleSolutionStatelessCrossover<TGenotype>
+  : SingleSolutionCrossover<TGenotype>
 {
   public static readonly NoCrossover<TGenotype> Instance = new();
 
@@ -14,3 +14,4 @@ public record NoCrossover<TGenotype>
     return parents.Parent1;
   }
 }
+

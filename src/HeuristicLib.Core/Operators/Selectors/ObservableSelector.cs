@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 [Equatable]
 public partial record ObservableSelector<TG, TS, TP>
-  : Selector<TG, TS, TP>
+  : ISelector<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -25,17 +25,17 @@ public partial record ObservableSelector<TG, TS, TP>
     Observers = observers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public ISelectorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var selectorInstance = instanceRegistry.Resolve(Selector);
     var selectorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
     return new Instance(selectorInstance, selectorObserverInstances);
   }
 
-  public new sealed class Instance(ISelectorInstance<TG, TS, TP> selectorInstance, IReadOnlyList<ISelectorObserverInstance<TG, TS, TP>> observers)
-    : Selector<TG, TS, TP>.Instance
+  private sealed class Instance(ISelectorInstance<TG, TS, TP> selectorInstance, IReadOnlyList<ISelectorObserverInstance<TG, TS, TP>> observers)
+    : ISelectorInstance<TG, TS, TP>
   {
-    public override IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    public IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
       var result = selectorInstance.Select(population, objective, count, random, searchSpace, problem);
 

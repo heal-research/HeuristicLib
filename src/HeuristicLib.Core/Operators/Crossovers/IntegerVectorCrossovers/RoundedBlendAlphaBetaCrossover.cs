@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-public record RoundedBlendAlphaBetaCrossover : SingleSolutionStatelessCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedBlendAlphaBetaCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
   public double Alpha
   {

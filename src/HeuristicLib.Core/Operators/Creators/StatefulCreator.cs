@@ -40,12 +40,12 @@ public abstract record StatefulCreator<TGenotype, TSearchSpace, TState>
   : ICreator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  protected abstract TState CreateInitialState(ExecutionInstanceRegistry instanceRegistry);
+  protected abstract TState CreateInitialState();
 
   protected abstract IReadOnlyList<TGenotype> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
   public ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new StatefulCreatorInstance(this, CreateInitialState(instanceRegistry));
+    new StatefulCreatorInstance(this, CreateInitialState());
 
   private sealed class StatefulCreatorInstance : ICreatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
   {
@@ -70,12 +70,12 @@ public abstract record StatefulCreator<TGenotype, TState>
   : ICreator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   where TState : class
 {
-  protected abstract TState CreateInitialState(ExecutionInstanceRegistry instanceRegistry);
+  protected abstract TState CreateInitialState();
 
   protected abstract IReadOnlyList<TGenotype> Create(int count, TState state, IRandomNumberGenerator random);
 
   public ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new StatefulCreatorInstance(this, CreateInitialState(instanceRegistry));
+    new StatefulCreatorInstance(this, CreateInitialState());
 
   private sealed class StatefulCreatorInstance : ICreatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   {

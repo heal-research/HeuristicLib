@@ -1,11 +1,11 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
-public record SimulatedBinaryCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
+public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
 {
   /// <summary>
   ///   Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if
@@ -189,7 +189,7 @@ public static class Sbx
   }
 }
 
-public record SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionStatelessCrossover<RealVector, RealVectorSearchSpace>
+public record SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
 {
   public double ProbVar { get; set; } = 0.5;
   public double Eta { get; set; } = 15.0;

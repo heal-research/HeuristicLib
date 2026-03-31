@@ -9,33 +9,33 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 [Equatable]
 public partial record ObservableTerminator<TG, TR, TS, TP>
-  : Terminator<TG, TR, TS, TP>
+  : ITerminator<TG, TR, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
 {
-  public ITerminator<TG, TR, TS, TP> Interceptor { get; }
+  public ITerminator<TG, TR, TS, TP> Terminator { get; }
 
   [OrderedEquality]
   public ImmutableArray<ITerminatorObserver<TG, TR, TS, TP>> Observers { get; }
 
-  public ObservableTerminator(ITerminator<TG, TR, TS, TP> interceptor, params ImmutableArray<ITerminatorObserver<TG, TR, TS, TP>> observers)
+  public ObservableTerminator(ITerminator<TG, TR, TS, TP> terminator, params ImmutableArray<ITerminatorObserver<TG, TR, TS, TP>> observers)
   {
-    Interceptor = interceptor;
+    Terminator = terminator;
     Observers = observers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public ITerminatorInstance<TG, TR, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
-    var interceptorInstance = instanceRegistry.Resolve(Interceptor);
+    var terminatorInstance = instanceRegistry.Resolve(Terminator);
     var terminatorObserverInstances = Observers.Select(instanceRegistry.Resolve).ToArray();
-    return new Instance(interceptorInstance, terminatorObserverInstances);
+    return new Instance(terminatorInstance, terminatorObserverInstances);
   }
 
-  public new sealed class Instance(ITerminatorInstance<TG, TR, TS, TP> terminatorInstance, IReadOnlyList<ITerminatorObserverInstance<TG, TS, TP, TR>> observers)
-    : Terminator<TG, TR, TS, TP>.Instance
+  private sealed class Instance(ITerminatorInstance<TG, TR, TS, TP> terminatorInstance, IReadOnlyList<ITerminatorObserverInstance<TG, TS, TP, TR>> observers)
+    : ITerminatorInstance<TG, TR, TS, TP>
   {
-    public override bool ShouldTerminate(TR state, TS searchSpace, TP problem)
+    public bool ShouldTerminate(TR state, TS searchSpace, TP problem)
     {
       var result = terminatorInstance.ShouldTerminate(state, searchSpace, problem);
 
@@ -61,7 +61,7 @@ public interface ITerminatorObserverInstance<in TG, in TS, in TP, in TR> : IExec
   void AfterTerminationCheck(bool shouldTerminate, TR state, TS searchSpace, TP problem);
 }
 
-// ToDo: rename to make it clear that this is not a base-class to be inherited from
+// Helper implementation for callback-based termination observers.
 public class TerminatorObserver<TG, TR, TS, TP> : ITerminatorObserver<TG, TR, TS, TP>, ITerminatorObserverInstance<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
