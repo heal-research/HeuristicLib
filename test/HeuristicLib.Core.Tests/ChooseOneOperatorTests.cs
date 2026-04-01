@@ -106,7 +106,7 @@ public class ChooseOneOperatorTests
   [Fact]
   public void PipelineInterceptor_ShouldApplyInterceptorsInSequence()
   {
-    var interceptor = new PipelineInterceptor<int, TestAlgorithmState, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>([
+    var interceptor = new PipelineInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>([
       new AddToStateInterceptor(10),
       new AddToStateInterceptor(100)
     ]);

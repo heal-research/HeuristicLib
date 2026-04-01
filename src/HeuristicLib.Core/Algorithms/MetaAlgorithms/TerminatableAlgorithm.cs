@@ -17,7 +17,7 @@ public record TerminatableAlgorithm<TG, TS, TP, TR>
   where TR : class, IAlgorithmState
 {
   public required IAlgorithm<TG, TS, TP, TR> Algorithm { get; init; }
-  public required ITerminator<TG, TR, TS, TP> Terminator { get; init; }
+  public required ITerminator<TG, TS, TP, TR> Terminator { get; init; }
 
   public override TerminatableAlgorithmInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
@@ -39,9 +39,9 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<T
   where TR : class, IAlgorithmState
 {
   protected readonly IAlgorithmInstance<TG, TS, TP, TR> Algorithm;
-  protected readonly ITerminatorInstance<TG, TR, TS, TP> Terminator;
+  protected readonly ITerminatorInstance<TG, TS, TP, TR> Terminator;
 
-  public TerminatableAlgorithmInstance(IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithmInstance<TG, TS, TP, TR> algorithm, ITerminatorInstance<TG, TR, TS, TP> terminator)
+  public TerminatableAlgorithmInstance(IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithmInstance<TG, TS, TP, TR> algorithm, ITerminatorInstance<TG, TS, TP, TR> terminator)
     : base(evaluator)
   {
     Algorithm = algorithm;

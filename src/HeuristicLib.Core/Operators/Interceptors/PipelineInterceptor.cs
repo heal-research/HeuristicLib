@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 [Equatable]
-public partial record PipelineInterceptor<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+public partial record PipelineInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : CompositeInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>

@@ -227,7 +227,7 @@ public class PythonGenealogyAnalysis
     var qualities = new BestMedianWorstAnalysis<T>();
     builder.AttachObserver(qualities);
     if (callback != null)
-      builder.AttachObserver(new ActionInterceptorObserver<T, TRes, TE, TP>((y, _, _, _, _) => callback(y)));
+      builder.AttachObserver(new ActionInterceptorObserver<T, TE, TP, TRes>((y, _, _, _, _) => callback(y)));
 
     var rankAnalysis = parameters.TrackGenealogy ? new RankAnalysis<T>() : null;
     if (rankAnalysis is not null)

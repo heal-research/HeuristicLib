@@ -12,5 +12,5 @@ public interface ITerminatableAlgorithm<TGenotype, in TSearchSpace, in TProblem,
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
 {
-  ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem> Terminator { get; }
+  ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState> Terminator { get; }
 }

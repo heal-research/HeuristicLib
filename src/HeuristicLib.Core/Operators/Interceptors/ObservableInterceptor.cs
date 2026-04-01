@@ -61,7 +61,7 @@ public interface IInterceptorObserverInstance<in TG, in TS, in TP, in TR> : IExe
   void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem);
 }
 
-public class ActionInterceptorObserver<TG, TR, TS, TP> : IInterceptorObserver<TG, TS, TP, TR>, IInterceptorObserverInstance<TG, TS, TP, TR>
+public class ActionInterceptorObserver<TG, TS, TP, TR> : IInterceptorObserver<TG, TS, TP, TR>, IInterceptorObserverInstance<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -100,13 +100,13 @@ public static class ObservableInterceptorExtensions
 
     public IInterceptor<TG, TS, TP, TR> ObserveWith(Action<TR, TR, TR?, TS, TP> afterInterception)
     {
-      var observer = new ActionInterceptorObserver<TG, TR, TS, TP>(afterInterception);
+      var observer = new ActionInterceptorObserver<TG, TS, TP, TR>(afterInterception);
       return interceptor.ObserveWith(observer);
     }
 
     public IInterceptor<TG, TS, TP, TR> ObserveWith(Action<TR> afterInterception)
     {
-      var observer = new ActionInterceptorObserver<TG, TR, TS, TP>((newState, _, _, _, _) => afterInterception(newState));
+      var observer = new ActionInterceptorObserver<TG, TS, TP, TR>((newState, _, _, _, _) => afterInterception(newState));
       return interceptor.ObserveWith(observer);
     }
 

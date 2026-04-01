@@ -33,7 +33,7 @@ public interface IMutatorObserver<TGenotype> :
 
 public static class BuilderExtensions
 {
-  public static void AttachObserver<TG, TR, TS, TP>(this IAlgorithmBuilder<TG, TS, TP, TR> builder, IExecutable<IExecutionInstance> analysis)
+  public static void AttachObserver<TG, TS, TP, TR>(this IAlgorithmBuilder<TG, TS, TP, TR> builder, IExecutable<IExecutionInstance> analysis)
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TR : class, IAlgorithmState
@@ -45,13 +45,13 @@ public static class BuilderExtensions
       hasAttached = true;
     }
 
-    if (analysis is IInterceptorObserver<TG, TS, TP, TR> interceptorObserver && builder is IBuilderWithInterceptor<TG, TR, TS, TP> builderWithInterceptor) {
+    if (analysis is IInterceptorObserver<TG, TS, TP, TR> interceptorObserver && builder is IBuilderWithInterceptor<TG, TS, TP, TR> builderWithInterceptor) {
       var interceptor = builderWithInterceptor.Interceptor ?? new IdentityInterceptor<TG, TR>();
       builderWithInterceptor.Interceptor = interceptor.ObserveWith(interceptorObserver);
       hasAttached = true;
     }
 
-    if (analysis is ITerminatorObserver<TG, TR, TS, TP> terminatorObserver && builder is IBuilderWithTerminator<TG, TR, TS, TP> builderWithTerminator) {
+    if (analysis is ITerminatorObserver<TG, TS, TP, TR> terminatorObserver && builder is IBuilderWithTerminator<TG, TS, TP, TR> builderWithTerminator) {
       builderWithTerminator.Terminator = builderWithTerminator.Terminator.ObserveWith(terminatorObserver);
       hasAttached = true;
     }

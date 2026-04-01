@@ -8,31 +8,31 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 [Equatable]
 public abstract partial record CompositeTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem, TState>
-  : ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+  : ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  [OrderedEquality] protected ImmutableArray<ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> InnerTerminators { get; }
+  [OrderedEquality] protected ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> InnerTerminators { get; }
   
-  protected CompositeTerminator(ImmutableArray<ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> innerTerminators)
+  protected CompositeTerminator(ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> innerTerminators)
   {
     InnerTerminators = innerTerminators;
   }
   
-  public ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+  public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
     new Instance(this, InnerTerminators.Select(instanceRegistry.Resolve).ToArray(), CreateInitialState());
   
   protected abstract TState CreateInitialState();
   
   protected abstract bool ShouldTerminate(TAlgorithmState algorithmState, TState state,
-    IReadOnlyList<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> innerTerminators,
+    IReadOnlyList<ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> innerTerminators,
     TSearchSpace searchSpace, TProblem problem);
   
   private sealed class Instance(CompositeTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem, TState> composite,
-    IReadOnlyList<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> innerTerminators,
+    IReadOnlyList<ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> innerTerminators,
     TState terminatorState)
-    : ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+    : ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   {
     public bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem)
     {
@@ -41,13 +41,13 @@ public abstract partial record CompositeTerminator<TGenotype, TAlgorithmState, T
   }
 }
 
-public abstract record CompositeTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>
+public abstract record CompositeTerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   : CompositeTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem, NoState>
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  protected CompositeTerminator(ImmutableArray<ITerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> innerTerminators)
+  protected CompositeTerminator(ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> innerTerminators)
     : base(innerTerminators)
   {
   }
@@ -55,11 +55,11 @@ public abstract record CompositeTerminator<TGenotype, TAlgorithmState, TSearchSp
   protected sealed override NoState CreateInitialState() => NoState.Instance;
 
   protected sealed override bool ShouldTerminate(TAlgorithmState algorithmState, NoState state,
-    IReadOnlyList<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> innerTerminators,
+    IReadOnlyList<ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> innerTerminators,
     TSearchSpace searchSpace, TProblem problem)
     => ShouldTerminate(algorithmState, innerTerminators, searchSpace, problem);
 
   protected abstract bool ShouldTerminate(TAlgorithmState algorithmState,
-    IReadOnlyList<ITerminatorInstance<TGenotype, TAlgorithmState, TSearchSpace, TProblem>> innerTerminators,
+    IReadOnlyList<ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> innerTerminators,
     TSearchSpace searchSpace, TProblem problem);
 }

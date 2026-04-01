@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg>
   : IAlgorithmBuilder<TG, TS, TP, TR, TAlg>,
-    IBuilderWithEvaluator<TG, TS, TP>, IBuilderWithInterceptor<TG, TR, TS, TP>
+    IBuilderWithEvaluator<TG, TS, TP>, IBuilderWithInterceptor<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState

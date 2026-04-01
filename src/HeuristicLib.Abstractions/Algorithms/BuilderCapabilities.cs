@@ -47,15 +47,15 @@ public interface IBuilderWithReplacer<TG, TS, TP> : IAlgorithmBuilder
   IReplacer<TG, TS, TP> Replacer { get; set; }
 }
 
-public interface IBuilderWithTerminator<TG, TR, TS, TP> : IAlgorithmBuilder
+public interface IBuilderWithTerminator<TG, TS, TP, TR> : IAlgorithmBuilder
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
 {
-  ITerminator<TG, TR, TS, TP> Terminator { get; set; }
+  ITerminator<TG, TS, TP, TR> Terminator { get; set; }
 }
 
-public interface IBuilderWithInterceptor<TG, TR, TS, TP> : IAlgorithmBuilder
+public interface IBuilderWithInterceptor<TG, TS, TP, TR> : IAlgorithmBuilder
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
