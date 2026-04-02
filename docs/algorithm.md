@@ -93,10 +93,11 @@ var algorithm = builder.Build();
 
 - **Termination**: `ITerminator` decides when to stop.
 - **Interception**: `IInterceptor` transforms the produced state after each step.
-- **Observation**: `IIterationObserver` can be used as a side-effect hook and is invoked once per produced state during execution. See [Execution model](execution-model.md).
+- **Observation and analysis**: observable operators provide callback hook points, and run-scoped analyzers collect analysis state via `CreateRun(problem, analyzers...)`. See [Execution model](execution-model.md) and [Analyzer architecture](analyzer-architecture.md).
 
 ## Related pages
 
 - [Algorithm state](algorithm-state.md)
 - [Operators](operators.md)
 - [Execution model](execution-model.md)
+- [Analyzer architecture](analyzer-architecture.md)

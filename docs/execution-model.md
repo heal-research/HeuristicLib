@@ -2,82 +2,176 @@
 
 This page explains how algorithms are executed in HeuristicLib.
 
-## The core loop: iterative state transformation
+## The core abstraction: algorithms produce a stream of states
 
-At the abstraction level, an algorithm is a function that produces a sequence of states:
+At the abstraction level, an algorithm instance exposes:
 
-- `ExecuteStep(problem, previousState, random)` computes the next state.
-- `previousState == null` signals that the algorithm should initialize.
+```csharp
+IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
+  TProblem problem,
+  IRandomNumberGenerator random,
+  TAlgorithmState? initialState = null,
+  CancellationToken ct = default);
+```
 
-> [!NOTE]
-> The `random` parameter is an `IRandomNumberGenerator`. For deterministic parallel workflows, see [Randomness (RNG) design](randomness.md).
+That means execution is **streaming-first**:
 
-Most algorithms in this repository start with `CurrentIteration = 0` and then increment by 1.
+- algorithms produce a sequence of states
+- enumeration drives execution
+- stopping enumeration stops execution
 
-## Two modes: batch vs streaming
+The convenience methods in `HEAL.HeuristicLib.Core` build on top of that stream:
 
-The `IIterable<...>` contract is streaming-first and comes with extension methods:
+- `algorithm.CreateRun(problem, analyzers...)`
+- `algorithm.RunStreamingAsync(problem, random, initialState?)`
+- `algorithm.RunToCompletion(problem, random, initialState?)`
+- `run.RunStreaming(random, initialState?)`
+- `run.RunToCompletion(random, initialState?)`
 
-- `Execute(problem, random, initialState?)` returns the last produced state.
-- `ExecuteStreaming(problem, random, initialState?)` yields each produced state.
+## Definitions, runs, and instances
 
-Streaming is **pull-based**: enumeration drives execution. If you stop enumerating, you stop executing.
+The execution model has three levels:
 
-## The exact streaming semantics
+### 1) Definition
 
-The default implementation of `ExecuteStreaming(...)` behaves like this:
+A definition is the reusable object graph you configure:
 
-1. `previousState` is set to `initialState`.
-2. If `previousState` is not null, the terminator is consulted once before the first step.
-3. While the terminator says “continue”:
-   - compute `newState = ExecuteStep(problem, previousState, random)`
-   - optionally apply `Interceptor.Transform(newState, previousState, ...)`
+- algorithms
+- operators
+- problems
+- analyzers
+
+Definitions should stay declarative and reusable.
+
+### 2) Run
+
+A `Run<TGenotype, TSearchSpace, TProblem, TState>` represents one logical execution of an algorithm on a problem.
+
+A run owns:
+
+- the algorithm definition
+- the problem
+- the root `ExecutionInstanceRegistry`
+- analyzer states for that logical execution
+
+### 3) Execution instances
+
+When execution starts, definitions are resolved into execution instances through `ExecutionInstanceRegistry`.
+
+Those instances perform the actual work and may carry run-specific state.
+
+## Streaming semantics
+
+`RunStreamingAsync(...)` is **pull-based**:
+
+- the consumer enumerates the returned `IAsyncEnumerable<TState>`
+- each `MoveNextAsync()` step advances execution
+- if the consumer stops iterating, the algorithm stops progressing
+
+The convenience method `RunToCompletion(...)` simply enumerates the stream to the last produced state.
+
+## Iterative algorithms
+
+Many algorithms in `HEAL.HeuristicLib.Core` are modeled as iterative algorithms.
+
+In that style, the core step is:
+
+```csharp
+TAlgorithmState ExecuteStep(TAlgorithmState? previousState, TProblem problem, IRandomNumberGenerator random)
+```
+
+The current default iterative loop in `IterativeAlgorithmInstance` behaves like this:
+
+1. start from `previousState = initialState`
+2. generate an iteration index sequence `0, 1, 2, ...`
+3. for each iteration:
+   - throw if cancellation was requested
+   - fork the iteration RNG via `random.Fork(currentIteration)`
+   - compute `newState = ExecuteStep(previousState, problem, iterationRandom)`
+   - if an interceptor exists, apply `Interceptor.Transform(newState, previousState, problem.SearchSpace, problem)`
    - `yield return newState`
-   - ask the terminator whether to continue using `(newState, previousState)`
    - set `previousState = newState`
 
-This makes two patterns explicit:
+So a fresh start and a resumed run are both supported:
 
-- Fresh start: call `ExecuteStreaming(problem, random)` and let the algorithm initialize.
-- Continue from checkpoint: call `ExecuteStreaming(problem, random, initialState: checkpoint)`.
-
-## Termination
-
-Termination is a pluggable policy:
-
-- `ITerminator.ShouldTerminate(currentState, previousState, searchSpace, problem)`
-
-The interface also provides a default `ShouldContinue(...)` convenience method.
-
-The repository includes common terminators such as `AfterIterationsTerminator<TGenotype>`.
+- fresh start: `initialState == null`
+- resumed execution: pass a previous algorithm state as `initialState`
 
 ## Interception
 
 Interceptors are part of the state pipeline:
 
-- `IInterceptor.Transform(currentState, previousState, searchSpace, problem)`
+```csharp
+TAlgorithmState Transform(
+  TAlgorithmState currentState,
+  TAlgorithmState? previousState,
+  TSearchSpace searchSpace,
+  TProblem problem);
+```
 
-Use interceptors when you want to **modify/enrich the produced state** (for example, attach derived metrics).
+Use interceptors when you want to **transform or enrich** produced states without changing the rest of the execution model.
 
-## Observation
+Typical uses:
 
-The library defines `IIterationObserver<...>` as a side-effect hook.
+- attach derived metrics
+- normalize state shape
+- remove duplicates from populations
+- collect iteration-boundary hooks for analyzers
 
-Algorithms may expose an observer via `IObservable.Observer`.
+## Termination
 
-> [!IMPORTANT]
-> The execution loop invokes the observer once per produced iteration state.
+Termination is **not** built into the base algorithm abstraction.
 
-Observer invocation happens as part of the normal iteration pipeline:
+An algorithm can stop in several ways depending on its implementation:
 
-1. `ExecuteStep(...)` produces the next state.
-2. If an interceptor is present, `Interceptor.Transform(...)` post-processes that state.
-3. The observer is invoked with `(currentState, previousState, searchSpace, problem)`.
+- a finite algorithm simply completes its stream
+- a meta-algorithm such as `CycleAlgorithm` can stop because of its own configuration (for example `MaximumCycles`)
+- an algorithm can be wrapped by `TerminatableAlgorithm<...>` to stop based on an `ITerminator<...>`
 
-Observers are intended for side effects like logging, progress reporting, and metrics collection.
+The current terminator contract is:
+
+```csharp
+bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem);
+```
+
+So termination is a pluggable concern, but not a universal mandatory step in every algorithm implementation.
+
+## Observation and analyzers
+
+HeuristicLib has two related but distinct observation mechanisms:
+
+### Observable wrappers
+
+`ObservableEvaluator`, `ObservableMutator`, `ObservableInterceptor`, and similar wrappers define **where callbacks happen**.
+
+They are operator-level instrumentation hooks.
+
+### Analyzers
+
+Analyzers are the **run-scoped** analysis system built on top of observable wrappers.
+
+Current flow:
+
+1. pass analyzers to `CreateRun(problem, analyzers...)`
+2. `Run` creates one analyzer state per analyzer
+3. analyzer states call `RegisterObservations(IObservationRegistry)`
+4. `Run` installs merged observable replacements into each relevant registry
+5. users retrieve analyzer state through `run.GetAnalyzerResult(analyzer)`
+
+So observation is no longer modeled as a special `IIterationObserver<...>` abstraction on algorithms.
+Instead, it is composed from observable operators and run-scoped analyzers.
 
 ## Error handling
 
-HeuristicLib does not wrap exceptions thrown by algorithms/operators/problems.
+HeuristicLib does not wrap exceptions thrown by algorithms, operators, problems, or analyzers.
 
-If evaluation, termination, interception, or algorithm logic throws, the exception will bubble out of the streaming enumeration.
+If evaluation, termination, interception, or algorithm logic throws, the exception bubbles out of the streaming enumeration.
+
+The same is true for observer and analyzer callbacks triggered through observable wrappers.
+
+## Related pages
+
+- [Definition vs execution instances](execution-instances.md)
+- [Observability & analysis](observability-and-analysis.md)
+- [Analyzer architecture](analyzer-architecture.md)
+- [Randomness](randomness.md)

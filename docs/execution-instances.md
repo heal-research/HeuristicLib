@@ -1,6 +1,6 @@
 # Definition vs execution instances
 
-HeuristicLib separates **what to run** (an algorithm/operator definition) from **the thing that actually runs** (its execution instance).
+HeuristicLib separates **what to run** (an algorithm or operator definition) from **the thing that actually runs** (its execution instance).
 
 This distinction is the foundation for:
 
@@ -26,7 +26,7 @@ Every `IExecutable<TExecutionInstance>` must implement:
 TExecutionInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 ```
 
-The returned instance is what you call during execution (e.g. `RunStreamingAsync(...)`, `Cross(...)`, `ShouldTerminate(...)`).
+The returned instance is what you call during execution (for example `RunStreamingAsync(...)`, `Cross(...)`, or `ShouldTerminate(...)`).
 
 ## Stateless vs stateful (better mental model)
 
@@ -36,7 +36,7 @@ In practice, most definitions fall into one of two groups:
 
 Stateless operators (and potentially algorithms) can act as their own instance.
 
-In the codebase, this pattern is represented by base types like `StatelessCrossover<...>`, `StatelessEvaluator<...>`, `StatelessTerminator<...>`.
+In the codebase, this pattern is represented by base types like `StatelessCrossover<...>`, `StatelessEvaluator<...>`, and `StatelessTerminator<...>`.
 
 They implement both the definition interface and the instance interface, and typically do:
 
@@ -48,7 +48,7 @@ Example: `OrderCrossover` inherits from `SingleSolutionCrossover<...>` and there
 
 ### 2) Stateful execution (definition creates a new instance)
 
-If an operator/algorithm needs *memory across calls* while it runs, it must create a fresh instance that carries that state.
+If an operator or algorithm needs *memory across calls* while it runs, it must create a fresh instance that carries that state.
 
 Example: `StagnationTerminator<TGenotype>`.
 
@@ -83,24 +83,20 @@ Separating definition from instance keeps the reusable graph purely declarative,
 
 Key properties:
 
-- It caches by **reference identity** (it uses a reference equality comparer).
-- It returns the *same instance* when the *same definition object reference* is requested again via `GetOrCreate(...)`.
+- It caches by **reference identity**.
+- It returns the *same instance* when the *same definition object reference* is resolved again.
+- It can also hold **replacement executables** pre-registered for a particular definition.
 
 ```csharp
-var instance = registry.GetOrCreate(someDefinition);
+var instance = registry.Resolve(someDefinition);
 ```
 
 This enables two important patterns:
 
-1) **Avoid duplication**: shared definition nodes become shared instances.
-2) **Enable wrappers**: wrapper nodes can instance their inner operator once and decorate it.
+1. **Avoid duplication**: shared definition nodes become shared instances.
+2. **Enable wrappers and instrumentation**: the registry can return a pre-registered replacement definition instead of the original one.
 
-Example: `ObservableTerminator` does:
-
-```csharp
-var inner = instanceRegistry.GetOrCreate(Interceptor);
-return new ObservableTerminatorInstance(inner, Observers);
-```
+Example: observable operators and analyzer observation installers use `PreRegister(...)` so later `Resolve(...)` calls transparently return observable replacements.
 
 ### Important: “equal” is not “same”
 
@@ -115,7 +111,7 @@ The registry does **not** use value equality.
 
 The following diagrams intentionally show **one stateless operator** (`OrderCrossover`) and **one stateful operator** (`StagnationTerminator`).
 
-### Definition graph (what you build/configure)
+### Definition graph (what you build and configure)
 
 ```mermaid
 flowchart LR
@@ -150,7 +146,6 @@ flowchart LR
   BI --> OTI
   OTI --> STI
 
-  %% Emphasize that OrderCrossover instance is the same object as its definition
   classDef stateless stroke-dasharray: 5 5;
   class CDEF stateless;
 ```
@@ -160,14 +155,14 @@ Notes:
 - `OrderCrossover` is stateless, so the “instance node” is literally the same object.
 - `StagnationTerminator` is stateful, so it creates a dedicated `Instance` object that carries run-specific fields.
 
-## The “execution thread”: instances produce a state stream
+## The execution stream: instances produce a state sequence
 
-Algorithms don’t return a single result by default; they produce a stream of states:
+Algorithms do not return a single result by default; they produce a stream of states:
 
 - `IAlgorithmInstance<...>.RunStreamingAsync(...)` returns `IAsyncEnumerable<TAlgorithmState>`.
 - Enumeration *drives* execution.
 
-An algorithm instance therefore creates an “execution thread” (a timeline) of states:
+An algorithm instance therefore creates a timeline of states:
 
 ```mermaid
 sequenceDiagram
@@ -175,7 +170,7 @@ sequenceDiagram
   participant Alg as AlgorithmInstance
 
   Consumer->>Alg: RunStreamingAsync(problem, rng, initialState?)
-  loop until termination
+  loop until completion
     Alg-->>Consumer: yield state_1
     Alg-->>Consumer: yield state_2
     Alg-->>Consumer: ...
@@ -185,7 +180,7 @@ sequenceDiagram
 
 This aligns with meta-algorithms: they can interleave or concatenate streams while still treating execution as a stream of produced states.
 
-## `CycleAlgorithm`: instancing per cycle vs re-using instances
+## `CycleAlgorithm`: instancing per cycle vs reusing instances
 
 `CycleAlgorithmInstance` runs a list of inner algorithms repeatedly.
 
@@ -199,7 +194,7 @@ The key switch is `NewExecutionInstancesPerCycle`.
 
 ### Option A: `NewExecutionInstancesPerCycle = true` (reset per cycle)
 
-Each cycle gets a fresh registry, so any stateful sub-operator instances created via `GetOrCreate(...)` are reset each cycle.
+Each cycle gets a fresh registry, so any stateful sub-operator instances resolved through that registry are reset each cycle.
 
 ```mermaid
 flowchart TB
@@ -212,14 +207,14 @@ flowchart TB
   end
 ```
 
-Effect on `StagnationTerminator` (if the inner algorithm instantiates it via `GetOrCreate(...)`):
+Effect on `StagnationTerminator`:
 
 - stagnation counters start fresh each cycle,
-- “memory” does not leak across cycles.
+- state does not leak across cycles.
 
 ### Option B: `NewExecutionInstancesPerCycle = false` (persist per algorithm)
 
-The registry is stored per *algorithm definition object* and re-used across cycles.
+The registry is stored per *algorithm definition object* and reused across cycles.
 
 ```mermaid
 flowchart TB
@@ -232,30 +227,21 @@ flowchart TB
   R --> A2[AlgorithmInstance (cycle 2)]
 ```
 
-Effect on `StagnationTerminator` (again, assuming the inner algorithm uses `GetOrCreate(...)` for its terminator definition):
+Effect on stateful dependencies resolved through that registry:
 
-- the *terminator instance* can persist across cycles,
-- stagnation can accumulate across cycles (which may be exactly what you want in a meta-algorithm).
+- execution instances can persist across cycles,
+- state can accumulate across cycles when that is the intended meta-algorithm behavior.
 
 ### A subtle but important rule
 
-`NewExecutionInstancesPerCycle` only affects components that are created through the registry (typically via `GetOrCreate`).
+Registry reuse only matters if the inner algorithm resolves the same definition objects through the reused registry.
 
-- If an inner algorithm/operator directly calls `CreateExecutionInstance(...)` on a dependency every time, it can force “fresh instances” regardless of registry reuse.
-- If it uses `GetOrCreate(...)`, registry reuse becomes a knob for controlling persistence.
-
-## Practical guidance
-
-- Use **definition objects** for composition and configuration.
-- Put **mutable run state** only into execution instances.
-- When implementing a new operator, use the checklist in [Operators](operators.md#choosing-a-base-class-when-implementing-an-operator) to decide between `SingleSolution*`, `Stateless*`, `Stateful*`, `Decorator*`, and `Composite*`.
-- Use `instanceRegistry.GetOrCreate(...)` when you want:
-  - shared sub-graphs to stay shared,
-  - wrappers to decorate the same underlying instance,
-  - registry reuse (like in `CycleAlgorithm`) to meaningfully control persistence.
+- Sharing is by **reference identity**.
+- Fresh definition objects still produce fresh instances.
+- Pre-registered replacements also participate in this reuse model because they are installed on the chosen registry.
 
 ## Related pages
 
-- [Operators](operators.md)
 - [Execution model](execution-model.md)
 - [Analyzer architecture](analyzer-architecture.md)
+- [Observability & analysis](observability-and-analysis.md)
