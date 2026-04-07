@@ -1,5 +1,12 @@
+# packages for the jupyter notebook environment\
+pythonnet
 ipython # for interactive computing
 ipykernel # Jupyter kernel support
 ipympl # for interactive matplotlib in Jupyter
 
+# packages for the demonstrator 
+numpy
+uvicorn[standard]
+fastapi
 pythonnet
+sympy

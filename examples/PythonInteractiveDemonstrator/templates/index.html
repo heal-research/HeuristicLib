@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Symbolic Regression – Draw to Fit (HeuristicLib)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<link rel="stylesheet" href="/static/styles.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="overlay"><span class="hint">Draw a curve to fit</span></div>
+<div id="runtime-display"></div>
+<div id="gen-display"></div>
+<div id="top-solutions-panel"></div>
+
+<!-- Burger menu button -->
+<button id="burger-btn" aria-label="Settings">&#9776;</button>
+
+<!-- Settings backdrop (click to close) -->
+<div id="settings-backdrop"></div>
+
+<!-- Settings slide-out panel -->
+<div id="settings-panel">
+  <div class="settings-header">
+    <h2>GP Settings</h2>
+    <button class="settings-close" aria-label="Close settings">&times;</button>
+  </div>
+
+  <!-- Allowed Symbols -->
+  <div class="settings-section">
+    <div class="settings-section-title">Allowed Symbols</div>
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Choose which mathematical operations the GP algorithm can use to build expressions. More symbols = more expressive but slower search. <b>constant</b> and <b>variable</b> are always required.</span>
+        </span>
+        <span>Select function primitives</span>
+      </div>
+      <div id="symbol-chips-container"></div>
+    </div>
+  </div>
+
+  <!-- Primary Parameters -->
+  <div class="settings-section">
+    <div class="settings-section-title">Primary</div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Number of evolutionary generations. <b>Higher</b> = more time to evolve better solutions but slower. <b>Lower</b> = faster but may find simpler/worse fits. Typical range: 10–100.</span>
+        </span>
+        <span>generations</span>
+      </div>
+      <input class="param-input" type="number" id="p-generations" value="30" min="1" max="1000" step="1">
+    </div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Number of candidate solutions in each generation. <b>Higher</b> = more diversity, better exploration, but more memory and time. <b>Lower</b> = faster iterations but risk premature convergence. Typical: 100–1000.</span>
+        </span>
+        <span>population_size</span>
+      </div>
+      <input class="param-input" type="number" id="p-population_size" value="200" min="10" max="10000" step="10">
+    </div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Maximum tree length (number of nodes) for candidate expressions. <b>Higher</b> = allows more complex expressions. <b>Lower</b> = forces simpler, more interpretable models. Typical: 10–50.</span>
+        </span>
+        <span>tree_length</span>
+      </div>
+      <input class="param-input" type="number" id="p-tree_length" value="40" min="3" max="200" step="1">
+    </div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Maximum tree depth (height). <b>Higher</b> = deeper nesting of operations. <b>Lower</b> = shallower, often simpler models. Typical: 5–30.</span>
+        </span>
+        <span>tree_depth</span>
+      </div>
+      <input class="param-input" type="number" id="p-tree_depth" value="20" min="2" max="50" step="1">
+    </div>
+  </div>
+
+  <!-- Secondary Parameters -->
+  <div class="settings-section">
+    <div class="settings-section-title">Secondary</div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Probability of mutating an individual each generation (0–1). <b>Higher</b> = more exploration, can escape local optima. <b>Lower</b> = more exploitation of good solutions. Typical: 0.05–0.3.</span>
+        </span>
+        <span>mutation_rate</span>
+      </div>
+      <input class="param-input" type="number" id="p-mutation_rate" value="0.1" min="0" max="1" step="0.01">
+    </div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Number of individuals competing in tournament selection. <b>Higher</b> = stronger selection pressure, favors best individuals. <b>Lower</b> = weaker pressure, more diversity. Typical: 2–7.</span>
+        </span>
+        <span>tournament_size</span>
+      </div>
+      <input class="param-input" type="number" id="p-tournament_size" value="4" min="2" max="20" step="1">
+    </div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Number of best individuals preserved unchanged to the next generation. <b>Higher</b> = more exploitation. <b>Lower</b> = more exploration. Typical: 1–5.</span>
+        </span>
+        <span>elites</span>
+      </div>
+      <input class="param-input" type="number" id="p-elites" value="1" min="0" max="50" step="1">
+    </div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Number of iterations for optimizing constants in expressions. <b>Higher</b> = better-tuned coefficients but slower. <b>Lower</b> = faster but coefficients may be rough. Typical: 1–20. Set 0 to disable.</span>
+        </span>
+        <span>parameter_optimization_iterations</span>
+      </div>
+      <input class="param-input" type="number" id="p-parameter_optimization_iterations" value="5" min="0" max="100" step="1">
+    </div>
+  </div>
+
+  <!-- Advanced Parameters -->
+  <div class="settings-section">
+    <div class="settings-section-title">Advanced</div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Enable Keijzer linear scaling (offset + scale * expression). Improves fit quality by automatically adjusting constants. Generally keep enabled.</span>
+        </span>
+        <span>use_linear_scaling</span>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="p-use_linear_scaling" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Seed for the random number generator. Set a number ≥ 0 for reproducible results. Set to -1 for random initialization each run.</span>
+        </span>
+        <span>seed</span>
+      </div>
+      <input class="param-input" type="number" id="p-seed" value="-1" min="-1" step="1">
+    </div>
+  </div>
+
+  <!-- Visualization Parameters -->
+  <div class="settings-section">
+    <div class="settings-section-title">Visualization</div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Delay between generation updates (milliseconds). <b>Higher</b> = more time to observe each generation's population. <b>0</b> = as fast as possible. Useful for investigating evolution step by step.</span>
+        </span>
+        <span>step_delay_ms</span>
+      </div>
+      <div class="slider-row">
+        <input class="param-slider" type="range" id="p-step_delay_ms" value="0" min="0" max="5000" step="50">
+        <span class="slider-value" id="p-step_delay_ms-val">0 ms</span>
+      </div>
+    </div>
+
+    <div class="param-row">
+      <div class="param-label">
+        <span class="tooltip-wrap">
+          <button class="info-btn" type="button">i</button>
+          <span class="tooltip-text">Maximum number of population curves to display per generation. <b>Higher</b> = denser visualization of population diversity. <b>Lower</b> = less visual clutter and faster rendering. Curves are randomly sampled.</span>
+        </span>
+        <span>max_displayed_curves</span>
+      </div>
+      <div class="slider-row">
+        <input class="param-slider" type="range" id="p-max_displayed_curves" value="50" min="10" max="500" step="10">
+        <span class="slider-value" id="p-max_displayed_curves-val">50</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Control buttons (bottom-right) -->
+<div id="controls" class="hidden">
+  <button class="ctrl-btn pause-btn" id="btn-pause" title="Pause computation">&#9208;</button>
+  <button class="ctrl-btn resume-btn" id="btn-resume" title="Resume computation" style="display:none">&#9654;</button>
+  <button class="ctrl-btn stop-btn" id="btn-stop" title="Stop and clear">&#9209;</button>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
