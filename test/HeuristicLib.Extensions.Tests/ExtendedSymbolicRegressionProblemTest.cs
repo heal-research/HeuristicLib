@@ -1,4 +1,6 @@
-﻿using HEAL.HeuristicLib.PythonInterOptScripts;
+﻿using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.PythonInterOptScripts;
 
 namespace HEAL.HeuristicLib.Extensions.Tests;
 
@@ -11,8 +13,12 @@ public class ExtendedSymbolicRegressionProblemTest
   public void RunMagicProblem()
   {
     var file = Path.Combine("TestData", "192_vineyard.tsv");
-    var p = ExtendedSymbolicRegressionProblem.DefaultConf(file, x => [1, 4.2, 1.3]);
-    var pop = ExtendedSymbolicRegressionProblem.RunDefault(p, 43);
+
+    //take the original r2 and add 4 dummy objectives that we will ignore in this test, but could be used for other things in a real scenario
+    Func<SymbolicExpressionTree,ObjectiveVector, double[]> individualCallback = (t, o) => [o[0],0,0,0,0]; 
+    Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> populationCallback = (ts, os) => os.Select( o => new double[]{o[0],0,0,0,0}).ToArray();
+
+    var pop = ExtendedSymbolicRegressionProblem.RunDefault(file,40, individualCallback, populationCallback);
     Assert.Equal(300, pop.Solutions.Length);
     var best = pop.Solutions.OrderByDescending(x => x.ObjectiveVector[0]).First();
 
