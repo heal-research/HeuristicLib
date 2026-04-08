@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Algorithms;
+﻿using System.Diagnostics.CodeAnalysis;
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -64,7 +65,7 @@ public abstract class Run
     throw new KeyNotFoundException($"No analyzer found for analyzer {analyzer}");
   }
 
-  public bool TryGetAnalyzerResult<TAnalyzerRunState>(IAnalyzer<TAnalyzerRunState> analyzer, out TAnalyzerRunState? analyzerRunState)
+  public bool TryGetAnalyzerResult<TAnalyzerRunState>(IAnalyzer<TAnalyzerRunState> analyzer, [MaybeNullWhen(false)] out TAnalyzerRunState analyzerRunState)
     where TAnalyzerRunState : class, IAnalyzerRunState
   {
     if (analyzerStates.TryGetValue(analyzer, out var state)) {
@@ -80,7 +81,7 @@ public abstract class Run
     where TAnalyzerRunState : class, IAnalyzerRunState
     => GetAnalyzerResult(analyzer);
 
-  public bool TryGetResult<TAnalyzerRunState>(IAnalyzer<TAnalyzerRunState> analyzer, out TAnalyzerRunState? analyzerRunState)
+  public bool TryGetResult<TAnalyzerRunState>(IAnalyzer<TAnalyzerRunState> analyzer, [MaybeNullWhen(false)] out TAnalyzerRunState analyzerRunState)
     where TAnalyzerRunState : class, IAnalyzerRunState
     => TryGetAnalyzerResult(analyzer, out analyzerRunState);
 }

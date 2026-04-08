@@ -55,13 +55,13 @@ public class GenealogyGraphTests
     var interceptor = ga.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
     ga = ga with { Interceptor = interceptor };
 
-    var analysis = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(ga.Interceptor!);
+    var analysis = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(ga, ga.Interceptor!);
 
     var run = ga.WithMaxIterations(100).CreateRun(problem, analysis);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
-    var ares = run.GetAnalyzerResult(analysis);
+    var ares = run.GetAnalyzerResult(analysis).State;
 
-    Assert.Equal(100, ares.BestSolutions.Count);
+    Assert.Equal(100, ares.Count);
     Assert.Equal(100, res.Population.Solutions.Count());
   }
 
@@ -83,22 +83,22 @@ public class GenealogyGraphTests
     var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
     algorithm = algorithm with { Interceptor = interceptor };
 
-    var evalQualities = new QualityCurveAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>>(algorithm.Evaluator);
-    var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm.Interceptor!);
-    var genealogyAnalysis = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
+    var evalQualities = new QualityCurveAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Evaluator);
+    var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Interceptor!);
+    var genealogyAnalysis = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
 
     var run = algorithm.WithMaxIterations(gens).CreateRun(problem, evalQualities, qualities, genealogyAnalysis);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
 
-    var qres = run.GetAnalyzerResult(qualities);
-    var eres = run.GetAnalyzerResult(evalQualities);
-    var gres = run.GetAnalyzerResult(genealogyAnalysis);
+    var qres = run.GetAnalyzerResult(qualities).State;
+    var eres = run.GetAnalyzerResult(evalQualities).State;
+    var gres = run.GetAnalyzerResult(genealogyAnalysis).State;
 
-    Assert.Equal(gens, qres.BestSolutions.Count);
+    Assert.Equal(gens, qres.Count);
     Assert.Equal(popsize, res.Population.Solutions.Length);
-    var graphViz = gres.Graph.ToGraphViz();
+    var graphViz = gres.ToGraphViz();
     Assert.True(graphViz.Length > 0);
-    Assert.Equal(qres.BestSolutions[^1].Best.ObjectiveVector, eres.CurrentState[^1].best.ObjectiveVector);
+    Assert.Equal(qres[^1].Best.ObjectiveVector, eres.CurrentState[^1].best.ObjectiveVector);
   }
 
   [Fact]
@@ -109,12 +109,12 @@ public class GenealogyGraphTests
     var algorithm = builder.Build();
     var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, SingleSolutionState<SymbolicExpressionTree>>();
     algorithm = algorithm with { Interceptor = interceptor };
-    var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, SingleSolutionState<SymbolicExpressionTree>>(mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
+    var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, SingleSolutionState<SymbolicExpressionTree>>(algorithm, mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
     var run = algorithm.WithMaxIterations(100).CreateRun(problem, genealogy);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
-    var gres = run.GetAnalyzerResult(genealogy);
+    var gres = run.GetAnalyzerResult(genealogy).State;
     Assert.Single(res.Population.Solutions);
-    var graphViz = gres.Graph.ToGraphViz();
+    var graphViz = gres.ToGraphViz();
     Assert.True(graphViz.Length > 0);
   }
 
@@ -137,17 +137,17 @@ public class GenealogyGraphTests
     var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
     algorithm = algorithm with { Interceptor = interceptor };
 
-    var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
-    var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm.Interceptor!);
+    var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
+    var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Interceptor!);
 
     var run = algorithm.WithMaxIterations(maximumIterations).CreateRun(problem, genealogy, qualities);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
-    var gres = run.GetAnalyzerResult(genealogy);
-    var qres = run.GetAnalyzerResult(qualities);
+    var gres = run.GetAnalyzerResult(genealogy).State;
+    var qres = run.GetAnalyzerResult(qualities).State;
 
-    Assert.Equal(maximumIterations, qres.BestSolutions.Count);
+    Assert.Equal(maximumIterations, qres.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Length);
-    var graphViz = gres.Graph.ToGraphViz();
+    var graphViz = gres.ToGraphViz();
     Assert.True(graphViz.Length > 0);
   }
 

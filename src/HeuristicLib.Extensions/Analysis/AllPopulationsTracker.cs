@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -6,31 +7,18 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public class AllPopulationsTracker<T, TS, TP, TR>(IInterceptor<T, TS, TP, TR> interceptor)
-  : IAnalyzer<AllPopulationsTracker<T, TS, TP, TR>.State>
+public record AllPopulationsTracker<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> Algorithm, IInterceptor<T, TS, TP, TR> Interceptor)
+  : Analyzer<T, TS, TP, TR, List<ISolution<T>[]>>(Algorithm)
   where TS : class, ISearchSpace<T>
   where TP : class, IProblem<T, TS>
   where TR : PopulationState<T>
 {
-  public IInterceptor<T, TS, TP, TR> Interceptor { get; } = interceptor;
+  public override List<ISolution<T>[]> CreateInitialState() => [];
 
-  public State CreateAnalyzerState() => new(this);
-
-  public sealed class State(AllPopulationsTracker<T, TS, TP, TR> analyzer)
-    : AnalyzerRunState<AllPopulationsTracker<T, TS, TP, TR>>(analyzer)
+  public override void RegisterObservations(IObservationRegistry observationRegistry, List<ISolution<T>[]> state)
   {
-    private readonly List<ISolution<T>[]> allSolutions = [];
-
-    public IReadOnlyList<ISolution<T>[]> AllSolutions => allSolutions;
-
-    public override void RegisterObservations(IObservationRegistry observationRegistry)
-    {
-      observationRegistry.Add(Analyzer.Interceptor, AfterInterception);
-    }
-
-    public void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem)
-    {
-      allSolutions.Add(currentState.Population.ToArray());
-    }
+    observationRegistry.Add(Interceptor, (populationState, _, _, _, _) => AfterInterception(state, populationState));
   }
+
+  public void AfterInterception(List<ISolution<T>[]> state, PopulationState<T> populationState) => state.Add(populationState.Population.ToArray());
 }

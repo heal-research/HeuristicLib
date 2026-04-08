@@ -126,53 +126,53 @@ public class PythonGenealogyAnalysis
 
     switch (parameters.AlgorithmName.ToLower()) {
       case "ga": {
-          var ga = GeneticAlgorithm.GetBuilder(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
-          ga.PopulationSize = parameters.PopulationSize;
-          ga.MutationRate = parameters.MutationRate;
-          ga.Elites = parameters.Elites;
-          if (parameters.Selector != null) {
-            ga.Selector = parameters.Selector;
-          }
-
-          var gaAlgorithm = ga.Build();
-          if (callback is not null && gaAlgorithm.Interceptor is null) {
-            gaAlgorithm = gaAlgorithm with {
-              Interceptor = new IdentityInterceptor<T, PopulationState<T>>()
-            };
-          }
-
-          var analyzers = CreateAnalyzers(gaAlgorithm, parameters);
-          var gaRun = gaAlgorithm.WithMaxIterations(parameters.Iterations).CreateRun(problem, GetAnalyzers(analyzers, gaAlgorithm.Interceptor, callback));
-          gaRun.RunToCompletion(RandomNumberGenerator.Create(parameters.Seed));
-          return analyzers.ToExperimentResult(gaRun);
+        var ga = GeneticAlgorithm.GetBuilder(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
+        ga.PopulationSize = parameters.PopulationSize;
+        ga.MutationRate = parameters.MutationRate;
+        ga.Elites = parameters.Elites;
+        if (parameters.Selector != null) {
+          ga.Selector = parameters.Selector;
         }
+
+        var gaAlgorithm = ga.Build();
+        if (callback is not null && gaAlgorithm.Interceptor is null) {
+          gaAlgorithm = gaAlgorithm with {
+            Interceptor = new IdentityInterceptor<T, PopulationState<T>>()
+          };
+        }
+
+        var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
+        var gaRun = gaAlgorithm.WithMaxIterations(parameters.Iterations).CreateRun(problem, analyzers.GetAll());
+        gaRun.RunToCompletion(RandomNumberGenerator.Create(parameters.Seed));
+        return analyzers.ToExperimentResult(gaRun);
+      }
       case "es": {
-          var es = EvolutionStrategy.GetBuilder(parameters.Creator!, parameters.Mutator!);
-          es.PopulationSize = parameters.PopulationSize;
-          es.NumberOfChildren = parameters.NoChildren;
-          es.Strategy = parameters.Strategy;
-          //es.Terminator = terminator;
-          if (parameters.Selector != null) {
-            es.Selector = parameters.Selector;
-          }
-
-          if (parameters.WithCrossover) {
-            es.Crossover = parameters.Crossover;
-          }
-
-          var esAlgorithm = es.Build();
-          if (callback is not null && esAlgorithm.Interceptor is null) {
-            esAlgorithm = esAlgorithm with {
-              Interceptor = new IdentityInterceptor<T, EvolutionStrategyState<T>>()
-            };
-          }
-
-          var analyzers = CreateAnalyzers(esAlgorithm, parameters);
-
-          var esRun = esAlgorithm.WithMaxIterations(parameters.Iterations).CreateRun(problem, GetAnalyzers(analyzers, esAlgorithm.Interceptor, callback));
-          esRun.RunToCompletion(RandomNumberGenerator.Create(parameters.Seed));
-          return analyzers.ToExperimentResult(esRun);
+        var es = EvolutionStrategy.GetBuilder(parameters.Creator!, parameters.Mutator!);
+        es.PopulationSize = parameters.PopulationSize;
+        es.NumberOfChildren = parameters.NoChildren;
+        es.Strategy = parameters.Strategy;
+        //es.Terminator = terminator;
+        if (parameters.Selector != null) {
+          es.Selector = parameters.Selector;
         }
+
+        if (parameters.WithCrossover) {
+          es.Crossover = parameters.Crossover;
+        }
+
+        var esAlgorithm = es.Build();
+        if (callback is not null && esAlgorithm.Interceptor is null) {
+          esAlgorithm = esAlgorithm with {
+            Interceptor = new IdentityInterceptor<T, EvolutionStrategyState<T>>()
+          };
+        }
+
+        var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
+
+        var esRun = esAlgorithm.WithMaxIterations(parameters.Iterations).CreateRun(problem, analyzers.GetAll());
+        esRun.RunToCompletion(RandomNumberGenerator.Create(parameters.Seed));
+        return analyzers.ToExperimentResult(esRun);
+      }
       case "ls":
         var ls = HillClimber.GetBuilder(parameters.Creator!, parameters.Mutator!);
         ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
@@ -182,26 +182,26 @@ public class PythonGenealogyAnalysis
         lsRun.RunToCompletion(RandomNumberGenerator.Create(parameters.Seed));
         throw new NotSupportedException("Configured experiment result extraction is not implemented for local search in this analyzer pipeline.");
       case "nsga2": {
-          var nsga2 = NSGA2.GetBuilder(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
-          nsga2.PopulationSize = parameters.PopulationSize;
-          nsga2.MutationRate = parameters.MutationRate;
-          if (parameters.Selector != null) {
-            nsga2.Selector = parameters.Selector;
-          }
-
-          //nsga2.Terminator = terminator;
-          var nsga2Algorithm = nsga2.Build();
-          if (callback is not null && nsga2Algorithm.Interceptor is null) {
-            nsga2Algorithm = nsga2Algorithm with {
-              Interceptor = new IdentityInterceptor<T, PopulationState<T>>()
-            };
-          }
-
-          var analyzers = CreateAnalyzers(nsga2Algorithm, parameters);
-          var nsga2Run = nsga2Algorithm.WithMaxIterations(parameters.Iterations).CreateRun(problem, GetAnalyzers(analyzers, nsga2Algorithm.Interceptor, callback));
-          _ = nsga2Run.RunToCompletion(RandomNumberGenerator.Create(parameters.Seed));
-          return analyzers.ToExperimentResult(nsga2Run);
+        var nsga2 = NSGA2.GetBuilder(parameters.Creator!, parameters.Crossover!, parameters.Mutator!);
+        nsga2.PopulationSize = parameters.PopulationSize;
+        nsga2.MutationRate = parameters.MutationRate;
+        if (parameters.Selector != null) {
+          nsga2.Selector = parameters.Selector;
         }
+
+        //nsga2.Terminator = terminator;
+        var nsga2Algorithm = nsga2.Build();
+        if (callback is not null && nsga2Algorithm.Interceptor is null) {
+          nsga2Algorithm = nsga2Algorithm with {
+            Interceptor = new IdentityInterceptor<T, PopulationState<T>>()
+          };
+        }
+
+        var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
+        var nsga2Run = nsga2Algorithm.WithMaxIterations(parameters.Iterations).CreateRun(problem, analyzers.GetAll());
+        _ = nsga2Run.RunToCompletion(RandomNumberGenerator.Create(parameters.Seed));
+        return analyzers.ToExperimentResult(nsga2Run);
+      }
       default:
         throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");
     }
@@ -214,59 +214,34 @@ public class PythonGenealogyAnalysis
     IReadOnlyList<IAnalyzer> GetAll();
   }
 
-  private static IReadOnlyList<IAnalyzer> GetAnalyzers<T, TE, TState>(
-    IAnalyzerSet<T> analyzers,
-    IInterceptor<T, TE, IProblem<T, TE>, TState>? interceptor,
-    Action<PopulationState<T>>? callback)
-    where T : notnull
-    where TE : class, ISearchSpace<T>
-    where TState : PopulationState<T>
-  {
-    if (callback is null) {
-      return analyzers.GetAll();
-    }
-
-    if (interceptor is null) {
-      throw new InvalidOperationException("Population callback wiring requires an interceptor.");
-    }
-
-    return [.. analyzers.GetAll(), new CallbackAnalysis<T, TE, TState>(interceptor, callback)];
-  }
-
-  private sealed record MyAnalyzers<T, TE, TRes>(
-    BestMedianWorstAnalysis<T, TE, IProblem<T, TE>, TRes> Qualities,
-    RankAnalysis<T, TE, IProblem<T, TE>, TRes>? RankAnalysis,
-    QualityCurveAnalysis<T, TE, IProblem<T, TE>> QualityCurve,
-    AllPopulationsTracker<T, TE, IProblem<T, TE>, TRes>? AllPopulations)
+  private sealed record MyAnalyzers<T>(
+    Analyzer<List<BestMedianWorstEntry<T>>> Qualities,
+    Analyzer<RankState<T>>? RankAnalysis,
+    Analyzer<QualityCurve<T>> QualityCurve,
+    Analyzer<List<ISolution<T>[]>>? AllPopulations,
+    Analyzer<object>? CallbackAnalyzer)
     : IAnalyzerSet<T>
     where T : notnull
-    where TRes : PopulationState<T>
-    where TE : class, ISearchSpace<T>
   {
     public ExperimentResult<T> ToExperimentResult(Run run)
     {
-      var qRes = run.GetAnalyzerResult(Qualities).BestSolutions;
+      var qRes = AnalyzerExtensions.GetAnalyzerResult(run, Qualities);
+
       var rankGraph = string.Empty;
       IReadOnlyList<List<double>> rankLines = [];
-      var rankAnalysis = RankAnalysis;
-      if (rankAnalysis is not null) {
-        var rankResult = run.GetAnalyzerResult<RankAnalysis<T, TE, IProblem<T, TE>, TRes>.State>(rankAnalysis).Result;
+
+      if (RankAnalysis is not null) {
+        var rankResult = AnalyzerExtensions.GetAnalyzerResult(run, RankAnalysis).Result;
         rankGraph = rankResult.Graph.ToGraphViz();
         rankLines = rankResult.Ranks.Select(x => x.ToList()).ToArray();
       }
 
       IReadOnlyList<ISolution<T>[]> apRes = [];
-      if (AllPopulations is not null && run.TryGetAnalyzerResult(AllPopulations, out var populations) && populations is not null) {
-        apRes = populations.AllSolutions;
+      if (AllPopulations is not null && AnalyzerExtensions.TryGetAnalyzerResult(run, AllPopulations, out var populations) && populations is not null) {
+        apRes = populations;
       }
 
-      var experimentResult = new ExperimentResult<T>(
-        rankGraph,
-        rankLines,
-        qRes,
-        apRes
-      );
-      return experimentResult;
+      return new ExperimentResult<T>(rankGraph, rankLines, qRes, apRes);
     }
 
     public IReadOnlyList<IAnalyzer> GetAll()
@@ -280,83 +255,47 @@ public class PythonGenealogyAnalysis
         analyzers.Add(AllPopulations);
       }
 
+      if (CallbackAnalyzer is not null)
+        analyzers.Add(CallbackAnalyzer);
       return analyzers;
     }
   }
 
-  private sealed record CallbackRegistration;
-
-  private sealed class CallbackAnalysis<T, TE, TState>(
-    IInterceptor<T, TE, IProblem<T, TE>, TState> interceptor,
-    Action<PopulationState<T>> callback)
-    : IAnalyzer<CallbackAnalysis<T, TE, TState>.State>
-    where T : notnull
-    where TE : class, ISearchSpace<T>
-    where TState : PopulationState<T>
+  private sealed record CallbackAnalysis<T, TS, TP, TR>(
+    IAlgorithm<T, TS, TP, TR> Algorithm,
+    IInterceptor<T, TS, TP, TR> Interceptor,
+    Action<PopulationState<T>> Callback)
+    : Analyzer<T, TS, TP, TR, object>(Algorithm)
+    where TS : class, ISearchSpace<T>
+    where TP : class, IProblem<T, TS>
+    where TR : PopulationState<T>, IAlgorithmState
   {
-    public IInterceptor<T, TE, IProblem<T, TE>, TState> Interceptor { get; } = interceptor;
-    public Action<PopulationState<T>> Callback { get; } = callback;
+    public override object CreateInitialState() => new();
 
-    public State CreateAnalyzerState() => new(this);
-
-    public sealed class State(CallbackAnalysis<T, TE, TState> analyzer)
-      : AnalyzerRunState<CallbackAnalysis<T, TE, TState>>(analyzer)
+    public override void RegisterObservations(IObservationRegistry observationRegistry, object state)
     {
-      public override void RegisterObservations(IObservationRegistry observationRegistry)
-      {
-        observationRegistry.Add(Analyzer.Interceptor, AfterInterception);
-      }
-
-      private void AfterInterception(TState newState, TState currentState, TState? previousState, TE searchSpace, IProblem<T, TE> problem)
-      {
-        Analyzer.Callback(newState);
-      }
+      observationRegistry.Add(Interceptor, (algorithmState, _, _, _, _) => Callback(algorithmState));
     }
   }
 
-  private static MyAnalyzers<T, TE, PopulationState<T>> CreateAnalyzers<T, TE>(
-    GeneticAlgorithm<T, TE, IProblem<T, TE>> algorithm,
-    ExperimentParameters<T, TE> parameters)
+  private static MyAnalyzers<T> CreateAnalyzers<T, TE, TP, TR>(
+    ExperimentParameters<T, TE> parameters,
+    IterativeAlgorithm<T, TE, TP, TR> algorithm,
+    ICrossover<T, TE, TP>? crossover,
+    IMutator<T, TE, TP>? mutator,
+    Action<PopulationState<T>>? callback)
     where T : notnull
     where TE : class, ISearchSpace<T>
+    where TP : class, IProblem<T, TE>
+    where TR : PopulationState<T>
   {
     var interceptor = algorithm.Interceptor ?? throw new InvalidOperationException("Population-based analysis requires an interceptor.");
-    var qualities = new BestMedianWorstAnalysis<T, TE, IProblem<T, TE>, PopulationState<T>>(interceptor);
-    var rankAnalysis = parameters.TrackGenealogy ? new RankAnalysis<T, TE, IProblem<T, TE>, PopulationState<T>>(algorithm.Crossover, algorithm.Mutator, interceptor) : null;
-    var qc = new QualityCurveAnalysis<T, TE, IProblem<T, TE>>(algorithm.Evaluator);
-    var apt = parameters.TrackPopulations ? new AllPopulationsTracker<T, TE, IProblem<T, TE>, PopulationState<T>>(interceptor) : null;
-
-    return new MyAnalyzers<T, TE, PopulationState<T>>(qualities, rankAnalysis, qc, apt);
-  }
-
-  private static MyAnalyzers<T, TE, EvolutionStrategyState<T>> CreateAnalyzers<T, TE>(
-    EvolutionStrategy<T, TE, IProblem<T, TE>> algorithm,
-    ExperimentParameters<T, TE> parameters)
-    where T : notnull
-    where TE : class, ISearchSpace<T>
-  {
-    var interceptor = algorithm.Interceptor ?? throw new InvalidOperationException("Population-based analysis requires an interceptor.");
-    var qualities = new BestMedianWorstAnalysis<T, TE, IProblem<T, TE>, EvolutionStrategyState<T>>(interceptor);
-    var rankAnalysis = parameters.TrackGenealogy ? new RankAnalysis<T, TE, IProblem<T, TE>, EvolutionStrategyState<T>>(algorithm.Crossover, algorithm.Mutator, interceptor) : null;
-    var qc = new QualityCurveAnalysis<T, TE, IProblem<T, TE>>(algorithm.Evaluator);
-    var apt = parameters.TrackPopulations ? new AllPopulationsTracker<T, TE, IProblem<T, TE>, EvolutionStrategyState<T>>(interceptor) : null;
-
-    return new MyAnalyzers<T, TE, EvolutionStrategyState<T>>(qualities, rankAnalysis, qc, apt);
-  }
-
-  private static MyAnalyzers<T, TE, PopulationState<T>> CreateAnalyzers<T, TE>(
-    NSGA2<T, TE, IProblem<T, TE>> algorithm,
-    ExperimentParameters<T, TE> parameters)
-    where T : notnull
-    where TE : class, ISearchSpace<T>
-  {
-    var interceptor = algorithm.Interceptor ?? throw new InvalidOperationException("Population-based analysis requires an interceptor.");
-    var qualities = new BestMedianWorstAnalysis<T, TE, IProblem<T, TE>, PopulationState<T>>(interceptor);
-    var rankAnalysis = parameters.TrackGenealogy ? new RankAnalysis<T, TE, IProblem<T, TE>, PopulationState<T>>(algorithm.Crossover, algorithm.Mutator, interceptor) : null;
-    var qc = new QualityCurveAnalysis<T, TE, IProblem<T, TE>>(algorithm.Evaluator);
-    var apt = parameters.TrackPopulations ? new AllPopulationsTracker<T, TE, IProblem<T, TE>, PopulationState<T>>(interceptor) : null;
-
-    return new MyAnalyzers<T, TE, PopulationState<T>>(qualities, rankAnalysis, qc, apt);
+    var qualities = new BestMedianWorstAnalysis<T, TE, TP, TR>(algorithm, interceptor);
+    var rankAnalysis = parameters.TrackGenealogy ? new RankAnalysis<T, TE, TP, TR>(algorithm, crossover, mutator, interceptor) : null;
+    var qc = new QualityCurveAnalysis<T, TE, TP, TR>(algorithm, algorithm.Evaluator);
+    var apt = parameters.TrackPopulations ? new AllPopulationsTracker<T, TE, TP, TR>(algorithm, interceptor) : null;
+    var c = callback != null ? new CallbackAnalysis<T, TE, TP, TR>(algorithm, interceptor, callback) : null;
+    return new MyAnalyzers<T>(qualities, rankAnalysis, qc, apt, c);
   }
 
   private static ChooseOneMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()

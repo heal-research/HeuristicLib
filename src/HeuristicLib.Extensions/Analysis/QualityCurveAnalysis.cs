@@ -1,54 +1,68 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public class QualityCurveAnalysis<TGenotype, TSearchSpace, TProblem>(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator)
-  : IAnalyzer<QualityCurveAnalysis<TGenotype, TSearchSpace, TProblem>.State>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, QualityCurve<T>>
+  where TS : class, ISearchSpace<T>
+  where TP : class, IProblem<T, TS>
+  where TR : class, IAlgorithmState
+
 {
-  public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; } = evaluator;
+  private IEvaluator<T, TS, TP>[] Evaluators { get; }
 
-  public State CreateAnalyzerState() => new(this);
-
-  public sealed class State(QualityCurveAnalysis<TGenotype, TSearchSpace, TProblem> analyzer)
-    : AnalyzerRunState<QualityCurveAnalysis<TGenotype, TSearchSpace, TProblem>>(analyzer)
+  public QualityCurveAnalysis(IAlgorithm<T, TS, TP, TR> Algorithm, params IEvaluator<T, TS, TP>[] Evaluators) : base(Algorithm)
   {
-    private readonly List<(ISolution<TGenotype> best, int evalCount)> currentState = [];
-    private ISolution<TGenotype>? best;
-    private int evalCount;
+    this.Evaluators = Evaluators;
+  }
 
-    public IReadOnlyList<(ISolution<TGenotype> best, int evalCount)> CurrentState => currentState;
+  public void AfterEvaluation(QualityCurve<T> state, IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<T, ISearchSpace<T>> problem)
+  {
+    for (var i = 0; i < genotypes.Count; i++) {
+      var genotype = genotypes[i];
+      var q = objectiveVectors[i];
+      state.EvalCount++;
 
-    public override void RegisterObservations(IObservationRegistry observationRegistry)
-    {
-      observationRegistry.Add(Analyzer.Evaluator, AfterEvaluation);
-    }
-
-    public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, TProblem problem)
-    {
-      for (var i = 0; i < genotypes.Count; i++) {
-        var genotype = genotypes[i];
-        var q = objectiveVectors[i];
-        evalCount++;
-
-        if (best is not null) {
-          var comp = problem.Objective.TotalOrderComparer;
-          if (NoTotalOrderComparer.Instance.Equals(comp)) {
-            comp = new LexicographicComparer(problem.Objective.Directions);
-          }
-
-          if (comp.Compare(q, best.ObjectiveVector) >= 0) {
-            continue;
-          }
+      if (state.Best is not null) {
+        var comp = problem.Objective.TotalOrderComparer;
+        if (NoTotalOrderComparer.Instance.Equals(comp)) {
+          comp = new LexicographicComparer(problem.Objective.Directions);
         }
 
-        best = new Solution<TGenotype>(genotype, q);
-        currentState.Add((best, evalCount));
+        if (comp.Compare(q, state.Best.ObjectiveVector) >= 0) {
+          continue;
+        }
       }
+
+      state.Add(new Solution<T>(genotype, q));
     }
   }
+
+  public override QualityCurve<T> CreateInitialState() => new();
+
+  public override void RegisterObservations(IObservationRegistry observationRegistry, QualityCurve<T> curve)
+  {
+    foreach (var evaluator in Evaluators) {
+      observationRegistry.Add(evaluator, (genotypes, objectiveVectors, _, problem) => AfterEvaluation(curve, genotypes, objectiveVectors, problem));
+    }
+  }
+}
+
+public sealed class QualityCurve<TGenotype>
+{
+  private readonly List<(ISolution<TGenotype> best, int evalCount)> currentState = [];
+  public IReadOnlyList<(ISolution<TGenotype> best, int evalCount)> CurrentState => currentState;
+
+  public void Add(ISolution<TGenotype> solution)
+  {
+    Best = solution;
+    currentState.Add((solution, EvalCount));
+  }
+
+  public int EvalCount { get; set; }
+  public ISolution<TGenotype>? Best { get; private set; }
 }

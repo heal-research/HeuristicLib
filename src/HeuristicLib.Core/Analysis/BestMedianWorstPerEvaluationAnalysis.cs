@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -6,53 +7,57 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public class BestMedianWorstPerEvaluationAnalysis<TGenotype, TSearchSpace, TProblem>
-  : IAnalyzer<BestMedianWorstPerEvaluationAnalysis<TGenotype, TSearchSpace, TProblem>.State>
+public record BestMedianWorstPerEvaluationAnalysis<TGenotype, TSearchSpace, TProblem, TAlgorithmState> : Analyzer<TGenotype, TSearchSpace, TProblem, TAlgorithmState, BestMedianWorstPerEvaluationAnalysisState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TAlgorithmState : PopulationState<TGenotype>
 {
-  public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; }
-  public IInterceptor<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>> Interceptor { get; }
+  private IEvaluator<TGenotype, TSearchSpace, TProblem>[] Evaluators { get; }
+  private IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>[] Interceptors { get; }
 
-  public BestMedianWorstPerEvaluationAnalysis(
-    IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
-    IInterceptor<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>> interceptor)
+  public BestMedianWorstPerEvaluationAnalysis(IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> Algorithm,
+                                              IEvaluator<TGenotype, TSearchSpace, TProblem>[] Evaluators,
+                                              IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>[] Interceptors) : base(Algorithm)
   {
-    Evaluator = evaluator;
-    Interceptor = interceptor;
+    this.Evaluators = Evaluators;
+    this.Interceptors = Interceptors;
   }
 
-  public State CreateAnalyzerState() => new(this);
+  public override BestMedianWorstPerEvaluationAnalysisState<TGenotype> CreateInitialState() => new();
 
-  public sealed class State(BestMedianWorstPerEvaluationAnalysis<TGenotype, TSearchSpace, TProblem> analyzer)
-    : AnalyzerRunState<BestMedianWorstPerEvaluationAnalysis<TGenotype, TSearchSpace, TProblem>>(analyzer)
+  public override void RegisterObservations(IObservationRegistry observationRegistry, BestMedianWorstPerEvaluationAnalysisState<TGenotype> state)
   {
-    private int currentEvaluationsCount;
-    private readonly List<(int evaluations, BestMedianWorstEntry<TGenotype> entry)> bestSolutions = [];
-
-    public IReadOnlyList<(int evaluations, BestMedianWorstEntry<TGenotype> entry)> BestSolutions => bestSolutions;
-
-    public override void RegisterObservations(IObservationRegistry observationRegistry)
-    {
-      observationRegistry.Add(Analyzer.Evaluator, AfterEvaluation);
-      observationRegistry.Add(Analyzer.Interceptor, AfterInterception);
+    foreach (var evaluator in Evaluators) {
+      observationRegistry.Add(evaluator, (genotypes, _, _, _) => state.AfterEvaluation(genotypes));
     }
 
-    private void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, TProblem problem)
-    {
-      currentEvaluationsCount += genotypes.Count;
+    foreach (var interceptor in Interceptors) {
+      observationRegistry.Add(interceptor, ((populationState, _, _, _, problem) => state.AfterInterception(populationState, problem.Objective)));
+    }
+  }
+}
+
+public sealed class BestMedianWorstPerEvaluationAnalysisState<TGenotype>
+{
+  private int currentEvaluationsCount;
+  private readonly List<(int evaluations, BestMedianWorstEntry<TGenotype> entry)> bestSolutions = [];
+
+  public IReadOnlyList<(int evaluations, BestMedianWorstEntry<TGenotype> entry)> BestSolutions => bestSolutions;
+
+  public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes)
+  {
+    currentEvaluationsCount += genotypes.Count;
+  }
+
+  public void AfterInterception(PopulationState<TGenotype> currentState, Objective objective)
+  {
+    if (currentState.Population.Solutions.Length == 0) {
+      throw new InvalidOperationException("Population is empty, cannot determine best/median/worst solution.");
     }
 
-    private void AfterInterception(PopulationState<TGenotype> newState, PopulationState<TGenotype> currentState, PopulationState<TGenotype>? previousState, TSearchSpace searchSpace, TProblem problem)
-    {
-      if (currentState.Population.Solutions.Length == 0) {
-        throw new InvalidOperationException("Population is empty, cannot determine best/median/worst solution.");
-      }
+    var comp = objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(objective.Directions) : objective.TotalOrderComparer;
+    var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
 
-      var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
-      var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
-
-      bestSolutions.Add((currentEvaluationsCount, new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
-    }
+    bestSolutions.Add((currentEvaluationsCount, new BestMedianWorstEntry<TGenotype>(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
   }
 }

@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -8,43 +10,30 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, ISolution<T> Worst);
 
-public class BestMedianWorstAnalysis<T, TS, TP, TR>
-  : IAnalyzer<BestMedianWorstAnalysis<T, TS, TP, TR>.State>
+public record BestMedianWorstAnalysis<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> Algorithm, params IInterceptor<T, TS, TP, TR>[] Interceptor)
+  : Analyzer<T, TS, TP, TR, List<BestMedianWorstEntry<T>>>(Algorithm)
   where TS : class, ISearchSpace<T>
   where TP : class, IProblem<T, TS>
   where TR : PopulationState<T>
 {
-  public BestMedianWorstAnalysis(IInterceptor<T, TS, TP, TR> interceptor)
+  public override List<BestMedianWorstEntry<T>> CreateInitialState() => [];
+
+  public override void RegisterObservations(IObservationRegistry observationRegistry, List<BestMedianWorstEntry<T>> state)
   {
-    Interceptor = interceptor;
+    foreach (var interceptor in Interceptor) {
+      observationRegistry.Add(interceptor, (populationState, _, _, _, problem) => AfterInterception(state, populationState, problem));
+    }
   }
 
-  public IInterceptor<T, TS, TP, TR> Interceptor { get; }
-
-  public State CreateAnalyzerState() => new(this);
-
-  public sealed class State(BestMedianWorstAnalysis<T, TS, TP, TR> analyzer)
-    : AnalyzerRunState<BestMedianWorstAnalysis<T, TS, TP, TR>>(analyzer)
+  private static void AfterInterception(List<BestMedianWorstEntry<T>> bestSolutions, TR currentState, TP problem)
   {
-    private readonly List<BestMedianWorstEntry<T>> bestSolutions = [];
-    public IReadOnlyList<BestMedianWorstEntry<T>> BestSolutions => bestSolutions;
-
-    public override void RegisterObservations(IObservationRegistry observationRegistry)
-    {
-      observationRegistry.Add(Analyzer.Interceptor, AfterInterception);
+    var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
+    var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
+    if (ordered.Length == 0) {
+      bestSolutions.Add(null!);
+      return;
     }
 
-    private void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem)
-    {
-      var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
-      var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
-      if (ordered.Length == 0) {
-        bestSolutions.Add(null!);
-
-        return;
-      }
-
-      bestSolutions.Add(new BestMedianWorstEntry<T>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
-    }
+    bestSolutions.Add(new BestMedianWorstEntry<T>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
   }
 }
