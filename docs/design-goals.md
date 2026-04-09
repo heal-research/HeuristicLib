@@ -1,48 +1,151 @@
-# Design goals
+# Design Goals And Principles
 
-This page captures the guiding principles behind HeuristicLib’s architecture.
+This page records the durable design principles for HeuristicLib. It should outlive the current implementation and the current redesign draft.
 
-## Library-first
+For contributor workflow and change rules, see the root `AGENTS.md`.
 
-HeuristicLib is designed as a library:
+## North star
 
-- No GUI assumptions.
-- The caller controls execution and integration.
-- Dependencies that affect behavior (especially randomness) are explicit.
+HeuristicLib should become a modern, library-first toolkit for heuristic optimization that is:
 
-## A small set of stable concepts
+- predictable
+- composable
+- testable
+- easy to embed
+- easy to use correctly
 
-The public API is built around a deliberately small conceptual core:
+This implies:
 
-- Problem
-- Search space
-- Objective / solution
-- Algorithm as an iterative state transformer (`IIterable`)
-- Operators
+- no GUI assumptions
+- plain C# composition over framework magic
+- explicit execution control and integration points
+- a small number of strong concepts instead of many overlapping abstractions
 
-The goal is that “reading the code” feels predictable: the same concepts reappear with the same names and shapes.
+The library should serve researchers and practitioners first, while remaining easy to use from notebooks, services, automation, and AI-driven workflows.
 
-## Composition over graphs
+## Alpha stance
 
-HeuristicLib favors straightforward composition in C#:
+HeuristicLib is still early alpha.
 
-- Algorithms are ordinary types that compose operator implementations.
-- There is no operator graph runtime to learn.
+Therefore:
 
-## Explicit randomness and reproducibility
+- backward compatibility is not a design goal
+- current APIs are evidence, not commitments
+- redesign is encouraged when it materially improves correctness, clarity, or usability
 
-Randomness is explicit via `IRandomNumberGenerator`.
+Alpha status is not a license for arbitrary churn. Changes should still be intentional, documented, and clearly better.
 
-See [Randomness (RNG) design](randomness.md) for the deterministic forking model used for parallel workflows.
+## Implementation path
 
-In this repository, `SystemRandomNumberGenerator` is a simple default implementation and supports spawning child generators (`Spawn(...)`) for parallel workflows.
+The active path is not a broad parallel rewrite. It is example-first, incremental improvement of the existing implementation.
 
-## Focused scope
+In practice:
 
-Compared to HeuristicLab, this repository intentionally narrows the scope:
+- executable API specs should expose the intended user flow first
+- implementation changes should follow those specs
+- archived redesign notes may inform the work, but they do not define it directly
 
-- No GUI.
-- No operator graph runtime.
-- No “serialize the whole object graph” model.
+## Core principles
 
-The library aims to be easy to embed (services, experiments, notebooks) and easy to test.
+### Small, honest concepts
+
+The public model should revolve around a deliberately small vocabulary, including concepts such as:
+
+- problem
+- domain
+- evaluator
+- objective
+- candidate and evaluation
+- algorithm
+- run and state
+- operators where they are genuinely useful
+
+Prefer one honest unified concept over parallel hierarchies when the semantics are truly shared.
+
+### Pit of success and strong typing
+
+The library should make correct usage natural and incorrect usage difficult.
+
+- Prefer static typing over conventions.
+- Make invalid states unrepresentable where practical.
+- Validate at construction boundaries when the type system cannot express an invariant.
+- Avoid half-configured or ambiguous public objects.
+- If something should not be allowed, prefer preventing it by API shape.
+
+### Explicit dependencies and data flow
+
+Behavior-affecting inputs must be explicit, especially:
+
+- randomness
+- cancellation
+- time or scheduling concerns
+- caches or evaluator wrappers
+
+Avoid ambient state, hidden global registries, and opaque orchestration.
+
+### Honest execution and evaluation boundaries
+
+The problem defines canonical evaluation semantics.
+
+The design may place an explicit evaluator layer between algorithms and `Problem.Evaluate(...)` when that improves composability, for example for:
+
+- caching
+- repeated evaluation
+- observation
+- dynamic-problem-aware behavior
+- specialized scheduling
+
+Shared operators should prefer batch-first APIs when batch context is the honest semantic model.
+
+### Humans first, AI compatible
+
+Humans are the primary users. AI compatibility is a design constraint, not the main goal.
+
+In practice:
+
+- names should be descriptive and low-ambiguity
+- related abstractions should follow consistent patterns
+- defaults, costs, and side effects should be explicit
+- examples should be clear to both humans and tools
+
+### Responsibilities before packages
+
+Architectural guidance should be phrased in terms of concepts and responsibilities, not the current folder or assembly layout.
+
+- current package boundaries are provisional
+- no current project should be treated as uniquely central unless explicitly decided
+
+### Core model versus authoring layers
+
+Not every useful abstraction belongs in the conceptual core.
+
+Convenience layers may include:
+
+- builders
+- extension helpers
+- helper base classes
+
+These should serve the core model, not define it.
+
+### Patterns are tools, not law
+
+Some current patterns are promising, but should remain justified by use:
+
+- streaming execution
+- explicit runs
+- definition versus execution separation
+
+Use them where they solve a real problem. Do not preserve them as doctrine.
+
+## Change discipline
+
+When evolving the architecture:
+
+- start from the user problem
+- state the problem clearly
+- compare meaningful alternatives
+- justify the chosen direction with concrete examples
+- prefer designs that make misuse harder and intended use more obvious
+- update docs, examples, and tests together
+
+HeuristicLib should stay willing to redesign early, but each redesign should leave the library more coherent than before.

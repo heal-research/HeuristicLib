@@ -2,8 +2,16 @@
   href: overview.md
 - name: Getting started
   href: getting-started.md
-- name: Design goals
-  href: design-goals.md
+- name: Design guidance
+  items:
+    - name: Design goals & principles
+      href: design-goals.md
+  - name: Requirements
+    href: requirements.md
+  - name: Example spec backlog
+    href: example-spec-backlog.md
+  - name: Redesign salvage
+    href: redesign-salvage.md
 - name: Fundamentals
   items:
     - name: Core concepts
