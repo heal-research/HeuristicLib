@@ -6,12 +6,10 @@
   items:
     - name: Design goals & principles
       href: design-goals.md
-  - name: Requirements
-    href: requirements.md
-  - name: Example spec backlog
-    href: example-spec-backlog.md
-  - name: Redesign salvage
-    href: redesign-salvage.md
+    - name: Requirements
+      href: requirements.md
+    - name: Developer backlog
+      href: developer-backlog.md
 - name: Fundamentals
   items:
     - name: Core concepts
