@@ -5,6 +5,8 @@ namespace HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
 {
+  private static readonly IntegerVector DefaultStep = new(1);
+
   public IntegerVectorSearchSpace(int Length, IntegerVector Minimum, IntegerVector Maximum, IntegerVector? Step = null)
   {
     if (Minimum.Count != Length && Minimum.Count != 1)
@@ -20,7 +22,7 @@ public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
     this.Length = Length;
     this.Minimum = Minimum;
     this.Maximum = Maximum;
-    this.Step = Step ?? new IntegerVector(1);
+    this.Step = Step ?? DefaultStep;
   }
 
   public IntegerVector Step { get; }
@@ -28,9 +30,25 @@ public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
   public IntegerVector Minimum { get; }
   public IntegerVector Maximum { get; }
 
-  public override bool Contains(IntegerVector genotype) => genotype.Count == Length
-                                                           && (genotype >= Minimum).All()
-                                                           && (genotype <= Maximum).All();
+  public override bool Contains(IntegerVector genotype)
+  {
+    if (genotype.Count != Length)
+      return false;
+
+    for (int i = 0; i < Length; i++) {
+      var v = genotype[i];
+      var (min, max, step) = GetDimInfo(i);
+
+      if (v < min)
+        return false;
+      if (v > max)
+        return false;
+      if ((v - min) % step != 0)
+        return false;
+    }
+
+    return true;
+  }
 
   public static implicit operator RealVectorSearchSpace(IntegerVectorSearchSpace integerVectorSpace) =>
     new(integerVectorSpace.Length, integerVectorSpace.Minimum, integerVectorSpace.Maximum);
