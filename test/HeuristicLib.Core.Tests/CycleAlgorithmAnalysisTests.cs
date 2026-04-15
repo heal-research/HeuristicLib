@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Data;
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
@@ -96,7 +97,7 @@ public class CycleAlgorithmAnalysisTests
     }
   }
 
-  private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+  private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, SingleStepAlgorithm.State>
   {
     public int Genotype { get; }
 
@@ -112,35 +113,29 @@ public class CycleAlgorithmAnalysisTests
       Evaluator = evaluator;
     }
 
-    public override IAlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-      => new Instance(instanceRegistry.Run, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Interceptor), Genotype);
+    protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry) => new(instanceRegistry, this);
 
-    private sealed class Instance(
-      Run run,
-      IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator,
-      IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor,
-      int genotype)
-      : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(run, evaluator)
+    protected override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(State state, IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
-      private readonly IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor = interceptor;
-      private readonly int genotype = genotype;
+      ct.ThrowIfCancellationRequested();
 
-      public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-        IProblem<int, DummySearchSpace<int>> problem,
-        IRandomNumberGenerator random,
-        PopulationState<int>? initialState = null,
-        [EnumeratorCancellation]
-        CancellationToken ct = default)
+      var objectiveVector = state.Evaluator.Evaluate([Genotype], random, problem.SearchSpace, problem).Single();
+      var currentState = new PopulationState<int> {
+        Population = Population.From([Solution.From(Genotype, objectiveVector)])
+      };
+
+      yield return state.Interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
+      await Task.CompletedTask;
+    }
+
+    public sealed class State : AlgorithmState
+    {
+      public readonly IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor;
+
+      public State(ExecutionInstanceRegistry instanceRegistry, SingleStepAlgorithm algorithm) :
+        base(instanceRegistry, algorithm)
       {
-        ct.ThrowIfCancellationRequested();
-
-        var objectiveVector = Evaluator.Evaluate([genotype], random, problem.SearchSpace, problem).Single();
-        var currentState = new PopulationState<int> {
-          Population = Population.From([Solution.From(genotype, objectiveVector)])
-        };
-
-        yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
-        await Task.CompletedTask;
+        Interceptor = instanceRegistry.Resolve(algorithm.Interceptor);
       }
     }
   }
@@ -197,4 +192,3 @@ public class CycleAlgorithmAnalysisTests
     }
   }
 }
-

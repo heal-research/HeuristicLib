@@ -9,39 +9,52 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public abstract record Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TState>
   : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
+//where TState : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TState>.AlgorithmState
 {
+  protected abstract TState CreateInitialState(ExecutionInstanceRegistry instanceRegistry);
+
   // ToDo: Since we have an evaluator, should we rename the class to "Optimization-Algorithm" or "Solver" or something like this?
   public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TGenotype>();
 
-  public abstract IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
-}
+  public IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new AlgorithmInstance(this, CreateInitialState(instanceRegistry));
 
-public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-{
-  protected readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator;
+  protected abstract IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TState state,
+                                                                         TProblem problem,
+                                                                         IRandomNumberGenerator random,
+                                                                         TAlgorithmState? initialState = null,
+                                                                         CancellationToken ct = default);
 
-  public Run Run { get; }
-
-  protected AlgorithmInstance(Run run, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
+  protected record AlgorithmInstance(Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TState> Algorithm, TState State)
+    : IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   {
-    Run = run;
-    Evaluator = evaluator;
+    public IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default)
+    {
+      return Algorithm.RunStreamingAsync(State, problem, random, initialState, ct);
+    }
   }
 
-  public abstract IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
-    TProblem problem,
-    IRandomNumberGenerator random,
-    TAlgorithmState? initialState = null,
-    CancellationToken ct = default);
+  public class AlgorithmState
+  {
+    public IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator { get; }
+    public Run Run { get; }
+
+    protected AlgorithmState(ExecutionInstanceRegistry instanceRegistry, Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TState> algorithm)
+    {
+      Evaluator = instanceRegistry.Resolve(algorithm.Evaluator);
+      Run = instanceRegistry.Run;
+    }
+  }
+}
+
+public class NoState
+{
+  public static readonly NoState Instance = new();
+  private NoState() { }
 }
 
 public static class AlgorithmExtensions
@@ -64,7 +77,6 @@ public static class AlgorithmExtensions
     {
       var run = algorithm.CreateRun(problem);
       return run.RunStreamingAsync(random, initialState, ct);
-
     }
 
     public async Task<TAlgorithmState> RunToCompletionAsync(

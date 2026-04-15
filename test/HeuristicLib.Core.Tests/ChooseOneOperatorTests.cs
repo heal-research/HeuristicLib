@@ -100,13 +100,13 @@ public class ChooseOneOperatorTests
   public void PipelineMutator_ShouldRejectEmptyPipelines()
   {
     Should.Throw<ArgumentException>(() => new PipelineMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>([]))
-      .ParamName.ShouldBe("mutators");
+          .ParamName.ShouldBe("mutators");
   }
 
   [Fact]
   public void PipelineInterceptor_ShouldApplyInterceptorsInSequence()
   {
-    var interceptor = new PipelineInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>([
+    var interceptor = new PipelineInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>([
       new AddToStateInterceptor(10),
       new AddToStateInterceptor(100)
     ]);
@@ -117,7 +117,7 @@ public class ChooseOneOperatorTests
       objective: SingleObjective.Minimize);
     var instance = interceptor.CreateExecutionInstance(new Execution.ExecutionInstanceRegistry(TestRun.Instance));
 
-    var result = instance.Transform(new TestAlgorithmState { Value = 1 }, previousState: null, DummySearchSpace<int>.Instance, problem);
+    var result = instance.Transform(new TestState { Value = 1 }, previousState: null, DummySearchSpace<int>.Instance, problem);
 
     result.Value.ShouldBe(111);
   }
@@ -138,13 +138,13 @@ public class ChooseOneOperatorTests
   }
 
   private sealed record AddToStateInterceptor(int Offset)
-    : StatelessInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>
+    : StatelessInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestState>
   {
-    public override TestAlgorithmState Transform(TestAlgorithmState currentState, TestAlgorithmState? previousState, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+    public override TestState Transform(TestState currentState, TestState? previousState, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
       => currentState with { Value = currentState.Value + Offset };
   }
 
-  private sealed record TestAlgorithmState : AlgorithmState
+  private sealed record TestState : AlgorithmState
   {
     public required int Value { get; init; }
   }
@@ -165,7 +165,3 @@ public class ChooseOneOperatorTests
     public IRandomNumberGenerator Fork(ulong forkKey) => this;
   }
 }
-
-
-
-

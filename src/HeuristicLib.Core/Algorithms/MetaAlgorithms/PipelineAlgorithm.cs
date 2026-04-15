@@ -1,7 +1,5 @@
-﻿using System.Runtime.CompilerServices;
-using Generator.Equals;
+﻿using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -14,59 +12,25 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 [Equatable]
 public partial record PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, NoState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
   where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
-  [OrderedEquality] public ImmutableArray<TAlgorithm> Algorithms { get; }
+  [OrderedEquality]
+  public ImmutableArray<TAlgorithm> Algorithms { get; }
 
   public PipelineAlgorithm(ImmutableArray<TAlgorithm> algorithms)
   {
     Algorithms = algorithms;
   }
 
-  public override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-  {
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
+  protected override NoState CreateInitialState(ExecutionInstanceRegistry instanceRegistry) => NoState.Instance;
 
-    return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
-      instanceRegistry.Run,
-      evaluatorInstance,
-      Algorithms
-    );
-  }
-}
-
-public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-{
-  protected readonly IReadOnlyList<TAlgorithm> Algorithms;
-
-  public PipelineAlgorithmInstance(Run run, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms)
-    : base(run, evaluator)
-  {
-    Algorithms = algorithms;
-  }
-
-  public PipelineAlgorithmInstance(
-    Run run,
-    IReadOnlyList<TAlgorithm> algorithms,
-    IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
-    : base(run, evaluator)
-  {
-    Algorithms = algorithms;
-  }
-
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+  protected override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(NoState _, TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default)
   {
     var state = initialState;
-
     foreach (var (algorithm, index) in Algorithms.Select((a, i) => (a, i))) {
       var algRng = random.Fork(index);
       // run a new fresh stream here

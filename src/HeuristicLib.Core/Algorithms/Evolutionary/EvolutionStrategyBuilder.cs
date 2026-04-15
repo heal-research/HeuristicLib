@@ -2,11 +2,12 @@ using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public record EvolutionStrategyBuilder<TG, TS, TP>
-  : AlgorithmBuilder<TG, TS, TP, EvolutionStrategyState<TG>, EvolutionStrategy<TG, TS, TP>>,
+  : AlgorithmBuilder<TG, TS, TP, PopulationState<TG>, EvolutionStrategy<TG, TS, TP>>,
     IBuilderWithCreator<TG, TS, TP>,
     IBuilderWithMutator<TG, TS, TP>,
     IBuilderWithSelector<TG, TS, TP>

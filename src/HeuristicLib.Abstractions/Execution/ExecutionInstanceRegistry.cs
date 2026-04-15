@@ -49,6 +49,11 @@ public class ExecutionInstanceRegistry
     return false;
   }
 
+  public TExecutionInstance? ResolveOptional<TExecutionInstance>(IExecutable<TExecutionInstance>? executable) where TExecutionInstance : class, IExecutionInstance
+  {
+    return executable is null ? null : Resolve(executable);
+  }
+
   public TExecutionInstance Resolve<TExecutionInstance>(IExecutable<TExecutionInstance> executable)
     where TExecutionInstance : class, IExecutionInstance
   {

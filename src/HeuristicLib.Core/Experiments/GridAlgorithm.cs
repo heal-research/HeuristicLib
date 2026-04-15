@@ -17,7 +17,8 @@ public partial record GridAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorith
   where TAlgorithmState : class, IAlgorithmState
   where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
 {
-  [OrderedEquality] public required Grid<TAlgorithm> ParameterGrid { get; init; }
+  [OrderedEquality]
+  public required Grid<TAlgorithm> ParameterGrid { get; init; }
 
   public override GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
@@ -57,8 +58,7 @@ public static class GridAlgorithmExtensions
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
     where TAlgorithmState : class, IAlgorithmState
     where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  {
-  }
+  { }
 
   // extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, TAlgorithm> executor)
   //   where TSearchSpace : class, ISearchSpace<TGenotype>
@@ -77,4 +77,3 @@ public static class GridAlgorithmExtensions
   //   }
   // }
 }
-

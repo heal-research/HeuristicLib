@@ -92,12 +92,12 @@ public static class MetaOptimizationProblemExamples
     });
   }
 
-  public static MetaOptimizationProblem<T, TE, TP, EvolutionStrategyState<T>> EvolutionStrategyMetaOptimizationProblem<T, TE, TP>(
+  public static MetaOptimizationProblem<T, TE, TP, PopulationState<T>> EvolutionStrategyMetaOptimizationProblem<T, TE, TP>(
     this TP problem,
     ICreator<T, TE, TP>[] creators,
     ICrossover<T, TE, TP>[] crossovers,
     IEvaluator<T, TE, TP>[] evaluators,
-    IInterceptor<T, TE, TP, EvolutionStrategyState<T>>[] interceptors,
+    IInterceptor<T, TE, TP, PopulationState<T>>[] interceptors,
     IMutator<T, TE, TP>[] mutators,
     EvolutionStrategyType[] strategies,
     IReplacer<T, TE, TP>[] replacers,
@@ -123,9 +123,9 @@ public static class MetaOptimizationProblemExamples
     var realVectorSearchSpace = new RealVectorSearchSpace(1, mutationRate.min, mutationRate.max);
     var combinedSearchSpace = realVectorSearchSpace.WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(integerVectorSearchSpace);
 
-    return new MetaOptimizationProblem<T, TE, TP, EvolutionStrategyState<T>>(problem, combinedSearchSpace, AlgBuilder);
+    return new MetaOptimizationProblem<T, TE, TP, PopulationState<T>>(problem, combinedSearchSpace, AlgBuilder);
 
-    IAlgorithm<T, TE, TP, EvolutionStrategyState<T>> AlgBuilder(CompositeGenotype<RealVector, IntegerVector> x)
+    IAlgorithm<T, TE, TP, PopulationState<T>> AlgBuilder(CompositeGenotype<RealVector, IntegerVector> x)
     {
       var ints = x.Part2;
       return new EvolutionStrategy<T, TE, TP> {

@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 // ToDo: think if we want the CycleAlgorithm to terminate internally by checking each result of the inner algorihtms
 [Equatable]
 public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>.State>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TAlgorithmState : class, IAlgorithmState
@@ -33,44 +33,9 @@ public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProbl
     Algorithms = algorithms;
   }
 
-  public override CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-  {
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
+  protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry) => new(instanceRegistry, this);
 
-    return new CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
-      instanceRegistry.Run,
-      evaluatorInstance,
-      Algorithms.ToList(),
-      MaximumCycles,
-      NewExecutionInstancesPerCycle
-    );
-  }
-}
-
-public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-{
-  protected readonly IReadOnlyList<TAlgorithm> Algorithms;
-  protected readonly int? MaximumCycles;
-  protected readonly bool NewExecutionInstancesPerCycle;
-
-  private readonly Dictionary<TAlgorithm, ExecutionInstanceRegistry> algorithmInstanceRegistries;
-
-  public CycleAlgorithmInstance(Run run, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
-    : base(run, evaluator)
-  {
-    Algorithms = algorithms;
-    MaximumCycles = maximumCycles;
-    NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle;
-
-    algorithmInstanceRegistries = new Dictionary<TAlgorithm, ExecutionInstanceRegistry>(capacity: NewExecutionInstancesPerCycle ? Algorithms.Count : 0);
-  }
-
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+  protected override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(State cycleState, TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 
@@ -82,29 +47,39 @@ public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProble
       var cycleRng = random.Fork(cycleCount);
       foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i))) {
         var algorithmRng = cycleRng.Fork(algorithmIndex);
-        var registry = ExecutionInstanceRegistry(algorithm, Run);
+        var registry = ExecutionInstanceRegistry(cycleState, algorithm);
         var algorithmInstance = algorithm.CreateExecutionInstance(registry);
 
         await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algorithmRng, state, ct)) {
           state = newState;
           yield return newState;
         }
+
+        if (ct.IsCancellationRequested) yield break;
       }
     }
   }
 
-  private ExecutionInstanceRegistry ExecutionInstanceRegistry(TAlgorithm algorithm, Run run)
+  private ExecutionInstanceRegistry ExecutionInstanceRegistry(State cycleState, TAlgorithm algorithm)
   {
-    if (NewExecutionInstancesPerCycle) {
-      return run.CreateNewRegistry();
-    }
+    if (NewExecutionInstancesPerCycle)
+      return cycleState.Run.CreateNewRegistry();
 
-    if (algorithmInstanceRegistries.TryGetValue(algorithm, out var existingRegistry)) {
+    if (cycleState.AlgorithmInstanceRegistries.TryGetValue(algorithm, out var existingRegistry))
       return existingRegistry;
-    }
 
-    var newRegistry = run.CreateChildRegistry();
-    algorithmInstanceRegistries[algorithm] = newRegistry;
+    var newRegistry = cycleState.Run.CreateChildRegistry();
+    cycleState.AlgorithmInstanceRegistries[algorithm] = newRegistry;
     return newRegistry;
+  }
+
+  public class State : AlgorithmState
+  {
+    public Dictionary<TAlgorithm, ExecutionInstanceRegistry> AlgorithmInstanceRegistries { get; }
+
+    public State(ExecutionInstanceRegistry instanceRegistry, CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm) : base(instanceRegistry, algorithm)
+    {
+      AlgorithmInstanceRegistries = new Dictionary<TAlgorithm, ExecutionInstanceRegistry>(capacity: algorithm.NewExecutionInstancesPerCycle ? algorithm.Algorithms.Length : 0);
+    }
   }
 }

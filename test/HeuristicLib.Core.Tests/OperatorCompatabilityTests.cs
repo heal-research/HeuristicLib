@@ -14,6 +14,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using NoState = HEAL.HeuristicLib.Algorithms.NoState;
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 
@@ -57,7 +58,7 @@ public class OperatorCompatabilityTests
 
   private static bool DoesCompile(string code, params Type[] usedTypes)
   {
-    var references = usedTypes.Concat([typeof(object), typeof(IAlgorithm<,,,>), typeof(Algorithm<,,,>)])
+    var references = usedTypes.Concat([typeof(object), typeof(IAlgorithm<,,,>), typeof(Algorithm<,,,,>)])
                               .Select(t => t.Assembly)
                               .Concat([Assembly.Load("System.Runtime")])
                               .Distinct()
@@ -220,15 +221,23 @@ public class OperatorCompatabilityTests
   public void AlgorithmOperatorCompatibility(Type algorithm, Type @operator, bool shouldCompile) => AlgorithmUsingOperatorDoesCompile(algorithm, @operator).ShouldBe(shouldCompile);
 }
 
-public abstract record AlgorithmState<TGenotype> : AlgorithmState;
+public record AlgorithmState : IAlgorithmState;
 
-public record IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : Algorithm<TGenotype, TSearchSpace, TProblem, AlgorithmState<TGenotype>>
+public record StatelessAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState, NoState>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TAlgorithmState : class, IAlgorithmState
+{
+  protected sealed override NoState CreateInitialState(ExecutionInstanceRegistry instanceRegistry) => NoState.Instance;
+
+  protected sealed override IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(NoState state, TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, CancellationToken ct = default) => throw new NotImplementedException();
+}
+
+public record IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : StatelessAlgorithm<TGenotype, TSearchSpace, TProblem, AlgorithmState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
-
-  public override IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, AlgorithmState<TGenotype>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
 public record IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
@@ -236,38 +245,30 @@ public record IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorit
 
 public record IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>;
 
-public record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutation, PermutationSearchSpace, TProblem, AlgorithmState<Permutation>>
+public record PermutationEncodingSpecificAlgorithm<TProblem> : StatelessAlgorithm<Permutation, PermutationSearchSpace, TProblem, AlgorithmState>
   where TProblem : class, IProblem<Permutation, PermutationSearchSpace>
 {
   public ICrossover<Permutation, PermutationSearchSpace, TProblem> Crossover { get; set; }
-
-  public override IAlgorithmInstance<Permutation, PermutationSearchSpace, TProblem, AlgorithmState<Permutation>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
 public record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>;
 
-public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, AlgorithmState<Permutation>>
+public record TravelingSalesmanProblemSpecificAlgorithm : StatelessAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, AlgorithmState>
 {
   public ICrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> Crossover { get; set; }
-
-  public override IAlgorithmInstance<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, AlgorithmState<Permutation>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
-public record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorSearchSpace, TProblem, AlgorithmState<RealVector>>
+public record RealVectorEncodingSpecificAlgorithm<TProblem> : StatelessAlgorithm<RealVector, RealVectorSearchSpace, TProblem, AlgorithmState>
   where TProblem : class, IProblem<RealVector, RealVectorSearchSpace>
 {
   public ICrossover<RealVector, RealVectorSearchSpace, TProblem> Crossover { get; set; }
-
-  public override IAlgorithmInstance<RealVector, RealVectorSearchSpace, TProblem, AlgorithmState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
 public record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorSearchSpace>>;
 
-public record TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, AlgorithmState<RealVector>>
+public record TestFunctionProblemSpecificAlgorithm : StatelessAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, AlgorithmState>
 {
   public ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Crossover { get; set; }
-
-  public override IAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, AlgorithmState<RealVector>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => throw new NotImplementedException();
 }
 
 public record IndependentCrossover<TGenotype> : SingleSolutionCrossover<TGenotype>

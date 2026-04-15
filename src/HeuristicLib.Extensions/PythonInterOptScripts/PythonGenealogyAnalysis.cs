@@ -163,7 +163,7 @@ public class PythonGenealogyAnalysis
         var esAlgorithm = es.Build();
         if (callback is not null && esAlgorithm.Interceptor is null) {
           esAlgorithm = esAlgorithm with {
-            Interceptor = new IdentityInterceptor<T, EvolutionStrategyState<T>>()
+            Interceptor = new IdentityInterceptor<T, PopulationState<T>>()
           };
         }
 
@@ -278,9 +278,9 @@ public class PythonGenealogyAnalysis
     }
   }
 
-  private static MyAnalyzers<T> CreateAnalyzers<T, TE, TP, TR>(
+  private static MyAnalyzers<T> CreateAnalyzers<T, TE, TP, TR, TS>(
     ExperimentParameters<T, TE> parameters,
-    IterativeAlgorithm<T, TE, TP, TR> algorithm,
+    IterativeAlgorithm<T, TE, TP, TR, TS> algorithm,
     ICrossover<T, TE, TP>? crossover,
     IMutator<T, TE, TP>? mutator,
     Action<PopulationState<T>>? callback)
@@ -288,6 +288,7 @@ public class PythonGenealogyAnalysis
     where TE : class, ISearchSpace<T>
     where TP : class, IProblem<T, TE>
     where TR : PopulationState<T>
+    where TS : IterativeAlgorithm<T, TE, TP, TR, TS>.IterativeAlgorithmState
   {
     var interceptor = algorithm.Interceptor ?? throw new InvalidOperationException("Population-based analysis requires an interceptor.");
     var qualities = new BestMedianWorstAnalysis<T, TE, TP, TR>(algorithm, interceptor);

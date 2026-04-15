@@ -29,4 +29,8 @@
     <PackageReference Include="System.Linq.Async" Version="7.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="AlgorithmExecutions\" />
+  </ItemGroup>
+
 </Project>

@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Execution;
+﻿using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
@@ -10,14 +11,14 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record AlpsState<TGenotype> : AlgorithmState
+public record AlpsState<TGenotype> : IAlgorithmState
 {
   public required IReadOnlyList<Population<TGenotype>> Population { get; init; }
   public required IReadOnlyList<IReadOnlyList<int>> Ages { get; init; }
 }
 
 public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>, AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>.State>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -29,71 +30,18 @@ public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
   public int Elites { get; init; }
-  // public IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; }
 
-  // ToDo: this is not yet correctly set.
-  // private readonly ChooseOneMutator<TGenotype, TSearchSpace, TProblem> internalMutator;
-  // private readonly ElitismReplacer<TGenotype> internalReplacer = new(1);
+  protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry) => new(instanceRegistry, this);
 
-  public override AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-  {
-    var internalMutator = new ChooseOneMutator<TGenotype, TSearchSpace, TProblem>([Mutator, new NoChangeMutator<TGenotype>()], [MutationRate, 1 - MutationRate]);
-    var internalReplacer = new ElitismReplacer<TGenotype>(Elites);
-
-    var interceptorInstance = Interceptor is not null ? instanceRegistry.Resolve(Interceptor) : null;
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
-    var creatorInstance = instanceRegistry.Resolve(Creator);
-    var crossoverInstance = instanceRegistry.Resolve(Crossover);
-    var mutatorInstance = instanceRegistry.Resolve(internalMutator);
-    var selectorInstance = instanceRegistry.Resolve(Selector);
-    var replacerInstance = instanceRegistry.Resolve(internalReplacer);
-
-    return new AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>(
-      instanceRegistry.Run,
-      interceptorInstance,
-      evaluatorInstance,
-      PopulationSize,
-      creatorInstance,
-      crossoverInstance,
-      mutatorInstance,
-      selectorInstance,
-      replacerInstance
-    );
-  }
-}
-
-public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
-  private readonly int PopulationSize;
-  private readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator;
-  private readonly ICrossoverInstance<TGenotype, TSearchSpace, TProblem> agedCrossover;
-  private readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> agedMutator;
-  private readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector;
-  private readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer;
-
-  public AlpsGeneticAlgorithmInstance(Run run, IInterceptorInstance<TGenotype, TSearchSpace, TProblem, AlpsState<TGenotype>>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> agedCreator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> agedCrossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> agedMutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> agedSelector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> agedReplacer)
-    : base(run, interceptor, evaluator)
-  {
-    PopulationSize = populationSize;
-    this.agedCreator = agedCreator;
-    this.agedCrossover = agedCrossover;
-    this.agedMutator = agedMutator;
-    this.agedSelector = agedSelector;
-    this.agedReplacer = agedReplacer;
-  }
-
-  public override AlpsState<TGenotype> ExecuteStep(AlpsState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
+  protected override AlpsState<TGenotype> ExecuteStep(State state, AlpsState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
   {
     var agedProblem = problem;
     var agedSearchSpace = problem.SearchSpace;
 
     if (previousState is null) {
-      var initialLayerPopulation = agedCreator.Create(PopulationSize, random, agedSearchSpace, agedProblem);
+      var initialLayerPopulation = state.Creator.Create(PopulationSize, random, agedSearchSpace, agedProblem);
 
-      var initialFitnesses = Evaluator.Evaluate(initialLayerPopulation, random, agedSearchSpace, agedProblem);
+      var initialFitnesses = state.Evaluator.Evaluate(initialLayerPopulation, random, agedSearchSpace, agedProblem);
 
       return new AlpsState<TGenotype> {
         Population = [Population.From(initialLayerPopulation, initialFitnesses)],
@@ -107,7 +55,7 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
 
     var oldPopulation = previousState.Population[0].ToArray();
 
-    var parents = agedSelector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, agedSearchSpace, agedProblem);
+    var parents = state.Selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, agedSearchSpace, agedProblem);
 
     var parentPairs = new IParents<TGenotype>[offspringCount];
     var offspringAges = new int[offspringCount];
@@ -116,15 +64,15 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
       offspringAges[i] = Math.Max(previousState.Ages[0][j], previousState.Ages[0][j + 1]) + 1;
     }
 
-    var population = agedCrossover.Cross(parentPairs, random, agedSearchSpace, agedProblem);
+    var population = state.Crossover.Cross(parentPairs, random, agedSearchSpace, agedProblem);
 
-    population = agedMutator.Mutate(population, random, agedSearchSpace, agedProblem);
+    population = state.Mutator.Mutate(population, random, agedSearchSpace, agedProblem);
 
-    var fitnesses = Evaluator.Evaluate(population, random, agedSearchSpace, agedProblem);
+    var fitnesses = state.Evaluator.Evaluate(population, random, agedSearchSpace, agedProblem);
 
     var evaluatedPopulation = Population.From(population, fitnesses);
 
-    var newPopulation = agedReplacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, offspringCount, random, agedSearchSpace, agedProblem);
+    var newPopulation = state.Replacer.Replace(oldPopulation, evaluatedPopulation.ToList(), problem.Objective, offspringCount, random, agedSearchSpace, agedProblem);
 
     var result = new AlpsState<TGenotype> {
       Population = [Population.From(newPopulation)],
@@ -132,5 +80,23 @@ public class AlpsGeneticAlgorithmInstance<TGenotype, TSearchSpace, TProblem>
     };
 
     return result;
+  }
+
+  public class State : IterativeAlgorithmState
+  {
+    public ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; }
+    public ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover { get; }
+    public IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; }
+    public ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector { get; }
+    public IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer { get; }
+
+    public State(ExecutionInstanceRegistry instanceRegistry, AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem> algorithm) : base(instanceRegistry, algorithm)
+    {
+      Creator = instanceRegistry.Resolve(algorithm.Creator);
+      Crossover = instanceRegistry.Resolve(algorithm.Crossover);
+      Mutator = instanceRegistry.Resolve(algorithm.Mutator.WithRate(algorithm.MutationRate));
+      Selector = instanceRegistry.Resolve(algorithm.Selector);
+      Replacer = instanceRegistry.Resolve(new ElitismReplacer<TGenotype>(algorithm.Elites));
+    }
   }
 }

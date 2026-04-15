@@ -15,11 +15,11 @@
     MutationRate: 0.1,
     MutationStrength: 0.1
   },
-  Elites: 1,
-  MutationRate: 0.15,
   Selector: {
     $type: RandomSelector<RealVector>
   },
+  Elites: 1,
+  MutationRate: 0.15,
   Interceptor: null,
   Evaluator: {
     $type: DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>,

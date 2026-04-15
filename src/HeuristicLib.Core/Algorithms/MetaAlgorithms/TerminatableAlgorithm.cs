@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 // ToDo: Think about if we really want to handle termination via decorators. Maybe as additional mechanism for algorithms that do not hav inner termination criterion, but otherwise, this feels overcomplicated.
 public record TerminatableAlgorithm<TG, TS, TP, TR>
-  : Algorithm<TG, TS, TP, TR>
+  : Algorithm<TG, TS, TP, TR, TerminatableAlgorithm<TG, TS, TP, TR>.State>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -19,49 +19,32 @@ public record TerminatableAlgorithm<TG, TS, TP, TR>
   public required IAlgorithm<TG, TS, TP, TR> Algorithm { get; init; }
   public required ITerminator<TG, TS, TP, TR> Terminator { get; init; }
 
-  public override TerminatableAlgorithmInstance<TG, TS, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-  {
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
-    var terminatorInstance = instanceRegistry.Resolve(Terminator);
-    var algorithmInstance = instanceRegistry.Resolve(Algorithm);
+  protected override State CreateInitialState(ExecutionInstanceRegistry instanceRegistry) => new(instanceRegistry, this);
 
-    return new TerminatableAlgorithmInstance<TG, TS, TP, TR>(
-      instanceRegistry.Run,
-      evaluatorInstance,
-      algorithmInstance,
-      terminatorInstance
-    );
-  }
-}
-
-public class TerminatableAlgorithmInstance<TG, TS, TP, TR> : AlgorithmInstance<TG, TS, TP, TR>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
-{
-  protected readonly IAlgorithmInstance<TG, TS, TP, TR> Algorithm;
-  protected readonly ITerminatorInstance<TG, TS, TP, TR> Terminator;
-
-  public TerminatableAlgorithmInstance(Run run, IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithmInstance<TG, TS, TP, TR> algorithm, ITerminatorInstance<TG, TS, TP, TR> terminator)
-    : base(run, evaluator)
-  {
-    Algorithm = algorithm;
-    Terminator = terminator;
-  }
-
-  public override async IAsyncEnumerable<TR> RunStreamingAsync(TP problem, IRandomNumberGenerator random, TR? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+  protected override async IAsyncEnumerable<TR> RunStreamingAsync(State state, TP problem, IRandomNumberGenerator random, TR? initialState = null, CancellationToken ct = default)
   {
     // ToDo: IMPORTANT: probably we should actually not check the termination condition here, as we advance terminator state on accident
-    if (initialState is not null && Terminator.ShouldTerminate(initialState, problem.SearchSpace, problem)) {
+    if (initialState is not null && state.Terminator.ShouldTerminate(initialState, problem.SearchSpace, problem)) {
       yield break;
     }
 
-    await foreach (var state in Algorithm.RunStreamingAsync(problem, random, initialState, ct)) {
-      yield return state;
+    await foreach (var algState in Algorithm.RunStreamingAsync(problem, random, initialState, ct)) {
+      yield return algState;
 
-      if (Terminator.ShouldTerminate(state, problem.SearchSpace, problem)) {
+      if (state.Terminator.ShouldTerminate(algState, problem.SearchSpace, problem))
         yield break;
-      }
+    }
+  }
+
+  public class State : Algorithm<TG, TS, TP, TR, State>.AlgorithmState
+  {
+    public readonly IAlgorithmInstance<TG, TS, TP, TR> Algorithm;
+    public readonly ITerminatorInstance<TG, TS, TP, TR> Terminator;
+
+    public State(ExecutionInstanceRegistry instanceRegistry, TerminatableAlgorithm<TG, TS, TP, TR> algorithm) : base(instanceRegistry, algorithm)
+    {
+      Terminator = instanceRegistry.Resolve(algorithm.Terminator);
+      Algorithm = instanceRegistry.Resolve(algorithm.Algorithm);
     }
   }
 }
