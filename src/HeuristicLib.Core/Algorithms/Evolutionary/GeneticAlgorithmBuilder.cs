@@ -36,7 +36,8 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
       Evaluator = Evaluator,
       Elites = Elites,
       Interceptor = Interceptor,
-      Mutator = Mutator.WithRate(MutationRate)
+      Mutator = Mutator,
+      MutationRate = MutationRate
     };
   }
 }
