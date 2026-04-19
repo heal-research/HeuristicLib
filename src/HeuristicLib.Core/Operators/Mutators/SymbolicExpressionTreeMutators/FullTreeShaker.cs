@@ -13,7 +13,15 @@ public sealed record FullTreeShaker : SymbolicExpressionTreeManipulator
     set;
   } = 1.0;
 
-  public static SymbolicExpressionTree Apply(
+  public override SymbolicExpressionTree Mutate(
+    SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
+    var t = Mutate(random, parent, ShakingFactor);
+    Debug.Assert(searchSpace.Contains(t), "Upps destroyed tree");
+    return t;
+  }
+
+  public static SymbolicExpressionTree Mutate(
     IRandomNumberGenerator random, SymbolicExpressionTree tree, double shakingFactor)
   {
     var clone = new SymbolicExpressionTree(tree);
@@ -23,13 +31,5 @@ public sealed record FullTreeShaker : SymbolicExpressionTreeManipulator
       }
     });
     return clone;
-  }
-
-  public override SymbolicExpressionTree Mutate(
-    SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
-  {
-    var t = Apply(random, parent, ShakingFactor);
-    Debug.Assert(searchSpace.Contains(t), "Upps destroyed tree");
-    return t;
   }
 }

@@ -7,6 +7,12 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
 public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>
 {
+  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
+  {
+    var (parent1, parent2) = (parents.Parent1, parents.Parent2);
+    return Cross(parent1, parent2, random);
+  }
+
   public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng, Memory<int>? memory = null)
   {
     if (parent1.Count != parent2.Count) {
@@ -73,12 +79,6 @@ public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationS
         currentIndex++;
       }
     }
-  }
-
-  public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
-  {
-    var (parent1, parent2) = (parents.Parent1, parents.Parent2);
-    return Cross(parent1, parent2, random);
   }
 
   public static (int, int) GetRandomBreakPoints(int length, IRandomNumberGenerator rng)

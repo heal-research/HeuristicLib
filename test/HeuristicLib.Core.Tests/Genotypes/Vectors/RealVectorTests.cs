@@ -363,6 +363,90 @@ public sealed class RealVectorTests
   }
 
   [Fact]
+  public void Clamp_InstanceMethod_DelegatesToStaticBehavior()
+  {
+    RealVector input = new[] { -1.0, 2.0, 10.0 };
+    RealVector min = 0.0;
+    RealVector max = 5.0;
+
+    var result = input.Clamp(min, max);
+
+    Assert.Equal(new[] { 0.0, 2.0, 5.0 }, result.ToArray());
+  }
+
+  [Fact]
+  public void ClampAt_UsesDimensionBounds()
+  {
+    RealVector input = new[] { -1.0, 2.0, 10.0 };
+    RealVector min = new[] { 0.0, 1.0, 2.0 };
+    RealVector max = new[] { 5.0, 3.0, 8.0 };
+
+    Assert.Equal(0.0, input.ClampAt(min, max, 0));
+    Assert.Equal(2.0, input.ClampAt(min, max, 1));
+    Assert.Equal(8.0, input.ClampAt(min, max, 2));
+  }
+
+  [Fact]
+  public void FloorCeilRound_InstanceMethods_ReturnExpectedValues()
+  {
+    RealVector input = new[] { 1.2, -1.8, 0.5 };
+
+    Assert.Equal(new[] { 1.0, -2.0, 0.0 }, input.Floor().ToArray());
+    Assert.Equal(new[] { 2.0, -1.0, 1.0 }, input.Ceil().ToArray());
+    Assert.Equal(new[] { 1.0, -2.0, 1.0 }, input.Round().ToArray());
+  }
+
+  [Fact]
+  public void FloorCeilRoundAt_InstanceMethods_ReturnExpectedValues()
+  {
+    RealVector input = new[] { 1.2, -1.8, 0.5 };
+
+    Assert.Equal(1.0, input.FloorAt(0));
+    Assert.Equal(-1.0, input.CeilAt(1));
+    Assert.Equal(1.0, input.RoundAt(2));
+  }
+
+  [Fact]
+  public void RoundToIntegerVector_InstanceMethod_ConvertsWithBounds()
+  {
+    RealVector input = new[] { 1.6, -2.8, 0.2 };
+    IntegerVector min = -2;
+    IntegerVector max = 2;
+
+    var result = input.RoundToIntegerVector(min, max);
+
+    Assert.Equal(new[] { 2, -2, 0 }, result.ToArray());
+  }
+
+  [Fact]
+  public void ScalarToIntegerConversions_RespectBounds()
+  {
+    Assert.Equal(2, RealVector.RoundToInteger(1.6, -2, 2));
+    Assert.Equal(1, RealVector.FloorToInteger(1.6, -2, 2));
+    Assert.Equal(-1, RealVector.CeilToInteger(-1.8, -2, 2));
+  }
+
+  [Fact]
+  public void ScalarToIntegerConversions_TolerateBoundaryNoise()
+  {
+    Assert.Equal(1, RealVector.FloorToInteger(1.0 - 1e-13, -2, 2));
+    Assert.Equal(1, RealVector.CeilToInteger(1.0 + 1e-13, -2, 2));
+    Assert.Equal(2, RealVector.CeilToInteger(1.0 + 1e-10, -2, 2));
+    Assert.Equal(0, RealVector.FloorToInteger(1.0 - 1e-10, -2, 2));
+  }
+
+  [Fact]
+  public void RoundToIntegerAt_UsesDimensionBounds()
+  {
+    IntegerVector min = new[] { -2, -1, -5 };
+    IntegerVector max = new[] { 2, 3, 0 };
+
+    Assert.Equal(2, RealVector.RoundToIntegerAt(1.6, min, max, 0));
+    Assert.Equal(-1, RealVector.RoundToIntegerAt(-2.8, min, max, 1));
+    Assert.Equal(0, RealVector.RoundToIntegerAt(0.2, min, max, 2));
+  }
+
+  [Fact]
   public void ComparisonOperators_SameLength_WorkElementwise()
   {
     RealVector a = new[] { 1.0, 5.0, 3.0 };

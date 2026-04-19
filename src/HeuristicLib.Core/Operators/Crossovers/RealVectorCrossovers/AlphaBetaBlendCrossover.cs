@@ -16,10 +16,15 @@ public record AlphaBetaBlendCrossover : SingleSolutionCrossover<RealVector, Real
   public double Beta => 1 - Alpha;
 
   public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
+    => Cross(parents.Parent1, parents.Parent2, random, searchSpace, Alpha);
+
+  public static RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double alpha)
+    => Cross(parent1, parent2, random, alpha, searchSpace.Minimum, searchSpace.Maximum);
+
+  public static RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, double alpha, RealVector minimum, RealVector maximum)
   {
-    var parent1 = parents.Parent1;
-    var parent2 = parents.Parent2;
-    var result = (Alpha * parent1) + (Beta * parent2);
-    return RealVector.Clamp(result, searchSpace.Minimum, searchSpace.Maximum);
+    var beta = 1 - alpha;
+    var result = (alpha * parent1) + (beta * parent2);
+    return RealVector.Clamp(result, minimum, maximum);
   }
 }

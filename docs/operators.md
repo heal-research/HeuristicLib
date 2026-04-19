@@ -55,6 +55,21 @@ HeuristicLib includes a few small composition patterns that keep calling code cl
 - `ChooseOne*` helpers (for example, `ChooseOneMutator` and `ChooseOneCrossover`) choose among several operators using weights.
 - `Pipeline*` helpers (for example, `PipelineMutator` and `PipelineInterceptor`) apply several operators in sequence.
 
+## Direct invocation for stateless operators
+
+Concrete stateless operators should usually expose a public static method using the role verb so callers can use the operator logic directly without instantiating an operator object.
+
+- creators -> `Create(...)`
+- mutators -> `Mutate(...)`
+- crossovers -> `Cross(...)`
+- evaluators -> `Evaluate(...)`
+- selectors -> `Select(...)`
+- replacers -> `Replace(...)`
+- terminators -> `ShouldTerminate(...)`
+- interceptors -> `Transform(...)`
+
+When the operator has instance configuration, make that configuration explicit in the static method signature. When an identical static signature would collide with the instance method, use either a companion static helper type or a nearby overload that exposes the required parameters directly.
+
 ## Choosing a base class when implementing an operator
 
 The base classes in `src/HeuristicLib.Core/Operators` are mainly **authoring conveniences**.

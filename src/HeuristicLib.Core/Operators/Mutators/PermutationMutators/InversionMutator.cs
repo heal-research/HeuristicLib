@@ -7,11 +7,14 @@ namespace HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 public record InversionMutator : SingleSolutionMutator<Permutation, PermutationSearchSpace>
 {
   public override Permutation Mutate(Permutation parent, IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
+    => Mutate(parent, random, start: null, end: null);
+
+  public static Permutation Mutate(Permutation parent, IRandomNumberGenerator random, int? start = null, int? end = null)
   {
-    var start = random.NextInt(parent.Count);
-    var end = random.NextInt(start, parent.Count);
+    var rangeStart = start ?? random.NextInt(parent.Count);
+    var rangeEnd = end ?? random.NextInt(rangeStart, parent.Count);
     var newElements = parent.ToArray();
-    Array.Reverse(newElements, start, end - start + 1);
+    Array.Reverse(newElements, rangeStart, rangeEnd - rangeStart + 1);
     return new Permutation(newElements);
   }
 }

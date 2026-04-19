@@ -83,6 +83,24 @@ Behavior-affecting inputs must be explicit, especially:
 
 Avoid ambient state, hidden global registries, and opaque orchestration.
 
+### No build-mode-dependent behavior
+
+Debug and release builds must not differ in behavior.
+
+- Build configuration must never change whether the library accepts, rejects, mutates, validates, or otherwise processes the same input.
+- Debug-only checks are not an acceptable place for behavioral validation.
+- `Debug.Assert` is not allowed in library code because it creates different observable behavior between debug and release builds.
+- If an invariant matters for correctness, enforce it explicitly in normal runtime code or express it through types and tests.
+
+### Immutable solution candidates
+
+Any type used as `TGenotype` is part of the solution-candidate model and must be immutable.
+
+- Solution candidate types must behave like values, not mutable containers.
+- Operators must not mutate parent candidates in place.
+- Mutation and crossover may produce new candidates, but they must not change the identity-bearing state of existing candidates.
+- Search spaces, problems, and algorithms should be designed around immutable candidate flow.
+
 ### Honest execution and evaluation boundaries
 
 The problem defines canonical evaluation semantics.
@@ -107,6 +125,20 @@ In practice:
 - related abstractions should follow consistent patterns
 - defaults, costs, and side effects should be explicit
 - examples should be clear to both humans and tools
+
+### Stateless operator static methods
+
+Stateless operators should expose direct static methods that mirror the instance entry point.
+
+- The static method name should match the instance method name, for example `Create`, `Mutate`, `Cross`, `Select`, or `Evaluate`.
+- The instance method should delegate to a static method instead of owning separate logic.
+- One overload should be the core implementation overload and should accept the direct parameters the algorithm actually needs.
+- Search-space overloads should be thin adapters that extract the required parameters and forward to the core overload.
+- The core implementation overload should avoid taking a search space when the search space is only a container for already-extractable values such as length, bounds, or probabilities.
+- If the honest semantic dependency really is the search space itself, for example grammar-driven or topology-driven behavior that cannot be reduced to a smaller parameter set without hiding meaning, then the search space may remain part of the core overload.
+- Static overloads should be ordered top-down from adapters to the final core implementation, so a reader can follow the delegation path straight downward and reach the real implementation at the end.
+- Validation should live in the core overload when it protects the real operational contract, not only in adapter overloads, and it must behave the same in debug and release builds.
+- Convenience overloads are fine, but they should delegate inward rather than duplicate logic.
 
 ### Responsibilities before packages
 

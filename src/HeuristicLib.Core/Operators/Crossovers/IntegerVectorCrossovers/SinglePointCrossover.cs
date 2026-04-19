@@ -14,16 +14,17 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 public record SinglePointCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
   public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
+    => Cross(parents.Parent1, parents.Parent2, random);
+
+  public static IntegerVector Cross(IntegerVector parent1, IntegerVector parent2, IRandomNumberGenerator random, int? crossoverPoint = null)
   {
-    var parent1 = parents.Parent1;
-    var parent2 = parents.Parent2;
-    var crossoverPoint = random.NextInt(1, parent1.Count);
+    var cutPoint = crossoverPoint ?? random.NextInt(1, parent1.Count);
     var offspringValues = new int[parent1.Count];
-    for (var i = 0; i < crossoverPoint; i++) {
+    for (var i = 0; i < cutPoint; i++) {
       offspringValues[i] = parent1[i];
     }
 
-    for (var i = crossoverPoint; i < parent2.Count; i++) {
+    for (var i = cutPoint; i < parent2.Count; i++) {
       offspringValues[i] = parent2[i];
     }
 

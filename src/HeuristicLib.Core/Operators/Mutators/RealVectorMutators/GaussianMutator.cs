@@ -19,14 +19,31 @@ public record GaussianMutator
   public double MutationStrength { get; set; }
 
   public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
+    => Mutate(solution, random, searchSpace, MutationRate, MutationStrength);
+
+  public static RealVector Mutate(
+    RealVector solution,
+    IRandomNumberGenerator random,
+    RealVectorSearchSpace searchSpace,
+    double mutationRate,
+    double mutationStrength)
+    => Mutate(solution, random, mutationRate, mutationStrength, searchSpace.Minimum, searchSpace.Maximum);
+
+  public static RealVector Mutate(
+    RealVector solution,
+    IRandomNumberGenerator random,
+    double mutationRate,
+    double mutationStrength,
+    RealVector minimum,
+    RealVector maximum)
   {
     var newElements = solution.ToArray();
     for (var i = 0; i < newElements.Length; i++) {
-      if (random.NextDouble() < MutationRate) {
-        newElements[i] += MutationStrength * (random.NextDouble() - 0.5);
+      if (random.NextDouble() < mutationRate) {
+        newElements[i] += mutationStrength * (random.NextDouble() - 0.5);
       }
     }
 
-    return RealVector.Clamp(new RealVector(newElements), searchSpace.Minimum, searchSpace.Maximum);
+    return RealVector.Clamp(new RealVector(newElements), minimum, maximum);
   }
 }

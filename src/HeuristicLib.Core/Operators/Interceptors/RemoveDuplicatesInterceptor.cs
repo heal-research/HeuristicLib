@@ -7,13 +7,24 @@ public record RemoveDuplicatesInterceptor<TGenotype, TAlgorithmState>
   : StatelessInterceptor<TGenotype, TAlgorithmState>
   where TAlgorithmState : PopulationState<TGenotype>
 {
-  private readonly IEqualityComparer<TGenotype> comparer;
+  public IEqualityComparer<TGenotype> Comparer { get; init; }
+
   public RemoveDuplicatesInterceptor(IEqualityComparer<TGenotype> comparer)
   {
-    this.comparer = comparer;
+    Comparer = comparer;
   }
 
   public override TAlgorithmState Transform(TAlgorithmState currentState, TAlgorithmState? previousState)
+    => RemoveDuplicatesInterceptor.Transform(currentState, previousState, Comparer);
+}
+
+public static class RemoveDuplicatesInterceptor
+{
+  public static TAlgorithmState Transform<TGenotype, TAlgorithmState>(
+    TAlgorithmState currentState,
+    TAlgorithmState? previousState,
+    IEqualityComparer<TGenotype> comparer)
+    where TAlgorithmState : PopulationState<TGenotype>
   {
     var newSolutions = currentState.Population.DistinctBy(s => s.Genotype, comparer).ToImmutableArray();
     return currentState with {

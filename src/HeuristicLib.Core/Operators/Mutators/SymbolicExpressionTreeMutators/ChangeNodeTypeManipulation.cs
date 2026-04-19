@@ -10,7 +10,14 @@ public record ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator
 {
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree ChangeNodeType(SymbolicExpressionTree symbolicExpressionTree, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
+    var t = Mutate(random, parent, searchSpace);
+    Debug.Assert(searchSpace.Contains(t), "Upps destroyed tree");
+    return t;
+  }
+
+  public static SymbolicExpressionTree Mutate(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace)
   {
     var allowedSymbols = new List<Symbol>();
     var mutant = new SymbolicExpressionTree(symbolicExpressionTree);
@@ -73,12 +80,5 @@ public record ChangeNodeTypeManipulation : SymbolicExpressionTreeManipulator
     parent.RemoveSubtree(childIndex);
     parent.InsertSubtree(childIndex, newNode);
     return mutant;
-  }
-
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
-  {
-    var t = ChangeNodeType(parent, random, searchSpace);
-    Debug.Assert(searchSpace.Contains(t), "Upps destroyed tree");
-    return t;
   }
 }

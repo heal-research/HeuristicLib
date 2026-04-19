@@ -6,13 +6,13 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 public record ParetoCrowdingTournamentSelector<TGenotype>
   : StatelessSelector<TGenotype>
 {
-  private readonly int tournamentSize;
-  private readonly bool dominateOnEqualities;
+  public int TournamentSize { get; init; }
+  public bool DominateOnEqualities { get; init; }
 
   public ParetoCrowdingTournamentSelector(bool dominateOnEqualities, int tournamentSize = 2)
   {
-    this.dominateOnEqualities = dominateOnEqualities;
-    this.tournamentSize = tournamentSize;
+    DominateOnEqualities = dominateOnEqualities;
+    TournamentSize = tournamentSize;
   }
 
   public override IReadOnlyList<ISolution<TGenotype>> Select(
@@ -20,6 +20,18 @@ public record ParetoCrowdingTournamentSelector<TGenotype>
     Objective objective,
     int count,
     IRandomNumberGenerator random)
+    => ParetoCrowdingTournamentSelector.Select(population, objective, count, random, DominateOnEqualities, TournamentSize);
+}
+
+public static class ParetoCrowdingTournamentSelector
+{
+  public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
+    IReadOnlyList<ISolution<TGenotype>> population,
+    Objective objective,
+    int count,
+    IRandomNumberGenerator random,
+    bool dominateOnEqualities,
+    int tournamentSize = 2)
   {
     var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
 

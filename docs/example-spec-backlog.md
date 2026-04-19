@@ -45,6 +45,9 @@ These are the next most useful gaps to turn into specs or refactor targets:
 - multi-objective short-path usage
 - role-aware mating and parent selection pressure differences
 - stateless operators should expose direct public static entry points where object instantiation adds no value
+- decide and document one common rule for record configuration style: primary constructor parameters versus explicit init-only properties, including naming and when each form is allowed
+- remove all `Debug.Assert` usage and any other debug-versus-release behavioral divergence from library code, and replace correctness checks with runtime invariants, type constraints, or tests
+- audit all solution candidate types used as `TGenotype` and refactor the model so solution candidates are immutable everywhere
 - remove artificial helper operators that only bundle other operators, such as the old variation layer
 - add a simpler no-explicit-runtime-state algorithm authoring base beside `StatefulIterativeAlgorithm`
 - simplify the analyzer/observation system to remove framework-heavy leakage from the authoring and usage model

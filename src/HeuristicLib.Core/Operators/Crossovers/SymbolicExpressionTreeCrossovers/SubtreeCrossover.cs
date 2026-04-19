@@ -15,7 +15,9 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossover
 /// </summary>
 public record SubtreeCrossover : SymbolicExpressionTreeCrossover
 {
-  public double InternalCrossoverPointProbability { get; set; } = 0.9;
+  public double InternalCrossoverPointProbability { get; init; } = 0.9;
+
+  public override SymbolicExpressionTree Cross(IParents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, searchSpace);
 
   public static SymbolicExpressionTree Cross(IRandomNumberGenerator random,
                                              SymbolicExpressionTree parent0, SymbolicExpressionTree parent1,
@@ -157,6 +159,4 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
                                select branch).ToList();
     return allowedInternalBranches.Count == 0 ? null : allowedInternalBranches.SampleRandom(random);
   }
-
-  public override SymbolicExpressionTree Cross(IParents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, searchSpace);
 }

@@ -20,19 +20,39 @@ public record UniformDistributedCreator : SingleSolutionCreator<RealVector, Real
   public RealVector? Maximum { get; init; }
 
   public override RealVector Create(IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
+    => Create(random, searchSpace, Minimum, Maximum);
+
+  public static RealVector Create(
+    IRandomNumberGenerator random,
+    int length,
+    RealVector minimum,
+    RealVector maximum)
   {
-    if (Minimum is not null && (Minimum < searchSpace.Minimum).Any()) {
-      throw new ArgumentException("Minimum values must be greater or equal to searchSpace minimum values");
-    }
-
-    if (Maximum is not null && (Maximum > searchSpace.Maximum).Any()) {
-      throw new ArgumentException("Maximum values must be less or equal to searchSpace maximum values");
-    }
-
-    if (!RealVector.AreCompatible(searchSpace.Length, Minimum ?? searchSpace.Minimum, Maximum ?? searchSpace.Maximum)) {
+    if (!RealVector.AreCompatible(length, minimum, maximum)) {
       throw new ArgumentException("Vectors must have compatible lengths");
     }
 
-    return RealVector.CreateUniform(searchSpace.Length, Minimum ?? searchSpace.Minimum, Maximum ?? searchSpace.Maximum, random);
+    return random.NextDouble(minimum, maximum, length);
+  }
+
+  public static RealVector Create(
+    IRandomNumberGenerator random,
+    RealVectorSearchSpace searchSpace,
+    RealVector? minimum = null,
+    RealVector? maximum = null)
+  {
+    if (minimum is not null && (minimum < searchSpace.Minimum).Any()) {
+      throw new ArgumentException("Minimum values must be greater or equal to searchSpace minimum values");
+    }
+
+    if (maximum is not null && (maximum > searchSpace.Maximum).Any()) {
+      throw new ArgumentException("Maximum values must be less or equal to searchSpace maximum values");
+    }
+
+    if (!RealVector.AreCompatible(searchSpace.Length, minimum ?? searchSpace.Minimum, maximum ?? searchSpace.Maximum)) {
+      throw new ArgumentException("Vectors must have compatible lengths");
+    }
+
+    return Create(random, searchSpace.Length, minimum ?? searchSpace.Minimum, maximum ?? searchSpace.Maximum);
   }
 }

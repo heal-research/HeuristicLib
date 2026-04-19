@@ -7,6 +7,10 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
 public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
 {
+  public double Contiguity { get; } = 2;
+
+  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, Contiguity);
+
   /// <summary>
   ///   Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if
   ///   crossed either a contracting crossover or an expanding crossover is performed, again with equal probability.
@@ -28,7 +32,7 @@ public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Rea
   ///   means closer). The value must be greater or equal than 0. Typical values are in the range [2;5].
   /// </param>
   /// <returns>The vector resulting from the crossover.</returns>
-  public static RealVector Apply(IRandomNumberGenerator random, RealVector parent1, RealVector parent2, double contiguity)
+  public static RealVector Cross(IRandomNumberGenerator random, RealVector parent1, RealVector parent2, double contiguity)
   {
     var length = parent1.Count;
     if (length != parent2.Count) {
@@ -66,7 +70,7 @@ public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Rea
 
   /// <summary>
   ///   Checks number of parents, availability of the parameters and forwards the call to
-  ///   <see cref="Apply(IRandomNumberGenerator, RealVector, RealVector, DoubleValue)" />.
+  ///   <see cref="Cross(IRandomNumberGenerator, RealVector, RealVector, double)" />.
   /// </summary>
   /// <exception cref="ArgumentException">
   ///   Thrown when there are not exactly 2 parents or when the contiguity parameter could
@@ -81,12 +85,8 @@ public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Rea
       throw new ArgumentException("SimulatedBinaryCrossover: The number of parents is not equal to 2");
     }
 
-    return Apply(random, parents[0], parents[1], Contiguity);
+    return Cross(random, parents[0], parents[1], Contiguity);
   }
-
-  public double Contiguity { get; } = 2;
-
-  public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Apply(random, parents.Parent1, parents.Parent2, Contiguity);
 }
 
 public static class Sbx
@@ -191,10 +191,10 @@ public static class Sbx
 
 public record SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
 {
-  public double ProbVar { get; set; } = 0.5;
-  public double Eta { get; set; } = 15.0;
-  public double ProbExch { get; set; } = 1.0; // single draw gating probBin (whole call)
-  public double ProbBin { get; set; } = 0.5;
+  public double ProbVar { get; init; } = 0.5;
+  public double Eta { get; init; } = 15.0;
+  public double ProbExch { get; init; } = 1.0; // single draw gating probBin (whole call)
+  public double ProbBin { get; init; } = 0.5;
 
   public (RealVector child1, RealVector child2) Do(
     RealVector p1,

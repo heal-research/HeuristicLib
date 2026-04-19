@@ -63,12 +63,28 @@ public record PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSe
   }
 
   public override RealVector Mutate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
+    => Mutate(parent, random, searchSpace, eta, atLeastOnce);
+
+  public static RealVector Mutate(
+    RealVector parent,
+    IRandomNumberGenerator random,
+    RealVectorSearchSpace searchSpace,
+    double eta,
+    bool atLeastOnce)
+    => Mutate(parent, random, eta, atLeastOnce, searchSpace.Minimum, searchSpace.Maximum);
+
+  public static RealVector Mutate(
+    RealVector parent,
+    IRandomNumberGenerator random,
+    double eta,
+    bool atLeastOnce,
+    RealVector minimum,
+    RealVector maximum)
   {
-    var probVar = GetVarProb(searchSpace);
-    // Current vector and bounds
+    var probVar = Math.Min(0.5, 1.0 / parent.Count);
     var x = parent.ToArray(); // assume double[] (or expose as such)
-    var xl = searchSpace.Minimum;
-    var xu = searchSpace.Maximum;
+    var xl = minimum;
+    var xu = maximum;
     var nVar = x.Length;
 
     var xp = new double[nVar];

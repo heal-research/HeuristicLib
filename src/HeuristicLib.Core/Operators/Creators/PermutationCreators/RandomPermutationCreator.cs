@@ -7,13 +7,11 @@ namespace HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 public record RandomPermutationCreator : SingleSolutionCreator<Permutation, PermutationSearchSpace>
 {
   public override Permutation Create(IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
-  {
-    var elements = Enumerable.Range(0, searchSpace.Length).ToArray();
-    for (var i = elements.Length - 1; i > 0; i--) {
-      var j = random.NextInt(i + 1);
-      (elements[i], elements[j]) = (elements[j], elements[i]);
-    }
+    => Create(searchSpace, random);
 
-    return new Permutation(elements);
-  }
+  public static Permutation Create(PermutationSearchSpace searchSpace, IRandomNumberGenerator random)
+    => Create(random, searchSpace.Length);
+
+  public static Permutation Create(IRandomNumberGenerator random, int length)
+    => random.NextPermutation(length);
 }

@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
@@ -27,15 +28,23 @@ public record RoundedUniformArithmeticCrossover : SingleSolutionCrossover<Intege
   } = 1;
 
   public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-  {
-    return Apply(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Probability);
-  }
+    => Cross(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Probability);
 
-  public static IntegerVector Apply(
+  public static IntegerVector Cross(
     IRandomNumberGenerator random,
     IntegerVector parent1,
     IntegerVector parent2,
     IntegerVectorSearchSpace searchSpace,
+    double alpha,
+    double probability)
+    => Cross(random, parent1, parent2, searchSpace.Minimum, searchSpace.Maximum, alpha, probability);
+
+  public static IntegerVector Cross(
+    IRandomNumberGenerator random,
+    IntegerVector parent1,
+    IntegerVector parent2,
+    IntegerVector minimum,
+    IntegerVector maximum,
     double alpha,
     double probability)
   {
@@ -52,8 +61,8 @@ public record RoundedUniformArithmeticCrossover : SingleSolutionCrossover<Intege
 
     for (int i = 0; i < length; i++) {
       if (random.NextDouble() < probability) {
-        double x = alpha * parent1[i] + (1.0 - alpha) * parent2[i];
-        result[i] = searchSpace.RoundFeasible(x, i);
+        double value = alpha * parent1[i] + (1.0 - alpha) * parent2[i];
+        result[i] = RealVector.RoundToIntegerAt(value, minimum, maximum, i);
       } else {
         result[i] = parent1[i];
       }

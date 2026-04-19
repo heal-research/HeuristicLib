@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
@@ -8,13 +9,16 @@ public record UniformOnePositionManipulator
   : SingleSolutionMutator<IntegerVector, IntegerVectorSearchSpace>
 {
   public override IntegerVector Mutate(IntegerVector parent, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-    => Manipulate(random, parent, searchSpace);
+    => Mutate(random, parent, searchSpace);
 
-  public static IntegerVector Manipulate(IRandomNumberGenerator random, IntegerVector vector, IntegerVectorSearchSpace searchSpace)
+  public static IntegerVector Mutate(IRandomNumberGenerator random, IntegerVector vector, IntegerVectorSearchSpace searchSpace)
+    => Mutate(random, vector, searchSpace.Minimum, searchSpace.Maximum);
+
+  public static IntegerVector Mutate(IRandomNumberGenerator random, IntegerVector vector, IntegerVector minimum, IntegerVector maximum)
   {
     var index = random.NextInt(0, vector.Count);
     var res = vector.ToArray();
-    res[index] = searchSpace.UniformRandom(random, index);
+    res[index] = random.NextInt(minimum, maximum, index);
     return res;
   }
 }

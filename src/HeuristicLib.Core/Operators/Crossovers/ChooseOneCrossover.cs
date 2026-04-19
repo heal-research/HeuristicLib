@@ -78,7 +78,7 @@ public static class ChooseOneCrossover
   {
     public ChooseOneCrossover<TGenotype, TSearchSpace, TProblem> WithRate(double crossoverRate)
     {
-      return Create([crossover, NoCrossover<TGenotype>.Instance], [crossoverRate, 1 - crossoverRate]);
+      return Create([crossover, SelectFirstParentCrossover<TGenotype>.Instance], [crossoverRate, 1 - crossoverRate]);
     }
   }
 }

@@ -18,9 +18,9 @@ public record FullTreeCreator : SymbolicExpressionTreeCreator
   /// <param name="maxTreeDepth">Maximum tree depth</param>
   /// <param name="maxTreeLength">Maximum tree length. This parameter is not used.</param>
   /// <returns></returns>
-  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => CreateTree(random, searchSpace);
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
 
-  public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)
   {
     var tree = searchSpace.Grammar.MakeStump(random);
     Create(random, tree.Root[0], searchSpace, searchSpace.TreeDepth - tree.Depth);

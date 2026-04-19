@@ -7,12 +7,15 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
 {
   public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random)
+    => Cross(parents.Parent1, parents.Parent2, random);
+
+  public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random)
   {
-    if (parents.Parent1.Count != parents.Parent2.Count) {
+    if (parent1.Count != parent2.Count) {
       throw new ArgumentException("EdgeRecombinationCrossover: The parent permutations are of unequal length.");
     }
 
-    var length = parents.Parent1.Count;
+    var length = parent1.Count;
     var result = new int[length];
     var edgeList = new int[length, 4];
     var remainingNumbers = new bool[length];
@@ -23,7 +26,7 @@ public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
       remainingNumbers[i] = true;
 
       index = 0;
-      while (index < length && parents.Parent1[index] != i) {
+      while (index < length && parent1[index] != i) {
         // search edges in parent1
         index++;
       }
@@ -32,10 +35,10 @@ public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
         throw new InvalidOperationException("Permutation doesn't contain number " + i + ".");
       }
 
-      edgeList[i, 0] = parents.Parent1[(index - 1 + length) % length];
-      edgeList[i, 1] = parents.Parent1[(index + 1) % length];
+      edgeList[i, 0] = parent1[(index - 1 + length) % length];
+      edgeList[i, 1] = parent1[(index + 1) % length];
       index = 0;
-      while (index < length && parents.Parent2[index] != i) {
+      while (index < length && parent2[index] != i) {
         // search edges in parent2
         index++;
       }
@@ -44,10 +47,10 @@ public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
         throw new InvalidOperationException("Permutation doesn't contain number " + i + ".");
       }
 
-      var currentEdge = parents.Parent2[(index - 1 + length) % length];
+      var currentEdge = parent2[(index - 1 + length) % length];
       edgeList[i, 2] = edgeList[i, 0] != currentEdge && edgeList[i, 1] != currentEdge ? currentEdge : -1; // new edge found ?
 
-      currentEdge = parents.Parent2[(index + 1) % length];
+      currentEdge = parent2[(index + 1) % length];
       edgeList[i, 3] = edgeList[i, 0] != currentEdge && edgeList[i, 1] != currentEdge ? currentEdge : -1; // new edge found ?
     }
 

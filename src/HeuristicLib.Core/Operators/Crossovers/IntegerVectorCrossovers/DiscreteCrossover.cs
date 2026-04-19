@@ -14,9 +14,9 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 public record DiscreteCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
   public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-    => Apply(random, [parents.Parent1, parents.Parent2]);
+    => Cross(random, [parents.Parent1, parents.Parent2]);
 
-  public static IntegerVector Apply(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents)
+  public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents)
   {
     var n = parents.Count;
     if (n < 2)

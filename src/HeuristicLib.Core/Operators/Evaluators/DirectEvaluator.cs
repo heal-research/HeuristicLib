@@ -9,7 +9,15 @@ public record DirectEvaluator<TGenotype>
   : StatelessEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
   public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-    => problem.Evaluate(genotypes, random);
+    => DirectEvaluator.Evaluate(genotypes, random, problem);
+}
+
+public static class DirectEvaluator
+{
+  public static IReadOnlyList<ObjectiveVector> Evaluate<TGenotype>(
+    IReadOnlyList<TGenotype> genotypes,
+    IRandomNumberGenerator random,
+    IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => problem.Evaluate(genotypes, random);
 }
 
 public static class DirectEvaluatorExtensions

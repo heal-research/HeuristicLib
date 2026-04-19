@@ -7,6 +7,6 @@ public record SwapSingleSolutionMutator : SingleSolutionMutator<Permutation>
 {
   public override Permutation Mutate(Permutation solution, IRandomNumberGenerator random)
   {
-    return Permutation.SwapRandomElements(solution, random);
+    return random.Swap(solution);
   }
 }
