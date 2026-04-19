@@ -4,7 +4,7 @@ Algorithms produce **states**: values that represent the algorithm at a specific
 
 States are the primary unit of observation and control:
 
-- Streaming execution yields states (`IEnumerable<TState>`).
+- Streaming execution yields states.
 - Termination policies inspect states.
 - Interceptors post-process states.
 
@@ -41,10 +41,10 @@ The default streaming loop accepts an optional `initialState` parameter. Concept
 This supports a simple checkpointing pattern:
 
 ```csharp
-var last = algorithm.Execute(problem, rng);
+var last = algorithm.RunToCompletion(problem, rng);
 
 // Continue from the checkpoint.
-foreach (var state in algorithm.ExecuteStreaming(problem, rng, initialState: last)) {
+foreach (var state in algorithm.RunStreaming(problem, rng, initialState: last)) {
    // ...
 }
 ```

@@ -44,6 +44,10 @@ These are the next most useful gaps to turn into specs or refactor targets:
 - no-publish observation model
 - multi-objective short-path usage
 - role-aware mating and parent selection pressure differences
+- stateless operators should expose direct public static entry points where object instantiation adds no value
+- remove artificial helper operators that only bundle other operators, such as the old variation layer
+- add a simpler no-explicit-runtime-state algorithm authoring base beside `StatefulIterativeAlgorithm`
+- simplify the analyzer/observation system to remove framework-heavy leakage from the authoring and usage model
 
 ## Covered foundations
 

@@ -1,10 +1,9 @@
-﻿using HEAL.HeuristicLib.AlgorithmExecutions;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
-using HEAL.HeuristicLib.Operators.Variations;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
@@ -28,36 +27,46 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
   } = 0.1;
 
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
-  //public IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; } = new ElitismReplacer<TGenotype>(1);
 
-  public override EvolutionaryAlgorithmExecution<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override PopulationState<TGenotype> ExecuteStep(
+    PopulationState<TGenotype>? previousState,
+    IOperatorExecutor executor,
+    TProblem problem,
+    IRandomNumberGenerator random)
   {
-    // ToDo: think about if this is the right way or if we break the instantiation process because we create a new operator here.
-    var mutator = MutationRate >= 1.0
+    if (previousState is null) {
+      var initialSolutions = executor.Create(Creator, PopulationSize, random, problem.SearchSpace, problem);
+      var initialFitnesses = executor.Evaluate(Evaluator, initialSolutions, random, problem.SearchSpace, problem);
+      return new PopulationState<TGenotype> {
+        Population = Population.From(initialSolutions, initialFitnesses)
+      };
+    }
+
+    var oldPopulation = previousState.Population.Solutions;
+    var offspringSize = PopulationSize * 2;
+    var effectiveMutator = MutationRate >= 1.0
       ? Mutator
       : Mutator.WithRate(MutationRate);
-    var crossover = Crossover; // ToDo: crossover probability
 
-    var variation = new CrossoverAndMutationVariation<TGenotype, TSearchSpace, TProblem>(crossover, mutator);
+    var parents = executor.Select(Selector, oldPopulation, problem.Objective, offspringSize, random, problem.SearchSpace, problem)
+      .Select(x => x.Genotype)
+      .ToList();
 
-    var replacer = new ElitismReplacer<TGenotype>(Elites);
+    var offspring = executor.Cross(Crossover, parents.ToParentPairs(), random, problem.SearchSpace, problem);
+    offspring = executor.Mutate(effectiveMutator, offspring, random, problem.SearchSpace, problem);
+    var fitnesses = executor.Evaluate(Evaluator, offspring, random, problem.SearchSpace, problem);
+    var offspringPopulation = Population.From(offspring, fitnesses).Solutions;
 
-    return new EvolutionaryAlgorithmExecution<TGenotype, TSearchSpace, TProblem>(
-      instanceRegistry.Run,
-      PopulationSize,
-      offspringSize: PopulationSize * 2,
-      instanceRegistry.Resolve(Creator),
-      instanceRegistry.Resolve(Selector),
-      instanceRegistry.Resolve(variation),
-      instanceRegistry.Resolve(replacer),
-      instanceRegistry.Resolve(Evaluator),
-      Interceptor is not null ? instanceRegistry.Resolve(Interceptor) : null
-    );
+    var newPopulation = ElitismReplacer<TGenotype>.Replace(oldPopulation, offspringPopulation, problem.Objective, PopulationSize, Elites);
+
+    return new PopulationState<TGenotype> {
+      Population = Population.From(newPopulation)
+    };
   }
 }
 
-// ToDo: Do we want this, and if yes, do we want it for all algorithms?
-public record GeneticAlgorithm<TGenotype, TSearchSpace> : GeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> where TSearchSpace : class, ISearchSpace<TGenotype>;
+public record GeneticAlgorithm<TGenotype, TSearchSpace> : GeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+  where TSearchSpace : class, ISearchSpace<TGenotype>;
 
 public record GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>>;
 
@@ -81,7 +90,6 @@ public static class GeneticAlgorithm
       MutationRate = mutationRate,
       Selector = selector,
       Elites = elites,
-      //Replacer = replacer,
       PopulationSize = populationSize,
       Evaluator = evaluator,
       Interceptor = interceptor

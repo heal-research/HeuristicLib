@@ -100,6 +100,30 @@ public class PractitionerUsageSpecs
     results.All(result => problem.SearchSpace.Contains(result.Value.Solution.Genotype)).ShouldBeTrue();
   }
 
+  [Fact]
+  public async Task EvolutionStrategy_BenchmarkExample_RunsToCompletion()
+  {
+    var problem = CreateRastriginProblem(dimension: 4);
+    var algorithm = new EvolutionStrategy<RealVector, RealVectorSearchSpace, TestFunctionProblem> {
+      PopulationSize = 8,
+      NumberOfChildren = 8,
+      Strategy = EvolutionStrategyType.Plus,
+      Creator = new UniformDistributedCreator(problem.SearchSpace),
+      Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+      Crossover = null,
+      Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+      InitialMutationStrength = 0.15
+    }.WithMaxIterations(5);
+
+    var finalState = await algorithm.RunToCompletionAsync(
+      problem,
+      RandomNumberGenerator.Create(555),
+      ct: TestContext.Current.CancellationToken);
+
+    finalState.Population.Solutions.Length.ShouldBe(8);
+    finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+  }
+
   private static TestFunctionProblem CreateRastriginProblem(int dimension)
   {
     return new TestFunctionProblem(new RastriginFunction(dimension));

@@ -1,103 +1,96 @@
 # Algorithm
 
-An **algorithm** drives the optimization process.
+An algorithm drives the optimization process by producing a stream of algorithm states.
 
-In HeuristicLib’s abstractions, an algorithm is an **iterative state transformer**:
+For normal authoring, HeuristicLib now promotes a simple model:
 
-> Starting from an optional initial state, it produces a sequence of states until a termination policy says “stop”.
+- derive from `IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>` if the algorithm has no meaningful custom runtime state
+- derive from `StatefulIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TRuntimeState>` if it does
+- implement the step logic on the algorithm type itself
+- call operators through `IOperatorExecutor`
 
-## The key interface: `IIterable<...>`
+That is the main authoring story users should learn first.
 
-`IIterable<TG, TS, TP, TR>` is the core contract:
+## Authoring bases
 
-- `TR ExecuteStep(TP problem, TR? previousState, IRandomNumberGenerator random)`
-- `ITerminator<...> Terminator { get; }`
-- `IInterceptor<...>? Interceptor { get; }`
+### `IterativeAlgorithm<...>`
 
-The library also provides extension methods:
+Use this when the algorithm can be written as:
 
-- `Execute(problem, random, initialState?)` returns the last produced state.
-- `ExecuteStreaming(problem, random, initialState?)` yields states as they are produced.
+```csharp
+protected override TSearchState ExecuteStep(
+  TSearchState? previousState,
+  IOperatorExecutor executor,
+  TProblem problem,
+  IRandomNumberGenerator random)
+```
 
-## `IAlgorithm<...>` and the base class in this repository
+This is the common case for algorithms such as:
 
-`IAlgorithm<...>` is the algorithm definition interface.
-
-Its execution instance exposes the streaming runtime API used during execution.
-
-In this repository, most concrete algorithms inherit from:
-
-- `Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>`
-
-That base class wires the common properties (`Terminator`, `Interceptor`, `Evaluator`) and provides an `Execute(problem, random)` convenience method.
-
-## Algorithms available in this repository
-
-Evolutionary:
-
+- `HillClimber<...>`
 - `GeneticAlgorithm<...>`
 - `NSGA2<...>`
 - `EvolutionStrategy<...>`
-- `ALPSGeneticAlgorithm<...>`
+- `OpenEndedRelevantAllelesPreservingGeneticAlgorithm<...>`
+- `AlpsGeneticAlgorithm<...>`
 
-Local search:
+### `StatefulIterativeAlgorithm<...>`
 
-- `HillClimber<...>`
-
-Meta algorithms:
-
-- `ConcatAlgorithm<...>`
-
-## The canonical story: Genetic Algorithm
-
-If you’re learning the library, start with the genetic algorithm. It composes the most recognizable operator set:
-
-- create initial genotypes
-- evaluate them
-- select parents
-- crossover and mutate offspring
-- replace the population
-
-The produced state is a population snapshot, which makes progress easy to reason about.
-
-## Builders (recommended for configuration)
-
-For common algorithms, the repository provides builders that collect configuration in one place.
-
-Example (genetic algorithm):
+Use this when the algorithm needs hidden per-run state:
 
 ```csharp
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
-using HEAL.HeuristicLib.Operators.Terminators;
-using HEAL.HeuristicLib.Problems.TravelingSalesman;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
+protected override TRuntimeState CreateInitialRuntimeState();
 
-var builder = new GeneticAlgorithmBuilder<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
-	Creator = new RandomPermutationCreator(),
-	Crossover = new OrderCrossover(),
-	Mutator = new SwapSingleSolutionMutator(),
-	PopulationSize = 200,
-	MutationRate = 0.20,
-	Elites = 2,
-	Terminator = new AfterIterationsTerminator<Permutation>(maximumIterations: 200)
-};
-
-var algorithm = builder.Build();
+protected override TSearchState ExecuteStep(
+  TSearchState? previousState,
+  TRuntimeState runtimeState,
+  IOperatorExecutor executor,
+  TProblem problem,
+  IRandomNumberGenerator random)
 ```
 
-## Extension points
+`TRuntimeState` is internal algorithm execution state. It is not the streamed public search state.
 
-- **Termination**: `ITerminator` decides when to stop.
-- **Interception**: `IInterceptor` transforms the produced state after each step.
-- **Observation and analysis**: observable operators provide callback hook points, and run-scoped analyzers collect analysis state via `CreateRun(problem, analyzers...)`. See [Execution model](execution-model.md) and [Analyzer architecture](analyzer-architecture.md).
+## `IOperatorExecutor`
+
+Algorithms call operators through `IOperatorExecutor` rather than resolving execution instances manually.
+
+Examples:
+
+```csharp
+var genotypes = executor.Create(Creator, PopulationSize, random, problem.SearchSpace, problem);
+var fitnesses = executor.Evaluate(Evaluator, genotypes, random, problem.SearchSpace, problem);
+var parents = executor.Select(Selector, population, problem.Objective, count, random, problem.SearchSpace, problem);
+```
+
+This keeps algorithm authoring focused on the optimization logic instead of execution-instance plumbing.
+
+## Evaluator and interceptor
+
+`Algorithm<...>` provides the explicit `Evaluator`.
+
+`StatefulIterativeAlgorithm<...>` additionally supports an optional `Interceptor` that transforms the produced state after each step.
+
+The evaluator is part of the core algorithm story.
+The interceptor is currently a practical execution hook and may evolve later when the analyzer/observation system is revisited.
+
+## Internal runtime machinery
+
+The library still uses execution instances internally.
+
+That matters for:
+
+- run-local state
+- shared runtime graph resolution
+- meta-algorithm behavior
+
+But for normal algorithm authoring, execution instances are infrastructure, not the intended extension model.
+
+If a very advanced algorithm really needs full manual control, it can still implement `IAlgorithm<...>` directly.
 
 ## Related pages
 
 - [Algorithm state](algorithm-state.md)
-- [Operators](operators.md)
 - [Execution model](execution-model.md)
-- [Analyzer architecture](analyzer-architecture.md)
+- [Definition vs execution instances](execution-instances.md)
+- [Operators](operators.md)

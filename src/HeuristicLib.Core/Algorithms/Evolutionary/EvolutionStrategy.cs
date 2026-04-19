@@ -1,4 +1,3 @@
-﻿using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Replacers;
@@ -35,76 +34,17 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
   public double InitialMutationStrength { get; init; } = 1.0;
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
-  public override EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-  {
-    var interceptorInstance = Interceptor is not null ? instanceRegistry.Resolve(Interceptor) : null;
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
-    var creatorInstance = instanceRegistry.Resolve(Creator);
-    var mutatorInstance = instanceRegistry.Resolve(Mutator);
-    var crossoverInstance = Crossover is not null ? instanceRegistry.Resolve(Crossover) : null;
-    var selectorInstance = instanceRegistry.Resolve(Selector);
-
-    IReplacer<TGenotype, TSearchSpace, TProblem> replacer = Strategy switch {
-      EvolutionStrategyType.Comma => new ElitismReplacer<TGenotype>(0),
-      EvolutionStrategyType.Plus => new PlusSelectionReplacer<TGenotype>(),
-      _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
-    };
-    var replacerInstance = instanceRegistry.Resolve(replacer);
-
-    return new EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>(
-      instanceRegistry.Run,
-      interceptorInstance,
-      evaluatorInstance,
-      PopulationSize,
-      NumberOfChildren,
-      Strategy,
-      creatorInstance,
-      mutatorInstance,
-      crossoverInstance,
-      selectorInstance,
-      InitialMutationStrength,
-      replacerInstance
-    );
-  }
-}
-
-public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
-  protected readonly int PopulationSize;
-  protected readonly int NumberOfChildren;
-  protected readonly EvolutionStrategyType Strategy;
-  protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
-  protected readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator;
-  protected readonly ICrossoverInstance<TGenotype, TSearchSpace, TProblem>? Crossover;
-  protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
-  protected readonly double InitialMutationStrength;
-  protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
-
-  public EvolutionStrategyInstance(Run run, IInterceptorInstance<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, int numberOfChildren, EvolutionStrategyType strategy, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem>? crossover, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, double initialMutationStrength, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
-    : base(run, interceptor, evaluator)
-  {
-    PopulationSize = populationSize;
-    NumberOfChildren = numberOfChildren;
-    Strategy = strategy;
-    Creator = creator;
-    Mutator = mutator;
-    Crossover = crossover;
-    Selector = selector;
-    InitialMutationStrength = initialMutationStrength;
-    Replacer = replacer;
-  }
-
-  public override EvolutionStrategyState<TGenotype> ExecuteStep(EvolutionStrategyState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
+  protected override EvolutionStrategyState<TGenotype> ExecuteStep(
+    EvolutionStrategyState<TGenotype>? previousState,
+    IOperatorExecutor executor,
+    TProblem problem,
+    IRandomNumberGenerator random)
   {
     if (previousState is null) {
-      var initialPopulation = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
-      var objectives = Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
+      var initialPopulation = executor.Create(Creator, PopulationSize, random, problem.SearchSpace, problem);
+      var objectives = executor.Evaluate(Evaluator, initialPopulation, random, problem.SearchSpace, problem);
       return new EvolutionStrategyState<TGenotype> {
         Population = Population.From(initialPopulation, objectives),
-        // ToDo: Actually, mutation strength is not used in initial population creation.
         MutationStrength = InitialMutationStrength
       };
     }
@@ -112,35 +52,53 @@ public class EvolutionStrategyInstance<TGenotype, TSearchSpace, TProblem>
     IReadOnlyList<TGenotype> parents;
     IReadOnlyList<ObjectiveVector> parentQualities;
 
-    if (Crossover == null) {
-      var parentSolutions = Selector.Select(previousState.Population.Solutions, problem.Objective, NumberOfChildren, random, problem.SearchSpace, problem);
+    if (Crossover is null) {
+      var parentSolutions = executor.Select(
+        Selector,
+        previousState.Population.Solutions,
+        problem.Objective,
+        NumberOfChildren,
+        random,
+        problem.SearchSpace,
+        problem);
       parents = parentSolutions.Select(x => x.Genotype).ToArray();
       parentQualities = parentSolutions.Select(x => x.ObjectiveVector).ToArray();
     } else {
-      var parentSolutions = Selector.Select(previousState.Population.Solutions, problem.Objective, NumberOfChildren * 2, random, problem.SearchSpace, problem);
-      parents = Crossover!.Cross(parentSolutions.ToParents(problem.Objective), random, problem.SearchSpace, problem);
+      var parentSolutions = executor.Select(
+        Selector,
+        previousState.Population.Solutions,
+        problem.Objective,
+        NumberOfChildren * 2,
+        random,
+        problem.SearchSpace,
+        problem);
+      parents = executor.Cross(Crossover, parentSolutions.ToParents(problem.Objective), random, problem.SearchSpace, problem);
       parentQualities = parentSolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
     }
 
-    var children = Mutator.Mutate(parents, random, problem.SearchSpace, problem);
-    var fitnesses = Evaluator.Evaluate(children, random, problem.SearchSpace, problem);
+    var children = executor.Mutate(Mutator, parents, random, problem.SearchSpace, problem);
+    var fitnesses = executor.Evaluate(Evaluator, children, random, problem.SearchSpace, problem);
 
     var newMutationStrength = previousState.MutationStrength;
-    if (Mutator is IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem> vm) {
-      // adapt Mutation Strength based on 1/5th rule
-      var successes = parentQualities.Zip(fitnesses).Count(t => t.Item2.CompareTo(t.Item1, problem.Objective) == DominanceRelation.Dominates);
+    if (Mutator is IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem> variableStrengthMutator) {
+      var successes = parentQualities.Zip(fitnesses)
+        .Count(t => t.Second.CompareTo(t.First, problem.Objective) == DominanceRelation.Dominates);
       var successRate = successes / (double)PopulationSize;
       newMutationStrength *= successRate switch {
         > 0.2 => 1.5,
         < 0.2 => 1 / 1.5,
         _ => 1
       };
-      vm.MutationStrength = newMutationStrength;
+      variableStrengthMutator.MutationStrength = newMutationStrength;
     }
 
     var population = Population.From(children, fitnesses);
+    var newPopulation = Strategy switch {
+      EvolutionStrategyType.Comma => ElitismReplacer<TGenotype>.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, NumberOfChildren, 0),
+      EvolutionStrategyType.Plus => PlusSelectionReplacer<TGenotype>.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, NumberOfChildren),
+      _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
+    };
 
-    var newPopulation = Replacer.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, NumberOfChildren, random, problem.SearchSpace, problem);
     return new EvolutionStrategyState<TGenotype> {
       Population = Population.From(newPopulation),
       MutationStrength = newMutationStrength

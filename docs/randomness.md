@@ -84,8 +84,8 @@ Common fork keys:
 
 The execution APIs explicitly accept an RNG:
 
-- `Execute(problem, random, initialState?)`
-- `ExecuteStreaming(problem, random, initialState?)`
+- `RunToCompletion(problem, random, initialState?)`
+- `RunStreaming(problem, random, initialState?)`
 
 This is intentional: algorithm behavior-affecting dependencies (especially randomness) stay visible and controllable.
 

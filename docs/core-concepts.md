@@ -17,7 +17,7 @@ The goal is a single dominant mental model:
 | Solution | Genotype + objective vector | `ISolution<TGenotype>`
 | Problem | Owns objective + search space + evaluation | `IProblem<TGenotype, TSearchSpace>`
 | Algorithm state | The iteration boundary value produced by algorithms | `IAlgorithmState`
-| Algorithm loop | The “one-step” engine + termination | `IIterable<TG, TS, TP, TR>`
+| Algorithm loop | The step-based algorithm authoring model | `IterativeAlgorithm<...>`, `StatefulIterativeAlgorithm<...>`
 | Operators | Pluggable building blocks used by algorithms | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor`
 
 ## How the types fit together
@@ -35,9 +35,9 @@ This is deliberate: once you’ve understood one family of types, the rest of th
 
 At runtime, the loop looks like this:
 
-1. `ExecuteStep(problem, previousState, random)` produces the next state.
+1. `ExecuteStep(previousState, executor, problem, random)` produces the next state.
 2. Optional: `Interceptor.Transform(newState, previousState, ...)` post-processes the state.
-3. `Terminator.ShouldContinue(newState, previousState, ...)` decides whether to run another step.
+3. Streaming continues until the algorithm completes or an external termination wrapper stops it.
 
 The state itself is the “unit of progress”: it is what streaming execution yields, and it’s what termination and interception reason about.
 
