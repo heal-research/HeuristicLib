@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 // ToDo: If we assume that a selector cannot select the whole requested number of solutions, the EliteSelector could simply be a PipelineSelector with a BestSelector and then another selector for the remaining.
 public record EliteSelector<TGenotype, TSearchSpace, TProblem>
-  : DecoratorSelector<TGenotype, TSearchSpace, TProblem>
+  : WrappingSelector<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -22,12 +22,12 @@ public record EliteSelector<TGenotype, TSearchSpace, TProblem>
   }
 
   protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-    Objective objective, int count, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selectorForRemaining,
+    Objective objective, int count, InnerSelect innerSelect,
     IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
     var selectedElites = BestSelector.Select(population, objective, this.elites, random);
     var remainingCount = count - selectedElites.Count;
-    var selecterdRemaining = selectorForRemaining.Select(population, objective, remainingCount, random, searchSpace, problem);
+    var selecterdRemaining = innerSelect(population, objective, remainingCount, random, searchSpace, problem);
 
     return selectedElites.Concat(selecterdRemaining).ToArray();
   }

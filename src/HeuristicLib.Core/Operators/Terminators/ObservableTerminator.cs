@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 [Equatable]
 public partial record ObservableTerminator<TG, TS, TP, TR>
-  : DecoratorTerminator<TG, TS, TP, TR>
+  : WrappingTerminator<TG, TS, TP, TR>
   where TR : class, IAlgorithmState
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
@@ -26,9 +26,9 @@ public partial record ObservableTerminator<TG, TS, TP, TR>
   {
   }
 
-  protected override bool ShouldTerminate(TR algorithmState, ITerminatorInstance<TG, TS, TP, TR> innerTerminator, TS searchSpace, TP problem)
+  protected override bool ShouldTerminate(TR algorithmState, InnerShouldTerminate innerShouldTerminate, TS searchSpace, TP problem)
   {
-    var result = innerTerminator.ShouldTerminate(algorithmState, searchSpace, problem);
+    var result = innerShouldTerminate(algorithmState, searchSpace, problem);
     foreach (var observer in Observers) {
       observer.AfterTerminationCheck(result, algorithmState, searchSpace, problem);
     }

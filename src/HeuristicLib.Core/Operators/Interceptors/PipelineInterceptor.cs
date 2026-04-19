@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 [Equatable]
 public partial record PipelineInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : CompositeInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  : MultiInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -20,11 +20,11 @@ public partial record PipelineInterceptor<TGenotype, TSearchSpace, TProblem, TAl
   protected override TAlgorithmState Transform(
     TAlgorithmState currentState,
     TAlgorithmState? previousState,
-    IReadOnlyList<IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> innerInterceptors,
+    IReadOnlyList<InnerTransform> innerInterceptors,
     TSearchSpace searchSpace,
     TProblem problem)
   {
-    return innerInterceptors.Aggregate(currentState, (current, interceptor) => interceptor.Transform(current, previousState, searchSpace, problem));
+    return innerInterceptors.Aggregate(currentState, (current, interceptor) => interceptor(current, previousState, searchSpace, problem));
   }
 }
 

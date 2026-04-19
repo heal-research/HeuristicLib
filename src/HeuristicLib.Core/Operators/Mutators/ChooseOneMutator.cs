@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
 public partial record ChooseOneMutator<TGenotype, TSearchSpace, TProblem>
-  : CompositeMutator<TGenotype, TSearchSpace, TProblem>
+  : MultiMutator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -36,10 +36,10 @@ public partial record ChooseOneMutator<TGenotype, TSearchSpace, TProblem>
   }
 
   protected override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents,
-    IReadOnlyList<IMutatorInstance<TGenotype, TSearchSpace, TProblem>> innerMutators,
+    IReadOnlyList<InnerMutate> innerMutators,
     IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
-    return dispatcher.Dispatch(parents, innerMutators, random, (mutator, batchParents) => mutator.Mutate(batchParents, random, searchSpace, problem));
+    return dispatcher.Dispatch(parents, innerMutators, random, (mutator, batchParents) => mutator(batchParents, random, searchSpace, problem));
   }
 }
 

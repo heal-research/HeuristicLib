@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 
 [Equatable]
 public partial record ObservableReplacer<TG, TS, TP>
-  : DecoratorReplacer<TG, TS, TP>
+  : WrappingReplacer<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -27,9 +27,9 @@ public partial record ObservableReplacer<TG, TS, TP>
   {
   }
 
-  protected override IReadOnlyList<ISolution<TG>> Replace(IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, int count, IReplacerInstance<TG, TS, TP> innerReplacer, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  protected override IReadOnlyList<ISolution<TG>> Replace(IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, int count, InnerReplace innerReplace, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    var result = innerReplacer.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+    var result = innerReplace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
     foreach (var observer in Observers) {
       observer.AfterReplacement(result, previousPopulation, offspringPopulation, objective, searchSpace, problem);
     }

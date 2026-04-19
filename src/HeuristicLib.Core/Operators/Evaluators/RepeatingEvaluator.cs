@@ -23,7 +23,7 @@ public static class RepeatingEvaluator
 }
 
 public record RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
-  : DecoratorEvaluator<TGenotype, TSearchSpace, TProblem>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -38,13 +38,13 @@ public record RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
   }
 
   protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
-    IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> innerEvaluator, IRandomNumberGenerator random,
+    InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
     TSearchSpace searchSpace, TProblem problem)
   {
-    var results = innerEvaluator.Evaluate(genotypes, random, searchSpace, problem).ToArray();
+    var results = innerEvaluate(genotypes, random, searchSpace, problem).ToArray();
 
     for (var i = 0; i < repeats; i++) {
-      var reevaluationResult = innerEvaluator.Evaluate(genotypes, random, searchSpace, problem);
+      var reevaluationResult = innerEvaluate(genotypes, random, searchSpace, problem);
       for (var j = 0; j < results.Length; j++) {
         results[j] = aggregator(results[j], reevaluationResult[j]);
       }
@@ -55,7 +55,7 @@ public record RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
 }
 
 public record RepeatedEvaluator<TGenotype, TSearchSpace, TProblem>
-  : DecoratorEvaluator<TGenotype, TSearchSpace, TProblem>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -72,12 +72,12 @@ public record RepeatedEvaluator<TGenotype, TSearchSpace, TProblem>
   }
 
   protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
-    IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> innerEvaluator, IRandomNumberGenerator random,
+    InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
     TSearchSpace searchSpace, TProblem problem)
   {
     var res = BatchExecution.Parallel(
       repeats,
-      r => innerEvaluator.Evaluate(genotypes, r, searchSpace, problem),
+      r => innerEvaluate(genotypes, r, searchSpace, problem),
       random,
       maxDegreeOfParallelism: maxDegreeOfParallelism);
     return Enumerable.Range(0, genotypes.Count)

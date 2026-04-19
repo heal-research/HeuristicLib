@@ -8,7 +8,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
 
 public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-  : DecoratorEvaluator<TGenotype, TSearchSpace, TProblem, DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.State>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.State>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : DynamicProblem<TGenotype, TSearchSpace>
   where TGenotype : notnull
@@ -55,7 +55,7 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
   protected override IReadOnlyList<ObjectiveVector> Evaluate(
     IReadOnlyList<TGenotype> genotypes,
     State state,
-    IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> innerEvaluator,
+    InnerEvaluate innerEvaluate,
     IRandomNumberGenerator random,
     TSearchSpace searchSpace,
     TProblem problem)
@@ -92,7 +92,7 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
     }
 
     if (uncachedGenotypes.Count > 0) {
-      var newObjectives = innerEvaluator.Evaluate(uncachedGenotypes, random, searchSpace, problem);
+      var newObjectives = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
       for (var k = 0; k < uncachedKeys.Count; k++) {
         cache.Set(uncachedKeys[k], newObjectives[k], new MemoryCacheEntryOptions { Size = 1 });
       }

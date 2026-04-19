@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 [Equatable]
 public partial record ObservableSelector<TG, TS, TP>
-  : DecoratorSelector<TG, TS, TP>
+  : WrappingSelector<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -28,9 +28,9 @@ public partial record ObservableSelector<TG, TS, TP>
   }
 
 
-  protected override IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, ISelectorInstance<TG, TS, TP> innerSelector, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  protected override IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    var result = innerSelector.Select(population, objective, count, random, searchSpace, problem);
+    var result = innerSelect(population, objective, count, random, searchSpace, problem);
     foreach (var observer in Observers) {
       observer.AfterSelection(result, population, objective, count, searchSpace, problem);
     }

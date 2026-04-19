@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
 public partial record PipelineMutator<TG, TS, TP>
-  : CompositeMutator<TG, TS, TP>
+  : MultiMutator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -23,12 +23,12 @@ public partial record PipelineMutator<TG, TS, TP>
   }
 
   protected override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents,
-    IReadOnlyList<IMutatorInstance<TG, TS, TP>> innerMutators, IRandomNumberGenerator random, TS searchSpace,
+    IReadOnlyList<InnerMutate> innerMutators, IRandomNumberGenerator random, TS searchSpace,
     TP problem)
   {
     var current = parents;
     foreach (var mutator in innerMutators) {
-      current = mutator.Mutate(current, random, searchSpace, problem);
+      current = mutator(current, random, searchSpace, problem);
     }
     return current;
   }

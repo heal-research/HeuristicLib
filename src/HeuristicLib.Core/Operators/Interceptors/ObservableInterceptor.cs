@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 [Equatable]
 public partial record ObservableInterceptor<TG, TS, TP, TR>
-  : DecoratorInterceptor<TG, TS, TP, TR>
+  : WrappingInterceptor<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, IAlgorithmState
@@ -27,9 +27,9 @@ public partial record ObservableInterceptor<TG, TS, TP, TR>
   {
   }
 
-  protected override TR Transform(TR currentState, TR? previousState, IInterceptorInstance<TG, TS, TP, TR> innerInterceptor, TS searchSpace, TP problem)
+  protected override TR Transform(TR currentState, TR? previousState, InnerTransform innerTransform, TS searchSpace, TP problem)
   {
-    var result = innerInterceptor.Transform(currentState, previousState, searchSpace, problem);
+    var result = innerTransform(currentState, previousState, searchSpace, problem);
     foreach (var observer in Observers) {
       observer.AfterInterception(result, currentState, previousState, searchSpace, problem);
     }

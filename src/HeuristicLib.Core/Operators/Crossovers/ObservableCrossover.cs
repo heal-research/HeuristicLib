@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 [Equatable]
 public partial record ObservableCrossover<TG, TS, TP>
-  : DecoratorCrossover<TG, TS, TP>
+  : WrappingCrossover<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -27,9 +27,9 @@ public partial record ObservableCrossover<TG, TS, TP>
   {
   }
 
-  protected override IReadOnlyList<TG> Cross(IReadOnlyList<IParents<TG>> parents, ICrossoverInstance<TG, TS, TP> innerCrossover, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  protected override IReadOnlyList<TG> Cross(IReadOnlyList<IParents<TG>> parents, InnerCross innerCross, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    var result = innerCrossover.Cross(parents, random, searchSpace, problem);
+    var result = innerCross(parents, random, searchSpace, problem);
     foreach (var observer in Observers) {
       observer.AfterCross(result, parents, searchSpace, problem);
     }

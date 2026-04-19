@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
 public partial record ObservableMutator<TG, TS, TP>
-  : DecoratorMutator<TG, TS, TP>
+  : WrappingMutator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -26,9 +26,9 @@ public partial record ObservableMutator<TG, TS, TP>
   {
   }
 
-  protected override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, IMutatorInstance<TG, TS, TP> innerMutator, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  protected override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, InnerMutate innerMutate, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    var result = innerMutator.Mutate(parents, random, searchSpace, problem);
+    var result = innerMutate(parents, random, searchSpace, problem);
     foreach (var observer in Observers) {
       observer.AfterMutate(result, parents, searchSpace, problem);
     }

@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 [Equatable]
 public partial record ObservableEvaluator<TG, TS, TP>
-  : DecoratorEvaluator<TG, TS, TP>
+  : WrappingEvaluator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -27,9 +27,9 @@ public partial record ObservableEvaluator<TG, TS, TP>
   {
   }
 
-  protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, IEvaluatorInstance<TG, TS, TP> innerEvaluator, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    var result = innerEvaluator.Evaluate(genotypes, random, searchSpace, problem);
+    var result = innerEvaluate(genotypes, random, searchSpace, problem);
     foreach (var observer in Observers) {
       observer.AfterEvaluation(genotypes, result, searchSpace, problem);
     }

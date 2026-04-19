@@ -6,43 +6,45 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public abstract record DecoratorCrossover<TGenotype, TSearchSpace, TProblem, TState>
+public abstract record WrappingCrossover<TGenotype, TSearchSpace, TProblem, TState>
   : ICrossover<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
+  protected delegate IReadOnlyList<TGenotype> InnerCross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
   protected ICrossover<TGenotype, TSearchSpace, TProblem> InnerCrossover { get; }
 
-  protected DecoratorCrossover(ICrossover<TGenotype, TSearchSpace, TProblem> innerCrossover)
+  protected WrappingCrossover(ICrossover<TGenotype, TSearchSpace, TProblem> innerCrossover)
   {
     InnerCrossover = innerCrossover;
   }
 
   public ICrossoverInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new Instance(this, instanceRegistry.Resolve(InnerCrossover), CreateInitialState());
+    new Instance(this, instanceRegistry.Resolve(InnerCrossover).Cross, CreateInitialState());
 
   protected abstract TState CreateInitialState();
 
   protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, TState state,
-    ICrossoverInstance<TGenotype, TSearchSpace, TProblem> innerCrossover, IRandomNumberGenerator random,
+    InnerCross innerCross, IRandomNumberGenerator random,
     TSearchSpace searchSpace, TProblem problem);
 
-  private sealed class Instance(DecoratorCrossover<TGenotype, TSearchSpace, TProblem, TState> decorator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> innerCrossover, TState state)
+  private sealed class Instance(WrappingCrossover<TGenotype, TSearchSpace, TProblem, TState> wrappingCrossover, InnerCross innerCross, TState state)
     : ICrossoverInstance<TGenotype, TSearchSpace, TProblem>
   {
     public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
-      return decorator.Cross(parents, state, innerCrossover, random, searchSpace, problem);
+      return wrappingCrossover.Cross(parents, state, innerCross, random, searchSpace, problem);
     }
   }
 }
 
-public abstract record DecoratorCrossover<TGenotype, TSearchSpace, TProblem>
-  : DecoratorCrossover<TGenotype, TSearchSpace, TProblem, NoState>
+public abstract record WrappingCrossover<TGenotype, TSearchSpace, TProblem>
+  : WrappingCrossover<TGenotype, TSearchSpace, TProblem, NoState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  protected DecoratorCrossover(ICrossover<TGenotype, TSearchSpace, TProblem> innerCrossover)
+  protected WrappingCrossover(ICrossover<TGenotype, TSearchSpace, TProblem> innerCrossover)
     : base(innerCrossover)
   {
   }
@@ -50,11 +52,11 @@ public abstract record DecoratorCrossover<TGenotype, TSearchSpace, TProblem>
   protected sealed override NoState CreateInitialState() => NoState.Instance;
 
   protected sealed override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, NoState state,
-    ICrossoverInstance<TGenotype, TSearchSpace, TProblem> innerCrossover, IRandomNumberGenerator random,
+    InnerCross innerCross, IRandomNumberGenerator random,
     TSearchSpace searchSpace, TProblem problem)
-    => Cross(parents, innerCrossover, random, searchSpace, problem);
+    => Cross(parents, innerCross, random, searchSpace, problem);
 
   protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents,
-    ICrossoverInstance<TGenotype, TSearchSpace, TProblem> innerCrossover, IRandomNumberGenerator random,
+    InnerCross innerCross, IRandomNumberGenerator random,
     TSearchSpace searchSpace, TProblem problem);
 }

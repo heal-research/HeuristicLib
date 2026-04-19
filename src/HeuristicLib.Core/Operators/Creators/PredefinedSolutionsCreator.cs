@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
 public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
-  : DecoratorCreator<TGenotype, TSearchSpace, TProblem, PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>.State>
+  : WrappingCreator<TGenotype, TSearchSpace, TProblem, PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>.State>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -23,7 +23,7 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
 
   protected override State CreateInitialState() => new();
 
-  protected override IReadOnlyList<TGenotype> Create(int count, State state, ICreatorInstance<TGenotype, TSearchSpace, TProblem> innerCreator, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+  protected override IReadOnlyList<TGenotype> Create(int count, State state, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
     var offspring = new TGenotype[count];
 
@@ -42,7 +42,7 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
     }
 
     var remainingRandom = random.Fork(1);
-    var remaining = innerCreator.Create(countRemaining, remainingRandom, searchSpace, problem);
+    var remaining = innerCreate(countRemaining, remainingRandom, searchSpace, problem);
     for (var i = 0; i < remaining.Count; i++) {
       offspring[countPredefined + i] = remaining[i];
     }

@@ -87,13 +87,13 @@ Use this checklist:
    - See [Definition vs execution instances](execution-instances.md) for the mental model.
 
 5. **If the operator wraps exactly one inner operator of the same role, use `Decorator*`**
-   - Examples: `DecoratorEvaluator`, `DecoratorMutator`, `DecoratorSelector`, ...
+   - Examples: `WrappingEvaluator`, `WrappingMutator`, `WrappingSelector`, ...
    - Typical use cases: caching, limiting, adding elites before delegating, prepending predefined solutions.
    - If the wrapper does **not** need its own extra execution state, prefer the lower-arity `Decorator*<...>` base.
    - If it does need mutable per-run wrapper state, use the `Decorator*<..., TState>` form.
 
 6. **If the operator combines several inner operators of the same role, use `Composite*`**
-   - Examples: `CompositeMutator`, `CompositeCrossover`, `CompositeTerminator`, ...
+   - Examples: `MultiMutator`, `MultiCrossover`, `MultiTerminator`, ...
    - Typical use cases: pipelines, weighted choice among operators, AND/OR combinations of terminators.
    - If the wrapper does **not** need its own extra execution state, prefer the lower-arity `Composite*<...>` base.
    - If it does need mutable per-run wrapper state, use the `Composite*<..., TState>` form.

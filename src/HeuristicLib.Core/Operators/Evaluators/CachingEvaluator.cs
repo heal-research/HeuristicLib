@@ -7,7 +7,7 @@ using Microsoft.Extensions.Caching.Memory;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-  : DecoratorEvaluator<TGenotype, TSearchSpace, TProblem, CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.State>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.State>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : notnull
@@ -38,7 +38,7 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
   protected override IReadOnlyList<ObjectiveVector> Evaluate(
     IReadOnlyList<TGenotype> genotypes,
     State state,
-    IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> innerEvaluator,
+    InnerEvaluate innerEvaluate,
     IRandomNumberGenerator random,
     TSearchSpace searchSpace,
     TProblem problem)
@@ -74,7 +74,7 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
       return results;
     }
 
-    var newObjectives = innerEvaluator.Evaluate(uncachedGenotypes, random, searchSpace, problem);
+    var newObjectives = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
 
     for (var k = 0; k < uncachedKeys.Count; k++) {
       cache.Set(uncachedKeys[k], newObjectives[k], new MemoryCacheEntryOptions { Size = 1 });

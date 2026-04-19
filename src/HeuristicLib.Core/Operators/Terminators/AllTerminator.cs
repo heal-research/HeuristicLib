@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 [Equatable]
 public partial record AllTerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : CompositeTerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  : MultiTerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
   where TAlgorithmState : class, IAlgorithmState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -18,9 +18,9 @@ public partial record AllTerminator<TGenotype, TSearchSpace, TProblem, TAlgorith
   }
 
   protected override bool ShouldTerminate(TAlgorithmState algorithmState,
-    IReadOnlyList<ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>> innerTerminators,
+    IReadOnlyList<InnerShouldTerminate> innerTerminators,
     TSearchSpace searchSpace, TProblem problem)
   {
-    return innerTerminators.All(t => t.ShouldTerminate(algorithmState, searchSpace, problem));
+    return innerTerminators.All(t => t(algorithmState, searchSpace, problem));
   }
 }

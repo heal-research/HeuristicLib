@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
 public partial record ObservableCreator<TG, TS, TP>
-  : DecoratorCreator<TG, TS, TP>
+  : WrappingCreator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -26,9 +26,9 @@ public partial record ObservableCreator<TG, TS, TP>
   {
   }
 
-  protected override IReadOnlyList<TG> Create(int count, ICreatorInstance<TG, TS, TP> innerCreator, IRandomNumberGenerator random, TS searchSpace, TP problem)
+  protected override IReadOnlyList<TG> Create(int count, InnerCreate innerCreate, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    var result = innerCreator.Create(count, random, searchSpace, problem);
+    var result = innerCreate(count, random, searchSpace, problem);
     foreach (var observer in Observers) {
       observer.AfterCreation(result, count, searchSpace, problem);
     }
