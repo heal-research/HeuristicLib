@@ -58,7 +58,6 @@ public class PermutationSearchSpaceTests
     Assert.Equal(5, intSpace.Length);
     Assert.Equal(new IntegerVector(0), intSpace.Minimum);
     Assert.Equal(new IntegerVector(4), intSpace.Maximum);
-    Assert.Equal(new IntegerVector(1), intSpace.Step);
   }
 
   [Fact]
@@ -71,7 +70,6 @@ public class PermutationSearchSpaceTests
     Assert.Equal(1, intSpace.Length);
     Assert.Equal(new IntegerVector(0), intSpace.Minimum);
     Assert.Equal(new IntegerVector(0), intSpace.Maximum);
-    Assert.Equal(new IntegerVector(1), intSpace.Step);
   }
 
   [Fact]

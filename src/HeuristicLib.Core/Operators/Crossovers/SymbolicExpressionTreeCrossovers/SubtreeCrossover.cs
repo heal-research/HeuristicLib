@@ -30,7 +30,9 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
     var childLength = crossoverPoint0.Child?.GetLength() ?? 0;
     // calculate the max length and depth that the inserted branch can have 
     var maxInsertedBranchLength = Math.Max(0, searchSpace.TreeLength - (parent0.Length - childLength));
-    var maxInsertedBranchDepth = Math.Max(0, searchSpace.TreeDepth - parent0.Root.GetBranchLevel(crossoverPoint0.Parent));
+    // The inserted branch hangs below the selected parent, so it consumes one
+    // additional level beyond the parent's branch level.
+    var maxInsertedBranchDepth = Math.Max(0, searchSpace.TreeDepth - parent0.Root.GetBranchLevel(crossoverPoint0.Parent) - 1);
 
     var allowedBranches = new List<SymbolicExpressionTreeNode?>();
     parent1.Root.ForEachNodePostfix(n => {
