@@ -1,7 +1,6 @@
 ﻿using System.Collections;
 using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 using MathNet.Numerics.Statistics;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
@@ -139,7 +138,7 @@ public sealed class RegressionVariableImpactsCalculator(
         replacementValues = Enumerable.Repeat(double.NaN, modifiableDataset.Rows).ToList();
         // update column values 
         foreach (var r in rows) {
-          replacementValues[r] = NormalDistribution.NextDouble(r2, avg, stdDev);
+          replacementValues[r] = r2.NextNormal(avg, stdDev);
         }
 
         break;

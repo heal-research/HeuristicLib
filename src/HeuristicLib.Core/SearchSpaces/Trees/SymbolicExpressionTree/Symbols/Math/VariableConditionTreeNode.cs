@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
@@ -24,19 +23,19 @@ public sealed class VariableConditionTreeNode : SymbolicExpressionTreeNode
   public override void ResetLocalParameters(IRandomNumberGenerator random)
   {
     base.ResetLocalParameters(random);
-    Threshold = NormalDistribution.NextDouble(random, Symbol.ThresholdInitializerMu, Symbol.ThresholdInitializerSigma);
+    Threshold = random.NextNormal(Symbol.ThresholdInitializerMu, Symbol.ThresholdInitializerSigma);
     VariableName = Symbol.VariableNames.SampleRandom(random);
-    Slope = NormalDistribution.NextDouble(random, Symbol.SlopeInitializerMu, Symbol.SlopeInitializerSigma);
+    Slope = random.NextNormal(Symbol.SlopeInitializerMu, Symbol.SlopeInitializerSigma);
   }
 
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
   {
     base.ShakeLocalParameters(random, shakingFactor);
-    var x = NormalDistribution.NextDouble(random, Symbol.ThresholdManipulatorMu, Symbol.ThresholdManipulatorSigma);
+    var x = random.NextNormal(Symbol.ThresholdManipulatorMu, Symbol.ThresholdManipulatorSigma);
     Threshold += x * shakingFactor;
     VariableName = Symbol.VariableNames.SampleRandom(random);
 
-    x = NormalDistribution.NextDouble(random, Symbol.SlopeManipulatorMu, Symbol.SlopeManipulatorSigma);
+    x = random.NextNormal(Symbol.SlopeManipulatorMu, Symbol.SlopeManipulatorSigma);
     Slope += x * shakingFactor;
   }
 

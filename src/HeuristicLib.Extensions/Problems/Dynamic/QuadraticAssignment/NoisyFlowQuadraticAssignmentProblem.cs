@@ -2,7 +2,6 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
@@ -55,7 +54,7 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
 
     for (var i = 0; i < n; i++) {
       for (var j = 0; j < n; j++) {
-        noisyFlows[i, j] = f0[i, j] + EnvironmentRandom.NextGaussian(0, sigma);
+        noisyFlows[i, j] = f0[i, j] + EnvironmentRandom.NextNormal(0, sigma);
       }
     }
   }

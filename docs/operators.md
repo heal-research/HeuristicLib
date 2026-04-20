@@ -70,6 +70,19 @@ Concrete stateless operators should usually expose a public static method using 
 
 When the operator has instance configuration, make that configuration explicit in the static method signature. When an identical static signature would collide with the instance method, use either a companion static helper type or a nearby overload that exposes the required parameters directly.
 
+## Creators and RNG helpers
+
+Creators sit at the top of the random-sampling stack.
+
+That means a creator should usually **not** implement sampling math itself.
+Instead, it should delegate to the existing RNG helper layers and keep only the creator-specific concerns:
+
+- choosing the appropriate helper for the output type or search space
+- exposing the operator-shaped `Create(...)` API
+- enforcing operator-level guarantees such as producing search-space-valid output
+
+In practice, a creator like `UniformDistributedCreator` should call the most convenient existing RNG helper rather than becoming a second implementation site for uniform sampling.
+
 ## Choosing a base class when implementing an operator
 
 The base classes in `src/HeuristicLib.Core/Operators` are mainly **authoring conveniences**.

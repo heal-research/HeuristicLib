@@ -35,13 +35,24 @@ public class PractitionerUsageSpecs
     var realSearchSpace = new RealVectorSearchSpace(3, new RealVector([-1.0]), new RealVector([1.0]));
     var integerSearchSpace = new IntegerVectorSearchSpace(3, new IntegerVector(-2), new IntegerVector(2));
 
-    var randomIntegerVector = RandomNumberGenerator.Create(2025).NextIntVector(new IntegerVector(-2), new IntegerVector(2), length: 4);
+    var randomIntegerVector = RandomNumberGenerator.Create(2025).NextIntegerVectorUniform(new IntegerVector(-2), new IntegerVector(2), length: 4);
     randomIntegerVector.Count.ShouldBe(4);
     randomIntegerVector.All(x => x is >= -2 and <= 2).ShouldBeTrue();
 
-    var randomRealVector = RandomNumberGenerator.Create(2025).NextDouble(new RealVector([-0.5]), new RealVector([0.5]), length: 3);
+    var randomIntegerVectorFromSearchSpace = RandomNumberGenerator.Create(2025).NextIntegerVectorUniform(integerSearchSpace);
+    randomIntegerVectorFromSearchSpace.Count.ShouldBe(3);
+    randomIntegerVectorFromSearchSpace.All(x => x is >= -2 and <= 2).ShouldBeTrue();
+
+    var randomRealVector = RandomNumberGenerator.Create(2025).NextRealVectorUniform(new RealVector([-0.5]), new RealVector([0.5]), length: 3);
     randomRealVector.Count.ShouldBe(3);
     randomRealVector.All(x => x is >= -0.5 and <= 0.5).ShouldBeTrue();
+
+    var randomRealVectorFromSearchSpace = RandomNumberGenerator.Create(2025).NextRealVectorUniform(realSearchSpace);
+    randomRealVectorFromSearchSpace.Count.ShouldBe(3);
+    randomRealVectorFromSearchSpace.All(x => x is >= -1.0 and <= 1.0).ShouldBeTrue();
+
+    RandomNumberGenerator.Create(2025).NextBools(3, probability: 0.0).ShouldBe([false, false, false]);
+    RandomNumberGenerator.Create(2025).NextNormals(3, mu: 0.25, sigma: 0.0).ShouldBe([0.25, 0.25, 0.25]);
 
     var roundedVector = new RealVector([1.6, -2.8, 0.2]).RoundToIntegerVector(new IntegerVector(-2), new IntegerVector(2));
     roundedVector.ShouldBe(new IntegerVector([2, -2, 0]));
@@ -61,6 +72,9 @@ public class PractitionerUsageSpecs
 
     var directPermutation = RandomNumberGenerator.Create(2026).NextPermutation(5);
     directPermutation.Order().ToArray().ShouldBe([0, 1, 2, 3, 4]);
+
+    var directPermutationFromSearchSpace = RandomNumberGenerator.Create(2026).NextPermutation(new PermutationSearchSpace(5));
+    directPermutationFromSearchSpace.Order().ToArray().ShouldBe([0, 1, 2, 3, 4]);
 
     var integerVector = HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator.Create(
       RandomNumberGenerator.Create(2027),
@@ -108,6 +122,12 @@ public class PractitionerUsageSpecs
       sigmas: new RealVector([0.0]));
     normalRealVectorFromSearchSpace.ShouldBe(RealVector.Repeat(0.25, 3));
 
+    var randomNormalRealVectorFromSearchSpace = RandomNumberGenerator.Create(2028).NextRealVectorNormal(
+      realSearchSpace,
+      means: new RealVector([0.25]),
+      sigmas: new RealVector([0.0]));
+    randomNormalRealVectorFromSearchSpace.ShouldBe(RealVector.Repeat(0.25, 3));
+
     var normalIntegerVector = HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.NormalDistributedCreator.Create(
       RandomNumberGenerator.Create(2029),
       length: 3,
@@ -123,6 +143,12 @@ public class PractitionerUsageSpecs
       means: new RealVector([1.6]),
       sigmas: new RealVector([0.0]));
     normalIntegerVectorFromSearchSpace.ShouldBe(new IntegerVector([2, 2, 2]));
+
+    var randomNormalIntegerVectorFromSearchSpace = RandomNumberGenerator.Create(2029).NextIntegerVectorNormal(
+      integerSearchSpace,
+      means: new RealVector([1.6]),
+      sigmas: new RealVector([0.0]));
+    randomNormalIntegerVectorFromSearchSpace.ShouldBe(new IntegerVector([2, 2, 2]));
 
     var parent = new RealVector([1.0, 2.0, 3.0]);
     var otherParent = new RealVector([9.0, 9.0, 9.0]);

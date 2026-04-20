@@ -470,7 +470,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void CreateUniform_ReturnsVectorOfRequestedLength()
   {
-    var rng = new StubRandomNumberGenerator(1, 2, 3);
+    var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
 
     IntegerVector low = 0;
     IntegerVector high = 10;
@@ -481,41 +481,35 @@ public sealed class IntegerVectorTests
   }
 
   [Fact]
-  public void CreateUniform_UsesModuloBasedExtensionSemantics_ForScalarBounds()
+  public void CreateUniform_MapsUniformDrawsIntoScalarBounds()
   {
-    var rng = new StubRandomNumberGenerator(14, 25, 36);
+    var rng = new StubRandomNumberGenerator(0.9, 0.5, 0.1);
 
     IntegerVector low = 10;
     IntegerVector high = 12;
 
     var result = IntegerVector.CreateUniform(3, low, high, rng);
 
-    // extension semantics:
-    // NextInt(low, high, true) = (NextInt() % (high - low + 1)) + low
-    // here range size = 3
     Assert.Equal(new[] { 12, 11, 10 }, result.ToArray());
   }
 
   [Fact]
   public void CreateUniform_UsesElementwiseBounds()
   {
-    var rng = new StubRandomNumberGenerator(5, 8, 11);
+    var rng = new StubRandomNumberGenerator(0.9, 0.9, 0.9);
 
     IntegerVector low = new[] { 10, 20, 30 };
     IntegerVector high = new[] { 12, 22, 32 };
 
     var result = IntegerVector.CreateUniform(3, low, high, rng);
 
-    // 5 % 3 + 10 = 12
-    // 8 % 3 + 20 = 22
-    // 11 % 3 + 30 = 32
     Assert.Equal(new[] { 12, 22, 32 }, result.ToArray());
   }
 
   [Fact]
   public void CreateUniform_LowLengthMismatch_ThrowsArgumentException()
   {
-    var rng = new StubRandomNumberGenerator(1, 2, 3);
+    var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
 
     IntegerVector low = new[] { 0, 1 };
     IntegerVector high = 10;
@@ -526,7 +520,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void CreateUniform_HighLengthMismatch_ThrowsArgumentException()
   {
-    var rng = new StubRandomNumberGenerator(1, 2, 3);
+    var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
 
     IntegerVector low = 0;
     IntegerVector high = new[] { 10, 11 };
@@ -546,28 +540,28 @@ public sealed class IntegerVectorTests
 
   private sealed class StubRandomNumberGenerator : IRandomNumberGenerator
   {
-    private readonly Queue<int> ints;
+    private readonly Queue<double> doubles;
 
-    public int NextIntCallCount { get; private set; }
+    public int NextDoubleCallCount { get; private set; }
 
-    public StubRandomNumberGenerator(params int[] nextInts)
+    public StubRandomNumberGenerator(params double[] nextDoubles)
     {
-      ints = new Queue<int>(nextInts);
+      doubles = new Queue<double>(nextDoubles);
     }
 
-    public int NextInt()
-    {
-      NextIntCallCount++;
-
-      if (ints.Count == 0) {
-        throw new InvalidOperationException("No more test ints available.");
-      }
-
-      return ints.Dequeue();
-    }
+    public int NextInt() => throw new NotSupportedException();
 
     public IRandomNumberGenerator Fork(ulong forkKey) => throw new NotImplementedException();
 
-    public double NextDouble() => throw new NotSupportedException();
+    public double NextDouble()
+    {
+      NextDoubleCallCount++;
+
+      if (doubles.Count == 0) {
+        throw new InvalidOperationException("No more test doubles available.");
+      }
+
+      return doubles.Dequeue();
+    }
   }
 }

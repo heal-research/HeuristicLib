@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
@@ -26,10 +25,10 @@ public sealed class BinaryFactorVariableTreeNode : VariableTreeNodeBase
   {
     // 50% additive & 50% multiplicative (override of functionality of base class because of a BUG)
     if (random.NextDouble() < 0.5) {
-      var x = NormalDistribution.NextDouble(random, Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
+      var x = random.NextNormal(Symbol.WeightManipulatorMu, Symbol.WeightManipulatorSigma);
       Weight = Weight + x * shakingFactor;
     } else {
-      var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
+      var x = random.NextNormal(1.0, Symbol.MultiplicativeWeightManipulatorSigma);
       Weight = Weight * x;
     }
 
@@ -38,7 +37,7 @@ public sealed class BinaryFactorVariableTreeNode : VariableTreeNodeBase
       VariableName = Symbol.VariableNames.SampleRandom(random);
       // reinitialize weights if variable has changed (similar to FactorVariableTreeNode)
       if (oldName != VariableName) {
-        Weight = NormalDistribution.NextDouble(random, Symbol.WeightMu, Symbol.WeightSigma);
+        Weight = random.NextNormal(Symbol.WeightMu, Symbol.WeightSigma);
       }
     }
 

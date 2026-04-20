@@ -15,7 +15,7 @@ public record NormalDistributedCreator(RealVector Means, RealVector Sigmas)
     RealVectorSearchSpace searchSpace,
     RealVector means,
     RealVector sigmas)
-    => Create(random, searchSpace.Length, means, sigmas, searchSpace.Minimum, searchSpace.Maximum);
+    => random.NextRealVectorNormal(searchSpace, means, sigmas);
 
   public static RealVector Create(
     IRandomNumberGenerator random,
@@ -24,12 +24,5 @@ public record NormalDistributedCreator(RealVector Means, RealVector Sigmas)
     RealVector sigmas,
     RealVector minimum,
     RealVector maximum)
-  {
-    if (!RealVector.AreCompatible(length, means, sigmas, minimum, maximum)) {
-      throw new ArgumentException("Vectors must have compatible lengths");
-    }
-
-    var value = random.NextGaussian(means, sigmas, length);
-    return RealVector.Clamp(value, minimum, maximum);
-  }
+    => RealVector.Clamp(random.NextRealVectorNormal(means, sigmas, length), minimum, maximum);
 }

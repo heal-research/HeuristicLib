@@ -18,7 +18,7 @@ public record UniformOnePositionManipulator
   {
     var index = random.NextInt(0, vector.Count);
     var res = vector.ToArray();
-    res[index] = random.NextInt(minimum, maximum, index);
+    res[index] = random.NextIntegerVectorUniformAt(minimum, maximum, index);
     return res;
   }
 }

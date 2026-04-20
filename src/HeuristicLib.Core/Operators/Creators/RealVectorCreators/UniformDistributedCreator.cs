@@ -27,32 +27,12 @@ public record UniformDistributedCreator : SingleSolutionCreator<RealVector, Real
     int length,
     RealVector minimum,
     RealVector maximum)
-  {
-    if (!RealVector.AreCompatible(length, minimum, maximum)) {
-      throw new ArgumentException("Vectors must have compatible lengths");
-    }
-
-    return random.NextDouble(minimum, maximum, length);
-  }
+    => random.NextRealVectorUniform(minimum, maximum, length);
 
   public static RealVector Create(
     IRandomNumberGenerator random,
     RealVectorSearchSpace searchSpace,
     RealVector? minimum = null,
     RealVector? maximum = null)
-  {
-    if (minimum is not null && (minimum < searchSpace.Minimum).Any()) {
-      throw new ArgumentException("Minimum values must be greater or equal to searchSpace minimum values");
-    }
-
-    if (maximum is not null && (maximum > searchSpace.Maximum).Any()) {
-      throw new ArgumentException("Maximum values must be less or equal to searchSpace maximum values");
-    }
-
-    if (!RealVector.AreCompatible(searchSpace.Length, minimum ?? searchSpace.Minimum, maximum ?? searchSpace.Maximum)) {
-      throw new ArgumentException("Vectors must have compatible lengths");
-    }
-
-    return Create(random, searchSpace.Length, minimum ?? searchSpace.Minimum, maximum ?? searchSpace.Maximum);
-  }
+    => random.NextRealVectorUniform(searchSpace, minimum, maximum);
 }

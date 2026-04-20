@@ -52,12 +52,12 @@ public record UniformSomePositionsManipulator
       if (random.NextDouble() >= probability)
         continue;
       mutated = true;
-      res[i] = random.NextInt(minimum, maximum, i);
+      res[i] = random.NextIntegerVectorUniformAt(minimum, maximum, i);
     }
 
     if (!mutated && atLeastOnce) {
       var idx = random.NextInt(0, vector.Count);
-      res[idx] = random.NextInt(minimum, maximum, idx);
+      res[idx] = random.NextIntegerVectorUniformAt(minimum, maximum, idx);
     }
 
     return res;

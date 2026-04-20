@@ -50,7 +50,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
   public static implicit operator RealVector(IntegerVector integerVector) => ToRealVector(integerVector);
 
   public static IntegerVector CreateUniform(int length, IntegerVector low, IntegerVector high, IRandomNumberGenerator random)
-    => random.NextIntVector(low, high, length);
+    => random.NextIntegerVectorUniform(low, high, length);
 
   public static RealVector ToRealVector(IntegerVector input)
   {

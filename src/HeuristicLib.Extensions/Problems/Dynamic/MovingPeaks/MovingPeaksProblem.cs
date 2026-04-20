@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
@@ -127,11 +126,11 @@ public sealed class MovingPeaksProblem
     for (var i = 0; i < Parameters.NumberOfPeaks; i++) {
       peakPositions[i] = new double[Parameters.Dimension];
       for (var d = 0; d < Parameters.Dimension; d++) {
-        peakPositions[i][d] = UniformRealDistribution.NextDouble(EnvironmentRandom, Parameters.LowerBound, Parameters.UpperBound);
+        peakPositions[i][d] = EnvironmentRandom.NextDouble(Parameters.LowerBound, Parameters.UpperBound);
       }
 
-      peakHeights[i] = UniformRealDistribution.NextDouble(EnvironmentRandom, Parameters.MinHeight, Parameters.MaxHeight);
-      peakWidths[i] = UniformRealDistribution.NextDouble(EnvironmentRandom, Parameters.MinWidth, Parameters.MaxWidth);
+      peakHeights[i] = EnvironmentRandom.NextDouble(Parameters.MinHeight, Parameters.MaxHeight);
+      peakWidths[i] = EnvironmentRandom.NextDouble(Parameters.MinWidth, Parameters.MaxWidth);
     }
   }
 
@@ -151,7 +150,7 @@ public sealed class MovingPeaksProblem
     var v = new double[dim];
     var normSq = 0.0;
     for (var i = 0; i < dim; i++) {
-      var a = UniformRealDistribution.NextDouble(EnvironmentRandom, -1.0, 1.0);
+      var a = EnvironmentRandom.NextDouble(-1.0, 1.0);
       v[i] = a;
       normSq += a * a;
     }

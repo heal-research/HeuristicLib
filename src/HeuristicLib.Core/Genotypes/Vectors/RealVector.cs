@@ -136,10 +136,10 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   public static RealVector Repeat(double value, int count) => new(Enumerable.Repeat(value, count));
 
   public static RealVector CreateNormal(int length, RealVector mean, RealVector std, IRandomNumberGenerator random)
-    => random.NextGaussian(mean, std, length);
+    => random.NextRealVectorNormal(mean, std, length);
 
   public static RealVector CreateUniform(int length, RealVector low, RealVector high, IRandomNumberGenerator random)
-    => random.NextDouble(low, high, length);
+    => random.NextRealVectorUniform(low, high, length);
 
   public static RealVector Add(RealVector a, RealVector b)
   {
@@ -343,7 +343,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
     var result = new int[input.Count];
     for (var i = 0; i < input.Count; i++) {
-      result[i] = FloorToIntegerAt(input, minimum, maximum, i);
+      result[i] = FloorToIntegerAtUnchecked(input, minimum, maximum, i);
     }
 
     return result;
@@ -355,7 +355,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
     var result = new int[input.Count];
     for (var i = 0; i < input.Count; i++) {
-      result[i] = CeilToIntegerAt(input, minimum, maximum, i);
+      result[i] = CeilToIntegerAtUnchecked(input, minimum, maximum, i);
     }
 
     return result;
@@ -367,7 +367,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
     var result = new int[input.Count];
     for (var i = 0; i < input.Count; i++) {
-      result[i] = RoundToIntegerAt(input, minimum, maximum, i);
+      result[i] = RoundToIntegerAtUnchecked(input, minimum, maximum, i);
     }
 
     return result;
@@ -376,40 +376,40 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
   public static int FloorToIntegerAt(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
   {
     ValidateBounds(minimum, maximum, dimension: dimension);
-    return FloorToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+    return FloorToIntegerAtUnchecked(value, minimum, maximum, dimension);
   }
 
   public static int FloorToIntegerAt(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
   {
     ValidateBounds(minimum, maximum, input.Count, dimension);
 
-    return FloorToIntegerAt(input[dimension], minimum, maximum, dimension);
+    return FloorToIntegerAtUnchecked(input, minimum, maximum, dimension);
   }
 
   public static int CeilToIntegerAt(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
   {
     ValidateBounds(minimum, maximum, dimension: dimension);
-    return CeilToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+    return CeilToIntegerAtUnchecked(value, minimum, maximum, dimension);
   }
 
   public static int CeilToIntegerAt(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
   {
     ValidateBounds(minimum, maximum, input.Count, dimension);
 
-    return CeilToIntegerAt(input[dimension], minimum, maximum, dimension);
+    return CeilToIntegerAtUnchecked(input, minimum, maximum, dimension);
   }
 
   public static int RoundToIntegerAt(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
   {
     ValidateBounds(minimum, maximum, dimension: dimension);
-    return RoundToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+    return RoundToIntegerAtUnchecked(value, minimum, maximum, dimension);
   }
 
   public static int RoundToIntegerAt(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
   {
     ValidateBounds(minimum, maximum, input.Count, dimension);
 
-    return RoundToIntegerAt(input[dimension], minimum, maximum, dimension);
+    return RoundToIntegerAtUnchecked(input, minimum, maximum, dimension);
   }
 
   public static int FloorToInteger(double value, int minimum, int maximum)
@@ -441,6 +441,24 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
 
     return (int)Math.Clamp(Math.Round(value, MidpointRounding.AwayFromZero), minimum, maximum);
   }
+
+  private static int FloorToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
+    => FloorToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+
+  private static int FloorToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
+    => FloorToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
+
+  private static int CeilToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
+    => CeilToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+
+  private static int CeilToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
+    => CeilToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
+
+  private static int RoundToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
+    => RoundToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+
+  private static int RoundToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
+    => RoundToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
 
   private static void ValidateBounds(RealVector? minimum, RealVector? maximum, int? length = null, int? dimension = null)
   {

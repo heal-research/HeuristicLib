@@ -39,6 +39,7 @@ These are still real open items:
 - dynamic-problem extension workflow
 - meta-optimization by running an inner algorithm inside `Problem.Evaluate(...)`
 - clear separation between population topology and per-member side metadata as an executable example story
+- add explicit ownership-taking factory methods for genotype containers such as `RealVector`, `IntegerVector`, and similar types, following the explicit static-factory style rather than constructor overloads; the goal is to let callers that already own the backing storage transfer it without another allocation or copy, and random generation should be one of the first places to adopt this once the API shape is decided
 
 ## Still failing the current design rules
 

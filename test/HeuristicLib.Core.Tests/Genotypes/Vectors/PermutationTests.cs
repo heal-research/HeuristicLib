@@ -295,7 +295,7 @@ public sealed class PermutationTests
   [Fact]
   public void CreateRandom_ReturnsValidPermutationOfRequestedLength()
   {
-    var rng = new StubRandomNumberGenerator(0, 0, 0, 0);
+    var rng = new StubRandomNumberGenerator(0.0, 0.0, 0.0, 0.0);
 
     var permutation = Permutation.CreateRandom(5, rng);
 
@@ -306,7 +306,7 @@ public sealed class PermutationTests
   [Fact]
   public void CreateRandom_WithAlwaysZeroIndices_ProducesDeterministicPermutation()
   {
-    var rng = new StubRandomNumberGenerator(0, 0, 0);
+    var rng = new StubRandomNumberGenerator(0.0, 0.0, 0.0);
 
     var permutation = Permutation.CreateRandom(4, rng);
 
@@ -317,7 +317,7 @@ public sealed class PermutationTests
   public void SwapRandomElements_WhenIndicesDiffer_SwapsThem()
   {
     Permutation permutation = new[] { 0, 1, 2, 3 };
-    var rng = new StubRandomNumberGenerator(1, 3);
+    var rng = new StubRandomNumberGenerator(0.3, 0.9);
 
     var result = Permutation.SwapRandomElements(permutation, rng);
 
@@ -329,7 +329,7 @@ public sealed class PermutationTests
   public void SwapRandomElements_WhenIndicesEqual_ReturnsEqualPermutation()
   {
     Permutation permutation = new[] { 0, 1, 2, 3 };
-    var rng = new StubRandomNumberGenerator(2, 2);
+    var rng = new StubRandomNumberGenerator(0.6, 0.6);
 
     var result = Permutation.SwapRandomElements(permutation, rng);
 
@@ -341,7 +341,7 @@ public sealed class PermutationTests
   public void SwapRandomElements_ResultIsStillValidPermutation()
   {
     Permutation permutation = new[] { 3, 1, 0, 2 };
-    var rng = new StubRandomNumberGenerator(0, 2);
+    var rng = new StubRandomNumberGenerator(0.0, 0.6);
 
     var result = Permutation.SwapRandomElements(permutation, rng);
 
@@ -351,20 +351,17 @@ public sealed class PermutationTests
 
   private sealed class StubRandomNumberGenerator : IRandomNumberGenerator
   {
-    private readonly Queue<int> values;
+    private readonly Queue<double> values;
 
-    public StubRandomNumberGenerator(params int[] values)
+    public StubRandomNumberGenerator(params double[] values)
     {
-      this.values = new Queue<int>(values);
+      this.values = new Queue<double>(values);
     }
 
-    public int NextInt()
-    {
-      return values.Count == 0 ? 0 : values.Dequeue();
-    }
+    public int NextInt() => throw new NotSupportedException();
 
     public IRandomNumberGenerator Fork(ulong forkKey) => throw new NotImplementedException();
 
-    public double NextDouble() => throw new NotSupportedException();
+    public double NextDouble() => values.Count == 0 ? 0.0 : values.Dequeue();
   }
 }

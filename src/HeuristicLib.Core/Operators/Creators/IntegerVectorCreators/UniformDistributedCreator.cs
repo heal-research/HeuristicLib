@@ -7,13 +7,13 @@ namespace HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators;
 public record UniformDistributedCreator : SingleSolutionCreator<IntegerVector, IntegerVectorSearchSpace>
 {
   public override IntegerVector Create(IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-    => Create(random, searchSpace.Length, searchSpace.Minimum, searchSpace.Maximum);
+    => random.NextIntegerVectorUniform(searchSpace);
 
   public static IntegerVector Create(IntegerVectorSearchSpace searchSpace, IRandomNumberGenerator random)
-    => Create(random, searchSpace.Length, searchSpace.Minimum, searchSpace.Maximum);
+    => random.NextIntegerVectorUniform(searchSpace);
 
   public static IntegerVector Create(IRandomNumberGenerator random, int length, IntegerVector minimum, IntegerVector maximum)
-    => random.NextIntVector(minimum, maximum, length);
+    => random.NextIntegerVectorUniform(minimum, maximum, length);
 
   public static IntegerVector Create(IRandomNumberGenerator random, int length, int minimum, int maximum)
     => Create(random, length, new IntegerVector(minimum), new IntegerVector(maximum));

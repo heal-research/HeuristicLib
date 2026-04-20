@@ -1,7 +1,6 @@
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
@@ -40,7 +39,7 @@ public record RoundedNormalAllPositionsManipulator
       var s = sigma[i % sigma.Count];
       if (s < 0)
         throw new ArgumentOutOfRangeException(nameof(sigma), "All sigma values must be >= 0.");
-      var value = random.NextGaussian(vector[i], s);
+      var value = random.NextNormal(vector[i], s);
       result[i] = RealVector.RoundToIntegerAt(value, minimum, maximum, i);
     }
 
