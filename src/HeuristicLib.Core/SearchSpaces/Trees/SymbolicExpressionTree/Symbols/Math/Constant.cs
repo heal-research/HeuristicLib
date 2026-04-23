@@ -9,7 +9,7 @@ public sealed class Constant() : Symbol(0, 0, 0)
   public override SymbolicExpressionTreeNode CreateTreeNode() => new ConstantTreeNode(Value);
 }
 
-public sealed class ConstantTreeNode : SymbolicExpressionTreeNode
+public sealed class ConstantTreeNode : NumericTreeNode
 {
 
   public ConstantTreeNode(Constant numberSymbol) : base(numberSymbol) { }
@@ -19,11 +19,7 @@ public sealed class ConstantTreeNode : SymbolicExpressionTreeNode
   public ConstantTreeNode(double value) : this(new Constant()) => Value = value;
   public new Constant Symbol => (Constant)base.Symbol;
 
-  public double Value { get; set; }
-
   public override bool HasLocalParameters => false;
 
   public override SymbolicExpressionTreeNode Clone() => new ConstantTreeNode(this);
-
-  public override string ToString() => $"{Value:E4}";
 }

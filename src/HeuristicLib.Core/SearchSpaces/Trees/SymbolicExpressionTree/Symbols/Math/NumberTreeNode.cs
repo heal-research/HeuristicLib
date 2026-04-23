@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-public sealed class NumberTreeNode : SymbolicExpressionTreeNode
+public sealed class NumberTreeNode : NumericTreeNode
 {
 
   public NumberTreeNode(Number numberSymbol) : base(numberSymbol) { }
@@ -12,8 +12,6 @@ public sealed class NumberTreeNode : SymbolicExpressionTreeNode
 
   public NumberTreeNode(double value) : this(new Number()) => Value = value;
   public new Number Symbol => (Number)base.Symbol;
-
-  public double Value { get; set; }
 
   public override bool HasLocalParameters => true;
 
@@ -38,6 +36,4 @@ public sealed class NumberTreeNode : SymbolicExpressionTreeNode
   }
 
   public override SymbolicExpressionTreeNode Clone() => new NumberTreeNode(this);
-
-  public override string ToString() => $"{Value:E4}";
 }
