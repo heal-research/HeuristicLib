@@ -85,9 +85,9 @@ public static class BaseInfixExpressionFormatter
           // rotation:
           //     (op1)              (op2)
           //     /   \              /  \
-          //    a    (op2)       (op1)  c 
+          //    a    (op2)       (op1)  c
           //         /  \        /  \
-          //        b    c      a    b      
+          //        b    c      a    b
           var op2 = n.GetSubtree(1);
           var b = op2.GetSubtree(0);
           op2.RemoveSubtree(0);
@@ -114,7 +114,7 @@ public static class BaseInfixExpressionFormatter
 
         break;
       }
-      case 0 when node is NumberTreeNode numNode: {
+      case 0 when node is NumericTreeNode numNode: {
         var parenthesisRequired = RequiresParenthesis(node.Parent, node);
         if (parenthesisRequired) {
           strBuilder.Append('(');
