@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
 [Equatable]
-public abstract partial record MultiReplacer<TGenotype, TSearchSpace, TProblem, TState>
+public abstract partial record MultiReplacer<TGenotype, TSearchSpace, TProblem, TExecutionState>
   : IReplacer<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -25,20 +25,20 @@ public abstract partial record MultiReplacer<TGenotype, TSearchSpace, TProblem, 
   public IReplacerInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
     new Instance(this, InnerReplacers.Select(instanceRegistry.Resolve).Select(x => (InnerReplace)x.Replace).ToArray(), CreateInitialState());
 
-  protected abstract TState CreateInitialState();
+  protected abstract TExecutionState CreateInitialState();
 
   protected abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-    IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, TState state,
+    IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, TExecutionState executionState,
     IReadOnlyList<InnerReplace> innerReplacers,
     IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  private sealed class Instance(MultiReplacer<TGenotype, TSearchSpace, TProblem, TState> multiReplacer,
-    IReadOnlyList<InnerReplace> innerReplacers, TState state)
+  private sealed class Instance(MultiReplacer<TGenotype, TSearchSpace, TProblem, TExecutionState> multiReplacer,
+    IReadOnlyList<InnerReplace> innerReplacers, TExecutionState executionState)
     : IReplacerInstance<TGenotype, TSearchSpace, TProblem>
   {
     public IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
-      return multiReplacer.Replace(previousPopulation, offspringPopulation, objective, count, state, innerReplacers, random, searchSpace, problem);
+      return multiReplacer.Replace(previousPopulation, offspringPopulation, objective, count, executionState, innerReplacers, random, searchSpace, problem);
     }
   }
 }
@@ -56,7 +56,7 @@ public abstract record MultiReplacer<TGenotype, TSearchSpace, TProblem>
   protected sealed override NoState CreateInitialState() => NoState.Instance;
 
   protected sealed override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-    IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, NoState state,
+    IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, NoState executionState,
     IReadOnlyList<InnerReplace> innerReplacers,
     IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     => Replace(previousPopulation, offspringPopulation, objective, count, innerReplacers, random, searchSpace, problem);

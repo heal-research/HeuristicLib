@@ -1,6 +1,7 @@
 ﻿using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -97,6 +98,28 @@ public class ChooseOneOperatorTests
   }
 
   [Fact]
+  public void PipelineMutator_ShouldResolveInnerMutatorsOncePerExecutionInstance()
+  {
+    var countingMutator = new CountingInstanceMutator();
+    var mutator = new PipelineMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>([
+      countingMutator
+    ]);
+
+    var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
+      evaluateFunc: x => x,
+      encoding: DummySearchSpace<int>.Instance,
+      objective: SingleObjective.Minimize);
+    var instance = mutator.CreateExecutionInstance(new Execution.ExecutionInstanceRegistry(TestRun.Instance));
+
+    var first = instance.Mutate([1], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
+    var second = instance.Mutate([1], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, problem);
+
+    countingMutator.ExecutionInstancesCreated.ShouldBe(1);
+    first.ShouldBe([2]);
+    second.ShouldBe([3]);
+  }
+
+  [Fact]
   public void PipelineMutator_ShouldRejectEmptyPipelines()
   {
     Should.Throw<ArgumentException>(() => new PipelineMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>([]))
@@ -144,9 +167,31 @@ public class ChooseOneOperatorTests
       => currentState with { Value = currentState.Value + Offset };
   }
 
-  private sealed record TestAlgorithmState : AlgorithmState
+  private sealed record TestAlgorithmState : SearchState
   {
     public required int Value { get; init; }
+  }
+
+  private sealed class CountingInstanceMutator : IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+  {
+    public int ExecutionInstancesCreated { get; private set; }
+
+    public IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(Execution.ExecutionInstanceRegistry instanceRegistry)
+    {
+      ExecutionInstancesCreated++;
+      return new Instance();
+    }
+
+    private sealed class Instance : IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    {
+      private int calls;
+
+      public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+      {
+        calls++;
+        return parents.Select(parent => parent + calls).ToArray();
+      }
+    }
   }
 
   private sealed class SequenceRandomNumberGenerator(params double[] nextDoubles) : IRandomNumberGenerator

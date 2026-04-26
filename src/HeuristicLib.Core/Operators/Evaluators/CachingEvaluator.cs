@@ -7,17 +7,17 @@ using Microsoft.Extensions.Caching.Memory;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.State>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : notnull
   where TKey : notnull
 {
-  public sealed class State
+  public sealed class ExecutionState
   {
     public MemoryCache Cache { get; }
 
-    public State(long? sizeLimit)
+    public ExecutionState(long? sizeLimit)
     {
       Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
     }
@@ -33,17 +33,17 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
     SizeLimit = sizeLimit;
   }
 
-  protected override State CreateInitialState() => new(SizeLimit);
+  protected override ExecutionState CreateInitialState() => new(SizeLimit);
 
   protected override IReadOnlyList<ObjectiveVector> Evaluate(
     IReadOnlyList<TGenotype> genotypes,
-    State state,
+    ExecutionState executionState,
     InnerEvaluate innerEvaluate,
     IRandomNumberGenerator random,
     TSearchSpace searchSpace,
     TProblem problem)
   {
-    var cache = state.Cache;
+    var cache = executionState.Cache;
     var n = genotypes.Count;
     var results = new ObjectiveVector[n];
 

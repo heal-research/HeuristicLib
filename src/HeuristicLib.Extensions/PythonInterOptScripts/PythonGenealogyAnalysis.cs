@@ -268,7 +268,7 @@ public class PythonGenealogyAnalysis
     : Analyzer<T, TS, TP, TR, object>(Algorithm)
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS>
-    where TR : PopulationState<T>, IAlgorithmState
+    where TR : PopulationState<T>, ISearchState
   {
     public override object CreateInitialState() => new();
 
@@ -280,7 +280,7 @@ public class PythonGenealogyAnalysis
 
   private static MyAnalyzers<T> CreateAnalyzers<T, TE, TP, TR>(
     ExperimentParameters<T, TE> parameters,
-    IterativeAlgorithm<T, TE, TP, TR> algorithm,
+    IIterativeAlgorithm<T, TE, TP, TR> algorithm,
     ICrossover<T, TE, TP>? crossover,
     IMutator<T, TE, TP>? mutator,
     Action<PopulationState<T>>? callback)

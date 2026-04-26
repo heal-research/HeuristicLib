@@ -13,13 +13,18 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 // ToDo: Add support for Transformation between different (or the same typed) states.
 
 [Equatable]
-public partial record PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public partial record PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  where TSearchState : class, ISearchState
+  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
 {
+  public new sealed class ExecutionState
+    : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, ExecutionState>.ExecutionState
+  {
+  }
+
   [OrderedEquality] public ImmutableArray<TAlgorithm> Algorithms { get; }
 
   public PipelineAlgorithm(ImmutableArray<TAlgorithm> algorithms)
@@ -27,24 +32,29 @@ public partial record PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TPr
     Algorithms = algorithms;
   }
 
-  public override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
   {
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
+    return new ExecutionState {
+      Evaluator = resolver.Resolve(Evaluator)
+    };
+  }
 
-    return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
-      instanceRegistry.Run,
-      evaluatorInstance,
+  protected override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState)
+  {
+    return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>(
+      run,
+      executionState.Evaluator,
       Algorithms
     );
   }
 }
 
-public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>
+  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  where TSearchState : class, ISearchState
+  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
 {
   protected readonly IReadOnlyList<TAlgorithm> Algorithms;
 
@@ -63,7 +73,7 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
     Algorithms = algorithms;
   }
 
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+  public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 

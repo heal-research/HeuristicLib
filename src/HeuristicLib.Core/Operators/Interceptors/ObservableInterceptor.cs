@@ -11,7 +11,7 @@ public partial record ObservableInterceptor<TG, TS, TP, TR>
   : WrappingInterceptor<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   [OrderedEquality]
   public ImmutableArray<IInterceptorObserver<TG, TS, TP, TR>> Observers { get; }
@@ -40,7 +40,7 @@ public partial record ObservableInterceptor<TG, TS, TP, TR>
 public interface IInterceptorObserver<in TG, in TS, in TP, in TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem);
 }
@@ -50,7 +50,7 @@ public static class ObservableInterceptorExtensions
   extension<TG, TS, TP, TR>(IInterceptor<TG, TS, TP, TR> interceptor)
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
-    where TR : class, IAlgorithmState
+    where TR : class, ISearchState
   {
     public IInterceptor<TG, TS, TP, TR> ObserveWith(IInterceptorObserver<TG, TS, TP, TR> observer)
       => new ObservableInterceptor<TG, TS, TP, TR>(interceptor, observer);
@@ -73,7 +73,7 @@ public static class ObservableInterceptorExtensions
 public sealed class ActionInterceptorObserver<TG, TS, TP, TR>(Action<TR, TR, TR?, TS, TP> afterInterception) : IInterceptorObserver<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   public void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem) => afterInterception(newState, currentState, previousState, searchSpace, problem);
 }

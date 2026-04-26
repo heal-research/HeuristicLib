@@ -12,14 +12,14 @@ public interface IAlgorithmBuilder<TG, TS, TP, TR>
   : IAlgorithmBuilder
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState;
+  where TR : class, ISearchState;
 
 public interface IAlgorithmBuilder<TG, TS, TP, TR, out TA>
   : IAlgorithmBuilder<TG, TS, TP, TR>
   where TA : IAlgorithm<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   TA Build();
 }

@@ -51,13 +51,13 @@ public static class ObservationRegistryExtensions
     public void Add<TG, TS, TP, TR>(IInterceptor<TG, TS, TP, TR> interceptor, IInterceptorObserver<TG, TS, TP, TR> observer)
       where TS : class, ISearchSpace<TG>
       where TP : class, IProblem<TG, TS>
-      where TR : class, IAlgorithmState
+      where TR : class, ISearchState
       => observationRegistry.Add(new InterceptorObservationInstaller<TG, TS, TP, TR>(interceptor, observer));
 
     public void Add<TG, TS, TP, TR>(IInterceptor<TG, TS, TP, TR> interceptor, Action<TR, TR, TR?, TS, TP> afterInterception)
       where TS : class, ISearchSpace<TG>
       where TP : class, IProblem<TG, TS>
-      where TR : class, IAlgorithmState
+      where TR : class, ISearchState
       => observationRegistry.Add(interceptor, new ActionInterceptorObserver<TG, TS, TP, TR>(afterInterception));
 
     public void Add<TG, TS, TP>(IMutator<TG, TS, TP> mutator, IMutatorObserver<TG, TS, TP> observer)
@@ -93,13 +93,13 @@ public static class ObservationRegistryExtensions
     public void Add<TG, TS, TP, TR>(ITerminator<TG, TS, TP, TR> terminator, ITerminatorObserver<TG, TS, TP, TR> observer)
       where TS : class, ISearchSpace<TG>
       where TP : class, IProblem<TG, TS>
-      where TR : class, IAlgorithmState
+      where TR : class, ISearchState
       => observationRegistry.Add(new TerminatorObservationInstaller<TG, TS, TP, TR>(terminator, observer));
 
     public void Add<TG, TS, TP, TR>(ITerminator<TG, TS, TP, TR> terminator, Action<bool, TR, TS, TP> afterTerminationCheck)
       where TS : class, ISearchSpace<TG>
       where TP : class, IProblem<TG, TS>
-      where TR : class, IAlgorithmState
+      where TR : class, ISearchState
       => observationRegistry.Add(terminator, new ActionTerminatorObserver<TG, TS, TP, TR>(afterTerminationCheck));
   }
 }

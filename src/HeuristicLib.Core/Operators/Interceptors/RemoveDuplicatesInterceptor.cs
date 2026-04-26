@@ -3,9 +3,9 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public record RemoveDuplicatesInterceptor<TGenotype, TAlgorithmState>
-  : StatelessInterceptor<TGenotype, TAlgorithmState>
-  where TAlgorithmState : PopulationState<TGenotype>
+public record RemoveDuplicatesInterceptor<TGenotype, TSearchState>
+  : StatelessInterceptor<TGenotype, TSearchState>
+  where TSearchState : PopulationState<TGenotype>
 {
   public IEqualityComparer<TGenotype> Comparer { get; init; }
 
@@ -14,17 +14,17 @@ public record RemoveDuplicatesInterceptor<TGenotype, TAlgorithmState>
     Comparer = comparer;
   }
 
-  public override TAlgorithmState Transform(TAlgorithmState currentState, TAlgorithmState? previousState)
+  public override TSearchState Transform(TSearchState currentState, TSearchState? previousState)
     => RemoveDuplicatesInterceptor.Transform(currentState, previousState, Comparer);
 }
 
 public static class RemoveDuplicatesInterceptor
 {
-  public static TAlgorithmState Transform<TGenotype, TAlgorithmState>(
-    TAlgorithmState currentState,
-    TAlgorithmState? previousState,
+  public static TSearchState Transform<TGenotype, TSearchState>(
+    TSearchState currentState,
+    TSearchState? previousState,
     IEqualityComparer<TGenotype> comparer)
-    where TAlgorithmState : PopulationState<TGenotype>
+    where TSearchState : PopulationState<TGenotype>
   {
     var newSolutions = currentState.Population.DistinctBy(s => s.Genotype, comparer).ToImmutableArray();
     return currentState with {

@@ -13,7 +13,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
   SingleSolutionProblem<TGenotype, TSearchSpace>,
   IDynamicProblem<TGenotype, TSearchSpace>,
   IEvaluatorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
-  IInterceptorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>,
+  IInterceptorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, ISearchState>,
   IDisposable
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -74,7 +74,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
     }
   }
 
-  public void AfterInterception(IAlgorithmState newState, IAlgorithmState currentState, IAlgorithmState? previousState, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
+  public void AfterInterception(ISearchState newState, ISearchState currentState, ISearchState? previousState, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
   {
     if (UpdatePolicy == UpdatePolicy.AfterInterception) {
       ResolvePendingUpdates();

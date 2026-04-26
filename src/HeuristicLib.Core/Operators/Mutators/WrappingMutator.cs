@@ -5,10 +5,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public abstract record WrappingMutator<TG, TS, TP, TState>
+public abstract record WrappingMutator<TG, TS, TP, TExecutionState>
   : IMutator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
+  where TExecutionState : class
 {
   protected delegate IReadOnlyList<TG> InnerMutate(IReadOnlyList<TG> parents, IRandomNumberGenerator random, TS searchSpace, TP problem);
 
@@ -22,15 +23,15 @@ public abstract record WrappingMutator<TG, TS, TP, TState>
   public IMutatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     => new Instance(this, instanceRegistry.Resolve(InnerMutator).Mutate, CreateInitialState());
 
-  protected abstract TState CreateInitialState();
+  protected abstract TExecutionState CreateInitialState();
 
-  protected abstract IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, TState state, InnerMutate innerMutate, IRandomNumberGenerator random, TS searchSpace, TP problem);
+  protected abstract IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, TExecutionState executionState, InnerMutate innerMutate, IRandomNumberGenerator random, TS searchSpace, TP problem);
 
-  private sealed class Instance(WrappingMutator<TG, TS, TP, TState> wrappingMutator, InnerMutate innerMutate, TState state)
+  private sealed class Instance(WrappingMutator<TG, TS, TP, TExecutionState> wrappingMutator, InnerMutate innerMutate, TExecutionState executionState)
     : IMutatorInstance<TG, TS, TP>
   {
     public IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, IRandomNumberGenerator random, TS searchSpace, TP problem)
-      => wrappingMutator.Mutate(parents, state, innerMutate, random, searchSpace, problem);
+      => wrappingMutator.Mutate(parents, executionState, innerMutate, random, searchSpace, problem);
   }
 }
 
@@ -46,7 +47,7 @@ public abstract record WrappingMutator<TG, TS, TP>
 
   protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-  protected sealed override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, NoState state,
+  protected sealed override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, NoState executionState,
     InnerMutate innerMutate, IRandomNumberGenerator random, TS searchSpace, TP problem)
     => Mutate(parents, innerMutate, random, searchSpace, problem);
 

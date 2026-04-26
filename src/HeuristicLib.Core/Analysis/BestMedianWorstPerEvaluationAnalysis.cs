@@ -7,17 +7,17 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public record BestMedianWorstPerEvaluationAnalysis<TGenotype, TSearchSpace, TProblem, TAlgorithmState> : Analyzer<TGenotype, TSearchSpace, TProblem, TAlgorithmState, BestMedianWorstPerEvaluationAnalysisState<TGenotype>>
+public record BestMedianWorstPerEvaluationAnalysis<TGenotype, TSearchSpace, TProblem, TSearchState> : Analyzer<TGenotype, TSearchSpace, TProblem, TSearchState, BestMedianWorstPerEvaluationAnalysisState<TGenotype>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : PopulationState<TGenotype>
+  where TSearchState : PopulationState<TGenotype>
 {
   private IEvaluator<TGenotype, TSearchSpace, TProblem>[] Evaluators { get; }
-  private IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>[] Interceptors { get; }
+  private IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>[] Interceptors { get; }
 
-  public BestMedianWorstPerEvaluationAnalysis(IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> Algorithm,
+  public BestMedianWorstPerEvaluationAnalysis(IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState> Algorithm,
                                               IEvaluator<TGenotype, TSearchSpace, TProblem>[] Evaluators,
-                                              IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>[] Interceptors) : base(Algorithm)
+                                              IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>[] Interceptors) : base(Algorithm)
   {
     this.Evaluators = Evaluators;
     this.Interceptors = Interceptors;

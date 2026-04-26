@@ -12,13 +12,18 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 // ToDo: maybe we need another base class for MetaAlgorithms like this?
 // ToDo: think if we want the CycleAlgorithm to terminate internally by checking each result of the inner algorihtms
 [Equatable]
-public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  where TSearchState : class, ISearchState
+  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
 {
+  public new sealed class ExecutionState
+    : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, ExecutionState>.ExecutionState
+  {
+  }
+
   [OrderedEquality]
   public ImmutableArray<TAlgorithm> Algorithms { get; }
 
@@ -33,13 +38,18 @@ public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProbl
     Algorithms = algorithms;
   }
 
-  public override CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
   {
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
+    return new ExecutionState {
+      Evaluator = resolver.Resolve(Evaluator)
+    };
+  }
 
-    return new CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>(
-      instanceRegistry.Run,
-      evaluatorInstance,
+  protected override CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState)
+  {
+    return new CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>(
+      run,
+      executionState.Evaluator,
       Algorithms.ToList(),
       MaximumCycles,
       NewExecutionInstancesPerCycle
@@ -47,12 +57,12 @@ public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProbl
   }
 }
 
-public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>
+  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  where TSearchState : class, ISearchState
+  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
 {
   protected readonly IReadOnlyList<TAlgorithm> Algorithms;
   protected readonly int? MaximumCycles;
@@ -70,7 +80,7 @@ public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProble
     algorithmInstanceRegistries = new Dictionary<TAlgorithm, ExecutionInstanceRegistry>(capacity: NewExecutionInstancesPerCycle ? Algorithms.Count : 0);
   }
 
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+  public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
   {
     var state = initialState;
 

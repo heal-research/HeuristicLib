@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Analysis;
 public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, QualityCurve<T>>
   where TS : class, ISearchSpace<T>
   where TP : class, IProblem<T, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 
 {
   private IEvaluator<T, TS, TP>[] Evaluators { get; }

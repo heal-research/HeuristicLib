@@ -50,7 +50,7 @@ public interface IBuilderWithReplacer<TG, TS, TP> : IAlgorithmBuilder
 public interface IBuilderWithTerminator<TG, TS, TP, TR> : IAlgorithmBuilder
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   ITerminator<TG, TS, TP, TR> Terminator { get; set; }
 }
@@ -58,7 +58,7 @@ public interface IBuilderWithTerminator<TG, TS, TP, TR> : IAlgorithmBuilder
 public interface IBuilderWithInterceptor<TG, TS, TP, TR> : IAlgorithmBuilder
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   IInterceptor<TG, TS, TP, TR>? Interceptor { get; set; }
 }

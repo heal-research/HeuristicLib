@@ -8,18 +8,18 @@ using Microsoft.Extensions.Caching.Memory;
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
 
 public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.State>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : DynamicProblem<TGenotype, TSearchSpace>
   where TGenotype : notnull
   where TKey : notnull
 {
-  public sealed class State
+  public sealed class ExecutionState
   {
     public MemoryCache Cache { get; }
     public long HitCount { get; set; }
 
-    public State(long? sizeLimit)
+    public ExecutionState(long? sizeLimit)
     {
       Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
     }
@@ -42,25 +42,25 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
 
   public long GraceCount { get; init; } = long.MaxValue;
 
-  protected override State CreateInitialState()
+  protected override ExecutionState CreateInitialState()
   {
-    var state = new State(sizeLimit);
+    var executionState = new ExecutionState(sizeLimit);
     sourceProblem.EpochClock.OnEpochChange += (_, _) => {
-      state.Cache.Clear();
-      state.HitCount = 0;
+      executionState.Cache.Clear();
+      executionState.HitCount = 0;
     };
-    return state;
+    return executionState;
   }
 
   protected override IReadOnlyList<ObjectiveVector> Evaluate(
     IReadOnlyList<TGenotype> genotypes,
-    State state,
+    ExecutionState executionState,
     InnerEvaluate innerEvaluate,
     IRandomNumberGenerator random,
     TSearchSpace searchSpace,
     TProblem problem)
   {
-    var cache = state.Cache;
+    var cache = executionState.Cache;
     var beforeCacheStatistics = cache.GetCurrentStatistics();
     var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
     var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
@@ -117,12 +117,12 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
     }
 
     if (uniqueEvaluatedCount == 0) {
-      state.HitCount += cachedSolutionsCount;
-      if (state.HitCount >= GraceCount) {
+      executionState.HitCount += cachedSolutionsCount;
+      if (executionState.HitCount >= GraceCount) {
         problem.EpochClock.AdvanceEpoch();
       }
     } else {
-      state.HitCount = 0;
+      executionState.HitCount = 0;
     }
 
     return results;

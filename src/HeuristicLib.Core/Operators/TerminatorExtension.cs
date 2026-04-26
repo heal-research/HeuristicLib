@@ -6,12 +6,12 @@ namespace HEAL.HeuristicLib.Operators;
 
 public static class TerminatorExtension
 {
-  extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> terminatorInstance)
+  extension<TGenotype, TSearchSpace, TProblem, TSearchState>(ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> terminatorInstance)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : IProblem<TGenotype, TSearchSpace>
-    where TAlgorithmState : IAlgorithmState
+    where TSearchState : ISearchState
   {
-    public bool ShouldContinue(TSearchSpace searchSpace, TProblem problem, TAlgorithmState state)
+    public bool ShouldContinue(TSearchSpace searchSpace, TProblem problem, TSearchState state)
     {
       return !terminatorInstance.ShouldTerminate(state, searchSpace, problem);
     }

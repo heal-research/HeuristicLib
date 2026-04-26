@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
 public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
-  : WrappingCreator<TGenotype, TSearchSpace, TProblem, PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>.State>
+  : WrappingCreator<TGenotype, TSearchSpace, TProblem, PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
@@ -21,19 +21,19 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
     PredefinedSolutions = predefinedSolutions;
   }
 
-  protected override State CreateInitialState() => new();
+  protected override ExecutionState CreateInitialState() => new();
 
-  protected override IReadOnlyList<TGenotype> Create(int count, State state, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+  protected override IReadOnlyList<TGenotype> Create(int count, ExecutionState executionState, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
     var offspring = new TGenotype[count];
 
-    var countPredefined = Math.Min(PredefinedSolutions.Length - state.CurrentSolutionIndex, count);
+    var countPredefined = Math.Min(PredefinedSolutions.Length - executionState.CurrentSolutionIndex, count);
     if (countPredefined > 0) {
       for (var i = 0; i < countPredefined; i++) {
-        offspring[i] = PredefinedSolutions[state.CurrentSolutionIndex + i];
+        offspring[i] = PredefinedSolutions[executionState.CurrentSolutionIndex + i];
       }
 
-      state.CurrentSolutionIndex += countPredefined;
+      executionState.CurrentSolutionIndex += countPredefined;
     }
 
     var countRemaining = count - countPredefined;
@@ -50,7 +50,7 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
     return offspring;
   }
 
-  public sealed class State
+  public sealed class ExecutionState
   {
     public int CurrentSolutionIndex { get; set; } = 0;
   }

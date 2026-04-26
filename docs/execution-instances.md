@@ -4,8 +4,8 @@ This page documents an internal runtime concept.
 
 For most users and most extension authors, the preferred model is:
 
-- operators: author through the stateful/stateless, wrapping, and multi base classes
-- algorithms: author through `IterativeAlgorithm<...>` or `StatefulIterativeAlgorithm<...>` with `IOperatorExecutor`
+- operators: author through `Creator`, `Mutator`, `Evaluator`, `Selector`, `Crossover`, `Replacer`, `Terminator`, `Interceptor`, `Wrapping*`, and `Multi*`
+- algorithms: author through `IterativeAlgorithm<...>` with explicit execution state
 
 You usually do **not** need to work with execution instances directly.
 
@@ -19,8 +19,8 @@ HeuristicLib keeps a separation between:
 That separation is still useful internally for:
 
 - run-local mutable state
-- sharing the same runtime object when the same definition object is reused in one run
-- giving meta algorithms control over whether runtime state resets or persists
+- sharing the same execution object when the same definition object is reused in one run
+- giving meta algorithms control over whether execution state resets or persists
 
 ## `ExecutionInstanceRegistry`
 
@@ -32,7 +32,18 @@ Important properties:
 - the same definition object resolves to the same execution instance within one registry
 - different runs can use different registries and therefore different execution graphs
 
-This is the infrastructure that makes `IOperatorExecutor` and the simplified authoring bases work correctly behind the scenes.
+`ExecutionInstanceRegistry` also implements `IExecutionInstanceResolver`, the narrow API that high-level authoring bases receive.
+
+That means ordinary authoring code can resolve the execution instances it needs without depending on the full registry API.
+
+## Eager local resolution
+
+The current intended model is eager, local resolution:
+
+- when an algorithm creates its execution instance, it resolves the operators it will use into execution state
+- when a wrapping or multi operator creates its execution instance, it resolves its declared inner operators into its execution state
+
+This gives one-time resolution cost per execution instance and avoids per-call dictionary lookups during steady-state execution.
 
 ## When you should care
 

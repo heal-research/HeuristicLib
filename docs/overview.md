@@ -4,7 +4,7 @@ HeuristicLib is a **library-first** framework for implementing and composing heu
 
 The project’s organizing idea is simple:
 
-> An **algorithm** iteratively transforms an **algorithm state** while operating on **genotypes** from a **search space**, evaluated by a **problem** under an **objective**.
+> An **algorithm** produces a stream of **search states** while operating on **genotypes** from a **search space**, evaluated by a **problem** under an **objective**.
 
 This documentation focuses on the mental model and the stable contracts that shape day-to-day usage. The generated **API** reference is the place for exhaustive type-by-type details.
 
@@ -49,12 +49,14 @@ var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSale
 
 var algorithm = ga.WithMaxIterations(maxIterations: 200);
 
+var step = 0;
+
 await foreach (var state in algorithm.RunStreamingAsync(problem, rng))
 {
    var best = state.Population.Solutions
       .MinBy(s => s.ObjectiveVector, problem.Objective.TotalOrderComparer)!;
 
-   Console.WriteLine($"Iter {state.CurrentIteration,4}: best = {best.ObjectiveVector}");
+   Console.WriteLine($"Step {step++,4}: best = {best.ObjectiveVector}");
 }
 ```
 

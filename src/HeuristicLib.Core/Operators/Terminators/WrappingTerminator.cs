@@ -5,60 +5,60 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public abstract record WrappingTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem, TState>
-  : ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TAlgorithmState : class, IAlgorithmState
+public abstract record WrappingTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, TExecutionState>
+  : ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TSearchState : class, ISearchState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  protected delegate bool InnerShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem);
+  protected delegate bool InnerShouldTerminate(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 
-  protected ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState> InnerTerminator { get; }
+  protected ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState> InnerTerminator { get; }
 
-  protected WrappingTerminator(ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState> innerTerminator)
+  protected WrappingTerminator(ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState> innerTerminator)
   {
     InnerTerminator = innerTerminator;
   }
 
-  public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+  public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
     new Instance(this, instanceRegistry.Resolve(InnerTerminator).ShouldTerminate, CreateInitialState());
 
-  protected abstract TState CreateInitialState();
+  protected abstract TExecutionState CreateInitialState();
 
-  protected abstract bool ShouldTerminate(TAlgorithmState algorithmState, TState state,
+  protected abstract bool ShouldTerminate(TSearchState searchState, TExecutionState executionState,
     InnerShouldTerminate innerShouldTerminate,
     TSearchSpace searchSpace, TProblem problem);
 
-  private sealed class Instance(WrappingTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem, TState> wrappingTerminator,
-    InnerShouldTerminate innerShouldTerminate, TState terminatorState)
-    : ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+  private sealed class Instance(WrappingTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, TExecutionState> wrappingTerminator,
+    InnerShouldTerminate innerShouldTerminate, TExecutionState executionState)
+    : ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
   {
-    public bool ShouldTerminate(TAlgorithmState state, TSearchSpace searchSpace, TProblem problem)
+    public bool ShouldTerminate(TSearchState state, TSearchSpace searchSpace, TProblem problem)
     {
-      return wrappingTerminator.ShouldTerminate(state, terminatorState, innerShouldTerminate, searchSpace, problem);
+      return wrappingTerminator.ShouldTerminate(state, executionState, innerShouldTerminate, searchSpace, problem);
     }
   }
 }
 
-public abstract record WrappingTerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : WrappingTerminator<TGenotype, TAlgorithmState, TSearchSpace, TProblem, NoState>
-  where TAlgorithmState : class, IAlgorithmState
+public abstract record WrappingTerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
+  : WrappingTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, NoState>
+  where TSearchState : class, ISearchState
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  protected WrappingTerminator(ITerminator<TGenotype, TSearchSpace, TProblem, TAlgorithmState> innerTerminator)
+  protected WrappingTerminator(ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState> innerTerminator)
     : base(innerTerminator)
   {
   }
 
   protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-  protected sealed override bool ShouldTerminate(TAlgorithmState algorithmState, NoState state,
+  protected sealed override bool ShouldTerminate(TSearchState searchState, NoState executionState,
     InnerShouldTerminate innerShouldTerminate,
     TSearchSpace searchSpace, TProblem problem)
-    => ShouldTerminate(algorithmState, innerShouldTerminate, searchSpace, problem);
+    => ShouldTerminate(searchState, innerShouldTerminate, searchSpace, problem);
 
-  protected abstract bool ShouldTerminate(TAlgorithmState algorithmState,
+  protected abstract bool ShouldTerminate(TSearchState searchState,
     InnerShouldTerminate innerShouldTerminate,
     TSearchSpace searchSpace, TProblem problem);
 }

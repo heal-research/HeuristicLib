@@ -86,39 +86,39 @@ public abstract class Run
     => TryGetAnalyzerResult(analyzer, out analyzerRunState);
 }
 
-public class Run<TGenotype, TSearchSpace, TProblem, TState> : Run
+public class Run<TGenotype, TSearchSpace, TProblem, TSearchState> : Run
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TState : class, IAlgorithmState
+  where TSearchState : class, ISearchState
 {
-  public IAlgorithm<TGenotype, TSearchSpace, TProblem, TState> Algorithm { get; }
+  public IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState> Algorithm { get; }
 
   public TProblem Problem { get; }
 
-  public Run(IAlgorithm<TGenotype, TSearchSpace, TProblem, TState> algorithm, TProblem problem, IReadOnlyList<IAnalyzer>? analyzers = null)
+  public Run(IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState> algorithm, TProblem problem, IReadOnlyList<IAnalyzer>? analyzers = null)
     : base(analyzers)
   {
     Algorithm = algorithm;
     Problem = problem;
   }
 
-  public IAsyncEnumerable<TState> RunStreamingAsync(IRandomNumberGenerator random, TState? initialState = null, CancellationToken cancellationToken = default)
+  public IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
   {
     var instance = RootRegistry.Resolve(Algorithm);
     return instance.RunStreamingAsync(Problem, random, initialState, cancellationToken);
   }
 
-  public async Task<TState> RunToCompletionAsync(IRandomNumberGenerator random, TState? initialState = null, CancellationToken cancellationToken = default)
+  public async Task<TSearchState> RunToCompletionAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
   {
     return await RunStreamingAsync(random, initialState, cancellationToken).LastAsync(cancellationToken);
   }
 
-  public IEnumerable<TState> RunStreaming(IRandomNumberGenerator random, TState? initialState = null, CancellationToken cancellationToken = default)
+  public IEnumerable<TSearchState> RunStreaming(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
   {
     return RunStreamingAsync(random, initialState, cancellationToken).ToBlockingEnumerable(cancellationToken);
   }
 
-  public TState RunToCompletion(IRandomNumberGenerator random, TState? initialState = null, CancellationToken cancellationToken = default)
+  public TSearchState RunToCompletion(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
   {
     return RunToCompletionAsync(random, initialState, cancellationToken).GetAwaiter().GetResult();
   }

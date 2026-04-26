@@ -1,25 +1,15 @@
 ﻿using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IIterativeAlgorithm<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
-  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public interface IIterativeAlgorithm<TGenotype, in TSearchSpace, in TProblem, TSearchState>
+  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
+  where TSearchState : class, ISearchState
 {
-  IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Interceptor { get; }
-}
-
-public interface IIterativeAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TAlgorithmState>
-  : IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-{
-  TAlgorithmState ExecuteStep(TAlgorithmState? previousState, TProblem problem, IRandomNumberGenerator random);
+  IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
 }

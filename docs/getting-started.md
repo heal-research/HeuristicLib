@@ -6,7 +6,7 @@ The most important current ideas are:
 
 1. configure problems and operators as plain objects
 2. run algorithms streaming-first
-3. when you implement your own algorithm, start from `IterativeAlgorithm<...>` or `StatefulIterativeAlgorithm<...>`
+3. when you implement your own algorithm, start from `IterativeAlgorithm<...>`
 
 ## Run a genetic algorithm
 
@@ -53,43 +53,72 @@ This is the intended everyday style:
 
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-public sealed record MyState : AlgorithmState
-{
-  public required int Iteration { get; init; }
-}
-
 public sealed record MyAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, MyState>
+  : IterativeAlgorithm<
+      TGenotype,
+      TSearchSpace,
+      TProblem,
+      SingleSolutionState<TGenotype>,
+      MyAlgorithm<TGenotype, TSearchSpace, TProblem>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  protected override MyState ExecuteStep(
-    MyState? previousState,
-    IOperatorExecutor executor,
+  public new sealed class ExecutionState
+    : IterativeAlgorithm<
+        TGenotype,
+        TSearchSpace,
+        TProblem,
+        SingleSolutionState<TGenotype>,
+        ExecutionState>.ExecutionState
+  {
+    public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
+  }
+
+  public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
+
+  protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
+  {
+    return new ExecutionState {
+      Evaluator = resolver.Resolve(Evaluator),
+      Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
+      Creator = resolver.Resolve(Creator)
+    };
+  }
+
+  protected override SingleSolutionState<TGenotype> ExecuteStep(
+    SingleSolutionState<TGenotype>? previousState,
+    ExecutionState executionState,
     TProblem problem,
     IRandomNumberGenerator random)
   {
-    return new MyState {
-      Iteration = (previousState?.Iteration ?? 0) + 1
+    var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
+    var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+
+    return new SingleSolutionState<TGenotype> {
+      Population = Population.From([candidate], [objective])
     };
   }
 }
 ```
 
-If the algorithm needs hidden mutable per-run state, switch to `StatefulIterativeAlgorithm<...>` and add `TRuntimeState`.
+Here the public search state is the current solution. If your algorithm needs other public progress data, add it explicitly to your concrete search-state type.
+
+When the algorithm depends on operators, resolve them in `CreateInitialExecutionState(...)` and store the resulting execution instances and other per-run mutable data in the nested `ExecutionState`.
 
 ## What not to learn first
 
 You do not need to start with:
 
-- execution instances
-- manual registry resolution
+- manual execution-instance classes
+- full registry control
 - meta algorithms
 
 Those are real parts of the system, but they are not the intended first extension path anymore.

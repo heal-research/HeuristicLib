@@ -1,9 +1,9 @@
-﻿namespace HEAL.HeuristicLib.Operators.Terminators;
+namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record AfterIterationsTerminator<TGenotype>
-  : StatefulTerminator<TGenotype, AfterIterationsTerminator<TGenotype>.State>
+  : Terminator<TGenotype, AfterIterationsTerminator<TGenotype>.ExecutionState>
 {
-  public sealed class State
+  public sealed class ExecutionState
   {
     public int CurrentCounter { get; set; }
   }
@@ -15,11 +15,11 @@ public record AfterIterationsTerminator<TGenotype>
     this.maximumIterations = maximumIterations;
   }
 
-  protected override State CreateInitialState() => new();
+  protected override ExecutionState CreateInitialState() => new();
 
-  protected override bool ShouldTerminate(State terminatorState)
+  protected override bool ShouldTerminate(ExecutionState executionState)
   {
-    terminatorState.CurrentCounter += 1;
-    return terminatorState.CurrentCounter >= maximumIterations;
+    executionState.CurrentCounter += 1;
+    return executionState.CurrentCounter >= maximumIterations;
   }
 }

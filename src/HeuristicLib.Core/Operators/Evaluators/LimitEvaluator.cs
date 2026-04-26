@@ -7,11 +7,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public record LimitEvaluator<TG, TS, TP>
-  : WrappingEvaluator<TG, TS, TP, LimitEvaluator<TG, TS, TP>.State>
+  : WrappingEvaluator<TG, TS, TP, LimitEvaluator<TG, TS, TP>.ExecutionState>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  public sealed class State
+  public sealed class ExecutionState
   {
     public InvocationCounter Counter { get; } = new();
   }
@@ -29,12 +29,12 @@ public record LimitEvaluator<TG, TS, TP>
     this.strict = strict;
   }
 
-  protected override State CreateInitialState() => new();
+  protected override ExecutionState CreateInitialState() => new();
 
-  protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, State state,
+  protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, ExecutionState executionState,
     InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    var remainingEvaluations = maxEvaluations - state.Counter.CurrentCount;
+    var remainingEvaluations = maxEvaluations - executionState.Counter.CurrentCount;
 
     var alternative = alternativeValue ?? problem.Objective.Worst;
 
@@ -47,14 +47,14 @@ public record LimitEvaluator<TG, TS, TP>
       var genotypesToSkip = genotypes.Skip(remainingEvaluations).ToList();
 
       var evaluated = innerEvaluate(genotypesToEvaluate, random, searchSpace, problem);
-      state.Counter.IncrementBy(genotypesToEvaluate.Count);
+      executionState.Counter.IncrementBy(genotypesToEvaluate.Count);
       var skipped = Enumerable.Repeat(alternative, genotypesToSkip.Count);
 
       return evaluated.Concat(skipped).ToArray();
     }
 
     var result = innerEvaluate(genotypes, random, searchSpace, problem);
-    state.Counter.IncrementBy(genotypes.Count);
+    executionState.Counter.IncrementBy(genotypes.Count);
     return result;
   }
 }

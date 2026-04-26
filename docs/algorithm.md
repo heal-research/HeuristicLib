@@ -1,96 +1,58 @@
 # Algorithm
 
-An algorithm drives the optimization process by producing a stream of algorithm states.
+An algorithm drives the optimization process by producing a stream of search states.
 
-For normal authoring, HeuristicLib now promotes a simple model:
+For normal authoring, HeuristicLib now has one main iterative base:
 
-- derive from `IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>` if the algorithm has no meaningful custom runtime state
-- derive from `StatefulIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TRuntimeState>` if it does
+- derive from `IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>`
 - implement the step logic on the algorithm type itself
-- call operators through `IOperatorExecutor`
+- resolve operator dependencies once in `CreateInitialExecutionState(IExecutionInstanceResolver resolver)`
+- store the resolved execution instances and any mutable per-run data in `TExecutionState`
 
-That is the main authoring story users should learn first.
-
-## Authoring bases
-
-### `IterativeAlgorithm<...>`
-
-Use this when the algorithm can be written as:
+## Main authoring shape
 
 ```csharp
+protected override TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
+
 protected override TSearchState ExecuteStep(
   TSearchState? previousState,
-  IOperatorExecutor executor,
+  TExecutionState executionState,
   TProblem problem,
   IRandomNumberGenerator random)
 ```
 
-This is the common case for algorithms such as:
+`TExecutionState` is hidden per-run state. It is not the streamed public search state.
 
-- `HillClimber<...>`
-- `GeneticAlgorithm<...>`
-- `NSGA2<...>`
-- `EvolutionStrategy<...>`
-- `OpenEndedRelevantAllelesPreservingGeneticAlgorithm<...>`
-- `AlpsGeneticAlgorithm<...>`
+Typical execution-state contents:
 
-### `StatefulIterativeAlgorithm<...>`
-
-Use this when the algorithm needs hidden per-run state:
-
-```csharp
-protected override TRuntimeState CreateInitialRuntimeState();
-
-protected override TSearchState ExecuteStep(
-  TSearchState? previousState,
-  TRuntimeState runtimeState,
-  IOperatorExecutor executor,
-  TProblem problem,
-  IRandomNumberGenerator random)
-```
-
-`TRuntimeState` is internal algorithm execution state. It is not the streamed public search state.
-
-## `IOperatorExecutor`
-
-Algorithms call operators through `IOperatorExecutor` rather than resolving execution instances manually.
-
-Examples:
-
-```csharp
-var genotypes = executor.Create(Creator, PopulationSize, random, problem.SearchSpace, problem);
-var fitnesses = executor.Evaluate(Evaluator, genotypes, random, problem.SearchSpace, problem);
-var parents = executor.Select(Selector, population, problem.Objective, count, random, problem.SearchSpace, problem);
-```
-
-This keeps algorithm authoring focused on the optimization logic instead of execution-instance plumbing.
+- resolved `ICreatorInstance`, `IMutatorInstance`, `IEvaluatorInstance`, ...
+- counters, caches, and other mutable per-run data
 
 ## Evaluator and interceptor
 
-`Algorithm<...>` provides the explicit `Evaluator`.
+`Algorithm<...>` still provides the explicit `Evaluator`.
 
-`StatefulIterativeAlgorithm<...>` additionally supports an optional `Interceptor` that transforms the produced state after each step.
+`IterativeAlgorithm<...>` additionally supports an optional `Interceptor` that transforms the produced state after each step.
 
-The evaluator is part of the core algorithm story.
-The interceptor is currently a practical execution hook and may evolve later when the analyzer/observation system is revisited.
+## Why this model exists
 
-## Internal runtime machinery
+This keeps algorithm logic on the algorithm type, while still preserving:
 
-The library still uses execution instances internally.
+- run-local mutable state
+- shared execution-instance identity within one run
+- explicit, eager dependency resolution
 
-That matters for:
+Nested operator use is no longer hidden behind an executor object. If an algorithm depends on operators, its execution state makes that dependency explicit.
 
-- run-local state
-- shared runtime graph resolution
-- meta-algorithm behavior
+## Advanced path
 
-But for normal algorithm authoring, execution instances are infrastructure, not the intended extension model.
+The low-level execution-instance model still exists.
 
-If a very advanced algorithm really needs full manual control, it can still implement `IAlgorithm<...>` directly.
+If a very advanced algorithm needs full manual control, it can still implement `IAlgorithm<...>` directly and work with `ExecutionInstanceRegistry`.
 
 ## Related pages
 
-- [Algorithm state](algorithm-state.md)
+- [Search state](algorithm-state.md)
 - [Execution model](execution-model.md)
 - [Definition vs execution instances](execution-instances.md)
 - [Operators](operators.md)

@@ -34,59 +34,10 @@ This consistency reduces cognitive load: once you’ve implemented one operator,
 >
 > - Operators assume their input genotypes are already within the given search space. Passing out-of-space inputs is considered a usage error and may throw.
 > - Operators guarantee that any genotypes they return are within the given search space.
->
-> In other words: algorithms typically do not validate or repair genotypes automatically; operators are the enforcement boundary.
 
-## A note on parallelism and reproducibility
+## Choosing a base class
 
-Several operator base classes use internal parallelization helpers (for example, creators and mutators operate on batches).
-
-To keep results reproducible:
-
-- Do not use `System.Random` directly inside operators.
-- Always take randomness from the provided `IRandomNumberGenerator`.
-- If you parallelize internally, fork deterministic child generators (see [Randomness (RNG) design](randomness.md)).
-
-## Common composition helpers
-
-HeuristicLib includes a few small composition patterns that keep calling code clean:
-
-- `mutator.WithRate(mutationRate)` wraps a mutator with a no-op mutator to achieve a per-offspring mutation probability.
-- `ChooseOne*` helpers (for example, `ChooseOneMutator` and `ChooseOneCrossover`) choose among several operators using weights.
-- `Pipeline*` helpers (for example, `PipelineMutator` and `PipelineInterceptor`) apply several operators in sequence.
-
-## Direct invocation for stateless operators
-
-Concrete stateless operators should usually expose a public static method using the role verb so callers can use the operator logic directly without instantiating an operator object.
-
-- creators -> `Create(...)`
-- mutators -> `Mutate(...)`
-- crossovers -> `Cross(...)`
-- evaluators -> `Evaluate(...)`
-- selectors -> `Select(...)`
-- replacers -> `Replace(...)`
-- terminators -> `ShouldTerminate(...)`
-- interceptors -> `Transform(...)`
-
-When the operator has instance configuration, make that configuration explicit in the static method signature. When an identical static signature would collide with the instance method, use either a companion static helper type or a nearby overload that exposes the required parameters directly.
-
-## Creators and RNG helpers
-
-Creators sit at the top of the random-sampling stack.
-
-That means a creator should usually **not** implement sampling math itself.
-Instead, it should delegate to the existing RNG helper layers and keep only the creator-specific concerns:
-
-- choosing the appropriate helper for the output type or search space
-- exposing the operator-shaped `Create(...)` API
-- enforcing operator-level guarantees such as producing search-space-valid output
-
-In practice, a creator like `UniformDistributedCreator` should call the most convenient existing RNG helper rather than becoming a second implementation site for uniform sampling.
-
-## Choosing a base class when implementing an operator
-
-The base classes in `src/HeuristicLib.Core/Operators` are mainly **authoring conveniences**.
-They do not introduce fundamentally different operator concepts; they package common implementation patterns on top of the role interfaces (`ICreator`, `IMutator`, `IEvaluator`, ...).
+The base classes in `src/HeuristicLib.Core/Operators` are authoring conveniences on top of the role interfaces.
 
 Use this checklist:
 
@@ -102,43 +53,45 @@ Use this checklist:
 2. **If the operator is stateless and naturally processes one item at a time, prefer `SingleSolution*`**
    - Examples: `SingleSolutionCreator`, `SingleSolutionMutator`, `SingleSolutionCrossover`, `SingleSolutionEvaluator`
    - Use this when the batch implementation is just “apply the same logic independently to each element”.
-   - These bases already provide the batch loop and RNG splitting behavior.
 
 3. **If the operator is stateless but needs custom batch logic, use `Stateless*`**
-   - Examples: `StatelessSelector`, `StatelessReplacer`, `StatelessTerminator`, `StatelessInterceptor`
-   - Also use this for creators/mutators/crossovers/evaluators when you want to optimize across the whole batch instead of implementing per-item logic.
+   - `Stateless*` is the special-case convenience layer built on `NoState`.
 
-4. **If the operator needs mutable per-run memory, use `Stateful*`**
-   - Examples: `StatefulTerminator`, `StatefulEvaluator`, `StatefulMutator`, ...
+4. **If the operator needs mutable per-run memory, use the unprefixed role base**
+   - Examples: `Creator`, `Mutator`, `Evaluator`, `Selector`, `Crossover`, `Replacer`, `Terminator`, `Interceptor`
    - Put configuration on the definition object.
-   - Put mutable runtime data into the nested `State` that becomes part of the execution instance.
-   - See [Definition vs execution instances](execution-instances.md) for the mental model.
+   - Put mutable runtime data into `TExecutionState`.
 
-5. **If the operator wraps exactly one inner operator of the same role, use `Decorator*`**
+5. **If the operator wraps exactly one inner operator of the same role, use `Wrapping*<..., TExecutionState>`**
    - Examples: `WrappingEvaluator`, `WrappingMutator`, `WrappingSelector`, ...
-   - Typical use cases: caching, limiting, adding elites before delegating, prepending predefined solutions.
-   - If the wrapper does **not** need its own extra execution state, prefer the lower-arity `Decorator*<...>` base.
-   - If it does need mutable per-run wrapper state, use the `Decorator*<..., TState>` form.
+   - The base resolves the inner execution instance once and passes it to your implementation as a delegate.
+   - Store that instance in `TExecutionState`.
 
-6. **If the operator combines several inner operators of the same role, use `Composite*`**
+6. **If the operator combines several inner operators of the same role, use `Multi*<..., TExecutionState>`**
    - Examples: `MultiMutator`, `MultiCrossover`, `MultiTerminator`, ...
-   - Typical use cases: pipelines, weighted choice among operators, AND/OR combinations of terminators.
-   - If the wrapper does **not** need its own extra execution state, prefer the lower-arity `Composite*<...>` base.
-   - If it does need mutable per-run wrapper state, use the `Composite*<..., TState>` form.
+   - The base resolves the inner execution instances once and passes them to your implementation as delegates.
+   - Store those instances in `TExecutionState`.
 
 7. **If none of the convenience bases fit, implement the operator contract directly**
    - This is the fallback when you need full control over instancing or execution behavior.
-   - At the lowest level, that means implementing `IOperator<TExecutionInstance>` yourself.
-   - If you do that, you also need to handle the execution-instance split correctly. See [Definition vs execution instances](execution-instances.md).
+   - If you do that, you also need to handle the definition/execution-instance split correctly. See [Definition vs execution instances](execution-instances.md).
 
-### Short version
+## Short version
 
 - plain stateless batch operator -> `Stateless*`
 - plain stateless per-item operator -> `SingleSolution*`
-- operator with mutable execution state -> `Stateful*`
-- operator that wraps one operator -> `Decorator*` (`Decorator*<...>` without extra state, `Decorator*<..., TState>` with extra state)
-- operator that coordinates several operators -> `Composite*` (`Composite*<...>` without extra state, `Composite*<..., TState>` with extra state)
+- operator with mutable execution state -> `Creator` / `Mutator` / `Evaluator` / ...
+- operator that wraps one operator -> `Wrapping*<..., TExecutionState>`
+- operator that coordinates several operators -> `Multi*<..., TExecutionState>`
 - full custom behavior -> implement the contract directly and handle execution instances yourself
+
+## Composition helpers
+
+HeuristicLib includes a few small composition patterns that keep calling code clean:
+
+- `mutator.WithRate(mutationRate)` wraps a mutator with a no-op mutator to achieve a per-offspring mutation probability
+- `ChooseOne*` helpers choose among several operators using weights
+- `Pipeline*` helpers apply several operators in sequence
 
 ## Next
 

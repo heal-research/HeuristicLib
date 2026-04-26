@@ -6,25 +6,28 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public abstract record Analyzer<T, TS, TP, TR, TState>(IAlgorithm<T, TS, TP, TR> Algorithm) : Analyzer<TState> where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS> where TR : class, IAlgorithmState;
+public abstract record Analyzer<T, TS, TP, TSearchState, TExecutionState>(IAlgorithm<T, TS, TP, TSearchState> Algorithm) : Analyzer<TExecutionState>
+  where TS : class, ISearchSpace<T>
+  where TP : class, IProblem<T, TS>
+  where TSearchState : class, ISearchState;
 
-public abstract record Analyzer<TState> : IAnalyzer<AnalyzerRunInstance<TState>>
+public abstract record Analyzer<TExecutionState> : IAnalyzer<AnalyzerRunInstance<TExecutionState>>
 {
-  public AnalyzerRunInstance<TState> CreateAnalyzerState() => new RunInstance(this, CreateInitialState());
-  public abstract TState CreateInitialState();
+  public AnalyzerRunInstance<TExecutionState> CreateAnalyzerState() => new RunInstance(this, CreateInitialState());
+  public abstract TExecutionState CreateInitialState();
 
-  public abstract void RegisterObservations(IObservationRegistry observationRegistry, TState state);
+  public abstract void RegisterObservations(IObservationRegistry observationRegistry, TExecutionState state);
 
-  private sealed class RunInstance(Analyzer<TState> analyzer, TState state) : AnalyzerRunInstance<TState>(analyzer, state)
+  private sealed class RunInstance(Analyzer<TExecutionState> analyzer, TExecutionState state) : AnalyzerRunInstance<TExecutionState>(analyzer, state)
   {
     public override void RegisterObservations(IObservationRegistry observationRegistry) => Analyzer.RegisterObservations(observationRegistry, State);
   }
 }
 
-public abstract class AnalyzerRunInstance<TState>(Analyzer<TState> analyzer, TState state) : IAnalyzerRunState
+public abstract class AnalyzerRunInstance<TExecutionState>(Analyzer<TExecutionState> analyzer, TExecutionState state) : IAnalyzerRunState
 {
-  protected Analyzer<TState> Analyzer { get; } = analyzer;
-  public TState State { get; } = state;
+  protected Analyzer<TExecutionState> Analyzer { get; } = analyzer;
+  public TExecutionState State { get; } = state;
   public abstract void RegisterObservations(IObservationRegistry observationRegistry);
 }
 

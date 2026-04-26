@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Operators;
@@ -17,7 +18,7 @@ namespace HEAL.HeuristicLib.ApiSpecs;
 public class AlgorithmAuthoringSpecs
 {
   [Fact]
-  public async Task IterativeAlgorithm_AuthoringExample_HidesRuntimeStateCompletely()
+  public async Task StatefulIterativeAlgorithm_AuthoringExample_UsesResolvedExecutionState()
   {
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
     var algorithm = new SingleCreateAlgorithm {
@@ -33,7 +34,7 @@ public class AlgorithmAuthoringSpecs
   }
 
   [Fact]
-  public async Task StatefulIterativeAlgorithm_AuthoringExample_HidesPublicRuntimeClass()
+  public async Task StatefulIterativeAlgorithm_AuthoringExample_HidesPublicExecutionStateClass()
   {
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
     var algorithm = new DoubleCreateAlgorithm {
@@ -71,19 +72,56 @@ public class AlgorithmAuthoringSpecs
     finalState.Solution.Genotype.ShouldBe(new RealVector([1.0, 2.0, 2.0]));
   }
 
-  private sealed record SingleCreateAlgorithm
-    : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+  [Fact]
+  public void StatefulIterativeAlgorithm_CreateExecutionInstance_EagerlyResolvesRuntimeDependencies()
   {
+    var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
+    var creator = new InstancingCreator();
+    var evaluator = new InstancingEvaluator();
+    var algorithm = new SingleCreateAlgorithm {
+      Creator = creator,
+      Evaluator = evaluator
+    };
+
+    var run = algorithm.CreateRun(problem);
+    var registry = run.CreateNewRegistry();
+
+    _ = registry.Resolve(algorithm);
+
+    creator.ExecutionInstancesCreated.ShouldBe(1);
+    evaluator.ExecutionInstancesCreated.ShouldBe(1);
+    creator.CreateCalls.ShouldBe(0);
+    evaluator.EvaluateCalls.ShouldBe(0);
+  }
+
+  private sealed record SingleCreateAlgorithm
+    : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, SingleCreateAlgorithm.ExecutionState>
+  {
+    public new sealed class ExecutionState
+      : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, ExecutionState>.ExecutionState
+    {
+      public required ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
+    }
+
     public required ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
+
+    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
+    {
+      return new ExecutionState {
+        Evaluator = resolver.Resolve(Evaluator),
+        Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
+        Creator = resolver.Resolve(Creator)
+      };
+    }
 
     protected override SingleSolutionState<RealVector> ExecuteStep(
       SingleSolutionState<RealVector>? previousState,
-      IOperatorExecutor executor,
+      ExecutionState executionState,
       TestFunctionProblem problem,
       IRandomNumberGenerator random)
     {
-      var candidate = executor.Create(Creator, 1, random, problem.SearchSpace, problem)[0];
-      var objective = executor.Evaluate(Evaluator, [candidate], random, problem.SearchSpace, problem)[0];
+      var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
+      var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
       return new SingleSolutionState<RealVector> {
         Population = Population.From([candidate], [objective])
@@ -92,33 +130,38 @@ public class AlgorithmAuthoringSpecs
   }
 
   private sealed record DoubleCreateAlgorithm
-    : StatefulIterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, DoubleCreateAlgorithm.RuntimeState>
+    : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, DoubleCreateAlgorithm.ExecutionState>
   {
-    public sealed class RuntimeState
+    public new sealed class ExecutionState
+      : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, ExecutionState>.ExecutionState
     {
       public int Steps { get; set; }
+      public required ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
     }
 
     public required ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
 
-    protected override RuntimeState CreateInitialRuntimeState()
+    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
     {
-      return new RuntimeState();
+      return new ExecutionState {
+        Evaluator = resolver.Resolve(Evaluator),
+        Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
+        Creator = resolver.Resolve(Creator)
+      };
     }
 
     protected override SingleSolutionState<RealVector> ExecuteStep(
       SingleSolutionState<RealVector>? previousState,
-      RuntimeState runtimeState,
-      IOperatorExecutor executor,
+      ExecutionState executionState,
       TestFunctionProblem problem,
       IRandomNumberGenerator random)
     {
-      runtimeState.Steps++;
+      executionState.Steps++;
 
-      var first = executor.Create(Creator, 1, random, problem.SearchSpace, problem)[0];
-      var second = executor.Create(Creator, 1, random, problem.SearchSpace, problem)[0];
-      var candidate = new RealVector([first[0], second[0], runtimeState.Steps]);
-      var objective = executor.Evaluate(Evaluator, [candidate], random, problem.SearchSpace, problem)[0];
+      var first = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
+      var second = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
+      var candidate = new RealVector([first[0], second[0], executionState.Steps]);
+      var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
       return new SingleSolutionState<RealVector> {
         Population = Population.From([candidate], [objective])
@@ -127,29 +170,29 @@ public class AlgorithmAuthoringSpecs
   }
 
   private sealed record CountingCreator
-    : StatefulCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingCreator.CounterState>
+    : Creator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingCreator.ExecutionState>
   {
-    public sealed class CounterState
+    public sealed class ExecutionState
     {
       public int Calls { get; set; }
     }
 
-    protected override CounterState CreateInitialState()
+    protected override ExecutionState CreateInitialState()
     {
-      return new CounterState();
+      return new ExecutionState();
     }
 
     protected override IReadOnlyList<RealVector> Create(
       int count,
-      CounterState state,
+      ExecutionState executionState,
       IRandomNumberGenerator random,
       RealVectorSearchSpace searchSpace,
       TestFunctionProblem problem)
     {
       return Enumerable.Range(0, count)
         .Select(_ => {
-          state.Calls++;
-          return new RealVector([state.Calls, 0.0, 0.0]);
+          executionState.Calls++;
+          return new RealVector([executionState.Calls, 0.0, 0.0]);
         })
         .ToArray();
     }
@@ -169,6 +212,52 @@ public class AlgorithmAuthoringSpecs
       return new SingleSolutionState<RealVector> {
         Population = Population.From([transformed], [currentState.Solution.ObjectiveVector])
       };
+    }
+  }
+
+  private sealed class InstancingCreator : ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+  {
+    public int ExecutionInstancesCreated { get; private set; }
+    public int CreateCalls { get; private set; }
+
+    public ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    {
+      ExecutionInstancesCreated++;
+      return new Instance(this);
+    }
+
+    private sealed class Instance(InstancingCreator owner) : ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+      public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+      {
+        owner.CreateCalls++;
+        return Enumerable.Range(0, count)
+          .Select(_ => RealVector.Repeat(0.0, problem.TestFunction.Dimension))
+          .ToArray();
+      }
+    }
+  }
+
+  private sealed class InstancingEvaluator : IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+  {
+    public int ExecutionInstancesCreated { get; private set; }
+    public int EvaluateCalls { get; private set; }
+
+    public IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    {
+      ExecutionInstancesCreated++;
+      return new Instance(this);
+    }
+
+    private sealed class Instance(InstancingEvaluator owner) : IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+      public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> genotypes, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+      {
+        owner.EvaluateCalls++;
+        return Enumerable.Range(0, genotypes.Count)
+          .Select(_ => new ObjectiveVector(0.0))
+          .ToArray();
+      }
     }
   }
 }

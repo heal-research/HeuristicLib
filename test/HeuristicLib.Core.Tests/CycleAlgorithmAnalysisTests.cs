@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
@@ -71,33 +71,39 @@ public class CycleAlgorithmAnalysisTests
 
   private sealed record CycleRunResult(
     PopulationState<int> FinalState,
-    EvaluationTraceAnalysis.State EvaluationTrace1,
-    EvaluationTraceAnalysis.State EvaluationTrace2,
-    InterceptionTraceAnalysis.State InterceptionTrace);
+    EvaluationTraceAnalysis.ExecutionState EvaluationTrace1,
+    EvaluationTraceAnalysis.ExecutionState EvaluationTrace2,
+    InterceptionTraceAnalysis.ExecutionState InterceptionTrace);
 
   private sealed record IncrementingEvaluator
-    : StatefulEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, IncrementingEvaluator.Counter>
+    : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, IncrementingEvaluator.ExecutionState>
   {
-    public sealed class Counter
+    public sealed class ExecutionState
     {
       public int Value { get; set; }
     }
 
-    protected override Counter CreateInitialState() => new();
+    protected override ExecutionState CreateInitialState() => new();
 
     protected override IReadOnlyList<ObjectiveVector> Evaluate(
       IReadOnlyList<int> genotypes,
-      Counter state,
+      ExecutionState executionState,
       IRandomNumberGenerator random,
       DummySearchSpace<int> searchSpace,
       IProblem<int, DummySearchSpace<int>> problem)
     {
-      return genotypes.Select(_ => new ObjectiveVector(++state.Value)).ToArray();
+      return genotypes.Select(_ => new ObjectiveVector(++executionState.Value)).ToArray();
     }
   }
 
-  private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+  private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, SingleStepAlgorithm.ExecutionState>
   {
+    public new sealed class ExecutionState
+      : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ExecutionState>.ExecutionState
+    {
+      public required IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; init; }
+    }
+
     public int Genotype { get; }
 
     public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; }
@@ -112,8 +118,14 @@ public class CycleAlgorithmAnalysisTests
       Evaluator = evaluator;
     }
 
-    public override IAlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-      => new Instance(instanceRegistry.Run, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Interceptor), Genotype);
+    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
+      => new() {
+        Evaluator = resolver.Resolve(Evaluator),
+        Interceptor = resolver.Resolve(Interceptor)
+      };
+
+    protected override IAlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(Run run, ExecutionState executionState)
+      => new Instance(run, executionState.Evaluator, executionState.Interceptor, Genotype);
 
     private sealed class Instance(
       Run run,
@@ -146,13 +158,13 @@ public class CycleAlgorithmAnalysisTests
   }
 
   private sealed class EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
-    : IAnalyzer<EvaluationTraceAnalysis.State>
+    : IAnalyzer<EvaluationTraceAnalysis.ExecutionState>
   {
     public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; } = evaluator;
 
-    public State CreateAnalyzerState() => new(this);
+    public ExecutionState CreateAnalyzerState() => new(this);
 
-    public sealed class State(EvaluationTraceAnalysis analyzer)
+    public sealed class ExecutionState(EvaluationTraceAnalysis analyzer)
       : AnalyzerRunState<EvaluationTraceAnalysis>(analyzer)
     {
       private readonly List<double> objectiveValues = [];
@@ -172,13 +184,13 @@ public class CycleAlgorithmAnalysisTests
   }
 
   private sealed class InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
-    : IAnalyzer<InterceptionTraceAnalysis.State>
+    : IAnalyzer<InterceptionTraceAnalysis.ExecutionState>
   {
     public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; } = interceptor;
 
-    public State CreateAnalyzerState() => new(this);
+    public ExecutionState CreateAnalyzerState() => new(this);
 
-    public sealed class State(InterceptionTraceAnalysis analyzer)
+    public sealed class ExecutionState(InterceptionTraceAnalysis analyzer)
       : AnalyzerRunState<InterceptionTraceAnalysis>(analyzer)
     {
       private readonly List<double> objectiveValues = [];

@@ -69,7 +69,7 @@ internal sealed class InterceptorObservationInstaller<TG, TS, TP, TR>(IIntercept
   : OperatorObservationInstaller<IInterceptorObserver<TG, TS, TP, TR>>(interceptor, observer)
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   public override void Install(ExecutionInstanceRegistry registry)
     => registry.PreRegister(interceptor, interceptor.ObserveWith(Observers));
@@ -106,7 +106,7 @@ internal sealed class TerminatorObservationInstaller<TG, TS, TP, TR>(ITerminator
   : OperatorObservationInstaller<ITerminatorObserver<TG, TS, TP, TR>>(terminator, observer)
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   public override void Install(ExecutionInstanceRegistry registry)
     => registry.PreRegister(terminator, terminator.ObserveWith(Observers));

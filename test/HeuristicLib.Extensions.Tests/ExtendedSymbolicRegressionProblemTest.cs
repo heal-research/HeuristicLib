@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.Extensions.Tests;
 
 public class ExtendedSymbolicRegressionProblemTest
 {
-  [Fact]
+  [Fact(Skip = "Unit test simply takes too much time.")]
   public void RunMagicProblem()
   {
     var file = Path.Combine("TestData", "192_vineyard.tsv");

@@ -24,7 +24,7 @@
       href: operators.md
     - name: Algorithm
       href: algorithm.md
-    - name: Algorithm state
+    - name: Search state
       href: algorithm-state.md
     - name: Execution model
       href: execution-model.md

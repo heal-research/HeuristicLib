@@ -2,7 +2,7 @@
 
 namespace HEAL.HeuristicLib.Execution;
 
-public class ExecutionInstanceRegistry
+public class ExecutionInstanceRegistry : IExecutionInstanceResolver
 {
   public Run Run { get; }
 

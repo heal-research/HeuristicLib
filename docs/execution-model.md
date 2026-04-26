@@ -8,15 +8,15 @@ At the user level, the important idea is simple:
 
 - an algorithm definition is a reusable configured object
 - a run executes that definition on a problem
-- execution produces a stream of algorithm states
+- execution produces a stream of search states
 
 The core streaming shape is:
 
 ```csharp
-IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
+IAsyncEnumerable<TSearchState> RunStreamingAsync(
   TProblem problem,
   IRandomNumberGenerator random,
-  TAlgorithmState? initialState = null,
+  TSearchState? initialState = null,
   CancellationToken ct = default);
 ```
 
@@ -24,33 +24,25 @@ Convenience methods such as `RunToCompletion(...)` are just ways of consuming th
 
 ## The main authoring model
 
-Most ordinary algorithms should now be authored through:
+Ordinary iterative algorithms should be authored through `IterativeAlgorithm<...>`.
 
-- `IterativeAlgorithm<...>`
-- `StatefulIterativeAlgorithm<...>`
-
-Those bases provide a step-based model:
+That base provides a step-based model with explicit execution-state creation:
 
 ```csharp
+protected override TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
+
 protected override TSearchState ExecuteStep(
   TSearchState? previousState,
-  IOperatorExecutor executor,
+  TExecutionState executionState,
   TProblem problem,
   IRandomNumberGenerator random)
 ```
 
-or, with explicit hidden runtime state:
+The intended pattern is:
 
-```csharp
-protected override TSearchState ExecuteStep(
-  TSearchState? previousState,
-  TRuntimeState runtimeState,
-  IOperatorExecutor executor,
-  TProblem problem,
-  IRandomNumberGenerator random)
-```
-
-`IOperatorExecutor` is the intended way to invoke creators, evaluators, selectors, crossovers, mutators, replacers, interceptors, and terminators from algorithm logic.
+- resolve operator dependencies once in `CreateInitialExecutionState(...)`
+- store those resolved execution instances in `TExecutionState`
+- reuse them in every `ExecuteStep(...)` call
 
 ## Iterative loop semantics
 
@@ -65,6 +57,8 @@ For iterative algorithms, the default loop is:
    - optionally transform it with the configured interceptor
    - yield the produced state
    - continue from that state
+
+Those iteration indices are internal to that specific iterative loop. They are useful for execution concerns such as deterministic RNG forking, but they are not part of the public search-state contract and do not define a cross-algorithm notion of iteration for nested or meta-algorithm execution.
 
 So the model supports both:
 
@@ -88,14 +82,16 @@ Analyzers are attached to the run, not to the algorithm definition.
 
 Internally, definitions are resolved into execution instances through `ExecutionInstanceRegistry`.
 
+`ExecutionInstanceRegistry` also implements `IExecutionInstanceResolver`, which is the narrow surface passed into high-level authoring APIs.
+
 This still matters for:
 
 - run-local operator state
-- shared runtime graph resolution
+- shared execution graph resolution
 - meta-algorithms that need control over instance reuse vs reset
 
-But it is now intentionally an internal execution concern.
-Normal algorithm authoring should work through the algorithm base classes and `IOperatorExecutor`, not through manual instance classes.
+But it is now intentionally an execution concern.
+Normal algorithm authoring should work through execution state and resolved execution instances, not through a separate executor object.
 
 ## Meta algorithms
 

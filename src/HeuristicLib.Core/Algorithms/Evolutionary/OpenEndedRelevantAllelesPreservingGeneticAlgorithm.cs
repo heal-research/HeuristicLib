@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
@@ -11,10 +12,19 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>, OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
+  public new sealed class ExecutionState
+    : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>, ExecutionState>.ExecutionState
+  {
+    public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
+    public required ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
+    public required IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
+    public required ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+  }
+
   private double Strictness { get; } = 1.0;
 
   public required int PopulationSize { get; init; }
@@ -25,15 +35,27 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
   public int Elites { get; init; } = 1;
   public required int MaxEffort { get; init; }
 
+  protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
+  {
+    return new ExecutionState {
+      Evaluator = resolver.Resolve(Evaluator),
+      Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
+      Creator = resolver.Resolve(Creator),
+      Crossover = resolver.Resolve(Crossover),
+      Mutator = resolver.Resolve(Mutator),
+      Selector = resolver.Resolve(Selector)
+    };
+  }
+
   protected override PopulationState<TGenotype> ExecuteStep(
     PopulationState<TGenotype>? previousState,
-    IOperatorExecutor executor,
+    ExecutionState executionState,
     TProblem problem,
     IRandomNumberGenerator random)
   {
     if (previousState is null) {
-      var initialSolutions = executor.Create(Creator, PopulationSize, random, problem.SearchSpace, problem);
-      var initialFitnesses = executor.Evaluate(Evaluator, initialSolutions, random, problem.SearchSpace, problem);
+      var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
+      var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
       return new PopulationState<TGenotype> {
         Population = Population.From(initialSolutions, initialFitnesses)
       };
@@ -43,14 +65,14 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
 
     IReadOnlyList<ISolution<TGenotype>> newPop;
     if (oldPopulation.Length <= 0) {
-      var initialSolutions = executor.Create(Creator, PopulationSize, random, problem.SearchSpace, problem);
-      var initialFitnesses = executor.Evaluate(Evaluator, initialSolutions, random, problem.SearchSpace, problem);
+      var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
+      var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
       newPop = Population.From(initialSolutions, initialFitnesses).Solutions;
     } else {
-      var selected = executor.Select(Selector, oldPopulation, problem.Objective, MaxEffort * 2, random, problem.SearchSpace, problem);
-      var population = executor.Cross(Crossover, selected.ToParents(problem.Objective), random, problem.SearchSpace, problem);
-      population = executor.Mutate(Mutator, population, random, problem.SearchSpace, problem);
-      var fitnesses = executor.Evaluate(Evaluator, population, random, problem.SearchSpace, problem);
+      var selected = executionState.Selector.Select(oldPopulation, problem.Objective, MaxEffort * 2, random, problem.SearchSpace, problem);
+      var population = executionState.Crossover.Cross(selected.ToParents(problem.Objective), random, problem.SearchSpace, problem);
+      population = executionState.Mutator.Mutate(population, random, problem.SearchSpace, problem);
+      var fitnesses = executionState.Evaluator.Evaluate(population, random, problem.SearchSpace, problem);
 
       newPop = Population
                .From(population, fitnesses)

@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 [Equatable]
-public abstract partial record MultiCrossover<TGenotype, TSearchSpace, TProblem, TState>
+public abstract partial record MultiCrossover<TGenotype, TSearchSpace, TProblem, TExecutionState>
   : ICrossover<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
@@ -24,18 +24,18 @@ public abstract partial record MultiCrossover<TGenotype, TSearchSpace, TProblem,
   public ICrossoverInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
     new Instance(this, InnerCrossovers.Select(instanceRegistry.Resolve).Select(x => (InnerCross)x.Cross).ToArray(), CreateInitialState());
 
-  protected abstract TState CreateInitialState();
+  protected abstract TExecutionState CreateInitialState();
 
-  protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, TState state,
+  protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, TExecutionState executionState,
     IReadOnlyList<InnerCross> innerCrossovers,
     IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  private sealed class Instance(MultiCrossover<TGenotype, TSearchSpace, TProblem, TState> multiCrossover, IReadOnlyList<InnerCross> innerCrossovers, TState state)
+  private sealed class Instance(MultiCrossover<TGenotype, TSearchSpace, TProblem, TExecutionState> multiCrossover, IReadOnlyList<InnerCross> innerCrossovers, TExecutionState executionState)
     : ICrossoverInstance<TGenotype, TSearchSpace, TProblem>
   {
     public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
-      return multiCrossover.Cross(parents, state, innerCrossovers, random, searchSpace, problem);
+      return multiCrossover.Cross(parents, executionState, innerCrossovers, random, searchSpace, problem);
     }
   }
 }
@@ -52,7 +52,7 @@ public abstract record MultiCrossover<TGenotype, TSearchSpace, TProblem>
 
   protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-  protected sealed override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, NoState state,
+  protected sealed override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, NoState executionState,
     IReadOnlyList<InnerCross> innerCrossovers,
     IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     => Cross(parents, innerCrossovers, random, searchSpace, problem);

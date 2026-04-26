@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 [Equatable]
 public partial record ObservableTerminator<TG, TS, TP, TR>
   : WrappingTerminator<TG, TS, TP, TR>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
@@ -40,7 +40,7 @@ public partial record ObservableTerminator<TG, TS, TP, TR>
 public interface ITerminatorObserver<in TG, in TS, in TP, in TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   void AfterTerminationCheck(bool shouldTerminate, TR state, TS searchSpace, TP problem);
 }
@@ -48,7 +48,7 @@ public interface ITerminatorObserver<in TG, in TS, in TP, in TR>
 public static class ObservableTerminatorExtensions
 {
   extension<TG, TS, TP, TR>(ITerminator<TG, TS, TP, TR> terminator)
-    where TR : class, IAlgorithmState
+    where TR : class, ISearchState
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
   {
@@ -73,7 +73,7 @@ public static class ObservableTerminatorExtensions
 public sealed class ActionTerminatorObserver<TG, TS, TP, TR>(Action<bool, TR, TS, TP> afterTerminateCheck) : ITerminatorObserver<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
-  where TR : class, IAlgorithmState
+  where TR : class, ISearchState
 {
   public void AfterTerminationCheck(bool shouldTerminate, TR state, TS searchSpace, TP problem) => afterTerminateCheck(shouldTerminate, state, searchSpace, problem);
 }
