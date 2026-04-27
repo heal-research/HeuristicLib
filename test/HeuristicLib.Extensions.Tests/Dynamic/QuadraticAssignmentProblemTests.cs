@@ -43,7 +43,7 @@ public class QuadraticAssignmentProblemTests
     var rng = TestRandoms.SystemRandomGenerator(1);
 
     // identity assignment: facility i -> location i
-    var sol = new Permutation([0, 1, 2, 3]); // adapt ctor if needed
+    var sol = new Permutation(0, 1, 2, 3); // adapt ctor if needed
 
     var cost = problem.Evaluate(sol, rng)[0]; // adapt cast if ObjectiveVector differs
 

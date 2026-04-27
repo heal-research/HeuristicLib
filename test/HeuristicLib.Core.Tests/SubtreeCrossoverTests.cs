@@ -16,7 +16,7 @@ public class SubtreeCrossoverTests
     var grammar = new SimpleSymbolicExpressionGrammar();
     var addition = new Addition();
     var variable = new Variable { VariableNames = ["x"] };
-    grammar.AddFullyConnectedSymbols(grammar.StartSymbol, [addition, variable]);
+    grammar.AddFullyConnectedSymbols(grammar.StartSymbol, addition, variable);
 
     var searchSpace = new SymbolicExpressionTreeSearchSpace(grammar, TreeLength: 20, TreeDepth: 4);
 

@@ -30,7 +30,7 @@ public class AlgorithmAuthoringSpecs
       RandomNumberGenerator.Create(42),
       ct: TestContext.Current.CancellationToken);
 
-    finalState.Solution.Genotype.ShouldBe(new RealVector([1.0, 0.0, 0.0]));
+    finalState.Solution.Genotype.ShouldBe(new RealVector(1.0, 0.0, 0.0));
   }
 
   [Fact]
@@ -51,8 +51,8 @@ public class AlgorithmAuthoringSpecs
       RandomNumberGenerator.Create(456),
       ct: TestContext.Current.CancellationToken);
 
-    firstRunState.Solution.Genotype.ShouldBe(new RealVector([1.0, 2.0, 1.0]));
-    secondRunState.Solution.Genotype.ShouldBe(new RealVector([1.0, 2.0, 1.0]));
+    firstRunState.Solution.Genotype.ShouldBe(new RealVector(1.0, 2.0, 1.0));
+    secondRunState.Solution.Genotype.ShouldBe(new RealVector(1.0, 2.0, 1.0));
   }
 
   [Fact]
@@ -69,7 +69,7 @@ public class AlgorithmAuthoringSpecs
       RandomNumberGenerator.Create(789),
       ct: TestContext.Current.CancellationToken);
 
-    finalState.Solution.Genotype.ShouldBe(new RealVector([1.0, 2.0, 2.0]));
+    finalState.Solution.Genotype.ShouldBe(new RealVector(1.0, 2.0, 2.0));
   }
 
   [Fact]
@@ -160,7 +160,7 @@ public class AlgorithmAuthoringSpecs
 
       var first = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
       var second = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-      var candidate = new RealVector([first[0], second[0], executionState.Steps]);
+      var candidate = new RealVector(first[0], second[0], executionState.Steps);
       var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
       return new SingleSolutionState<RealVector> {
@@ -190,11 +190,11 @@ public class AlgorithmAuthoringSpecs
       TestFunctionProblem problem)
     {
       return Enumerable.Range(0, count)
-        .Select(_ => {
-          executionState.Calls++;
-          return new RealVector([executionState.Calls, 0.0, 0.0]);
-        })
-        .ToArray();
+                       .Select(_ => {
+                         executionState.Calls++;
+                         return new RealVector(executionState.Calls, 0.0, 0.0);
+                       })
+                       .ToArray();
     }
   }
 
@@ -208,7 +208,7 @@ public class AlgorithmAuthoringSpecs
       TestFunctionProblem problem)
     {
       var current = currentState.Solution.Genotype;
-      var transformed = new RealVector([current[0], current[1], current[2] + 1.0]);
+      var transformed = new RealVector(current[0], current[1], current[2] + 1.0);
       return new SingleSolutionState<RealVector> {
         Population = Population.From([transformed], [currentState.Solution.ObjectiveVector])
       };
@@ -232,8 +232,8 @@ public class AlgorithmAuthoringSpecs
       {
         owner.CreateCalls++;
         return Enumerable.Range(0, count)
-          .Select(_ => RealVector.Repeat(0.0, problem.TestFunction.Dimension))
-          .ToArray();
+                         .Select(_ => RealVector.Repeat(0.0, problem.TestFunction.Dimension))
+                         .ToArray();
       }
     }
   }
@@ -255,8 +255,8 @@ public class AlgorithmAuthoringSpecs
       {
         owner.EvaluateCalls++;
         return Enumerable.Range(0, genotypes.Count)
-          .Select(_ => new ObjectiveVector(0.0))
-          .ToArray();
+                         .Select(_ => new ObjectiveVector(0.0))
+                         .ToArray();
       }
     }
   }

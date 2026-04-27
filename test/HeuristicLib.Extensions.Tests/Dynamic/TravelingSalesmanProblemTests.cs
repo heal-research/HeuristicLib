@@ -31,7 +31,7 @@ public class TravelingSalesmanProblemTests
     var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, 1.0, 0.0);
     Assert.Equal([true, true, true, true], p.CurrentState);
-    var tour = new Permutation([0, 1, 2, 3]);
+    var tour = new Permutation(0, 1, 2, 3);
     var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     // Full cycle: 0->1->2->3->0 = 1 + 4 + 6 + 3 = 14
     Assert.Equal(14.0, cost, 10);
@@ -46,7 +46,7 @@ public class TravelingSalesmanProblemTests
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
     var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, true], 0.0);
-    var tour = new Permutation([0, 1, 2, 3]);
+    var tour = new Permutation(0, 1, 2, 3);
     var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     // 0->2 (2) + 2->3 (6) + 3->0 (3) = 11
     Assert.Equal(11.0, cost, 10);
@@ -61,7 +61,7 @@ public class TravelingSalesmanProblemTests
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
     var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, [false, false, false, false], 0.0);
-    var tour = new Permutation([0, 1, 2, 3]);
+    var tour = new Permutation(0, 1, 2, 3);
 
     var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     Assert.Equal(0.0, cost, 10);
@@ -77,7 +77,7 @@ public class TravelingSalesmanProblemTests
     var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
     var p = new ActivatedTravelingSalesmanProblem(data, env, [false, true, false, false], 0.0);
 
-    var tour = new Permutation([0, 1, 2, 3]);
+    var tour = new Permutation(0, 1, 2, 3);
 
     var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
     Assert.Equal(0.0, cost, 10);
@@ -103,7 +103,7 @@ public class TravelingSalesmanProblemTests
     var env = RandomNumberGenerator.Create(0);
     var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 0.0);
 
-    var tour = new Permutation([0, 1, 2, 3]);
+    var tour = new Permutation(0, 1, 2, 3);
     var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
 
     // filtered tour: [0,3] => 0->3 (3) + 3->0 (3) = 6
@@ -116,7 +116,7 @@ public class TravelingSalesmanProblemTests
     var data = new TravelingSalesmanDistanceMatrixProblemData(D);
     var env = RandomNumberGenerator.Create(0);
     var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 1.0, epochLength: 200);
-    var tour = new Permutation([0, 1, 2, 3]);
+    var tour = new Permutation(0, 1, 2, 3);
     var cachedEval = p.CreateEvaluator().WithCache().CreateExecutionInstance(TestRun.Instance);
     Assert.Equal(0, p.EpochClock.CurrentEpoch);
 

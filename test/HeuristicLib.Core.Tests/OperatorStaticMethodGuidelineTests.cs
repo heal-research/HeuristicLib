@@ -105,8 +105,8 @@ public class OperatorStaticMethodGuidelineTests
   [Fact]
   public void ChangedOperatorRecords_ExposeOnlyImmutableConfigurationProperties()
   {
-    AssertImmutableDeclaredProperties(typeof(HEAL.HeuristicLib.Operators.Creators.RealVectorCreators.NormalDistributedCreator));
-    AssertImmutableDeclaredProperties(typeof(HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.NormalDistributedCreator));
+    AssertImmutableDeclaredProperties(typeof(Operators.Creators.RealVectorCreators.NormalDistributedCreator));
+    AssertImmutableDeclaredProperties(typeof(Operators.Creators.IntegerVectorCreators.NormalDistributedCreator));
     AssertImmutableDeclaredProperties(typeof(BalancedTreeCreator));
     AssertImmutableDeclaredProperties(typeof(SelfAdaptiveSimulatedBinaryCrossover));
     AssertImmutableDeclaredProperties(typeof(SubtreeCrossover));
@@ -133,8 +133,7 @@ public class OperatorStaticMethodGuidelineTests
   private static Objective CreateBiObjective()
     => new(
       [ObjectiveDirection.Minimize, ObjectiveDirection.Minimize],
-      Comparer<ObjectiveVector>.Create((left, right) =>
-      {
+      Comparer<ObjectiveVector>.Create((left, right) => {
         var first = left[0].CompareTo(right[0]);
         return first != 0 ? first : left[1].CompareTo(right[1]);
       }));
@@ -163,10 +162,10 @@ public class OperatorStaticMethodGuidelineTests
   private static void AssertImmutableDeclaredProperties(Type type)
   {
     var mutableProperties = type
-      .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly)
-      .Where(property => property.SetMethod is not null && !IsInitOnly(property))
-      .Select(property => property.Name)
-      .ToArray();
+                            .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly)
+                            .Where(property => property.SetMethod is not null && !IsInitOnly(property))
+                            .Select(property => property.Name)
+                            .ToArray();
 
     mutableProperties.ShouldBeEmpty();
   }

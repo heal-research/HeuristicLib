@@ -11,24 +11,24 @@ public abstract record Analyzer<T, TS, TP, TSearchState, TExecutionState>(IAlgor
   where TP : class, IProblem<T, TS>
   where TSearchState : class, ISearchState;
 
-public abstract record Analyzer<TExecutionState> : IAnalyzer<AnalyzerRunInstance<TExecutionState>>
+public abstract record Analyzer<TExecutionState> : IAnalyzer<Analyzer<TExecutionState>.AnalyzerRunInstance>
 {
-  public AnalyzerRunInstance<TExecutionState> CreateAnalyzerState() => new RunInstance(this, CreateInitialState());
+  public AnalyzerRunInstance CreateAnalyzerState() => new RunInstance(this, CreateInitialState());
   public abstract TExecutionState CreateInitialState();
 
   public abstract void RegisterObservations(IObservationRegistry observationRegistry, TExecutionState state);
 
-  private sealed class RunInstance(Analyzer<TExecutionState> analyzer, TExecutionState state) : AnalyzerRunInstance<TExecutionState>(analyzer, state)
+  public abstract class AnalyzerRunInstance(Analyzer<TExecutionState> analyzer, TExecutionState state) : IAnalyzerRunState
+  {
+    protected Analyzer<TExecutionState> Analyzer { get; } = analyzer;
+    public TExecutionState State { get; } = state;
+    public abstract void RegisterObservations(IObservationRegistry observationRegistry);
+  }
+
+  private sealed class RunInstance(Analyzer<TExecutionState> analyzer, TExecutionState state) : AnalyzerRunInstance(analyzer, state)
   {
     public override void RegisterObservations(IObservationRegistry observationRegistry) => Analyzer.RegisterObservations(observationRegistry, State);
   }
-}
-
-public abstract class AnalyzerRunInstance<TExecutionState>(Analyzer<TExecutionState> analyzer, TExecutionState state) : IAnalyzerRunState
-{
-  protected Analyzer<TExecutionState> Analyzer { get; } = analyzer;
-  public TExecutionState State { get; } = state;
-  public abstract void RegisterObservations(IObservationRegistry observationRegistry);
 }
 
 public static class AnalyzerExtensions
