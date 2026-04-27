@@ -27,12 +27,13 @@ public abstract record WrappingSelector<TGenotype, TSearchSpace, TProblem, TExec
   protected abstract TExecutionState CreateInitialState();
 
   protected abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-    Objective objective, int count, TExecutionState executionState, InnerSelect innerSelect,
-    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+                                                                Objective objective, int count, TExecutionState executionState, InnerSelect innerSelect,
+                                                                IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  private sealed class Instance(WrappingSelector<TGenotype, TSearchSpace, TProblem, TExecutionState> wrappingSelector,
-    InnerSelect innerSelect, TExecutionState executionState)
-    : ISelectorInstance<TGenotype, TSearchSpace, TProblem>
+  private sealed class Instance(
+    WrappingSelector<TGenotype, TSearchSpace, TProblem, TExecutionState> wrappingSelector,
+    InnerSelect innerSelect,
+    TExecutionState executionState) : ISelectorInstance<TGenotype, TSearchSpace, TProblem>
   {
     public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
@@ -48,17 +49,16 @@ public abstract record WrappingSelector<TGenotype, TSearchSpace, TProblem>
 {
   protected WrappingSelector(ISelector<TGenotype, TSearchSpace, TProblem> innerSelector)
     : base(innerSelector)
-  {
-  }
+  { }
 
   protected sealed override NoState CreateInitialState() => NoState.Instance;
 
   protected sealed override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-    Objective objective, int count, NoState executionState, InnerSelect innerSelect,
-    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+                                                                       Objective objective, int count, NoState state, InnerSelect innerSelect,
+                                                                       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     => Select(population, objective, count, innerSelect, random, searchSpace, problem);
 
   protected abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-    Objective objective, int count, InnerSelect innerSelect,
-    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+                                                                Objective objective, int count, InnerSelect innerSelect,
+                                                                IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

@@ -42,11 +42,7 @@ public static class ProportionalSelector
       qualities = qualities.Select(_ => 1.0);
     } else {
       if (windowing) {
-        if (singleObjective == ObjectiveDirection.Maximize) {
-          qualities = qualities.Select(q => q - minQuality);
-        } else {
-          qualities = qualities.Select(q => maxQuality - q);
-        }
+        qualities = singleObjective == ObjectiveDirection.Maximize ? qualities.Select(q => q - minQuality) : qualities.Select(q => maxQuality - q);
       } else {
         if (minQuality < 0.0) {
           throw new InvalidOperationException("Proportional selection without windowing does not work with quality values < 0.");

@@ -57,7 +57,7 @@ public record HillClimber<TGenotype, TSearchSpace, TProblem>
     for (var i = 0; i < MaxNeighbors; i += BatchSize) {
       var child = executionState.Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, problem.SearchSpace, problem);
       var res = executionState.Evaluator.Evaluate(child, random, problem.SearchSpace, problem);
-      var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1, random)[0];
+      var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1)[0];
       if (best == BatchSize) {
         continue;
       }

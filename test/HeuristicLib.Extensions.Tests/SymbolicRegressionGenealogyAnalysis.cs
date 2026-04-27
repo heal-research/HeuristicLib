@@ -39,7 +39,8 @@ public class GenealogyGraphTests
     return symRegAllMutator;
   }
 
-  [Fact(Skip = "Currently disabled because the LevenbergMarquardtMinimizer seems to loop endlessly in this test.")]
+  //[Fact(Skip = "Currently disabled because the LevenbergMarquardtMinimizer seems to loop endlessly in this test.")]
+  [Fact]
   public void GeneticAlgorithmExecution()
   {
     var problem = CreateTestSymbolicRegressionProblem();
@@ -109,7 +110,8 @@ public class GenealogyGraphTests
     var algorithm = builder.Build();
     var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, SingleSolutionState<SymbolicExpressionTree>>();
     algorithm = algorithm with { Interceptor = interceptor };
-    var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, SingleSolutionState<SymbolicExpressionTree>>(algorithm, mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
+    var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, SingleSolutionState<SymbolicExpressionTree>>(
+      algorithm, mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
     var run = algorithm.WithMaxIterations(100).CreateRun(problem, genealogy);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
     var gres = run.GetAnalyzerResult(genealogy).State;
