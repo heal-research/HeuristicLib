@@ -92,9 +92,11 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
       if (mathLibCounter > 0) {
         strBuilder.AppendLine("import math");
       }
+
       if (statisticLibCounter > 0) {
         strBuilder.AppendLine("import statistics");
       }
+
       strBuilder.AppendLine();
     }
 
@@ -211,7 +213,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
     strBuilder.Append($"{prefixSymbol}{openingSymbol}");
     foreach (var child in node.Subtrees) {
       FormatRecursively(child, strBuilder);
-      if (child != node.Subtrees.Last()) {
+      if (child != node.Subtrees[^1]) {
         strBuilder.Append(infixSymbol);
       }
     }
@@ -275,6 +277,7 @@ public sealed class SymbolicDataAnalysisExpressionPythonFormatter : ISymbolicExp
         if (i > 1) {
           strBuilder.Append(" * ");
         }
+
         FormatRecursively(node.GetSubtree(i), strBuilder);
       }
 

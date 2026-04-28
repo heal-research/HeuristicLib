@@ -81,7 +81,7 @@ public static class RandomEnumerable
     /// </summary>
     /// <remarks>
     ///   Runtime complexity is O(N) for all sequences.
-    ///   No exception is thrown if the sequence contains less items than there are to be selected.
+    ///   No exception is thrown if the sequence contains fewer items than there are to be selected.
     ///   The method is online.
     /// </remarks>
     /// <param name="random">The random number generator to use, its NextDouble() method must produce values in the range [0;1)</param>
@@ -91,7 +91,9 @@ public static class RandomEnumerable
     public IEnumerable<T> SampleRandomWithoutRepetition(IRandomNumberGenerator random, int count, int sourceCount = -1)
     {
       if (sourceCount == -1) {
-        sourceCount = source.Count();
+        var s = source.ToArray();
+        sourceCount = s.Length;
+        source = s;
       }
 
       var remaining = sourceCount;
@@ -154,10 +156,11 @@ public static class RandomEnumerable
   }
 
   #region Proportional Helpers
-
   extension<T>(IEnumerable<T> source)
   {
+#pragma warning disable S2190
     private IEnumerable<T> SampleProportional(IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional)
+#pragma warning restore S2190
     {
       var sourceArray = source.ToArray();
       var valueArray = PrepareProportional(weights, windowing, inverseProportional);
@@ -172,6 +175,7 @@ public static class RandomEnumerable
 
         yield return sourceArray[index];
       }
+      // ReSharper disable once IteratorNeverReturns
     }
 
     private IEnumerable<T> SampleProportionalWithoutRepetition(IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional)
@@ -249,7 +253,6 @@ public static class RandomEnumerable
       values[i] = maxValue - values[i];
     }
   }
-
   #endregion
 
   /// <summary>

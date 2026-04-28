@@ -57,8 +57,8 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     var invalidIdentifierParts = new Regex(@"[^\p{Lu}\p{Ll}\p{Lt}\p{Lm}\p{Lo}\p{Nl}\p{Mn}\p{Mc}\p{Nd}\p{Pc}\p{Cf}]");
 
     return "@" +
-      (invalidIdentifierStarts.IsMatch(name.AsSpan(0, 1)) ? "_" : "") + // prepend '_' if necessary
-      invalidIdentifierParts.Replace(name, "_");
+           (invalidIdentifierStarts.IsMatch(name.AsSpan(0, 1)) ? "_" : "") + // prepend '_' if necessary
+           invalidIdentifierParts.Replace(name, "_");
   }
 
   private void FormatRecursively(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
@@ -186,34 +186,34 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     } else {
       switch (node) {
         case VariableTreeNode treeNode: {
-            strBuilder.Append($"{VariableName2Identifier(treeNode.VariableName)} * {treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
+          strBuilder.Append($"{VariableName2Identifier(treeNode.VariableName)} * {treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
 
-            break;
-          }
+          break;
+        }
         case NumberTreeNode numNode:
           strBuilder.Append(numNode.Value.ToString("g17", CultureInfo.InvariantCulture));
 
           break;
         default: {
-            switch (node.Symbol) {
-              case FactorVariable: {
-                  var factorNode = (FactorVariableTreeNode)node;
-                  FormatFactor(factorNode, strBuilder);
+          switch (node.Symbol) {
+            case FactorVariable: {
+              var factorNode = (FactorVariableTreeNode)node;
+              FormatFactor(factorNode, strBuilder);
 
-                  break;
-                }
-              case BinaryFactorVariable: {
-                  var binFactorNode = (BinaryFactorVariableTreeNode)node;
-                  FormatBinaryFactor(binFactorNode, strBuilder);
-
-                  break;
-                }
-              default:
-                throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for C# symbolic expression tree formatter.");
+              break;
             }
+            case BinaryFactorVariable: {
+              var binFactorNode = (BinaryFactorVariableTreeNode)node;
+              FormatBinaryFactor(binFactorNode, strBuilder);
 
-            break;
+              break;
+            }
+            default:
+              throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for C# symbolic expression tree formatter.");
           }
+
+          break;
+        }
       }
     }
   }
@@ -252,6 +252,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
         if (i > 1) {
           strBuilder.Append(" * ");
         }
+
         FormatRecursively(node.GetSubtree(i), strBuilder);
       }
 
@@ -277,7 +278,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.Append('(');
     foreach (var child in node.Subtrees) {
       FormatRecursively(child, strBuilder);
-      if (child != node.Subtrees.Last()) {
+      if (child != node.Subtrees[^1]) {
         strBuilder.Append($" {symbol} ");
       }
     }
@@ -290,7 +291,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.Append(function + "(");
     foreach (var child in node.Subtrees) {
       FormatRecursively(child, strBuilder);
-      if (child != node.Subtrees.Last()) {
+      if (child != node.Subtrees[^1]) {
         strBuilder.Append(", ");
       }
     }
@@ -298,7 +299,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     strBuilder.Append(')');
   }
 
-  private void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree)
+  private static void GenerateHeader(StringBuilder strBuilder, SymbolicExpressionTree symbolicExpressionTree)
   {
     strBuilder.AppendLine("using System;");
     strBuilder.AppendLine("using System.Linq;" + Environment.NewLine);
@@ -327,6 +328,7 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     if (stringVarNames.Count != 0 && doubleVarNames.Count != 0) {
       strBuilder.AppendLine(",");
     }
+
     orderedNames = doubleVarNames.OrderBy(keySelector: n => n, new NaturalStringComparer()).Select(n => "double " + VariableName2Identifier(n) + " /* " + n + " */");
     strBuilder.Append(string.Join(", ", orderedNames));
 
@@ -368,8 +370,8 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
   {
     strBuilder.AppendLine("private static double EvaluateFactor(string factorValue, string[] factorValues, double[] parameters) {");
     strBuilder.AppendLine("   for(int i=0;i<factorValues.Length;i++) " +
-      "      if(factorValues[i] == factorValue) return parameters[i];" +
-      "   throw new ArgumentException();");
+                          "      if(factorValues[i] == factorValue) return parameters[i];" +
+                          "   throw new ArgumentException();");
     strBuilder.AppendLine("}");
   }
 

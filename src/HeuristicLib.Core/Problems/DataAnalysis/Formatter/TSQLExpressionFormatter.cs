@@ -60,8 +60,8 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     // Generate comment and instructions
     strBuilder.Append("-- generated. created function can be used like 'SELECT dbo.REGRESSIONMODEL(");
     strBuilder.Append(string.Join(", ", sortedVarcharIdentifiers));
-    if (varcharVarNames.Any() && floatVarNames.Any()) {
-      strBuilder.Append(",");
+    if (varcharVarNames.Count != 0 && floatVarNames.Count != 0) {
+      strBuilder.Append(',');
     }
 
     strBuilder.Append(string.Join(", ", sortedFloatIdentifiers));

@@ -25,7 +25,7 @@ public record EliteSelector<TGenotype, TSearchSpace, TProblem>
                                                                 Objective objective, int count, InnerSelect innerSelect,
                                                                 IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
-    var selectedElites = BestSelector.Select(population, objective, this.elites);
+    var selectedElites = BestSelector.Select(population, objective, elites);
     var remainingCount = count - selectedElites.Count;
     var selecterdRemaining = innerSelect(population, objective, remainingCount, random, searchSpace, problem);
 
