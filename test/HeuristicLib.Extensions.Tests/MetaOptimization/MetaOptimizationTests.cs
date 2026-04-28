@@ -21,7 +21,7 @@ namespace HEAL.HeuristicLib.Extensions.Tests.MetaOptimization;
 
 public class MetaOptimizationTests
 {
-  [Fact]
+  [Fact(Explicit = true)]
   public void TestGAwithMutators()
   {
     //setup

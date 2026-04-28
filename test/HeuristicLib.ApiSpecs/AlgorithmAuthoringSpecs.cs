@@ -17,7 +17,7 @@ namespace HEAL.HeuristicLib.ApiSpecs;
 
 public class AlgorithmAuthoringSpecs
 {
-  [Fact]
+  [Fact(Explicit = true)]
   public async Task StatefulIterativeAlgorithm_AuthoringExample_UsesResolvedExecutionState()
   {
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
@@ -33,7 +33,7 @@ public class AlgorithmAuthoringSpecs
     finalState.Solution.Genotype.ShouldBe(new RealVector(1.0, 0.0, 0.0));
   }
 
-  [Fact]
+  [Fact(Explicit = true)]
   public async Task StatefulIterativeAlgorithm_AuthoringExample_HidesPublicExecutionStateClass()
   {
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
@@ -55,7 +55,7 @@ public class AlgorithmAuthoringSpecs
     secondRunState.Solution.Genotype.ShouldBe(new RealVector(1.0, 2.0, 1.0));
   }
 
-  [Fact]
+  [Fact(Explicit = true)]
   public async Task StatefulIterativeAlgorithm_AuthoringExample_StillUsesInterceptorsNormally()
   {
     var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));

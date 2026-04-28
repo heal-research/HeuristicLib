@@ -7,7 +7,7 @@ public class PythonInterOptEquationScoringTest
   /// <summary>
   ///  takes about 25 seconds on my machine
   /// </summary>
-  [Fact(Skip = "Unit test simply takes too much time.")]
+  [Fact(Explicit = true)]
   public void RunProblem()
   {
     var file = Path.Combine("TestData", "192_vineyard.tsv");

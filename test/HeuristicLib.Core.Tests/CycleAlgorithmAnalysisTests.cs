@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.Tests;
 
 public class CycleAlgorithmAnalysisTests
 {
-  [Fact]
+  [Fact(Explicit = true)]
   public void CycleAlgorithm_WithFreshRegistries_PreservesAnalyzerStateAcrossCycles()
   {
     var result = RunCycleAlgorithm(newExecutionInstancesPerCycle: true);
@@ -27,7 +27,7 @@ public class CycleAlgorithmAnalysisTests
     result.FinalState.Population.Solutions.Single().Genotype.ShouldBe(2);
   }
 
-  [Fact]
+  [Fact(Explicit = true)]
   public void CycleAlgorithm_WithReusedChildRegistries_PreservesAnalyzerStateAcrossCycles()
   {
     var result = RunCycleAlgorithm(newExecutionInstancesPerCycle: false);

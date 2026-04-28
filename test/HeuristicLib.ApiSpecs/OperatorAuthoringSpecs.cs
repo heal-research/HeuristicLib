@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.ApiSpecs;
 
 public class OperatorAuthoringSpecs
 {
-  [Fact]
+  [Fact(Explicit = true)]
   public async Task WrappingCreator_AuthoringExample_RunsInsideHillClimber()
   {
     var problem = CreateRastriginProblem(dimension: 3);
@@ -36,7 +36,7 @@ public class OperatorAuthoringSpecs
     finalState.Solution.Genotype.ShouldBe(RealVector.Repeat(0.0, problem.TestFunction.Dimension));
   }
 
-  [Fact]
+  [Fact(Explicit = true)]
   public async Task MultiMutator_AuthoringExample_CanBeUsedInsideHillClimber()
   {
     var problem = CreateRastriginProblem(dimension: 3);

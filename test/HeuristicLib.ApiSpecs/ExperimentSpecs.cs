@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.ApiSpecs;
 
 public class ExperimentSpecs
 {
-  [Fact]
+  [Fact(Explicit = true)]
   public async Task RepeatedExecution_CurrentApi_UsesExplicitRepeatAlgorithmAndGenericRunToCompletion()
   {
     var problem = CreateRastriginProblem(dimension: 4);

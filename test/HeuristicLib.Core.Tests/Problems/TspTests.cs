@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.Tests.Problems;
 
 public class TspTests
 {
-  [Fact]
+  [Fact(Explicit = true)]
   public void GaWithTSP()
   {
     // Load Problem

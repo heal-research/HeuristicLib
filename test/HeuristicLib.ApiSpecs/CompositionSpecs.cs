@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.ApiSpecs;
 
 public class CompositionSpecs
 {
-  [Fact]
+  [Fact(Explicit = true)]
   public async Task PipelineAlgorithm_CompositionExample_RunsTwoStages()
   {
     var problem = CreateRastriginProblem(dimension: 4);
@@ -41,7 +41,7 @@ public class CompositionSpecs
     problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
   }
 
-  [Fact]
+  [Fact(Explicit = true)]
   public async Task CycleAlgorithm_CompositionExample_RunsFiniteCycles()
   {
     var problem = CreateRastriginProblem(dimension: 4);

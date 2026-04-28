@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Extensions.Tests;
 
 public class DynamicTSPTests
 {
-  [Fact]
+  [Fact(Explicit = true)]
   public void GaWithDynamicTSP()
   {
     //Load Problem

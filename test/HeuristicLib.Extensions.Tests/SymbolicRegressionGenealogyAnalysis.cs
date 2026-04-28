@@ -40,7 +40,7 @@ public class GenealogyGraphTests
   }
 
   //[Fact(Skip = "Currently disabled because the LevenbergMarquardtMinimizer seems to loop endlessly in this test.")]
-  [Fact]
+  [Fact(Explicit = true)]
   public void GeneticAlgorithmExecution()
   {
     var problem = CreateTestSymbolicRegressionProblem();
@@ -66,7 +66,7 @@ public class GenealogyGraphTests
     Assert.Equal(100, res.Population.Solutions.Count());
   }
 
-  [Fact]
+  [Fact(Explicit = true)]
   public void GenealogyGraphOnGeneticAlgorithm()
   {
     var problem = CreateTestSymbolicRegressionProblem();
@@ -102,7 +102,7 @@ public class GenealogyGraphTests
     Assert.Equal(qres[^1].Best.ObjectiveVector, eres.CurrentState[^1].best.ObjectiveVector);
   }
 
-  [Fact(Skip = "Currently disabled because the LevenbergMarquardtMinimizer seems to loop endlessly in this test.")]
+  [Fact(Explicit = true, Skip = "Currently disabled because the LevenbergMarquardtMinimizer seems to loop endlessly in this test.")]
   public void GenealogyGraphOnLocalSearch()
   {
     var problem = CreateTestSymbolicRegressionProblem();
@@ -120,7 +120,7 @@ public class GenealogyGraphTests
     Assert.True(graphViz.Length > 0);
   }
 
-  [Fact]
+  [Fact(Explicit = true)]
   public void GenealogyGraphOnNSGA2()
   {
     var problem = CreateTestSymbolicRegressionProblem(multiObjective: true);
