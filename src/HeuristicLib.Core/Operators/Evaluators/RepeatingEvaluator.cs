@@ -23,104 +23,66 @@ public static class RepeatingEvaluator
 }
 
 public record RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
-  : Evaluator<TGenotype, TSearchSpace, TProblem>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  private readonly IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator;
   private readonly int repeats;
   private readonly Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator;
 
   public RepeatingEvaluator(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
+    : base(evaluator)
   {
-    this.evaluator = evaluator;
     this.repeats = repeats;
     this.aggregator = aggregator;
   }
 
-  public override IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
+    InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
+    TSearchSpace searchSpace, TProblem problem)
   {
-    // ToDo: think about if we want a fresh evaluation or the same evaluation instance as the base for the repeated evaluations. 
-    // Currently we use the same instance to maintain state such as caches.
-    var evaluatorInstance = instanceRegistry.Resolve(evaluator);
-    return new Instance(evaluatorInstance, repeats, aggregator);
-  }
+    var results = innerEvaluate(genotypes, random, searchSpace, problem).ToArray();
 
-  public new class Instance : Evaluator<TGenotype, TSearchSpace, TProblem>.Instance
-  {
-    private readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator;
-    private readonly int repeats;
-    private readonly Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator;
-
-    public Instance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
-    {
-      this.evaluator = evaluator;
-      this.repeats = repeats;
-      this.aggregator = aggregator;
-    }
-
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-      var results = evaluator.Evaluate(genotypes, random, searchSpace, problem).ToArray();
-
-      for (var i = 0; i < repeats; i++) {
-        var reevaluationResult = evaluator.Evaluate(genotypes, random, searchSpace, problem);
-        for (var j = 0; j < results.Length; j++) {
-          results[j] = aggregator(results[j], reevaluationResult[j]);
-        }
+    for (var i = 0; i < repeats; i++) {
+      var reevaluationResult = innerEvaluate(genotypes, random, searchSpace, problem);
+      for (var j = 0; j < results.Length; j++) {
+        results[j] = aggregator(results[j], reevaluationResult[j]);
       }
-
-      return results;
     }
+
+    return results;
   }
 }
 
 public record RepeatedEvaluator<TGenotype, TSearchSpace, TProblem>
-  : Evaluator<TGenotype, TSearchSpace, TProblem>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  private readonly IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator;
   private readonly int repeats;
   private readonly Func<ObjectiveVector[], ObjectiveVector> aggregator;
   private readonly int maxDegreeOfParallelism;
 
   public RepeatedEvaluator(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, int repeats, Func<ObjectiveVector[], ObjectiveVector> aggregator, int maxDegreeOfParallelism = -1)
+    : base(evaluator)
   {
-    this.evaluator = evaluator;
     this.repeats = repeats;
     this.aggregator = aggregator;
     this.maxDegreeOfParallelism = maxDegreeOfParallelism;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => new(instanceRegistry.Resolve(evaluator), repeats, aggregator, maxDegreeOfParallelism);
-
-  public new class Instance : Evaluator<TGenotype, TSearchSpace, TProblem>.Instance
+  protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
+    InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
+    TSearchSpace searchSpace, TProblem problem)
   {
-    private readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator;
-    private readonly int repeats;
-    private readonly Func<ObjectiveVector[], ObjectiveVector> aggregator;
-    private readonly int maxDegreeOfParallelism;
-
-    public Instance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int repeats, Func<ObjectiveVector[], ObjectiveVector> aggregator, int maxDegreeOfParallelism)
-    {
-      this.evaluator = evaluator;
-      this.repeats = repeats;
-      this.aggregator = aggregator;
-      this.maxDegreeOfParallelism = maxDegreeOfParallelism;
-    }
-
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-      var res = BatchExecution.Parallel(
-        repeats,
-        r => evaluator.Evaluate(genotypes, r, searchSpace, problem),
-        random,
-        maxDegreeOfParallelism: maxDegreeOfParallelism);
-      return Enumerable.Range(0, genotypes.Count)
-                       .Select(i => Enumerable.Range(0, repeats).Select(j => res[j][i]).ToArray())
-                       .Select(aggregator)
-                       .ToArray();
-    }
+    var res = BatchExecution.Parallel(
+      repeats,
+      r => innerEvaluate(genotypes, r, searchSpace, problem),
+      random,
+      maxDegreeOfParallelism: maxDegreeOfParallelism);
+    return Enumerable.Range(0, genotypes.Count)
+                     .Select(i => Enumerable.Range(0, repeats).Select(j => res[j][i]).ToArray())
+                     .Select(aggregator)
+                     .ToArray();
   }
 }

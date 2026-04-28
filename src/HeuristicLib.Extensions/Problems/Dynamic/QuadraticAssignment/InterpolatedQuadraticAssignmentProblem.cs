@@ -28,7 +28,7 @@ public sealed class InterpolatedQuadraticAssignmentProblem
     bool pingPong = true,
     UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
     int epochLength = int.MaxValue
-  ) : base(environmentRandom, updatePolicy, epochLength)
+  ) : base(SingleObjective.Minimize, new PermutationSearchSpace(a.Size), environmentRandom, updatePolicy, epochLength)
   {
     if (a.Size != b.Size) {
       throw new ArgumentException("Instances must have same size.");
@@ -46,9 +46,6 @@ public sealed class InterpolatedQuadraticAssignmentProblem
     this.alphaStep = alphaStep;
     this.pingPong = pingPong;
 
-    Objective = SingleObjective.Minimize;
-    SearchSpace = new PermutationSearchSpace(a.Size);
-
     currentFlows = new double[a.Size, a.Size];
     currentDistances = new double[a.Size, a.Size];
 
@@ -56,9 +53,6 @@ public sealed class InterpolatedQuadraticAssignmentProblem
   }
 
   public double Alpha { get; private set; }
-
-  public override PermutationSearchSpace SearchSpace { get; }
-  public override Objective Objective { get; }
 
   public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
   {

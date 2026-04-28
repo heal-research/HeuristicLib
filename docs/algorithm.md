@@ -1,104 +1,58 @@
 # Algorithm
 
-An **algorithm** drives the optimization process.
+An algorithm drives the optimization process by producing a stream of search states.
 
-In HeuristicLib’s abstractions, an algorithm is an **iterative state transformer**:
+For normal authoring, HeuristicLib now has one main iterative base:
 
-> Starting from an optional initial state, it produces a sequence of states until a termination policy says “stop”.
+- derive from `IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>`
+- implement the step logic on the algorithm type itself
+- resolve operator dependencies once in `CreateInitialExecutionState(IExecutionInstanceResolver resolver)`
+- store the resolved execution instances and any mutable per-run data in `TExecutionState`
 
-## The key interface: `IIterable<...>`
-
-`IIterable<TG, TS, TP, TR>` is the core contract:
-
-- `TR ExecuteStep(TP problem, TR? previousState, IRandomNumberGenerator random)`
-- `ITerminator<...> Terminator { get; }`
-- `IInterceptor<...>? Interceptor { get; }`
-
-The library also provides extension methods:
-
-- `Execute(problem, random, initialState?)` returns the last produced state.
-- `ExecuteStreaming(problem, random, initialState?)` yields states as they are produced.
-
-## `IAlgorithm<...>` and the base class in this repository
-
-`IAlgorithm<...>` is an aggregate interface that combines:
-
-- `IExecutable` (run to completion)
-- `IIterable` (run step-by-step)
-- `IObservable` (exposes an optional observer)
-
-In this repository, most concrete algorithms inherit from:
-
-- `Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>`
-
-That base class wires the common properties (`Terminator`, `Interceptor`, `Evaluator`) and provides an `Execute(problem, random)` convenience method.
-
-## Algorithms available in this repository
-
-Evolutionary:
-
-- `GeneticAlgorithm<...>`
-- `NSGA2<...>`
-- `EvolutionStrategy<...>`
-- `ALPSGeneticAlgorithm<...>`
-
-Local search:
-
-- `HillClimber<...>`
-
-Meta algorithms:
-
-- `ConcatAlgorithm<...>`
-
-## The canonical story: Genetic Algorithm
-
-If you’re learning the library, start with the genetic algorithm. It composes the most recognizable operator set:
-
-- create initial genotypes
-- evaluate them
-- select parents
-- crossover and mutate offspring
-- replace the population
-
-The produced state is a population snapshot, which makes progress easy to reason about.
-
-## Builders (recommended for configuration)
-
-For common algorithms, the repository provides builders that collect configuration in one place.
-
-Example (genetic algorithm):
+## Main authoring shape
 
 ```csharp
-using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
-using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
-using HEAL.HeuristicLib.Operators.Terminators;
-using HEAL.HeuristicLib.Problems.TravelingSalesman;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
+protected override TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
 
-var builder = new GeneticAlgorithmBuilder<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
-	Creator = new RandomPermutationCreator(),
-	Crossover = new OrderCrossover(),
-	Mutator = new SwapSingleSolutionMutator(),
-	PopulationSize = 200,
-	MutationRate = 0.20,
-	Elites = 2,
-	Terminator = new AfterIterationsTerminator<Permutation>(maximumIterations: 200)
-};
-
-var algorithm = builder.Build();
+protected override TSearchState ExecuteStep(
+  TSearchState? previousState,
+  TExecutionState executionState,
+  TProblem problem,
+  IRandomNumberGenerator random)
 ```
 
-## Extension points
+`TExecutionState` is hidden per-run state. It is not the streamed public search state.
 
-- **Termination**: `ITerminator` decides when to stop.
-- **Interception**: `IInterceptor` transforms the produced state after each step.
-- **Observation**: `IIterationObserver` can be used as a side-effect hook and is invoked once per produced state during execution. See [Execution model](execution-model.md).
+Typical execution-state contents:
+
+- resolved `ICreatorInstance`, `IMutatorInstance`, `IEvaluatorInstance`, ...
+- counters, caches, and other mutable per-run data
+
+## Evaluator and interceptor
+
+`Algorithm<...>` still provides the explicit `Evaluator`.
+
+`IterativeAlgorithm<...>` additionally supports an optional `Interceptor` that transforms the produced state after each step.
+
+## Why this model exists
+
+This keeps algorithm logic on the algorithm type, while still preserving:
+
+- run-local mutable state
+- shared execution-instance identity within one run
+- explicit, eager dependency resolution
+
+Nested operator use is no longer hidden behind an executor object. If an algorithm depends on operators, its execution state makes that dependency explicit.
+
+## Advanced path
+
+The low-level execution-instance model still exists.
+
+If a very advanced algorithm needs full manual control, it can still implement `IAlgorithm<...>` directly and work with `ExecutionInstanceRegistry`.
 
 ## Related pages
 
-- [Algorithm state](algorithm-state.md)
-- [Operators](operators.md)
+- [Search state](algorithm-state.md)
 - [Execution model](execution-model.md)
+- [Definition vs execution instances](execution-instances.md)
+- [Operators](operators.md)

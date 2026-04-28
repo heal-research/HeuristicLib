@@ -67,26 +67,10 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation>
   }
 
   public static Permutation CreateRandom(int length, IRandomNumberGenerator rng)
-  {
-    var elements = Enumerable.Range(0, length).ToArray();
-    for (var i = elements.Length - 1; i > 0; i--) {
-      var j = rng.NextInt(i + 1);
-      (elements[i], elements[j]) = (elements[j], elements[i]);
-    }
-
-    return FromMemory(elements);
-  }
+    => rng.NextPermutation(length);
 
   public static Permutation SwapRandomElements(Permutation permutation, IRandomNumberGenerator rng)
-  {
-    var length = permutation.Count;
-    var index1 = rng.NextInt(length);
-    var index2 = rng.NextInt(length);
-
-    var newElements = permutation.memory.ToArray();
-    (newElements[index1], newElements[index2]) = (newElements[index2], newElements[index1]);
-    return FromMemory(newElements);
-  }
+    => rng.Swap(permutation);
 
   public static Permutation Range(int count) => FromMemory(Enumerable.Range(0, count).ToArray());
 

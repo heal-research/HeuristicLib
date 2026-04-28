@@ -4,16 +4,14 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 
-public record RandomPermutationCreator : SingleSolutionStatelessCreator<Permutation, PermutationSearchSpace>
+public record RandomPermutationCreator : SingleSolutionCreator<Permutation, PermutationSearchSpace>
 {
   public override Permutation Create(IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
-  {
-    var elements = Enumerable.Range(0, searchSpace.Length).ToArray();
-    for (var i = elements.Length - 1; i > 0; i--) {
-      var j = random.NextInt(i + 1);
-      (elements[i], elements[j]) = (elements[j], elements[i]);
-    }
+    => random.NextPermutation(searchSpace);
 
-    return new Permutation(elements);
-  }
+  public static Permutation Create(PermutationSearchSpace searchSpace, IRandomNumberGenerator random)
+    => random.NextPermutation(searchSpace);
+
+  public static Permutation Create(IRandomNumberGenerator random, int length)
+    => random.NextPermutation(length);
 }

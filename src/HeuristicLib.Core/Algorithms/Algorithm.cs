@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Execution;
+﻿using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -8,115 +9,140 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public abstract record Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>
+  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
+  where TSearchState : class, ISearchState
+  where TExecutionState : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
 {
-  // ToDo: Since we have an evaluator, should we rename the class to "Optimization-Algorithm" or "Solver" or something like this?
+  public class ExecutionState
+  {
+    public required IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; }
+  }
+
+  // NOTE: Evaluator remains part of the base algorithm contract for now.
   public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TGenotype>();
 
-  public abstract IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+  protected abstract TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
+
+  protected abstract IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState);
+
+  public IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  {
+    return CreateAlgorithmInstance(instanceRegistry.Run, CreateInitialExecutionState(instanceRegistry));
+  }
 }
 
-public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
+  : IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
+  where TSearchState : class, ISearchState
 {
   protected readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator;
 
-  protected AlgorithmInstance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
+  public Run Run { get; }
+
+  protected AlgorithmInstance(Run run, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
   {
+    Run = run;
     Evaluator = evaluator;
   }
 
-  public abstract IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
+  public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(
     TProblem problem,
     IRandomNumberGenerator random,
-    TAlgorithmState? initialState = null,
+    TSearchState? initialState = null,
     CancellationToken ct = default);
 }
 
 public static class AlgorithmExtensions
 {
-  extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
+  extension<TGenotype, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState> algorithm)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-    where TAlgorithmState : class, IAlgorithmState
+    where TSearchState : class, ISearchState
   {
-    public IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(
+    public Run<TGenotype, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, params IReadOnlyList<IAnalyzer> analyzers)
+    {
+      return new Run<TGenotype, TSearchSpace, TProblem, TSearchState>(algorithm, problem, analyzers);
+    }
+
+    public IAsyncEnumerable<TSearchState> RunStreamingAsync(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null,
+      TSearchState? initialState = null,
       CancellationToken ct = default)
     {
-      var algorithmInstance = algorithm.CreateExecutionInstance();
-      return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct);
+      var run = algorithm.CreateRun(problem);
+      return run.RunStreamingAsync(random, initialState, ct);
+
     }
 
-    public async Task<TAlgorithmState> RunToCompletionAsync(
+    public async Task<TSearchState> RunToCompletionAsync(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null,
+      TSearchState? initialState = null,
       CancellationToken ct = default
     )
     {
-      return await algorithm.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
+      var run = algorithm.CreateRun(problem);
+      return await run.RunToCompletionAsync(random, initialState, ct);
     }
 
-    public IEnumerable<TAlgorithmState> RunStreaming(
+    public IEnumerable<TSearchState> RunStreaming(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null,
+      TSearchState? initialState = null,
       CancellationToken ct = default
     )
     {
-      return algorithm.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
+      var run = algorithm.CreateRun(problem);
+      return run.RunStreaming(random, initialState, ct);
     }
 
-    public TAlgorithmState RunToCompletion(
+    public TSearchState RunToCompletion(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null,
+      TSearchState? initialState = null,
       CancellationToken ct = default
     )
     {
-      return algorithm.RunToCompletionAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
+      var run = algorithm.CreateRun(problem);
+      return run.RunToCompletion(random, initialState, ct);
     }
   }
 
-  extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithmInstance)
+  extension<TGenotype, TSearchSpace, TProblem, TSearchState>(IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> algorithmInstance)
     where TSearchSpace : class, ISearchSpace<TGenotype>
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
-    where TAlgorithmState : class, IAlgorithmState
+    where TSearchState : class, ISearchState
   {
-    public async Task<TAlgorithmState> RunToCompletionAsync(
+    public async Task<TSearchState> RunToCompletionAsync(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null,
+      TSearchState? initialState = null,
       CancellationToken ct = default
     )
     {
       return await algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
     }
 
-    public IEnumerable<TAlgorithmState> RunStreaming(
+    public IEnumerable<TSearchState> RunStreaming(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null,
+      TSearchState? initialState = null,
       CancellationToken ct = default
     )
     {
       return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
     }
 
-    public TAlgorithmState RunToCompletion(
+    public TSearchState RunToCompletion(
       TProblem problem,
       IRandomNumberGenerator random,
-      TAlgorithmState? initialState = null,
+      TSearchState? initialState = null,
       CancellationToken ct = default
     )
     {

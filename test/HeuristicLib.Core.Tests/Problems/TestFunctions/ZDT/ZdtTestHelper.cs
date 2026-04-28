@@ -1,7 +1,5 @@
-﻿using System;
-using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
-using Xunit;
 
 namespace HEAL.HeuristicLib.Tests.Problems.TestFunctions.ZDT;
 

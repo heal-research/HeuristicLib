@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Analyzers;
+﻿using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Optimization;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;

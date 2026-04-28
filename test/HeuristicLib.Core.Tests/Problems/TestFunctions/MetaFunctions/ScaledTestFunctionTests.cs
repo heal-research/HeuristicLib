@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
-using Xunit;
 
 namespace HEAL.HeuristicLib.Tests.Problems.TestFunctions.MetaFunctions;
 

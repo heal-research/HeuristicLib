@@ -1,95 +1,131 @@
-﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators;
+﻿using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
 
 public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-  : CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : DynamicProblem<TGenotype, TSearchSpace>
   where TGenotype : notnull
   where TKey : notnull
 {
-  private readonly TProblem problem;
+  public sealed class ExecutionState
+  {
+    public MemoryCache Cache { get; }
+    public long HitCount { get; set; }
+
+    public ExecutionState(long? sizeLimit)
+    {
+      Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
+    }
+  }
+
+  private readonly TProblem sourceProblem;
+  private readonly Func<TGenotype, TKey> keySelector;
+  private readonly long? sizeLimit;
 
   public DynamicCachingEvaluator(
     IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
     TProblem problem,
     Func<TGenotype, TKey> keySelector, long? sizeLimit = null)
-    : base(evaluator, keySelector, sizeLimit)
+    : base(evaluator)
   {
-    this.problem = problem;
+    sourceProblem = problem;
+    this.keySelector = keySelector;
+    this.sizeLimit = sizeLimit;
   }
 
   public long GraceCount { get; init; } = long.MaxValue;
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override ExecutionState CreateInitialState()
   {
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
-    return new Instance(problem, evaluatorInstance, KeySelector, SizeLimit, GraceCount);
+    var executionState = new ExecutionState(sizeLimit);
+    sourceProblem.EpochClock.OnEpochChange += (_, _) => {
+      executionState.Cache.Clear();
+      executionState.HitCount = 0;
+    };
+    return executionState;
   }
 
-  public new class Instance : CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.Instance
+  protected override IReadOnlyList<ObjectiveVector> Evaluate(
+    IReadOnlyList<TGenotype> genotypes,
+    ExecutionState executionState,
+    InnerEvaluate innerEvaluate,
+    IRandomNumberGenerator random,
+    TSearchSpace searchSpace,
+    TProblem problem)
   {
-    private readonly long graceCount;
-    private long hitCount;
+    var cache = executionState.Cache;
+    var beforeCacheStatistics = cache.GetCurrentStatistics();
+    var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
+    var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
 
-    public Instance(TProblem problem, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, Func<TGenotype, TKey> keySelector, long? sizeLimit, long graceCount)
-      : base(evaluator, keySelector, sizeLimit)
-    {
-      this.graceCount = graceCount;
+    var n = genotypes.Count;
+    var results = new ObjectiveVector[n];
 
-      problem.EpochClock.OnEpochChange += (_, _) => {
-        ClearCache();
-        hitCount = 0;
-      };
+    var uncachedGenotypes = new List<TGenotype>();
+    var uncachedKeys = new List<TKey>();
+    var uncachedMap = new Dictionary<TKey, (int j, List<int> indices)>();
+
+    for (var i = 0; i < n; i++) {
+      var genotype = genotypes[i];
+      var key = keySelector(genotype);
+
+      if (cache.TryGetValue(key, out ObjectiveVector? cached)) {
+        results[i] = cached!;
+        continue;
+      }
+
+      if (!uncachedMap.TryGetValue(key, out var entry)) {
+        var j = uncachedGenotypes.Count;
+        uncachedGenotypes.Add(genotype);
+        uncachedKeys.Add(key);
+        uncachedMap.Add(key, (j, [i]));
+      } else {
+        entry.indices.Add(i);
+      }
     }
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(
-      IReadOnlyList<TGenotype> genotypes,
-      IRandomNumberGenerator random,
-      TSearchSpace searchSpace,
-      TProblem problem)
-    {
-      var beforeCacheStatistics = Cache.GetCurrentStatistics();
-      var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
-      var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
-
-      var results = base.Evaluate(genotypes, random, searchSpace, problem);
-
-      var afterCacheStatistics = Cache.GetCurrentStatistics();
-      var afterHits = afterCacheStatistics?.TotalHits ?? 0;
-      var afterMisses = afterCacheStatistics?.TotalMisses ?? 0;
-
-      var uniqueEvaluatedCount = afterMisses - beforeMisses;
-      var cachedSolutionsCount = afterHits - beforeHits;
-
-      if (genotypes.Count == 0) {
-        return results;
+    if (uncachedGenotypes.Count > 0) {
+      var newObjectives = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
+      for (var k = 0; k < uncachedKeys.Count; k++) {
+        cache.Set(uncachedKeys[k], newObjectives[k], new MemoryCacheEntryOptions { Size = 1 });
       }
 
-      if (uniqueEvaluatedCount == 0) {
-        // Everything was cached in this batch
-        hitCount += cachedSolutionsCount;
-        if (hitCount >= graceCount) {
-          problem.EpochClock.AdvanceEpoch();
+      foreach (var (_, entry) in uncachedMap) {
+        var objectiveVector = newObjectives[entry.j];
+        foreach (var i in entry.indices) {
+          results[i] = objectiveVector;
         }
-      } else {
-        // We had to actually evaluate something – reset streak
-        hitCount = 0;
       }
+    }
 
+    var afterCacheStatistics = cache.GetCurrentStatistics();
+    var afterHits = afterCacheStatistics?.TotalHits ?? 0;
+    var afterMisses = afterCacheStatistics?.TotalMisses ?? 0;
+
+    var uniqueEvaluatedCount = afterMisses - beforeMisses;
+    var cachedSolutionsCount = afterHits - beforeHits;
+
+    if (genotypes.Count == 0) {
       return results;
     }
 
-    private void ClearCache()
-    {
-      Cache.Clear();
+    if (uniqueEvaluatedCount == 0) {
+      executionState.HitCount += cachedSolutionsCount;
+      if (executionState.HitCount >= GraceCount) {
+        problem.EpochClock.AdvanceEpoch();
+      }
+    } else {
+      executionState.HitCount = 0;
     }
+
+    return results;
   }
 }
 

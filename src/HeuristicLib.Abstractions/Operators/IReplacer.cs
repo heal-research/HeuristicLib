@@ -16,7 +16,7 @@ public interface IReplacerInstance<TGenotype, in TSearchSpace, in TProblem>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
   IReadOnlyList<ISolution<TGenotype>> Replace(
-    IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, 
-    Objective objective, int count, 
+    IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation,
+    Objective objective, int count,
     IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

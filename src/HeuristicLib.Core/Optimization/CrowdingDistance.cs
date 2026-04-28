@@ -1,6 +1,4 @@
-﻿using HEAL.HeuristicLib.Optimization;
-
-namespace HEAL.HeuristicLib.Operators.Replacers;
+﻿namespace HEAL.HeuristicLib.Optimization;
 
 public static class CrowdingDistance
 {

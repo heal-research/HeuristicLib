@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -7,58 +8,68 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>,
-    IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
+public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>
+  : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>,
+    IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
+  where TSearchState : class, ISearchState
+  where TExecutionState : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
 {
-  public IInterceptor<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Interceptor { get; init; }
-}
-
-public abstract class IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>,
-    IIterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TAlgorithmState : class, IAlgorithmState
-{
-  protected readonly IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? Interceptor;
-
-  protected IterativeAlgorithmInstance(IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TAlgorithmState>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
-    : base(evaluator)
+  public new class ExecutionState
+    : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
   {
-    Interceptor = interceptor;
+    public IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
   }
 
-  public abstract TAlgorithmState ExecuteStep(TAlgorithmState? previousState, TProblem problem, IRandomNumberGenerator random);
+  public IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
 
-  public override async IAsyncEnumerable<TAlgorithmState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TAlgorithmState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+  protected abstract TSearchState ExecuteStep(
+    TSearchState? previousState,
+    TExecutionState executionState,
+    TProblem problem,
+    IRandomNumberGenerator random);
+
+  protected sealed override IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState)
   {
-    var previousState = initialState;
+    return new Instance(this, run, executionState);
+  }
 
-    foreach (var currentIteration in Enumerable.InfiniteSequence(0, 1)) {
-      ct.ThrowIfCancellationRequested();
-      var iterationRandom = random.Fork(currentIteration);
-      var newState = ExecuteStep(previousState, problem, iterationRandom);
-      if (Interceptor is not null) {
-        newState = Interceptor.Transform(newState, previousState, problem.SearchSpace, problem);
+  private sealed class Instance(
+    IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState> algorithm,
+    Run run,
+    TExecutionState executionState)
+    : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>(run, executionState.Evaluator)
+  {
+    private readonly IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>? interceptor = executionState.Interceptor;
+
+    private TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
+    {
+      return algorithm.ExecuteStep(previousState, executionState, problem, random);
+    }
+
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TSearchState? initialState = null,
+      [EnumeratorCancellation] CancellationToken ct = default)
+    {
+      var previousState = initialState;
+
+      foreach (var currentIteration in Enumerable.InfiniteSequence(0, 1)) {
+        ct.ThrowIfCancellationRequested();
+        var iterationRandom = random.Fork(currentIteration);
+        var newState = ExecuteStep(previousState, problem, iterationRandom);
+        if (interceptor is not null) {
+          newState = interceptor.Transform(newState, previousState, problem.SearchSpace, problem);
+        }
+
+        yield return newState;
+
+        await Task.Yield();
+
+        previousState = newState;
       }
-
-      yield return newState;
-
-      await Task.Yield();
-
-      previousState = newState;
     }
   }
-}
-
-public static class IterativeAlgorithmExtensions
-{
-  extension<TGenotype, TSearchSpace, TProblem, TAlgorithmState>(IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TAlgorithmState> algorithm)
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
-    where TAlgorithmState : class, IAlgorithmState;
 }

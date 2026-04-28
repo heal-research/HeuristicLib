@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
@@ -10,7 +11,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 /// It creates new offspring by sampling a new value in the range [min_i - d * alpha, max_i + d * alpha) at each position i
 /// Here min_i and max_i are the smaller and larger value of the two parents at position i and d is max_i - min_i.
 /// </summary>
-public record RoundedBlendAlphaCrossover : SingleSolutionStatelessCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedBlendAlphaCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
   public double Alpha
   {
@@ -22,12 +23,20 @@ public record RoundedBlendAlphaCrossover : SingleSolutionStatelessCrossover<Inte
   } = 0.5;
 
   public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-    => Apply(random, [parents.Parent1, parents.Parent2], searchSpace, Alpha);
+    => Cross(random, [parents.Parent1, parents.Parent2], searchSpace, Alpha);
 
-  public static IntegerVector Apply(
+  public static IntegerVector Cross(
     IRandomNumberGenerator random,
     IReadOnlyList<IntegerVector> parents,
     IntegerVectorSearchSpace searchSpace,
+    double alpha)
+    => Cross(random, parents, searchSpace.Minimum, searchSpace.Maximum, alpha);
+
+  public static IntegerVector Cross(
+    IRandomNumberGenerator random,
+    IReadOnlyList<IntegerVector> parents,
+    IntegerVector minimum,
+    IntegerVector maximum,
     double alpha)
   {
     var parent1 = parents[0];
@@ -48,18 +57,17 @@ public record RoundedBlendAlphaCrossover : SingleSolutionStatelessCrossover<Inte
       double minReal = minP - d;
       double maxReal = maxP + d;
 
-      int minBound = searchSpace.Minimum[searchSpace.Minimum.Count == 1 ? 0 : i];
-      int maxBound = searchSpace.Maximum[searchSpace.Maximum.Count == 1 ? 0 : i];
+      int minBound = minimum[minimum.Count == 1 ? 0 : i];
+      int maxBound = maximum[maximum.Count == 1 ? 0 : i];
 
       // clamp real interval to integer bounds (as reals) &&
       // convert to feasible integer interval (inclusive)
-      int lo = (int)Math.Ceiling(Math.Max(minReal, minBound));
-      int hi = (int)Math.Floor(Math.Min(maxReal, maxBound));
+      int lo = RealVector.CeilToInteger(Math.Max(minReal, minBound), minBound, maxBound);
+      int hi = RealVector.FloorToInteger(Math.Min(maxReal, maxBound), minBound, maxBound);
 
       if (lo > hi) {
         // interval narrower than one integer; pick the nearest feasible int
-        int v = (int)Math.Round((Math.Max(minReal, minBound) + Math.Min(maxReal, maxBound)) * 0.5, MidpointRounding.AwayFromZero);
-        result[i] = Math.Clamp(v, minBound, maxBound);
+        result[i] = RealVector.RoundToInteger((Math.Max(minReal, minBound) + Math.Min(maxReal, maxBound)) * 0.5, minBound, maxBound);
         continue;
       }
 

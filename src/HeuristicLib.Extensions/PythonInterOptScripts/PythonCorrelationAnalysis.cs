@@ -10,7 +10,6 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.PythonInterOptScripts;
@@ -51,7 +50,7 @@ public static class PythonCorrelationAnalysis
 
   public static RealVector NextSphere(IRandomNumberGenerator uniformRandom, RealVector mu, RealVector sigma, int dim, bool surface = true)
   {
-    var d = new RealVector(Enumerable.Range(0, dim).Select(_ => uniformRandom.NextGaussian()));
+    var d = new RealVector(Enumerable.Range(0, dim).Select(_ => uniformRandom.NextNormal()));
     if (surface) {
       d /= d.Norm();
     }

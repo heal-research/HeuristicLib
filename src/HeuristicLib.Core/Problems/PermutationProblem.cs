@@ -5,4 +5,4 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.Problems;
 
 public abstract class PermutationProblem(Objective objective, PermutationSearchSpace searchSpace) :
-  Problem<Permutation, PermutationSearchSpace>(objective, searchSpace);
+  SingleSolutionProblem<Permutation, PermutationSearchSpace>(objective, searchSpace);

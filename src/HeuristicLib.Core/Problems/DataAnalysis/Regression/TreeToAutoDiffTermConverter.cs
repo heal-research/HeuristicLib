@@ -87,73 +87,73 @@ public class TreeToAutoDiffTermConverter
   {
     switch (node.Symbol) {
       case Number: {
-        var numberTreeNode = (NumberTreeNode)node;
-        return CreateWeightTerm(numberTreeNode.Value);
-      }
+          var numberTreeNode = (NumberTreeNode)node;
+          return CreateWeightTerm(numberTreeNode.Value);
+        }
       case Variable:
       case BinaryFactorVariable: {
-        var varNode = (VariableTreeNodeBase)node;
-        // factor variable values are only 0 or 1 and set in x accordingly
-        var varValue = node is BinaryFactorVariableTreeNode factorVarNode ? factorVarNode.VariableValue : string.Empty;
-        var par = FindOrCreateParameter(parameters, varNode.VariableName, varValue);
-        var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
-        return CreateWeightedTerm(par, varNode.Weight, optimizeWeight);
-      }
+          var varNode = (VariableTreeNodeBase)node;
+          // factor variable values are only 0 or 1 and set in x accordingly
+          var varValue = node is BinaryFactorVariableTreeNode factorVarNode ? factorVarNode.VariableValue : string.Empty;
+          var par = FindOrCreateParameter(parameters, varNode.VariableName, varValue);
+          var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
+          return CreateWeightedTerm(par, varNode.Weight, optimizeWeight);
+        }
       case FactorVariable: {
-        var factorVarNode = (FactorVariableTreeNode)node;
-        var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
-        var products = factorVarNode.Symbol.GetVariableValues(factorVarNode.VariableName).Select(variableValue => {
-          var par = FindOrCreateParameter(parameters, factorVarNode.VariableName, variableValue);
-          return CreateWeightedTerm(par, factorVarNode.GetValue(variableValue), optimizeWeight);
-        });
-        return TermBuilder.Sum(products);
-      }
+          var factorVarNode = (FactorVariableTreeNode)node;
+          var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
+          var products = factorVarNode.Symbol.GetVariableValues(factorVarNode.VariableName).Select(variableValue => {
+            var par = FindOrCreateParameter(parameters, factorVarNode.VariableName, variableValue);
+            return CreateWeightedTerm(par, factorVarNode.GetValue(variableValue), optimizeWeight);
+          });
+          return TermBuilder.Sum(products);
+        }
       case LaggedVariable: {
-        var varNode = (LaggedVariableTreeNode)node;
-        var par = FindOrCreateParameter(parameters, varNode.VariableName, string.Empty, varNode.Lag);
-        var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
-        return CreateWeightedTerm(par, varNode.Weight, optimizeWeight);
-      }
+          var varNode = (LaggedVariableTreeNode)node;
+          var par = FindOrCreateParameter(parameters, varNode.VariableName, string.Empty, varNode.Lag);
+          var optimizeWeight = makeVariableWeightsVariable && !excludedNodes.Contains(node);
+          return CreateWeightedTerm(par, varNode.Weight, optimizeWeight);
+        }
       case Addition: {
-        var s = node.Subtrees.Select(ConvertToAutoDiff).ToArray();
-        return TermBuilder.Sum(s);
-      }
+          var s = node.Subtrees.Select(ConvertToAutoDiff).ToArray();
+          return TermBuilder.Sum(s);
+        }
       case Subtraction: {
-        var terms = new List<Term>();
-        for (var i = 0; i < node.SubtreeCount; i++) {
-          var t = ConvertToAutoDiff(node[i]);
-          if (i > 0) {
-            t = -t;
+          var terms = new List<Term>();
+          for (var i = 0; i < node.SubtreeCount; i++) {
+            var t = ConvertToAutoDiff(node[i]);
+            if (i > 0) {
+              t = -t;
+            }
+
+            terms.Add(t);
           }
 
-          terms.Add(t);
+          return terms.Count == 1 ? -terms[0] : TermBuilder.Sum(terms);
         }
-
-        return terms.Count == 1 ? -terms[0] : TermBuilder.Sum(terms);
-      }
       case Multiplication: {
-        var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
-        return terms.Count == 1 ? terms[0] : terms.Aggregate((a, b) => new Product(a, b));
-      }
-      case Division: {
-        var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
-        if (terms.Count == 1) {
-          return 1.0 / terms[0];
+          var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
+          return terms.Count == 1 ? terms[0] : terms.Aggregate((a, b) => new Product(a, b));
         }
+      case Division: {
+          var terms = node.Subtrees.Select(ConvertToAutoDiff).ToList();
+          if (terms.Count == 1) {
+            return 1.0 / terms[0];
+          }
 
-        return terms.Aggregate((a, b) => new Product(a, 1.0 / b));
-      }
+          return terms.Aggregate((a, b) => new Product(a, 1.0 / b));
+        }
       case Absolute: {
-        var x1 = ConvertToAutoDiff(node[0]);
+          var x1 = ConvertToAutoDiff(node[0]);
 
-        return Abs(x1);
-      }
+          return Abs(x1);
+        }
       case AnalyticQuotient: {
-        var x1 = ConvertToAutoDiff(node[0]);
-        var x2 = ConvertToAutoDiff(node[1]);
+          var x1 = ConvertToAutoDiff(node[0]);
+          var x2 = ConvertToAutoDiff(node[1]);
 
-        return x1 / TermBuilder.Power(1 + x2 * x2, 0.5);
-      }
+          return x1 / TermBuilder.Power(1 + x2 * x2, 0.5);
+        }
       case Logarithm:
         return TermBuilder.Log(
           ConvertToAutoDiff(node[0]));
@@ -172,11 +172,11 @@ public class TreeToAutoDiffTermConverter
       case CubeRoot:
         return Cbrt(ConvertToAutoDiff(node[0]));
       case Power: {
-        if (node[1] is not NumberTreeNode powerNode)
-          throw new NotSupportedException("Only numeric powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
-        var intPower = Math.Truncate(powerNode.Value);
-        return Math.Abs(intPower - powerNode.Value) > 1e-15 ? throw new NotSupportedException("Only integer powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.") : TermBuilder.Power(ConvertToAutoDiff(node[0]), intPower);
-      }
+          if (node[1] is not NumberTreeNode powerNode)
+            throw new NotSupportedException("Only numeric powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.");
+          var intPower = Math.Truncate(powerNode.Value);
+          return Math.Abs(intPower - powerNode.Value) > 1e-15 ? throw new NotSupportedException("Only integer powers are allowed in parameter optimization. Try to use exp() and log() instead of the power symbol.") : TermBuilder.Power(ConvertToAutoDiff(node[0]), intPower);
+        }
       case Sine:
         return Sin(
           ConvertToAutoDiff(node[0]));

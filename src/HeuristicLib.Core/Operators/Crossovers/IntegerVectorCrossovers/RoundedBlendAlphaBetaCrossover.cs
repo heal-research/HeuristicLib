@@ -1,11 +1,12 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+﻿using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-public record RoundedBlendAlphaBetaCrossover : SingleSolutionStatelessCrossover<IntegerVector, IntegerVectorSearchSpace>
+public record RoundedBlendAlphaBetaCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
   public double Alpha
   {
@@ -26,13 +27,23 @@ public record RoundedBlendAlphaBetaCrossover : SingleSolutionStatelessCrossover<
   } = 0.25;
 
   public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-    => Apply(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Beta);
+    => Cross(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Beta);
 
-  public static IntegerVector Apply(
+  public static IntegerVector Cross(
     IRandomNumberGenerator random,
     IntegerVector betterParent,
     IntegerVector worseParent,
     IntegerVectorSearchSpace searchSpace,
+    double alpha,
+    double beta)
+    => Cross(random, betterParent, worseParent, searchSpace.Minimum, searchSpace.Maximum, alpha, beta);
+
+  public static IntegerVector Cross(
+    IRandomNumberGenerator random,
+    IntegerVector betterParent,
+    IntegerVector worseParent,
+    IntegerVector minimum,
+    IntegerVector maximum,
     double alpha,
     double beta)
   {
@@ -62,12 +73,15 @@ public record RoundedBlendAlphaBetaCrossover : SingleSolutionStatelessCrossover<
         maxReal = bp + d * alpha; // extend above better by α
       }
 
-      int lo = searchSpace.CeilingFeasible(minReal, i);
-      int hi = searchSpace.FloorFeasible(maxReal, i);
+      int minBound = minimum[minimum.Count == 1 ? 0 : i];
+      int maxBound = maximum[maximum.Count == 1 ? 0 : i];
+
+      int lo = RealVector.CeilToInteger(minReal, minBound, maxBound);
+      int hi = RealVector.FloorToInteger(maxReal, minBound, maxBound);
 
       if (lo > hi) {
-        // no feasible point inside (can happen with steps / tight bounds)
-        result[i] = searchSpace.RoundFeasible((minReal + maxReal) * 0.5, i);
+        // no feasible integer point inside the interval after clamping
+        result[i] = RealVector.RoundToInteger((minReal + maxReal) * 0.5, minBound, maxBound);
         continue;
       }
 

@@ -129,7 +129,8 @@ public class SymbolicExpressionTreeNode
   public int IndexOfSubtree(SymbolicExpressionTreeNode tree)
   {
     for (int i = 0; i < subtrees.Count; i++) {
-      if (tree.Equals(subtrees[i])) return i;
+      if (tree.Equals(subtrees[i]))
+        return i;
     }
 
     return -1;

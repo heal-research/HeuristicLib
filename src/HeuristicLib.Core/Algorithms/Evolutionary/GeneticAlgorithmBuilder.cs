@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
-using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -37,7 +36,8 @@ public record GeneticAlgorithmBuilder<TG, TS, TP>
       Evaluator = Evaluator,
       Elites = Elites,
       Interceptor = Interceptor,
-      Mutator = Mutator.WithRate(MutationRate)
+      Mutator = Mutator,
+      MutationRate = MutationRate
     };
   }
 }

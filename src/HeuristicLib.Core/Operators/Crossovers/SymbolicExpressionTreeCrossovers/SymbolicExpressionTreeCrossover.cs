@@ -6,4 +6,4 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossover
 /// <summary>
 ///   A base class for operators that perform a crossover of symbolic expression trees.
 /// </summary>
-public abstract record SymbolicExpressionTreeCrossover : SingleSolutionStatelessCrossover<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>;
+public abstract record SymbolicExpressionTreeCrossover : SingleSolutionCrossover<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>;

@@ -6,14 +6,25 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 public record TournamentSelector<TGenotype>
   : StatelessSelector<TGenotype>
 {
-  private readonly int tournamentSize;
+  public int TournamentSize { get; init; }
 
   public TournamentSelector(int tournamentSize)
   {
-    this.tournamentSize = tournamentSize;
+    TournamentSize = tournamentSize;
   }
 
   public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    => TournamentSelector.Select(population, objective, count, random, TournamentSize);
+}
+
+public static class TournamentSelector
+{
+  public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
+    IReadOnlyList<ISolution<TGenotype>> population,
+    Objective objective,
+    int count,
+    IRandomNumberGenerator random,
+    int tournamentSize)
   {
     return Enumerable
            .Range(0, count)

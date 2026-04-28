@@ -15,7 +15,10 @@ public record GrowTreeCreator : SymbolicExpressionTreeCreator
   /// <param name="random">Random generator</param>
   /// <param name="searchSpace"></param>
   /// <returns></returns>
-  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => CreateTree(random, searchSpace);
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
+
+  public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)
+    => CreateTree(random, searchSpace);
 
   private static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
   {

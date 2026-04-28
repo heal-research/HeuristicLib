@@ -201,7 +201,7 @@ public static class InteractiveSymbolicRegression {
       ParameterOptimizationIterations = parameters.ParameterOptimizationIterations
     };
 
-    var mutator = MultiMutator.Create(
+    var mutator = ChooseOneMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
       new OnePointShaker(),

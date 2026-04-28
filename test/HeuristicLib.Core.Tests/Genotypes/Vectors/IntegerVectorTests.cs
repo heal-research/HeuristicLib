@@ -220,6 +220,24 @@ public sealed class IntegerVectorTests
   }
 
   [Fact]
+  public void ToRealVector_ConvertsAllElementsToDouble()
+  {
+    IntegerVector input = new[] { 1, -2, 3 };
+
+    var result = input.ToRealVector();
+
+    Assert.Equal(new[] { 1.0, -2.0, 3.0 }, result.ToArray());
+  }
+
+  [Fact]
+  public void ToRealAt_ReturnsElementAsDouble()
+  {
+    IntegerVector input = new[] { 1, -2, 3 };
+
+    Assert.Equal(-2.0, input.ToRealAt(1));
+  }
+
+  [Fact]
   public void AreCompatible_ReturnsTrue_ForSameLength()
   {
     IntegerVector a = new[] { 1, 2 };
@@ -263,6 +281,118 @@ public sealed class IntegerVectorTests
 
     Assert.Equal(3, IntegerVector.BroadcastLength(scalar, vector));
     Assert.Equal(3, IntegerVector.BroadcastLength(vector, scalar));
+  }
+
+  [Fact]
+  public void Add_SameLength_AddsElementwise()
+  {
+    IntegerVector a = new[] { 1, 2, 3 };
+    IntegerVector b = new[] { 10, 20, 30 };
+
+    var result = IntegerVector.Add(a, b);
+
+    Assert.Equal(new[] { 11, 22, 33 }, result.ToArray());
+  }
+
+  [Fact]
+  public void Add_BroadcastsScalarLeft()
+  {
+    IntegerVector scalar = 2;
+    IntegerVector vector = new[] { 10, 20, 30 };
+
+    var result = IntegerVector.Add(scalar, vector);
+
+    Assert.Equal(new[] { 12, 22, 32 }, result.ToArray());
+  }
+
+  [Fact]
+  public void Add_BroadcastsScalarRight()
+  {
+    IntegerVector vector = new[] { 10, 20, 30 };
+    IntegerVector scalar = 2;
+
+    var result = IntegerVector.Add(vector, scalar);
+
+    Assert.Equal(new[] { 12, 22, 32 }, result.ToArray());
+  }
+
+  [Fact]
+  public void Add_IncompatibleLengths_Throws()
+  {
+    IntegerVector a = new[] { 1, 2 };
+    IntegerVector b = new[] { 10, 20, 30 };
+
+    Assert.Throws<ArgumentException>(() => IntegerVector.Add(a, b));
+  }
+
+  [Fact]
+  public void Subtract_SameLength_SubtractsElementwise()
+  {
+    IntegerVector a = new[] { 10, 20, 30 };
+    IntegerVector b = new[] { 1, 2, 3 };
+
+    var result = IntegerVector.Subtract(a, b);
+
+    Assert.Equal(new[] { 9, 18, 27 }, result.ToArray());
+  }
+
+  [Fact]
+  public void Multiply_SameLength_MultipliesElementwise()
+  {
+    IntegerVector a = new[] { 2, 3, 4 };
+    IntegerVector b = new[] { 10, 20, 30 };
+
+    var result = IntegerVector.Multiply(a, b);
+
+    Assert.Equal(new[] { 20, 60, 120 }, result.ToArray());
+  }
+
+  [Fact]
+  public void Divide_SameLength_DividesElementwise()
+  {
+    IntegerVector a = new[] { 10, 20, 30 };
+    IntegerVector b = new[] { 2, 4, 5 };
+
+    var result = IntegerVector.Divide(a, b);
+
+    Assert.Equal(new[] { 5, 5, 6 }, result.ToArray());
+  }
+
+  [Fact]
+  public void Operators_DelegateToArithmeticMethods()
+  {
+    IntegerVector a = new[] { 10, 20, 30 };
+    IntegerVector b = new[] { 2, 4, 5 };
+
+    Assert.Equal(new[] { 12, 24, 35 }, (a + b).ToArray());
+    Assert.Equal(new[] { 8, 16, 25 }, (a - b).ToArray());
+    Assert.Equal(new[] { 20, 80, 150 }, (a * b).ToArray());
+    Assert.Equal(new[] { 5, 5, 6 }, (a / b).ToArray());
+  }
+
+  [Fact]
+  public void Clamp_ScalarBounds_ClampsValues()
+  {
+    IntegerVector input = new[] { -1, 2, 10 };
+    IntegerVector min = 0;
+    IntegerVector max = 5;
+
+    var result = IntegerVector.Clamp(input, min, max);
+
+    Assert.Equal(new[] { 0, 2, 5 }, result.ToArray());
+    Assert.NotSame(input, result);
+  }
+
+  [Fact]
+  public void ClampAt_UsesDimensionBounds()
+  {
+    IntegerVector input = new[] { -1, 2, 10 };
+    IntegerVector min = new[] { 0, 1, 2 };
+    IntegerVector max = new[] { 5, 3, 8 };
+
+    Assert.Equal(0, input.ClampAt(min, max, 0));
+    Assert.Equal(2, input.ClampAt(min, max, 1));
+    Assert.Equal(8, input.ClampAt(min, max, 2));
   }
 
   [Fact]
@@ -340,7 +470,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void CreateUniform_ReturnsVectorOfRequestedLength()
   {
-    var rng = new StubRandomNumberGenerator(1, 2, 3);
+    var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
 
     IntegerVector low = 0;
     IntegerVector high = 10;
@@ -351,41 +481,35 @@ public sealed class IntegerVectorTests
   }
 
   [Fact]
-  public void CreateUniform_UsesModuloBasedExtensionSemantics_ForScalarBounds()
+  public void CreateUniform_MapsUniformDrawsIntoScalarBounds()
   {
-    var rng = new StubRandomNumberGenerator(14, 25, 36);
+    var rng = new StubRandomNumberGenerator(0.9, 0.5, 0.1);
 
     IntegerVector low = 10;
     IntegerVector high = 12;
 
     var result = IntegerVector.CreateUniform(3, low, high, rng);
 
-    // extension semantics:
-    // NextInt(low, high, true) = (NextInt() % (high - low + 1)) + low
-    // here range size = 3
     Assert.Equal(new[] { 12, 11, 10 }, result.ToArray());
   }
 
   [Fact]
   public void CreateUniform_UsesElementwiseBounds()
   {
-    var rng = new StubRandomNumberGenerator(5, 8, 11);
+    var rng = new StubRandomNumberGenerator(0.9, 0.9, 0.9);
 
     IntegerVector low = new[] { 10, 20, 30 };
     IntegerVector high = new[] { 12, 22, 32 };
 
     var result = IntegerVector.CreateUniform(3, low, high, rng);
 
-    // 5 % 3 + 10 = 12
-    // 8 % 3 + 20 = 22
-    // 11 % 3 + 30 = 32
     Assert.Equal(new[] { 12, 22, 32 }, result.ToArray());
   }
 
   [Fact]
   public void CreateUniform_LowLengthMismatch_ThrowsArgumentException()
   {
-    var rng = new StubRandomNumberGenerator(1, 2, 3);
+    var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
 
     IntegerVector low = new[] { 0, 1 };
     IntegerVector high = 10;
@@ -396,7 +520,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void CreateUniform_HighLengthMismatch_ThrowsArgumentException()
   {
-    var rng = new StubRandomNumberGenerator(1, 2, 3);
+    var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
 
     IntegerVector low = 0;
     IntegerVector high = new[] { 10, 11 };
@@ -416,29 +540,28 @@ public sealed class IntegerVectorTests
 
   private sealed class StubRandomNumberGenerator : IRandomNumberGenerator
   {
-    private readonly Queue<int> ints;
+    private readonly Queue<double> doubles;
 
-    public int NextIntCallCount { get; private set; }
+    public int NextDoubleCallCount { get; private set; }
 
-    public StubRandomNumberGenerator(params int[] nextInts)
+    public StubRandomNumberGenerator(params double[] nextDoubles)
     {
-      ints = new Queue<int>(nextInts);
+      doubles = new Queue<double>(nextDoubles);
     }
 
-    public int NextInt()
-    {
-      NextIntCallCount++;
-
-      if (ints.Count == 0) {
-        throw new InvalidOperationException("No more test ints available.");
-      }
-
-      return ints.Dequeue();
-    }
+    public int NextInt() => throw new NotSupportedException();
 
     public IRandomNumberGenerator Fork(ulong forkKey) => throw new NotImplementedException();
 
-    public double NextDouble() => throw new NotSupportedException();
-    public void Reset() => throw new NotSupportedException();
+    public double NextDouble()
+    {
+      NextDoubleCallCount++;
+
+      if (doubles.Count == 0) {
+        throw new InvalidOperationException("No more test doubles available.");
+      }
+
+      return doubles.Dequeue();
+    }
   }
 }

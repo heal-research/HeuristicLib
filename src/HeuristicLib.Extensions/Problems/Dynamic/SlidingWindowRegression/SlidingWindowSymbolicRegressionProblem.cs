@@ -22,7 +22,7 @@ public class SlidingWindowSymbolicRegressionProblem
     int stepSize = 10,
     UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
     int epochLength = int.MaxValue
-  ) : base(RandomNumberGenerator.Create(0), updatePolicy, epochLength)
+  ) : base(problem.Objective, problem.SearchSpace, RandomNumberGenerator.Create(0), updatePolicy, epochLength)
   {
     ArgumentOutOfRangeException.ThrowIfNegative(windowStart);
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(windowLength);
@@ -39,9 +39,6 @@ public class SlidingWindowSymbolicRegressionProblem
   public int WindowLength { get; }
 
   public (int StartIndex, int EndIndex) CurrentState { get; private set; }
-
-  public override SymbolicExpressionTreeSearchSpace SearchSpace => innerProblem.SearchSpace;
-  public override Objective Objective => innerProblem.Objective;
 
   public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) => innerProblem.Evaluate(solution, CachedRows, CachedTargets);
 
@@ -69,8 +66,8 @@ public class SlidingWindowSymbolicRegressionProblem
     }
 
     var targets = innerProblem.ProblemData.Dataset
-      .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
-      .ToArray();
+                              .GetDoubleValues(innerProblem.ProblemData.TargetVariable, rows)
+                              .ToArray();
 
     CachedRows = rows;
     CachedTargets = targets;

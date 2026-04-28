@@ -1,5 +1,4 @@
-﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,98 +7,87 @@ using Microsoft.Extensions.Caching.Memory;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-  : Evaluator<TGenotype, TSearchSpace, TProblem>
+  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TGenotype : notnull
   where TKey : notnull
 {
-  protected readonly IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator;
+  public sealed class ExecutionState
+  {
+    public MemoryCache Cache { get; }
+
+    public ExecutionState(long? sizeLimit)
+    {
+      Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
+    }
+  }
+
   protected readonly Func<TGenotype, TKey> KeySelector;
   protected readonly long? SizeLimit;
 
   public CachingEvaluator(IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator, Func<TGenotype, TKey> keySelector, long? sizeLimit = null)
+    : base(evaluator)
   {
-    this.Evaluator = evaluator;
-    this.KeySelector = keySelector;
-    this.SizeLimit = sizeLimit;
+    KeySelector = keySelector;
+    SizeLimit = sizeLimit;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-  {
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
-    return new Instance(evaluatorInstance, KeySelector, SizeLimit);
-  }
+  protected override ExecutionState CreateInitialState() => new(SizeLimit);
 
-  public new class Instance
-    : Evaluator<TGenotype, TSearchSpace, TProblem>.Instance
+  protected override IReadOnlyList<ObjectiveVector> Evaluate(
+    IReadOnlyList<TGenotype> genotypes,
+    ExecutionState executionState,
+    InnerEvaluate innerEvaluate,
+    IRandomNumberGenerator random,
+    TSearchSpace searchSpace,
+    TProblem problem)
   {
-    protected readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator;
-    protected readonly Func<TGenotype, TKey> KeySelector;
-    protected readonly MemoryCache Cache;
+    var cache = executionState.Cache;
+    var n = genotypes.Count;
+    var results = new ObjectiveVector[n];
 
-    public Instance(IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, Func<TGenotype, TKey> keySelector, long? sizeLimit)
-    {
-      this.Evaluator = evaluator;
-      this.KeySelector = keySelector;
-      var cacheOptions = new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true };
-      Cache = new MemoryCache(cacheOptions);
+    var uncachedGenotypes = new List<TGenotype>();
+    var uncachedKeys = new List<TKey>();
+    var uncachedMap = new Dictionary<TKey, (int j, List<int> indices)>();
+
+    for (var i = 0; i < n; i++) {
+      var genotype = genotypes[i];
+      var key = KeySelector(genotype);
+
+      if (cache.TryGetValue(key, out ObjectiveVector? cached)) {
+        results[i] = cached!;
+        continue;
+      }
+
+      if (!uncachedMap.TryGetValue(key, out var entry)) {
+        var j = uncachedGenotypes.Count;
+        uncachedGenotypes.Add(genotype);
+        uncachedKeys.Add(key);
+        uncachedMap.Add(key, (j, [i]));
+      } else {
+        entry.indices.Add(i);
+      }
     }
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(
-      IReadOnlyList<TGenotype> genotypes,
-      IRandomNumberGenerator random,
-      TSearchSpace searchSpace,
-      TProblem problem)
-    {
-      var n = genotypes.Count;
-      var results = new ObjectiveVector[n];
-
-      // Distinct uncached items in evaluation order
-      var uncachedGenotypes = new List<TGenotype>();
-      var uncachedKeys = new List<TKey>();
-      var uncachedMap = new Dictionary<TKey, (int j, List<int> indices)>();
-
-      for (int i = 0; i < n; i++) {
-        var g = genotypes[i];
-        var key = KeySelector(g);
-
-        if (Cache.TryGetValue(key, out ObjectiveVector? cached)) {
-          results[i] = cached!;
-          continue;
-        }
-
-        if (!uncachedMap.TryGetValue(key, out var entry)) {
-          int j = uncachedGenotypes.Count;
-          uncachedGenotypes.Add(g);
-          uncachedKeys.Add(key);
-          var indices = new List<int>(capacity: 1) { i };
-          uncachedMap.Add(key, (j, indices));
-        } else {
-          entry.indices.Add(i);
-        }
-      }
-
-      if (uncachedGenotypes.Count == 0)
-        return results;
-
-      var newObjectives = Evaluator.Evaluate(uncachedGenotypes, random, searchSpace, problem);
-
-      for (int k = 0; k < uncachedKeys.Count; k++) {
-        var key = uncachedKeys[k];
-        var obj = newObjectives[k];
-
-        Cache.Set(key, obj, new MemoryCacheEntryOptions { Size = 1 });
-      }
-
-      foreach (var (_, entry) in uncachedMap) {
-        var obj = newObjectives[entry.j];
-        foreach (var i in entry.indices)
-          results[i] = obj;
-      }
-
+    if (uncachedGenotypes.Count == 0) {
       return results;
     }
+
+    var newObjectives = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
+
+    for (var k = 0; k < uncachedKeys.Count; k++) {
+      cache.Set(uncachedKeys[k], newObjectives[k], new MemoryCacheEntryOptions { Size = 1 });
+    }
+
+    foreach (var (_, entry) in uncachedMap) {
+      var objectiveVector = newObjectives[entry.j];
+      foreach (var i in entry.indices) {
+        results[i] = objectiveVector;
+      }
+    }
+
+    return results;
   }
 }
 

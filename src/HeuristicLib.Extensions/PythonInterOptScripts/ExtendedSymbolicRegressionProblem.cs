@@ -36,8 +36,8 @@ public record EquationScoringEvaluator(Func<SymbolicExpressionTree[], ObjectiveV
 /// <summary>
 /// This is a toy problem that uses a "normal" symbolic regression problem and adds more objectives provided by a generic function
 /// </summary>
-public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpressionTreeSearchSpace searchSpace, Func<SymbolicExpressionTree,ObjectiveVector, double[]> individualPythonCallback)
-  : Problem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>(objective, searchSpace)
+public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpressionTreeSearchSpace searchSpace, Func<SymbolicExpressionTree, ObjectiveVector, double[]> individualPythonCallback)
+  : SingleSolutionProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>(objective, searchSpace)
 {
   public required SymbolicRegressionProblem InnerProblem { get; init; }
 
@@ -109,7 +109,7 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
 
     var problem =  new ExtendedSymbolicRegressionProblem(objective, symbolicExpressionTreeSearchSpace, individualPythonCallback) { InnerProblem = p };
 
-    var symRegAllMutator = MultiMutator.Create(
+    var symRegAllMutator = ChooseOneMutator.Create(
       new ChangeNodeTypeManipulation(),
       new FullTreeShaker(),
       new OnePointShaker(),

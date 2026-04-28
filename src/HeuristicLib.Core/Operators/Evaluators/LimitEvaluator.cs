@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -8,71 +7,55 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public record LimitEvaluator<TG, TS, TP>
-  : Evaluator<TG, TS, TP>
+  : WrappingEvaluator<TG, TS, TP, LimitEvaluator<TG, TS, TP>.ExecutionState>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  private readonly IEvaluator<TG, TS, TP> evaluator;
+  public sealed class ExecutionState
+  {
+    public InvocationCounter Counter { get; } = new();
+  }
+
   private readonly int maxEvaluations;
   private readonly ObjectiveVector? alternativeValue;
   private readonly bool strict;
 
   // ToDo: document that strict means in-batch checking
   public LimitEvaluator(IEvaluator<TG, TS, TP> evaluator, int maxEvaluations, ObjectiveVector? alternativeValue, bool strict = false)
+    : base(evaluator)
   {
-    this.evaluator = evaluator;
     this.maxEvaluations = maxEvaluations;
     this.alternativeValue = alternativeValue;
     this.strict = strict;
   }
 
-  public override IEvaluatorInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override ExecutionState CreateInitialState() => new();
+
+  protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, ExecutionState executionState,
+    InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    var countedEvaluator = evaluator.CountInvocations(out var counter);
+    var remainingEvaluations = maxEvaluations - executionState.Counter.CurrentCount;
 
-    var evaluatorInstance = instanceRegistry.Resolve(countedEvaluator);
-    return new Instance(evaluatorInstance, counter, maxEvaluations, alternativeValue, strict);
-  }
+    var alternative = alternativeValue ?? problem.Objective.Worst;
 
-  public new class Instance : Evaluator<TG, TS, TP>.Instance
-  {
-    private readonly IEvaluatorInstance<TG, TS, TP> evaluator;
-    private readonly InvocationCounter counter;
-    private readonly int maxEvaluations;
-    private readonly ObjectiveVector? alternativeValue;
-    private readonly bool strict;
-
-    public Instance(IEvaluatorInstance<TG, TS, TP> evaluator, InvocationCounter counter, int maxEvaluations, ObjectiveVector? alternativeValue, bool strict)
-    {
-      this.evaluator = evaluator;
-      this.counter = counter;
-      this.maxEvaluations = maxEvaluations;
-      this.alternativeValue = alternativeValue;
-      this.strict = strict;
+    if (remainingEvaluations <= 0) {
+      return Enumerable.Repeat(alternative, genotypes.Count).ToArray();
     }
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, IRandomNumberGenerator random, TS searchSpace, TP problem)
-    {
-      var remainingEvaluations = maxEvaluations - counter.CurrentCount;
+    if (strict && remainingEvaluations < genotypes.Count) {
+      var genotypesToEvaluate = genotypes.Take(remainingEvaluations).ToList();
+      var genotypesToSkip = genotypes.Skip(remainingEvaluations).ToList();
 
-      var alternative = alternativeValue ?? problem.Objective.Worst;
+      var evaluated = innerEvaluate(genotypesToEvaluate, random, searchSpace, problem);
+      executionState.Counter.IncrementBy(genotypesToEvaluate.Count);
+      var skipped = Enumerable.Repeat(alternative, genotypesToSkip.Count);
 
-      if (remainingEvaluations <= 0) {
-        return Enumerable.Repeat(alternative, genotypes.Count).ToArray();
-      }
-
-      if (strict && remainingEvaluations < genotypes.Count) {
-        var solutionsToEvaluate = genotypes.Take(remainingEvaluations).ToList();
-        var solutionsToSkip = genotypes.Skip(remainingEvaluations).ToList();
-
-        var evaluated = evaluator.Evaluate(solutionsToEvaluate, random, searchSpace, problem);
-        var skipped = Enumerable.Repeat(alternative, solutionsToSkip.Count);
-
-        return evaluated.Concat(skipped).ToArray();
-      }
-
-      return evaluator.Evaluate(genotypes, random, searchSpace, problem);
+      return evaluated.Concat(skipped).ToArray();
     }
+
+    var result = innerEvaluate(genotypes, random, searchSpace, problem);
+    executionState.Counter.IncrementBy(genotypes.Count);
+    return result;
   }
 }
 

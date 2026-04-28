@@ -15,7 +15,9 @@ public sealed record OnePointShaker : SymbolicExpressionTreeManipulator
   } = 1.0;
   #endregion
 
-  public static SymbolicExpressionTree Shake(IRandomNumberGenerator random, SymbolicExpressionTree tree, double shakingFactor)
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Mutate(random, parent, ShakingFactor);
+
+  public static SymbolicExpressionTree Mutate(IRandomNumberGenerator random, SymbolicExpressionTree tree, double shakingFactor)
   {
     tree = new SymbolicExpressionTree(tree);
     var parametricNodes = new List<SymbolicExpressionTreeNode?>();
@@ -31,6 +33,4 @@ public sealed record OnePointShaker : SymbolicExpressionTreeManipulator
     parametricNodes.SampleRandom(random)!.ShakeLocalParameters(random, shakingFactor);
     return tree;
   }
-
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Shake(random, parent, ShakingFactor);
 }

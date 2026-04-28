@@ -7,11 +7,18 @@ This is the spiritual successor to [HeuristicLab](https://github.com/heal-resear
 - **Library first**: Focus on a well-designed API that is intuitive to use.
 - **Focused scope**: Does less, but does it well.
 - **Modern C#**: Built with the latest C# features.
-- **Open**: Be usable from other ecosystems like Python. 
+- **Open**: Be usable from other ecosystems like Python.
+
+HeuristicLib is currently in an early alpha stage. Architecture and public APIs may change when a stronger design is justified.
+
+## Steering docs
+
+- [`AGENTS.md`](AGENTS.md) is the repository-wide contributor contract for humans and AI agents.
+- [`docs/design-goals.md`](docs/design-goals.md) records the durable design principles and clarifies which current patterns are still provisional.
 
 Noticeable differences to HeuristicLab:
 - No GUI
-  - HeuristicLib focuses on being a library first. 
+  - HeuristicLib focuses on being a library first.
 - No operator graph
   - Write algorithms in plain C# code.
 - No serialization

@@ -1,83 +1,106 @@
 # Execution model
 
-This page explains how algorithms are executed in HeuristicLib.
+This page explains how algorithm execution works in HeuristicLib.
 
-## The core loop: iterative state transformation
+## The user-facing model
 
-At the abstraction level, an algorithm is a function that produces a sequence of states:
+At the user level, the important idea is simple:
 
-- `ExecuteStep(problem, previousState, random)` computes the next state.
-- `previousState == null` signals that the algorithm should initialize.
+- an algorithm definition is a reusable configured object
+- a run executes that definition on a problem
+- execution produces a stream of search states
 
-> [!NOTE]
-> The `random` parameter is an `IRandomNumberGenerator`. For deterministic parallel workflows, see [Randomness (RNG) design](randomness.md).
+The core streaming shape is:
 
-Most algorithms in this repository start with `CurrentIteration = 0` and then increment by 1.
+```csharp
+IAsyncEnumerable<TSearchState> RunStreamingAsync(
+  TProblem problem,
+  IRandomNumberGenerator random,
+  TSearchState? initialState = null,
+  CancellationToken ct = default);
+```
 
-## Two modes: batch vs streaming
+Convenience methods such as `RunToCompletion(...)` are just ways of consuming that stream.
 
-The `IIterable<...>` contract is streaming-first and comes with extension methods:
+## The main authoring model
 
-- `Execute(problem, random, initialState?)` returns the last produced state.
-- `ExecuteStreaming(problem, random, initialState?)` yields each produced state.
+Ordinary iterative algorithms should be authored through `IterativeAlgorithm<...>`.
 
-Streaming is **pull-based**: enumeration drives execution. If you stop enumerating, you stop executing.
+That base provides a step-based model with explicit execution-state creation:
 
-## The exact streaming semantics
+```csharp
+protected override TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
 
-The default implementation of `ExecuteStreaming(...)` behaves like this:
+protected override TSearchState ExecuteStep(
+  TSearchState? previousState,
+  TExecutionState executionState,
+  TProblem problem,
+  IRandomNumberGenerator random)
+```
 
-1. `previousState` is set to `initialState`.
-2. If `previousState` is not null, the terminator is consulted once before the first step.
-3. While the terminator says “continue”:
-   - compute `newState = ExecuteStep(problem, previousState, random)`
-   - optionally apply `Interceptor.Transform(newState, previousState, ...)`
-   - `yield return newState`
-   - ask the terminator whether to continue using `(newState, previousState)`
-   - set `previousState = newState`
+The intended pattern is:
 
-This makes two patterns explicit:
+- resolve operator dependencies once in `CreateInitialExecutionState(...)`
+- store those resolved execution instances in `TExecutionState`
+- reuse them in every `ExecuteStep(...)` call
 
-- Fresh start: call `ExecuteStreaming(problem, random)` and let the algorithm initialize.
-- Continue from checkpoint: call `ExecuteStreaming(problem, random, initialState: checkpoint)`.
+## Iterative loop semantics
 
-## Termination
+For iterative algorithms, the default loop is:
 
-Termination is a pluggable policy:
+1. start from `previousState = initialState`
+2. enumerate iteration indices `0, 1, 2, ...`
+3. for each iteration:
+   - check cancellation
+   - fork the RNG using the iteration index
+   - compute the next state with `ExecuteStep(...)`
+   - optionally transform it with the configured interceptor
+   - yield the produced state
+   - continue from that state
 
-- `ITerminator.ShouldTerminate(currentState, previousState, searchSpace, problem)`
+Those iteration indices are internal to that specific iterative loop. They are useful for execution concerns such as deterministic RNG forking, but they are not part of the public search-state contract and do not define a cross-algorithm notion of iteration for nested or meta-algorithm execution.
 
-The interface also provides a default `ShouldContinue(...)` convenience method.
+So the model supports both:
 
-The repository includes common terminators such as `AfterIterationsTerminator<TGenotype>`.
+- fresh runs, where `initialState == null`
+- resumed runs, where an existing state is passed back in
 
-## Interception
+## Runs and analyzers
 
-Interceptors are part of the state pipeline:
+`CreateRun(problem, analyzers...)` creates one logical execution.
 
-- `IInterceptor.Transform(currentState, previousState, searchSpace, problem)`
+A run owns:
 
-Use interceptors when you want to **modify/enrich the produced state** (for example, attach derived metrics).
+- the algorithm definition
+- the problem
+- the root execution-instance registry
+- analyzer state for that run
 
-## Observation
+Analyzers are attached to the run, not to the algorithm definition.
 
-The library defines `IIterationObserver<...>` as a side-effect hook.
+## Internal infrastructure
 
-Algorithms may expose an observer via `IObservable.Observer`.
+Internally, definitions are resolved into execution instances through `ExecutionInstanceRegistry`.
 
-> [!IMPORTANT]
-> The execution loop invokes the observer once per produced iteration state.
+`ExecutionInstanceRegistry` also implements `IExecutionInstanceResolver`, which is the narrow surface passed into high-level authoring APIs.
 
-Observer invocation happens as part of the normal iteration pipeline:
+This still matters for:
 
-1. `ExecuteStep(...)` produces the next state.
-2. If an interceptor is present, `Interceptor.Transform(...)` post-processes that state.
-3. The observer is invoked with `(currentState, previousState, searchSpace, problem)`.
+- run-local operator state
+- shared execution graph resolution
+- meta-algorithms that need control over instance reuse vs reset
 
-Observers are intended for side effects like logging, progress reporting, and metrics collection.
+But it is now intentionally an execution concern.
+Normal algorithm authoring should work through execution state and resolved execution instances, not through a separate executor object.
 
-## Error handling
+## Meta algorithms
 
-HeuristicLib does not wrap exceptions thrown by algorithms/operators/problems.
+Meta algorithms such as `PipelineAlgorithm`, `CycleAlgorithm`, and `TerminatableAlgorithm` still work closer to the low-level execution model because they orchestrate other algorithms directly.
 
-If evaluation, termination, interception, or algorithm logic throws, the exception will bubble out of the streaming enumeration.
+That is a separate concern from the simplified authoring path for ordinary iterative algorithms.
+
+## Related pages
+
+- [Algorithm](algorithm.md)
+- [Definition vs execution instances](execution-instances.md)
+- [Observability & analysis](observability-and-analysis.md)

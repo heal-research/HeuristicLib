@@ -153,36 +153,36 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
       switch (node.Symbol) {
         // terminals
         case Variable: {
-            var varNode = (VariableTreeNode)node;
-            strBuilder.Append($"Times[{varNode.VariableName}, {varNode.Weight.ToString("G17", CultureInfo.InvariantCulture)}]");
+          var varNode = (VariableTreeNode)node;
+          strBuilder.Append($"Times[{varNode.VariableName}, {varNode.Weight.ToString("G17", CultureInfo.InvariantCulture)}]");
 
-            break;
-          }
+          break;
+        }
         case Number: {
-            var numNode = (NumberTreeNode)node;
-            strBuilder.Append(numNode.Value.ToString("G17", CultureInfo.InvariantCulture));
+          var numNode = (NumberTreeNode)node;
+          strBuilder.Append(numNode.Value.ToString("G17", CultureInfo.InvariantCulture));
 
-            break;
-          }
+          break;
+        }
         case FactorVariable: {
-            var factorNode = (FactorVariableTreeNode)node;
-            strBuilder.Append($"Switch[{factorNode.VariableName},");
-            var varValues = factorNode.Symbol.GetVariableValues(factorNode.VariableName).ToArray();
-            var weights = varValues.Select(factorNode.GetValue).ToArray();
+          var factorNode = (FactorVariableTreeNode)node;
+          strBuilder.Append($"Switch[{factorNode.VariableName},");
+          var varValues = factorNode.Symbol.GetVariableValues(factorNode.VariableName).ToArray();
+          var weights = varValues.Select(factorNode.GetValue).ToArray();
 
-            var weightStr = string.Join(", ",
-              varValues.Zip(weights, resultSelector: (s, d) => string.Format(CultureInfo.InvariantCulture, "\"{0}\", {1:G17}", s, d)));
-            strBuilder.Append(weightStr);
-            strBuilder.Append(']');
+          var weightStr = string.Join(", ",
+            varValues.Zip(weights, resultSelector: (s, d) => string.Format(CultureInfo.InvariantCulture, "\"{0}\", {1:G17}", s, d)));
+          strBuilder.Append(weightStr);
+          strBuilder.Append(']');
 
-            break;
-          }
+          break;
+        }
         case BinaryFactorVariable: {
-            var factorNode = (BinaryFactorVariableTreeNode)node;
-            strBuilder.Append(CultureInfo.InvariantCulture, $"If[{factorNode.VariableName}==\"{factorNode.VariableValue}\",{factorNode.Weight:G17},0.0]");
+          var factorNode = (BinaryFactorVariableTreeNode)node;
+          strBuilder.Append(CultureInfo.InvariantCulture, $"If[{factorNode.VariableName}==\"{factorNode.VariableValue}\",{factorNode.Weight:G17},0.0]");
 
-            break;
-          }
+          break;
+        }
         default:
           throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " is not supported.");
       }
@@ -196,8 +196,8 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
       strBuilder.Append("Greater[");
       FormatRecursively(t, strBuilder);
       strBuilder.Append(", 0]");
-      if (t != node.Subtrees.Last()) {
-        strBuilder.Append(",");
+      if (t != node.Subtrees[^1]) {
+        strBuilder.Append(',');
       }
     }
 
@@ -211,8 +211,8 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
       strBuilder.Append("Greater[");
       FormatRecursively(t, strBuilder);
       strBuilder.Append(", 0]");
-      if (t != node.Subtrees.Last()) {
-        strBuilder.Append(",");
+      if (t != node.Subtrees[^1]) {
+        strBuilder.Append(',');
       }
     }
 
@@ -226,8 +226,8 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
       strBuilder.Append("Greater[");
       FormatRecursively(t, strBuilder);
       strBuilder.Append(", 0]");
-      if (t != node.Subtrees.Last()) {
-        strBuilder.Append(",");
+      if (t != node.Subtrees[^1]) {
+        strBuilder.Append(',');
       }
     }
 
@@ -242,7 +242,7 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     FormatRecursively(node.GetSubtree(1), strBuilder);
     strBuilder.Append(", ");
     FormatRecursively(node.GetSubtree(2), strBuilder);
-    strBuilder.Append("]");
+    strBuilder.Append(']');
   }
 
   private void FormatAverage(SymbolicExpressionTreeNode node, StringBuilder strBuilder)
@@ -314,11 +314,11 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
     strBuilder.Append(function + "[");
     foreach (var child in node.Subtrees) {
       FormatRecursively(child, strBuilder);
-      if (child != node.Subtrees.Last()) {
+      if (child != node.Subtrees[^1]) {
         strBuilder.Append(", ");
       }
     }
 
-    strBuilder.Append("]");
+    strBuilder.Append(']');
   }
 }

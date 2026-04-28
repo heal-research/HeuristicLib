@@ -5,9 +5,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creators;
 
-// ToDo: Since the stateless versions will be the most commonly used ones, think about naming them "Creator" and the other ones the "StatefulCreator".
-
-
 public abstract record StatelessCreator<TGenotype, TSearchSpace, TProblem>
   : ICreator<TGenotype, TSearchSpace, TProblem>,
     ICreatorInstance<TGenotype, TSearchSpace, TProblem>

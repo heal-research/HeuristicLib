@@ -4,10 +4,17 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators;
 
-public record UniformDistributedCreator : SingleSolutionStatelessCreator<IntegerVector, IntegerVectorSearchSpace>
+public record UniformDistributedCreator : SingleSolutionCreator<IntegerVector, IntegerVectorSearchSpace>
 {
   public override IntegerVector Create(IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-  {
-    return IntegerVector.CreateUniform(searchSpace.Length, searchSpace.Minimum, searchSpace.Maximum, random);
-  }
+    => random.NextIntegerVectorUniform(searchSpace);
+
+  public static IntegerVector Create(IntegerVectorSearchSpace searchSpace, IRandomNumberGenerator random)
+    => random.NextIntegerVectorUniform(searchSpace);
+
+  public static IntegerVector Create(IRandomNumberGenerator random, int length, IntegerVector minimum, IntegerVector maximum)
+    => random.NextIntegerVectorUniform(minimum, maximum, length);
+
+  public static IntegerVector Create(IRandomNumberGenerator random, int length, int minimum, int maximum)
+    => Create(random, length, new IntegerVector(minimum), new IntegerVector(maximum));
 }

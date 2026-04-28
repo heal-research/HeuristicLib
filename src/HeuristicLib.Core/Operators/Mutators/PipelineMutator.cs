@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -7,44 +6,30 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
-public partial record PipelineMutator<TG, TS, TP> : Mutator<TG, TS, TP>
+public partial record PipelineMutator<TG, TS, TP>
+  : MultiMutator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  [OrderedEquality] public ImmutableArray<IMutator<TG, TS, TP>> Mutators { get; }
+  [IgnoreEquality] public ImmutableArray<IMutator<TG, TS, TP>> Mutators => InnerMutators;
 
   public PipelineMutator(ImmutableArray<IMutator<TG, TS, TP>> mutators)
+    : base(mutators)
   {
+    // ToDo: think if we want to allow empty pipelines.
     if (mutators.Length == 0) {
-      throw new ArgumentException("At least one crossover must be provided.", nameof(mutators));
+      throw new ArgumentException("At least one mutator must be provided.", nameof(mutators));
     }
-
-    Mutators = mutators;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents,
+    IReadOnlyList<InnerMutate> innerMutators, IRandomNumberGenerator random, TS searchSpace,
+    TP problem)
   {
-    var mutatorInstances = Mutators.Select(instanceRegistry.Resolve).ToArray();
-    return new Instance(mutatorInstances);
-  }
-
-  public new class Instance : Mutator<TG, TS, TP>.Instance
-  {
-    private readonly IReadOnlyList<IMutatorInstance<TG, TS, TP>> mutators;
-
-    public Instance(IReadOnlyList<IMutatorInstance<TG, TS, TP>> mutators)
-    {
-      this.mutators = mutators;
+    var current = parents;
+    foreach (var mutator in innerMutators) {
+      current = mutator(current, random, searchSpace, problem);
     }
-
-    public override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parent, IRandomNumberGenerator random, TS searchSpace, TP problem)
-    {
-      var current = parent;
-      foreach (var mutator in mutators) {
-        current = mutator.Mutate(current, random, searchSpace, problem);
-      }
-
-      return current;
-    }
+    return current;
   }
 }

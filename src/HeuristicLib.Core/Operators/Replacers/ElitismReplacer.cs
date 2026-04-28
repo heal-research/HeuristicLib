@@ -16,12 +16,22 @@ public record ElitismReplacer<TGenotype>
 
   public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
   {
-    var elitesPopulation = previousPopulation.OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer).Take(Elites);
-    
-    var remainingCount = count - Math.Min(previousPopulation.Count, Elites);
-    
+    return Replace(previousPopulation, offspringPopulation, objective, count, Elites);
+  }
+
+  public static IReadOnlyList<ISolution<TGenotype>> Replace(
+    IReadOnlyList<ISolution<TGenotype>> previousPopulation,
+    IReadOnlyList<ISolution<TGenotype>> offspringPopulation,
+    Objective objective,
+    int count,
+    int elites)
+  {
+    ArgumentOutOfRangeException.ThrowIfNegative(elites);
+
+    var elitesPopulation = previousPopulation.OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer).Take(elites);
+    var remainingCount = count - Math.Min(previousPopulation.Count, elites);
     var nonElites = offspringPopulation.Take(remainingCount);
-    
+
     return elitesPopulation.Concat(nonElites).ToArray();
   }
 }

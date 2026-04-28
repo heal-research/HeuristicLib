@@ -8,17 +8,30 @@ namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
 public record BalancedTreeCreator : SymbolicExpressionTreeCreator
 {
-  public double IrregularityBias { get; set; }
+  public double IrregularityBias { get; init; }
 
-  public static SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, double irregularityBias) => CreateExpressionTree(random, searchSpace, irregularityBias);
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+    => Create(random, searchSpace, IrregularityBias);
 
-  public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, double irregularityBias = 1)
+  #region helpers
+  private sealed record NodeInfo(SymbolicExpressionTreeNode Node, int Depth, int Arity);
+
+  public void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeSearchSpace searchSpace, int maxTreeLength, int maxTreeDepth)
+    => Create(random, seedNode, searchSpace, maxTreeLength, maxTreeDepth, IrregularityBias);
+  #endregion
+
+  public static SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, double irregularityBias) => Create(random, searchSpace.Grammar, searchSpace.TreeLength, searchSpace.TreeDepth, irregularityBias);
+
+  public static SymbolicExpressionTree Create(ISymbolicExpressionGrammar grammar, int treeLength, int treeDepth, IRandomNumberGenerator random, double irregularityBias = 1)
+    => Create(random, grammar, treeLength, treeDepth, irregularityBias);
+
+  public static SymbolicExpressionTree Create(IRandomNumberGenerator random, ISymbolicExpressionGrammar grammar, int treeLength, int treeDepth, double irregularityBias = 1)
   {
-    var tree = searchSpace.Grammar.MakeStump(random); // create a stump consisting of just a ProgramRootSymbol and a StartSymbol
-    var minLength = searchSpace.Grammar.GetMinimumExpressionLength(tree.Root.Symbol);
-    var targetLength = random.NextInt(minLength, searchSpace.TreeLength) - tree.Length;
-    var targetDepth = searchSpace.TreeDepth - tree.Depth;
-    CreateExpression(random, tree.Root[0], searchSpace, targetLength, targetDepth, irregularityBias);
+    var tree = grammar.MakeStump(random); // create a stump consisting of just a ProgramRootSymbol and a StartSymbol
+    var minLength = grammar.GetMinimumExpressionLength(tree.Root.Symbol);
+    var targetLength = random.NextInt(minLength, treeLength) - tree.Length;
+    var targetDepth = treeDepth - tree.Depth;
+    Create(random, tree.Root[0], grammar, targetLength, targetDepth, irregularityBias);
     return tree;
   }
 
@@ -48,9 +61,11 @@ public record BalancedTreeCreator : SymbolicExpressionTreeCreator
     return node;
   }
 
-  public static void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeSearchSpace searchSpace, int targetLength, int maxDepth, double irregularityBias)
+  public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, SymbolicExpressionTreeSearchSpace searchSpace, int targetLength, int maxDepth, double irregularityBias)
+    => Create(random, root, searchSpace.Grammar, targetLength, maxDepth, irregularityBias);
+
+  public static void Create(IRandomNumberGenerator random, SymbolicExpressionTreeNode root, ISymbolicExpressionGrammar grammar, int targetLength, int maxDepth, double irregularityBias)
   {
-    var grammar = searchSpace.Grammar;
     var minSubtreeCount = grammar.GetMinimumSubtreeCount(root.Symbol);
     var maxSubtreeCount = grammar.GetMaximumSubtreeCount(root.Symbol);
     var arity = random.NextInt(minSubtreeCount, maxSubtreeCount, true);
@@ -112,14 +127,4 @@ public record BalancedTreeCreator : SymbolicExpressionTreeCreator
       }
     }
   }
-
-  #region helpers
-  private sealed record NodeInfo(SymbolicExpressionTreeNode Node, int Depth, int Arity);
-
-  public void CreateExpression(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, SymbolicExpressionTreeSearchSpace searchSpace, int maxTreeLength, int maxTreeDepth)
-    => CreateExpression(random, seedNode, searchSpace, maxTreeLength, maxTreeDepth, IrregularityBias);
-  #endregion
-
-  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
-    => Create(random, searchSpace, IrregularityBias);
 }

@@ -1,5 +1,4 @@
 ﻿using Generator.Equals;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,65 +7,51 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
 public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
-  : Creator<TGenotype, TSearchSpace, TProblem>
+  : WrappingCreator<TGenotype, TSearchSpace, TProblem, PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
+  public ICreator<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutions => InnerCreator;
+
   [OrderedEquality] public ImmutableArray<TGenotype> PredefinedSolutions { get; init; }
 
-  public ICreator<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutions { get; init; }
-
   public PredefinedSolutionsCreator(ImmutableArray<TGenotype> predefinedSolutions, ICreator<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutions)
+    : base(creatorForRemainingSolutions)
   {
     PredefinedSolutions = predefinedSolutions;
-    CreatorForRemainingSolutions = creatorForRemainingSolutions;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override ExecutionState CreateInitialState() => new();
+
+  protected override IReadOnlyList<TGenotype> Create(int count, ExecutionState executionState, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
-    var creatorForRemainingSolutionsInstance = instanceRegistry.Resolve(CreatorForRemainingSolutions);
-    return new Instance(PredefinedSolutions, creatorForRemainingSolutionsInstance);
-  }
+    var offspring = new TGenotype[count];
 
-  public new class Instance
-    : Creator<TGenotype, TSearchSpace, TProblem>.Instance
-  {
-    private int currentSolutionIndex;
+    var countPredefined = Math.Min(PredefinedSolutions.Length - executionState.CurrentSolutionIndex, count);
+    if (countPredefined > 0) {
+      for (var i = 0; i < countPredefined; i++) {
+        offspring[i] = PredefinedSolutions[executionState.CurrentSolutionIndex + i];
+      }
 
-    private readonly IReadOnlyList<TGenotype> predefinedSolutions;
-    private readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance;
-
-    public Instance(IReadOnlyList<TGenotype> predefinedSolutions, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutionsInstance)
-    {
-      this.predefinedSolutions = predefinedSolutions;
-      this.creatorForRemainingSolutionsInstance = creatorForRemainingSolutionsInstance;
+      executionState.CurrentSolutionIndex += countPredefined;
     }
 
-    public override IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-      var offspring = new TGenotype[count];
-
-      var countPredefined = Math.Min(predefinedSolutions.Count - currentSolutionIndex, count);
-      if (countPredefined > 0) {
-        for (var i = 0; i < countPredefined; i++) {
-          offspring[i] = predefinedSolutions[currentSolutionIndex + i];
-        }
-
-        currentSolutionIndex += countPredefined;
-      }
-
-      var countRemaining = count - countPredefined;
-      if (countRemaining <= 0) {
-        return offspring;
-      }
-
-      var remainingRandom = random.Fork(1);
-      var remaining = creatorForRemainingSolutionsInstance.Create(countRemaining, remainingRandom, searchSpace, problem);
-      for (var i = 0; i < remaining.Count; i++) {
-        offspring[countPredefined + i] = remaining[i];
-      }
-
+    var countRemaining = count - countPredefined;
+    if (countRemaining <= 0) {
       return offspring;
     }
+
+    var remainingRandom = random.Fork(1);
+    var remaining = innerCreate(countRemaining, remainingRandom, searchSpace, problem);
+    for (var i = 0; i < remaining.Count; i++) {
+      offspring[countPredefined + i] = remaining[i];
+    }
+
+    return offspring;
+  }
+
+  public sealed class ExecutionState
+  {
+    public int CurrentSolutionIndex { get; set; } = 0;
   }
 }

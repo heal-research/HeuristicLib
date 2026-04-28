@@ -6,7 +6,6 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.V
 using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
 using MathNet.Numerics.Optimization;
-using static HEAL.HeuristicLib.Problems.DataAnalysis.Regression.TreeToAutoDiffTermConverter;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
@@ -23,7 +22,6 @@ public static class SymbolicRegressionParameterOptimization
                                           double lowerEstimationLimit = double.MinValue,
                                           double upperEstimationLimit = double.MaxValue,
                                           bool updateParametersInTree = true,
-                                          Action<double[], double, object>? iterationCallback = null,
                                           EvaluationsCounter? counter = null)
   {
     // Numeric parameters in the tree become variables for parameter optimization.
@@ -31,7 +29,7 @@ public static class SymbolicRegressionParameterOptimization
     // For each parameter (variable in the original tree) we store the 
     // variable name, variable value (for factor vars) and lag as a DataForVariable object.
     // A dictionary is used to find parameters
-    if (!TryConvertToAutoDiff(tree, updateVariableWeights, out var parameters, out var initialParameters, out var func, out var funcGrad)) {
+    if (!TreeToAutoDiffTermConverter.TryConvertToAutoDiff(tree, updateVariableWeights, out var parameters, out var initialParameters, out var func, out var funcGrad)) {
       throw new NotSupportedException("Could not optimize parameters of symbolic expression tree due to not supported symbols used in the tree.");
     }
 
@@ -89,7 +87,8 @@ public static class SymbolicRegressionParameterOptimization
     counter.FunctionEvaluations += rowEvaluationsCounter.FunctionEvaluations / n;
     counter.GradientEvaluations += rowEvaluationsCounter.GradientEvaluations / n;
 
-    if (status is ExitCondition.InvalidValues || !success) return originalQuality;
+    if (status is ExitCondition.InvalidValues || !success)
+      return originalQuality;
 
     UpdateParameters(tree, cOpt, updateVariableWeights);
 
@@ -140,11 +139,14 @@ public static class SymbolicRegressionParameterOptimization
     }
   }
 
-  public static bool CanOptimizeParameters(SymbolicExpressionTree tree) => IsCompatible(tree);
+  public static bool CanOptimizeParameters(SymbolicExpressionTree tree) => TreeToAutoDiffTermConverter.IsCompatible(tree);
 
-  public static (double[] cOpt, ExitCondition status) MathNetLevenbergMarquardt(int maxIterations, int n, double[] y, int m, double[,] x, CompiledModel func, EvaluationsCounter rowEvaluationsCounter, CompiledModelGradient funcGrad, double[] c, int k)
+  private static (double[] cOpt, ExitCondition status) MathNetLevenbergMarquardt(int maxIterations, int n, double[] y, int m, double[,] x,
+                                                                                 TreeToAutoDiffTermConverter.CompiledModel func,
+                                                                                 EvaluationsCounter rowEvaluationsCounter,
+                                                                                 TreeToAutoDiffTermConverter.CompiledModelGradient funcGrad,
+                                                                                 double[] c, int k)
   {
-    #region math.net.numerics
     var xIdx = Vector<double>.Build.Dense(n, init: i => i);
     var yVec = Vector<double>.Build.DenseOfArray(y);
     var wVec = Vector<double>.Build.Dense(n, 1.0);
@@ -154,15 +156,29 @@ public static class SymbolicRegressionParameterOptimization
     {
       var predicted = Vector<double>.Build.Dense(idx.Count);
       var xRow = new double[m];
+      var pArr = p.ToArray();
 
       for (var j = 0; j < idx.Count; j++) {
-        var i = (int)idx[j]; // observation index
+        var i = (int)idx[j];
 
         for (var col = 0; col < m; col++) {
           xRow[col] = x[i, col];
         }
 
-        predicted[j] = func(p.ToArray(), xRow);
+        double value;
+        try {
+          value = func(pArr, xRow);
+        } catch (Exception ex) {
+          throw new InvalidModelEvaluationException(
+            $"func failed at row {i}.", ex);
+        }
+
+        if (double.IsNaN(value) || double.IsInfinity(value)) {
+          throw new InvalidModelEvaluationException(
+            $"func returned non-finite value {value} at row {i}.");
+        }
+
+        predicted[j] = value;
         rowEvaluationsCounter.FunctionEvaluations++;
       }
 
@@ -174,6 +190,7 @@ public static class SymbolicRegressionParameterOptimization
     {
       var J = Matrix<double>.Build.Dense(idx.Count, p.Count);
       var xRow = new double[m];
+      var pArr = p.ToArray();
 
       for (var j = 0; j < idx.Count; j++) {
         var i = (int)idx[j];
@@ -182,16 +199,33 @@ public static class SymbolicRegressionParameterOptimization
           xRow[col] = x[i, col];
         }
 
-        var (gradArr, _) = funcGrad(p.ToArray(), xRow);
+        double[] gradArr;
+        try {
+          (gradArr, _) = funcGrad(pArr, xRow);
+        } catch (Exception ex) {
+          throw new InvalidModelEvaluationException(
+            $"funcGrad failed at row {i}.", ex);
+        }
+
+        if (gradArr == null || gradArr.Length != p.Count) {
+          throw new InvalidModelEvaluationException(
+            $"funcGrad returned invalid gradient length at row {i}: got {gradArr?.Length}, expected {p.Count}.");
+        }
 
         for (var q = 0; q < p.Count; q++) {
-          J[j, q] = gradArr[q];
+          var g = gradArr[q];
+          if (double.IsNaN(g) || double.IsInfinity(g)) {
+            throw new InvalidModelEvaluationException(
+              $"funcGrad returned non-finite value {g} at row {i}, parameter {q}.");
+          }
+
+          J[j, q] = g;
         }
 
         rowEvaluationsCounter.GradientEvaluations++;
       }
 
-      return J;
+      return JacobianLooksToxic(J, out var reason) ? throw new InvalidModelEvaluationException(reason) : J;
     }
 
     var objective =
@@ -217,15 +251,59 @@ public static class SymbolicRegressionParameterOptimization
     );
 
     // Solve
-    var result = lm.FindMinimum(objective,
-      c, // initialGuess
-      scales: scales,
-      isFixed: isFixed);
+    try {
+      var result = lm.FindMinimum(
+        objective,
+        c,
+        scales: scales,
+        isFixed: isFixed);
 
-    var cOpt = result.MinimizingPoint.ToArray();
-    var status = result.ReasonForExit;
-    #endregion
-
-    return (cOpt, status);
+      return (result.MinimizingPoint.ToArray(), result.ReasonForExit);
+    } catch (InvalidModelEvaluationException) {
+      return (c.ToArray(), ExitCondition.InvalidValues);
+    } catch (ArithmeticException) {
+      return (c.ToArray(), ExitCondition.InvalidValues);
+    }
   }
+
+  private static bool JacobianLooksToxic(Matrix<double> jacobian, out string reason)
+  {
+    reason = "";
+
+    double maxAbs = 0.0;
+    double minAbsNonZero = double.PositiveInfinity;
+
+    for (int i = 0; i < jacobian.RowCount; i++) {
+      for (int j = 0; j < jacobian.ColumnCount; j++) {
+        var a = Math.Abs(jacobian[i, j]);
+        if ((double.IsNaN(a) || double.IsInfinity(a))) {
+          reason = $"Non-finite Jacobian entry at ({i},{j})";
+          return true;
+        }
+
+        if (a > maxAbs)
+          maxAbs = a;
+        if (a > 0.0 && a < minAbsNonZero)
+          minAbsNonZero = a;
+      }
+    }
+
+    if (maxAbs > 1e100) {
+      reason = $"Jacobian magnitude too large: {maxAbs:E3}";
+      return true;
+    }
+
+    if ((minAbsNonZero >= double.PositiveInfinity) || (maxAbs / minAbsNonZero <= 1e50)) {
+      return false;
+    }
+
+    reason = $"Jacobian dynamic range too large: {maxAbs / minAbsNonZero:E3}";
+    return true;
+  }
+}
+
+public sealed class InvalidModelEvaluationException : Exception
+{
+  public InvalidModelEvaluationException(string message, Exception e) : base(message, e) { }
+  public InvalidModelEvaluationException(string message) : base(message) { }
 }

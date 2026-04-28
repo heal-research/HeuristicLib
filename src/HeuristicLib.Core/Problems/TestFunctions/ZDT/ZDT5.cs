@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 ///   ZDT5 is a binary-encoded multi-objective optimization problem and therefore can not fit into the RealVector
 ///   TestFunctions
 /// </summary>
-public class Zdt5 : Problem<BoolVector, BoolVectorSearchSpace>
+public class Zdt5 : SingleSolutionProblem<BoolVector, BoolVectorSearchSpace>
 {
   private readonly int numberOfVariables;
 

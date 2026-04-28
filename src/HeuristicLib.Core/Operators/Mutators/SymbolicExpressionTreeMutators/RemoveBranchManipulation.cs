@@ -10,7 +10,14 @@ public sealed record RemoveBranchManipulation : SymbolicExpressionTreeManipulato
 {
   private const int MaxTries = 100;
 
-  public static SymbolicExpressionTree RemoveRandomBranch(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace)
+  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  {
+    var t = Mutate(random, parent, searchSpace);
+    Debug.Assert(searchSpace.Contains(t), "Upps destroyed tree");
+    return t;
+  }
+
+  public static SymbolicExpressionTree Mutate(IRandomNumberGenerator random, SymbolicExpressionTree symbolicExpressionTree, SymbolicExpressionTreeSearchSpace searchSpace)
   {
     SymbolicExpressionTree childTree = new(symbolicExpressionTree);
     var allowedSymbols = new List<Symbol>();
@@ -80,12 +87,5 @@ public sealed record RemoveBranchManipulation : SymbolicExpressionTreeManipulato
       // replace the just inserted dummy by recursive application
       ReplaceWithMinimalTree(random, root, newTreeNode, i, searchSpace);
     }
-  }
-
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
-  {
-    var t = RemoveRandomBranch(random, parent, searchSpace);
-    Debug.Assert(searchSpace.Contains(t), "Upps destroyed tree");
-    return t;
   }
 }

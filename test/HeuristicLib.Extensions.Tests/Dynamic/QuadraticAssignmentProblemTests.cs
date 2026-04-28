@@ -1,7 +1,6 @@
 ﻿using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Tests;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Dynamic;
@@ -44,7 +43,7 @@ public class QuadraticAssignmentProblemTests
     var rng = TestRandoms.SystemRandomGenerator(1);
 
     // identity assignment: facility i -> location i
-    var sol = new Permutation([0, 1, 2, 3]); // adapt ctor if needed
+    var sol = new Permutation(0, 1, 2, 3); // adapt ctor if needed
 
     var cost = problem.Evaluate(sol, rng)[0]; // adapt cast if ObjectiveVector differs
 

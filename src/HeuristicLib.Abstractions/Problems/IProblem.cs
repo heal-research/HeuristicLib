@@ -10,5 +10,6 @@ public interface IProblem<in TGenotype, out TSearchSpace>
   TSearchSpace SearchSpace { get; }
   Objective Objective { get; }
 
-  ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random);
+  //ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random);
+  IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random);
 }

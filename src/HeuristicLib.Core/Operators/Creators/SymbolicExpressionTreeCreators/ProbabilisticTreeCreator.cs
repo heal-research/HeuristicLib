@@ -16,8 +16,8 @@ public record ProbabilisticTreeCreator : SymbolicExpressionTreeCreator
     return tree;
   }
 
-  public static SymbolicExpressionTree CreateExpressionTree(IRandomNumberGenerator random, ISymbolicExpressionGrammar grammar, int targetLength,
-                                                            int maxTreeDepth, SymbolicExpressionTreeSearchSpace searchSpace)
+  public static SymbolicExpressionTree Create(ISymbolicExpressionGrammar grammar, int targetLength,
+                                              int maxTreeDepth, SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)
   {
     var rootNode = grammar.ProgramRootSymbol.CreateTreeNode();
     if (rootNode.HasLocalParameters) {
@@ -47,7 +47,7 @@ public record ProbabilisticTreeCreator : SymbolicExpressionTreeCreator
     public int MinimumExtensionLength { get; set; }
   }
 
-  public static void Ptc2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, int maxLength, SymbolicExpressionTreeSearchSpace searchSpace)
+  internal static void Ptc2(IRandomNumberGenerator random, SymbolicExpressionTreeNode seedNode, int maxDepth, int maxLength, SymbolicExpressionTreeSearchSpace searchSpace)
   {
     // make sure it is possible to create a trees smaller than maxLength and maxDepth
     if (searchSpace.Grammar.GetMinimumExpressionLength(seedNode.Symbol) > maxLength) {

@@ -1,6 +1,5 @@
 ﻿using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
@@ -8,91 +7,52 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
 
 public record ReevaluationInterceptor<T, TE, TP, TR>
-  : Interceptor<T, TE, TP, TR>
+  : IInterceptor<T, TE, TP, TR>
   where TR : PopulationState<T>
   where TE : class, ISearchSpace<T>
   where TP : DynamicProblem<T, TE>
 {
   private readonly IEvaluator<T, TE, TP> evaluator;
-  private readonly TP problem;
+  private readonly TP subscribedProblem;
 
   public ReevaluationInterceptor(IEvaluator<T, TE, TP> evaluator, TP problem)
   {
     this.evaluator = evaluator;
-    this.problem = problem;
+    subscribedProblem = problem;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public IInterceptorInstance<T, TE, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
   {
     var evaluatorInstance = instanceRegistry.Resolve(evaluator);
-    return new Instance(evaluatorInstance, problem);
+    var instance = new Instance(evaluatorInstance);
+
+    // ToDo: maybe we have a memory leak here?
+    subscribedProblem.EpochClock.OnEpochChange += (_, _) => instance.RequestReevaluation();
+
+    return instance;
   }
 
-  public new class Instance : Interceptor<T, TE, TP, TR>.Instance
+  private sealed class Instance(IEvaluatorInstance<T, TE, TP> evaluator)
+    : IInterceptorInstance<T, TE, TP, TR>
   {
-    private readonly IEvaluatorInstance<T, TE, TP> evaluator;
-
     private int requireReevaluation;
 
-    public Instance(IEvaluatorInstance<T, TE, TP> evaluator, TP problem)
+    public void RequestReevaluation() => Interlocked.Increment(ref requireReevaluation);
+    public bool ConsumeReevaluationRequest() => Interlocked.Exchange(ref requireReevaluation, 0) != 0;
+
+    public TR Transform(TR currentState, TR? previousState, TE searchSpace, TP problem)
     {
-      this.evaluator = evaluator;
+      var result = currentState;
 
-      // ToDo: maybe we have a memory leak here?
-      problem.EpochClock.OnEpochChange += (_, _) => Interlocked.Increment(ref requireReevaluation);
-    }
-
-    public override TR Transform(TR currentState, TR? previousState, TE searchSpace, TP problem)
-    {
-      var r = currentState;
-
-      var wasTrue = Interlocked.Exchange(ref requireReevaluation, 0) != 0;
-      if (!wasTrue) {
-        return r;
+      if (!ConsumeReevaluationRequest()) {
+        return result;
       }
 
-      var genotypes = r.Population.Genotypes.ToArray();
-      var fitnesses = evaluator.Evaluate(genotypes, null!, searchSpace, problem); // TODO: pass random?
-      r = r with { Population = Population.From(genotypes, fitnesses) };
+      var genotypes = result.Population.Genotypes.ToArray();
+      var objectiveVectors = evaluator.Evaluate(genotypes, null!, searchSpace, problem); // random is not available in the interceptor contract.
+      result = result with { Population = Population.From(genotypes, objectiveVectors) };
 
-      return r;
+      return result;
     }
   }
 }
-
-// public class ReevaluationInterceptor<T, TR, TE, TP> : Interceptor<T, TR, TE, TP>
-//   where TR : PopulationState<T>
-//   where TE : class, ISearchSpace<T>
-//   where TP : DynamicProblem<T, TE>
-// {
-//   private readonly IEvaluator<T, TE, TP> evaluator;
-//   private readonly IInterceptor<T, TR, TE, TP>? inner;
-// 
-//   private int requireReevaluation;
-// 
-//   public ReevaluationInterceptor(IInterceptor<T, TR, TE, TP>? inner, IEvaluator<T, TE, TP> evaluator, TP problem)
-//   {
-//     this.inner = inner;
-//     this.evaluator = evaluator;
-//     problem.EpochClock.OnEpochChange += (_, _) => Interlocked.Increment(ref requireReevaluation);
-//   }
-// 
-//   public TR Transform(TR currentIterationResult, TR? previousIterationResult, TE encoding, TP problem)
-//   {
-//     var r = currentIterationResult;
-//     if (inner != null) {
-//       r = inner.Transform(currentIterationResult, previousIterationResult, encoding, problem);
-//     }
-// 
-//     var wasTrue = Interlocked.Exchange(ref requireReevaluation, 0) != 0;
-//     if (!wasTrue) {
-//       return r;
-//     }
-// 
-//     var genotypes = r.Population.Genotypes.ToArray();
-//     var fitnesses = evaluator.Evaluate(genotypes, null!, encoding, problem); //TODO: pass random?
-//     r = r with { Population = Population.From(genotypes, fitnesses) };
-// 
-//     return r;
-//   }
-// }

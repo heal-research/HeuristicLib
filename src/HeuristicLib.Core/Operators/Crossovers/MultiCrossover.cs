@@ -4,201 +4,60 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-// ToDo: Think of a better name, maybe "ChooseOneCrossover".
 [Equatable]
-public partial record MultiCrossover<TGenotype, TSearchSpace, TProblem> : Crossover<TGenotype, TSearchSpace, TProblem>
+public abstract partial record MultiCrossover<TGenotype, TSearchSpace, TProblem, TExecutionState>
+  : ICrossover<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  [OrderedEquality]
-  public ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers { get; }
+  [OrderedEquality] protected ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> InnerCrossovers { get; }
 
-  [OrderedEquality]
-  public ImmutableArray<double> Weights { get; }
+  protected delegate IReadOnlyList<TGenotype> InnerCross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  [IgnoreEquality]
-  private readonly double sumWeights;
-
-  [IgnoreEquality]
-  private readonly double[] cumulativeSumWeights;
-
-  public MultiCrossover(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+  protected MultiCrossover(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> innerCrossovers)
   {
-    if (crossovers.Length == 0) {
-      throw new ArgumentException("At least one crossover must be provided.", nameof(crossovers));
-    }
-
-    if (weights is not null && weights.Value.Length != crossovers.Length) {
-      throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
-    }
-
-    if (weights is not null && weights.Value.Any(p => p < 0)) {
-      throw new ArgumentException("Weights must be non-negative.", nameof(weights));
-    }
-
-    if (weights is not null && weights.Value.All(p => p <= 0)) {
-      throw new ArgumentException("At least one weight must be greater than zero.", nameof(weights));
-    }
-
-    Crossovers = crossovers;
-    Weights = weights ?? [.. Enumerable.Repeat(1.0, crossovers.Length)];
-
-    cumulativeSumWeights = new double[Weights.Length];
-    for (var i = 0; i < Weights.Length; i++) {
-      sumWeights += Weights[i];
-      cumulativeSumWeights[i] = sumWeights;
-    }
+    InnerCrossovers = innerCrossovers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public ICrossoverInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    new Instance(this, InnerCrossovers.Select(instanceRegistry.Resolve).Select(x => (InnerCross)x.Cross).ToArray(), CreateInitialState());
+
+  protected abstract TExecutionState CreateInitialState();
+
+  protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, TExecutionState executionState,
+    IReadOnlyList<InnerCross> innerCrossovers,
+    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+  private sealed class Instance(MultiCrossover<TGenotype, TSearchSpace, TProblem, TExecutionState> multiCrossover, IReadOnlyList<InnerCross> innerCrossovers, TExecutionState executionState)
+    : ICrossoverInstance<TGenotype, TSearchSpace, TProblem>
   {
-    var crossoverInstances = Crossovers.Select(instanceRegistry.Resolve).ToArray();
-    return new Instance(crossoverInstances, cumulativeSumWeights, sumWeights);
-  }
-
-  public new class Instance : Crossover<TGenotype, TSearchSpace, TProblem>.Instance
-  {
-    private readonly IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers;
-    private readonly double[] cumulativeSumWeights;
-    private readonly double sumWeights;
-
-    public Instance(IReadOnlyList<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>> crossovers, double[] cumulativeSumWeights, double sumWeights)
+    public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
-      this.crossovers = crossovers;
-      this.cumulativeSumWeights = cumulativeSumWeights;
-      this.sumWeights = sumWeights;
+      return multiCrossover.Cross(parents, executionState, innerCrossovers, random, searchSpace, problem);
     }
-
-    public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-      var offspringCount = parents.Count;
-
-      // determine which crossover to use for each offspring
-      var operatorAssignment = new int[offspringCount];
-      var operatorCounts = new int[crossovers.Count];
-      var randoms = random.NextDoubles(offspringCount);
-      for (var i = 0; i < offspringCount; i++) {
-        var r = randoms[i] * sumWeights;
-        var idx = Array.FindIndex(cumulativeSumWeights, w => r < w);
-        operatorAssignment[i] = idx;
-        operatorCounts[idx]++;
-      }
-
-      // batch parents by operator
-      var parentBatches = new List<IParents<TGenotype>>[crossovers.Count];
-      for (var i = 0; i < crossovers.Count; i++) {
-        parentBatches[i] = new List<IParents<TGenotype>>(operatorCounts[i]);
-      }
-
-      for (var i = 0; i < offspringCount; i++) {
-        var opIdx = operatorAssignment[i];
-        parentBatches[opIdx].Add(parents[i]);
-      }
-
-      // batch-create for each operator and collect
-      var offspring = new List<TGenotype>(offspringCount);
-
-      for (var i = 0; i < crossovers.Count; i++) {
-        var batchOffspring = crossovers[i].Cross(parentBatches[i], random, searchSpace, problem);
-        offspring.AddRange(batchOffspring);
-      }
-
-      return offspring;
-    }
-
-    // public override void Cross(ReadOnlySpan<TGenotype> parent1, ReadOnlySpan<TGenotype> parent2, IRandomNumberGenerator random, TSearchSpace encoding, TProblem problem, Span<TGenotype> offspring) {
-    //   if (parent1.Length != parent2.Length || offspring.Length != parent1.Length) throw new ArgumentException("Parent arrays and offspring array must have the same length.", nameof(parent1));
-    // 
-    //   // Compute cumulative weights for roulette wheel selection
-    //   double[] cumulative = new double[Weights.Count];
-    //   double sum = 0;
-    //   for (int i = 0; i < Weights.Count; i++) {
-    //     sum += Weights[i];
-    //     cumulative[i] = sum;
-    //   }
-    // 
-    //   int n = offspring.Length;
-    //   int[] operatorIndices = new int[n];
-    //   for (int i = 0; i < n; i++) {
-    //     double r = random.Random() * totalWeightSum;
-    //     int idx = Array.FindIndex(cumulative, w => r < w);
-    //     operatorIndices[i] = idx;
-    //   }
-    // 
-    //   // Batch indices by operator
-    //   for (int op = 0; op < Crossovers.Count; op++) {
-    //     // Find all indices for this operator
-    //     var indices = Enumerable.Range(0, n).Where(i => operatorIndices[i] == op).ToArray();
-    // 
-    //     if (indices.Length == 0) continue;
-    // 
-    //     // GetEvaluator temporary arrays for this batch
-    //     TGenotype[] p1 = new TGenotype[indices.Length];
-    //     TGenotype[] p2 = new TGenotype[indices.Length];
-    //     for (int j = 0; j < indices.Length; j++) {
-    //       p1[j] = parent1[indices[j]];
-    //       p2[j] = parent2[indices[j]];
-    //     }
-    //     TGenotype[] off = new TGenotype[indices.Length];
-    // 
-    //     Crossovers[op].Cross(p1, p2, random, encoding, problem, off);
-    // 
-    //     for (int j = 0; j < indices.Length; j++) {
-    //       offspring[indices[j]] = off[j];
-    //     }
-    //   }
-    // }
   }
 }
 
-public static class MultiCrossover
+public abstract record MultiCrossover<TGenotype, TSearchSpace, TProblem>
+  : MultiCrossover<TGenotype, TSearchSpace, TProblem, NoState>
+  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  protected MultiCrossover(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> innerCrossovers)
+    : base(innerCrossovers)
   {
-    return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers, weights);
   }
 
-  // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers, IReadOnlyList<double>? weights = null) 
-  //   where TSearchSpace : class, ISearchSpace<TGenotype>
-  // {
-  //   return new(crossovers, weights);
-  // }
+  protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-  // public static MultiCrossover<TGenotype> Create<TGenotype>(IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers, IReadOnlyList<double>? weights = null)
-  // {
-  //   return new(crossovers, weights);
-  // }
+  protected sealed override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, NoState executionState,
+    IReadOnlyList<InnerCross> innerCrossovers,
+    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    => Cross(parents, innerCrossovers, random, searchSpace, problem);
 
-  // public static MultiCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers) 
-  //   where TSearchSpace : class, ISearchSpace<TGenotype> 
-  //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  // {
-  //   return new MultiCrossover<TGenotype, TSearchSpace, TProblem>(crossovers);
-  // }
-
-  // public static MultiCrossover<TGenotype, TSearchSpace> Create<TGenotype, TSearchSpace>(params IReadOnlyList<ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>> crossovers) 
-  //   where TSearchSpace : class, ISearchSpace<TGenotype>
-  // {
-  //   return new(crossovers);
-  // }
-
-  // public static MultiCrossover<TGenotype> Create<TGenotype>(params IReadOnlyList<ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>> crossovers)
-  // {
-  //   return new(crossovers);
-  // }
-
-  extension<TGenotype, TSearchSpace, TProblem>(ICrossover<TGenotype, TSearchSpace, TProblem> crossover)
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  {
-    public MultiCrossover<TGenotype, TSearchSpace, TProblem> WithRate(double crossoverRate)
-    {
-      return Create([crossover, NoCrossover<TGenotype>.Instance], [crossoverRate, 1 - crossoverRate]);
-    }
-  }
+  protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents,
+    IReadOnlyList<InnerCross> innerCrossovers,
+    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

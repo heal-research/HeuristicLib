@@ -2,8 +2,14 @@
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public record IdentityInterceptor<TG, TState> : StatelessInterceptor<TG, TState>
-  where TState : class, IAlgorithmState
+public record IdentityInterceptor<TG, TSearchState> : StatelessInterceptor<TG, TSearchState>
+  where TSearchState : class, ISearchState
 {
-  public override TState Transform(TState currentState, TState? previousState) => currentState;
+  public override TSearchState Transform(TSearchState currentState, TSearchState? previousState) => IdentityInterceptor.Transform(currentState, previousState);
+}
+
+public static class IdentityInterceptor
+{
+  public static TSearchState Transform<TSearchState>(TSearchState currentState, TSearchState? previousState)
+    where TSearchState : class, ISearchState => currentState;
 }

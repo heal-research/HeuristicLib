@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Optimization;
@@ -11,11 +10,10 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 // ToDo: A DynamicProblem should be, foremost, a Problem. It "being" also an Observer, is an interesting way of implementing about it, but we have to think if this is really what we want.
 public abstract class DynamicProblem<TGenotype, TSearchSpace> :
-  IEvaluatorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
-  IInterceptorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>,
+  SingleSolutionProblem<TGenotype, TSearchSpace>,
   IDynamicProblem<TGenotype, TSearchSpace>,
-  IEvaluatorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
-  IInterceptorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>,
+  IEvaluatorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
+  IInterceptorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, ISearchState>,
   IDisposable
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -24,7 +22,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
 
   public readonly UpdatePolicy UpdatePolicy;
 
-  protected DynamicProblem(IRandomNumberGenerator environmentRandom, UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue)
+  protected DynamicProblem(Objective objective, TSearchSpace searchSpace, IRandomNumberGenerator environmentRandom, UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) : base(objective, searchSpace)
   {
     ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochLength);
     UpdatePolicy = updatePolicy;
@@ -41,13 +39,10 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
     GC.SuppressFinalize(this);
   }
 
-  public abstract TSearchSpace SearchSpace { get; }
-  public abstract Objective Objective { get; }
-
   public event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
 
   // this method will be called in parallel
-  public ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random)
+  public override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random)
   {
     // PredictAndTrain in parallel read lock
     var timing = EpochClock.IncreaseCount();
@@ -69,13 +64,6 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
 
   public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing);
 
-  IEvaluatorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>
-    IExecutable<IEvaluatorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-    => this;
-
-  IInterceptorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>
-    IExecutable<IInterceptorObserverInstance<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, IAlgorithmState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-    => this;
 
   public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
   {
@@ -86,7 +74,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
     }
   }
 
-  public void AfterInterception(IAlgorithmState newState, IAlgorithmState currentState, IAlgorithmState? previousState, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
+  public void AfterInterception(ISearchState newState, ISearchState currentState, ISearchState? previousState, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
   {
     if (UpdatePolicy == UpdatePolicy.AfterInterception) {
       ResolvePendingUpdates();

@@ -1,12 +1,12 @@
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
 
 public record RoundedNormalOnePositionManipulator
-  : SingleSolutionStatelessMutator<IntegerVector, IntegerVectorSearchSpace>
+  : SingleSolutionMutator<IntegerVector, IntegerVectorSearchSpace>
 {
   /// <summary>
   /// Standard deviations per dimension (cycled if shorter than the vector).
@@ -14,12 +14,20 @@ public record RoundedNormalOnePositionManipulator
   public RealVector Sigma { get; init; } = new(1.0);
 
   public override IntegerVector Mutate(IntegerVector parent, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-    => Manipulate(random, parent, searchSpace, Sigma);
+    => Mutate(random, parent, searchSpace, Sigma);
 
-  public static IntegerVector Manipulate(
+  public static IntegerVector Mutate(
     IRandomNumberGenerator random,
     IntegerVector vector,
     IntegerVectorSearchSpace searchSpace,
+    IReadOnlyList<double> sigma)
+    => Mutate(random, vector, searchSpace.Minimum, searchSpace.Maximum, sigma);
+
+  public static IntegerVector Mutate(
+    IRandomNumberGenerator random,
+    IntegerVector vector,
+    IntegerVector minimum,
+    IntegerVector maximum,
     IReadOnlyList<double> sigma)
   {
     if (sigma is null || sigma.Count == 0)
@@ -32,11 +40,10 @@ public record RoundedNormalOnePositionManipulator
     if (s < 0)
       throw new ArgumentOutOfRangeException(nameof(sigma), "All sigma values must be >= 0.");
 
-    var res = vector.ToArray();
+    var result = vector.ToArray();
+    var value = random.NextNormal(vector[idx], s);
+    result[idx] = RealVector.RoundToIntegerAt(value, minimum, maximum, idx);
 
-    var value = random.NextGaussian(res[idx], s);
-    res[idx] = searchSpace.RoundFeasible(value, idx);
-
-    return res;
+    return result;
   }
 }

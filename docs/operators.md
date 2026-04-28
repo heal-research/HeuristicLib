@@ -34,34 +34,64 @@ This consistency reduces cognitive load: once you’ve implemented one operator,
 >
 > - Operators assume their input genotypes are already within the given search space. Passing out-of-space inputs is considered a usage error and may throw.
 > - Operators guarantee that any genotypes they return are within the given search space.
->
-> In other words: algorithms typically do not validate or repair genotypes automatically; operators are the enforcement boundary.
 
-## A note on parallelism and reproducibility
+## Choosing a base class
 
-Several operator base classes use internal parallelization helpers (for example, creators and mutators operate on batches).
+The base classes in `src/HeuristicLib.Core/Operators` are authoring conveniences on top of the role interfaces.
 
-To keep results reproducible:
+Use this checklist:
 
-- Do not use `System.Random` directly inside operators.
-- Always take randomness from the provided `IRandomNumberGenerator`.
-- If you parallelize internally, fork deterministic child generators (see [Randomness (RNG) design](randomness.md)).
+1. **First choose the operator role**
+   - creation -> `ICreator`
+   - evaluation -> `IEvaluator`
+   - selection -> `ISelector`
+   - variation of existing genotypes -> `IMutator` / `ICrossover`
+   - survivor selection -> `IReplacer`
+   - stopping rule -> `ITerminator`
+   - state post-processing -> `IInterceptor`
 
-## Common composition helpers
+2. **If the operator is stateless and naturally processes one item at a time, prefer `SingleSolution*`**
+   - Examples: `SingleSolutionCreator`, `SingleSolutionMutator`, `SingleSolutionCrossover`, `SingleSolutionEvaluator`
+   - Use this when the batch implementation is just “apply the same logic independently to each element”.
+
+3. **If the operator is stateless but needs custom batch logic, use `Stateless*`**
+   - `Stateless*` is the special-case convenience layer built on `NoState`.
+
+4. **If the operator needs mutable per-run memory, use the unprefixed role base**
+   - Examples: `Creator`, `Mutator`, `Evaluator`, `Selector`, `Crossover`, `Replacer`, `Terminator`, `Interceptor`
+   - Put configuration on the definition object.
+   - Put mutable runtime data into `TExecutionState`.
+
+5. **If the operator wraps exactly one inner operator of the same role, use `Wrapping*<..., TExecutionState>`**
+   - Examples: `WrappingEvaluator`, `WrappingMutator`, `WrappingSelector`, ...
+   - The base resolves the inner execution instance once and passes it to your implementation as a delegate.
+   - Store that instance in `TExecutionState`.
+
+6. **If the operator combines several inner operators of the same role, use `Multi*<..., TExecutionState>`**
+   - Examples: `MultiMutator`, `MultiCrossover`, `MultiTerminator`, ...
+   - The base resolves the inner execution instances once and passes them to your implementation as delegates.
+   - Store those instances in `TExecutionState`.
+
+7. **If none of the convenience bases fit, implement the operator contract directly**
+   - This is the fallback when you need full control over instancing or execution behavior.
+   - If you do that, you also need to handle the definition/execution-instance split correctly. See [Definition vs execution instances](execution-instances.md).
+
+## Short version
+
+- plain stateless batch operator -> `Stateless*`
+- plain stateless per-item operator -> `SingleSolution*`
+- operator with mutable execution state -> `Creator` / `Mutator` / `Evaluator` / ...
+- operator that wraps one operator -> `Wrapping*<..., TExecutionState>`
+- operator that coordinates several operators -> `Multi*<..., TExecutionState>`
+- full custom behavior -> implement the contract directly and handle execution instances yourself
+
+## Composition helpers
 
 HeuristicLib includes a few small composition patterns that keep calling code clean:
 
-- `mutator.WithRate(mutationRate)` wraps a mutator with a no-op mutator to achieve a per-offspring mutation probability.
-- “Multi operators” (for example, `MultiMutator`) choose among several operators using weights.
-
-## Interception vs observation
-
-These are two different hooks with different responsibilities:
-
-- **Interceptor**: part of the algorithm pipeline (it returns a possibly modified state).
-- **Observer**: side effects only (logging, metrics, diagnostics).
-
-See [Execution model](execution-model.md) for the current wiring guidance.
+- `mutator.WithRate(mutationRate)` wraps a mutator with a no-op mutator to achieve a per-offspring mutation probability
+- `ChooseOne*` helpers choose among several operators using weights
+- `Pipeline*` helpers apply several operators in sequence
 
 ## Next
 

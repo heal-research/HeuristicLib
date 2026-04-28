@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
@@ -12,10 +12,20 @@ namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 #pragma warning disable S101
 public record NSGA2<TGenotype, TSearchSpace, TProblem>
 #pragma warning restore S101
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
+  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>, NSGA2<TGenotype, TSearchSpace, TProblem>.ExecutionState>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
+  public new sealed class ExecutionState
+    : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>, ExecutionState>.ExecutionState
+  {
+    public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
+    public required ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
+    public required IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
+    public required ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+    public required IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
+  }
+
   public required int PopulationSize { get; init; }
   public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
   public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
@@ -23,73 +33,42 @@ public record NSGA2<TGenotype, TSearchSpace, TProblem>
   public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
   public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
 
-  public override NSGA2Instance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
   {
-    var interceptorInstance = Interceptor is not null ? instanceRegistry.Resolve(Interceptor) : null;
-    var evaluatorInstance = instanceRegistry.Resolve(Evaluator);
-    var creatorInstance = instanceRegistry.Resolve(Creator);
-    var crossoverInstance = instanceRegistry.Resolve(Crossover);
-    var mutatorInstance = instanceRegistry.Resolve(Mutator);
-    var selectorInstance = instanceRegistry.Resolve(Selector);
-    var replacerInstance = instanceRegistry.Resolve(Replacer);
-
-    return new NSGA2Instance<TGenotype, TSearchSpace, TProblem>(
-      interceptorInstance,
-      evaluatorInstance,
-      PopulationSize,
-      creatorInstance,
-      crossoverInstance,
-      mutatorInstance,
-      selectorInstance,
-      replacerInstance
-    );
-  }
-}
-
-#pragma warning disable S101
-public class NSGA2Instance<TGenotype, TSearchSpace, TProblem>
-#pragma warning restore S101
-  : IterativeAlgorithmInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-{
-  protected readonly int PopulationSize;
-  protected readonly ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator;
-  protected readonly ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover;
-  protected readonly IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator;
-  protected readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector;
-  protected readonly IReplacerInstance<TGenotype, TSearchSpace, TProblem> Replacer;
-
-  public NSGA2Instance(IInterceptorInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? interceptor, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, int populationSize, ICreatorInstance<TGenotype, TSearchSpace, TProblem> creator, ICrossoverInstance<TGenotype, TSearchSpace, TProblem> crossover, IMutatorInstance<TGenotype, TSearchSpace, TProblem> mutator, ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, IReplacerInstance<TGenotype, TSearchSpace, TProblem> replacer)
-    : base(interceptor, evaluator)
-  {
-    PopulationSize = populationSize;
-    Creator = creator;
-    Crossover = crossover;
-    Mutator = mutator;
-    Selector = selector;
-    Replacer = replacer;
+    return new ExecutionState {
+      Evaluator = resolver.Resolve(Evaluator),
+      Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
+      Creator = resolver.Resolve(Creator),
+      Crossover = resolver.Resolve(Crossover),
+      Mutator = resolver.Resolve(Mutator),
+      Selector = resolver.Resolve(Selector),
+      Replacer = resolver.Resolve(Replacer)
+    };
   }
 
-  public override PopulationState<TGenotype> ExecuteStep(PopulationState<TGenotype>? previousState, TProblem problem, IRandomNumberGenerator random)
+  protected override PopulationState<TGenotype> ExecuteStep(
+    PopulationState<TGenotype>? previousState,
+    ExecutionState executionState,
+    TProblem problem,
+    IRandomNumberGenerator random)
   {
     if (previousState is null) {
-      var initialSolutions = Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
-      var initialFitnesses = Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+      var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
+      var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
       return new PopulationState<TGenotype> {
         Population = Population.From(initialSolutions, initialFitnesses)
       };
     }
 
     var offspringCount = PopulationSize;
-    var parents = Selector.Select(previousState.Population.Solutions, problem.Objective, offspringCount * 2, random, problem.SearchSpace, problem).ToParents(problem.Objective);
-    var children = Crossover.Cross(parents, random, problem.SearchSpace, problem);
-    var mutants = Mutator.Mutate(children, random, problem.SearchSpace, problem);
-    var newPop = Population.From(mutants, Evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
-    var nextPop = Replacer.Replace(previousState.Population.Solutions, newPop.Solutions, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
+    var parents = executionState.Selector.Select(previousState.Population.Solutions, problem.Objective, offspringCount * 2, random, problem.SearchSpace, problem).ToParents(problem.Objective);
+    var children = executionState.Crossover.Cross(parents, random, problem.SearchSpace, problem);
+    var mutants = executionState.Mutator.Mutate(children, random, problem.SearchSpace, problem);
+    var newPopulation = Population.From(mutants, executionState.Evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
+    var nextPopulation = executionState.Replacer.Replace(previousState.Population.Solutions, newPopulation.Solutions, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
 
     return new PopulationState<TGenotype> {
-      Population = Population.From(nextPop)
+      Population = Population.From(nextPopulation)
     };
   }
 }

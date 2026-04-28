@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
@@ -35,7 +34,7 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode
     VariableName = Symbol.VariableNames.SampleRandom(random);
     Weights =
       Symbol.GetVariableValues(VariableName)
-        .Select(_ => NormalDistribution.NextDouble(random)).ToArray();
+        .Select(_ => random.NextNormal()).ToArray();
   }
 
   public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
@@ -44,11 +43,11 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode
     var idx = random.NextInt(Weights!.Length);
     // 50% additive & 50% multiplicative
     if (random.NextDouble() < 0.5) {
-      var x = NormalDistribution.NextDouble(random, Symbol.WeightManipulatorMu,
+      var x = random.NextNormal(Symbol.WeightManipulatorMu,
         Symbol.WeightManipulatorSigma);
       Weights[idx] += x * shakingFactor;
     } else {
-      var x = NormalDistribution.NextDouble(random, 1.0, Symbol.MultiplicativeWeightManipulatorSigma);
+      var x = random.NextNormal(1.0, Symbol.MultiplicativeWeightManipulatorSigma);
       Weights[idx] *= x;
     }
 
@@ -61,7 +60,7 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode
       // if the length of the weight array does not match => re-initialize weights
       Weights =
         Symbol.GetVariableValues(VariableName)
-          .Select(_ => NormalDistribution.NextDouble(random))
+          .Select(_ => random.NextNormal())
           .ToArray();
     }
   }

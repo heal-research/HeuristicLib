@@ -2,8 +2,14 @@
   href: overview.md
 - name: Getting started
   href: getting-started.md
-- name: Design goals
-  href: design-goals.md
+- name: Design guidance
+  items:
+    - name: Design goals & principles
+      href: design-goals.md
+    - name: Requirements
+      href: requirements.md
+    - name: Developer backlog
+      href: developer-backlog.md
 - name: Fundamentals
   items:
     - name: Core concepts
@@ -18,7 +24,7 @@
       href: operators.md
     - name: Algorithm
       href: algorithm.md
-    - name: Algorithm state
+    - name: Search state
       href: algorithm-state.md
     - name: Execution model
       href: execution-model.md
@@ -26,5 +32,7 @@
       href: execution-instances.md
     - name: Observability & analysis
       href: observability-and-analysis.md
+    - name: Analyzer architecture
+      href: analyzer-architecture.md
     - name: Randomness (RNG) design
       href: randomness.md

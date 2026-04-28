@@ -1,5 +1,4 @@
 ﻿using System.Collections.Immutable;
-using System.Collections.ObjectModel;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
 

@@ -12,9 +12,20 @@ public record ProportionalSelector<TGenotype>
   }
 
   // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
-  public bool Windowing { get; set; }
+  public bool Windowing { get; init; }
 
   public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    => ProportionalSelector.Select(population, objective, count, random, Windowing);
+}
+
+public static class ProportionalSelector
+{
+  public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
+    IReadOnlyList<ISolution<TGenotype>> population,
+    Objective objective,
+    int count,
+    IRandomNumberGenerator random,
+    bool windowing = true)
   {
     var singleObjective = objective.Directions.Length == 1 ? objective.Directions[0] : throw new InvalidOperationException("Proportional selection requires a single objective.");
     var fitnesses = population.Select(s => s.ObjectiveVector.Count == 1 ? s.ObjectiveVector[0] : throw new InvalidOperationException("Proportional selection requires a single objective.")).ToList();
@@ -30,12 +41,8 @@ public record ProportionalSelector<TGenotype>
     if (Math.Abs(minQuality - maxQuality) < double.Epsilon) {
       qualities = qualities.Select(_ => 1.0);
     } else {
-      if (Windowing) {
-        if (singleObjective == ObjectiveDirection.Maximize) {
-          qualities = qualities.Select(q => q - minQuality);
-        } else {
-          qualities = qualities.Select(q => maxQuality - q);
-        }
+      if (windowing) {
+        qualities = singleObjective == ObjectiveDirection.Maximize ? qualities.Select(q => q - minQuality) : qualities.Select(q => maxQuality - q);
       } else {
         if (minQuality < 0.0) {
           throw new InvalidOperationException("Proportional selection without windowing does not work with quality values < 0.");

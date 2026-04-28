@@ -16,7 +16,7 @@ public static class MetaOptimizationProblem
 }
 
 public class MetaOptimizationProblem<T, TE, TP, TS> :
-  Problem<CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>
+  SingleSolutionProblem<CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>
   where T : class
   where TE : class, ISearchSpace<T>
   where TP : class, IProblem<T, TE>

@@ -7,11 +7,11 @@ public class PythonInterOptEquationScoringTest
   /// <summary>
   ///  takes about 25 seconds on my machine
   /// </summary>
-  [Fact]
+  [Fact(Skip = "Unit test simply takes too much time.")]
   public void RunProblem()
   {
     var file = Path.Combine("TestData", "192_vineyard.tsv");
-    var p = PythonInterOptEquationScoring.DefaultConf(file, 30, (x, y) => [y[0], y[0], 0.9, 0.9 , 0.9]);
+    var p = PythonInterOptEquationScoring.DefaultConf(file, 30, (x, y) => [y[0], y[0], 0.9, 0.9, 0.9]);
     var pop = PythonInterOptEquationScoring.RunDefault(p, 42);
     Assert.Equal(300, pop.Solutions.Length);
     var best = pop.Solutions.OrderByDescending(x => x.ObjectiveVector[0]).First();

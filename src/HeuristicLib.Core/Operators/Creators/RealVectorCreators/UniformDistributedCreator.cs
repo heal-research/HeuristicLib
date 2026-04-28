@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 
-public record UniformDistributedCreator : SingleSolutionStatelessCreator<RealVector, RealVectorSearchSpace>
+public record UniformDistributedCreator : SingleSolutionCreator<RealVector, RealVectorSearchSpace>
 {
   public UniformDistributedCreator(RealVectorSearchSpace searchSpace)
     : this(searchSpace.Minimum, searchSpace.Maximum)
@@ -20,19 +20,19 @@ public record UniformDistributedCreator : SingleSolutionStatelessCreator<RealVec
   public RealVector? Maximum { get; init; }
 
   public override RealVector Create(IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
-  {
-    if (Minimum is not null && (Minimum < searchSpace.Minimum).Any()) {
-      throw new ArgumentException("Minimum values must be greater or equal to searchSpace minimum values");
-    }
+    => Create(random, searchSpace, Minimum, Maximum);
 
-    if (Maximum is not null && (Maximum > searchSpace.Maximum).Any()) {
-      throw new ArgumentException("Maximum values must be less or equal to searchSpace maximum values");
-    }
+  public static RealVector Create(
+    IRandomNumberGenerator random,
+    int length,
+    RealVector minimum,
+    RealVector maximum)
+    => random.NextRealVectorUniform(minimum, maximum, length);
 
-    if (!RealVector.AreCompatible(searchSpace.Length, Minimum ?? searchSpace.Minimum, Maximum ?? searchSpace.Maximum)) {
-      throw new ArgumentException("Vectors must have compatible lengths");
-    }
-
-    return RealVector.CreateUniform(searchSpace.Length, Minimum ?? searchSpace.Minimum, Maximum ?? searchSpace.Maximum, random);
-  }
+  public static RealVector Create(
+    IRandomNumberGenerator random,
+    RealVectorSearchSpace searchSpace,
+    RealVector? minimum = null,
+    RealVector? maximum = null)
+    => random.NextRealVectorUniform(searchSpace, minimum, maximum);
 }

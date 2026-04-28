@@ -7,6 +7,8 @@ namespace HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 
 public record RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator
 {
+  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
+
   /// <summary>
   ///   GetEvaluator a symbolic expression tree using 'RampedHalfAndHalf' strategy.
   ///   Half the trees are created with the 'Grow' method, and the other half are created with the 'Full' method.
@@ -14,7 +16,7 @@ public record RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator
   /// <param name="random">Random generator</param>
   /// <param name="searchSpace"></param>
   /// <returns></returns>
-  public static SymbolicExpressionTree CreateTree(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+  public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)
   {
     var tree = searchSpace.Grammar.MakeStump(random);
     var startNode = tree.Root[0];
@@ -27,6 +29,4 @@ public record RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator
 
     return tree;
   }
-
-  public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => CreateTree(random, searchSpace);
 }

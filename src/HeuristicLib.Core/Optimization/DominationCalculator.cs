@@ -97,14 +97,14 @@ public static class DominationCalculator
             dominationCounter[qI] += 1;
             break;
           case DominanceRelation.IsDominatedBy: {
-              dominationCounter[pI] += 1;
-              if (!dominatedIndividuals.ContainsKey(solutions[qI])) {
-                dominatedIndividuals.Add(solutions[qI], []);
-              }
-
-              dominatedIndividuals[solutions[qI]].Add(pI);
-              break;
+            dominationCounter[pI] += 1;
+            if (!dominatedIndividuals.ContainsKey(solutions[qI])) {
+              dominatedIndividuals.Add(solutions[qI], []);
             }
+
+            dominatedIndividuals[solutions[qI]].Add(pI);
+            break;
+          }
           case DominanceRelation.Incomparable:
             break;
           case DominanceRelation.Equivalent:
@@ -113,8 +113,8 @@ public static class DominationCalculator
         }
 
         if (pI != populationSize - 2
-          || qI != populationSize - 1
-          || dominationCounter[qI] != 0) {
+            || qI != populationSize - 1
+            || dominationCounter[qI] != 0) {
           continue;
         }
 
@@ -131,5 +131,87 @@ public static class DominationCalculator
     }
 
     return front;
+  }
+
+  public static List<ISolution<T>> AddToParetoFront<T>(
+    IReadOnlyList<ISolution<T>> front,
+    ISolution<T> solution,
+    Objective objective,
+    bool dominateOnEqualQualities = true)
+  {
+    var result = new List<ISolution<T>>(front.Count + 1);
+    var isDominated = false;
+
+    foreach (var existing in front) {
+      var relation = solution.ObjectiveVector.CompareTo(existing.ObjectiveVector, objective);
+
+      if (relation == DominanceRelation.Equivalent) {
+        relation = dominateOnEqualQualities
+          ? DominanceRelation.Dominates
+          : DominanceRelation.Incomparable;
+      }
+
+      switch (relation) {
+        case DominanceRelation.Dominates:
+          // New solution dominates the existing one, so skip existing.
+          break;
+
+        case DominanceRelation.IsDominatedBy:
+          // Existing solution dominates the new one, so new solution must not be added.
+          isDominated = true;
+          result.Add(existing);
+          break;
+
+        case DominanceRelation.Incomparable:
+          result.Add(existing);
+          break;
+
+        case DominanceRelation.Equivalent:
+        default:
+          throw new InvalidOperationException("Encountered invalid dominance relation");
+      }
+    }
+
+    if (!isDominated) {
+      result.Add(solution);
+    }
+
+    return result;
+  }
+
+  public static bool TryAddToParetoFrontInPlace<T>(
+    IList<ISolution<T>> front,
+    ISolution<T> solution,
+    Objective objective,
+    bool dominateOnEqualQualities = true)
+  {
+    for (var i = front.Count - 1; i >= 0; i--) {
+      var relation = solution.ObjectiveVector.CompareTo(front[i].ObjectiveVector, objective);
+
+      if (relation == DominanceRelation.Equivalent) {
+        relation = dominateOnEqualQualities
+          ? DominanceRelation.Dominates
+          : DominanceRelation.Incomparable;
+      }
+
+      switch (relation) {
+        case DominanceRelation.Dominates:
+          front.RemoveAt(i);
+          break;
+
+        case DominanceRelation.IsDominatedBy:
+          return false;
+
+        case DominanceRelation.Incomparable:
+          break;
+
+        case DominanceRelation.Equivalent:
+        default:
+          throw new InvalidOperationException("Encountered invalid dominance relation");
+      }
+    }
+
+    front.Add(solution);
+    return true;
   }
 }

@@ -1,6 +1,4 @@
-﻿using System.Collections;
-
-#pragma warning disable S2368
+﻿#pragma warning disable S2368
 
 namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 

@@ -37,8 +37,13 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull
       return; // operators sometimes just "give up" and return one of the parents as child
     }
 
-    var pNodes = parent.Where(x => !equality.Equals(x, child)).Select(x => CurrentGeneration[x]).ToArray();
-    cNode = new Node(nextId++, child, Nodes.Count - 1, pNodes.Max(x => x.Layer) + 1, -1);
+    var pNodes = parent.Where(x => !equality.Equals(x, child))
+                       .Select(x => CurrentGeneration.TryGetValue(x, out var node) ? node : null)
+                       .Where(x => x is not null)
+                       .Cast<Node>()
+                       .ToArray();
+    var layer = pNodes.Length > 0 ? pNodes.Max(x => x.Layer) + 1 : 1;
+    cNode = new Node(nextId++, child, Nodes.Count - 1, layer, -1);
     CurrentGeneration.Add(child, cNode);
     foreach (var p in pNodes) {
       p.Children.Add(cNode);

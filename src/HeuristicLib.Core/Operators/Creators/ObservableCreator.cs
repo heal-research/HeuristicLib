@@ -1,6 +1,5 @@
-﻿using Generator.Equals;
+using Generator.Equals;
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -9,72 +8,46 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
 public partial record ObservableCreator<TG, TS, TP>
-  : Creator<TG, TS, TP>
+  : WrappingCreator<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  public ICreator<TG, TS, TP> Creator { get; }
-
   [OrderedEquality]
   public ImmutableArray<ICreatorObserver<TG, TS, TP>> Observers { get; }
 
-  public ObservableCreator(ICreator<TG, TS, TP> creator, params ImmutableArray<ICreatorObserver<TG, TS, TP>> observers)
+  public ObservableCreator(ICreator<TG, TS, TP> creator, ImmutableArray<ICreatorObserver<TG, TS, TP>> observers)
+    : base(creator)
   {
-    Creator = creator;
     Observers = observers;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  public ObservableCreator(ICreator<TG, TS, TP> creator, params IEnumerable<ICreatorObserver<TG, TS, TP>> observers)
+    : this(creator, [.. observers])
   {
-    var creatorInstance = instanceRegistry.Resolve(Creator);
-    return new Instance(creatorInstance, Observers.Select(instanceRegistry.Resolve).ToArray());
   }
 
-  public new sealed class Instance(ICreatorInstance<TG, TS, TP> creatorInstance, IReadOnlyList<ICreatorObserverInstance<TG, TS, TP>> observers)
-    : Creator<TG, TS, TP>.Instance
+  protected override IReadOnlyList<TG> Create(int count, InnerCreate innerCreate, IRandomNumberGenerator random, TS searchSpace, TP problem)
   {
-    public override IReadOnlyList<TG> Create(int count, IRandomNumberGenerator random, TS searchSpace, TP problem)
-    {
-      var result = creatorInstance.Create(count, random, searchSpace, problem);
-
-      foreach (var observer in observers) {
-        observer.AfterCreation(result, count, searchSpace, problem);
-      }
-
-      return result;
+    var result = innerCreate(count, random, searchSpace, problem);
+    foreach (var observer in Observers) {
+      observer.AfterCreation(result, count, searchSpace, problem);
     }
+    return result;
   }
 }
 
-public interface ICreatorObserver<in TG, in TS, in TP> : IExecutable<ICreatorObserverInstance<TG, TS, TP>>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-{ }
-
-public interface ICreatorObserverInstance<in TG, in TS, in TP> : IExecutionInstance
+public interface ICreatorObserver<in TG, in TS, in TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
   void AfterCreation(IReadOnlyList<TG> offspring, int count, TS searchSpace, TP problem);
 }
 
-public sealed class ActionCreatorObserver<TG, TS, TP> : ICreatorObserver<TG, TS, TP>, ICreatorObserverInstance<TG, TS, TP>
+public sealed class ActionCreatorObserver<TG, TS, TP>(Action<IReadOnlyList<TG>, int, TS, TP> afterCreation) : ICreatorObserver<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  private readonly Action<IReadOnlyList<TG>, int, TS, TP> afterCreation;
-
-  public ActionCreatorObserver(Action<IReadOnlyList<TG>, int, TS, TP> afterCreation)
-  {
-    this.afterCreation = afterCreation;
-  }
-
-  public void AfterCreation(IReadOnlyList<TG> offspring, int count, TS searchSpace, TP problem)
-  {
-    afterCreation.Invoke(offspring, count, searchSpace, problem);
-  }
-
-  public ICreatorObserverInstance<TG, TS, TP> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+  public void AfterCreation(IReadOnlyList<TG> offspring, int count, TS searchSpace, TP problem) => afterCreation(offspring, count, searchSpace, problem);
 }
 
 public static class ObservableCreatorExtensions
@@ -84,51 +57,19 @@ public static class ObservableCreatorExtensions
     where TP : class, IProblem<TG, TS>
   {
     public ICreator<TG, TS, TP> ObserveWith(ICreatorObserver<TG, TS, TP> observer)
-    {
-      return new ObservableCreator<TG, TS, TP>(creator, observer);
-    }
-
-    public ICreator<TG, TS, TP> ObserveWith(params ImmutableArray<ICreatorObserver<TG, TS, TP>> observers)
-    {
-      return new ObservableCreator<TG, TS, TP>(creator, observers);
-    }
-
+      => new ObservableCreator<TG, TS, TP>(creator, observer);
+    public ICreator<TG, TS, TP> ObserveWith(params IEnumerable<ICreatorObserver<TG, TS, TP>> observers)
+      => new ObservableCreator<TG, TS, TP>(creator, observers);
     public ICreator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, int, TS, TP> afterCreation)
-    {
-      var observer = new ActionCreatorObserver<TG, TS, TP>(afterCreation);
-      return creator.ObserveWith(observer);
-    }
-
+      => creator.ObserveWith(new ActionCreatorObserver<TG, TS, TP>(afterCreation));
     public ICreator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterCreation)
-    {
-      var observer = new ActionCreatorObserver<TG, TS, TP>((offspring, _, _, _) => afterCreation(offspring));
-      return creator.ObserveWith(observer);
-    }
-
+      => creator.ObserveWith(new ActionCreatorObserver<TG, TS, TP>((offspring, _, _, _) => afterCreation(offspring)));
     public ICreator<TG, TS, TP> CountInvocations(InvocationCounter counter)
-    {
-      return creator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
-    }
-
+      => creator.ObserveWith(_ => counter.IncrementBy(1));
     public ICreator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
     {
       counter = new InvocationCounter();
       return creator.CountInvocations(counter);
-    }
-
-    // ToDo: think about how to implement this without knowing the start timing. Probably with a decorator on the CreatorInstance rather than a pure observer.
-    public ICreator<TG, TS, TP> TimeInvocations(out InvocationTiming timing)
-    {
-      throw new NotImplementedException();
-      var newTiming = new InvocationTiming();
-      timing = newTiming;
-      // return creator.ObserveWith(_ => ) 
-      // // ToDo: think if we want the actual timer as dependency
-      // var start = Stopwatch.GetTimestamp();
-      // var result = @operator.Execute(input, context);
-      // var duration = Stopwatch.GetElapsedTime(start);
-      // timing.AddTime(duration);
-      // return result;
     }
   }
 }

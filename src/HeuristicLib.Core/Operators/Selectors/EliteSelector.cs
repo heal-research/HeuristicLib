@@ -1,51 +1,35 @@
-﻿using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Optimization;
+﻿using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
+// ToDo: If we assume that a selector cannot select the whole requested number of solutions, the EliteSelector could simply be a PipelineSelector with a BestSelector and then another selector for the remaining.
 public record EliteSelector<TGenotype, TSearchSpace, TProblem>
-  : Selector<TGenotype, TSearchSpace, TProblem>
+  : WrappingSelector<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  private readonly ISelector<TGenotype, TSearchSpace, TProblem> selector;
-  private readonly BestSelector<TGenotype> best = new();
   private readonly int elites;
 
-  public EliteSelector(ISelector<TGenotype, TSearchSpace, TProblem> selector, int elites = 1)
+  public ISelector<TGenotype, TSearchSpace, TProblem> SelectorForRemaining => InnerSelector;
+
+  public EliteSelector(ISelector<TGenotype, TSearchSpace, TProblem> selectorForRemaining, int elites = 1)
+    : base(selectorForRemaining)
   {
-    this.selector = selector;
     this.elites = elites;
   }
 
-  public override Instance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+  protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
+                                                                Objective objective, int count, InnerSelect innerSelect,
+                                                                IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
   {
-    var selectorInstance = instanceRegistry.Resolve(selector);
-    var bestInstance = instanceRegistry.Resolve(best);
-    return new Instance(selectorInstance, bestInstance, elites);
-  }
+    var selectedElites = BestSelector.Select(population, objective, this.elites);
+    var remainingCount = count - selectedElites.Count;
+    var selecterdRemaining = innerSelect(population, objective, remainingCount, random, searchSpace, problem);
 
-  public new class Instance
-    : Selector<TGenotype, TSearchSpace, TProblem>.Instance
-  {
-    private readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector;
-    private readonly ISelectorInstance<TGenotype, TSearchSpace, TProblem> best;
-    private readonly int elites;
-
-    public Instance(ISelectorInstance<TGenotype, TSearchSpace, TProblem> selector, ISelectorInstance<TGenotype, TSearchSpace, TProblem> best, int elites)
-    {
-      this.selector = selector;
-      this.best = best;
-      this.elites = elites;
-    }
-
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-      return best.Select(population, objective, elites, random, searchSpace, problem).Concat(selector.Select(population, objective, count - elites, random, searchSpace, problem)).ToArray();
-    }
+    return selectedElites.Concat(selecterdRemaining).ToArray();
   }
 }
 

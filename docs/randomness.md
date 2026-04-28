@@ -84,9 +84,60 @@ Common fork keys:
 
 The execution APIs explicitly accept an RNG:
 
-- `Execute(problem, random, initialState?)`
-- `ExecuteStreaming(problem, random, initialState?)`
+- `RunToCompletion(problem, random, initialState?)`
+- `RunStreaming(problem, random, initialState?)`
 
 This is intentional: algorithm behavior-affecting dependencies (especially randomness) stay visible and controllable.
 
 See also: [Execution model](execution-model.md).
+
+## Sampling layers
+
+HeuristicLib intentionally builds random sampling in layers above `IRandomNumberGenerator`.
+
+The goal is that each layer adds one kind of convenience without creating a parallel implementation path.
+
+1. Primitive RNG
+  - Vehicle: instance methods on `IRandomNumberGenerator`
+  - Typical API: `NextDouble()`, `NextInt()`, `Fork(...)`
+  - Use when: you need raw draws or are implementing a higher random layer
+2. Scalar helpers
+  - Vehicle: extension blocks on `IRandomNumberGenerator` in `HEAL.HeuristicLib.Random`
+  - Typical API: ranged `NextDouble(low, high)`, `NextBool(...)`, `NextBools(...)`, `NextNormal(...)`, `NextNormals(...)`, `NextDoubles(...)`, `NextInts(...)`
+  - Use when: the desired result is a scalar or scalar array
+3. Typed output helpers
+  - Vehicle: extension blocks on `IRandomNumberGenerator` grouped by output type
+  - Typical API: `NextRealVectorUniform(...)`, `NextRealVectorNormal(...)`, `NextIntegerVectorUniform(...)`, `NextIntegerVectorNormal(...)`, `NextPermutation(...)`
+  - Use when: the desired result is a domain type and you want the type-specific construction logic handled for you
+4. Search-space convenience helpers
+  - Vehicle: extension blocks on `IRandomNumberGenerator` that accept search-space objects
+  - Typical API: `NextRealVectorUniform(searchSpace)`, `NextRealVectorNormal(searchSpace, ...)`, `NextIntegerVectorUniform(searchSpace)`, `NextIntegerVectorNormal(searchSpace, ...)`, `NextPermutation(searchSpace)`
+  - Use when: you already have a search space and want a matching valid sample
+5. Operator creators
+  - Vehicle: creator instances plus static `Create(...)` methods
+  - Typical API: `UniformDistributedCreator`, `NormalDistributedCreator`, `RandomPermutationCreator`
+  - Use when: you are configuring an algorithm or want to invoke the operator role directly
+6. Type-level factory aliases
+  - Vehicle: static factory methods on output types such as `RealVector` or `IntegerVector`
+  - Typical API: `RealVector.CreateUniform(...)`, `RealVector.CreateNormal(...)`, `IntegerVector.CreateUniform(...)`
+  - Use when: you prefer starting from the output type; these are ergonomic aliases only
+
+### Naming rule
+
+HeuristicLib does not use one naming pattern for every random layer.
+
+- scalar helpers use concept-first names because the result type is already implicit: `NextBool`, `NextDouble(low, high)`, `NextNormal`, `NextInts`, `NextNormals`
+- typed output helpers use target-first names because callers usually choose the output shape first: `NextRealVectorUniform`, `NextRealVectorNormal`, `NextIntegerVectorUniform`, `NextIntegerVectorNormal`
+- search-space helpers keep the same target-first names and add a search-space parameter instead of introducing a second naming scheme
+
+### Layering rule
+
+Higher layers may accept richer inputs, but they should build on lower layers rather than reimplementing the same sampling logic.
+
+- scalar helpers build on the primitive RNG
+- typed output helpers build on scalar helpers
+- search-space helpers build on typed output helpers
+- creators build on the existing random helper layers and add only operator-level guarantees
+- type-level factory aliases forward to the RNG helper layers
+
+This is also why HeuristicLib does not keep a separate general-purpose distribution-object layer for routine sampling. If a sampling behavior is just another convenience path to the same outcome, it should usually live in the extension-based layers above `IRandomNumberGenerator` instead of as a competing API surface.

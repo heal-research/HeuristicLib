@@ -6,16 +6,25 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record TargetTerminator<TGenotype>
-  : StatelessTerminator<TGenotype, PopulationState<TGenotype>, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+  : StatelessTerminator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, PopulationState<TGenotype>>
 {
-  private readonly ObjectiveVector target;
+  public ObjectiveVector Target { get; init; }
 
   public TargetTerminator(ObjectiveVector target)
   {
-    this.target = target;
+    Target = target;
   }
 
   public override bool ShouldTerminate(PopulationState<TGenotype> state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+    => TargetTerminator.ShouldTerminate(state, problem, Target);
+}
+
+public static class TargetTerminator
+{
+  public static bool ShouldTerminate<TGenotype>(
+    PopulationState<TGenotype> state,
+    IProblem<TGenotype, ISearchSpace<TGenotype>> problem,
+    ObjectiveVector target)
   {
     return state.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
   }

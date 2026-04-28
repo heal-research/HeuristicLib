@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 
-public record SpecialGenotypeCreator(int parameter) : SingleSolutionStatelessCreator<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
+public record SpecialGenotypeCreator(int parameter) : SingleSolutionCreator<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
 {
   public int Parameter { get; set; } = parameter;
 

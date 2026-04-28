@@ -15,7 +15,9 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossover
 /// </summary>
 public record SubtreeCrossover : SymbolicExpressionTreeCrossover
 {
-  public double InternalCrossoverPointProbability { get; set; } = 0.9;
+  public double InternalCrossoverPointProbability { get; init; } = 0.9;
+
+  public override SymbolicExpressionTree Cross(IParents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, searchSpace);
 
   public static SymbolicExpressionTree Cross(IRandomNumberGenerator random,
                                              SymbolicExpressionTree parent0, SymbolicExpressionTree parent1,
@@ -28,7 +30,9 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
     var childLength = crossoverPoint0.Child?.GetLength() ?? 0;
     // calculate the max length and depth that the inserted branch can have 
     var maxInsertedBranchLength = Math.Max(0, searchSpace.TreeLength - (parent0.Length - childLength));
-    var maxInsertedBranchDepth = Math.Max(0, searchSpace.TreeDepth - parent0.Root.GetBranchLevel(crossoverPoint0.Parent));
+    // The inserted branch hangs below the selected parent, so it consumes one
+    // additional level beyond the parent's branch level.
+    var maxInsertedBranchDepth = Math.Max(0, searchSpace.TreeDepth - parent0.Root.GetBranchLevel(crossoverPoint0.Parent) - 1);
 
     var allowedBranches = new List<SymbolicExpressionTreeNode?>();
     parent1.Root.ForEachNodePostfix(n => {
@@ -157,6 +161,4 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
                                select branch).ToList();
     return allowedInternalBranches.Count == 0 ? null : allowedInternalBranches.SampleRandom(random);
   }
-
-  public override SymbolicExpressionTree Cross(IParents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Cross(random, parents.Item1, parents.Item2, InternalCrossoverPointProbability, searchSpace);
 }

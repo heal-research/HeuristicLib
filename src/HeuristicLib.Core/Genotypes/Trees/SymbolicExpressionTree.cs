@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-
 namespace HEAL.HeuristicLib.Genotypes.Trees;
 
 public sealed class SymbolicExpressionTree : IEquatable<SymbolicExpressionTree>
