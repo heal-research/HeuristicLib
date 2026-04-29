@@ -35,8 +35,7 @@ public class AnalysisSpecs
       RandomNumberGenerator.Create(777),
       cancellationToken: TestContext.Current.CancellationToken);
 
-    var analysisState = run.GetAnalyzerResult(analysis);
-    var analysisResult = analysisState.State;
+    var analysisResult = run.GetAnalyzerResult(analysis);
 
     analysisResult.Count.ShouldBe(4);
     finalState.Population.Solutions.Length.ShouldBe(16);
@@ -60,16 +59,16 @@ public class AnalysisSpecs
       .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
     (await enumerator.MoveNextAsync()).ShouldBeTrue();
-    run.GetAnalyzerResult(analysis).State.Count.ShouldBe(1);
+    run.GetAnalyzerResult(analysis).Count.ShouldBe(1);
 
     (await enumerator.MoveNextAsync()).ShouldBeTrue();
-    run.GetAnalyzerResult(analysis).State.Count.ShouldBe(2);
+    run.GetAnalyzerResult(analysis).Count.ShouldBe(2);
 
     while (await enumerator.MoveNextAsync()) {
       _ = enumerator.Current;
     }
 
-    run.GetAnalyzerResult(analysis).State.Count.ShouldBe(3);
+    run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
   }
 
   [Fact(Explicit = true)]
@@ -89,7 +88,7 @@ public class AnalysisSpecs
       RandomNumberGenerator.Create(321),
       cancellationToken: TestContext.Current.CancellationToken);
 
-    var analysisResult = run.GetAnalyzerResult(analysis).State;
+    var analysisResult = run.GetAnalyzerResult(analysis);
 
     analysisResult.BestSolutions.Count.ShouldBe(3);
     analysisResult.BestSolutions.All(entry => entry.evaluations > 0).ShouldBeTrue();
@@ -110,7 +109,7 @@ public class AnalysisSpecs
       RandomNumberGenerator.Create(333),
       cancellationToken: TestContext.Current.CancellationToken);
 
-    var result = run.GetAnalyzerResult(analysis).State;
+    var result = run.GetAnalyzerResult(analysis);
 
     result.Count.ShouldBe(4);
     finalState.Population.Solutions.Length.ShouldBe(16);

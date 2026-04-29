@@ -6,49 +6,27 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public abstract record Analyzer<T, TS, TP, TSearchState, TExecutionState>(IAlgorithm<T, TS, TP, TSearchState> Algorithm) : Analyzer<TExecutionState>
+public abstract record Analyzer<T, TS, TP, TSearchState, TResult>(IAlgorithm<T, TS, TP, TSearchState> Algorithm) : Analyzer<TResult>
   where TS : class, ISearchSpace<T>
   where TP : class, IProblem<T, TS>
-  where TSearchState : class, ISearchState;
+  where TSearchState : class, ISearchState
+  where TResult : class;
 
-public abstract record Analyzer<TExecutionState> : IAnalyzer<Analyzer<TExecutionState>.AnalyzerRunInstance>
+public abstract record Analyzer<TResult> : IAnalyzer<TResult>
+  where TResult : class
 {
-  public AnalyzerRunInstance CreateAnalyzerState() => new RunInstance(this, CreateInitialState());
-  public abstract TExecutionState CreateInitialState();
+  public IAnalyzerRunState<TResult> CreateAnalyzerState() => new RunState(this, CreateInitialResult());
+  public abstract TResult CreateInitialResult();
 
-  public abstract void RegisterObservations(ObservationPlan observations, TExecutionState state);
+  public abstract void RegisterObservations(ObservationPlan observations, TResult result);
 
-  public abstract class AnalyzerRunInstance(Analyzer<TExecutionState> analyzer, TExecutionState state) : IAnalyzerRunState
+  private sealed class RunState(Analyzer<TResult> analyzer, TResult result) : IAnalyzerRunState<TResult>
   {
-    protected Analyzer<TExecutionState> Analyzer { get; } = analyzer;
-    public TExecutionState State { get; } = state;
-    public abstract void RegisterObservations(ObservationPlan observations);
-  }
+    public TResult Result { get; } = result;
 
-  private sealed class RunInstance(Analyzer<TExecutionState> analyzer, TExecutionState state) : AnalyzerRunInstance(analyzer, state)
-  {
-    public override void RegisterObservations(ObservationPlan observations) => Analyzer.RegisterObservations(observations, State);
-  }
-}
-
-public static class AnalyzerExtensions
-{
-  extension(Run run)
-  {
-    public T GetAnalyzerResult<T>(Analyzer<T> analyzer)
+    public void RegisterObservations(ObservationPlan observations)
     {
-      return run.GetAnalyzerResult(analyzer).State;
-    }
-
-    public bool TryGetAnalyzerResult<T>(Analyzer<T> analyzer, out T? analyzerRunState) where T : class
-    {
-      if (run.TryGetAnalyzerResult(analyzer, out var state)) {
-        analyzerRunState = state.State;
-        return true;
-      }
-
-      analyzerRunState = null;
-      return false;
+      analyzer.RegisterObservations(observations, Result);
     }
   }
 }

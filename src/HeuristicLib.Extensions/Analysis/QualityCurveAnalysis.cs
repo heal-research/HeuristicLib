@@ -42,7 +42,7 @@ public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, Qual
     }
   }
 
-  public override QualityCurve<T> CreateInitialState() => new();
+  public override QualityCurve<T> CreateInitialResult() => new();
 
   public override void RegisterObservations(ObservationPlan observations, QualityCurve<T> curve)
   {

@@ -144,7 +144,7 @@ In the current system:
 - analyzer states call `RegisterObservations(ObservationPlan)`
 - the observation plan stores merged observation entries
 - `Run` installs merged observable replacements into each relevant `ExecutionInstanceRegistry`
-- users retrieve analyzer state from the run via `GetAnalyzerResult(...)`
+- users retrieve analyzer results from the run via `GetAnalyzerResult(...)`
 
 So observable wrappers and analyzers solve different problems:
 
@@ -194,8 +194,8 @@ Use analyzers when you want a **run-scoped analysis object** that is part of the
 Typical characteristics:
 
 - scope is tied to the `Run`, not to one short-lived execution instance
-- mutable analysis state is stored inside the analyzer state object
-- the run creates that state once and lets you retrieve it later
+- mutable analysis data is stored inside the analyzer result object
+- the run creates that result once and lets you retrieve it later
 - multiple hook points can be combined into one coherent analysis object
 - best for reusable analysis features such as quality curves, genealogy, traces, or iteration statistics
 
@@ -227,7 +227,7 @@ Use **analyzers** when you want a **run-owned analysis object**.
 |---|---|---|
 | Main purpose | local callback / instrumentation | reusable run-scoped analysis |
 | Lifetime | execution-instance-driven | run-driven |
-| State lives where? | usually in an external sink or observer object | in the analyzer state returned by the run |
+| State lives where? | usually in an external sink or observer object | in the analyzer result returned by the run |
 | Retrieval model | you keep the sink yourself | `run.GetAnalyzerResult(analyzer)` |
 | Number of hook points | often one | one or many |
 | Best for | logging, counters, quick diagnostics | quality curves, genealogy, reusable analysis modules |

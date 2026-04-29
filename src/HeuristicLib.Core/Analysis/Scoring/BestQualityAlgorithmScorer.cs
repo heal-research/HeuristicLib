@@ -18,13 +18,13 @@ public record BestQualityAlgorithmScorer<T, TS, TP, TSearchState> : AlgorithmPer
     this.Evaluator = Evaluator;
   }
 
-  public override QualityScorerState CreateInitialState() => new() { CurrentScore = Objective.Worst };
+  public override QualityScorerState CreateInitialResult() => new() { CurrentScore = Objective.Worst };
 
-  public override void RegisterObservations(ObservationPlan observations, QualityScorerState state)
+  public override void RegisterObservations(ObservationPlan observations, QualityScorerState result)
   {
     foreach (var evaluator in Evaluator) {
       observations.Observe(evaluator,
-        (_, objectives, _, _) => state.CurrentScore = objectives.OrderBy(x => x, Objective.TotalOrderComparer).First());
+        (_, objectives, _, _) => result.CurrentScore = objectives.OrderBy(x => x, Objective.TotalOrderComparer).First());
     }
   }
 
@@ -38,14 +38,14 @@ public record HyperVolumeAlgorithmScorer<T, TS, TP, TSearchState>(IAlgorithm<T, 
   where TP : class, IProblem<T, TS>
   where TSearchState : class, ISearchState
 {
-  public override State CreateInitialState() => new();
+  public override State CreateInitialResult() => new();
 
-  public override void RegisterObservations(ObservationPlan observations, State state)
+  public override void RegisterObservations(ObservationPlan observations, State result)
   {
     foreach (var evaluator in Evaluator) {
       observations.Observe(evaluator,
         (genotypes, objectives, _, _) => {
-          state.AddPoints(genotypes.Zip(objectives).Select(x => new Solution<T>(x.First, x.Second)), ProblemObjective, ReferencePoint);
+          result.AddPoints(genotypes.Zip(objectives).Select(x => new Solution<T>(x.First, x.Second)), ProblemObjective, ReferencePoint);
         });
     }
   }

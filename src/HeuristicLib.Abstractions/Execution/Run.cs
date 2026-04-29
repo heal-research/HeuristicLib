@@ -53,35 +53,47 @@ public abstract class Run
     return RootRegistry.CreateChildRegistry();
   }
 
-  public TAnalyzerRunState GetAnalyzerResult<TAnalyzerRunState>(IAnalyzer<TAnalyzerRunState> analyzer)
-    where TAnalyzerRunState : class, IAnalyzerRunState
+  public TResult GetAnalyzerResult<TResult>(IAnalyzer<TResult> analyzer)
+    where TResult : class
   {
-    if (analyzerStates.TryGetValue(analyzer, out var state)) {
-      return (TAnalyzerRunState)state;
+    if (!analyzerStates.TryGetValue(analyzer, out var state)) {
+      throw new KeyNotFoundException($"No analyzer found for analyzer {analyzer}");
     }
 
-    throw new KeyNotFoundException($"No analyzer found for analyzer {analyzer}");
+    if (state is IAnalyzerRunState<TResult> typedState) {
+      return typedState.Result;
+    }
+
+    throw CreateAnalyzerResultTypeMismatchException<TResult>(analyzer, state);
   }
 
-  public bool TryGetAnalyzerResult<TAnalyzerRunState>(IAnalyzer<TAnalyzerRunState> analyzer, [MaybeNullWhen(false)] out TAnalyzerRunState analyzerRunState)
-    where TAnalyzerRunState : class, IAnalyzerRunState
+  public bool TryGetAnalyzerResult<TResult>(IAnalyzer<TResult> analyzer, [MaybeNullWhen(false)] out TResult result)
+    where TResult : class
   {
-    if (analyzerStates.TryGetValue(analyzer, out var state)) {
-      analyzerRunState = (TAnalyzerRunState)state;
+    if (!analyzerStates.TryGetValue(analyzer, out var state)) {
+      result = null;
+      return false;
+    }
+
+    if (state is IAnalyzerRunState<TResult> typedState) {
+      result = typedState.Result;
       return true;
     }
 
-    analyzerRunState = null;
-    return false;
+    throw CreateAnalyzerResultTypeMismatchException<TResult>(analyzer, state);
   }
 
-  public TAnalyzerRunState GetResult<TAnalyzerRunState>(IAnalyzer<TAnalyzerRunState> analyzer)
-    where TAnalyzerRunState : class, IAnalyzerRunState
+  public TResult GetResult<TResult>(IAnalyzer<TResult> analyzer)
+    where TResult : class
     => GetAnalyzerResult(analyzer);
 
-  public bool TryGetResult<TAnalyzerRunState>(IAnalyzer<TAnalyzerRunState> analyzer, [MaybeNullWhen(false)] out TAnalyzerRunState analyzerRunState)
-    where TAnalyzerRunState : class, IAnalyzerRunState
-    => TryGetAnalyzerResult(analyzer, out analyzerRunState);
+  public bool TryGetResult<TResult>(IAnalyzer<TResult> analyzer, [MaybeNullWhen(false)] out TResult result)
+    where TResult : class
+    => TryGetAnalyzerResult(analyzer, out result);
+
+  private static InvalidOperationException CreateAnalyzerResultTypeMismatchException<TResult>(IAnalyzer<TResult> analyzer, IAnalyzerRunState state)
+    where TResult : class
+    => new($"Analyzer {analyzer} created run state {state.GetType()} which does not implement {typeof(IAnalyzerRunState<TResult>)}.");
 }
 
 public class Run<TGenotype, TSearchSpace, TProblem, TSearchState> : Run

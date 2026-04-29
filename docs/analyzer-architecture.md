@@ -25,7 +25,7 @@ Analyzer data has a different lifetime from normal operator or algorithm configu
 If analysis state were stored directly on a definition, rerunning the same definition would mix old and new results.
 If analysis state were stored only inside an observer/decorator execution instance, results would be tied to registry mechanics rather than to the logical run.
 
-That is why HeuristicLib models analyzers as **definition-side descriptions + run-scoped analyzer states + run-owned analyzer lookup**.
+That is why HeuristicLib models analyzers as **definition-side descriptions + run-scoped analyzer run states + run-owned analyzer result lookup**.
 
 ## The three layers of the analyzer system
 
@@ -35,7 +35,7 @@ An analyzer definition is a reusable object that describes:
 
 - what the analyzer observes
 - which operators it needs references to
-- how to create its analyzer state for a run
+- how to create its analyzer run state and result for a run
 
 The current contracts are:
 
@@ -45,10 +45,10 @@ public interface IAnalyzer
   IAnalyzerRunState CreateAnalyzerState();
 }
 
-public interface IAnalyzer<out TAnalyzerRunState> : IAnalyzer
-  where TAnalyzerRunState : class, IAnalyzerRunState
+public interface IAnalyzer<out TResult> : IAnalyzer
+  where TResult : class
 {
-  new TAnalyzerRunState CreateAnalyzerState();
+  new IAnalyzerRunState<TResult> CreateAnalyzerState();
 }
 ```
 
@@ -86,13 +86,13 @@ What analyzers contribute is the **declarative registration** of which operator 
 
 ### 3) Run-scoped analyzer state
 
-At runtime, every analyzer gets **one analyzer state per run**.
+At runtime, every analyzer gets **one analyzer run state per run**.
 
 That instance:
 
 - receives callbacks from all hook points that belong to that analyzer
-- stores mutable analysis state
-- is itself the object users retrieve from the run
+- owns observation registration
+- exposes the user-facing analyzer result
 
 The run-scoped contract is:
 
@@ -100,6 +100,12 @@ The run-scoped contract is:
 public interface IAnalyzerRunState
 {
   void RegisterObservations(ObservationPlan observations);
+}
+
+public interface IAnalyzerRunState<out TResult> : IAnalyzerRunState
+  where TResult : class
+{
+  TResult Result { get; }
 }
 ```
 
@@ -126,13 +132,13 @@ The analyzer definition owns:
 - configuration
 - identity
 - references to operators it wants to observe
-- the logic for creating analyzer state
+- the logic for creating analyzer run state and result
 
 It does **not** own mutable run results.
 
-### Analyzer state owns mutable analysis data
+### Analyzer result owns mutable analysis data
 
-The analyzer state owns things like:
+The analyzer result owns things like:
 
 - current counters
 - in-progress aggregation for the current iteration
@@ -140,15 +146,15 @@ The analyzer state owns things like:
 - best-so-far values while evaluations happen
 - a mutable genealogy graph being built during execution
 
-This state exists only for the current run.
+This result exists only for the current run.
 
-### Run owns analyzer state lookup
+### Run owns analyzer result lookup
 
-The `Run` object creates one analyzer state per analyzer definition and stores that mapping.
-Users retrieve analyzer state through the run:
+The `Run` object creates one analyzer run state per analyzer definition and stores that mapping.
+Users retrieve analyzer results through the run:
 
 ```csharp
-var state = run.GetAnalyzerResult(analyzer);
+var result = run.GetAnalyzerResult(analyzer);
 ```
 
 The `GetResult(...)` and `TryGetResult(...)` aliases delegate to the same state lookup.
@@ -190,10 +196,10 @@ This keeps analyzer registration declarative while avoiding deep wrapper chains 
 
 1. The operator or algorithm performs its normal work.
 2. The observable wrapper invokes the analyzer callback.
-3. The analyzer state updates its own mutable state.
-4. Users can inspect that state through `Run.GetAnalyzerResult(...)` during or after execution.
+3. The analyzer callback updates its analyzer result.
+4. Users can inspect that result through `Run.GetAnalyzerResult(...)` during or after execution.
 
-There is currently **no separate publish step** and no separate result object stored beside the analyzer state. The analyzer state itself is the result object.
+There is currently **no separate publish step**. The analyzer run state exposes the result object directly through `IAnalyzerRunState<TResult>.Result`, and `Run.GetAnalyzerResult(...)` returns that result.
 
 ## Why the run is the right scope
 
@@ -212,9 +218,9 @@ For example, with `CycleAlgorithm`:
 
 - operator execution instances may reset per cycle
 - or may persist per inner algorithm
-- but the analyzer state should still describe the whole run
+- but the analyzer result should still describe the whole run
 
-Because analyzer states are created by `Run` and then registered into every relevant registry, analyzer scope stays stable even when execution registries change.
+Because analyzer run states are created by `Run` and then registered into every relevant registry, analyzer scope stays stable even when execution registries change.
 
 ## Definition-side hooks vs execution-side logic
 
@@ -234,11 +240,11 @@ This is handled by the analyzer definition holding references to the relevant op
 
 This side answers:
 
-- What mutable state do I accumulate?
-- How do I combine several hook points into one analysis state?
+- What mutable result do I accumulate?
+- How do I combine several hook points into one analysis result?
 - What shape should users retrieve from the run?
 
-This is handled by the analyzer state.
+This is handled by the analyzer result.
 
 ## Example patterns
 
@@ -246,7 +252,7 @@ This is handled by the analyzer state.
 
 This analyzer observes evaluator events and stores a best-so-far quality curve.
 
-Its analyzer state stores:
+Its analyzer result stores:
 
 - current best solution
 - current evaluation count
@@ -268,11 +274,11 @@ This analyzer combines several hook types:
 - mutator hooks
 - interceptor hooks
 
-Its analyzer state builds a genealogy graph over time.
+Its analyzer result builds a genealogy graph over time.
 
 ## Retrieval model
 
-Consumers retrieve analyzer state from the run.
+Consumers retrieve analyzer results from the run.
 
 Preferred pattern:
 
@@ -285,16 +291,16 @@ var qualityCurve = run.GetAnalyzerResult(analyzer);
 ```
 
 Avoid treating observable wrapper instances or execution registries as the result container.
-The registry is an execution detail; the run is the public analyzer-state scope.
+The registry is an execution detail; the run is the public analyzer-result scope.
 
 ## Design rules for analyzer authors
 
 ### Do
 
 - keep analyzer definitions reusable and configuration-only
-- put mutable analysis state into the analyzer state
+- put mutable analysis data into the analyzer result
 - register observation needs through `RegisterObservations(...)`
-- retrieve analyzer state through `Run.GetAnalyzerResult(...)`
+- retrieve analyzer results through `Run.GetAnalyzerResult(...)`
 - rely on observable wrappers as the callback mechanism
 
 ### Do not
@@ -310,14 +316,14 @@ The analyzer system does **not** replace observable wrappers.
 Instead:
 
 - observable wrappers are the **hooking mechanism**
-- analyzer states are the **run-scoped analysis objects**
+- analyzer run states connect observations to **run-scoped result objects**
 - `ObservationPlan` is the **bridge** between declarative analyzer registration and registry-specific wrapper installation
 
 This keeps concerns separate:
 
 - wrappers define *where* callbacks happen
 - analyzers define *which* callbacks they want
-- analyzer states define *how* data is accumulated
+- analyzer results define *how* data is accumulated
 
 ## When to use analyzers vs plain observable operators
 

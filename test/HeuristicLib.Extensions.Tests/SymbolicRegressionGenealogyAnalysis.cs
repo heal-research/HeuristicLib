@@ -60,7 +60,7 @@ public class GenealogyGraphTests
 
     var run = ga.WithMaxIterations(100).CreateRun(problem, analysis);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
-    var ares = run.GetAnalyzerResult(analysis).State;
+    var ares = run.GetAnalyzerResult(analysis);
 
     Assert.Equal(100, ares.Count);
     Assert.Equal(100, res.Population.Solutions.Count());
@@ -91,9 +91,9 @@ public class GenealogyGraphTests
     var run = algorithm.WithMaxIterations(gens).CreateRun(problem, evalQualities, qualities, genealogyAnalysis);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
 
-    var qres = run.GetAnalyzerResult(qualities).State;
-    var eres = run.GetAnalyzerResult(evalQualities).State;
-    var gres = run.GetAnalyzerResult(genealogyAnalysis).State;
+    var qres = run.GetAnalyzerResult(qualities);
+    var eres = run.GetAnalyzerResult(evalQualities);
+    var gres = run.GetAnalyzerResult(genealogyAnalysis);
 
     Assert.Equal(gens, qres.Count);
     Assert.Equal(popsize, res.Population.Solutions.Length);
@@ -114,7 +114,7 @@ public class GenealogyGraphTests
       algorithm, mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
     var run = algorithm.WithMaxIterations(100).CreateRun(problem, genealogy);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
-    var gres = run.GetAnalyzerResult(genealogy).State;
+    var gres = run.GetAnalyzerResult(genealogy);
     Assert.Single(res.Population.Solutions);
     var graphViz = gres.ToGraphViz();
     Assert.True(graphViz.Length > 0);
@@ -144,8 +144,8 @@ public class GenealogyGraphTests
 
     var run = algorithm.WithMaxIterations(maximumIterations).CreateRun(problem, genealogy, qualities);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
-    var gres = run.GetAnalyzerResult(genealogy).State;
-    var qres = run.GetAnalyzerResult(qualities).State;
+    var gres = run.GetAnalyzerResult(genealogy);
+    var qres = run.GetAnalyzerResult(qualities);
 
     Assert.Equal(maximumIterations, qres.Count);
     Assert.Equal(populationSize, res.Population.Solutions.Length);

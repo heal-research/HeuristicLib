@@ -63,6 +63,51 @@ public class CycleAlgorithmAnalysisTests
     run.GetAnalyzerResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
   }
 
+  [Fact]
+  public void GetAnalyzerResult_ReturnsDirectAnalyzerResult()
+  {
+    var evaluator = new IncrementingEvaluator();
+    var analysis = new EvaluationTraceAnalysis(evaluator);
+    var run = new AnalyzerTestRun(analysis);
+
+    run.GetAnalyzerResult(analysis).ShouldBeSameAs(run.GetResult(analysis));
+  }
+
+  [Fact]
+  public void TryGetAnalyzerResult_ReturnsDirectAnalyzerResultWhenPresent()
+  {
+    var evaluator = new IncrementingEvaluator();
+    var analysis = new EvaluationTraceAnalysis(evaluator);
+    var run = new AnalyzerTestRun(analysis);
+
+    run.TryGetAnalyzerResult(analysis, out var result).ShouldBeTrue();
+
+    result.ShouldNotBeNull();
+    result.ShouldBeSameAs(run.GetAnalyzerResult(analysis));
+  }
+
+  [Fact]
+  public void TryGetAnalyzerResult_ReturnsFalseWhenAnalyzerWasNotAttached()
+  {
+    var attached = new EvaluationTraceAnalysis(new IncrementingEvaluator());
+    var missing = new EvaluationTraceAnalysis(new IncrementingEvaluator());
+    var run = new AnalyzerTestRun(attached);
+
+    run.TryGetAnalyzerResult(missing, out var result).ShouldBeFalse();
+
+    result.ShouldBeNull();
+  }
+
+  [Fact]
+  public void AnalyzerResultRetrieval_ThrowsInvalidOperationExceptionForMismatchedRunState()
+  {
+    var analyzer = new MalformedAnalyzer();
+    var run = new AnalyzerTestRun(analyzer);
+
+    Should.Throw<InvalidOperationException>(() => run.GetAnalyzerResult(analyzer));
+    Should.Throw<InvalidOperationException>(() => run.TryGetAnalyzerResult<MalformedAnalyzer.Result>(analyzer, out _));
+  }
+
   private static CycleRunResult RunCycleAlgorithm(bool newExecutionInstancesPerCycle)
   {
     var evaluator = new IncrementingEvaluator();
@@ -102,6 +147,8 @@ public class CycleAlgorithmAnalysisTests
     var replacementExecutables = (IDictionary)replacementExecutablesField.GetValue(rootRegistry)!;
     return replacementExecutables.Count;
   }
+
+  private sealed class AnalyzerTestRun(params IAnalyzer[] analyzers) : Run(analyzers);
 
   private sealed record CycleRunResult(
     PopulationState<int> FinalState,
@@ -191,54 +238,73 @@ public class CycleAlgorithmAnalysisTests
     }
   }
 
-  private sealed class EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
-    : IAnalyzer<EvaluationTraceAnalysis.ExecutionState>
+  private sealed record EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
+    : Analyzer<EvaluationTraceAnalysis.ExecutionState>
   {
-    public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; } = evaluator;
+    public override ExecutionState CreateInitialResult() => new();
 
-    public ExecutionState CreateAnalyzerState() => new(this);
+    public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
+    {
+      observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.AddObjectiveValues(objectiveVectors));
+    }
 
-    public sealed class ExecutionState(EvaluationTraceAnalysis analyzer)
-      : AnalyzerRunState<EvaluationTraceAnalysis>(analyzer)
+    public sealed class ExecutionState
     {
       private readonly List<double> objectiveValues = [];
 
       public IReadOnlyList<double> ObjectiveValues => objectiveValues;
 
-      public override void RegisterObservations(ObservationPlan observations)
-      {
-        observations.Observe(Analyzer.Evaluator, AfterEvaluation);
-      }
-
-      private void AfterEvaluation(IReadOnlyList<int> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+      public void AddObjectiveValues(IReadOnlyList<ObjectiveVector> objectiveVectors)
       {
         objectiveValues.AddRange(objectiveVectors.Select(x => x[0]));
       }
     }
   }
 
-  private sealed class InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
-    : IAnalyzer<InterceptionTraceAnalysis.ExecutionState>
+  private sealed record InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor)
+    : Analyzer<InterceptionTraceAnalysis.ExecutionState>
   {
-    public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; } = interceptor;
+    public override ExecutionState CreateInitialResult() => new();
 
-    public ExecutionState CreateAnalyzerState() => new(this);
+    public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
+    {
+      observations.Observe(Interceptor, (_, currentState, _, _, _) => result.AddObjectiveValue(currentState));
+    }
 
-    public sealed class ExecutionState(InterceptionTraceAnalysis analyzer)
-      : AnalyzerRunState<InterceptionTraceAnalysis>(analyzer)
+    public sealed class ExecutionState
     {
       private readonly List<double> objectiveValues = [];
 
       public IReadOnlyList<double> ObjectiveValues => objectiveValues;
 
-      public override void RegisterObservations(ObservationPlan observations)
-      {
-        observations.Observe(Analyzer.Interceptor, AfterInterception);
-      }
-
-      private void AfterInterception(PopulationState<int> newState, PopulationState<int> currentState, PopulationState<int>? previousState, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+      public void AddObjectiveValue(PopulationState<int> currentState)
       {
         objectiveValues.Add(currentState.Population.Solutions.Single().ObjectiveVector[0]);
+      }
+    }
+  }
+
+  private sealed class MalformedAnalyzer : IAnalyzer<MalformedAnalyzer.Result>
+  {
+    public IAnalyzerRunState<Result> CreateAnalyzerState() => new CorrectRunState();
+
+    IAnalyzerRunState IAnalyzer.CreateAnalyzerState() => new WrongRunState();
+
+    public sealed class Result;
+
+    private sealed class CorrectRunState : IAnalyzerRunState<Result>
+    {
+      public Result Result { get; } = new();
+
+      public void RegisterObservations(ObservationPlan observations)
+      {
+      }
+    }
+
+    private sealed class WrongRunState : IAnalyzerRunState
+    {
+      public void RegisterObservations(ObservationPlan observations)
+      {
       }
     }
   }

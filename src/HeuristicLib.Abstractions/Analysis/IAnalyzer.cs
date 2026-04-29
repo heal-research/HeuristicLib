@@ -5,10 +5,10 @@ public interface IAnalyzer
   IAnalyzerRunState CreateAnalyzerState();
 }
 
-public interface IAnalyzer<out TAnalyzerRunState> : IAnalyzer
-  where TAnalyzerRunState : class, IAnalyzerRunState
+public interface IAnalyzer<out TResult> : IAnalyzer
+  where TResult : class
 {
-  new TAnalyzerRunState CreateAnalyzerState();
+  new IAnalyzerRunState<TResult> CreateAnalyzerState();
 
   IAnalyzerRunState IAnalyzer.CreateAnalyzerState() => CreateAnalyzerState();
 }

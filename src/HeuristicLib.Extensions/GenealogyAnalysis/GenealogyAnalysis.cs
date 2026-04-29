@@ -71,5 +71,5 @@ public record GenealogyAnalysis<T, TS, TP, TR> :
     graph.SetAsNewGeneration(ordered.Select(x => x.Genotype), saveSpace);
   }
 
-  public override GenealogyGraph<T> CreateInitialState() => new(equality ?? EqualityComparer<T>.Default);
+  public override GenealogyGraph<T> CreateInitialResult() => new(equality ?? EqualityComparer<T>.Default);
 }

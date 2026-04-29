@@ -225,19 +225,19 @@ public class PythonGenealogyAnalysis
   {
     public ExperimentResult<T> ToExperimentResult(Run run)
     {
-      var qRes = AnalyzerExtensions.GetAnalyzerResult(run, Qualities);
+      var qRes = run.GetAnalyzerResult(Qualities);
 
       var rankGraph = string.Empty;
       IReadOnlyList<List<double>> rankLines = [];
 
       if (RankAnalysis is not null) {
-        var rankResult = AnalyzerExtensions.GetAnalyzerResult(run, RankAnalysis).Result;
+        var rankResult = run.GetAnalyzerResult(RankAnalysis).Result;
         rankGraph = rankResult.Graph.ToGraphViz();
         rankLines = rankResult.Ranks.Select(x => x.ToList()).ToArray();
       }
 
       IReadOnlyList<ISolution<T>[]> apRes = [];
-      if (AllPopulations is not null && AnalyzerExtensions.TryGetAnalyzerResult(run, AllPopulations, out var populations) && populations is not null) {
+      if (AllPopulations is not null && run.TryGetAnalyzerResult(AllPopulations, out var populations) && populations is not null) {
         apRes = populations;
       }
 
@@ -270,9 +270,9 @@ public class PythonGenealogyAnalysis
     where TP : class, IProblem<T, TS>
     where TR : PopulationState<T>, ISearchState
   {
-    public override object CreateInitialState() => new();
+    public override object CreateInitialResult() => new();
 
-    public override void RegisterObservations(ObservationPlan observations, object state)
+    public override void RegisterObservations(ObservationPlan observations, object result)
     {
       observations.Observe(Interceptor, (algorithmState, _, _, _, _) => Callback(algorithmState));
     }
