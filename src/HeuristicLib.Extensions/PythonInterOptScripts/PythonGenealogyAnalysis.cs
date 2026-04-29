@@ -272,9 +272,9 @@ public class PythonGenealogyAnalysis
   {
     public override object CreateInitialState() => new();
 
-    public override void RegisterObservations(IObservationRegistry observationRegistry, object state)
+    public override void RegisterObservations(ObservationPlan observations, object state)
     {
-      observationRegistry.Add(Interceptor, (algorithmState, _, _, _, _) => Callback(algorithmState));
+      observations.Observe(Interceptor, (algorithmState, _, _, _, _) => Callback(algorithmState));
     }
   }
 

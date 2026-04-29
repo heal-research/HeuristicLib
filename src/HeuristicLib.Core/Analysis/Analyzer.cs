@@ -16,18 +16,18 @@ public abstract record Analyzer<TExecutionState> : IAnalyzer<Analyzer<TExecution
   public AnalyzerRunInstance CreateAnalyzerState() => new RunInstance(this, CreateInitialState());
   public abstract TExecutionState CreateInitialState();
 
-  public abstract void RegisterObservations(IObservationRegistry observationRegistry, TExecutionState state);
+  public abstract void RegisterObservations(ObservationPlan observations, TExecutionState state);
 
   public abstract class AnalyzerRunInstance(Analyzer<TExecutionState> analyzer, TExecutionState state) : IAnalyzerRunState
   {
     protected Analyzer<TExecutionState> Analyzer { get; } = analyzer;
     public TExecutionState State { get; } = state;
-    public abstract void RegisterObservations(IObservationRegistry observationRegistry);
+    public abstract void RegisterObservations(ObservationPlan observations);
   }
 
   private sealed class RunInstance(Analyzer<TExecutionState> analyzer, TExecutionState state) : AnalyzerRunInstance(analyzer, state)
   {
-    public override void RegisterObservations(IObservationRegistry observationRegistry) => Analyzer.RegisterObservations(observationRegistry, State);
+    public override void RegisterObservations(ObservationPlan observations) => Analyzer.RegisterObservations(observations, State);
   }
 }
 

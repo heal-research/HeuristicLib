@@ -2,5 +2,5 @@
 
 public interface IAnalyzerRunState
 {
-  void RegisterObservations(IObservationRegistry observationRegistry);
+  void RegisterObservations(ObservationPlan observations);
 }

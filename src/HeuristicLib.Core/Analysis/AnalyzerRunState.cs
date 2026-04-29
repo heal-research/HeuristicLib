@@ -5,5 +5,5 @@ public abstract class AnalyzerRunState<TAnalyzer>(TAnalyzer analyzer) : IAnalyze
 {
   protected TAnalyzer Analyzer { get; } = analyzer;
 
-  public abstract void RegisterObservations(IObservationRegistry observationRegistry);
+  public abstract void RegisterObservations(ObservationPlan observations);
 }

@@ -15,9 +15,9 @@ public record AllPopulationsTracker<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> Alg
 {
   public override List<ISolution<T>[]> CreateInitialState() => [];
 
-  public override void RegisterObservations(IObservationRegistry observationRegistry, List<ISolution<T>[]> state)
+  public override void RegisterObservations(ObservationPlan observations, List<ISolution<T>[]> state)
   {
-    observationRegistry.Add(Interceptor, (populationState, _, _, _, _) => AfterInterception(state, populationState));
+    observations.Observe(Interceptor, (populationState, _, _, _, _) => AfterInterception(state, populationState));
   }
 
   public void AfterInterception(List<ISolution<T>[]> state, PopulationState<T> populationState) => state.Add(populationState.Population.ToArray());

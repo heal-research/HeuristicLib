@@ -28,11 +28,11 @@ public record RankAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, RankState<T>
 
   public override RankState<T> CreateInitialState() => new(graphBuilder.CreateInitialState());
 
-  public override void RegisterObservations(IObservationRegistry observationRegistry, RankState<T> state)
+  public override void RegisterObservations(ObservationPlan observations, RankState<T> state)
   {
-    graphBuilder.RegisterObservations(observationRegistry, state.Graph); //tells sub-analyzer to record its findings into outer state
+    graphBuilder.RegisterObservations(observations, state.Graph); //tells sub-analyzer to record its findings into outer state
     if (interceptor is not null)
-      observationRegistry.Add(interceptor, (_, _, _, _, _) => RecordRanks(state));
+      observations.Observe(interceptor, (_, _, _, _, _) => RecordRanks(state));
   }
 
   private static void RecordRanks(RankState<T> state)

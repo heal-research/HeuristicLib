@@ -141,8 +141,8 @@ Observable wrappers are the callback mechanism; analyzers are the run-scoped arc
 
 In the current system:
 
-- analyzer states call `RegisterObservations(IObservationRegistry)`
-- the observation registry stores mergeable `IOperatorObservationInstaller` objects
+- analyzer states call `RegisterObservations(ObservationPlan)`
+- the observation plan stores merged observation entries
 - `Run` installs merged observable replacements into each relevant `ExecutionInstanceRegistry`
 - users retrieve analyzer state from the run via `GetAnalyzerResult(...)`
 

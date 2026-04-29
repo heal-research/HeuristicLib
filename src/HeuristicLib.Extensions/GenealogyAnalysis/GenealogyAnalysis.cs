@@ -36,18 +36,18 @@ public record GenealogyAnalysis<T, TS, TP, TR> :
   private IMutator<T, TS, TP>? Mutator { get; }
   private IInterceptor<T, TS, TP, TR>? Interceptor { get; }
 
-  public override void RegisterObservations(IObservationRegistry observationRegistry, GenealogyGraph<T> graph)
+  public override void RegisterObservations(ObservationPlan observations, GenealogyGraph<T> graph)
   {
     if (Crossover is not null) {
-      observationRegistry.Add(Crossover, ((offspring, parents, _, _) => AfterCross(graph, offspring, parents)));
+      observations.Observe(Crossover, ((offspring, parents, _, _) => AfterCross(graph, offspring, parents)));
     }
 
     if (Mutator is not null) {
-      observationRegistry.Add(Mutator, ((offspring, parent, _, _) => AfterMutate(graph, offspring, parent)));
+      observations.Observe(Mutator, ((offspring, parent, _, _) => AfterMutate(graph, offspring, parent)));
     }
 
     if (Interceptor is not null) {
-      observationRegistry.Add(Interceptor, ((currentState, _, _, _, problem) => AfterInterception(graph, currentState, problem)));
+      observations.Observe(Interceptor, ((currentState, _, _, _, problem) => AfterInterception(graph, currentState, problem)));
     }
   }
 

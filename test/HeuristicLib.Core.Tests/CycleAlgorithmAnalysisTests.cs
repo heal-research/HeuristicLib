@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
@@ -38,6 +40,29 @@ public class CycleAlgorithmAnalysisTests
     result.FinalState.Population.Solutions.Single().Genotype.ShouldBe(2);
   }
 
+  [Fact]
+  public void ObservationPlan_MergesMultipleAnalyzerCallbacksForSameOperator()
+  {
+    var evaluator = new IncrementingEvaluator();
+    var interceptor = new IdentityInterceptor<int, PopulationState<int>>();
+    var algorithm = new SingleStepAlgorithm(1, evaluator, interceptor);
+    var analysis1 = new EvaluationTraceAnalysis(evaluator);
+    var analysis2 = new EvaluationTraceAnalysis(evaluator);
+    var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
+      evaluateFunc: x => x,
+      encoding: DummySearchSpace<int>.Instance,
+      objective: SingleObjective.Minimize);
+
+    var run = algorithm.CreateRun(problem, analysis1, analysis2);
+
+    GetReplacementCount(run).ShouldBe(1);
+
+    run.RunToCompletion(RandomNumberGenerator.Create(0), cancellationToken: TestContext.Current.CancellationToken);
+
+    run.GetAnalyzerResult(analysis1).ObjectiveValues.ShouldBe([1.0]);
+    run.GetAnalyzerResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
+  }
+
   private static CycleRunResult RunCycleAlgorithm(bool newExecutionInstancesPerCycle)
   {
     var evaluator = new IncrementingEvaluator();
@@ -67,6 +92,15 @@ public class CycleAlgorithmAnalysisTests
       run.GetAnalyzerResult(evaluationTrace1),
       run.GetAnalyzerResult(evaluationTrace2),
       run.GetAnalyzerResult(interceptionTrace));
+  }
+
+  private static int GetReplacementCount(Run run)
+  {
+    var rootRegistryField = typeof(Run).GetField("rootRegistry", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    var rootRegistry = ((Lazy<ExecutionInstanceRegistry>)rootRegistryField.GetValue(run)!).Value;
+    var replacementExecutablesField = typeof(ExecutionInstanceRegistry).GetField("replacementExecutables", BindingFlags.Instance | BindingFlags.NonPublic)!;
+    var replacementExecutables = (IDictionary)replacementExecutablesField.GetValue(rootRegistry)!;
+    return replacementExecutables.Count;
   }
 
   private sealed record CycleRunResult(
@@ -171,9 +205,9 @@ public class CycleAlgorithmAnalysisTests
 
       public IReadOnlyList<double> ObjectiveValues => objectiveValues;
 
-      public override void RegisterObservations(IObservationRegistry observationRegistry)
+      public override void RegisterObservations(ObservationPlan observations)
       {
-        observationRegistry.Add(Analyzer.Evaluator, AfterEvaluation);
+        observations.Observe(Analyzer.Evaluator, AfterEvaluation);
       }
 
       private void AfterEvaluation(IReadOnlyList<int> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
@@ -197,9 +231,9 @@ public class CycleAlgorithmAnalysisTests
 
       public IReadOnlyList<double> ObjectiveValues => objectiveValues;
 
-      public override void RegisterObservations(IObservationRegistry observationRegistry)
+      public override void RegisterObservations(ObservationPlan observations)
       {
-        observationRegistry.Add(Analyzer.Interceptor, AfterInterception);
+        observations.Observe(Analyzer.Interceptor, AfterInterception);
       }
 
       private void AfterInterception(PopulationState<int> newState, PopulationState<int> currentState, PopulationState<int>? previousState, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)

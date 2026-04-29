@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Contributor contract for this repository. Durable architectural rationale lives in [docs/design-goals.md](/C:/Users/phili/Repositories/HeuristicLib/docs/design-goals.md).
+Contributor contract for this repository. Durable architectural rationale lives in [docs/design-goals.md](docs/design-goals.md).
 
 ## Project posture
 

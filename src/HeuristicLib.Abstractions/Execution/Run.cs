@@ -13,7 +13,7 @@ public abstract class Run
   private readonly Lazy<ExecutionInstanceRegistry> rootRegistry;
   protected ExecutionInstanceRegistry RootRegistry => rootRegistry.Value;
 
-  private readonly ObservationRegistry observationRegistry = new();
+  private readonly ObservationPlan observationPlan = new();
 
   private readonly Dictionary<IAnalyzer, IAnalyzerRunState> analyzerStates;
 
@@ -24,29 +24,27 @@ public abstract class Run
     foreach (var analyzer in analyzers ?? []) {
       var analyzerState = analyzer.CreateAnalyzerState();
       analyzerStates.Add(analyzer, analyzerState);
-      analyzerState.RegisterObservations(observationRegistry);
+      analyzerState.RegisterObservations(observationPlan);
     }
 
     rootRegistry = new Lazy<ExecutionInstanceRegistry>(() => {
       var registry = new ExecutionInstanceRegistry(this, parentRegistry: null);
-      InstallObservations(registry, observationRegistry);
+      InstallObservations(registry, observationPlan);
       return registry;
     });
 
     _ = RootRegistry;
   }
 
-  private static void InstallObservations(ExecutionInstanceRegistry registry, ObservationRegistry observationRegistry)
+  private static void InstallObservations(ExecutionInstanceRegistry registry, ObservationPlan observationPlan)
   {
-    foreach (var installer in observationRegistry.Installers) {
-      installer.Install(registry);
-    }
+    observationPlan.Install(registry);
   }
 
   public ExecutionInstanceRegistry CreateNewRegistry()
   {
     var registry = new ExecutionInstanceRegistry(this, parentRegistry: null);
-    InstallObservations(registry, observationRegistry);
+    InstallObservations(registry, observationPlan);
     return registry;
   }
 

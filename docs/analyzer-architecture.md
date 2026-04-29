@@ -58,7 +58,7 @@ It is configuration-time information, not runtime mutable state.
 ### 2) Observation requirements
 
 Analyzers do not mutate the definition graph directly.
-Instead, analyzer states declare observation requirements through `RegisterObservations(IObservationRegistry)`.
+Instead, analyzer states declare observation requirements through `RegisterObservations(ObservationPlan)`.
 
 Typical hook points are:
 
@@ -99,7 +99,7 @@ The run-scoped contract is:
 ```csharp
 public interface IAnalyzerRunState
 {
-  void RegisterObservations(IObservationRegistry observationRegistry);
+  void RegisterObservations(ObservationPlan observations);
 }
 ```
 
@@ -111,7 +111,7 @@ public abstract class AnalyzerRunState<TAnalyzer>(TAnalyzer analyzer) : IAnalyze
 {
   protected TAnalyzer Analyzer { get; } = analyzer;
 
-  public abstract void RegisterObservations(IObservationRegistry observationRegistry);
+  public abstract void RegisterObservations(ObservationPlan observations);
 }
 ```
 
@@ -172,13 +172,13 @@ var run = algorithm.CreateRun(problem, analyzer1, analyzer2);
 
 3. `Run` creates one analyzer state for each analyzer.
 4. Each analyzer state calls `RegisterObservations(...)`.
-5. `Run` collects those observation requests in an `ObservationRegistry`.
-6. When the root registry, a child registry, or a fresh registry is created, `Run` installs the merged observation registrations into that registry.
+5. `Run` collects those observation requests in an `ObservationPlan`.
+6. When the root registry or a fresh registry is created, `Run` installs the merged observation registrations into that registry. Child registries inherit those replacements from their parent registry.
 
 ### Observation installation
 
-The observation registry stores `IOperatorObservationInstaller` objects.
-Those installers:
+The observation plan stores merged observation entries.
+Those entries:
 
 - identify the original operator they belong to
 - merge multiple analyzer subscriptions for the same operator
@@ -311,7 +311,7 @@ Instead:
 
 - observable wrappers are the **hooking mechanism**
 - analyzer states are the **run-scoped analysis objects**
-- observation installers are the **bridge** between declarative analyzer registration and registry-specific wrapper installation
+- `ObservationPlan` is the **bridge** between declarative analyzer registration and registry-specific wrapper installation
 
 This keeps concerns separate:
 

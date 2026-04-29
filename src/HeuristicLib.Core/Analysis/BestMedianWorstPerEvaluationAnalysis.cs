@@ -25,14 +25,14 @@ public record BestMedianWorstPerEvaluationAnalysis<TGenotype, TSearchSpace, TPro
 
   public override BestMedianWorstPerEvaluationAnalysisState<TGenotype> CreateInitialState() => new();
 
-  public override void RegisterObservations(IObservationRegistry observationRegistry, BestMedianWorstPerEvaluationAnalysisState<TGenotype> state)
+  public override void RegisterObservations(ObservationPlan observations, BestMedianWorstPerEvaluationAnalysisState<TGenotype> state)
   {
     foreach (var evaluator in Evaluators) {
-      observationRegistry.Add(evaluator, (genotypes, _, _, _) => state.AfterEvaluation(genotypes));
+      observations.Observe(evaluator, (genotypes, _, _, _) => state.AfterEvaluation(genotypes));
     }
 
     foreach (var interceptor in Interceptors) {
-      observationRegistry.Add(interceptor, ((populationState, _, _, _, problem) => state.AfterInterception(populationState, problem.Objective)));
+      observations.Observe(interceptor, ((populationState, _, _, _, problem) => state.AfterInterception(populationState, problem.Objective)));
     }
   }
 }

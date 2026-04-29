@@ -18,10 +18,10 @@ public record BestMedianWorstAnalysis<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> A
 {
   public override List<BestMedianWorstEntry<T>> CreateInitialState() => [];
 
-  public override void RegisterObservations(IObservationRegistry observationRegistry, List<BestMedianWorstEntry<T>> state)
+  public override void RegisterObservations(ObservationPlan observations, List<BestMedianWorstEntry<T>> state)
   {
     foreach (var interceptor in Interceptor) {
-      observationRegistry.Add(interceptor, (populationState, _, _, _, problem) => AfterInterception(state, populationState, problem));
+      observations.Observe(interceptor, (populationState, _, _, _, problem) => AfterInterception(state, populationState, problem));
     }
   }
 
