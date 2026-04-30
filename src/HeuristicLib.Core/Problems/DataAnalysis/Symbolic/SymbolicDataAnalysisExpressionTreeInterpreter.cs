@@ -431,7 +431,7 @@ public class SymbolicDataAnalysisExpressionTreeInterpreter : ISymbolicDataAnalys
         }
       case OpCodes.Constant: // fall through
       case OpCodes.Number: {
-          var numericTreeNode = (NumberTreeNode)currentInstr.DynamicNode;
+          var numericTreeNode = (NumericTreeNode)currentInstr.DynamicNode;
 
           return numericTreeNode.Value;
         }
