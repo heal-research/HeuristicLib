@@ -39,17 +39,15 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
       var c = instr.ChildIndex;
       var n = instr.NumberOfArguments;
 
+      if (instr.Opcode is OpCodes.Variable or OpCodes.Constant or OpCodes.Number) {
+        LoadData(instr, rows, rowIndex, batchSize);
+
+        continue;
+      }
+
       ref readonly var childInstruction = ref code[c];
 
       switch (instr.Opcode) {
-        case OpCodes.Variable: {
-            LoadData(instr, rows, rowIndex, batchSize);
-
-            break;
-          }
-        case OpCodes.Constant: // fall through
-        case OpCodes.Number:
-          break; // nothing to do here, don't remove because we want to prevent falling into the default case here.
         case OpCodes.Add: {
             Load(instr.Buf, childInstruction.Buf);
             for (var j = 1; j < n; ++j) {
