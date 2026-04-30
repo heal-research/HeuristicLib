@@ -246,7 +246,7 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
       if (node.SubtreeCount > ushort.MaxValue) {
         throw new ArgumentException("Number of subtrees is too big (>65.535)");
       }
-      double w = 0, v = 0;
+      double w = 1, v = 0;
       double[] d = [];
       switch (node) {
         case VariableTreeNode variable: {
@@ -262,7 +262,7 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
           }
         case NumericTreeNode numeric: {
             v = numeric.Value;
-            Array.Fill(code[i].Buf, code[i].Value, 0, BatchSize);
+            d = Enumerable.Repeat(v, BatchSize).ToArray();
 
             break;
           }
