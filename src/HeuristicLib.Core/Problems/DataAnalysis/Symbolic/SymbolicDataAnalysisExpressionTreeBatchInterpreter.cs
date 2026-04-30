@@ -260,7 +260,7 @@ public class SymbolicDataAnalysisExpressionTreeBatchInterpreter : ISymbolicDataA
 
             break;
           }
-        case NumberTreeNode numeric: {
+        case NumericTreeNode numeric: {
             v = numeric.Value;
             Array.Fill(code[i].Buf, code[i].Value, 0, BatchSize);
 
