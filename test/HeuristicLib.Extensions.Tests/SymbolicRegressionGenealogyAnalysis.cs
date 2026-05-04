@@ -102,7 +102,7 @@ public class GenealogyGraphTests
     Assert.Equal(qres[^1].Best.ObjectiveVector, eres.CurrentState[^1].best.ObjectiveVector);
   }
 
-  [Fact(Explicit = true, Skip = "Currently disabled because the LevenbergMarquardtMinimizer seems to loop endlessly in this test.")]
+  [Fact(Explicit = true)]
   public void GenealogyGraphOnLocalSearch()
   {
     var problem = CreateTestSymbolicRegressionProblem();
