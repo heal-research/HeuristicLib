@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
@@ -16,7 +17,12 @@ public class SymbolicRegressionTests
   private const int AlgorithmRandomSeed = 42;
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
 
-  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false, int constOptIteration = 5)
+  public static IEnumerable<TheoryDataRow<ISymbolicDataAnalysisExpressionTreeInterpreter>> InterpreterParameters => [
+    new(new SymbolicDataAnalysisExpressionTreeInterpreter()),
+    new(new SymbolicDataAnalysisExpressionTreeBatchInterpreter())
+  ];
+
+  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, int treeLength = 40, bool multiObjective = false, int constOptIteration = 5)
   {
     var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
 
@@ -42,7 +48,8 @@ public class SymbolicRegressionTests
         TreeDepth = treeLength,
         TreeLength = treeLength
       },
-      ParameterOptimizationIterations = constOptIteration
+      ParameterOptimizationIterations = constOptIteration,
+      Interpreter = interpreter
     };
 
     var linearScalingRoot = problem.SearchSpace.Grammar.AddLinearScaling();
@@ -62,10 +69,11 @@ public class SymbolicRegressionTests
     return problem;
   }
 
-  [Fact]
-  public void MultiObjectiveConstant()
+  [Theory]
+  [MemberData(nameof(InterpreterParameters))]
+  public void MultiObjectiveConstant(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
   {
-    var problem = CreateTestSymbolicRegressionProblem(multiObjective: true);
+    var problem = CreateTestSymbolicRegressionProblem(interpreter, multiObjective: true);
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var numberNode = new Number().CreateTreeNode(10);
@@ -77,10 +85,11 @@ public class SymbolicRegressionTests
     Assert.Equal([min, min, min, min, min, min, min, max, min, min, min], problem.Objective.Directions);
   }
 
-  [Fact]
-  public void Constant()
+  [Theory]
+  [MemberData(nameof(InterpreterParameters))]
+  public void Constant(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
   {
-    var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
+    var problem = CreateTestSymbolicRegressionProblem(interpreter, constOptIteration: -1);
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var startNode = tree.Root[0];
@@ -97,10 +106,11 @@ public class SymbolicRegressionTests
     _ = problem.Evaluate(tree2);
   }
 
-  [Fact]
-  public void Variable()
+  [Theory]
+  [MemberData(nameof(InterpreterParameters))]
+  public void Variable(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
   {
-    var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
+    var problem = CreateTestSymbolicRegressionProblem(interpreter, constOptIteration: -1);
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     tree.Root[0].AddSubtree(new Variable().CreateTreeNode("x", 1));
@@ -108,10 +118,11 @@ public class SymbolicRegressionTests
     Assert.Equal(Math.Sqrt(66), y, 1.0e-15);
   }
 
-  [Fact]
-  public void Add()
+  [Theory]
+  [MemberData(nameof(InterpreterParameters))]
+  public void Add(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
   {
-    var problem = CreateTestSymbolicRegressionProblem(constOptIteration: -1);
+    var problem = CreateTestSymbolicRegressionProblem(interpreter, constOptIteration: -1);
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var variableTreeNode = new Variable().CreateTreeNode("x", 1);
@@ -125,10 +136,11 @@ public class SymbolicRegressionTests
     Assert.Equal(Math.Sqrt(51), y, 1.0e-15);
   }
 
-  [Fact]
-  public void AddOpt()
+  [Theory]
+  [MemberData(nameof(InterpreterParameters))]
+  public void AddOpt(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
   {
-    var problem = CreateTestSymbolicRegressionProblem();
+    var problem = CreateTestSymbolicRegressionProblem(interpreter);
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     var variableTreeNode = new Variable().CreateTreeNode("x", 1);
@@ -143,10 +155,11 @@ public class SymbolicRegressionTests
     Assert.Equal(0, y, 1.0e-8);
   }
 
-  [Fact]
-  public void Creators()
+  [Theory]
+  [MemberData(nameof(InterpreterParameters))]
+  public void Creators(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
   {
-    var problem = CreateTestSymbolicRegressionProblem(12);
+    var problem = CreateTestSymbolicRegressionProblem(interpreter, 12);
     var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator() };
     var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
 
