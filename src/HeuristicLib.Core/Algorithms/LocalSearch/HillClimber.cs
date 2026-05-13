@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;

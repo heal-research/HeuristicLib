@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 
 // ReSharper disable UnusedParameter.Local

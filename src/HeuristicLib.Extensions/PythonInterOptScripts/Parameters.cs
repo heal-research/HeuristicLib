@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;

@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
+namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public enum DistanceMeasure
 {

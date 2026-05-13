@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using HEAL.HeuristicLib.Genotypes.Trees;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Formatters;

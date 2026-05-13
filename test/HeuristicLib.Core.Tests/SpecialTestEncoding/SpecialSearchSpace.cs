@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;
 

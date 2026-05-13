@@ -1,4 +1,4 @@
-﻿using Generator.Equals;
+using Generator.Equals;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;

@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 #pragma warning disable S2178
 public class OnlineMeanErrorCalculator
 {

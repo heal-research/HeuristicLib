@@ -1,4 +1,4 @@
-﻿{
+{
   PopulationSize: 250,
   Creator: {
     $type: UniformDistributedCreator,

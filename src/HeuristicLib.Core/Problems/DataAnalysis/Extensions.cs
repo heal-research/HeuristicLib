@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public static class Extensions
 {

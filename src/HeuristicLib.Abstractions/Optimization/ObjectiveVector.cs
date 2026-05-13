@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Globalization;
 
 namespace HEAL.HeuristicLib.Optimization;

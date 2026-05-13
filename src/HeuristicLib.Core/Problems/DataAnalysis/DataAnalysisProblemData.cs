@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public abstract class DataAnalysisProblemData : IProblemData
 {

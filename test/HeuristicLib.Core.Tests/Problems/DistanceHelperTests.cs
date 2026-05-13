@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Problems.TravelingSalesman;
+using HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 namespace HEAL.HeuristicLib.Tests.Problems;
 

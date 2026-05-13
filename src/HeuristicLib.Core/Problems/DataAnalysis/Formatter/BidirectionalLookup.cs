@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 

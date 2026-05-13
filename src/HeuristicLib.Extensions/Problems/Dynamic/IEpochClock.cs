@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public interface IEpochClock
 {

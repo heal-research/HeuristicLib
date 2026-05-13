@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.MetaOptimization;
+namespace HEAL.HeuristicLib.Problems.MetaOptimization;
 
 public record EmptyGenotype
 {

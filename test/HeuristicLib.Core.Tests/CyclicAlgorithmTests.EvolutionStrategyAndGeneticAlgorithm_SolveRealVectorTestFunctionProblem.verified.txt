@@ -1,4 +1,4 @@
-﻿{
+{
   generations: [
     {
       Generation: 0,

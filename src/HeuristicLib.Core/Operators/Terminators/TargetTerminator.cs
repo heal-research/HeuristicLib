@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;

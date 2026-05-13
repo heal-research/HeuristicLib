@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 public enum OpCode : byte
 {

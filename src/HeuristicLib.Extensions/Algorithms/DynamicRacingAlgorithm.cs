@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;

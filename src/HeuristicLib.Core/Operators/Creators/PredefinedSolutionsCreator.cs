@@ -1,4 +1,4 @@
-﻿using Generator.Equals;
+using Generator.Equals;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;

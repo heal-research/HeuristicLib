@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Optimization;
+namespace HEAL.HeuristicLib.Optimization;
 
 public record Solution<TGenotype>(TGenotype Genotype, ObjectiveVector ObjectiveVector) : ISolution<TGenotype>;
 

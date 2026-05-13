@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Execution;
+namespace HEAL.HeuristicLib.Execution;
 
 public static class ExecutableExtensions
 {

@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Operators.Terminators;
+namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record PauseTokenTerminator<TGenotype> : StatelessTerminator<TGenotype>
 {

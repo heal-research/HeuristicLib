@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Optimization;
+namespace HEAL.HeuristicLib.Optimization;
 
 public class NoTotalOrderComparer : IComparer<ObjectiveVector>
 {

@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Operators;
+namespace HEAL.HeuristicLib.Operators;
 
 public class NoState
 {

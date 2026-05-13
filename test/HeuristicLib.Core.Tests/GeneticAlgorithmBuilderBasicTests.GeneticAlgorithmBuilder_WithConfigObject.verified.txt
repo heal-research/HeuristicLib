@@ -1,4 +1,4 @@
-﻿{
+{
   PopulationSize: 200,
   Terminator: {
     $type: ThresholdTerminator<IGenerationalState>,

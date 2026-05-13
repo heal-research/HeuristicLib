@@ -1,4 +1,4 @@
-﻿{
+{
   Generation: 10,
   Goal: Minimize,
   Population: [

@@ -1,4 +1,4 @@
-﻿// using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
+// using HEAL.HeuristicLib.Algorithms.GeneticAlgorithm;
 // using HEAL.HeuristicLib.Encodings;
 // using HEAL.HeuristicLib.Genotypes;
 // using HEAL.HeuristicLib.Operators;

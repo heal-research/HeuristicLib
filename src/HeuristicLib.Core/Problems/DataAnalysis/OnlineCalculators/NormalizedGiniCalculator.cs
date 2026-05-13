@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public static class NormalizedGiniCalculator
 {

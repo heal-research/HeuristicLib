@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using HEAL.HeuristicLib.Tests.Mocks;
 

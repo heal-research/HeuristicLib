@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.PythonInterOptScripts;
+using HEAL.HeuristicLib.PythonInterOptScripts;
 
 namespace HEAL.HeuristicLib.Extensions.Tests;
 

@@ -1,4 +1,4 @@
-﻿{
+{
   PopulationSize: 200,
   Creator: {
     $type: ProblemSpecificCreator<RealVector, RealVectorSearchSpace, IOptimizable<RealVector, RealVectorSearchSpace>>,

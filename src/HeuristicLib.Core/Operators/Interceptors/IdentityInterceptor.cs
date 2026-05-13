@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 

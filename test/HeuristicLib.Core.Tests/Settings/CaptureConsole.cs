@@ -1,1 +1,1 @@
-﻿[assembly: CaptureConsole(CaptureOut = true, CaptureError = true)]
+[assembly: CaptureConsole(CaptureOut = true, CaptureError = true)]

@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 

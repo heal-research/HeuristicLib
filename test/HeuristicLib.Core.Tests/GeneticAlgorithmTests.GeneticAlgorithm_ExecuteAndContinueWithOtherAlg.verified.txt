@@ -1,4 +1,4 @@
-﻿{
+{
   firstResult: {
     CurrentGeneration: 5,
     TotalGenerations: 5,

@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 

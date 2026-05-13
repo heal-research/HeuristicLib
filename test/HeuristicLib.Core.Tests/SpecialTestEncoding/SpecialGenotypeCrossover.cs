@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 

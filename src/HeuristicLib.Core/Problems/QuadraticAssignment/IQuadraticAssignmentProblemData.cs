@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
+namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
 
 public interface IQuadraticAssignmentProblemData
 {

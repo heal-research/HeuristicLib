@@ -1,4 +1,4 @@
-﻿[
+[
   {
     CurrentGeneration: 0,
     TotalGenerations: 0,

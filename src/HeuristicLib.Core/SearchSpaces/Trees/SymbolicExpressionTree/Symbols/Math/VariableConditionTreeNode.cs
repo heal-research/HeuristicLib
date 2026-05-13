@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 

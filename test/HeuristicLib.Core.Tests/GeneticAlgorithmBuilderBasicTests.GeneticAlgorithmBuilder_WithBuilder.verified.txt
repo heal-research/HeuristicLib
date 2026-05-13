@@ -1,4 +1,4 @@
-﻿{
+{
   Encoding: {
     Length: 3,
     Minimum: [

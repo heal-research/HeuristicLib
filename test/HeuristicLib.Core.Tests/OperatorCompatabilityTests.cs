@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;

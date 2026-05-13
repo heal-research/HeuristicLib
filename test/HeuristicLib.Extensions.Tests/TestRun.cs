@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Execution;
 
 namespace HEAL.HeuristicLib.Extensions.Tests;
 

@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Random;
+namespace HEAL.HeuristicLib.Random;
 
 public class RandomNumberGenerator : IRandomNumberGenerator
 {

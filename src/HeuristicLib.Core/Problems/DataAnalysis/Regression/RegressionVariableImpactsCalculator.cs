@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Random;
 using MathNet.Numerics.Statistics;

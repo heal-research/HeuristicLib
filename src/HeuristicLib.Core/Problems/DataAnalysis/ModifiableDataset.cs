@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 
 #pragma warning disable S2368 // multidimensional parameters are explicitly allowed
 

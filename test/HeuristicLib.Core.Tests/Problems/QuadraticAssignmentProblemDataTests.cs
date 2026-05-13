@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Problems.QuadraticAssignment;
+using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 
 namespace HEAL.HeuristicLib.Tests.Problems;
 

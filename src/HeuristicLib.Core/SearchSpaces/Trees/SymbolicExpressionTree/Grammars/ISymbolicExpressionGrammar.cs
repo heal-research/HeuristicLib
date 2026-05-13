@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;

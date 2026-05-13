@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Analysis;
+namespace HEAL.HeuristicLib.Analysis;
 
 public interface IAnalyzer
 {

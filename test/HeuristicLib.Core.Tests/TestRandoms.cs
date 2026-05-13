@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Random.KeyCombiners;
 using HEAL.HeuristicLib.Random.RandomEngines;
 

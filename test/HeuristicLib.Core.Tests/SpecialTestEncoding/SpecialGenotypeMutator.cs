@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests.SpecialTestEncoding;

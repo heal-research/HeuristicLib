@@ -1,4 +1,4 @@
-﻿// ReSharper disable UnusedParameter.Local
+// ReSharper disable UnusedParameter.Local
 
 #pragma warning disable S1172
 namespace HEAL.HeuristicLib.Problems.TestFunctions.BBoB;

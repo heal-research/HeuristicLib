@@ -1,3 +1,3 @@
-﻿namespace HEAL.HeuristicLib.Problems;
+namespace HEAL.HeuristicLib.Problems;
 
 public interface IProblemData;

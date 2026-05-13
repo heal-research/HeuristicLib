@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 
 public sealed class GroupSymbol : Symbol
 {

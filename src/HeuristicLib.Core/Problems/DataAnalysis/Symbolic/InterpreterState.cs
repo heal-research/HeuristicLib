@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 
 public class InterpreterState(Instruction[] code, int argumentStackSize)
 {

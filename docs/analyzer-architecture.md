@@ -1,4 +1,4 @@
-﻿# Analyzer architecture
+# Analyzer architecture
 
 This page explains the current analyzer system in HeuristicLib.
 

@@ -1,4 +1,4 @@
-﻿// ReSharper disable CompareOfFloatsByEqualityOperator
+// ReSharper disable CompareOfFloatsByEqualityOperator
 
 #pragma warning disable S1244
 namespace HEAL.HeuristicLib.Optimization

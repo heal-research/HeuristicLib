@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
 
 public class ClassificationProblemData(Dataset dataset, IEnumerable<string> allowedInputVariables, string targetVariable)
   : DataAnalysisProblemData(dataset, allowedInputVariables)

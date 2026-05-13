@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
 
 /// <summary>
 ///   Interface for all classification models.

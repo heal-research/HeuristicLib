@@ -1,4 +1,4 @@
-﻿namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering;
 
 public interface IClusteringModel
 {

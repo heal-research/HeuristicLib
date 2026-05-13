@@ -1,4 +1,4 @@
-﻿{
+{
   CurrentGeneration: 5,
   TotalGenerations: 5,
   CurrentOperatorMetrics: {

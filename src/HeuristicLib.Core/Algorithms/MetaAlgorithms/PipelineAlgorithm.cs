@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
