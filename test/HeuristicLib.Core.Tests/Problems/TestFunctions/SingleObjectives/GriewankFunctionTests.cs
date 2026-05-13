@@ -9,7 +9,7 @@ public class GriewankFunctionTests
   public void Evaluate_ShouldReturnZero_AtOrigin()
   {
     var f = new GriewankFunction(3);
-    var x = new RealVector(0.0, 0.0, 0.0);
+    RealVector x = [0.0, 0.0, 0.0];
 
     Assert.Equal(0.0, f.Evaluate(x), 12);
   }
@@ -18,7 +18,7 @@ public class GriewankFunctionTests
   public void Evaluate_ShouldReturnExpectedValue_ForKnownPoint()
   {
     var f = new GriewankFunction(1);
-    var x = new RealVector(2.0);
+    RealVector x = [2.0];
 
     var expected = (4.0 / 4000.0) - Math.Cos(2.0) + 1.0;
     Assert.Equal(expected, f.Evaluate(x), 12);
@@ -28,7 +28,7 @@ public class GriewankFunctionTests
   public void EvaluateGradient_ShouldBeZero_AtOrigin()
   {
     var f = new GriewankFunction(3);
-    var x = new RealVector(0.0, 0.0, 0.0);
+    RealVector x = [0.0, 0.0, 0.0];
 
     var grad = f.EvaluateGradient(x);
 
@@ -41,7 +41,7 @@ public class GriewankFunctionTests
   public void EvaluateGradient_ShouldMatchFiniteDifferences()
   {
     var f = new GriewankFunction(3);
-    var x = new RealVector(0.3, -0.4, 0.5);
+    RealVector x = [0.3, -0.4, 0.5];
 
     SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(f, x, tolerance: 1e-5);
   }

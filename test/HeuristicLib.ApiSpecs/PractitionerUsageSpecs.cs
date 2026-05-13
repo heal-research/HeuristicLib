@@ -32,10 +32,10 @@ public class PractitionerUsageSpecs
   public void StatelessOperators_CanBeInvokedDirectly_WithoutInstantiation()
   {
     var problem = CreateRastriginProblem(dimension: 3);
-    var realSearchSpace = new RealVectorSearchSpace(3, new RealVector(-1.0), new RealVector(1.0));
-    var integerSearchSpace = new IntegerVectorSearchSpace(3, new IntegerVector(-2), new IntegerVector(2));
+    var realSearchSpace = new RealVectorSearchSpace(3, [-1.0], [1.0]);
+    var integerSearchSpace = new IntegerVectorSearchSpace(3, [-2], [2]);
 
-    var randomIntegerVector = RandomNumberGenerator.Create(2025).NextIntegerVectorUniform(new IntegerVector(-2), new IntegerVector(2), length: 4);
+    var randomIntegerVector = RandomNumberGenerator.Create(2025).NextIntegerVectorUniform([-2], [2], length: 4);
     randomIntegerVector.Count.ShouldBe(4);
     randomIntegerVector.All(x => x is >= -2 and <= 2).ShouldBeTrue();
 
@@ -43,7 +43,7 @@ public class PractitionerUsageSpecs
     randomIntegerVectorFromSearchSpace.Count.ShouldBe(3);
     randomIntegerVectorFromSearchSpace.All(x => x is >= -2 and <= 2).ShouldBeTrue();
 
-    var randomRealVector = RandomNumberGenerator.Create(2025).NextRealVectorUniform(new RealVector(-0.5), new RealVector(0.5), length: 3);
+    var randomRealVector = RandomNumberGenerator.Create(2025).NextRealVectorUniform([-0.5], [0.5], length: 3);
     randomRealVector.Count.ShouldBe(3);
     randomRealVector.All(x => x is >= -0.5 and <= 0.5).ShouldBeTrue();
 
@@ -93,46 +93,46 @@ public class PractitionerUsageSpecs
     var boundedRealVector = UniformDistributedCreator.Create(
       RandomNumberGenerator.Create(2027),
       length: 3,
-      minimum: new RealVector(-0.5),
-      maximum: new RealVector(0.5));
+      minimum: [-0.5],
+      maximum: [0.5]);
     boundedRealVector.Count.ShouldBe(3);
     boundedRealVector.All(x => x is >= -0.5 and <= 0.5).ShouldBeTrue();
 
     var boundedRealVectorFromSearchSpace = UniformDistributedCreator.Create(
       RandomNumberGenerator.Create(2027),
       realSearchSpace,
-      minimum: new RealVector(-0.5),
-      maximum: new RealVector(0.5));
+      minimum: [-0.5],
+      maximum: [0.5]);
     boundedRealVectorFromSearchSpace.Count.ShouldBe(3);
     boundedRealVectorFromSearchSpace.All(x => x is >= -0.5 and <= 0.5).ShouldBeTrue();
 
     var normalRealVector = NormalDistributedCreator.Create(
       RandomNumberGenerator.Create(2028),
       length: 3,
-      means: new RealVector(0.25),
-      sigmas: new RealVector(0.0),
-      minimum: new RealVector(-1.0),
-      maximum: new RealVector(1.0));
+      means: [0.25],
+      sigmas: [0.0],
+      minimum: [-1.0],
+      maximum: [1.0]);
     normalRealVector.ShouldBe(RealVector.Repeat(0.25, 3));
 
     var normalRealVectorFromSearchSpace = NormalDistributedCreator.Create(
       RandomNumberGenerator.Create(2028),
       realSearchSpace,
-      means: new RealVector(0.25),
-      sigmas: new RealVector(0.0));
+      means: [0.25],
+      sigmas: [0.0]);
     normalRealVectorFromSearchSpace.ShouldBe(RealVector.Repeat(0.25, 3));
 
     var randomNormalRealVectorFromSearchSpace = RandomNumberGenerator.Create(2028).NextRealVectorNormal(
       realSearchSpace,
-      means: new RealVector(0.25),
-      sigmas: new RealVector(0.0));
+      means: [0.25],
+      sigmas: [0.0]);
     randomNormalRealVectorFromSearchSpace.ShouldBe(RealVector.Repeat(0.25, 3));
 
     var normalIntegerVector = Operators.Creators.IntegerVectorCreators.NormalDistributedCreator.Create(
       RandomNumberGenerator.Create(2029),
       length: 3,
-      means: new RealVector(1.6),
-      sigmas: new RealVector(0.0),
+      means: [1.6],
+      sigmas: [0.0],
       minimum: integerSearchSpace.Minimum,
       maximum: integerSearchSpace.Maximum);
     normalIntegerVector.ShouldBe(new IntegerVector(2, 2, 2));
@@ -140,18 +140,18 @@ public class PractitionerUsageSpecs
     var normalIntegerVectorFromSearchSpace = Operators.Creators.IntegerVectorCreators.NormalDistributedCreator.Create(
       RandomNumberGenerator.Create(2029),
       integerSearchSpace,
-      means: new RealVector(1.6),
-      sigmas: new RealVector(0.0));
+      means: [1.6],
+      sigmas: [0.0]);
     normalIntegerVectorFromSearchSpace.ShouldBe(new IntegerVector(2, 2, 2));
 
     var randomNormalIntegerVectorFromSearchSpace = RandomNumberGenerator.Create(2029).NextIntegerVectorNormal(
       integerSearchSpace,
-      means: new RealVector(1.6),
-      sigmas: new RealVector(0.0));
+      means: [1.6],
+      sigmas: [0.0]);
     randomNormalIntegerVectorFromSearchSpace.ShouldBe(new IntegerVector(2, 2, 2));
 
-    var parent = new RealVector(1.0, 2.0, 3.0);
-    var otherParent = new RealVector(9.0, 9.0, 9.0);
+    RealVector parent = [1.0, 2.0, 3.0];
+    RealVector otherParent = [9.0, 9.0, 9.0];
 
     NoChangeMutator.Mutate(parent, RandomNumberGenerator.Create(2030)).ShouldBe(parent);
     var gaussianChild = GaussianMutator.Mutate(parent, RandomNumberGenerator.Create(2031), realSearchSpace, mutationRate: 1.0, mutationStrength: 100.0);
@@ -161,8 +161,8 @@ public class PractitionerUsageSpecs
     SelectSecondParentCrossover.Cross(new Parents<RealVector>(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(otherParent);
 
     var edgeChild = EdgeRecombinationCrossover.Cross(
-      new Permutation(0, 1, 2, 3),
-      new Permutation(0, 2, 1, 3),
+      [0, 1, 2, 3],
+      [0, 2, 1, 3],
       RandomNumberGenerator.Create(2033));
     edgeChild.Order().ToArray().ShouldBe([0, 1, 2, 3]);
 
@@ -179,8 +179,8 @@ public class PractitionerUsageSpecs
     CommaSelectionReplacer.Replace(solutions, problem.Objective, count: 1).Single().ShouldBe(solutions[1]);
 
     IReadOnlyList<ISolution<RealVector>> offspring = [
-      new Solution<RealVector>(new RealVector(5.0, 5.0, 5.0), new ObjectiveVector(0.5)),
-      new Solution<RealVector>(new RealVector(7.0, 7.0, 7.0), new ObjectiveVector(3.0))
+      new Solution<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
+      new Solution<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
     ];
     var paretoReplacement = ParetoCrowdingReplacer.Replace(solutions, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
     paretoReplacement.Select(solution => solution.ObjectiveVector[0]).Order().ToArray().ShouldBe([0.5, 1.0]);

@@ -95,7 +95,7 @@ public class ProblemGeneration
     RealVectorProblem(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
       new RealVectorSearchSpace(
         tsps.Max(x => x.ProblemData.NumberOfCities),
-        new RealVector(0.0), new RealVector(1.0)))
+        [0.0], [1.0]))
   {
     private readonly TravelingSalesmanProblem[] tsps = tsps.ToArray();
 

@@ -9,7 +9,7 @@ public class AckleyFunctionTests
   public void Evaluate_ShouldReturnZero_AtOrigin()
   {
     var f = new AckleyFunction(3);
-    var x = new RealVector(0.0, 0.0, 0.0);
+    RealVector x = [0.0, 0.0, 0.0];
 
     Assert.Equal(0.0, f.Evaluate(x), 12);
   }
@@ -18,7 +18,7 @@ public class AckleyFunctionTests
   public void EvaluateGradient_ShouldReturnZero_AtOrigin()
   {
     var f = new AckleyFunction(3);
-    var x = new RealVector(0.0, 0.0, 0.0);
+    RealVector x = [0.0, 0.0, 0.0];
 
     var grad = f.EvaluateGradient(x);
 
@@ -31,7 +31,7 @@ public class AckleyFunctionTests
   public void Evaluate_ShouldReturnExpectedValue_ForKnownPoint()
   {
     var f = new AckleyFunction(2);
-    var x = new RealVector(1.0, 1.0);
+    RealVector x = [1.0, 1.0];
 
     var sumSquares = (1.0 * 1.0 + 1.0 * 1.0) / 2.0;
     var rootMeanSquare = Math.Sqrt(sumSquares);
@@ -46,7 +46,7 @@ public class AckleyFunctionTests
   public void EvaluateGradient_ShouldMatchFiniteDifferences_AwayFromOrigin()
   {
     var f = new AckleyFunction(3);
-    var x = new RealVector(0.3, -0.4, 0.5);
+    RealVector x = [0.3, -0.4, 0.5];
 
     SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(f, x, tolerance: 1e-4);
   }

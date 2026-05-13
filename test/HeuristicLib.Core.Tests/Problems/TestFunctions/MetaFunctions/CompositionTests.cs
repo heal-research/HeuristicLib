@@ -12,10 +12,10 @@ public class CompositionTests
   public void Decorators_ShouldComposeCorrectly()
   {
     IGradientTestFunction inner = new SphereFunction(2);
-    inner = new ShiftedGradientTestFunction(new RealVector(1.0, 2.0), inner);
+    inner = new ShiftedGradientTestFunction([1.0, 2.0], inner);
     inner = new ScaledGradientTestFunction([2.0, 3.0], 5.0, inner);
 
-    var x = new RealVector(1.0, 1.0);
+    RealVector x = [1.0, 1.0];
 
     var value = inner.Evaluate(x);
     var gradient = inner.EvaluateGradient(x);

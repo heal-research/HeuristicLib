@@ -12,10 +12,10 @@ public class ShiftedGradientTestFunctionTests
   {
     var inner = new SphereFunction(2);
     var function = new ShiftedGradientTestFunction(
-      shiftVector: new RealVector(1.0, 2.0),
+      shiftVector: [1.0, 2.0],
       inner: inner);
 
-    var x = new RealVector(3.0, 4.0);
+    RealVector x = [3.0, 4.0];
 
     var gradient = function.EvaluateGradient(x);
 
@@ -29,10 +29,10 @@ public class ShiftedGradientTestFunctionTests
   {
     var inner = new SphereFunction(2);
     var function = new ShiftedGradientTestFunction(
-      shiftVector: new RealVector(1.0, -2.0),
+      shiftVector: [1.0, -2.0],
       inner: inner);
 
-    var x = new RealVector(0.3, -0.4);
+    RealVector x = [0.3, -0.4];
 
     SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(function, x);
   }

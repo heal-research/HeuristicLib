@@ -39,7 +39,7 @@ public class QuadraticAssignmentProblemTests
       });
 
     var problem = new QuadraticAssignmentProblem(data);
-    var solution = new Permutation(0, 1);
+    Permutation solution = [0, 1];
     var rng = DummyRandomNumberGenerator.Instance;
 
     var result = problem.Evaluate(solution, rng);
@@ -65,7 +65,7 @@ public class QuadraticAssignmentProblemTests
       });
 
     var problem = new QuadraticAssignmentProblem(data);
-    var solution = new Permutation(1, 0);
+    Permutation solution = [1, 0];
     var rng = DummyRandomNumberGenerator.Instance;
 
     var result = problem.Evaluate(solution, rng);

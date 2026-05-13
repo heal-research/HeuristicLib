@@ -9,7 +9,7 @@ public class RastriginFunctionTests
   public void Evaluate_ShouldReturnZero_AtOrigin()
   {
     var f = new RastriginFunction(3);
-    var x = new RealVector(0.0, 0.0, 0.0);
+    RealVector x = [0.0, 0.0, 0.0];
 
     Assert.Equal(0.0, f.Evaluate(x), 12);
   }
@@ -18,7 +18,7 @@ public class RastriginFunctionTests
   public void Evaluate_ShouldReturnExpectedValue_ForKnownPoint()
   {
     var f = new RastriginFunction(2);
-    var x = new RealVector(1.0, 1.0);
+    RealVector x = [1.0, 1.0];
 
     // 10*n + sum(x_i^2 - 10 cos(2pi x_i))
     // = 20 + (1 - 10) + (1 - 10) = 2
@@ -29,7 +29,7 @@ public class RastriginFunctionTests
   public void EvaluateGradient_ShouldBeZero_AtOrigin()
   {
     var f = new RastriginFunction(3);
-    var x = new RealVector(0.0, 0.0, 0.0);
+    RealVector x = [0.0, 0.0, 0.0];
 
     var grad = f.EvaluateGradient(x);
 
@@ -42,7 +42,7 @@ public class RastriginFunctionTests
   public void EvaluateGradient_ShouldMatchFiniteDifferences()
   {
     var f = new RastriginFunction(3);
-    var x = new RealVector(0.3, -0.4, 0.5);
+    RealVector x = [0.3, -0.4, 0.5];
 
     SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(f, x, tolerance: 1e-5);
   }

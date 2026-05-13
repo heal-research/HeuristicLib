@@ -16,7 +16,7 @@ public class RotatedGradientTestFunctionTests
     };
     var inner = new SphereFunction(2);
     var function = new RotatedGradientTestFunction(rotation, inner);
-    var x = new RealVector(3.0, 4.0);
+    RealVector x = [3.0, 4.0];
 
     var gradient = function.EvaluateGradient(x);
 
@@ -36,7 +36,7 @@ public class RotatedGradientTestFunctionTests
     };
     var inner = new SphereFunction(2);
     var function = new RotatedGradientTestFunction(rotation, inner);
-    var x = new RealVector(0.3, -0.4);
+    RealVector x = [0.3, -0.4];
 
     SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(function, x);
   }

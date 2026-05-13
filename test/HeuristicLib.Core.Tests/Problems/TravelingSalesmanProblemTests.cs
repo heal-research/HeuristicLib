@@ -30,7 +30,7 @@ public class TravelingSalesmanProblemTests
     });
 
     var problem = new TravelingSalesmanProblem(data);
-    var solution = new Permutation(0, 1, 2);
+    Permutation solution = [0, 1, 2];
     var rng = DummyRandomNumberGenerator.Instance;
 
     var result = problem.Evaluate(solution, rng);
@@ -51,7 +51,7 @@ public class TravelingSalesmanProblemTests
     });
 
     var problem = new TravelingSalesmanProblem(data);
-    var solution = new Permutation(0, 2, 1);
+    Permutation solution = [0, 2, 1];
     var rng = DummyRandomNumberGenerator.Instance;
 
     var result = problem.Evaluate(solution, rng);
@@ -67,7 +67,7 @@ public class TravelingSalesmanProblemTests
   {
     var problem = new TravelingSalesmanProblem();
     var rng = DummyRandomNumberGenerator.Instance;
-    var solution = new Permutation(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+    Permutation solution = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
     var result = problem.Evaluate(solution, rng);
 
@@ -79,7 +79,7 @@ public class TravelingSalesmanProblemTests
   {
     var problem = TravelingSalesmanProblem.CreateDefault();
     var rng = DummyRandomNumberGenerator.Instance;
-    var solution = new Permutation(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+    Permutation solution = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 
     var result = problem.Evaluate(solution, rng);
 

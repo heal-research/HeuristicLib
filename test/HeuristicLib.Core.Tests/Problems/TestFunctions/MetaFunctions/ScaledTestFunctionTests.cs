@@ -15,7 +15,7 @@ public class ScaledTestFunctionTests
       outputScaling: 5.0,
       inner: inner);
 
-    var x = new RealVector(1.0, 2.0);
+    RealVector x = [1.0, 2.0];
 
     var result = function.Evaluate(x);
 

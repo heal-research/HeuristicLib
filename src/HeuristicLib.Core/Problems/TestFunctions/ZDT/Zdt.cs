@@ -23,7 +23,7 @@ public abstract class Zdt : IMultiObjectiveGradientTestFunction
     var f1 = F1(solution);
     var h = H(f1, g);
 
-    return new RealVector(f1, g * h);
+    return [f1, g * h];
   }
 
   public RealVector[] EvaluateGradient(RealVector solution)

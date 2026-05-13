@@ -13,7 +13,7 @@ public class RotatedTestFunctionTests
       { 1, 2 },
       { 3, 4 }
     };
-    var vector = new RealVector(5.0, 6.0);
+    RealVector vector = [5.0, 6.0];
 
     var result = RotatedTestFunction.Rotate(rotation, vector);
 
@@ -30,7 +30,7 @@ public class RotatedTestFunctionTests
     };
     var inner = new SphereFunction(2);
     var function = new RotatedTestFunction(rotation, inner);
-    var x = new RealVector(3.0, 4.0);
+    RealVector x = [3.0, 4.0];
 
     var result = function.Evaluate(x);
 
@@ -58,7 +58,7 @@ public class RotatedTestFunctionTests
       { 1, 0 },
       { 0, 1 }
     };
-    var vector = new RealVector(1.0, 2.0, 3.0);
+    RealVector vector = [1.0, 2.0, 3.0];
 
     Assert.Throws<ArgumentOutOfRangeException>(() => RotatedTestFunction.Rotate(rotation, vector));
   }

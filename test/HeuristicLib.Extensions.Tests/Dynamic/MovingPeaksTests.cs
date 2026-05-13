@@ -33,7 +33,7 @@ public class MovingPeaksTests
     var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
-    var x = new RealVector(10.0, 10.0);
+    RealVector x = [10.0, 10.0];
     var fx = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
     Assert.Equal(50.0, fx, 10);
@@ -46,7 +46,7 @@ public class MovingPeaksTests
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     // At (10,10) peak1 gives 50, peak2 gives 30 - 1*sqrt(80^2+80^2) which is negative
-    var x = new RealVector(10.0, 10.0);
+    RealVector x = [10.0, 10.0];
     var fx = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
     Assert.Equal(50.0, fx, 10);
@@ -59,9 +59,9 @@ public class MovingPeaksTests
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     // Near the 50-peak
-    var near = p.Evaluate(new RealVector(10.0, 10.0), TestRandoms.NoRandom)[0];
+    var near = p.Evaluate([10.0, 10.0], TestRandoms.NoRandom)[0];
     // Far from both peaks (roughly center-ish but far from 10,10 and 90,90)
-    var far = p.Evaluate(new RealVector(50.0, 50.0), TestRandoms.NoRandom)[0];
+    var far = p.Evaluate([50.0, 50.0], TestRandoms.NoRandom)[0];
 
     Assert.True(far < near);
   }
@@ -73,7 +73,7 @@ public class MovingPeaksTests
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
     // If Evaluate touches RNG, this test should throw
-    var x = new RealVector(12.0, 12.0);
+    RealVector x = [12.0, 12.0];
     _ = p.Evaluate(x, TestRandoms.NoRandom)[0];
   }
 
@@ -88,7 +88,7 @@ public class MovingPeaksTests
     };
     var p = new MovingPeaksProblem(staticParams, rng, Peaks);
 
-    var x = new RealVector(33.0, 33.0);
+    RealVector x = [33.0, 33.0];
     var before = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
     for (var i = 0; i < 5; i++) {
@@ -105,7 +105,7 @@ public class MovingPeaksTests
     var rng = RandomNumberGenerator.Create(0);
     var p = new MovingPeaksProblem(Parameters, rng, Peaks);
 
-    var x = new RealVector(33.0, 33.0);
+    RealVector x = [33.0, 33.0];
     var before = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
     var changed = false;

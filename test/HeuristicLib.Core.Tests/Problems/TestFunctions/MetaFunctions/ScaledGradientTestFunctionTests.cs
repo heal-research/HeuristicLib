@@ -16,7 +16,7 @@ public class ScaledGradientTestFunctionTests
       outputScaling: 5.0,
       inner: inner);
 
-    var x = new RealVector(1.0, 2.0);
+    RealVector x = [1.0, 2.0];
 
     var gradient = function.EvaluateGradient(x);
 
@@ -37,7 +37,7 @@ public class ScaledGradientTestFunctionTests
       outputScaling: 5.0,
       inner: inner);
 
-    var x = new RealVector(0.3, -0.4);
+    RealVector x = [0.3, -0.4];
 
     SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(function, x);
   }

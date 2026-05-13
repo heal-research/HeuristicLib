@@ -107,8 +107,8 @@ public static class MetaOptimizationProblemExamples
     (double min, double max) mutationRate)
     where TE : class, ISearchSpace<T> where TP : class, IProblem<T, TE> where T : class
   {
-    var integerMins = new IntegerVector(0, 0, 0, 0, 0, 0, 0, populationSize.min, numberOfChildren.min);
-    var integerMaxs = new IntegerVector(
+    IntegerVector integerMins = [0, 0, 0, 0, 0, 0, 0, populationSize.min, numberOfChildren.min];
+    IntegerVector integerMaxs = [
       creators.Length - 1,
       crossovers.Length - 1,
       evaluators.Length - 1,
@@ -118,7 +118,8 @@ public static class MetaOptimizationProblemExamples
       replacers.Length - 1,
       selectors.Length - 1,
       populationSize.max,
-      numberOfChildren.max);
+      numberOfChildren.max
+    ];
     var integerVectorSearchSpace = new IntegerVectorSearchSpace(integerMins.Count, integerMins, integerMaxs);
     var realVectorSearchSpace = new RealVectorSearchSpace(1, mutationRate.min, mutationRate.max);
     var combinedSearchSpace = realVectorSearchSpace.WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(integerVectorSearchSpace);

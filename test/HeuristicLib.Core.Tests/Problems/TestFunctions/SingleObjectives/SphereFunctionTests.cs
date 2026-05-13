@@ -9,7 +9,7 @@ public class SphereFunctionTests
   public void Evaluate_ShouldReturnZero_AtOrigin()
   {
     var f = new SphereFunction(3);
-    var x = new RealVector(0.0, 0.0, 0.0);
+    RealVector x = [0.0, 0.0, 0.0];
 
     Assert.Equal(0.0, f.Evaluate(x), 12);
   }
@@ -18,7 +18,7 @@ public class SphereFunctionTests
   public void Evaluate_ShouldReturnExpectedValue_ForKnownPoint()
   {
     var f = new SphereFunction(3);
-    var x = new RealVector(1.0, -2.0, 3.0);
+    RealVector x = [1.0, -2.0, 3.0];
 
     Assert.Equal(14.0, f.Evaluate(x), 12);
   }
@@ -27,7 +27,7 @@ public class SphereFunctionTests
   public void EvaluateGradient_ShouldReturnExpectedValue_ForKnownPoint()
   {
     var f = new SphereFunction(3);
-    var x = new RealVector(1.0, -2.0, 3.0);
+    RealVector x = [1.0, -2.0, 3.0];
 
     var grad = f.EvaluateGradient(x);
 
@@ -40,7 +40,7 @@ public class SphereFunctionTests
   public void EvaluateGradient_ShouldMatchFiniteDifferences()
   {
     var f = new SphereFunction(3);
-    var x = new RealVector(0.3, -0.4, 0.5);
+    RealVector x = [0.3, -0.4, 0.5];
 
     SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(f, x);
   }

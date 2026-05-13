@@ -15,7 +15,7 @@ public class Zdt4Tests
   public void Evaluate_ShouldReturnExpectedValue_ForAllZeroVector()
   {
     var problem = new Zdt4(4);
-    var x = new RealVector(0.0, 0.0, 0.0, 0.0);
+    RealVector x = [0.0, 0.0, 0.0, 0.0];
 
     var result = problem.Evaluate(x);
 
@@ -27,7 +27,7 @@ public class Zdt4Tests
   public void Evaluate_ShouldReturnExpectedValue_ForKnownVector()
   {
     var problem = new Zdt4(4);
-    var x = new RealVector(0.25, 0.5, 0.5, 0.5);
+    RealVector x = [0.25, 0.5, 0.5, 0.5];
 
     var result = problem.Evaluate(x);
 
@@ -47,7 +47,7 @@ public class Zdt4Tests
   public void EvaluateGradient_ShouldMatchFiniteDifferences()
   {
     var problem = new Zdt4(4);
-    var x = new RealVector(0.3, 0.4, 0.5, 0.6);
+    RealVector x = [0.3, 0.4, 0.5, 0.6];
 
     ZdtTestHelper.AssertGradientMatchesFiniteDifferences(problem, x, tolerance: 1e-4);
   }

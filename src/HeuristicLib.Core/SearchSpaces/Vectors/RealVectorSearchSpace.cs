@@ -8,7 +8,7 @@ public record RealVectorSearchSpace : SearchSpace<RealVector>
   public RealVector Minimum { get; }
   public RealVector Maximum { get; }
 
-  public RealVectorSearchSpace(int length, double minimum, double maximum) : this(length, new RealVector(minimum), new RealVector(maximum)) { }
+  public RealVectorSearchSpace(int length, double minimum, double maximum) : this(length, [minimum], [maximum]) { }
 
   public RealVectorSearchSpace(int length, RealVector minimum, RealVector maximum)
   {

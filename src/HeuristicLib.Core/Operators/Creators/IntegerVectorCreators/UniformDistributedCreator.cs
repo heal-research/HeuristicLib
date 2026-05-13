@@ -16,5 +16,5 @@ public record UniformDistributedCreator : SingleSolutionCreator<IntegerVector, I
     => random.NextIntegerVectorUniform(minimum, maximum, length);
 
   public static IntegerVector Create(IRandomNumberGenerator random, int length, int minimum, int maximum)
-    => Create(random, length, new IntegerVector(minimum), new IntegerVector(maximum));
+    => Create(random, length, [minimum], [maximum]);
 }

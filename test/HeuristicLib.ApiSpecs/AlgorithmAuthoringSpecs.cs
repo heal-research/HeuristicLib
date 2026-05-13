@@ -160,7 +160,7 @@ public class AlgorithmAuthoringSpecs
 
       var first = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
       var second = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-      var candidate = new RealVector(first[0], second[0], executionState.Steps);
+      RealVector candidate = [first[0], second[0], executionState.Steps];
       var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
       return new SingleSolutionState<RealVector> {
@@ -208,7 +208,7 @@ public class AlgorithmAuthoringSpecs
       TestFunctionProblem problem)
     {
       var current = currentState.Solution.Genotype;
-      var transformed = new RealVector(current[0], current[1], current[2] + 1.0);
+      RealVector transformed = [current[0], current[1], current[2] + 1.0];
       return new SingleSolutionState<RealVector> {
         Population = Population.From([transformed], [currentState.Solution.ObjectiveVector])
       };
