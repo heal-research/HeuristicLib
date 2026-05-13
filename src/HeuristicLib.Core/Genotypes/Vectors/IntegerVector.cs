@@ -1,8 +1,10 @@
 ﻿using System.Collections;
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
+[CollectionBuilder(typeof(IntegerVectorBuilder), nameof(IntegerVectorBuilder.Create))]
 public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector>
 {
   private readonly int[] elements;

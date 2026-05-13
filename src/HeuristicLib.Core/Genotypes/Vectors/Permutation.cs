@@ -1,8 +1,10 @@
 ﻿using System.Collections;
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
+[CollectionBuilder(typeof(PermutationBuilder), nameof(PermutationBuilder.Create))]
 public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation>
 {
   private readonly int[] elements;

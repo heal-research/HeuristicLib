@@ -1,7 +1,9 @@
 ﻿using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
+[CollectionBuilder(typeof(BoolVectorBuilder), nameof(BoolVectorBuilder.Create))]
 public sealed class BoolVector : IReadOnlyList<bool>, IEquatable<BoolVector>
 {
   private readonly bool[] elements;

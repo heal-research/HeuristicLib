@@ -1,9 +1,11 @@
 ﻿using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
+[CollectionBuilder(typeof(RealVectorBuilder), nameof(RealVectorBuilder.Create))]
 [SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
 public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 {
