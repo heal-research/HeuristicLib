@@ -2,6 +2,18 @@
 
 Contributor contract for this repository. Durable architectural rationale lives in [docs/design-goals.md](docs/design-goals.md).
 
+## Repository map
+
+- `src/HeuristicLib.Abstractions`: small public contracts shared across the library.
+- `src/HeuristicLib.Core`: core algorithms, operators, search spaces, genotypes, problems, random engines, and analysis primitives.
+- `src/HeuristicLib.Extensions`: extension problems, workflows, and integration-oriented features.
+- `test/HeuristicLib.Core.Tests`: behavior and invariant tests for core library code.
+- `test/HeuristicLib.ApiSpecs`: executable API usage specs; see that folder's README before editing specs.
+- `test/HeuristicLib.Extensions.Tests`: tests and scenarios for extension features.
+- `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.
+- `docs`: user-facing and design documentation.
+- `examples`: runnable examples and external-language demonstrations.
+
 ## Project posture
 
 - HeuristicLib is in an early alpha stage.
@@ -35,3 +47,13 @@ Contributor contract for this repository. Durable architectural rationale lives 
 - Add or update tests when behavior or invariants change.
 - Prefer removing accidental complexity over preserving familiar but weak patterns.
 - Keep documentation aligned with code.
+
+## Validation commands
+
+- Restore dependencies with `dotnet restore`.
+- Build with `dotnet build --configuration Release --no-restore`.
+- Run tests with `dotnet test --configuration Release --no-restore`.
+- Check formatting with `dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error`.
+- CI currently runs restore, release build, release tests, formatting verification, and package creation. Formatting verification is currently non-blocking in CI, so do not treat a green CI format job as proof that formatting is clean.
+
+Prefer targeted test runs while iterating, then run the narrowest command that gives confidence for the changed area. For public API, shared invariants, or cross-project changes, run the full release test command when feasible.

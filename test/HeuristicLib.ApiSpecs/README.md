@@ -1,4 +1,4 @@
-# AGENTS.md
+# HeuristicLib.ApiSpecs
 
 This folder contains executable API usage specs.
 
@@ -9,3 +9,4 @@ This folder contains executable API usage specs.
 - Keep each spec focused on one user story.
 - It is fine to keep current-state and desired-state specs side by side when that makes the refactoring path clearer.
 - Detailed edge cases still belong in the normal unit test projects.
+- Prefer realistic names and explicit setup over compressed test helpers when the extra lines make the intended API usage clearer.
