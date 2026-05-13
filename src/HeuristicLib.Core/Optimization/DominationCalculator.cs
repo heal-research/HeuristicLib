@@ -97,14 +97,14 @@ public static class DominationCalculator
             dominationCounter[qI] += 1;
             break;
           case DominanceRelation.IsDominatedBy: {
-            dominationCounter[pI] += 1;
-            if (!dominatedIndividuals.ContainsKey(solutions[qI])) {
-              dominatedIndividuals.Add(solutions[qI], []);
-            }
+              dominationCounter[pI] += 1;
+              if (!dominatedIndividuals.ContainsKey(solutions[qI])) {
+                dominatedIndividuals.Add(solutions[qI], []);
+              }
 
-            dominatedIndividuals[solutions[qI]].Add(pI);
-            break;
-          }
+              dominatedIndividuals[solutions[qI]].Add(pI);
+              break;
+            }
           case DominanceRelation.Incomparable:
             break;
           case DominanceRelation.Equivalent:

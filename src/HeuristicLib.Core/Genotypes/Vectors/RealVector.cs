@@ -129,7 +129,7 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     return IntegerVector.FromOwnedArray(iElements);
   }
-  
+
   public static implicit operator RealVector(double value) => new(value);
 
   public static RealVector Create(params double[] elements) => new(elements, takeOwnership: false);

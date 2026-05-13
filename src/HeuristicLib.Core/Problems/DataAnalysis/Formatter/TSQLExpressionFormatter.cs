@@ -192,31 +192,31 @@ public sealed class TsqlExpressionFormatter : ISymbolicExpressionTreeStringForma
     } else {
       switch (node) {
         case VariableTreeNode treeNode: {
-          strBuilder.Append($"{VariableName2Identifier(treeNode.VariableName)} * {treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
+            strBuilder.Append($"{VariableName2Identifier(treeNode.VariableName)} * {treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
 
-          break;
-        }
+            break;
+          }
         case NumberTreeNode numNode:
           strBuilder.Append(numNode.Value.ToString("g17", CultureInfo.InvariantCulture));
 
           break;
         default: {
-          switch (node.Symbol) {
-            case FactorVariable: {
-              var factorNode = (FactorVariableTreeNode)node;
-              FormatFactor(level, factorNode, strBuilder);
+            switch (node.Symbol) {
+              case FactorVariable: {
+                  var factorNode = (FactorVariableTreeNode)node;
+                  FormatFactor(level, factorNode, strBuilder);
 
-              break;
+                  break;
+                }
+              case BinaryFactorVariable: {
+                  throw new NotSupportedException($"Symbol {node.Symbol.GetType().Name} not yet supported.");
+                }
+              default:
+                throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for TSQL symbolic expression tree formatter.");
             }
-            case BinaryFactorVariable: {
-              throw new NotSupportedException($"Symbol {node.Symbol.GetType().Name} not yet supported.");
-            }
-            default:
-              throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for TSQL symbolic expression tree formatter.");
+
+            break;
           }
-
-          break;
-        }
       }
     }
   }

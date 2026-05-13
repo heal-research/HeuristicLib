@@ -153,36 +153,36 @@ public sealed class SymbolicDataAnalysisExpressionMathematicaFormatter : ISymbol
       switch (node.Symbol) {
         // terminals
         case Variable: {
-          var varNode = (VariableTreeNode)node;
-          strBuilder.Append($"Times[{varNode.VariableName}, {varNode.Weight.ToString("G17", CultureInfo.InvariantCulture)}]");
+            var varNode = (VariableTreeNode)node;
+            strBuilder.Append($"Times[{varNode.VariableName}, {varNode.Weight.ToString("G17", CultureInfo.InvariantCulture)}]");
 
-          break;
-        }
+            break;
+          }
         case Number: {
-          var numNode = (NumberTreeNode)node;
-          strBuilder.Append(numNode.Value.ToString("G17", CultureInfo.InvariantCulture));
+            var numNode = (NumberTreeNode)node;
+            strBuilder.Append(numNode.Value.ToString("G17", CultureInfo.InvariantCulture));
 
-          break;
-        }
+            break;
+          }
         case FactorVariable: {
-          var factorNode = (FactorVariableTreeNode)node;
-          strBuilder.Append($"Switch[{factorNode.VariableName},");
-          var varValues = factorNode.Symbol.GetVariableValues(factorNode.VariableName).ToArray();
-          var weights = varValues.Select(factorNode.GetValue).ToArray();
+            var factorNode = (FactorVariableTreeNode)node;
+            strBuilder.Append($"Switch[{factorNode.VariableName},");
+            var varValues = factorNode.Symbol.GetVariableValues(factorNode.VariableName).ToArray();
+            var weights = varValues.Select(factorNode.GetValue).ToArray();
 
-          var weightStr = string.Join(", ",
-            varValues.Zip(weights, resultSelector: (s, d) => string.Format(CultureInfo.InvariantCulture, "\"{0}\", {1:G17}", s, d)));
-          strBuilder.Append(weightStr);
-          strBuilder.Append(']');
+            var weightStr = string.Join(", ",
+              varValues.Zip(weights, resultSelector: (s, d) => string.Format(CultureInfo.InvariantCulture, "\"{0}\", {1:G17}", s, d)));
+            strBuilder.Append(weightStr);
+            strBuilder.Append(']');
 
-          break;
-        }
+            break;
+          }
         case BinaryFactorVariable: {
-          var factorNode = (BinaryFactorVariableTreeNode)node;
-          strBuilder.Append(CultureInfo.InvariantCulture, $"If[{factorNode.VariableName}==\"{factorNode.VariableValue}\",{factorNode.Weight:G17},0.0]");
+            var factorNode = (BinaryFactorVariableTreeNode)node;
+            strBuilder.Append(CultureInfo.InvariantCulture, $"If[{factorNode.VariableName}==\"{factorNode.VariableValue}\",{factorNode.Weight:G17},0.0]");
 
-          break;
-        }
+            break;
+          }
         default:
           throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " is not supported.");
       }

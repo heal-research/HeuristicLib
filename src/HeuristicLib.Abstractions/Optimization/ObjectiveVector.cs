@@ -7,7 +7,6 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
 {
   private readonly double[] values;
 
-  // ToDo: think about creating a ctor that takes memory ownership to avoid reallocation
   public ObjectiveVector(params IEnumerable<double> values)
   {
     this.values = values.ToArray();

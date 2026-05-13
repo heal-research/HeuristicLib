@@ -37,7 +37,8 @@ public record RankAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, RankState<T>
 
   private static void RecordRanks(RankState<T> state)
   {
-    if (state.Graph.Nodes.Count < 2) return;
+    if (state.Graph.Nodes.Count < 2)
+      return;
 
     var line = state.Graph.Nodes[^2].Values
                     .Where(x => x.Layer == 0)

@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;

@@ -11,7 +11,6 @@ using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Formatter;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
@@ -28,7 +27,8 @@ namespace HEAL.HeuristicLib.PythonInterOptScripts;
 /// <summary>
 /// Parameters for interactive symbolic regression, configurable from Python.
 /// </summary>
-public class InteractiveSymRegParameters {
+public class InteractiveSymRegParameters
+{
   public int PopulationSize { get; set; } = 200;
   public int Generations { get; set; } = 30;
   public int TreeLength { get; set; } = 40;
@@ -48,13 +48,15 @@ public class InteractiveSymRegParameters {
 /// </summary>
 public record VisualizationCallbackEvaluator(
   Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> PopulationCallback)
-  : StatelessEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, SymbolicRegressionProblem> {
+  : StatelessEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, SymbolicRegressionProblem>
+{
 
   public override IReadOnlyList<ObjectiveVector> Evaluate(
     IReadOnlyList<SymbolicExpressionTree> genotypes,
     IRandomNumberGenerator random,
     SymbolicExpressionTreeSearchSpace searchSpace,
-    SymbolicRegressionProblem problem) {
+    SymbolicRegressionProblem problem)
+  {
 
     var objectives = new DirectEvaluator<SymbolicExpressionTree>()
       .Evaluate(genotypes, random, searchSpace, problem);
@@ -70,7 +72,8 @@ public record VisualizationCallbackEvaluator(
 /// Interactive symbolic regression runner designed for use from a Python web application.
 /// Provides fully configurable GP parameters and helper methods for tree formatting and prediction.
 /// </summary>
-public static class InteractiveSymbolicRegression {
+public static class InteractiveSymbolicRegression
+{
 
   private static readonly Dictionary<string, Func<string[], Symbol>> SymbolMap = new(StringComparer.OrdinalIgnoreCase) {
     ["add"] = _ => new Addition(),
@@ -96,7 +99,8 @@ public static class InteractiveSymbolicRegression {
   /// <summary>
   /// Creates RegressionProblemData from raw x and y arrays (single input variable).
   /// </summary>
-  public static RegressionProblemData CreateProblemDataFromArrays(double[] xValues, double[] yValues) {
+  public static RegressionProblemData CreateProblemDataFromArrays(double[] xValues, double[] yValues)
+  {
     var xList = xValues.ToList() as IList;
     var yList = yValues.ToList() as IList;
     var dataset = new ModifiableDataset(
@@ -112,7 +116,8 @@ public static class InteractiveSymbolicRegression {
   /// Builds a symbolic expression grammar from allowed symbol name strings.
   /// </summary>
   public static (SimpleSymbolicExpressionGrammar grammar, SymbolicExpressionTreeSearchSpace searchSpace)
-    BuildGrammarAndSearchSpace(string[] allowedSymbols, string[] variableNames, bool useLinearScaling, int treeLength, int treeDepth) {
+    BuildGrammarAndSearchSpace(string[] allowedSymbols, string[] variableNames, bool useLinearScaling, int treeLength, int treeDepth)
+  {
 
     var grammar = new SimpleSymbolicExpressionGrammar();
 
@@ -124,8 +129,10 @@ public static class InteractiveSymbolicRegression {
     }
 
     // Ensure we always have at least Number and Variable
-    if (!symbols.Any(s => s is Number)) symbols.Add(new Number());
-    if (!symbols.Any(s => s is Variable)) symbols.Add(new Variable { VariableNames = variableNames });
+    if (!symbols.Any(s => s is Number))
+      symbols.Add(new Number());
+    if (!symbols.Any(s => s is Variable))
+      symbols.Add(new Variable { VariableNames = variableNames });
 
     if (useLinearScaling) {
       var root = grammar.AddLinearScaling();
@@ -143,7 +150,8 @@ public static class InteractiveSymbolicRegression {
   /// <summary>
   /// Formats a symbolic expression tree as a human-readable infix string.
   /// </summary>
-  public static string FormatTree(SymbolicExpressionTree tree) {
+  public static string FormatTree(SymbolicExpressionTree tree)
+  {
     return InfixExpressionFormatter.Format(tree, NumberFormatInfo.InvariantInfo, "G4");
   }
 
@@ -151,7 +159,8 @@ public static class InteractiveSymbolicRegression {
   /// Evaluates a symbolic expression tree on the given x-values and returns predicted y-values.
   /// Creates a temporary dataset for evaluation.
   /// </summary>
-  public static double[] PredictValues(SymbolicExpressionTree tree, double[] xValues) {
+  public static double[] PredictValues(SymbolicExpressionTree tree, double[] xValues)
+  {
     var dummyY = new double[xValues.Length];
     var xList = xValues.ToList() as IList;
     var yList = dummyY.ToList() as IList;
@@ -169,7 +178,8 @@ public static class InteractiveSymbolicRegression {
   /// <summary>
   /// Returns a list of available symbol names that can be used in AllowedSymbols.
   /// </summary>
-  public static string[] GetAvailableSymbols() {
+  public static string[] GetAvailableSymbols()
+  {
     return SymbolMap.Keys.ToArray();
   }
 
@@ -183,7 +193,8 @@ public static class InteractiveSymbolicRegression {
     double[] yValues,
     Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> populationCallback,
     InteractiveSymRegParameters parameters,
-    CancellationToken ct = default) {
+    CancellationToken ct = default)
+  {
 
     var data = CreateProblemDataFromArrays(xValues, yValues);
 

@@ -186,34 +186,34 @@ public sealed partial class CSharpSymbolicExpressionTreeStringFormatter : Symbol
     } else {
       switch (node) {
         case VariableTreeNode treeNode: {
-          strBuilder.Append($"{VariableName2Identifier(treeNode.VariableName)} * {treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
+            strBuilder.Append($"{VariableName2Identifier(treeNode.VariableName)} * {treeNode.Weight.ToString("g17", CultureInfo.InvariantCulture)}");
 
-          break;
-        }
+            break;
+          }
         case NumberTreeNode numNode:
           strBuilder.Append(numNode.Value.ToString("g17", CultureInfo.InvariantCulture));
 
           break;
         default: {
-          switch (node.Symbol) {
-            case FactorVariable: {
-              var factorNode = (FactorVariableTreeNode)node;
-              FormatFactor(factorNode, strBuilder);
+            switch (node.Symbol) {
+              case FactorVariable: {
+                  var factorNode = (FactorVariableTreeNode)node;
+                  FormatFactor(factorNode, strBuilder);
 
-              break;
-            }
-            case BinaryFactorVariable: {
-              var binFactorNode = (BinaryFactorVariableTreeNode)node;
-              FormatBinaryFactor(binFactorNode, strBuilder);
+                  break;
+                }
+              case BinaryFactorVariable: {
+                  var binFactorNode = (BinaryFactorVariableTreeNode)node;
+                  FormatBinaryFactor(binFactorNode, strBuilder);
 
-              break;
+                  break;
+                }
+              default:
+                throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for C# symbolic expression tree formatter.");
             }
-            default:
-              throw new NotSupportedException("Formatting of symbol: " + node.Symbol + " not supported for C# symbolic expression tree formatter.");
+
+            break;
           }
-
-          break;
-        }
       }
     }
   }

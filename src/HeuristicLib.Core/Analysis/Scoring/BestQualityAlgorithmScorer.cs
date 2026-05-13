@@ -71,7 +71,8 @@ public class ParetoState<T>
         t = true;
     }
 
-    if (!t) return;
+    if (!t)
+      return;
     HyperVolume = new Lazy<ObjectiveVector>(() => HyperVolumeCalculator.Calculate(Front.Select(x => x.ObjectiveVector), referencePoint, objective));
   }
 

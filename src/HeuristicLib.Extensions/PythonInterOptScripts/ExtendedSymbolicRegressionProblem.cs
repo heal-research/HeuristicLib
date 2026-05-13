@@ -43,14 +43,14 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
 
   public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random)
   {
-    return individualPythonCallback(solution, InnerProblem.Evaluate(solution) ).ToArray();
+    return individualPythonCallback(solution, InnerProblem.Evaluate(solution)).ToArray();
   }
 
   #region CallTheseFromPython
 
   public static Population<SymbolicExpressionTree> RunDefault(
-    string file, int trainingRowCount, 
-    Func<SymbolicExpressionTree,ObjectiveVector, double[]> individualPythonCallback,
+    string file, int trainingRowCount,
+    Func<SymbolicExpressionTree, ObjectiveVector, double[]> individualPythonCallback,
     Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> populationwidePythonCallback, int seed = 42)
   {
 
@@ -74,13 +74,13 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
       symbolicExpressionTreeSearchSpace,
       new PearsonR2Evaluator()
 
-      // !! if other evaluators are added, the length of the objective vectors returned by the python 
-      // !! callback needs to be increased accordingly, and the problem's objective directions need to
-      // !! be updated to reflect the new objectives (e.g. more maximization objectives if you add more
-      // !! evaluators that you want to maximize)
+    // !! if other evaluators are added, the length of the objective vectors returned by the python 
+    // !! callback needs to be increased accordingly, and the problem's objective directions need to
+    // !! be updated to reflect the new objectives (e.g. more maximization objectives if you add more
+    // !! evaluators that you want to maximize)
 
-      // new RootMeanSquaredErrorEvaluator(), 
-      // new TreeLengthEvaluator() //... other evaluators
+    // new RootMeanSquaredErrorEvaluator(), 
+    // new TreeLengthEvaluator() //... other evaluators
     ) {
       ParameterOptimizationIterations = 5 //this is the effort spent on Constant-Optimization
     };
@@ -99,15 +99,15 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
     };
     var objective = new Objective(directions, new LexicographicComparer(directions));
 
-    if(individualPythonCallback == null) {
+    if (individualPythonCallback == null) {
 
       // !! number of evalutors in SymbolicRegressionProblem, objectives, and this length
       // !! of the objective vectors returned by the python callbacks all need to be in sync
 
-      individualPythonCallback = (SymbolicExpressionTree tree, ObjectiveVector objectiveVector) => new double[] {objectiveVector[0], 0, 0, 0, 0 }; //dummy values to keep the objective vectors at expected length
+      individualPythonCallback = (SymbolicExpressionTree tree, ObjectiveVector objectiveVector) => new double[] { objectiveVector[0], 0, 0, 0, 0 }; //dummy values to keep the objective vectors at expected length
     }
 
-    var problem =  new ExtendedSymbolicRegressionProblem(objective, symbolicExpressionTreeSearchSpace, individualPythonCallback) { InnerProblem = p };
+    var problem = new ExtendedSymbolicRegressionProblem(objective, symbolicExpressionTreeSearchSpace, individualPythonCallback) { InnerProblem = p };
 
     var symRegAllMutator = ChooseOneMutator.Create(
       new ChangeNodeTypeManipulation(),
@@ -121,7 +121,7 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
     //var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), symRegAllMutator);
     var ga = new GeneticAlgorithmBuilder<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem> {
       Creator = new ProbabilisticTreeCreator(),
-      Crossover = new SubtreeCrossover(), 
+      Crossover = new SubtreeCrossover(),
       Mutator = symRegAllMutator,
       MutationRate = 0.1,
       Selector = new TournamentSelector<SymbolicExpressionTree>(4),
@@ -136,4 +136,4 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
   }
   #endregion
 }
- 
+
