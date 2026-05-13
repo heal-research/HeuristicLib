@@ -6,6 +6,39 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.Vectors;
 public sealed class RealVectorTests
 {
   [Fact]
+  public void Create_FromArray_CopiesElements()
+  {
+    var elements = new[] { 1.0, 2.0, 3.0 };
+
+    var vector = RealVector.Create(elements);
+    elements[0] = 99.0;
+
+    Assert.Equal(new[] { 1.0, 2.0, 3.0 }, vector.ToArray());
+  }
+
+  [Fact]
+  public void Create_FromEnumerable_CopiesElements()
+  {
+    var elements = new List<double> { 1.0, 2.0, 3.0 };
+
+    var vector = RealVector.Create(elements);
+    elements[0] = 99.0;
+
+    Assert.Equal(new[] { 1.0, 2.0, 3.0 }, vector.ToArray());
+  }
+
+  [Fact]
+  public void FromOwnedArray_UsesProvidedArray()
+  {
+    var elements = new[] { 1.0, 2.0, 3.0 };
+
+    var vector = RealVector.FromOwnedArray(elements);
+    elements[0] = 99.0;
+
+    Assert.Equal(new[] { 99.0, 2.0, 3.0 }, vector.ToArray());
+  }
+
+  [Fact]
   public void Equals_SameReference_ReturnsTrue()
   {
     RealVector v = new[] { 1.0, 2.0, 3.0 };

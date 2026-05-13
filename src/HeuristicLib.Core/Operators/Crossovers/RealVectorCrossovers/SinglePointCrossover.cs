@@ -25,6 +25,6 @@ public record SinglePointCrossover : SingleSolutionCrossover<RealVector, RealVec
       offspringValues[i] = parent2[i];
     }
 
-    return RealVector.Clamp(new RealVector(offspringValues), minimum, maximum);
+    return RealVector.Clamp(RealVector.FromOwnedArray(offspringValues), minimum, maximum);
   }
 }

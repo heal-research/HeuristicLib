@@ -114,6 +114,6 @@ public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
       }
     }
 
-    return new Permutation(result);
+    return Permutation.FromOwnedArray(result);
   }
 }

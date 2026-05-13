@@ -14,7 +14,7 @@ public static class PermutationRandomExtensions
         (elements[i], elements[j]) = (elements[j], elements[i]);
       }
 
-      return Permutation.FromMemory(elements);
+      return Permutation.FromOwnedArray(elements);
     }
 
     public Permutation Swap(Permutation permutation)
@@ -25,7 +25,7 @@ public static class PermutationRandomExtensions
 
       var newElements = permutation.ToArray();
       (newElements[index1], newElements[index2]) = (newElements[index2], newElements[index1]);
-      return Permutation.FromMemory(newElements);
+      return Permutation.FromOwnedArray(newElements);
     }
   }
 }

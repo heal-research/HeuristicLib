@@ -13,42 +13,33 @@ public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationS
     return Cross(parent1, parent2, random);
   }
 
-  public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng, Memory<int>? memory = null)
+  public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator rng)
   {
     if (parent1.Count != parent2.Count) {
       throw new ArgumentException("Parent permutations must have the same length.");
-    }
-
-    if (memory.HasValue && memory.Value.Length < parent1.Count) {
-      throw new ArgumentException("Provided memory length is less than parent permutations length.");
     }
 
     var (start, end) = GetRandomBreakPoints(parent1.Count, rng);
 
-    return Cross(parent1, parent2, start, end, memory);
+    return Cross(parent1, parent2, start, end);
   }
 
-  public static Permutation Cross(Permutation parent1, Permutation parent2, int start, int end, Memory<int>? memory = null)
+  public static Permutation Cross(Permutation parent1, Permutation parent2, int start, int end)
   {
     if (parent1.Count != parent2.Count) {
       throw new ArgumentException("Parent permutations must have the same length.");
-    }
-
-    if (memory.HasValue && memory.Value.Length < parent1.Count) {
-      throw new ArgumentException("Provided memory length is less than parent permutations length.");
     }
 
     if (start < 0 || end < 0 || start >= parent1.Count || end >= parent1.Count || start > end) {
       throw new ArgumentException("Start and end indices must be within the bounds of the permutation.");
     }
 
-    var offspringMemory = memory ?? new int[parent1.Count];
-    Cross(parent1.Span, parent2.Span, start, end, offspringMemory.Span);
-
-    return Permutation.FromMemory(offspringMemory);
+    var offspring = new int[parent1.Count];
+    Cross(parent1, parent2, start, end, offspring);
+    return Permutation.FromOwnedArray(offspring);
   }
 
-  private static void Cross(ReadOnlySpan<int> parent1, ReadOnlySpan<int> parent2, int start, int end, Span<int> offspring)
+  private static void Cross(Permutation parent1, Permutation parent2, int start, int end, Span<int> offspring)
   {
     Span<bool> contains = stackalloc bool[offspring.Length];
     contains.Clear();
@@ -71,7 +62,7 @@ public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationS
       }
     }
 
-    for (var i = end; i < parent1.Length; i++) {
+    for (var i = end; i < parent1.Count; i++) {
       var value = parent2[i];
       if (!contains[value]) {
         offspring[currentIndex] = value;

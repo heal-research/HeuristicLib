@@ -6,6 +6,39 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.Vectors;
 public sealed class PermutationTests
 {
   [Fact]
+  public void Create_FromArray_CopiesElements()
+  {
+    var elements = new[] { 2, 0, 1 };
+
+    var permutation = Permutation.Create(elements);
+    elements[0] = 1;
+
+    Assert.Equal(new[] { 2, 0, 1 }, permutation.ToArray());
+  }
+
+  [Fact]
+  public void Create_FromEnumerable_CopiesElements()
+  {
+    var elements = new List<int> { 2, 0, 1 };
+
+    var permutation = Permutation.Create(elements);
+    elements[0] = 1;
+
+    Assert.Equal(new[] { 2, 0, 1 }, permutation.ToArray());
+  }
+
+  [Fact]
+  public void FromOwnedArray_UsesProvidedArray()
+  {
+    var elements = new[] { 2, 0, 1 };
+
+    var permutation = Permutation.FromOwnedArray(elements);
+    elements[0] = 1;
+
+    Assert.Equal(new[] { 1, 0, 1 }, permutation.ToArray());
+  }
+
+  [Fact]
   public void Constructor_ValidPermutation_CreatesInstance()
   {
     Permutation permutation = new[] { 2, 0, 1, 3 };
@@ -137,29 +170,31 @@ public sealed class PermutationTests
   }
 
   [Fact]
-  public void Span_ExposesElementsInOrder()
+  public void FromOwnedArray_ValidPermutation_CreatesInstance()
   {
-    Permutation permutation = new[] { 2, 0, 1 };
+    var elements = new[] { 1, 2, 0 };
 
-    Assert.True(permutation.Span.SequenceEqual(new[] { 2, 0, 1 }));
-  }
-
-  [Fact]
-  public void FromMemory_ValidPermutation_CreatesInstance()
-  {
-    var memory = new[] { 1, 2, 0 }.AsMemory();
-
-    var permutation = Permutation.FromMemory(memory);
+    var permutation = Permutation.FromOwnedArray(elements);
 
     Assert.Equal(new[] { 1, 2, 0 }, permutation.ToArray());
   }
 
   [Fact]
-  public void FromMemory_InvalidPermutation_ThrowsArgumentException()
+  public void FromOwnedArray_InvalidPermutation_ThrowsArgumentException()
   {
-    var memory = new[] { 1, 1, 0 }.AsMemory();
+    var elements = new[] { 1, 1, 0 };
 
-    Assert.Throws<ArgumentException>(() => Permutation.FromMemory(memory));
+    Assert.Throws<ArgumentException>(() => Permutation.FromOwnedArray(elements));
+  }
+
+  [Theory]
+  [InlineData(0, 1, 1)]
+  [InlineData(0, -1, 1)]
+  [InlineData(0, 1, 3)]
+  [InlineData(0, 2)]
+  public void Create_InvalidPermutation_ThrowsArgumentException(params int[] elements)
+  {
+    Assert.Throws<ArgumentException>(() => Permutation.Create(elements));
   }
 
   [Fact]

@@ -5,6 +5,39 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.Vectors;
 public sealed class BoolVectorTests
 {
   [Fact]
+  public void Create_FromArray_CopiesElements()
+  {
+    var elements = new[] { true, false, true };
+
+    var vector = BoolVector.Create(elements);
+    elements[0] = false;
+
+    Assert.Equal(new[] { true, false, true }, vector.ToArray());
+  }
+
+  [Fact]
+  public void Create_FromEnumerable_CopiesElements()
+  {
+    var elements = new List<bool> { true, false, true };
+
+    var vector = BoolVector.Create(elements);
+    elements[0] = false;
+
+    Assert.Equal(new[] { true, false, true }, vector.ToArray());
+  }
+
+  [Fact]
+  public void FromOwnedArray_UsesProvidedArray()
+  {
+    var elements = new[] { true, false, true };
+
+    var vector = BoolVector.FromOwnedArray(elements);
+    elements[0] = false;
+
+    Assert.Equal(new[] { false, false, true }, vector.ToArray());
+  }
+
+  [Fact]
   public void Constructor_FromEnumerable_CreatesVector()
   {
     var vector = new BoolVector(true, false, true);

@@ -3,9 +3,14 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
-public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyList<int>, IEquatable<IntegerVector>
+public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector>
 {
-  private readonly int[] elements = elements.ToArray();
+  private readonly int[] elements;
+
+  public IntegerVector(params IEnumerable<int> elements) : this(elements.ToArray(), takeOwnership: true) { }
+
+  private IntegerVector(int[] elements, bool takeOwnership)
+    => this.elements = takeOwnership ? elements : elements.ToArray();
 
   public int Count => elements.Length;
 
@@ -49,6 +54,16 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
 
   public static implicit operator RealVector(IntegerVector integerVector) => ToRealVector(integerVector);
 
+  public static IntegerVector Create(params int[] elements) => new(elements, takeOwnership: false);
+
+  public static IntegerVector Create(IEnumerable<int> elements) => new(elements);
+
+  /// <summary>
+  /// Creates a vector backed by <paramref name="elements"/> without copying it.
+  /// The caller transfers ownership of the array and must not mutate it after this method returns.
+  /// </summary>
+  public static IntegerVector FromOwnedArray(int[] elements) => new(elements, takeOwnership: true);
+
   public static IntegerVector CreateUniform(int length, IntegerVector low, IntegerVector high, IRandomNumberGenerator random)
     => random.NextIntegerVectorUniform(low, high, length);
 
@@ -59,7 +74,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = input[i];
     }
 
-    return new RealVector(result);
+    return RealVector.FromOwnedArray(result);
   }
 
   public static double ToRealAt(IntegerVector input, int dimension)
@@ -82,7 +97,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = left + right;
     }
 
-    return new IntegerVector(result);
+    return FromOwnedArray(result);
   }
 
   public static IntegerVector Subtract(IntegerVector a, IntegerVector b)
@@ -98,7 +113,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = left - right;
     }
 
-    return new IntegerVector(result);
+    return FromOwnedArray(result);
   }
 
   public static IntegerVector Multiply(IntegerVector a, IntegerVector b)
@@ -114,7 +129,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = left * right;
     }
 
-    return new IntegerVector(result);
+    return FromOwnedArray(result);
   }
 
   public static IntegerVector Divide(IntegerVector a, IntegerVector b)
@@ -130,7 +145,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = left / right;
     }
 
-    return new IntegerVector(result);
+    return FromOwnedArray(result);
   }
 
   public static IntegerVector Clamp(IntegerVector input, IntegerVector? min, IntegerVector? max)
@@ -147,7 +162,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       changed |= result[i] != input[i];
     }
 
-    return changed ? new IntegerVector(result) : input;
+    return changed ? FromOwnedArray(result) : input;
   }
 
   public static int ClampAt(IntegerVector input, IntegerVector? min, IntegerVector? max, int dimension)
@@ -197,7 +212,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = aValue > bValue;
     }
 
-    return new BoolVector(result);
+    return BoolVector.FromOwnedArray(result);
   }
 
   public static BoolVector operator <(IntegerVector a, IntegerVector b)
@@ -213,7 +228,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = aValue < bValue;
     }
 
-    return new BoolVector(result);
+    return BoolVector.FromOwnedArray(result);
   }
 
   public static BoolVector operator >=(IntegerVector a, IntegerVector b)
@@ -229,7 +244,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = aValue >= bValue;
     }
 
-    return new BoolVector(result);
+    return BoolVector.FromOwnedArray(result);
   }
 
   public static BoolVector operator <=(IntegerVector a, IntegerVector b)
@@ -245,7 +260,7 @@ public sealed class IntegerVector(params IEnumerable<int> elements) : IReadOnlyL
       result[i] = aValue <= bValue;
     }
 
-    return new BoolVector(result);
+    return BoolVector.FromOwnedArray(result);
   }
 
   public static bool operator ==(IntegerVector? a, IntegerVector? b)

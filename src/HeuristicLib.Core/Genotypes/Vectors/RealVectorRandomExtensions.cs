@@ -24,7 +24,7 @@ public static class RealVectorRandomExtensions
 
     private RealVector NextRealVectorUniformUnchecked(RealVector minimum, RealVector maximum, int length)
     {
-      var value = new RealVector(random.NextDoubles(length));
+      var value = RealVector.FromOwnedArray(random.NextDoubles(length));
       return minimum + ((maximum - minimum) * value);
     }
 
@@ -37,7 +37,7 @@ public static class RealVectorRandomExtensions
         result[i] = random.NextNormalUnchecked(mu, sigma);
       }
 
-      return result;
+      return RealVector.FromOwnedArray(result);
     }
   }
 }

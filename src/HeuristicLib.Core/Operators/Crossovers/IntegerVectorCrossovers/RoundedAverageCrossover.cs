@@ -25,6 +25,6 @@ public record RoundedAverageCrossover : SingleSolutionCrossover<IntegerVector, I
       result[i] = RealVector.RoundToIntegerAt(avg / (double)parentsCount, minimum, maximum, i);
     }
 
-    return new IntegerVector(result);
+    return IntegerVector.FromOwnedArray(result);
   }
 }

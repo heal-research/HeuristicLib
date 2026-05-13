@@ -6,6 +6,39 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.Vectors;
 public sealed class IntegerVectorTests
 {
   [Fact]
+  public void Create_FromArray_CopiesElements()
+  {
+    var elements = new[] { 1, 2, 3 };
+
+    var vector = IntegerVector.Create(elements);
+    elements[0] = 99;
+
+    Assert.Equal(new[] { 1, 2, 3 }, vector.ToArray());
+  }
+
+  [Fact]
+  public void Create_FromEnumerable_CopiesElements()
+  {
+    var elements = new List<int> { 1, 2, 3 };
+
+    var vector = IntegerVector.Create(elements);
+    elements[0] = 99;
+
+    Assert.Equal(new[] { 1, 2, 3 }, vector.ToArray());
+  }
+
+  [Fact]
+  public void FromOwnedArray_UsesProvidedArray()
+  {
+    var elements = new[] { 1, 2, 3 };
+
+    var vector = IntegerVector.FromOwnedArray(elements);
+    elements[0] = 99;
+
+    Assert.Equal(new[] { 99, 2, 3 }, vector.ToArray());
+  }
+
+  [Fact]
   public void Equals_SameReference_ReturnsTrue()
   {
     IntegerVector v = new[] { 1, 2, 3 };

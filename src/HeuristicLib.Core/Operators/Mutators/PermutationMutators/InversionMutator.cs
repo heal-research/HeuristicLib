@@ -15,6 +15,6 @@ public record InversionMutator : SingleSolutionMutator<Permutation, PermutationS
     var rangeEnd = end ?? random.NextInt(rangeStart, parent.Count);
     var newElements = parent.ToArray();
     Array.Reverse(newElements, rangeStart, rangeEnd - rangeStart + 1);
-    return new Permutation(newElements);
+    return Permutation.FromOwnedArray(newElements);
   }
 }

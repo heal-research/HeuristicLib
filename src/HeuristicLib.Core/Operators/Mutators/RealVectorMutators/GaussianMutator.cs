@@ -44,6 +44,6 @@ public record GaussianMutator
       }
     }
 
-    return RealVector.Clamp(new RealVector(newElements), minimum, maximum);
+    return RealVector.Clamp(RealVector.FromOwnedArray(newElements), minimum, maximum);
   }
 }

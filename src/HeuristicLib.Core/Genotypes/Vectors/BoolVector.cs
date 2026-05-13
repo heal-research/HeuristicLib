@@ -6,10 +6,23 @@ public sealed class BoolVector : IReadOnlyList<bool>, IEquatable<BoolVector>
 {
   private readonly bool[] elements;
 
-  public BoolVector(params IEnumerable<bool> elements) => this.elements = elements.ToArray();
+  public BoolVector(params IEnumerable<bool> elements) : this(elements.ToArray(), takeOwnership: true) { }
+
+  private BoolVector(bool[] elements, bool takeOwnership)
+    => this.elements = takeOwnership ? elements : elements.ToArray();
 
   public static implicit operator BoolVector(bool value) => new(value);
   public static implicit operator BoolVector(bool[] values) => new(values);
+
+  public static BoolVector Create(params bool[] elements) => new(elements, takeOwnership: false);
+
+  public static BoolVector Create(IEnumerable<bool> elements) => new(elements);
+
+  /// <summary>
+  /// Creates a vector backed by <paramref name="elements"/> without copying it.
+  /// The caller transfers ownership of the array and must not mutate it after this method returns.
+  /// </summary>
+  public static BoolVector FromOwnedArray(bool[] elements) => new(elements, takeOwnership: true);
 
   public bool this[int index] => elements[index];
 
@@ -40,7 +53,7 @@ public sealed class BoolVector : IReadOnlyList<bool>, IEquatable<BoolVector>
       result[i] = aValue && bValue;
     }
 
-    return new BoolVector(result);
+    return FromOwnedArray(result);
   }
 
   public static BoolVector Or(BoolVector a, BoolVector b)
@@ -58,7 +71,7 @@ public sealed class BoolVector : IReadOnlyList<bool>, IEquatable<BoolVector>
       result[i] = aValue || bValue;
     }
 
-    return new BoolVector(result);
+    return FromOwnedArray(result);
   }
 
   public static BoolVector Xor(BoolVector a, BoolVector b)
@@ -76,7 +89,7 @@ public sealed class BoolVector : IReadOnlyList<bool>, IEquatable<BoolVector>
       result[i] = aValue ^ bValue;
     }
 
-    return new BoolVector(result);
+    return FromOwnedArray(result);
   }
 
   public static BoolVector Not(BoolVector a)
@@ -87,7 +100,7 @@ public sealed class BoolVector : IReadOnlyList<bool>, IEquatable<BoolVector>
       result[i] = !a[i];
     }
 
-    return new BoolVector(result);
+    return FromOwnedArray(result);
   }
 
   public static BoolVector operator &(BoolVector a, BoolVector b) => And(a, b);

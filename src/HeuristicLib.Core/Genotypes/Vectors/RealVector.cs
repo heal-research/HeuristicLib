@@ -5,11 +5,16 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
 [SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
-public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyList<double>, IEquatable<RealVector>
+public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 {
-  private readonly double[] elements = elements.ToArray();
+  private readonly double[] elements;
 
   private const double IntegerBoundaryTolerance = 1e-12;
+
+  public RealVector(params IEnumerable<double> elements) : this(elements.ToArray(), takeOwnership: true) { }
+
+  private RealVector(double[] elements, bool takeOwnership)
+    => this.elements = takeOwnership ? elements : elements.ToArray();
 
   public double this[Index index] => elements[index];
 
@@ -122,16 +127,22 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       iElements[i] = (int)Math.Round(elements[i]);
     }
 
-    return iElements;
+    return IntegerVector.FromOwnedArray(iElements);
   }
-
-  // public RealVector(double value) {
-  //   elements = [value];
-  // }
-
+  
   public static implicit operator RealVector(double value) => new(value);
 
   public static implicit operator RealVector(double[] values) => new(values);
+
+  public static RealVector Create(params double[] elements) => new(elements, takeOwnership: false);
+
+  public static RealVector Create(IEnumerable<double> elements) => new(elements);
+
+  /// <summary>
+  /// Creates a vector backed by <paramref name="elements"/> without copying it.
+  /// The caller transfers ownership of the array and must not mutate it after this method returns.
+  /// </summary>
+  public static RealVector FromOwnedArray(double[] elements) => new(elements, takeOwnership: true);
 
   public static RealVector Repeat(double value, int count) => new(Enumerable.Repeat(value, count));
 
@@ -154,7 +165,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       result[i] = left + right;
     }
 
-    return new RealVector(result);
+    return FromOwnedArray(result);
   }
 
   public static RealVector Subtract(RealVector a, RealVector b)
@@ -170,7 +181,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       result[i] = left - right;
     }
 
-    return new RealVector(result);
+    return FromOwnedArray(result);
   }
 
   public static RealVector Multiply(RealVector a, RealVector b)
@@ -186,7 +197,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       result[i] = left * right;
     }
 
-    return new RealVector(result);
+    return FromOwnedArray(result);
   }
 
   public static RealVector Divide(RealVector a, RealVector b)
@@ -202,7 +213,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       result[i] = left / right;
     }
 
-    return new RealVector(result);
+    return FromOwnedArray(result);
   }
 
   public static RealVector operator +(RealVector a, RealVector b) => Add(a, b);
@@ -285,7 +296,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       }
     }
 
-    return result is null ? input : new RealVector(result);
+    return result is null ? input : FromOwnedArray(result);
   }
 
   public static double ClampAt(RealVector input, RealVector? min, RealVector? max, int dimension)
@@ -536,7 +547,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       result[i] = aValue > bValue;
     }
 
-    return new BoolVector(result);
+    return BoolVector.FromOwnedArray(result);
   }
 
   public static BoolVector operator <(RealVector a, RealVector b)
@@ -554,7 +565,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       result[i] = aValue < bValue;
     }
 
-    return new BoolVector(result);
+    return BoolVector.FromOwnedArray(result);
   }
 
   public static BoolVector operator >=(RealVector a, RealVector b)
@@ -572,7 +583,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       result[i] = aValue >= bValue;
     }
 
-    return new BoolVector(result);
+    return BoolVector.FromOwnedArray(result);
   }
 
   public static BoolVector operator <=(RealVector a, RealVector b)
@@ -590,7 +601,7 @@ public sealed class RealVector(params IEnumerable<double> elements) : IReadOnlyL
       result[i] = aValue <= bValue;
     }
 
-    return new BoolVector(result);
+    return BoolVector.FromOwnedArray(result);
   }
 
   public static bool operator ==(RealVector? a, RealVector? b) => Equals(a, b);
