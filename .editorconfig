@@ -6,10 +6,11 @@ root = true
 indent_size = 2
 indent_style = space
 tab_width = 2
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
 
 # New line preferences
-end_of_line = crlf
-insert_final_newline = true
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 dotnet_style_coalesce_expression = true:suggestion
 dotnet_style_null_propagation = true:suggestion
@@ -273,8 +274,6 @@ csharp_style_prefer_readonly_struct_member = true:suggestion
 
 # Verify settings
 [*.{received,verified}.{json,txt,xml}]
-charset = "utf-8-bom"
-end_of_line = lf
 indent_size = unset
 indent_style = unset
 insert_final_newline = false
