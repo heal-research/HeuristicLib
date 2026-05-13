@@ -547,7 +547,7 @@ public sealed class BoolVectorTests
   [Fact]
   public void ImplicitConversion_FromArray_CreatesVectorWithValues()
   {
-    BoolVector vector = new[] { true, false, true };
+    BoolVector vector = BoolVector.Create(true, false, true);
 
     Assert.Equal(3, vector.Count);
     Assert.Equal(new[] { true, false, true }, vector.ToArray());

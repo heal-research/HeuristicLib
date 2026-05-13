@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.SearchSpaces.Vectors;
@@ -19,7 +19,7 @@ public class PermutationSearchSpaceTests
     var space = new PermutationSearchSpace(4);
 
     int[] values = [0, 1, 2, 3];
-    Assert.True(space.Contains(values));
+    Assert.True(space.Contains(Permutation.Create(values)));
   }
 
   [Fact]
@@ -28,7 +28,7 @@ public class PermutationSearchSpaceTests
     var space = new PermutationSearchSpace(4);
 
     int[] values = [0, 1, 2];
-    Assert.False(space.Contains(values));
+    Assert.False(space.Contains(Permutation.Create(values)));
   }
 
   [Fact]
@@ -37,7 +37,7 @@ public class PermutationSearchSpaceTests
     var space = new PermutationSearchSpace(4);
 
     int[] values = [0, 1, 2, 3, 4];
-    Assert.False(space.Contains(values));
+    Assert.False(space.Contains(Permutation.Create(values)));
   }
 
   [Fact]
@@ -45,7 +45,7 @@ public class PermutationSearchSpaceTests
   {
     var space = new PermutationSearchSpace(0);
 
-    Assert.True(space.Contains(Array.Empty<int>()));
+    Assert.True(space.Contains(Permutation.Create(Array.Empty<int>())));
   }
 
   [Fact]

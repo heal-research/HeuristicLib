@@ -32,6 +32,6 @@ public record DiscreteCrossover : SingleSolutionCrossover<IntegerVector, Integer
     for (int i = 0; i < length; i++)
       result[i] = parents[random.NextInt(n)][i];
 
-    return result;
+    return IntegerVector.FromOwnedArray(result);
   }
 }

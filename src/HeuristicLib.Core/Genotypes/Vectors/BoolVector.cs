@@ -12,7 +12,6 @@ public sealed class BoolVector : IReadOnlyList<bool>, IEquatable<BoolVector>
     => this.elements = takeOwnership ? elements : elements.ToArray();
 
   public static implicit operator BoolVector(bool value) => new(value);
-  public static implicit operator BoolVector(bool[] values) => new(values);
 
   public static BoolVector Create(params bool[] elements) => new(elements, takeOwnership: false);
 

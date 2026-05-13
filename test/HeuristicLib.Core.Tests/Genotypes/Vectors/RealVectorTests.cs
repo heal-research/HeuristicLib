@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.Vectors;
@@ -41,7 +41,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Equals_SameReference_ReturnsTrue()
   {
-    RealVector v = new[] { 1.0, 2.0, 3.0 };
+    RealVector v = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.True(v.Equals(v));
     Assert.True(v == v);
@@ -51,7 +51,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Equals_Null_ReturnsFalse()
   {
-    RealVector v = new[] { 1.0, 2.0, 3.0 };
+    RealVector v = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.False(v.Equals(null));
     Assert.False(v.Equals((object?)null));
@@ -60,7 +60,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Equals_ObjectOfDifferentType_ReturnsFalse()
   {
-    RealVector v = new[] { 1.0, 2.0, 3.0 };
+    RealVector v = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.False(v.Equals("not a vector"));
   }
@@ -68,8 +68,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Equals_SameElements_ReturnsTrue()
   {
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 1.0, 2.0, 3.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.True(a.Equals(b));
     Assert.True(b.Equals(a));
@@ -81,8 +81,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Equals_DifferentLengths_ReturnsFalse()
   {
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 1.0, 2.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(1.0, 2.0);
 
     Assert.False(a.Equals(b));
     Assert.False(b.Equals(a));
@@ -93,8 +93,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Equals_DifferentElements_ReturnsFalse()
   {
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 1.0, 2.0, 4.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(1.0, 2.0, 4.0);
 
     Assert.False(a.Equals(b));
     Assert.False(b.Equals(a));
@@ -105,9 +105,9 @@ public sealed class RealVectorTests
   [Fact]
   public void Equals_IsTransitive()
   {
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 1.0, 2.0, 3.0 };
-    RealVector c = new[] { 1.0, 2.0, 3.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector c = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.True(a.Equals(b));
     Assert.True(b.Equals(c));
@@ -117,8 +117,8 @@ public sealed class RealVectorTests
   [Fact]
   public void GetHashCode_EqualVectors_HaveSameHashCode()
   {
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 1.0, 2.0, 3.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.Equal(a.GetHashCode(), b.GetHashCode());
   }
@@ -126,7 +126,7 @@ public sealed class RealVectorTests
   [Fact]
   public void GetHashCode_SameInstance_IsStable()
   {
-    RealVector v = new[] { 1.0, 2.0, 3.0 };
+    RealVector v = RealVector.Create(1.0, 2.0, 3.0);
 
     var h1 = v.GetHashCode();
     var h2 = v.GetHashCode();
@@ -138,8 +138,8 @@ public sealed class RealVectorTests
   public void HashSet_ContainsEquivalentVector()
   {
     var set = new HashSet<RealVector>();
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 1.0, 2.0, 3.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(1.0, 2.0, 3.0);
 
     set.Add(a);
 
@@ -150,8 +150,8 @@ public sealed class RealVectorTests
   public void HashSet_AddEquivalentVector_DoesNotIncreaseCount()
   {
     var set = new HashSet<RealVector>();
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 1.0, 2.0, 3.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(1.0, 2.0, 3.0);
 
     set.Add(a);
     set.Add(b);
@@ -163,8 +163,8 @@ public sealed class RealVectorTests
   public void Dictionary_CanUseEquivalentVectorAsKey()
   {
     var dict = new Dictionary<RealVector, string>();
-    RealVector key1 = new[] { 1.0, 2.0, 3.0 };
-    RealVector key2 = new[] { 1.0, 2.0, 3.0 };
+    RealVector key1 = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector key2 = RealVector.Create(1.0, 2.0, 3.0);
 
     dict[key1] = "value";
 
@@ -175,7 +175,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Count_Indexer_AndEnumeration_WorkCorrectly()
   {
-    RealVector v = new[] { 1.5, 2.5, 3.5 };
+    RealVector v = RealVector.Create(1.5, 2.5, 3.5);
 
     Assert.Equal(3, v.Count);
     Assert.Equal(1.5, v[0]);
@@ -187,7 +187,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Indexer_WithIndexFromEnd_WorksCorrectly()
   {
-    RealVector v = new[] { 10.0, 20.0, 30.0 };
+    RealVector v = RealVector.Create(10.0, 20.0, 30.0);
 
     Assert.Equal(30.0, v[^1]);
     Assert.Equal(20.0, v[^2]);
@@ -197,7 +197,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Contains_UsesElementEquality()
   {
-    RealVector v = new[] { 1.0, 2.0, 3.0 };
+    RealVector v = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.True(v.Contains(2.0));
     Assert.False(v.Contains(4.0));
@@ -206,8 +206,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Add_SameLength_AddsElementwise()
   {
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 10.0, 20.0, 30.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(10.0, 20.0, 30.0);
 
     var result = RealVector.Add(a, b);
 
@@ -218,7 +218,7 @@ public sealed class RealVectorTests
   public void Add_BroadcastsScalarLeft()
   {
     RealVector scalar = 2.0;
-    RealVector vector = new[] { 10.0, 20.0, 30.0 };
+    RealVector vector = RealVector.Create(10.0, 20.0, 30.0);
 
     var result = RealVector.Add(scalar, vector);
 
@@ -228,7 +228,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Add_BroadcastsScalarRight()
   {
-    RealVector vector = new[] { 10.0, 20.0, 30.0 };
+    RealVector vector = RealVector.Create(10.0, 20.0, 30.0);
     RealVector scalar = 2.0;
 
     var result = RealVector.Add(vector, scalar);
@@ -239,8 +239,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Add_IncompatibleLengths_Throws()
   {
-    RealVector a = new[] { 1.0, 2.0 };
-    RealVector b = new[] { 10.0, 20.0, 30.0 };
+    RealVector a = RealVector.Create(1.0, 2.0);
+    RealVector b = RealVector.Create(10.0, 20.0, 30.0);
 
     Assert.Throws<ArgumentException>(() => RealVector.Add(a, b));
   }
@@ -248,8 +248,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Subtract_SameLength_SubtractsElementwise()
   {
-    RealVector a = new[] { 10.0, 20.0, 30.0 };
-    RealVector b = new[] { 1.0, 2.0, 3.0 };
+    RealVector a = RealVector.Create(10.0, 20.0, 30.0);
+    RealVector b = RealVector.Create(1.0, 2.0, 3.0);
 
     var result = RealVector.Subtract(a, b);
 
@@ -259,8 +259,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Multiply_SameLength_MultipliesElementwise()
   {
-    RealVector a = new[] { 2.0, 3.0, 4.0 };
-    RealVector b = new[] { 10.0, 20.0, 30.0 };
+    RealVector a = RealVector.Create(2.0, 3.0, 4.0);
+    RealVector b = RealVector.Create(10.0, 20.0, 30.0);
 
     var result = RealVector.Multiply(a, b);
 
@@ -270,8 +270,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Divide_SameLength_DividesElementwise()
   {
-    RealVector a = new[] { 10.0, 20.0, 30.0 };
-    RealVector b = new[] { 2.0, 4.0, 5.0 };
+    RealVector a = RealVector.Create(10.0, 20.0, 30.0);
+    RealVector b = RealVector.Create(2.0, 4.0, 5.0);
 
     var result = RealVector.Divide(a, b);
 
@@ -281,8 +281,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Operators_DelegateToArithmeticMethods()
   {
-    RealVector a = new[] { 10.0, 20.0, 30.0 };
-    RealVector b = new[] { 2.0, 4.0, 5.0 };
+    RealVector a = RealVector.Create(10.0, 20.0, 30.0);
+    RealVector b = RealVector.Create(2.0, 4.0, 5.0);
 
     Assert.Equal(new[] { 12.0, 24.0, 35.0 }, (a + b).ToArray());
     Assert.Equal(new[] { 8.0, 16.0, 25.0 }, (a - b).ToArray());
@@ -293,8 +293,8 @@ public sealed class RealVectorTests
   [Fact]
   public void AreCompatible_ReturnsTrue_ForSameLength()
   {
-    RealVector a = new[] { 1.0, 2.0 };
-    RealVector b = new[] { 3.0, 4.0 };
+    RealVector a = RealVector.Create(1.0, 2.0);
+    RealVector b = RealVector.Create(3.0, 4.0);
 
     Assert.True(RealVector.AreCompatible(a, b));
   }
@@ -303,7 +303,7 @@ public sealed class RealVectorTests
   public void AreCompatible_ReturnsTrue_WhenOneIsScalar()
   {
     RealVector scalar = 1.0;
-    RealVector vector = new[] { 3.0, 4.0 };
+    RealVector vector = RealVector.Create(3.0, 4.0);
 
     Assert.True(RealVector.AreCompatible(scalar, vector));
     Assert.True(RealVector.AreCompatible(vector, scalar));
@@ -312,8 +312,8 @@ public sealed class RealVectorTests
   [Fact]
   public void AreCompatible_ReturnsFalse_ForDifferentNonScalarLengths()
   {
-    RealVector a = new[] { 1.0, 2.0 };
-    RealVector b = new[] { 3.0, 4.0, 5.0 };
+    RealVector a = RealVector.Create(1.0, 2.0);
+    RealVector b = RealVector.Create(3.0, 4.0, 5.0);
 
     Assert.False(RealVector.AreCompatible(a, b));
   }
@@ -322,7 +322,7 @@ public sealed class RealVectorTests
   public void BroadcastLength_ReturnsMaxLength()
   {
     RealVector scalar = 1.0;
-    RealVector vector = new[] { 3.0, 4.0, 5.0 };
+    RealVector vector = RealVector.Create(3.0, 4.0, 5.0);
 
     Assert.Equal(3, RealVector.BroadcastLength(scalar, vector));
     Assert.Equal(3, RealVector.BroadcastLength(vector, scalar));
@@ -331,7 +331,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Clamp_BothBoundsNull_ReturnsSameInstance()
   {
-    RealVector input = new[] { 1.0, 2.0, 3.0 };
+    RealVector input = RealVector.Create(1.0, 2.0, 3.0);
 
     var result = RealVector.Clamp(input, null, null);
 
@@ -341,7 +341,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Clamp_NoValueNeedsClamping_ReturnsSameInstance()
   {
-    RealVector input = new[] { 1.0, 2.0, 3.0 };
+    RealVector input = RealVector.Create(1.0, 2.0, 3.0);
     RealVector min = 0.0;
     RealVector max = 5.0;
 
@@ -353,7 +353,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Clamp_ScalarBounds_ClampsValues()
   {
-    RealVector input = new[] { -1.0, 2.0, 10.0 };
+    RealVector input = RealVector.Create(-1.0, 2.0, 10.0);
     RealVector min = 0.0;
     RealVector max = 5.0;
 
@@ -366,9 +366,9 @@ public sealed class RealVectorTests
   [Fact]
   public void Clamp_VectorBounds_ClampsValues()
   {
-    RealVector input = new[] { -1.0, 2.0, 10.0 };
-    RealVector min = new[] { 0.0, 1.0, 2.0 };
-    RealVector max = new[] { 5.0, 3.0, 8.0 };
+    RealVector input = RealVector.Create(-1.0, 2.0, 10.0);
+    RealVector min = RealVector.Create(0.0, 1.0, 2.0);
+    RealVector max = RealVector.Create(5.0, 3.0, 8.0);
 
     var result = RealVector.Clamp(input, min, max);
 
@@ -378,8 +378,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Clamp_MinLengthMismatch_Throws()
   {
-    RealVector input = new[] { 1.0, 2.0, 3.0 };
-    RealVector min = new[] { 0.0, 1.0 };
+    RealVector input = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector min = RealVector.Create(0.0, 1.0);
     RealVector max = 5.0;
 
     Assert.Throws<ArgumentException>(() => RealVector.Clamp(input, min, max));
@@ -388,9 +388,9 @@ public sealed class RealVectorTests
   [Fact]
   public void Clamp_MaxLengthMismatch_Throws()
   {
-    RealVector input = new[] { 1.0, 2.0, 3.0 };
+    RealVector input = RealVector.Create(1.0, 2.0, 3.0);
     RealVector min = 0.0;
-    RealVector max = new[] { 5.0, 6.0 };
+    RealVector max = RealVector.Create(5.0, 6.0);
 
     Assert.Throws<ArgumentException>(() => RealVector.Clamp(input, min, max));
   }
@@ -398,7 +398,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Clamp_InstanceMethod_DelegatesToStaticBehavior()
   {
-    RealVector input = new[] { -1.0, 2.0, 10.0 };
+    RealVector input = RealVector.Create(-1.0, 2.0, 10.0);
     RealVector min = 0.0;
     RealVector max = 5.0;
 
@@ -410,9 +410,9 @@ public sealed class RealVectorTests
   [Fact]
   public void ClampAt_UsesDimensionBounds()
   {
-    RealVector input = new[] { -1.0, 2.0, 10.0 };
-    RealVector min = new[] { 0.0, 1.0, 2.0 };
-    RealVector max = new[] { 5.0, 3.0, 8.0 };
+    RealVector input = RealVector.Create(-1.0, 2.0, 10.0);
+    RealVector min = RealVector.Create(0.0, 1.0, 2.0);
+    RealVector max = RealVector.Create(5.0, 3.0, 8.0);
 
     Assert.Equal(0.0, input.ClampAt(min, max, 0));
     Assert.Equal(2.0, input.ClampAt(min, max, 1));
@@ -422,7 +422,7 @@ public sealed class RealVectorTests
   [Fact]
   public void FloorCeilRound_InstanceMethods_ReturnExpectedValues()
   {
-    RealVector input = new[] { 1.2, -1.8, 0.5 };
+    RealVector input = RealVector.Create(1.2, -1.8, 0.5);
 
     Assert.Equal(new[] { 1.0, -2.0, 0.0 }, input.Floor().ToArray());
     Assert.Equal(new[] { 2.0, -1.0, 1.0 }, input.Ceil().ToArray());
@@ -432,7 +432,7 @@ public sealed class RealVectorTests
   [Fact]
   public void FloorCeilRoundAt_InstanceMethods_ReturnExpectedValues()
   {
-    RealVector input = new[] { 1.2, -1.8, 0.5 };
+    RealVector input = RealVector.Create(1.2, -1.8, 0.5);
 
     Assert.Equal(1.0, input.FloorAt(0));
     Assert.Equal(-1.0, input.CeilAt(1));
@@ -442,7 +442,7 @@ public sealed class RealVectorTests
   [Fact]
   public void RoundToIntegerVector_InstanceMethod_ConvertsWithBounds()
   {
-    RealVector input = new[] { 1.6, -2.8, 0.2 };
+    RealVector input = RealVector.Create(1.6, -2.8, 0.2);
     IntegerVector min = -2;
     IntegerVector max = 2;
 
@@ -517,8 +517,8 @@ public sealed class RealVectorTests
   [Fact]
   public void RoundToIntegerAt_UsesDimensionBounds()
   {
-    IntegerVector min = new[] { -2, -1, -5 };
-    IntegerVector max = new[] { 2, 3, 0 };
+    IntegerVector min = IntegerVector.Create(-2, -1, -5);
+    IntegerVector max = IntegerVector.Create(2, 3, 0);
 
     Assert.Equal(2, RealVector.RoundToIntegerAt(1.6, min, max, 0));
     Assert.Equal(-1, RealVector.RoundToIntegerAt(-2.8, min, max, 1));
@@ -528,8 +528,8 @@ public sealed class RealVectorTests
   [Fact]
   public void FloorAndCeilToIntegerAt_UseDimensionBounds()
   {
-    IntegerVector min = new[] { 0, 10, 100 };
-    IntegerVector max = new[] { 10, 20, 110 };
+    IntegerVector min = IntegerVector.Create(0, 10, 100);
+    IntegerVector max = IntegerVector.Create(10, 20, 110);
 
     Assert.Equal(1, RealVector.FloorToIntegerAt(1.9, min, max, 0));
     Assert.Equal(17, RealVector.FloorToIntegerAt(17.6, min, max, 1));
@@ -543,9 +543,9 @@ public sealed class RealVectorTests
   [Fact]
   public void RoundToIntegerVector_UsesPerDimensionBounds()
   {
-    RealVector input = new[] { 3.1, 17.6, 108.4 };
-    IntegerVector min = new[] { 0, 10, 100 };
-    IntegerVector max = new[] { 10, 20, 110 };
+    RealVector input = RealVector.Create(3.1, 17.6, 108.4);
+    IntegerVector min = IntegerVector.Create(0, 10, 100);
+    IntegerVector max = IntegerVector.Create(10, 20, 110);
 
     var rounded = RealVector.RoundToIntegerVector(input, min, max);
 
@@ -555,8 +555,8 @@ public sealed class RealVectorTests
   [Fact]
   public void ComparisonOperators_SameLength_WorkElementwise()
   {
-    RealVector a = new[] { 1.0, 5.0, 3.0 };
-    RealVector b = new[] { 2.0, 5.0, 1.0 };
+    RealVector a = RealVector.Create(1.0, 5.0, 3.0);
+    RealVector b = RealVector.Create(2.0, 5.0, 1.0);
 
     Assert.Equal(new[] { false, false, true }, (a > b).ToArray());
     Assert.Equal(new[] { true, false, false }, (a < b).ToArray());
@@ -567,7 +567,7 @@ public sealed class RealVectorTests
   [Fact]
   public void ComparisonOperators_BroadcastScalar_WorkElementwise()
   {
-    RealVector a = new[] { 1.0, 5.0, 3.0 };
+    RealVector a = RealVector.Create(1.0, 5.0, 3.0);
     RealVector scalar = 3.0;
 
     Assert.Equal(new[] { false, true, false }, (a > scalar).ToArray());
@@ -579,8 +579,8 @@ public sealed class RealVectorTests
   [Fact]
   public void ComparisonOperators_IncompatibleLengths_Throw()
   {
-    RealVector a = new[] { 1.0, 2.0 };
-    RealVector b = new[] { 1.0, 2.0, 3.0 };
+    RealVector a = RealVector.Create(1.0, 2.0);
+    RealVector b = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.Throws<ArgumentException>(() => a > b);
     Assert.Throws<ArgumentException>(() => a < b);
@@ -599,8 +599,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Dot_ComputesDotProduct()
   {
-    RealVector a = new[] { 1.0, 2.0, 3.0 };
-    RealVector b = new[] { 4.0, 5.0, 6.0 };
+    RealVector a = RealVector.Create(1.0, 2.0, 3.0);
+    RealVector b = RealVector.Create(4.0, 5.0, 6.0);
 
     Assert.Equal(32.0, a.Dot(b), precision: 12);
   }
@@ -608,7 +608,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Norm_ComputesEuclideanNorm()
   {
-    RealVector v = new[] { 3.0, 4.0 };
+    RealVector v = RealVector.Create(3.0, 4.0);
 
     Assert.Equal(5.0, v.Norm(), precision: 12);
   }
@@ -616,8 +616,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Angle_ComputesAngleBetweenVectors()
   {
-    RealVector x = new[] { 1.0, 0.0 };
-    RealVector y = new[] { 0.0, 1.0 };
+    RealVector x = RealVector.Create(1.0, 0.0);
+    RealVector y = RealVector.Create(0.0, 1.0);
 
     Assert.Equal(Math.PI / 2.0, x.Angle(y), precision: 12);
   }
@@ -625,7 +625,7 @@ public sealed class RealVectorTests
   [Fact]
   public void AsIntegerVector_RoundsElements()
   {
-    RealVector v = new[] { 1.2, 1.5, 2.6, -1.5 };
+    RealVector v = RealVector.Create(1.2, 1.5, 2.6, -1.5);
 
     var result = v.AsIntegerVector();
 
@@ -635,7 +635,7 @@ public sealed class RealVectorTests
   [Fact]
   public void ToString_FormatsElements()
   {
-    RealVector v = new[] { 1.0, 2.0, 3.0 };
+    RealVector v = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.Equal("[1, 2, 3]", v.ToString());
   }
@@ -652,7 +652,7 @@ public sealed class RealVectorTests
   [Fact]
   public void ImplicitConversion_FromArray_CreatesVectorWithArrayValues()
   {
-    RealVector v = new[] { 1.0, 2.0, 3.0 };
+    RealVector v = RealVector.Create(1.0, 2.0, 3.0);
 
     Assert.Equal(3, v.Count);
     Assert.Equal(new[] { 1.0, 2.0, 3.0 }, v.ToArray());
@@ -661,8 +661,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Equality_EmptyVectors_AreEqual_AndHaveSameHashCode()
   {
-    RealVector a = Array.Empty<double>();
-    RealVector b = Array.Empty<double>();
+    RealVector a = RealVector.Create(Array.Empty<double>());
+    RealVector b = RealVector.Create(Array.Empty<double>());
 
     Assert.True(a.Equals(b));
     Assert.Equal(a.GetHashCode(), b.GetHashCode());
@@ -671,8 +671,8 @@ public sealed class RealVectorTests
   [Fact]
   public void Equals_WithNaNElements_FollowsSequenceEqualSemantics()
   {
-    RealVector a = new[] { double.NaN };
-    RealVector b = new[] { double.NaN };
+    RealVector a = RealVector.Create(double.NaN);
+    RealVector b = RealVector.Create(double.NaN);
 
     Assert.Equal(a.Equals(b), a.GetHashCode() == b.GetHashCode() || a.Equals(b));
     Assert.True(a.Equals(b)); // current .NET double equality semantics treat NaN.Equals(NaN) as true
@@ -690,7 +690,7 @@ public sealed class RealVectorTests
   public void EqualityOperator_LeftNull_RightNonNull_ReturnsFalse()
   {
     RealVector? a = null;
-    RealVector b = new[] { 1.0 };
+    RealVector b = RealVector.Create(1.0);
     Assert.False(a == b);
     Assert.True(a != b);
   }
@@ -745,7 +745,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Sqrt_ReturnsElementwiseSquareRoot()
   {
-    RealVector input = new[] { 0.0, 1.0, 4.0, 9.0 };
+    RealVector input = RealVector.Create(0.0, 1.0, 4.0, 9.0);
 
     var result = RealVector.Sqrt(input);
 
@@ -755,7 +755,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Sqrt_OfNegativeValue_ReturnsNaNForThatElement()
   {
-    RealVector input = new[] { 4.0, -1.0, 9.0 };
+    RealVector input = RealVector.Create(4.0, -1.0, 9.0);
 
     var result = RealVector.Sqrt(input).ToArray();
 
@@ -767,7 +767,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Log_ReturnsElementwiseNaturalLogarithm()
   {
-    RealVector input = new[] { 1.0, Math.E, Math.E * Math.E };
+    RealVector input = RealVector.Create(1.0, Math.E, Math.E * Math.E);
 
     var result = RealVector.Log(input);
 
@@ -779,7 +779,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Log_OfZeroAndNegativeValue_FollowsMathLogSemantics()
   {
-    RealVector input = new[] { 0.0, -1.0, 1.0 };
+    RealVector input = RealVector.Create(0.0, -1.0, 1.0);
 
     var result = RealVector.Log(input).ToArray();
 
@@ -791,7 +791,7 @@ public sealed class RealVectorTests
   [Fact]
   public void Sin_ReturnsElementwiseSine()
   {
-    RealVector input = new[] { 0.0, Math.PI / 2.0, Math.PI };
+    RealVector input = RealVector.Create(0.0, Math.PI / 2.0, Math.PI);
 
     var result = RealVector.Sin(input);
 
@@ -803,11 +803,11 @@ public sealed class RealVectorTests
   [Fact]
   public void AreCompatible_VectorAndEnumerable_ReturnsTrue_WhenAllAreCompatible()
   {
-    RealVector vector = new[] { 1.0, 2.0, 3.0 };
-    var others = new[] {
-      new[] { 4.0, 5.0, 6.0 },
+    RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
+    var others = new RealVector[] {
+      RealVector.Create(4.0, 5.0, 6.0),
       7.0,
-      (RealVector)new[] { 8.0, 9.0, 10.0 }
+      RealVector.Create(8.0, 9.0, 10.0)
     };
 
     var result = RealVector.AreCompatible(vector, others);
@@ -818,10 +818,10 @@ public sealed class RealVectorTests
   [Fact]
   public void AreCompatible_VectorAndEnumerable_ReturnsFalse_WhenAtLeastOneIsIncompatible()
   {
-    RealVector vector = new[] { 1.0, 2.0, 3.0 };
-    var others = new[] {
-      new[] { 4.0, 5.0, 6.0 },
-      (RealVector)new[] { 7.0, 8.0 }
+    RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
+    var others = new RealVector[] {
+      RealVector.Create(4.0, 5.0, 6.0),
+      RealVector.Create(7.0, 8.0)
     };
 
     var result = RealVector.AreCompatible(vector, others);
@@ -832,7 +832,7 @@ public sealed class RealVectorTests
   [Fact]
   public void AreCompatible_VectorAndEmptyEnumerable_ReturnsTrue()
   {
-    RealVector vector = new[] { 1.0, 2.0, 3.0 };
+    RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
     var others = Array.Empty<RealVector>();
 
     var result = RealVector.AreCompatible(vector, others);
@@ -843,10 +843,10 @@ public sealed class RealVectorTests
   [Fact]
   public void AreCompatible_LengthAndEnumerable_ReturnsTrue_WhenAllMatchLengthOrAreScalar()
   {
-    var vectors = new[] {
-      new[] { 1.0, 2.0, 3.0 },
+    var vectors = new RealVector[] {
+      RealVector.Create(1.0, 2.0, 3.0),
       4.0,
-      (RealVector)new[] { 5.0, 6.0, 7.0 }
+      RealVector.Create(5.0, 6.0, 7.0)
     };
 
     var result = RealVector.AreCompatible(3, vectors);
@@ -857,9 +857,9 @@ public sealed class RealVectorTests
   [Fact]
   public void AreCompatible_LengthAndEnumerable_ReturnsFalse_WhenAtLeastOneIsIncompatible()
   {
-    var vectors = new[] {
-      new[] { 1.0, 2.0, 3.0 },
-      (RealVector)new[] { 4.0, 5.0 }
+    var vectors = new RealVector[] {
+      RealVector.Create(1.0, 2.0, 3.0),
+      RealVector.Create(4.0, 5.0)
     };
 
     var result = RealVector.AreCompatible(3, vectors);
@@ -870,8 +870,8 @@ public sealed class RealVectorTests
   [Fact]
   public void BroadcastLength_VectorAndEnumerable_ReturnsVectorLength_WhenOthersAreScalar()
   {
-    RealVector vector = new[] { 1.0, 2.0, 3.0 };
-    var others = new[] {
+    RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
+    var others = new RealVector[] {
       4.0,
       (RealVector)5.0
     };
@@ -885,10 +885,10 @@ public sealed class RealVectorTests
   public void BroadcastLength_VectorAndEnumerable_ReturnsMaximumCompatibleLength()
   {
     RealVector vector = 1.0;
-    var others = new[] {
-      new[] { 1.0, 2.0, 3.0, 4.0 },
+    var others = new RealVector[] {
+      RealVector.Create(1.0, 2.0, 3.0, 4.0),
       2.0,
-      (RealVector)new[] { 5.0, 6.0, 7.0, 8.0 }
+      RealVector.Create(5.0, 6.0, 7.0, 8.0)
     };
 
     var result = RealVector.BroadcastLength(vector, others);
@@ -899,7 +899,7 @@ public sealed class RealVectorTests
   [Fact]
   public void BroadcastLength_VectorAndEnumerable_WithEmptyEnumerable_ReturnsVectorLength()
   {
-    RealVector vector = new[] { 1.0, 2.0, 3.0 };
+    RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
     var others = Array.Empty<RealVector>();
 
     var result = RealVector.BroadcastLength(vector, others);
@@ -910,9 +910,9 @@ public sealed class RealVectorTests
   [Fact]
   public void BroadcastLength_VectorAndEnumerable_Throws_WhenIncompatible()
   {
-    RealVector vector = new[] { 1.0, 2.0, 3.0 };
-    var others = new[] {
-      (RealVector)new[] { 4.0, 5.0 }
+    RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
+    var others = new RealVector[] {
+      RealVector.Create(4.0, 5.0)
     };
 
     Assert.Throws<ArgumentException>(() => RealVector.BroadcastLength(vector, others));

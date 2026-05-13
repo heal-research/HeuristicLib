@@ -74,6 +74,6 @@ public record RoundedBlendAlphaCrossover : SingleSolutionCrossover<IntegerVector
       result[i] = random.NextInt(lo, hi, true);
     }
 
-    return result;
+    return IntegerVector.FromOwnedArray(result);
   }
 }

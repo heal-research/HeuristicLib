@@ -9,7 +9,7 @@ public class RotatedTestFunction(double[,] rotation, ITestFunction inner) : Meta
   protected readonly double[,] Rotation = rotation;
   public override int Dimension => Rotation.GetLength(0);
 
-  public override double Evaluate(RealVector solution) => Inner.Evaluate(Rotate(Rotation, solution));
+  public override double Evaluate(RealVector solution) => Inner.Evaluate(RealVector.FromOwnedArray(Rotate(Rotation, solution)));
 
   public static double[] Rotate(double[,] r, IReadOnlyList<double> v)
   {
@@ -39,7 +39,7 @@ public class RotatedGradientTestFunction(double[,] rotation, IGradientTestFuncti
 
   public RealVector EvaluateGradient(RealVector solution)
   {
-    var rotatedSolution = Rotate(Rotation, solution);
+    var rotatedSolution = RealVector.FromOwnedArray(Rotate(Rotation, solution));
     var gradInner = GradientInner.EvaluateGradient(rotatedSolution);
     var nCols = Rotation.GetLength(1);
     var rotatedGrad = new double[nCols];
@@ -52,6 +52,6 @@ public class RotatedGradientTestFunction(double[,] rotation, IGradientTestFuncti
       rotatedGrad[j] = sum;
     }
 
-    return new RealVector(rotatedGrad);
+    return RealVector.FromOwnedArray(rotatedGrad);
   }
 }

@@ -35,9 +35,9 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
 
   public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random, EvaluationTiming timing)
   {
-    solution = RotatedTestFunction.Rotate(CurrentState.Rotation, solution);
-    solution *= CurrentState.InputScaling;
-    solution += CurrentState.Shift;
+    solution = RealVector.FromOwnedArray(RotatedTestFunction.Rotate(CurrentState.Rotation, solution));
+    solution *= RealVector.Create(CurrentState.InputScaling);
+    solution += RealVector.Create(CurrentState.Shift);
     var res = problem.Evaluate(solution, random);
     var currentStateOutputScaling = CurrentState.OutputScaling;
 

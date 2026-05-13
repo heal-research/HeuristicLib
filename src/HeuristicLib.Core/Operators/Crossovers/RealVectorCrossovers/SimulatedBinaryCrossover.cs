@@ -65,7 +65,7 @@ public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Rea
       }
     }
 
-    return result;
+    return RealVector.FromOwnedArray(result);
   }
 
   /// <summary>
@@ -176,8 +176,8 @@ public static class Sbx
       c2[v] = ch2;
     }
 
-    return (RealVector.Clamp(c1, searchSpace.Minimum, searchSpace.Maximum),
-      RealVector.Clamp(c2, searchSpace.Minimum, searchSpace.Maximum));
+    return (RealVector.Clamp(RealVector.FromOwnedArray(c1), searchSpace.Minimum, searchSpace.Maximum),
+      RealVector.Clamp(RealVector.FromOwnedArray(c2), searchSpace.Minimum, searchSpace.Maximum));
   }
 
   public static double CalcBetaQ(double beta, double d, double rv)

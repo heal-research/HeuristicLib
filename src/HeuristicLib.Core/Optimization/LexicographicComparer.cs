@@ -4,7 +4,9 @@ namespace HEAL.HeuristicLib.Optimization;
 
 public class LexicographicComparer(ObjectiveDirection[] objectives, int[]? order = null) : IComparer<ObjectiveVector>
 {
-  private readonly Permutation order = order ?? Permutation.Range(objectives.Length);
+  private readonly Permutation order = order is null
+    ? Permutation.Range(objectives.Length)
+    : Permutation.Create(order);
 
   public int Compare(ObjectiveVector? x, ObjectiveVector? y)
   {

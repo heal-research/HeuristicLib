@@ -31,7 +31,7 @@ public class Zdt4(int dimension) : Zdt(dimension)
       res[i] = 2 * x + 40 * Math.PI * Math.Sin(4 * Math.PI * x);
     }
 
-    return res;
+    return RealVector.FromOwnedArray(res);
   }
 
   protected override double H(double f1, double g) => 1 - Math.Sqrt(f1 / g);

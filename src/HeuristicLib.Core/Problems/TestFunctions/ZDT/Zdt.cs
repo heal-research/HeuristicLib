@@ -47,7 +47,7 @@ public abstract class Zdt : IMultiObjectiveGradientTestFunction
     var r = new double[solution.Count];
     r[0] = 1.0;
 
-    return r;
+    return RealVector.FromOwnedArray(r);
   }
 
   protected abstract double G(RealVector solution);

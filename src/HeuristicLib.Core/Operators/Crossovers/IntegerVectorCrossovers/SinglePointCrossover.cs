@@ -28,6 +28,6 @@ public record SinglePointCrossover : SingleSolutionCrossover<IntegerVector, Inte
       offspringValues[i] = parent2[i];
     }
 
-    return offspringValues;
+    return IntegerVector.FromOwnedArray(offspringValues);
   }
 }

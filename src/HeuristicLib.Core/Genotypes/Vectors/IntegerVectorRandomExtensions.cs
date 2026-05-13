@@ -20,7 +20,7 @@ public static class IntegerVectorRandomExtensions
         result[dim] = random.NextIntegerVectorUniformAtUnchecked(minimum, maximum, dim);
       }
 
-      return result;
+      return IntegerVector.FromOwnedArray(result);
     }
 
     public IntegerVector NextIntegerVectorNormal(RealVector mean, RealVector std, IntegerVector minimum, IntegerVector maximum, int length)

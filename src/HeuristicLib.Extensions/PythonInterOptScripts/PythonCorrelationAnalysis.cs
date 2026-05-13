@@ -35,9 +35,10 @@ public static class PythonCorrelationAnalysis
     var random = RandomNumberGenerator.Create(seed);
     var evaluator = new DirectEvaluator<RealVector>();
     var res = new double[solutions.Count];
+    var sigma = RealVector.Create(delta);
     Parallel.ForEach(solutions, (vector, state, i) => {
       var r = random.Fork((int)i);
-      var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, delta, vector.Count, false)).ToArray();
+      var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, sigma, vector.Count, false)).ToArray();
       var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
       var d = OnlinePearsonsRCalculator.Calculate(
         objectives.Select(x => x[0]),
@@ -57,7 +58,7 @@ public static class PythonCorrelationAnalysis
 
     d *= sigma;
     d += mu;
-    return d.ToArray();
+    return d;
   }
 
   public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem)

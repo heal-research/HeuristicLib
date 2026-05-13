@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 
 namespace HEAL.HeuristicLib.Tests.Problems.TestFunctions.ZDT;
@@ -26,10 +26,10 @@ internal static class ZdtTestHelper
       plus[i] += epsilon;
       minus[i] -= epsilon;
 
-      grad[i] = (f(plus) - f(minus)) / (2.0 * epsilon);
+      grad[i] = (f(RealVector.FromOwnedArray(plus)) - f(RealVector.FromOwnedArray(minus))) / (2.0 * epsilon);
     }
 
-    return grad;
+    return RealVector.FromOwnedArray(grad);
   }
 
   public static void AssertGradientMatchesFiniteDifferences(

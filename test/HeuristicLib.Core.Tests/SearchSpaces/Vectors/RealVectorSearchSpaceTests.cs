@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.SearchSpaces.Vectors;
@@ -16,9 +16,9 @@ public class RealVectorSearchSpaceTests
 
     Assert.Equal(3, space.Length);
     double[] values = [0.0];
-    Assert.Equal((RealVector)values, space.Minimum);
+    Assert.Equal(RealVector.Create(values), space.Minimum);
     double[] values1 = [10.0];
-    Assert.Equal((RealVector)values1, space.Maximum);
+    Assert.Equal(RealVector.Create(values1), space.Maximum);
   }
 
   [Fact]
@@ -28,14 +28,14 @@ public class RealVectorSearchSpaceTests
     double[] values1 = [10.0, 11.0, 12.0];
     var space = new RealVectorSearchSpace(
       3,
-      values,
-      values1);
+      RealVector.Create(values),
+      RealVector.Create(values1));
 
     Assert.Equal(3, space.Length);
     double[] values2 = [0.0, 1.0, 2.0];
-    Assert.Equal((RealVector)values2, space.Minimum);
+    Assert.Equal(RealVector.Create(values2), space.Minimum);
     double[] values3 = [10.0, 11.0, 12.0];
-    Assert.Equal((RealVector)values3, space.Maximum);
+    Assert.Equal(RealVector.Create(values3), space.Maximum);
   }
 
   [Fact]
@@ -46,8 +46,8 @@ public class RealVectorSearchSpaceTests
       double[] values1 = [10.0];
       return new RealVectorSearchSpace(
         4,
-        values,
-        values1);
+        RealVector.Create(values),
+        RealVector.Create(values1));
     });
 
     Assert.Null(ex);
@@ -61,8 +61,8 @@ public class RealVectorSearchSpaceTests
       double[] values1 = [10.0, 11.0, 12.0];
       return new RealVectorSearchSpace(
         3,
-        values,
-        values1);
+        RealVector.Create(values),
+        RealVector.Create(values1));
     });
   }
 
@@ -74,8 +74,8 @@ public class RealVectorSearchSpaceTests
       double[] values1 = [10.0, 11.0];
       return new RealVectorSearchSpace(
         3,
-        values,
-        values1);
+        RealVector.Create(values),
+        RealVector.Create(values1));
     });
   }
 
@@ -90,11 +90,11 @@ public class RealVectorSearchSpaceTests
     double[] values1 = [10.0, 11.0, 12.0];
     var space = new RealVectorSearchSpace(
       3,
-      values,
-      values1);
+      RealVector.Create(values),
+      RealVector.Create(values1));
 
     double[] values2 = [0.0, 5.5, 12.0];
-    Assert.True(space.Contains(values2));
+    Assert.True(space.Contains(RealVector.Create(values2)));
   }
 
   [Fact]
@@ -104,11 +104,11 @@ public class RealVectorSearchSpaceTests
     double[] values1 = [10.0];
     var space = new RealVectorSearchSpace(
       3,
-      values,
-      values1);
+      RealVector.Create(values),
+      RealVector.Create(values1));
 
     double[] values2 = [1.0, 2.0];
-    Assert.False(space.Contains(values2));
+    Assert.False(space.Contains(RealVector.Create(values2)));
   }
 
   [Fact]
@@ -118,11 +118,11 @@ public class RealVectorSearchSpaceTests
     double[] values1 = [10.0, 11.0, 12.0];
     var space = new RealVectorSearchSpace(
       3,
-      values,
-      values1);
+      RealVector.Create(values),
+      RealVector.Create(values1));
 
     double[] values2 = [0.0, 0.5, 12.0];
-    Assert.False(space.Contains(values2));
+    Assert.False(space.Contains(RealVector.Create(values2)));
   }
 
   [Fact]
@@ -132,11 +132,11 @@ public class RealVectorSearchSpaceTests
     double[] values1 = [10.0, 11.0, 12.0];
     var space = new RealVectorSearchSpace(
       3,
-      values,
-      values1);
+      RealVector.Create(values),
+      RealVector.Create(values1));
 
     double[] values2 = [0.0, 5.0, 13.0];
-    Assert.False(space.Contains(values2));
+    Assert.False(space.Contains(RealVector.Create(values2)));
   }
 
   [Fact]
@@ -148,11 +148,11 @@ public class RealVectorSearchSpaceTests
       10.0);
 
     double[] values = [0.0, 5.5, 10.0];
-    Assert.True(space.Contains(values));
+    Assert.True(space.Contains(RealVector.Create(values)));
     double[] values1 = [-1.0, 5.0, 10.0];
-    Assert.False(space.Contains(values1));
+    Assert.False(space.Contains(RealVector.Create(values1)));
     double[] values2 = [0.0, 5.0, 11.0];
-    Assert.False(space.Contains(values2));
+    Assert.False(space.Contains(RealVector.Create(values2)));
   }
 
   // ---------------------------
@@ -166,13 +166,13 @@ public class RealVectorSearchSpaceTests
     double[] values1 = [10.0, 11.0];
     var space = new RealVectorSearchSpace(
       2,
-      values,
-      values1);
+      RealVector.Create(values),
+      RealVector.Create(values1));
 
     double[] values2 = [0.0, 1.0];
-    Assert.True(space.Contains(values2)); // min
+    Assert.True(space.Contains(RealVector.Create(values2))); // min
     double[] values3 = [10.0, 11.0];
-    Assert.True(space.Contains(values3)); // max
+    Assert.True(space.Contains(RealVector.Create(values3))); // max
   }
 
   [Fact]
@@ -185,7 +185,7 @@ public class RealVectorSearchSpaceTests
 
     var ex = Record.Exception(() => {
       double[] values = [1.0, 2.0, 3.0];
-      return space.Contains(values);
+      return space.Contains(RealVector.Create(values));
     });
 
     Assert.Null(ex);

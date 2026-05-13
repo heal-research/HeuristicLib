@@ -1,4 +1,5 @@
-﻿using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.SearchSpaces.Vectors;
 
@@ -18,7 +19,7 @@ public class BoolVectorSearchSpaceTests
     var space = new BoolVectorSearchSpace(3);
 
     bool[] values = [true, false, true];
-    Assert.True(space.Contains(values));
+    Assert.True(space.Contains(BoolVector.Create(values)));
   }
 
   [Fact]
@@ -27,7 +28,7 @@ public class BoolVectorSearchSpaceTests
     var space = new BoolVectorSearchSpace(3);
 
     bool[] values = [true, false];
-    Assert.False(space.Contains(values));
+    Assert.False(space.Contains(BoolVector.Create(values)));
   }
 
   [Fact]
@@ -36,7 +37,7 @@ public class BoolVectorSearchSpaceTests
     var space = new BoolVectorSearchSpace(3);
 
     bool[] values = [true, false, true, false];
-    Assert.False(space.Contains(values));
+    Assert.False(space.Contains(BoolVector.Create(values)));
   }
 
   [Fact]
@@ -44,7 +45,7 @@ public class BoolVectorSearchSpaceTests
   {
     var space = new BoolVectorSearchSpace(0);
 
-    Assert.True(space.Contains(Array.Empty<bool>()));
+    Assert.True(space.Contains(BoolVector.Create(Array.Empty<bool>())));
   }
 
   [Fact]
@@ -53,10 +54,10 @@ public class BoolVectorSearchSpaceTests
     var space = new BoolVectorSearchSpace(3);
 
     bool[] values = [true, true, true];
-    Assert.True(space.Contains(values));
+    Assert.True(space.Contains(BoolVector.Create(values)));
     bool[] values1 = [false, false, false];
-    Assert.True(space.Contains(values1));
+    Assert.True(space.Contains(BoolVector.Create(values1)));
     bool[] values2 = [true, false, true];
-    Assert.True(space.Contains(values2));
+    Assert.True(space.Contains(BoolVector.Create(values2)));
   }
 }

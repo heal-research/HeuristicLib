@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.Vectors;
@@ -41,7 +41,7 @@ public sealed class PermutationTests
   [Fact]
   public void Constructor_ValidPermutation_CreatesInstance()
   {
-    Permutation permutation = new[] { 2, 0, 1, 3 };
+    Permutation permutation = Permutation.Create(2, 0, 1, 3);
 
     Assert.Equal(4, permutation.Count);
     Assert.Equal(new[] { 2, 0, 1, 3 }, permutation.ToArray());
@@ -50,7 +50,7 @@ public sealed class PermutationTests
   [Fact]
   public void Constructor_EmptyPermutation_IsValid()
   {
-    Permutation permutation = Array.Empty<int>();
+    Permutation permutation = Permutation.Create(Array.Empty<int>());
 
     Assert.Equal(0, permutation.Count);
     Assert.Empty(permutation);
@@ -83,7 +83,7 @@ public sealed class PermutationTests
   [Fact]
   public void ImplicitConversion_FromArray_CreatesPermutation()
   {
-    Permutation permutation = new[] { 1, 0, 2 };
+    Permutation permutation = Permutation.Create(1, 0, 2);
 
     Assert.Equal(3, permutation.Count);
     Assert.Equal(new[] { 1, 0, 2 }, permutation.ToArray());
@@ -100,7 +100,7 @@ public sealed class PermutationTests
   [Fact]
   public void Count_Indexer_AndEnumeration_WorkCorrectly()
   {
-    Permutation permutation = new[] { 2, 0, 1 };
+    Permutation permutation = Permutation.Create(2, 0, 1);
 
     Assert.Equal(3, permutation.Count);
     Assert.Equal(2, permutation[0]);
@@ -112,7 +112,7 @@ public sealed class PermutationTests
   [Fact]
   public void Indexer_WithIndexFromEnd_WorksCorrectly()
   {
-    Permutation permutation = new[] { 2, 0, 1 };
+    Permutation permutation = Permutation.Create(2, 0, 1);
 
     Assert.Equal(1, permutation[^1]);
     Assert.Equal(0, permutation[^2]);
@@ -122,7 +122,7 @@ public sealed class PermutationTests
   [Fact]
   public void Contains_ReturnsTrue_ForContainedValue()
   {
-    Permutation permutation = new[] { 2, 0, 1 };
+    Permutation permutation = Permutation.Create(2, 0, 1);
 
     Assert.True(permutation.Contains(0));
     Assert.True(permutation.Contains(1));
@@ -132,7 +132,7 @@ public sealed class PermutationTests
   [Fact]
   public void Contains_ReturnsFalse_ForMissingValue()
   {
-    Permutation permutation = new[] { 2, 0, 1 };
+    Permutation permutation = Permutation.Create(2, 0, 1);
 
     Assert.False(permutation.Contains(3));
     Assert.False(permutation.Contains(-1));
@@ -141,7 +141,7 @@ public sealed class PermutationTests
   [Fact]
   public void Enumerator_EnumeratesAllElementsInOrder()
   {
-    Permutation permutation = new[] { 3, 1, 0, 2 };
+    Permutation permutation = Permutation.Create(3, 1, 0, 2);
 
     var values = new List<int>();
     foreach (var value in permutation) {
@@ -154,7 +154,7 @@ public sealed class PermutationTests
   [Fact]
   public void Enumerator_Reset_RewindsEnumeration()
   {
-    Permutation permutation = new[] { 2, 1, 0 };
+    Permutation permutation = Permutation.Create(2, 1, 0);
     var enumerator = permutation.GetEnumerator();
 
     Assert.True(enumerator.MoveNext());
@@ -200,7 +200,7 @@ public sealed class PermutationTests
   [Fact]
   public void RecordEquality_SameReference_ReturnsTrue()
   {
-    Permutation permutation = new[] { 1, 0, 2 };
+    Permutation permutation = Permutation.Create(1, 0, 2);
 
     Assert.True(permutation.Equals(permutation));
     Assert.True(permutation == permutation);
@@ -210,7 +210,7 @@ public sealed class PermutationTests
   [Fact]
   public void RecordEquality_Null_ReturnsFalse()
   {
-    Permutation permutation = new[] { 1, 0, 2 };
+    Permutation permutation = Permutation.Create(1, 0, 2);
 
     Assert.False(permutation.Equals(null));
     Assert.False(permutation.Equals((object?)null));
@@ -219,7 +219,7 @@ public sealed class PermutationTests
   [Fact]
   public void RecordEquality_DifferentType_ReturnsFalse()
   {
-    Permutation permutation = new[] { 1, 0, 2 };
+    Permutation permutation = Permutation.Create(1, 0, 2);
 
     Assert.False(permutation.Equals("not a permutation"));
   }
@@ -227,8 +227,8 @@ public sealed class PermutationTests
   [Fact]
   public void Equality_SameElementsConstructedSeparately_ShouldBeEqual()
   {
-    Permutation a = new[] { 2, 0, 1, 3 };
-    Permutation b = new[] { 2, 0, 1, 3 };
+    Permutation a = Permutation.Create(2, 0, 1, 3);
+    Permutation b = Permutation.Create(2, 0, 1, 3);
 
     Assert.True(a.Equals(b));
     Assert.True(b.Equals(a));
@@ -239,8 +239,8 @@ public sealed class PermutationTests
   [Fact]
   public void Equality_DifferentElements_ReturnsFalse()
   {
-    Permutation a = new[] { 2, 0, 1, 3 };
-    Permutation b = new[] { 2, 1, 0, 3 };
+    Permutation a = Permutation.Create(2, 0, 1, 3);
+    Permutation b = Permutation.Create(2, 1, 0, 3);
 
     Assert.False(a.Equals(b));
     Assert.False(b.Equals(a));
@@ -251,9 +251,9 @@ public sealed class PermutationTests
   [Fact]
   public void Equality_IsTransitive()
   {
-    Permutation a = new[] { 2, 0, 1, 3 };
-    Permutation b = new[] { 2, 0, 1, 3 };
-    Permutation c = new[] { 2, 0, 1, 3 };
+    Permutation a = Permutation.Create(2, 0, 1, 3);
+    Permutation b = Permutation.Create(2, 0, 1, 3);
+    Permutation c = Permutation.Create(2, 0, 1, 3);
 
     Assert.True(a.Equals(b));
     Assert.True(b.Equals(c));
@@ -263,8 +263,8 @@ public sealed class PermutationTests
   [Fact]
   public void GetHashCode_EqualPermutations_ShouldHaveSameHashCode()
   {
-    Permutation a = new[] { 2, 0, 1, 3 };
-    Permutation b = new[] { 2, 0, 1, 3 };
+    Permutation a = Permutation.Create(2, 0, 1, 3);
+    Permutation b = Permutation.Create(2, 0, 1, 3);
 
     Assert.Equal(a.GetHashCode(), b.GetHashCode());
   }
@@ -272,7 +272,7 @@ public sealed class PermutationTests
   [Fact]
   public void GetHashCode_SameInstance_IsStable()
   {
-    Permutation permutation = new[] { 2, 0, 1, 3 };
+    Permutation permutation = Permutation.Create(2, 0, 1, 3);
 
     var h1 = permutation.GetHashCode();
     var h2 = permutation.GetHashCode();
@@ -284,8 +284,8 @@ public sealed class PermutationTests
   public void HashSet_ContainsEquivalentPermutation()
   {
     var set = new HashSet<Permutation>();
-    Permutation a = new[] { 2, 0, 1, 3 };
-    Permutation b = new[] { 2, 0, 1, 3 };
+    Permutation a = Permutation.Create(2, 0, 1, 3);
+    Permutation b = Permutation.Create(2, 0, 1, 3);
 
     set.Add(a);
     Assert.Contains(b, set);
@@ -295,8 +295,8 @@ public sealed class PermutationTests
   public void HashSet_AddEquivalentPermutation_DoesNotIncreaseCount()
   {
     var set = new HashSet<Permutation>();
-    Permutation a = new[] { 2, 0, 1, 3 };
-    Permutation b = new[] { 2, 0, 1, 3 };
+    Permutation a = Permutation.Create(2, 0, 1, 3);
+    Permutation b = Permutation.Create(2, 0, 1, 3);
 
     set.Add(a);
     set.Add(b);
@@ -308,8 +308,8 @@ public sealed class PermutationTests
   public void Dictionary_CanUseEquivalentPermutationAsKey()
   {
     var dict = new Dictionary<Permutation, string>();
-    Permutation key1 = new[] { 2, 0, 1, 3 };
-    Permutation key2 = new[] { 2, 0, 1, 3 };
+    Permutation key1 = Permutation.Create(2, 0, 1, 3);
+    Permutation key2 = Permutation.Create(2, 0, 1, 3);
 
     dict[key1] = "value";
 
@@ -351,7 +351,7 @@ public sealed class PermutationTests
   [Fact]
   public void SwapRandomElements_WhenIndicesDiffer_SwapsThem()
   {
-    Permutation permutation = new[] { 0, 1, 2, 3 };
+    Permutation permutation = Permutation.Create(0, 1, 2, 3);
     var rng = new StubRandomNumberGenerator(0.3, 0.9);
 
     var result = Permutation.SwapRandomElements(permutation, rng);
@@ -363,7 +363,7 @@ public sealed class PermutationTests
   [Fact]
   public void SwapRandomElements_WhenIndicesEqual_ReturnsEqualPermutation()
   {
-    Permutation permutation = new[] { 0, 1, 2, 3 };
+    Permutation permutation = Permutation.Create(0, 1, 2, 3);
     var rng = new StubRandomNumberGenerator(0.6, 0.6);
 
     var result = Permutation.SwapRandomElements(permutation, rng);
@@ -375,7 +375,7 @@ public sealed class PermutationTests
   [Fact]
   public void SwapRandomElements_ResultIsStillValidPermutation()
   {
-    Permutation permutation = new[] { 3, 1, 0, 2 };
+    Permutation permutation = Permutation.Create(3, 1, 0, 2);
     var rng = new StubRandomNumberGenerator(0.0, 0.6);
 
     var result = Permutation.SwapRandomElements(permutation, rng);

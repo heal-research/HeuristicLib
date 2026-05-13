@@ -46,7 +46,7 @@ public class AckleyFunction(int dimension) : IGradientTestFunction
     sumSquares /= n;
     sumSquares = Math.Sqrt(sumSquares);
     if (sumSquares.IsAlmost(0.0, 1e-15)) {
-      return new double[n];
+      return RealVector.FromOwnedArray(new double[n]);
     }
 
     sumCosines /= n;
@@ -59,6 +59,6 @@ public class AckleyFunction(int dimension) : IGradientTestFunction
       res[i] = s1 + s2;
     }
 
-    return res;
+    return RealVector.FromOwnedArray(res);
   }
 }

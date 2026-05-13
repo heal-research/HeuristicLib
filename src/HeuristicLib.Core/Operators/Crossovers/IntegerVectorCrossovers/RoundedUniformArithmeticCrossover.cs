@@ -68,6 +68,6 @@ public record RoundedUniformArithmeticCrossover : SingleSolutionCrossover<Intege
       }
     }
 
-    return result;
+    return IntegerVector.FromOwnedArray(result);
   }
 }

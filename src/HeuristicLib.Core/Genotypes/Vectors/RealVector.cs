@@ -18,8 +18,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
   public double this[Index index] => elements[index];
 
-  // public static implicit operator RealVector?(double[]? values) => values is not null ? new RealVector(values) : null;
-
   // public static implicit operator RealVector(IntegerVector intVector) => new RealVector(intVector);
 
   public double this[int index] => elements[index];
@@ -131,8 +129,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
   }
   
   public static implicit operator RealVector(double value) => new(value);
-
-  public static implicit operator RealVector(double[] values) => new(values);
 
   public static RealVector Create(params double[] elements) => new(elements, takeOwnership: false);
 
@@ -357,7 +353,7 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
       result[i] = FloorToIntegerAtUnchecked(input, minimum, maximum, i);
     }
 
-    return result;
+    return IntegerVector.FromOwnedArray(result);
   }
 
   public static IntegerVector CeilToIntegerVector(RealVector input, IntegerVector minimum, IntegerVector maximum)
@@ -369,7 +365,7 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
       result[i] = CeilToIntegerAtUnchecked(input, minimum, maximum, i);
     }
 
-    return result;
+    return IntegerVector.FromOwnedArray(result);
   }
 
   public static IntegerVector RoundToIntegerVector(RealVector input, IntegerVector minimum, IntegerVector maximum)
@@ -381,7 +377,7 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
       result[i] = RoundToIntegerAtUnchecked(input, minimum, maximum, i);
     }
 
-    return result;
+    return IntegerVector.FromOwnedArray(result);
   }
 
   public static int FloorToIntegerAt(double value, IntegerVector minimum, IntegerVector maximum, int dimension)

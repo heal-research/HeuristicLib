@@ -60,6 +60,6 @@ public record UniformSomePositionsManipulator
       res[idx] = random.NextIntegerVectorUniformAt(minimum, maximum, idx);
     }
 
-    return res;
+    return IntegerVector.FromOwnedArray(res);
   }
 }

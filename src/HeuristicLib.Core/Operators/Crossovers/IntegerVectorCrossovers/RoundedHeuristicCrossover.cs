@@ -39,6 +39,6 @@ public record RoundedHeuristicCrossover : SingleSolutionCrossover<IntegerVector,
       result[i] = RealVector.RoundToIntegerAt(value, minimum, maximum, i);
     }
 
-    return result;
+    return IntegerVector.FromOwnedArray(result);
   }
 }

@@ -34,6 +34,6 @@ public class RastriginFunction(int dimension) : IGradientTestFunction
       g[i] = 2 * d + PiTwo * A * Math.Sin(PiTwo * d);
     }
 
-    return g;
+    return RealVector.FromOwnedArray(g);
   }
 }

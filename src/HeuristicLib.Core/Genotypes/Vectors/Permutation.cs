@@ -44,8 +44,6 @@ public sealed class Permutation : IReadOnlyList<int>, IEquatable<Permutation>
     return true;
   }
 
-  public static implicit operator Permutation(int[] elements) => new(elements);
-
   public int this[int index] => elements[index];
 
   public int this[Index index] => elements[index];

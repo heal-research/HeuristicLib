@@ -14,7 +14,9 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
     }
 
     this.objectives = objectives;
-    this.weights = weights ?? RealVector.Repeat(1.0, this.objectives.Length);
+    this.weights = weights is null
+      ? RealVector.Repeat(1.0, this.objectives.Length)
+      : RealVector.Create(weights);
   }
 
   public int Compare(ObjectiveVector? x, ObjectiveVector? y)

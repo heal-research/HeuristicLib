@@ -19,6 +19,6 @@ public class SphereFunction(int dimension) : IGradientTestFunction
       g[i] = 2 * solution[i];
     }
 
-    return g;
+    return RealVector.FromOwnedArray(g);
   }
 }

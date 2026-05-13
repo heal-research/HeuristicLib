@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.SearchSpaces.Vectors;
@@ -12,8 +12,8 @@ public class IntegerVectorSearchSpaceTests
     int[] values1 = [10, 11, 12];
     var space = new IntegerVectorSearchSpace(
       Length: 3,
-      Minimum: values,
-      Maximum: values1);
+      Minimum: IntegerVector.Create(values),
+      Maximum: IntegerVector.Create(values1));
 
     Assert.Equal(3, space.Length);
     int[] values3 = [0, 1, 2];
@@ -30,8 +30,8 @@ public class IntegerVectorSearchSpaceTests
       int[] values1 = [9];
       return new IntegerVectorSearchSpace(
         Length: 4,
-        Minimum: values,
-        Maximum: values1);
+        Minimum: IntegerVector.Create(values),
+        Maximum: IntegerVector.Create(values1));
     });
 
     Assert.Null(ex);
@@ -45,8 +45,8 @@ public class IntegerVectorSearchSpaceTests
       int[] values1 = [10, 10, 10];
       return new IntegerVectorSearchSpace(
         Length: 3,
-        Minimum: values,
-        Maximum: values1);
+        Minimum: IntegerVector.Create(values),
+        Maximum: IntegerVector.Create(values1));
     });
   }
 
@@ -58,8 +58,8 @@ public class IntegerVectorSearchSpaceTests
       int[] values1 = [10, 10];
       return new IntegerVectorSearchSpace(
         Length: 3,
-        Minimum: values,
-        Maximum: values1);
+        Minimum: IntegerVector.Create(values),
+        Maximum: IntegerVector.Create(values1));
     });
   }
 
@@ -71,8 +71,8 @@ public class IntegerVectorSearchSpaceTests
       int[] values1 = [10, 4, 10];
       return new IntegerVectorSearchSpace(
         Length: 3,
-        Minimum: values,
-        Maximum: values1);
+        Minimum: IntegerVector.Create(values),
+        Maximum: IntegerVector.Create(values1));
     });
   }
 
@@ -83,11 +83,11 @@ public class IntegerVectorSearchSpaceTests
     int[] values1 = [10, 11, 12];
     var space = new IntegerVectorSearchSpace(
       Length: 3,
-      Minimum: values,
-      Maximum: values1);
+      Minimum: IntegerVector.Create(values),
+      Maximum: IntegerVector.Create(values1));
 
     int[] values2 = [0, 5, 12];
-    Assert.True(space.Contains(values2));
+    Assert.True(space.Contains(IntegerVector.Create(values2)));
   }
 
   [Fact]
@@ -97,11 +97,11 @@ public class IntegerVectorSearchSpaceTests
     int[] values1 = [10];
     var space = new IntegerVectorSearchSpace(
       Length: 3,
-      Minimum: values,
-      Maximum: values1);
+      Minimum: IntegerVector.Create(values),
+      Maximum: IntegerVector.Create(values1));
 
     int[] values2 = [1, 2];
-    Assert.False(space.Contains(values2));
+    Assert.False(space.Contains(IntegerVector.Create(values2)));
   }
 
   [Fact]
@@ -111,11 +111,11 @@ public class IntegerVectorSearchSpaceTests
     int[] values1 = [10, 11, 12];
     var space = new IntegerVectorSearchSpace(
       Length: 3,
-      Minimum: values,
-      Maximum: values1);
+      Minimum: IntegerVector.Create(values),
+      Maximum: IntegerVector.Create(values1));
 
     int[] values2 = [0, 0, 12];
-    Assert.False(space.Contains(values2));
+    Assert.False(space.Contains(IntegerVector.Create(values2)));
   }
 
   [Fact]
@@ -125,11 +125,11 @@ public class IntegerVectorSearchSpaceTests
     int[] values1 = [10, 11, 12];
     var space = new IntegerVectorSearchSpace(
       Length: 3,
-      Minimum: values,
-      Maximum: values1);
+      Minimum: IntegerVector.Create(values),
+      Maximum: IntegerVector.Create(values1));
 
     int[] values2 = [0, 5, 13];
-    Assert.False(space.Contains(values2));
+    Assert.False(space.Contains(IntegerVector.Create(values2)));
   }
 
   [Fact]
@@ -139,8 +139,8 @@ public class IntegerVectorSearchSpaceTests
     int[] values1 = [10, 11, 12];
     var intSpace = new IntegerVectorSearchSpace(
       Length: 3,
-      Minimum: values,
-      Maximum: values1);
+      Minimum: IntegerVector.Create(values),
+      Maximum: IntegerVector.Create(values1));
 
     RealVectorSearchSpace realSpace = intSpace;
 
@@ -181,7 +181,7 @@ public class IntegerVectorSearchSpaceTests
       0,
       10);
 
-    var ex = Record.Exception(() => space.Contains(new[] { 0, 2, 4 }));
+    var ex = Record.Exception(() => space.Contains(IntegerVector.Create(0, 2, 4)));
 
     Assert.Null(ex);
   }

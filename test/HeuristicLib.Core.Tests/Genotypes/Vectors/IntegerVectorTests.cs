@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.Vectors;
@@ -41,7 +41,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Equals_SameReference_ReturnsTrue()
   {
-    IntegerVector v = new[] { 1, 2, 3 };
+    IntegerVector v = IntegerVector.Create(1, 2, 3);
 
     Assert.True(v.Equals(v));
     Assert.True(v == v);
@@ -51,7 +51,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Equals_Null_ReturnsFalse()
   {
-    IntegerVector v = new[] { 1, 2, 3 };
+    IntegerVector v = IntegerVector.Create(1, 2, 3);
 
     Assert.False(v.Equals(null));
     Assert.False(v.Equals((object?)null));
@@ -60,7 +60,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Equals_ObjectOfDifferentType_ReturnsFalse()
   {
-    IntegerVector v = new[] { 1, 2, 3 };
+    IntegerVector v = IntegerVector.Create(1, 2, 3);
 
     Assert.False(v.Equals("not a vector"));
   }
@@ -68,8 +68,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Equals_SameElements_ReturnsTrue()
   {
-    IntegerVector a = new[] { 1, 2, 3 };
-    IntegerVector b = new[] { 1, 2, 3 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
+    IntegerVector b = IntegerVector.Create(1, 2, 3);
 
     Assert.True(a.Equals(b));
     Assert.True(b.Equals(a));
@@ -81,8 +81,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Equals_DifferentLengths_ReturnsFalse()
   {
-    IntegerVector a = new[] { 1, 2, 3 };
-    IntegerVector b = new[] { 1, 2 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
+    IntegerVector b = IntegerVector.Create(1, 2);
 
     Assert.False(a.Equals(b));
     Assert.False(b.Equals(a));
@@ -93,8 +93,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Equals_DifferentElements_ReturnsFalse()
   {
-    IntegerVector a = new[] { 1, 2, 3 };
-    IntegerVector b = new[] { 1, 2, 4 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
+    IntegerVector b = IntegerVector.Create(1, 2, 4);
 
     Assert.False(a.Equals(b));
     Assert.False(b.Equals(a));
@@ -105,9 +105,9 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Equals_IsTransitive()
   {
-    IntegerVector a = new[] { 1, 2, 3 };
-    IntegerVector b = new[] { 1, 2, 3 };
-    IntegerVector c = new[] { 1, 2, 3 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
+    IntegerVector b = IntegerVector.Create(1, 2, 3);
+    IntegerVector c = IntegerVector.Create(1, 2, 3);
 
     Assert.True(a.Equals(b));
     Assert.True(b.Equals(c));
@@ -128,7 +128,7 @@ public sealed class IntegerVectorTests
   public void EqualityOperator_LeftNull_ReturnsFalse()
   {
     IntegerVector? a = null;
-    IntegerVector b = new[] { 1, 2, 3 };
+    IntegerVector b = IntegerVector.Create(1, 2, 3);
 
     Assert.False(a == b);
     Assert.True(a != b);
@@ -137,7 +137,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void EqualityOperator_RightNull_ReturnsFalse()
   {
-    IntegerVector a = new[] { 1, 2, 3 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
     IntegerVector? b = null;
 
     Assert.False(a == b);
@@ -147,8 +147,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void GetHashCode_EqualVectors_HaveSameHashCode()
   {
-    IntegerVector a = new[] { 1, 2, 3 };
-    IntegerVector b = new[] { 1, 2, 3 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
+    IntegerVector b = IntegerVector.Create(1, 2, 3);
 
     Assert.Equal(a.GetHashCode(), b.GetHashCode());
   }
@@ -156,7 +156,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void GetHashCode_SameInstance_IsStable()
   {
-    IntegerVector v = new[] { 1, 2, 3 };
+    IntegerVector v = IntegerVector.Create(1, 2, 3);
 
     var h1 = v.GetHashCode();
     var h2 = v.GetHashCode();
@@ -168,8 +168,8 @@ public sealed class IntegerVectorTests
   public void HashSet_ContainsEquivalentVector()
   {
     var set = new HashSet<IntegerVector>();
-    IntegerVector a = new[] { 1, 2, 3 };
-    IntegerVector b = new[] { 1, 2, 3 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
+    IntegerVector b = IntegerVector.Create(1, 2, 3);
 
     set.Add(a);
 
@@ -180,8 +180,8 @@ public sealed class IntegerVectorTests
   public void HashSet_AddEquivalentVector_DoesNotIncreaseCount()
   {
     var set = new HashSet<IntegerVector>();
-    IntegerVector a = new[] { 1, 2, 3 };
-    IntegerVector b = new[] { 1, 2, 3 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
+    IntegerVector b = IntegerVector.Create(1, 2, 3);
 
     set.Add(a);
     set.Add(b);
@@ -193,8 +193,8 @@ public sealed class IntegerVectorTests
   public void Dictionary_CanUseEquivalentVectorAsKey()
   {
     var dict = new Dictionary<IntegerVector, string>();
-    IntegerVector key1 = new[] { 1, 2, 3 };
-    IntegerVector key2 = new[] { 1, 2, 3 };
+    IntegerVector key1 = IntegerVector.Create(1, 2, 3);
+    IntegerVector key2 = IntegerVector.Create(1, 2, 3);
 
     dict[key1] = "value";
 
@@ -205,7 +205,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Count_Indexer_AndEnumeration_WorkCorrectly()
   {
-    IntegerVector v = new[] { 10, 20, 30 };
+    IntegerVector v = IntegerVector.Create(10, 20, 30);
 
     Assert.Equal(3, v.Count);
     Assert.Equal(10, v[0]);
@@ -217,7 +217,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Indexer_WithIndexFromEnd_WorksCorrectly()
   {
-    IntegerVector v = new[] { 10, 20, 30 };
+    IntegerVector v = IntegerVector.Create(10, 20, 30);
 
     Assert.Equal(30, v[^1]);
     Assert.Equal(20, v[^2]);
@@ -236,7 +236,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void ImplicitConversion_FromArray_CreatesVectorWithArrayValues()
   {
-    IntegerVector v = new[] { 1, 2, 3 };
+    IntegerVector v = IntegerVector.Create(1, 2, 3);
 
     Assert.Equal(3, v.Count);
     Assert.Equal(new[] { 1, 2, 3 }, v.ToArray());
@@ -245,7 +245,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void ImplicitConversion_ToRealVector_ConvertsAllElementsToDouble()
   {
-    IntegerVector input = new[] { 1, -2, 3 };
+    IntegerVector input = IntegerVector.Create(1, -2, 3);
 
     RealVector result = input;
 
@@ -255,7 +255,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void ToRealVector_ConvertsAllElementsToDouble()
   {
-    IntegerVector input = new[] { 1, -2, 3 };
+    IntegerVector input = IntegerVector.Create(1, -2, 3);
 
     var result = input.ToRealVector();
 
@@ -265,7 +265,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void ToRealAt_ReturnsElementAsDouble()
   {
-    IntegerVector input = new[] { 1, -2, 3 };
+    IntegerVector input = IntegerVector.Create(1, -2, 3);
 
     Assert.Equal(-2.0, input.ToRealAt(1));
   }
@@ -273,8 +273,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void AreCompatible_ReturnsTrue_ForSameLength()
   {
-    IntegerVector a = new[] { 1, 2 };
-    IntegerVector b = new[] { 3, 4 };
+    IntegerVector a = IntegerVector.Create(1, 2);
+    IntegerVector b = IntegerVector.Create(3, 4);
 
     Assert.True(IntegerVector.AreCompatible(a, b));
   }
@@ -283,7 +283,7 @@ public sealed class IntegerVectorTests
   public void AreCompatible_ReturnsTrue_WhenLeftIsScalar()
   {
     IntegerVector a = 1;
-    IntegerVector b = new[] { 3, 4, 5 };
+    IntegerVector b = IntegerVector.Create(3, 4, 5);
 
     Assert.True(IntegerVector.AreCompatible(a, b));
   }
@@ -291,7 +291,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void AreCompatible_ReturnsTrue_WhenRightIsScalar()
   {
-    IntegerVector a = new[] { 3, 4, 5 };
+    IntegerVector a = IntegerVector.Create(3, 4, 5);
     IntegerVector b = 1;
 
     Assert.True(IntegerVector.AreCompatible(a, b));
@@ -300,8 +300,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void AreCompatible_ReturnsFalse_ForDifferentNonScalarLengths()
   {
-    IntegerVector a = new[] { 1, 2 };
-    IntegerVector b = new[] { 3, 4, 5 };
+    IntegerVector a = IntegerVector.Create(1, 2);
+    IntegerVector b = IntegerVector.Create(3, 4, 5);
 
     Assert.False(IntegerVector.AreCompatible(a, b));
   }
@@ -310,7 +310,7 @@ public sealed class IntegerVectorTests
   public void BroadcastLength_ReturnsMaxLength()
   {
     IntegerVector scalar = 1;
-    IntegerVector vector = new[] { 3, 4, 5 };
+    IntegerVector vector = IntegerVector.Create(3, 4, 5);
 
     Assert.Equal(3, IntegerVector.BroadcastLength(scalar, vector));
     Assert.Equal(3, IntegerVector.BroadcastLength(vector, scalar));
@@ -319,8 +319,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Add_SameLength_AddsElementwise()
   {
-    IntegerVector a = new[] { 1, 2, 3 };
-    IntegerVector b = new[] { 10, 20, 30 };
+    IntegerVector a = IntegerVector.Create(1, 2, 3);
+    IntegerVector b = IntegerVector.Create(10, 20, 30);
 
     var result = IntegerVector.Add(a, b);
 
@@ -331,7 +331,7 @@ public sealed class IntegerVectorTests
   public void Add_BroadcastsScalarLeft()
   {
     IntegerVector scalar = 2;
-    IntegerVector vector = new[] { 10, 20, 30 };
+    IntegerVector vector = IntegerVector.Create(10, 20, 30);
 
     var result = IntegerVector.Add(scalar, vector);
 
@@ -341,7 +341,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Add_BroadcastsScalarRight()
   {
-    IntegerVector vector = new[] { 10, 20, 30 };
+    IntegerVector vector = IntegerVector.Create(10, 20, 30);
     IntegerVector scalar = 2;
 
     var result = IntegerVector.Add(vector, scalar);
@@ -352,8 +352,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Add_IncompatibleLengths_Throws()
   {
-    IntegerVector a = new[] { 1, 2 };
-    IntegerVector b = new[] { 10, 20, 30 };
+    IntegerVector a = IntegerVector.Create(1, 2);
+    IntegerVector b = IntegerVector.Create(10, 20, 30);
 
     Assert.Throws<ArgumentException>(() => IntegerVector.Add(a, b));
   }
@@ -361,8 +361,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Subtract_SameLength_SubtractsElementwise()
   {
-    IntegerVector a = new[] { 10, 20, 30 };
-    IntegerVector b = new[] { 1, 2, 3 };
+    IntegerVector a = IntegerVector.Create(10, 20, 30);
+    IntegerVector b = IntegerVector.Create(1, 2, 3);
 
     var result = IntegerVector.Subtract(a, b);
 
@@ -372,8 +372,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Multiply_SameLength_MultipliesElementwise()
   {
-    IntegerVector a = new[] { 2, 3, 4 };
-    IntegerVector b = new[] { 10, 20, 30 };
+    IntegerVector a = IntegerVector.Create(2, 3, 4);
+    IntegerVector b = IntegerVector.Create(10, 20, 30);
 
     var result = IntegerVector.Multiply(a, b);
 
@@ -383,8 +383,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Divide_SameLength_DividesElementwise()
   {
-    IntegerVector a = new[] { 10, 20, 30 };
-    IntegerVector b = new[] { 2, 4, 5 };
+    IntegerVector a = IntegerVector.Create(10, 20, 30);
+    IntegerVector b = IntegerVector.Create(2, 4, 5);
 
     var result = IntegerVector.Divide(a, b);
 
@@ -394,8 +394,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Operators_DelegateToArithmeticMethods()
   {
-    IntegerVector a = new[] { 10, 20, 30 };
-    IntegerVector b = new[] { 2, 4, 5 };
+    IntegerVector a = IntegerVector.Create(10, 20, 30);
+    IntegerVector b = IntegerVector.Create(2, 4, 5);
 
     Assert.Equal(new[] { 12, 24, 35 }, (a + b).ToArray());
     Assert.Equal(new[] { 8, 16, 25 }, (a - b).ToArray());
@@ -406,7 +406,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Clamp_ScalarBounds_ClampsValues()
   {
-    IntegerVector input = new[] { -1, 2, 10 };
+    IntegerVector input = IntegerVector.Create(-1, 2, 10);
     IntegerVector min = 0;
     IntegerVector max = 5;
 
@@ -419,9 +419,9 @@ public sealed class IntegerVectorTests
   [Fact]
   public void ClampAt_UsesDimensionBounds()
   {
-    IntegerVector input = new[] { -1, 2, 10 };
-    IntegerVector min = new[] { 0, 1, 2 };
-    IntegerVector max = new[] { 5, 3, 8 };
+    IntegerVector input = IntegerVector.Create(-1, 2, 10);
+    IntegerVector min = IntegerVector.Create(0, 1, 2);
+    IntegerVector max = IntegerVector.Create(5, 3, 8);
 
     Assert.Equal(0, input.ClampAt(min, max, 0));
     Assert.Equal(2, input.ClampAt(min, max, 1));
@@ -431,8 +431,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void GreaterThan_SameLength_WorksElementwise()
   {
-    IntegerVector a = new[] { 1, 5, 3 };
-    IntegerVector b = new[] { 2, 5, 1 };
+    IntegerVector a = IntegerVector.Create(1, 5, 3);
+    IntegerVector b = IntegerVector.Create(2, 5, 1);
 
     Assert.Equal(new[] { false, false, true }, (a > b).ToArray());
   }
@@ -440,8 +440,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void LessThan_SameLength_WorksElementwise()
   {
-    IntegerVector a = new[] { 1, 5, 3 };
-    IntegerVector b = new[] { 2, 5, 4 };
+    IntegerVector a = IntegerVector.Create(1, 5, 3);
+    IntegerVector b = IntegerVector.Create(2, 5, 4);
 
     Assert.Equal(new[] { true, false, true }, (a < b).ToArray());
   }
@@ -449,8 +449,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void GreaterThanOrEqual_SameLength_WorksElementwise()
   {
-    IntegerVector a = new[] { 1, 5, 3 };
-    IntegerVector b = new[] { 2, 5, 1 };
+    IntegerVector a = IntegerVector.Create(1, 5, 3);
+    IntegerVector b = IntegerVector.Create(2, 5, 1);
 
     Assert.Equal(new[] { false, true, true }, (a >= b).ToArray());
   }
@@ -458,8 +458,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void LessThanOrEqual_SameLength_WorksElementwise()
   {
-    IntegerVector a = new[] { 1, 5, 3 };
-    IntegerVector b = new[] { 2, 5, 3 };
+    IntegerVector a = IntegerVector.Create(1, 5, 3);
+    IntegerVector b = IntegerVector.Create(2, 5, 3);
 
     Assert.Equal(new[] { true, true, true }, (a <= b).ToArray());
   }
@@ -468,7 +468,7 @@ public sealed class IntegerVectorTests
   public void ComparisonOperators_BroadcastScalarLeft()
   {
     IntegerVector scalar = 3;
-    IntegerVector vector = new[] { 1, 3, 5 };
+    IntegerVector vector = IntegerVector.Create(1, 3, 5);
 
     Assert.Equal(new[] { true, false, false }, (scalar > vector).ToArray());
     Assert.Equal(new[] { false, false, true }, (scalar < vector).ToArray());
@@ -479,7 +479,7 @@ public sealed class IntegerVectorTests
   [Fact]
   public void ComparisonOperators_BroadcastScalarRight()
   {
-    IntegerVector vector = new[] { 1, 3, 5 };
+    IntegerVector vector = IntegerVector.Create(1, 3, 5);
     IntegerVector scalar = 3;
 
     Assert.Equal(new[] { false, false, true }, (vector > scalar).ToArray());
@@ -491,8 +491,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void ComparisonOperators_IncompatibleLengths_ThrowArgumentException()
   {
-    IntegerVector a = new[] { 1, 2 };
-    IntegerVector b = new[] { 1, 2, 3 };
+    IntegerVector a = IntegerVector.Create(1, 2);
+    IntegerVector b = IntegerVector.Create(1, 2, 3);
 
     Assert.Throws<ArgumentException>(() => a > b);
     Assert.Throws<ArgumentException>(() => a < b);
@@ -531,8 +531,8 @@ public sealed class IntegerVectorTests
   {
     var rng = new StubRandomNumberGenerator(0.9, 0.9, 0.9);
 
-    IntegerVector low = new[] { 10, 20, 30 };
-    IntegerVector high = new[] { 12, 22, 32 };
+    IntegerVector low = IntegerVector.Create(10, 20, 30);
+    IntegerVector high = IntegerVector.Create(12, 22, 32);
 
     var result = IntegerVector.CreateUniform(3, low, high, rng);
 
@@ -544,7 +544,7 @@ public sealed class IntegerVectorTests
   {
     var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
 
-    IntegerVector low = new[] { 0, 1 };
+    IntegerVector low = IntegerVector.Create(0, 1);
     IntegerVector high = 10;
 
     Assert.Throws<ArgumentException>(() => IntegerVector.CreateUniform(3, low, high, rng));
@@ -556,7 +556,7 @@ public sealed class IntegerVectorTests
     var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
 
     IntegerVector low = 0;
-    IntegerVector high = new[] { 10, 11 };
+    IntegerVector high = IntegerVector.Create(10, 11);
 
     Assert.Throws<ArgumentException>(() => IntegerVector.CreateUniform(3, low, high, rng));
   }
@@ -564,8 +564,8 @@ public sealed class IntegerVectorTests
   [Fact]
   public void Equality_EmptyVectors_AreEqual_AndHaveSameHashCode()
   {
-    IntegerVector a = Array.Empty<int>();
-    IntegerVector b = Array.Empty<int>();
+    IntegerVector a = IntegerVector.Create(Array.Empty<int>());
+    IntegerVector b = IntegerVector.Create(Array.Empty<int>());
 
     Assert.True(a.Equals(b));
     Assert.Equal(a.GetHashCode(), b.GetHashCode());

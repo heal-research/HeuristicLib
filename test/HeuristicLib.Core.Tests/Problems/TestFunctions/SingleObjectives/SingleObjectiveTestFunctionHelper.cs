@@ -19,10 +19,10 @@ internal static class SingleObjectiveTestFunctionHelper
       plus[i] += epsilon;
       minus[i] -= epsilon;
 
-      grad[i] = (f(plus) - f(minus)) / (2.0 * epsilon);
+      grad[i] = (f(RealVector.FromOwnedArray(plus)) - f(RealVector.FromOwnedArray(minus))) / (2.0 * epsilon);
     }
 
-    return grad;
+    return RealVector.FromOwnedArray(grad);
   }
 
   public static void AssertVectorApproximatelyEqual(

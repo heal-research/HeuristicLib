@@ -25,7 +25,7 @@ public class Zdt1(int dimension) : Zdt(dimension)
       res[i] = fact;
     }
 
-    return res;
+    return RealVector.FromOwnedArray(res);
   }
 
   protected override double H(double f1, double g) => 1 - Math.Sqrt(f1 / g);

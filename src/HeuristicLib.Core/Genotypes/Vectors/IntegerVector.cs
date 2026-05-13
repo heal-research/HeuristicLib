@@ -50,8 +50,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
   public static implicit operator IntegerVector(int value) => new(value);
 
-  public static implicit operator IntegerVector(int[] values) => new(values);
-
   public static implicit operator RealVector(IntegerVector integerVector) => ToRealVector(integerVector);
 
   public static IntegerVector Create(params int[] elements) => new(elements, takeOwnership: false);

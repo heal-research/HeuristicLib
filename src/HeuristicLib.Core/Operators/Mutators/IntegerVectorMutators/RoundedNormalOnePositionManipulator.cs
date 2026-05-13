@@ -44,6 +44,6 @@ public record RoundedNormalOnePositionManipulator
     var value = random.NextNormal(vector[idx], s);
     result[idx] = RealVector.RoundToIntegerAt(value, minimum, maximum, idx);
 
-    return result;
+    return IntegerVector.FromOwnedArray(result);
   }
 }

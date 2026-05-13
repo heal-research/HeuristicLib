@@ -115,7 +115,7 @@ public record PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSe
     if (!any)
     // Very unlikely
     {
-      return RealVector.Clamp(xp, xl, xu);
+      return RealVector.Clamp(RealVector.FromOwnedArray(xp), xl, xu);
     }
 
     var mutPow = 1.0 / (eta + 1.0);
@@ -167,6 +167,6 @@ public record PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSe
     }
 
     // Final safety repair (very unlikely to do anything)
-    return RealVector.Clamp(xp, xl, xu);
+    return RealVector.Clamp(RealVector.FromOwnedArray(xp), xl, xu);
   }
 }

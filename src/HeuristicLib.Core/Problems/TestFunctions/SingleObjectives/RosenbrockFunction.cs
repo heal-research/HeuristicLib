@@ -49,6 +49,6 @@ public class RosenbrockFunction(int dimension) : IGradientTestFunction
       g[i] = sum;
     }
 
-    return g;
+    return RealVector.FromOwnedArray(g);
   }
 }

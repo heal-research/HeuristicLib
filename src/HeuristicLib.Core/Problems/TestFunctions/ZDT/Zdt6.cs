@@ -20,7 +20,7 @@ public class Zdt6(int dimension) : Zdt(dimension)
     var cos = Math.Cos(freq);
     res[0] = 4 * Math.Exp(-4 * x) * Math.Pow(sin, 5) * (sin - 9 * Math.PI * cos);
 
-    return res;
+    return RealVector.FromOwnedArray(res);
   }
 
   protected override double G(RealVector solution)
@@ -54,7 +54,7 @@ public class Zdt6(int dimension) : Zdt(dimension)
       res[i] = resEntry;
     }
 
-    return res;
+    return RealVector.FromOwnedArray(res);
   }
 
   protected override double H(double f1, double g)

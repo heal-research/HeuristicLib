@@ -64,6 +64,6 @@ public class GriewankFunction(int dimension) : IGradientTestFunction
       res[i] = termSum + termProd;
     }
 
-    return res;
+    return RealVector.FromOwnedArray(res);
   }
 }
