@@ -51,24 +51,17 @@ public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationS
       contains[value] = true;
     }
 
-    // 2. copy left values from parent2
-    var currentIndex = 0;
-    for (var i = 0; i < start; i++) {
-      var value = parent2[i];
-      if (!contains[value]) {
-        offspring[currentIndex] = value;
-        contains[value] = true;
-        currentIndex++;
+    // 2. fill the remaining positions from parent2, preserving cyclic order
+    var currentIndex = (end + 1) % offspring.Length;
+    for (var offset = 1; offset <= parent2.Count; offset++) {
+      var value = parent2[(end + offset) % parent2.Count];
+      if (contains[value]) {
+        continue;
       }
-    }
 
-    for (var i = end; i < parent1.Count; i++) {
-      var value = parent2[i];
-      if (!contains[value]) {
-        offspring[currentIndex] = value;
-        contains[value] = true;
-        currentIndex++;
-      }
+      offspring[currentIndex] = value;
+      contains[value] = true;
+      currentIndex = (currentIndex + 1) % offspring.Length;
     }
   }
 
