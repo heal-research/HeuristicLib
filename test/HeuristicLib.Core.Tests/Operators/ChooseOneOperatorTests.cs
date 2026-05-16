@@ -8,6 +8,7 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
+using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
 
@@ -194,24 +195,7 @@ public class ChooseOneOperatorTests
       }
     }
   }
-
-  private sealed class SequenceRandomNumberGenerator(params double[] nextDoubles) : IRandomNumberGenerator
-  {
-    private readonly Queue<double> doubles = new(nextDoubles);
-
-    public double NextDouble()
-    {
-      if (doubles.Count == 0)
-        throw new InvalidOperationException("No more predefined doubles are available.");
-      return doubles.Dequeue();
-    }
-
-    public int NextInt() => 0;
-
-    public IRandomNumberGenerator Fork(ulong forkKey) => this;
-  }
 }
-
 
 
 
