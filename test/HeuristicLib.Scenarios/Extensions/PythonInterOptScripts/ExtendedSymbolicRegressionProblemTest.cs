@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Scenarios.Extensions.PythonInterOptScripts;
 
 public class ExtendedSymbolicRegressionProblemTest
 {
-  [Fact(Explicit = true)]
+  [Fact]
   public void RunMagicProblem()
   {
     var file = Path.Combine("TestData", "192_vineyard.tsv");
@@ -17,6 +17,8 @@ public class ExtendedSymbolicRegressionProblemTest
 
     var pop = ExtendedSymbolicRegressionProblem.RunDefault(file, 40, individualCallback, populationCallback);
     pop.Solutions.Length.ShouldBe(300);
+    pop.Solutions.All(solution => solution.ObjectiveVector.Count == 5).ShouldBeTrue();
+    pop.Solutions.All(solution => solution.ObjectiveVector.All(double.IsFinite)).ShouldBeTrue();
     var best = pop.Solutions.OrderByDescending(x => x.ObjectiveVector[0]).First();
 
     (best.ObjectiveVector[0] > 0.4).ShouldBeTrue();

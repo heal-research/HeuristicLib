@@ -42,6 +42,6 @@ Typical scenario characteristics:
 - exercises multiple subsystems together
 - uses realistic datasets, runtime composition, or external integration points
 - validates longer-running or more story-shaped execution flows
-- may be explicit or otherwise less suitable for the tight unit-test loop
+- may be slower and broader than unit tests, so it should not be treated as the inner TDD test cycle
 
 When both views matter, keep the narrow invariant in the unit-test project and add one representative end-to-end check in `HeuristicLib.Scenarios`.

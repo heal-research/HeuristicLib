@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Scenarios.Core.Problems.TravelingSalesman;
 
 public class TspScenarios
 {
-  [Fact(Explicit = true)]
+  [Fact]
   public void GaWithTSP()
   {
     // Load Problem
@@ -39,13 +39,17 @@ public class TspScenarios
     // execute
     var resGa = ga.Build()
                   .WithMaxIterations(10)
-                  .RunToCompletion(prob, RandomNumberGenerator.Create(42));
+                  .RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
     // look at results
     var objGa = resGa.Population
                      .OrderBy(x => x.ObjectiveVector[0])
                      .First();
 
-    // best possible 7542
+    resGa.Population.Solutions.Length.ShouldBe(100);
+    resGa.Population.Solutions.All(solution => prob.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    resGa.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+    double.IsFinite(objGa.ObjectiveVector[0]).ShouldBeTrue();
+    objGa.ObjectiveVector[0].ShouldBeGreaterThan(0.0);
   }
 }

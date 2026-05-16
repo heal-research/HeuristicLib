@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Scenarios.Extensions.Problems.Dynamic.TravelingSales
 
 public class DynamicTSPTests
 {
-  [Fact(Explicit = true)]
+  [Fact]
   public void GaWithDynamicTSP()
   {
     //Load Problem
@@ -48,6 +48,10 @@ public class DynamicTSPTests
                      .OrderBy(x => x.ObjectiveVector[0])
                      .First();
 
-    //best possible 7542
+    resGa.Population.Solutions.Length.ShouldBe(100);
+    resGa.Population.Solutions.All(solution => prob.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    resGa.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+    double.IsFinite(objGa.ObjectiveVector[0]).ShouldBeTrue();
+    objGa.ObjectiveVector[0].ShouldBeGreaterThan(0.0);
   }
 }

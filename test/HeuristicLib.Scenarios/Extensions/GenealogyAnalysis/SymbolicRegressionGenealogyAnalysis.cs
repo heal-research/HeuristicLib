@@ -39,14 +39,14 @@ public class GenealogyGraphTests
     return symRegAllMutator;
   }
 
-  //[Fact(Skip = "Currently disabled because the LevenbergMarquardtMinimizer seems to loop endlessly in this test.")]
-  [Fact(Explicit = true)]
+  // Note: be cautious here because Levenberg-Marquardt likely caused an endless loop in the past.
+  [Fact]
   public void GeneticAlgorithmExecution()
   {
     var problem = CreateTestSymbolicRegressionProblem();
 
     var builder = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
-    builder.PopulationSize = 100;
+    builder.PopulationSize = 8;
     builder.MutationRate = 0.05;
     builder.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
     builder.Elites = 1;
@@ -58,21 +58,24 @@ public class GenealogyGraphTests
 
     var analysis = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(ga, ga.Interceptor!);
 
-    var run = ga.WithMaxIterations(100).CreateRun(problem, analysis);
+    var run = ga.WithMaxIterations(6).CreateRun(problem, analysis);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
     var ares = run.GetAnalyzerResult(analysis);
 
-    ares.Count.ShouldBe(100);
-    res.Population.Solutions.Count().ShouldBe(100);
+    ares.Count.ShouldBe(6);
+    res.Population.Solutions.Count().ShouldBe(8);
+    res.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    res.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+    res.Population.Solutions.All(solution => double.IsFinite(solution.ObjectiveVector[0])).ShouldBeTrue();
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public void GenealogyGraphOnGeneticAlgorithm()
   {
     var problem = CreateTestSymbolicRegressionProblem();
 
-    const int gens = 100;
-    const int popsize = 10;
+    const int gens = 6;
+    const int popsize = 6;
     var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), CreateSymRegAllMutator());
     ga.PopulationSize = popsize;
     ga.MutationRate = 0.05;
@@ -89,7 +92,7 @@ public class GenealogyGraphTests
     var genealogyAnalysis = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
 
     var run = algorithm.WithMaxIterations(gens).CreateRun(problem, evalQualities, qualities, genealogyAnalysis);
-    var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
+    var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
 
     var qres = run.GetAnalyzerResult(qualities);
     var eres = run.GetAnalyzerResult(evalQualities);
@@ -97,12 +100,15 @@ public class GenealogyGraphTests
 
     qres.Count.ShouldBe(gens);
     res.Population.Solutions.Length.ShouldBe(popsize);
+    res.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    res.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
     var graphViz = gres.ToGraphViz();
     (graphViz.Length > 0).ShouldBeTrue();
     eres.CurrentState[^1].best.ObjectiveVector.ShouldBe(qres[^1].Best.ObjectiveVector);
   }
 
-  [Fact(Explicit = true)]
+  // Note: be cautious here because Levenberg-Marquardt likely caused an endless loop in the past.
+  [Fact]
   public void GenealogyGraphOnLocalSearch()
   {
     var problem = CreateTestSymbolicRegressionProblem();
@@ -112,21 +118,24 @@ public class GenealogyGraphTests
     algorithm = algorithm with { Interceptor = interceptor };
     var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, SingleSolutionState<SymbolicExpressionTree>>(
       algorithm, mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
-    var run = algorithm.WithMaxIterations(100).CreateRun(problem, genealogy);
-    var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
+    var run = algorithm.WithMaxIterations(8).CreateRun(problem, genealogy);
+    var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
     var gres = run.GetAnalyzerResult(genealogy);
     res.Population.Solutions.ShouldHaveSingleItem();
+    problem.SearchSpace.Contains(res.Population.Solutions.Single().Genotype).ShouldBeTrue();
+    res.Population.Solutions.Single().ObjectiveVector.Count.ShouldBe(1);
+    double.IsFinite(res.Population.Solutions.Single().ObjectiveVector[0]).ShouldBeTrue();
     var graphViz = gres.ToGraphViz();
     (graphViz.Length > 0).ShouldBeTrue();
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public void GenealogyGraphOnNSGA2()
   {
     var problem = CreateTestSymbolicRegressionProblem(multiObjective: true);
     var symRegAllMutator = CreateSymRegAllMutator();
-    const int populationSize = 10;
-    const int maximumIterations = 50;
+    const int populationSize = 6;
+    const int maximumIterations = 4;
     const double mutationRate = 0.05;
     var nsga2 = NSGA2.GetBuilder(
       new ProbabilisticTreeCreator(),
@@ -149,6 +158,9 @@ public class GenealogyGraphTests
 
     qres.Count.ShouldBe(maximumIterations);
     res.Population.Solutions.Length.ShouldBe(populationSize);
+    res.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    res.Population.Solutions.All(solution => solution.ObjectiveVector.Count == problem.Objective.Directions.Count()).ShouldBeTrue();
+    res.Population.Solutions.All(solution => solution.ObjectiveVector.All(double.IsFinite)).ShouldBeTrue();
     var graphViz = gres.ToGraphViz();
     (graphViz.Length > 0).ShouldBeTrue();
   }
@@ -157,7 +169,7 @@ public class GenealogyGraphTests
 
   public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
 
-  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 40, bool multiObjective = false, int constOptIteration = 5)
+  private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(int treeLength = 12, bool multiObjective = false, int constOptIteration = 1)
   {
     var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
 

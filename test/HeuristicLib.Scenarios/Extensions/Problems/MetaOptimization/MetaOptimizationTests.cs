@@ -21,7 +21,7 @@ namespace HEAL.HeuristicLib.Scenarios.Extensions.Problems.MetaOptimization;
 
 public class MetaOptimizationTests
 {
-  [Fact(Explicit = true)]
+  [Fact]
   public void TestGAwithMutators()
   {
     //setup
@@ -63,8 +63,12 @@ public class MetaOptimizationTests
                      .WithCache();
 
     //run meta alg
-    hc.Build()
+    var finalState = hc.Build()
       .WithMaxIterations(5)
-      .RunToCompletion(metaProblem, RandomNumberGenerator.Create(42), ct: CancellationToken.None);
+      .RunToCompletion(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+
+    metaProblem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+    finalState.Solution.ObjectiveVector.Count.ShouldBe(1);
+    double.IsFinite(finalState.Solution.ObjectiveVector[0]).ShouldBeTrue();
   }
 }

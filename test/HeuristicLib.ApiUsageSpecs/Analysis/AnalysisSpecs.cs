@@ -19,7 +19,7 @@ namespace HEAL.HeuristicLib.ApiUsageSpecs.Analysis;
 
 public class AnalysisSpecs
 {
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task Analyzer_CurrentApi_AttachesAtRunCreation_AndIsReadFromRunStateWrapper()
   {
     var problem = CreateRastriginProblem(dimension: 4);
@@ -71,7 +71,7 @@ public class AnalysisSpecs
     run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task Analyzer_CurrentApi_CanObserveBothEvaluatorAndInterceptor()
   {
     var problem = CreateRastriginProblem(dimension: 4);
@@ -94,7 +94,7 @@ public class AnalysisSpecs
     analysisResult.BestSolutions.All(entry => entry.evaluations > 0).ShouldBeTrue();
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task AnalyzerAttachment_Example_ProducesTypedResult()
   {
     var problem = CreateRastriginProblem(dimension: 4);

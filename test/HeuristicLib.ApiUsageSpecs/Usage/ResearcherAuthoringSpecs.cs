@@ -18,7 +18,7 @@ namespace HEAL.HeuristicLib.ApiUsageSpecs.Usage;
 
 public class ResearcherAuthoringSpecs
 {
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task CustomMutator_AuthoringExample_RunsInHillClimber()
   {
     var problem = CreateRastriginProblem(dimension: 4);
@@ -38,7 +38,7 @@ public class ResearcherAuthoringSpecs
     problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task CustomTerminator_AuthoringExample_CanStopAlgorithm()
   {
     var problem = CreateRastriginProblem(dimension: 4);
@@ -63,7 +63,7 @@ public class ResearcherAuthoringSpecs
     problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task ProblemSpecificOperator_AuthoringExample_CanUseProblemType()
   {
     var problem = CreateRastriginProblem(dimension: 4);

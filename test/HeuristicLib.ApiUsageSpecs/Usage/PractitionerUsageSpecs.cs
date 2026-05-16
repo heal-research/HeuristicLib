@@ -193,7 +193,7 @@ public class PractitionerUsageSpecs
     IdentityInterceptor.Transform(state, previousState: null).ShouldBe(state);
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task GeneticAlgorithm_BenchmarkExample_RunsToCompletion()
   {
     var problem = CreateRastriginProblem(dimension: 4);
@@ -216,7 +216,7 @@ public class PractitionerUsageSpecs
     finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task HillClimber_BenchmarkExample_RunsToCompletion()
   {
     var problem = CreateRastriginProblem(dimension: 4);
@@ -236,7 +236,7 @@ public class PractitionerUsageSpecs
     problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task RepeatedExecution_Example_RunsEachRepetition()
   {
     var problem = CreateRastriginProblem(dimension: 4);
@@ -274,7 +274,7 @@ public class PractitionerUsageSpecs
     results.All(result => problem.SearchSpace.Contains(result.Value.Solution.Genotype)).ShouldBeTrue();
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public async Task EvolutionStrategy_BenchmarkExample_RunsToCompletion()
   {
     var problem = CreateRastriginProblem(dimension: 4);

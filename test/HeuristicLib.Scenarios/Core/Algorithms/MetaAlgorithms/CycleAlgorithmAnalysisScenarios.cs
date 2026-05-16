@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.Scenarios.Core.Algorithms.MetaAlgorithms;
 
 public class CycleAlgorithmAnalysisScenarios
 {
-  [Fact(Explicit = true)]
+  [Fact]
   public void CycleAlgorithm_WithFreshRegistries_PreservesAnalyzerStateAcrossCycles()
   {
     var result = RunCycleAlgorithm(newExecutionInstancesPerCycle: true);
@@ -27,7 +27,7 @@ public class CycleAlgorithmAnalysisScenarios
     result.FinalState.Population.Solutions.Single().Genotype.ShouldBe(2);
   }
 
-  [Fact(Explicit = true)]
+  [Fact]
   public void CycleAlgorithm_WithReusedChildRegistries_PreservesAnalyzerStateAcrossCycles()
   {
     var result = RunCycleAlgorithm(newExecutionInstancesPerCycle: false);
