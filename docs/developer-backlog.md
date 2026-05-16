@@ -44,14 +44,6 @@ These are still real open items:
 - decide whether operators should expose a consistent caller-provided output-buffer or result-memory API. Avoid one-off `Memory<T>` parameters on individual operators. If this becomes necessary for allocation-sensitive workflows, design it as a library-wide operator convention that clearly states who owns the resulting storage and how immutable genotype containers are created from it.
 - expand `IRandomNumberGenerator` and the concrete random engines so they expose the raw primitive outputs and data widths needed to build statistically sound and efficient higher-level sampling APIs; in particular, bounded integer generation should eventually be reworked on top of integer-domain primitives rather than `NextDouble()` scaling
 
-## Still failing the current design rules
-
-These are not just theoretical backlog items; the repository still contains active mismatches with current design guidance:
-
-- remove all `Debug.Assert` usage and any other debug-versus-release behavioral divergence from library code, and replace correctness checks with runtime invariants, type constraints, or tests
-
-At the moment there are still `Debug.Assert` calls in symbolic tree operators, so this item is not done.
-
 ## Source material
 
 The active guiding docs remain:
