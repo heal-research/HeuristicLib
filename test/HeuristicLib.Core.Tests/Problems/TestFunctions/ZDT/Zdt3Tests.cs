@@ -8,7 +8,7 @@ public class Zdt3Tests
   [Fact]
   public void Constructor_ShouldThrow_WhenDimensionIsLessThanTwo()
   {
-    Assert.Throws<ArgumentOutOfRangeException>(() => new Zdt3(1));
+    Should.Throw<ArgumentOutOfRangeException>(() => new Zdt3(1));
   }
 
   [Fact]
@@ -19,8 +19,8 @@ public class Zdt3Tests
 
     var result = problem.Evaluate(x);
 
-    Assert.Equal(0.0, result[0], 12);
-    Assert.Equal(1.0, result[1], 12);
+    result[0].ShouldBe(0.0, 1e-12);
+    result[1].ShouldBe(1.0, 1e-12);
   }
 
   [Fact]
@@ -37,8 +37,8 @@ public class Zdt3Tests
     var h = 1.0 - Math.Sqrt(ratio) - ratio * Math.Sin(10.0 * Math.PI * f1);
     var f2 = g * h;
 
-    Assert.Equal(f1, result[0], 12);
-    Assert.Equal(f2, result[1], 12);
+    result[0].ShouldBe(f1, 1e-12);
+    result[1].ShouldBe(f2, 1e-12);
   }
 
   [Fact]

@@ -15,11 +15,11 @@ public class IntegerVectorSearchSpaceTests
       Minimum: IntegerVector.Create(values),
       Maximum: IntegerVector.Create(values1));
 
-    Assert.Equal(3, space.Length);
+    space.Length.ShouldBe(3);
     int[] values3 = [0, 1, 2];
-    Assert.Equal(values3, space.Minimum);
+    space.Minimum.ShouldBe(values3);
     int[] values4 = [10, 11, 12];
-    Assert.Equal(values4, space.Maximum);
+    space.Maximum.ShouldBe(values4);
   }
 
   [Fact]
@@ -34,13 +34,13 @@ public class IntegerVectorSearchSpaceTests
         Maximum: IntegerVector.Create(values1));
     });
 
-    Assert.Null(ex);
+    ex.ShouldBeNull();
   }
 
   [Fact]
   public void Constructor_Throws_WhenMinimumCountIsInvalid()
   {
-    Assert.Throws<ArgumentException>(() => {
+    Should.Throw<ArgumentException>(() => {
       int[] values = [0, 1];
       int[] values1 = [10, 10, 10];
       return new IntegerVectorSearchSpace(
@@ -53,7 +53,7 @@ public class IntegerVectorSearchSpaceTests
   [Fact]
   public void Constructor_Throws_WhenMaximumCountIsInvalid()
   {
-    Assert.Throws<ArgumentException>(() => {
+    Should.Throw<ArgumentException>(() => {
       int[] values = [0, 0, 0];
       int[] values1 = [10, 10];
       return new IntegerVectorSearchSpace(
@@ -66,7 +66,7 @@ public class IntegerVectorSearchSpaceTests
   [Fact]
   public void Constructor_Throws_WhenMinimumIsGreaterThanMaximum()
   {
-    Assert.Throws<ArgumentException>(() => {
+    Should.Throw<ArgumentException>(() => {
       int[] values = [0, 5, 0];
       int[] values1 = [10, 4, 10];
       return new IntegerVectorSearchSpace(
@@ -87,7 +87,7 @@ public class IntegerVectorSearchSpaceTests
       Maximum: IntegerVector.Create(values1));
 
     int[] values2 = [0, 5, 12];
-    Assert.True(space.Contains(IntegerVector.Create(values2)));
+    space.Contains(IntegerVector.Create(values2)).ShouldBeTrue();
   }
 
   [Fact]
@@ -101,7 +101,7 @@ public class IntegerVectorSearchSpaceTests
       Maximum: IntegerVector.Create(values1));
 
     int[] values2 = [1, 2];
-    Assert.False(space.Contains(IntegerVector.Create(values2)));
+    space.Contains(IntegerVector.Create(values2)).ShouldBeFalse();
   }
 
   [Fact]
@@ -115,7 +115,7 @@ public class IntegerVectorSearchSpaceTests
       Maximum: IntegerVector.Create(values1));
 
     int[] values2 = [0, 0, 12];
-    Assert.False(space.Contains(IntegerVector.Create(values2)));
+    space.Contains(IntegerVector.Create(values2)).ShouldBeFalse();
   }
 
   [Fact]
@@ -129,7 +129,7 @@ public class IntegerVectorSearchSpaceTests
       Maximum: IntegerVector.Create(values1));
 
     int[] values2 = [0, 5, 13];
-    Assert.False(space.Contains(IntegerVector.Create(values2)));
+    space.Contains(IntegerVector.Create(values2)).ShouldBeFalse();
   }
 
   [Fact]
@@ -144,9 +144,9 @@ public class IntegerVectorSearchSpaceTests
 
     RealVectorSearchSpace realSpace = intSpace;
 
-    Assert.Equal(3, realSpace.Length);
-    Assert.Equal(intSpace.Minimum, realSpace.Minimum);
-    Assert.Equal(intSpace.Maximum, realSpace.Maximum);
+    realSpace.Length.ShouldBe(3);
+    realSpace.Minimum.ShouldBe(intSpace.Minimum);
+    realSpace.Maximum.ShouldBe(intSpace.Maximum);
   }
 
   [Fact]
@@ -157,8 +157,8 @@ public class IntegerVectorSearchSpaceTests
       0,
       10);
 
-    Assert.True(space.Contains(new IntegerVector(0, 2, 10)));
-    Assert.False(space.Contains(new IntegerVector(0, 11, 10)));
+    space.Contains(new IntegerVector(0, 2, 10)).ShouldBeTrue();
+    space.Contains(new IntegerVector(0, 11, 10)).ShouldBeFalse();
   }
 
   [Fact]
@@ -169,8 +169,8 @@ public class IntegerVectorSearchSpaceTests
       new IntegerVector(0, 10, 100),
       new IntegerVector(10, 20, 110));
 
-    Assert.True(space.Contains(new IntegerVector(4, 16, 109)));
-    Assert.False(space.Contains(new IntegerVector(4, 21, 109)));
+    space.Contains(new IntegerVector(4, 16, 109)).ShouldBeTrue();
+    space.Contains(new IntegerVector(4, 21, 109)).ShouldBeFalse();
   }
 
   [Fact]
@@ -183,6 +183,6 @@ public class IntegerVectorSearchSpaceTests
 
     var ex = Record.Exception(() => space.Contains(IntegerVector.Create(0, 2, 4)));
 
-    Assert.Null(ex);
+    ex.ShouldBeNull();
   }
 }

@@ -11,7 +11,7 @@ public class AckleyFunctionTests
     var f = new AckleyFunction(3);
     RealVector x = [0.0, 0.0, 0.0];
 
-    Assert.Equal(0.0, f.Evaluate(x), 12);
+    f.Evaluate(x).ShouldBe(0.0, 1e-12);
   }
 
   [Fact]
@@ -22,9 +22,9 @@ public class AckleyFunctionTests
 
     var grad = f.EvaluateGradient(x);
 
-    Assert.Equal(0.0, grad[0], 12);
-    Assert.Equal(0.0, grad[1], 12);
-    Assert.Equal(0.0, grad[2], 12);
+    grad[0].ShouldBe(0.0, 1e-12);
+    grad[1].ShouldBe(0.0, 1e-12);
+    grad[2].ShouldBe(0.0, 1e-12);
   }
 
   [Fact]
@@ -39,7 +39,7 @@ public class AckleyFunctionTests
 
     var expected = -20.0 * Math.Exp(-0.2 * rootMeanSquare) - Math.Exp(meanCos) + 20.0 + Math.E;
 
-    Assert.Equal(expected, f.Evaluate(x), 12);
+    f.Evaluate(x).ShouldBe(expected, 1e-12);
   }
 
   [Fact]

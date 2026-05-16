@@ -21,6 +21,6 @@ public class ScaledTestFunctionTests
 
     // inner on (2, 6): 4 + 36 = 40
     // output scaling: 40 * 5 = 200
-    Assert.Equal(200.0, result, 12);
+    result.ShouldBe(200.0, 1e-12);
   }
 }

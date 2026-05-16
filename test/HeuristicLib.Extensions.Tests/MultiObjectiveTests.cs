@@ -30,8 +30,8 @@ public class MultiObjectiveTests
 
     var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank);
 
-    Assert.Empty(fronts);
-    Assert.Empty(rank);
+    fronts.ShouldBeEmpty();
+    rank.ShouldBeEmpty();
   }
 
   [Fact]
@@ -49,16 +49,16 @@ public class MultiObjectiveTests
 
     // Assert
     var ids = FrontIds(fronts);
-    Assert.Equal(3, fronts.Count);
-    Assert.Equal(["A"], ids[0]); // Front 0
-    Assert.Equal(["C", "D", "E"], ids[1]); // Front 1
-    Assert.Equal(["B"], ids[2]); // Front 2
+    fronts.Count.ShouldBe(3);
+    ids[0].ShouldBe(["A"]); // Front 0
+    ids[1].ShouldBe(["C", "D", "E"]); // Front 1
+    ids[2].ShouldBe(["B"]); // Front 2
 
     // Rank array matches positions: A=0; C/D/E=1; B=2
     var map = solutions.Select((s, i) => (s.Genotype, i)).ToDictionary(keySelector: x => x.Genotype, elementSelector: x => x.i);
-    Assert.Equal(0, rank[map["A"]]);
-    Assert.All(["C", "D", "E"], action: id => Assert.Equal(1, rank[map[id]]));
-    Assert.Equal(2, rank[map["B"]]);
+    rank[map["A"]].ShouldBe(0);
+    new[] { "C", "D", "E" }.ShouldAllBe(id => rank[map[id]] == 1);
+    rank[map["B"]].ShouldBe(2);
   }
 
   [Fact]
@@ -73,14 +73,14 @@ public class MultiObjectiveTests
 
     // Assert
     var ids = FrontIds(fronts);
-    Assert.Equal(2, fronts.Count);
-    Assert.Equal(["A", "B"], ids[0]); // both non-dominated
-    Assert.Equal(["C"], ids[1]);
+    fronts.Count.ShouldBe(2);
+    ids[0].ShouldBe(["A", "B"]); // both non-dominated
+    ids[1].ShouldBe(["C"]);
 
     var map = solutions.Select((s, i) => (s.Genotype, i)).ToDictionary(keySelector: x => x.Genotype, elementSelector: x => x.i);
-    Assert.Equal(0, rank[map["A"]]);
-    Assert.Equal(0, rank[map["B"]]);
-    Assert.Equal(1, rank[map["C"]]);
+    rank[map["A"]].ShouldBe(0);
+    rank[map["B"]].ShouldBe(0);
+    rank[map["C"]].ShouldBe(1);
   }
 
   [Fact]
@@ -94,10 +94,10 @@ public class MultiObjectiveTests
     var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank, true);
 
     // Assert
-    Assert.Equal(3, fronts.Count);
+    fronts.Count.ShouldBe(3);
     var ids = FrontIds(fronts);
-    Assert.Equal(["A", "B"], ids[0].Concat(ids[1]).OrderBy(x => x)); // Implementation may break ties arbitrarily
-    Assert.Equal(["C"], ids[2]);
+    ids[0].Concat(ids[1]).OrderBy(x => x).ShouldBe(["A", "B"]); // Implementation may break ties arbitrarily
+    ids[2].ShouldBe(["C"]);
   }
 
   private static string[][] FrontIds(List<List<ISolution<string>>> fronts)

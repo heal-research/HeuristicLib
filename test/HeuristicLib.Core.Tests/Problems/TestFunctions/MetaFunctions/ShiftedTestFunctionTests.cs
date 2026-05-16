@@ -19,6 +19,6 @@ public class ShiftedTestFunctionTests
     var result = function.Evaluate(x);
 
     // shifted input = (4, 6), sphere = 16 + 36 = 52
-    Assert.Equal(52.0, result, 12);
+    result.ShouldBe(52.0, 1e-12);
   }
 }

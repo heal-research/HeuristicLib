@@ -18,7 +18,7 @@ public class QuadraticAssignmentProblemDataTests
 
     var data = new QuadraticAssignmentProblemData(flows, distances);
 
-    Assert.Equal(2, data.Size);
+    data.Size.ShouldBe(2);
   }
 
   [Fact]
@@ -35,8 +35,8 @@ public class QuadraticAssignmentProblemDataTests
 
     var data = new QuadraticAssignmentProblemData(flows, distances);
 
-    Assert.Equal(2, data.GetFlow(1, 0));
-    Assert.Equal(3, data.GetFlow(1, 1));
+    data.GetFlow(1, 0).ShouldBe(2);
+    data.GetFlow(1, 1).ShouldBe(3);
   }
 
   [Fact]
@@ -53,8 +53,8 @@ public class QuadraticAssignmentProblemDataTests
 
     var data = new QuadraticAssignmentProblemData(flows, distances);
 
-    Assert.Equal(4, data.GetDistance(0, 1));
-    Assert.Equal(5, data.GetDistance(1, 0));
+    data.GetDistance(0, 1).ShouldBe(4);
+    data.GetDistance(1, 0).ShouldBe(5);
   }
 
   [Fact]
@@ -69,10 +69,10 @@ public class QuadraticAssignmentProblemDataTests
       { 2, 3 }
     };
 
-    var ex = Assert.Throws<ArgumentException>(() => new QuadraticAssignmentProblemData(flows, distances));
+    var ex = Should.Throw<ArgumentException>(() => new QuadraticAssignmentProblemData(flows, distances));
 
-    Assert.Equal("flows", ex.ParamName);
-    Assert.Contains("must be square", ex.Message);
+    ex.ParamName.ShouldBe("flows");
+    ex.Message.ShouldContain("must be square");
   }
 
   [Fact]
@@ -87,10 +87,10 @@ public class QuadraticAssignmentProblemDataTests
       { 4, 5, 6 }
     };
 
-    var ex = Assert.Throws<ArgumentException>(() => new QuadraticAssignmentProblemData(flows, distances));
+    var ex = Should.Throw<ArgumentException>(() => new QuadraticAssignmentProblemData(flows, distances));
 
-    Assert.Equal("distances", ex.ParamName);
-    Assert.Contains("must be square", ex.Message);
+    ex.ParamName.ShouldBe("distances");
+    ex.Message.ShouldContain("must be square");
   }
 
   [Fact]
@@ -106,8 +106,8 @@ public class QuadraticAssignmentProblemDataTests
       { 6, 7, 8 }
     };
 
-    var ex = Assert.Throws<ArgumentException>(() => new QuadraticAssignmentProblemData(flows, distances));
+    var ex = Should.Throw<ArgumentException>(() => new QuadraticAssignmentProblemData(flows, distances));
 
-    Assert.Contains("same size", ex.Message);
+    ex.Message.ShouldContain("same size");
   }
 }

@@ -10,7 +10,7 @@ public class PermutationSearchSpaceTests
   {
     var space = new PermutationSearchSpace(5);
 
-    Assert.Equal(5, space.Length);
+    space.Length.ShouldBe(5);
   }
 
   [Fact]
@@ -19,7 +19,7 @@ public class PermutationSearchSpaceTests
     var space = new PermutationSearchSpace(4);
 
     int[] values = [0, 1, 2, 3];
-    Assert.True(space.Contains(Permutation.Create(values)));
+    space.Contains(Permutation.Create(values)).ShouldBeTrue();
   }
 
   [Fact]
@@ -28,7 +28,7 @@ public class PermutationSearchSpaceTests
     var space = new PermutationSearchSpace(4);
 
     int[] values = [0, 1, 2];
-    Assert.False(space.Contains(Permutation.Create(values)));
+    space.Contains(Permutation.Create(values)).ShouldBeFalse();
   }
 
   [Fact]
@@ -37,7 +37,7 @@ public class PermutationSearchSpaceTests
     var space = new PermutationSearchSpace(4);
 
     int[] values = [0, 1, 2, 3, 4];
-    Assert.False(space.Contains(Permutation.Create(values)));
+    space.Contains(Permutation.Create(values)).ShouldBeFalse();
   }
 
   [Fact]
@@ -45,7 +45,7 @@ public class PermutationSearchSpaceTests
   {
     var space = new PermutationSearchSpace(0);
 
-    Assert.True(space.Contains(Permutation.Create(Array.Empty<int>())));
+    space.Contains(Permutation.Create(Array.Empty<int>())).ShouldBeTrue();
   }
 
   [Fact]
@@ -55,9 +55,9 @@ public class PermutationSearchSpaceTests
 
     IntegerVectorSearchSpace intSpace = permutationSpace;
 
-    Assert.Equal(5, intSpace.Length);
-    Assert.Equal(new IntegerVector(0), intSpace.Minimum);
-    Assert.Equal(new IntegerVector(4), intSpace.Maximum);
+    intSpace.Length.ShouldBe(5);
+    intSpace.Minimum.ShouldBe(new IntegerVector(0));
+    intSpace.Maximum.ShouldBe(new IntegerVector(4));
   }
 
   [Fact]
@@ -67,9 +67,9 @@ public class PermutationSearchSpaceTests
 
     IntegerVectorSearchSpace intSpace = permutationSpace;
 
-    Assert.Equal(1, intSpace.Length);
-    Assert.Equal(new IntegerVector(0), intSpace.Minimum);
-    Assert.Equal(new IntegerVector(0), intSpace.Maximum);
+    intSpace.Length.ShouldBe(1);
+    intSpace.Minimum.ShouldBe(new IntegerVector(0));
+    intSpace.Maximum.ShouldBe(new IntegerVector(0));
   }
 
   [Fact]
@@ -77,7 +77,7 @@ public class PermutationSearchSpaceTests
   {
     var permutationSpace = new PermutationSearchSpace(0);
 
-    Assert.Throws<ArgumentException>(() => {
+    Should.Throw<ArgumentException>(() => {
       IntegerVectorSearchSpace _ = permutationSpace;
     });
   }

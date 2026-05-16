@@ -10,7 +10,7 @@ public class BoolVectorSearchSpaceTests
   {
     var space = new BoolVectorSearchSpace(3);
 
-    Assert.Equal(3, space.Length);
+    space.Length.ShouldBe(3);
   }
 
   [Fact]
@@ -19,7 +19,7 @@ public class BoolVectorSearchSpaceTests
     var space = new BoolVectorSearchSpace(3);
 
     bool[] values = [true, false, true];
-    Assert.True(space.Contains(BoolVector.Create(values)));
+    space.Contains(BoolVector.Create(values)).ShouldBeTrue();
   }
 
   [Fact]
@@ -28,7 +28,7 @@ public class BoolVectorSearchSpaceTests
     var space = new BoolVectorSearchSpace(3);
 
     bool[] values = [true, false];
-    Assert.False(space.Contains(BoolVector.Create(values)));
+    space.Contains(BoolVector.Create(values)).ShouldBeFalse();
   }
 
   [Fact]
@@ -37,7 +37,7 @@ public class BoolVectorSearchSpaceTests
     var space = new BoolVectorSearchSpace(3);
 
     bool[] values = [true, false, true, false];
-    Assert.False(space.Contains(BoolVector.Create(values)));
+    space.Contains(BoolVector.Create(values)).ShouldBeFalse();
   }
 
   [Fact]
@@ -45,7 +45,7 @@ public class BoolVectorSearchSpaceTests
   {
     var space = new BoolVectorSearchSpace(0);
 
-    Assert.True(space.Contains(BoolVector.Create(Array.Empty<bool>())));
+    space.Contains(BoolVector.Create(Array.Empty<bool>())).ShouldBeTrue();
   }
 
   [Fact]
@@ -54,10 +54,10 @@ public class BoolVectorSearchSpaceTests
     var space = new BoolVectorSearchSpace(3);
 
     bool[] values = [true, true, true];
-    Assert.True(space.Contains(BoolVector.Create(values)));
+    space.Contains(BoolVector.Create(values)).ShouldBeTrue();
     bool[] values1 = [false, false, false];
-    Assert.True(space.Contains(BoolVector.Create(values1)));
+    space.Contains(BoolVector.Create(values1)).ShouldBeTrue();
     bool[] values2 = [true, false, true];
-    Assert.True(space.Contains(BoolVector.Create(values2)));
+    space.Contains(BoolVector.Create(values2)).ShouldBeTrue();
   }
 }

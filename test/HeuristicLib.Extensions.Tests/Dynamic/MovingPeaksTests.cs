@@ -36,7 +36,7 @@ public class MovingPeaksTests
     RealVector x = [10.0, 10.0];
     var fx = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
-    Assert.Equal(50.0, fx, 10);
+    fx.ShouldBe(50.0, 1e-10);
   }
 
   [Fact]
@@ -49,7 +49,7 @@ public class MovingPeaksTests
     RealVector x = [10.0, 10.0];
     var fx = p.Evaluate(x, TestRandoms.NoRandom)[0];
 
-    Assert.Equal(50.0, fx, 10);
+    fx.ShouldBe(50.0, 1e-10);
   }
 
   [Fact]
@@ -63,7 +63,7 @@ public class MovingPeaksTests
     // Far from both peaks (roughly center-ish but far from 10,10 and 90,90)
     var far = p.Evaluate([50.0, 50.0], TestRandoms.NoRandom)[0];
 
-    Assert.True(far < near);
+    (far < near).ShouldBeTrue();
   }
 
   [Fact]
@@ -96,7 +96,7 @@ public class MovingPeaksTests
     }
 
     var after = p.Evaluate(x, TestRandoms.NoRandom)[0];
-    Assert.Equal(before, after, 12);
+    after.ShouldBe(before, 1e-12);
   }
 
   [Fact]
@@ -121,7 +121,7 @@ public class MovingPeaksTests
       break;
     }
 
-    Assert.True(changed);
+    changed.ShouldBeTrue();
   }
 
   [Fact]
@@ -138,8 +138,8 @@ public class MovingPeaksTests
       // This assumes you expose current peaks as a read-only list.
       // If you don't, consider exposing them (super useful for debugging + tests).
       foreach (var pk in p.Peaks()) {
-        Assert.InRange(pk.Height, Parameters.MinHeight, Parameters.MaxHeight);
-        Assert.InRange(pk.Width, Parameters.MinWidth, Parameters.MaxWidth);
+        pk.Height.ShouldBeInRange(Parameters.MinHeight, Parameters.MaxHeight);
+        pk.Width.ShouldBeInRange(Parameters.MinWidth, Parameters.MaxWidth);
       }
     }
   }
@@ -159,7 +159,7 @@ public class MovingPeaksTests
     var peaks = p.Peaks().ToArray();
     for (var i = 0; i < peaks.Length; i++) {
       var dist = Euclidean(before[i], peaks[i].Center);
-      Assert.True(dist <= Parameters.ShiftSeverity + 1e-9);
+      (dist <= Parameters.ShiftSeverity + 1e-9).ShouldBeTrue();
     }
   }
 

@@ -12,7 +12,7 @@ public class CrowdingDistanceTests
 
     var d = CrowdingDistance.CalculateCrowdingDistances(pop);
 
-    Assert.Empty(d);
+    d.ShouldBeEmpty();
   }
 
   [Fact]
@@ -22,8 +22,8 @@ public class CrowdingDistanceTests
 
     var d = CrowdingDistance.CalculateCrowdingDistances(pop);
 
-    Assert.Single(d);
-    Assert.True(double.IsPositiveInfinity(d[0]));
+    d.ShouldHaveSingleItem();
+    double.IsPositiveInfinity(d[0]).ShouldBeTrue();
   }
 
   [Fact]
@@ -33,9 +33,9 @@ public class CrowdingDistanceTests
 
     var d = CrowdingDistance.CalculateCrowdingDistances(pop);
 
-    Assert.Equal(2, d.Length);
-    Assert.True(double.IsPositiveInfinity(d[0]));
-    Assert.True(double.IsPositiveInfinity(d[1]));
+    d.Length.ShouldBe(2);
+    double.IsPositiveInfinity(d[0]).ShouldBeTrue();
+    double.IsPositiveInfinity(d[1]).ShouldBeTrue();
   }
 
   [Fact]
@@ -46,12 +46,12 @@ public class CrowdingDistanceTests
 
     var d = CrowdingDistance.CalculateCrowdingDistances(pop);
 
-    Assert.True(double.IsPositiveInfinity(d[0]));
-    Assert.False(double.IsPositiveInfinity(d[1]));
-    Assert.True(double.IsPositiveInfinity(d[2]));
+    double.IsPositiveInfinity(d[0]).ShouldBeTrue();
+    double.IsPositiveInfinity(d[1]).ShouldBeFalse();
+    double.IsPositiveInfinity(d[2]).ShouldBeTrue();
 
     // middle should be (next-prev)/range = (10-0)/10 = 1.0
-    Assert.Equal(1.0, d[1], 12);
+    d[1].ShouldBe(1.0, 1e-12);
   }
 
   [Fact]
@@ -68,9 +68,9 @@ public class CrowdingDistanceTests
 
     var d = CrowdingDistance.CalculateCrowdingDistances(pop);
 
-    Assert.True(double.IsPositiveInfinity(d[0]));
-    Assert.True(double.IsPositiveInfinity(d[1])); // key check
-    Assert.True(double.IsPositiveInfinity(d[2]));
+    double.IsPositiveInfinity(d[0]).ShouldBeTrue();
+    double.IsPositiveInfinity(d[1]).ShouldBeTrue(); // key check
+    double.IsPositiveInfinity(d[2]).ShouldBeTrue();
   }
 
   [Fact]
@@ -86,11 +86,11 @@ public class CrowdingDistanceTests
 
     var d = CrowdingDistance.CalculateCrowdingDistances(pop);
 
-    Assert.True(double.IsPositiveInfinity(d[0]));
-    // Assert.True(double.IsPositiveInfinity(d[1])); // expected if "all extremes" should be infinite
-    Assert.False(double.IsPositiveInfinity(d[2]));
-    // Assert.True(double.IsPositiveInfinity(d[3]));
-    Assert.True(double.IsPositiveInfinity(d[4]));
+    double.IsPositiveInfinity(d[0]).ShouldBeTrue();
+    // double.IsPositiveInfinity(d[1]).ShouldBeTrue(); // expected if "all extremes" should be infinite
+    double.IsPositiveInfinity(d[2]).ShouldBeFalse();
+    // double.IsPositiveInfinity(d[3]).ShouldBeTrue();
+    double.IsPositiveInfinity(d[4]).ShouldBeTrue();
   }
 
   private static ObjectiveVector OV(params double[] values) => new(values);
@@ -120,11 +120,11 @@ public class CrowdingDistanceTests
 
     var result = replacer.Replace(previous, offspring, objective, previous.Length, null!).ToList();
 
-    Assert.Equal(3, result.Count);
+    result.Count.ShouldBe(3);
 
     // Both extremes must be present in the selected set
-    Assert.Contains(offspring[0], result);
-    Assert.Contains(offspring[^1], result);
+    result.ShouldContain(offspring[0]);
+    result.ShouldContain(offspring[^1]);
   }
 
   // ---------------- helpers ----------------

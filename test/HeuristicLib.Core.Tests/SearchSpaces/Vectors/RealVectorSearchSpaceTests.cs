@@ -14,11 +14,11 @@ public class RealVectorSearchSpaceTests
   {
     var space = new RealVectorSearchSpace(3, 0.0, 10.0);
 
-    Assert.Equal(3, space.Length);
+    space.Length.ShouldBe(3);
     double[] values = [0.0];
-    Assert.Equal(RealVector.Create(values), space.Minimum);
+    space.Minimum.ShouldBe(RealVector.Create(values));
     double[] values1 = [10.0];
-    Assert.Equal(RealVector.Create(values1), space.Maximum);
+    space.Maximum.ShouldBe(RealVector.Create(values1));
   }
 
   [Fact]
@@ -31,11 +31,11 @@ public class RealVectorSearchSpaceTests
       RealVector.Create(values),
       RealVector.Create(values1));
 
-    Assert.Equal(3, space.Length);
+    space.Length.ShouldBe(3);
     double[] values2 = [0.0, 1.0, 2.0];
-    Assert.Equal(RealVector.Create(values2), space.Minimum);
+    space.Minimum.ShouldBe(RealVector.Create(values2));
     double[] values3 = [10.0, 11.0, 12.0];
-    Assert.Equal(RealVector.Create(values3), space.Maximum);
+    space.Maximum.ShouldBe(RealVector.Create(values3));
   }
 
   [Fact]
@@ -50,13 +50,13 @@ public class RealVectorSearchSpaceTests
         RealVector.Create(values1));
     });
 
-    Assert.Null(ex);
+    ex.ShouldBeNull();
   }
 
   [Fact]
   public void Constructor_Throws_WhenMinimumIsIncompatible()
   {
-    Assert.Throws<ArgumentException>(() => {
+    Should.Throw<ArgumentException>(() => {
       double[] values = [0.0, 1.0];
       double[] values1 = [10.0, 11.0, 12.0];
       return new RealVectorSearchSpace(
@@ -69,7 +69,7 @@ public class RealVectorSearchSpaceTests
   [Fact]
   public void Constructor_Throws_WhenMaximumIsIncompatible()
   {
-    Assert.Throws<ArgumentException>(() => {
+    Should.Throw<ArgumentException>(() => {
       double[] values = [0.0, 1.0, 2.0];
       double[] values1 = [10.0, 11.0];
       return new RealVectorSearchSpace(
@@ -94,7 +94,7 @@ public class RealVectorSearchSpaceTests
       RealVector.Create(values1));
 
     double[] values2 = [0.0, 5.5, 12.0];
-    Assert.True(space.Contains(RealVector.Create(values2)));
+    space.Contains(RealVector.Create(values2)).ShouldBeTrue();
   }
 
   [Fact]
@@ -108,7 +108,7 @@ public class RealVectorSearchSpaceTests
       RealVector.Create(values1));
 
     double[] values2 = [1.0, 2.0];
-    Assert.False(space.Contains(RealVector.Create(values2)));
+    space.Contains(RealVector.Create(values2)).ShouldBeFalse();
   }
 
   [Fact]
@@ -122,7 +122,7 @@ public class RealVectorSearchSpaceTests
       RealVector.Create(values1));
 
     double[] values2 = [0.0, 0.5, 12.0];
-    Assert.False(space.Contains(RealVector.Create(values2)));
+    space.Contains(RealVector.Create(values2)).ShouldBeFalse();
   }
 
   [Fact]
@@ -136,7 +136,7 @@ public class RealVectorSearchSpaceTests
       RealVector.Create(values1));
 
     double[] values2 = [0.0, 5.0, 13.0];
-    Assert.False(space.Contains(RealVector.Create(values2)));
+    space.Contains(RealVector.Create(values2)).ShouldBeFalse();
   }
 
   [Fact]
@@ -148,11 +148,11 @@ public class RealVectorSearchSpaceTests
       10.0);
 
     double[] values = [0.0, 5.5, 10.0];
-    Assert.True(space.Contains(RealVector.Create(values)));
+    space.Contains(RealVector.Create(values)).ShouldBeTrue();
     double[] values1 = [-1.0, 5.0, 10.0];
-    Assert.False(space.Contains(RealVector.Create(values1)));
+    space.Contains(RealVector.Create(values1)).ShouldBeFalse();
     double[] values2 = [0.0, 5.0, 11.0];
-    Assert.False(space.Contains(RealVector.Create(values2)));
+    space.Contains(RealVector.Create(values2)).ShouldBeFalse();
   }
 
   // ---------------------------
@@ -170,9 +170,9 @@ public class RealVectorSearchSpaceTests
       RealVector.Create(values1));
 
     double[] values2 = [0.0, 1.0];
-    Assert.True(space.Contains(RealVector.Create(values2))); // min
+    space.Contains(RealVector.Create(values2)).ShouldBeTrue(); // min
     double[] values3 = [10.0, 11.0];
-    Assert.True(space.Contains(RealVector.Create(values3))); // max
+    space.Contains(RealVector.Create(values3)).ShouldBeTrue(); // max
   }
 
   [Fact]
@@ -188,6 +188,6 @@ public class RealVectorSearchSpaceTests
       return space.Contains(RealVector.Create(values));
     });
 
-    Assert.Null(ex);
+    ex.ShouldBeNull();
   }
 }

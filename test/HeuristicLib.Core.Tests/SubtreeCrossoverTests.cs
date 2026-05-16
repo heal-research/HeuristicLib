@@ -45,8 +45,8 @@ public class SubtreeCrossoverTests
       internalCrossoverPointProbability: 0.0,
       searchSpace);
 
-    Assert.True(searchSpace.Contains(child));
-    Assert.Equal(4, child.Depth);
+    searchSpace.Contains(child).ShouldBeTrue();
+    child.Depth.ShouldBe(4);
   }
 
   private sealed class SequenceRandomNumberGenerator(

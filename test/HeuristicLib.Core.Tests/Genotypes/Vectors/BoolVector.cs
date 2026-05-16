@@ -12,7 +12,7 @@ public sealed class BoolVectorTests
     var vector = BoolVector.Create(elements);
     elements[0] = false;
 
-    Assert.Equal(new[] { true, false, true }, vector.ToArray());
+    vector.ToArray().ShouldBe(new[] { true, false, true });
   }
 
   [Fact]
@@ -23,7 +23,7 @@ public sealed class BoolVectorTests
     var vector = BoolVector.Create(elements);
     elements[0] = false;
 
-    Assert.Equal(new[] { true, false, true }, vector.ToArray());
+    vector.ToArray().ShouldBe(new[] { true, false, true });
   }
 
   [Fact]
@@ -34,7 +34,7 @@ public sealed class BoolVectorTests
     var vector = BoolVector.FromOwnedArray(elements);
     elements[0] = false;
 
-    Assert.Equal(new[] { false, false, true }, vector.ToArray());
+    vector.ToArray().ShouldBe(new[] { false, false, true });
   }
 
   [Fact]
@@ -42,8 +42,8 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true, false, true);
 
-    Assert.Equal(3, vector.Count);
-    Assert.Equal(new[] { true, false, true }, vector.ToArray());
+    vector.Count.ShouldBe(3);
+    vector.ToArray().ShouldBe(new[] { true, false, true });
   }
 
   [Fact]
@@ -51,8 +51,8 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true);
 
-    Assert.Single(vector);
-    Assert.True(vector[0]);
+    vector.ShouldHaveSingleItem();
+    vector[0].ShouldBeTrue();
   }
 
   [Fact]
@@ -60,8 +60,8 @@ public sealed class BoolVectorTests
   {
     BoolVector vector = true;
 
-    Assert.Single(vector);
-    Assert.True(vector[0]);
+    vector.ShouldHaveSingleItem();
+    vector[0].ShouldBeTrue();
   }
 
   [Fact]
@@ -69,11 +69,11 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true, false, true);
 
-    Assert.Equal(3, vector.Count);
-    Assert.True(vector[0]);
-    Assert.False(vector[1]);
-    Assert.True(vector[2]);
-    Assert.Equal(new[] { true, false, true }, vector.ToArray());
+    vector.Count.ShouldBe(3);
+    vector[0].ShouldBeTrue();
+    vector[1].ShouldBeFalse();
+    vector[2].ShouldBeTrue();
+    vector.ToArray().ShouldBe(new[] { true, false, true });
   }
 
   [Fact]
@@ -81,9 +81,9 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true, false, true);
 
-    Assert.True(vector[^1]);
-    Assert.False(vector[^2]);
-    Assert.True(vector[^3]);
+    vector[^1].ShouldBeTrue();
+    vector[^2].ShouldBeFalse();
+    vector[^3].ShouldBeTrue();
   }
 
   [Fact]
@@ -91,8 +91,8 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true, false, true);
 
-    Assert.True(vector.Contains(true));
-    Assert.True(vector.Contains(false));
+    vector.Contains(true).ShouldBeTrue();
+    vector.Contains(false).ShouldBeTrue();
   }
 
   [Fact]
@@ -101,8 +101,8 @@ public sealed class BoolVectorTests
     var allTrue = new BoolVector(true, true, true);
     var allFalse = new BoolVector(false, false, false);
 
-    Assert.False(allTrue.Contains(false));
-    Assert.False(allFalse.Contains(true));
+    allTrue.Contains(false).ShouldBeFalse();
+    allFalse.Contains(true).ShouldBeFalse();
   }
 
   [Fact]
@@ -111,7 +111,7 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false);
     BoolVector b = new BoolVector(false, true);
 
-    Assert.True(BoolVector.AreCompatible(a, b));
+    BoolVector.AreCompatible(a, b).ShouldBeTrue();
   }
 
   [Fact]
@@ -120,7 +120,7 @@ public sealed class BoolVectorTests
     BoolVector a = true;
     BoolVector b = new BoolVector(false, true, false);
 
-    Assert.True(BoolVector.AreCompatible(a, b));
+    BoolVector.AreCompatible(a, b).ShouldBeTrue();
   }
 
   [Fact]
@@ -129,7 +129,7 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(false, true, false);
     BoolVector b = false;
 
-    Assert.True(BoolVector.AreCompatible(a, b));
+    BoolVector.AreCompatible(a, b).ShouldBeTrue();
   }
 
   [Fact]
@@ -138,7 +138,7 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false);
     BoolVector b = new BoolVector(true, false, true);
 
-    Assert.False(BoolVector.AreCompatible(a, b));
+    BoolVector.AreCompatible(a, b).ShouldBeFalse();
   }
 
   [Fact]
@@ -147,8 +147,8 @@ public sealed class BoolVectorTests
     BoolVector scalar = true;
     BoolVector vector = new BoolVector(true, false, true);
 
-    Assert.Equal(3, BoolVector.BroadcastLength(scalar, vector));
-    Assert.Equal(3, BoolVector.BroadcastLength(vector, scalar));
+    BoolVector.BroadcastLength(scalar, vector).ShouldBe(3);
+    BoolVector.BroadcastLength(vector, scalar).ShouldBe(3);
   }
 
   [Fact]
@@ -159,7 +159,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.And(a, b);
 
-    Assert.Equal(new[] { true, false, false, false }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { true, false, false, false });
   }
 
   [Fact]
@@ -170,7 +170,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.Or(a, b);
 
-    Assert.Equal(new[] { true, true, true, false }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { true, true, true, false });
   }
 
   [Fact]
@@ -181,7 +181,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.Xor(a, b);
 
-    Assert.Equal(new[] { false, true, true, false }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { false, true, true, false });
   }
 
   [Fact]
@@ -191,7 +191,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.Not(a);
 
-    Assert.Equal(new[] { false, true, false }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { false, true, false });
   }
 
   [Fact]
@@ -202,7 +202,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.And(scalar, vector);
 
-    Assert.Equal(new[] { true, false, true }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { true, false, true });
   }
 
   [Fact]
@@ -213,7 +213,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.And(vector, scalar);
 
-    Assert.Equal(new[] { false, false, false }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { false, false, false });
   }
 
   [Fact]
@@ -224,7 +224,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.Or(scalar, vector);
 
-    Assert.Equal(new[] { true, false, true }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { true, false, true });
   }
 
   [Fact]
@@ -235,7 +235,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.Or(vector, scalar);
 
-    Assert.Equal(new[] { true, true, true }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { true, true, true });
   }
 
   [Fact]
@@ -246,7 +246,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.Xor(scalar, vector);
 
-    Assert.Equal(new[] { false, true, false }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { false, true, false });
   }
 
   [Fact]
@@ -257,7 +257,7 @@ public sealed class BoolVectorTests
 
     var result = BoolVector.Xor(vector, scalar);
 
-    Assert.Equal(new[] { true, false, true }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { true, false, true });
   }
 
   [Fact]
@@ -266,10 +266,10 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, true, false, false);
     BoolVector b = new BoolVector(true, false, true, false);
 
-    Assert.Equal(new[] { true, false, false, false }, (a & b).ToArray());
-    Assert.Equal(new[] { true, true, true, false }, (a | b).ToArray());
-    Assert.Equal(new[] { false, true, true, false }, (a ^ b).ToArray());
-    Assert.Equal(new[] { false, false, true, true }, (!a).ToArray());
+    (a & b).ToArray().ShouldBe(new[] { true, false, false, false });
+    (a | b).ToArray().ShouldBe(new[] { true, true, true, false });
+    (a ^ b).ToArray().ShouldBe(new[] { false, true, true, false });
+    (!a).ToArray().ShouldBe(new[] { false, false, true, true });
   }
 
   [Fact]
@@ -278,7 +278,7 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false);
     BoolVector b = new BoolVector(true, false, true);
 
-    Assert.Throws<ArgumentException>(() => BoolVector.And(a, b));
+    Should.Throw<ArgumentException>(() => BoolVector.And(a, b));
   }
 
   [Fact]
@@ -287,7 +287,7 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false);
     BoolVector b = new BoolVector(true, false, true);
 
-    Assert.Throws<ArgumentException>(() => BoolVector.Or(a, b));
+    Should.Throw<ArgumentException>(() => BoolVector.Or(a, b));
   }
 
   [Fact]
@@ -296,7 +296,7 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false);
     BoolVector b = new BoolVector(true, false, true);
 
-    Assert.Throws<ArgumentException>(() => BoolVector.Xor(a, b));
+    Should.Throw<ArgumentException>(() => BoolVector.Xor(a, b));
   }
 
   [Fact]
@@ -304,7 +304,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true, true, true);
 
-    Assert.True(vector.All());
+    vector.All().ShouldBeTrue();
   }
 
   [Fact]
@@ -312,7 +312,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true, false, true);
 
-    Assert.False(vector.All());
+    vector.All().ShouldBeFalse();
   }
 
   [Fact]
@@ -320,7 +320,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(false, true, false);
 
-    Assert.True(vector.Any());
+    vector.Any().ShouldBeTrue();
   }
 
   [Fact]
@@ -328,7 +328,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(false, false, false);
 
-    Assert.False(vector.Any());
+    vector.Any().ShouldBeFalse();
   }
 
   [Fact]
@@ -336,7 +336,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true, false, true, true, false);
 
-    Assert.Equal(3, vector.TrueCount());
+    vector.TrueCount().ShouldBe(3);
   }
 
   [Fact]
@@ -344,9 +344,9 @@ public sealed class BoolVectorTests
   {
     BoolVector vector = new BoolVector(true, false, true);
 
-    Assert.True(vector.Equals(vector));
-    Assert.True(vector == vector);
-    Assert.False(vector != vector);
+    vector.Equals(vector).ShouldBeTrue();
+    (vector == vector).ShouldBeTrue();
+    (vector != vector).ShouldBeFalse();
   }
 
   [Fact]
@@ -354,8 +354,8 @@ public sealed class BoolVectorTests
   {
     BoolVector vector = new BoolVector(true, false, true);
 
-    Assert.False(vector.Equals(null));
-    Assert.False(vector.Equals((object?)null));
+    vector.Equals(null).ShouldBeFalse();
+    vector.Equals((object?)null).ShouldBeFalse();
   }
 
   [Fact]
@@ -363,7 +363,7 @@ public sealed class BoolVectorTests
   {
     BoolVector vector = new BoolVector(true, false, true);
 
-    Assert.False(vector.Equals("not a BoolVector"));
+    vector.Equals("not a BoolVector").ShouldBeFalse();
   }
 
   [Fact]
@@ -372,11 +372,11 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false, true);
     BoolVector b = new BoolVector(true, false, true);
 
-    Assert.True(a.Equals(b));
-    Assert.True(b.Equals(a));
-    Assert.True(a.Equals((object)b));
-    Assert.True(a == b);
-    Assert.False(a != b);
+    a.Equals(b).ShouldBeTrue();
+    b.Equals(a).ShouldBeTrue();
+    a.Equals((object)b).ShouldBeTrue();
+    (a == b).ShouldBeTrue();
+    (a != b).ShouldBeFalse();
   }
 
   [Fact]
@@ -385,10 +385,10 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false, true);
     BoolVector b = new BoolVector(true, false);
 
-    Assert.False(a.Equals(b));
-    Assert.False(b.Equals(a));
-    Assert.False(a == b);
-    Assert.True(a != b);
+    a.Equals(b).ShouldBeFalse();
+    b.Equals(a).ShouldBeFalse();
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -397,10 +397,10 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false, true);
     BoolVector b = new BoolVector(true, true, true);
 
-    Assert.False(a.Equals(b));
-    Assert.False(b.Equals(a));
-    Assert.False(a == b);
-    Assert.True(a != b);
+    a.Equals(b).ShouldBeFalse();
+    b.Equals(a).ShouldBeFalse();
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -410,9 +410,9 @@ public sealed class BoolVectorTests
     BoolVector b = new BoolVector(true, false, true);
     BoolVector c = new BoolVector(true, false, true);
 
-    Assert.True(a.Equals(b));
-    Assert.True(b.Equals(c));
-    Assert.True(a.Equals(c));
+    a.Equals(b).ShouldBeTrue();
+    b.Equals(c).ShouldBeTrue();
+    a.Equals(c).ShouldBeTrue();
   }
 
   [Fact]
@@ -421,8 +421,8 @@ public sealed class BoolVectorTests
     BoolVector? a = null;
     BoolVector? b = null;
 
-    Assert.True(a == b);
-    Assert.False(a != b);
+    (a == b).ShouldBeTrue();
+    (a != b).ShouldBeFalse();
   }
 
   [Fact]
@@ -431,8 +431,8 @@ public sealed class BoolVectorTests
     BoolVector? a = null;
     BoolVector b = new BoolVector(true);
 
-    Assert.False(a == b);
-    Assert.True(a != b);
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -441,8 +441,8 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true);
     BoolVector? b = null;
 
-    Assert.False(a == b);
-    Assert.True(a != b);
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -451,7 +451,7 @@ public sealed class BoolVectorTests
     BoolVector a = new BoolVector(true, false, true);
     BoolVector b = new BoolVector(true, false, true);
 
-    Assert.Equal(a.GetHashCode(), b.GetHashCode());
+    b.GetHashCode().ShouldBe(a.GetHashCode());
   }
 
   [Fact]
@@ -462,7 +462,7 @@ public sealed class BoolVectorTests
     var h1 = vector.GetHashCode();
     var h2 = vector.GetHashCode();
 
-    Assert.Equal(h1, h2);
+    h2.ShouldBe(h1);
   }
 
   [Fact]
@@ -473,7 +473,7 @@ public sealed class BoolVectorTests
     BoolVector b = new BoolVector(true, false, true);
 
     set.Add(a);
-    Assert.Contains(b, set);
+    set.ShouldContain(b);
   }
 
   [Fact]
@@ -486,7 +486,7 @@ public sealed class BoolVectorTests
     set.Add(a);
     set.Add(b);
 
-    Assert.Single(set);
+    set.ShouldHaveSingleItem();
   }
 
   [Fact]
@@ -498,8 +498,8 @@ public sealed class BoolVectorTests
 
     dict[key1] = "value";
 
-    Assert.True(dict.ContainsKey(key2));
-    Assert.Equal("value", dict[key2]);
+    dict.ContainsKey(key2).ShouldBeTrue();
+    dict[key2].ShouldBe("value");
   }
 
   [Fact]
@@ -508,8 +508,8 @@ public sealed class BoolVectorTests
     var a = new BoolVector();
     var b = new BoolVector();
 
-    Assert.True(a.Equals(b));
-    Assert.Equal(a.GetHashCode(), b.GetHashCode());
+    a.Equals(b).ShouldBeTrue();
+    b.GetHashCode().ShouldBe(a.GetHashCode());
   }
 
   [Fact]
@@ -517,7 +517,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector(true, false, true);
 
-    Assert.Equal("[True, False, True]", vector.ToString());
+    vector.ToString().ShouldBe("[True, False, True]");
   }
 
   [Fact]
@@ -525,7 +525,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector();
 
-    Assert.True(vector.All());
+    vector.All().ShouldBeTrue();
   }
 
   [Fact]
@@ -533,7 +533,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector();
 
-    Assert.False(vector.Any());
+    vector.Any().ShouldBeFalse();
   }
 
   [Fact]
@@ -541,7 +541,7 @@ public sealed class BoolVectorTests
   {
     var vector = new BoolVector();
 
-    Assert.Equal(0, vector.TrueCount());
+    vector.TrueCount().ShouldBe(0);
   }
 
   [Fact]
@@ -549,7 +549,7 @@ public sealed class BoolVectorTests
   {
     BoolVector vector = BoolVector.Create(true, false, true);
 
-    Assert.Equal(3, vector.Count);
-    Assert.Equal(new[] { true, false, true }, vector.ToArray());
+    vector.Count.ShouldBe(3);
+    vector.ToArray().ShouldBe(new[] { true, false, true });
   }
 }

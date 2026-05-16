@@ -54,7 +54,7 @@ public class QuadraticAssignmentProblemTests
                             + 0 * 2 + 3 * 1 + 0 * 0 + 4 * 1
                             + 1 * 3 + 0 * 2 + 4 * 1 + 0 * 0;
 
-    Assert.Equal(expected, cost, 10);
+    cost.ShouldBe(expected, 1e-10);
   }
 
   [Fact]
@@ -67,7 +67,7 @@ public class QuadraticAssignmentProblemTests
     var sol = new Permutation(Enumerable.Range(0, a.Size).ToArray());
     var costDyn = dyn.Evaluate(sol, TestRandoms.NoRandom);
     var costA = new QuadraticAssignmentProblem(a).Evaluate(sol, TestRandoms.NoRandom);
-    Assert.Equal(costA, costDyn);
+    costDyn.ShouldBe(costA);
   }
 
   [Fact]
@@ -82,7 +82,7 @@ public class QuadraticAssignmentProblemTests
     var sol = new Permutation(Enumerable.Range(0, a.Size).ToArray());
     var costDyn = dyn.Evaluate(sol, TestRandoms.NoRandom);
     var costB = new QuadraticAssignmentProblem(b).Evaluate(sol, TestRandoms.NoRandom);
-    Assert.Equal(costB, costDyn);
+    costDyn.ShouldBe(costB);
   }
 
   [Fact]
@@ -98,7 +98,7 @@ public class QuadraticAssignmentProblemTests
     var c1 = dyn.Evaluate(sol, TestRandoms.NoRandom);
     var c2 = stat.Evaluate(sol, TestRandoms.NoRandom);
 
-    Assert.Equal(c2, c1);
+    c1.ShouldBe(c2);
 
     // After many updates, still equal (since noise is zero)
     for (var i = 0; i < 50; i++) {
@@ -106,6 +106,6 @@ public class QuadraticAssignmentProblemTests
     }
 
     var c3 = dyn.Evaluate(sol, TestRandoms.NoRandom);
-    Assert.Equal(c2, c3);
+    c3.ShouldBe(c2);
   }
 }

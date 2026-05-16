@@ -9,13 +9,13 @@ public class Zdt5Tests
   [Fact]
   public void Constructor_ShouldThrow_WhenDimensionIsLessThan35()
   {
-    Assert.Throws<ArgumentOutOfRangeException>(() => new Zdt5(34));
+    Should.Throw<ArgumentOutOfRangeException>(() => new Zdt5(34));
   }
 
   [Fact]
   public void Constructor_ShouldThrow_WhenDimensionDoesNotMatchRequiredEncoding()
   {
-    Assert.Throws<ArgumentOutOfRangeException>(() => new Zdt5(36));
+    Should.Throw<ArgumentOutOfRangeException>(() => new Zdt5(36));
   }
 
   [Fact]
@@ -33,8 +33,8 @@ public class Zdt5Tests
     // g = 2
     // h = 1 / f1 = 1
     // f2 = g * h = 2
-    Assert.Equal(1.0, result[0], 12);
-    Assert.Equal(2.0, result[1], 12);
+    result[0].ShouldBe(1.0, 1e-12);
+    result[1].ShouldBe(2.0, 1e-12);
   }
 
   [Fact]
@@ -53,8 +53,8 @@ public class Zdt5Tests
     // g = 1
     // h = 1 / 31
     // f2 = 1 / 31
-    Assert.Equal(31.0, result[0], 12);
-    Assert.Equal(1.0 / 31.0, result[1], 12);
+    result[0].ShouldBe(31.0, 1e-12);
+    result[1].ShouldBe(1.0 / 31.0, 1e-12);
   }
 
   [Fact]
@@ -86,8 +86,8 @@ public class Zdt5Tests
     // g = 1 + 4 = 5
     // h = 1 / 4
     // f2 = 5 / 4
-    Assert.Equal(4.0, result[0], 12);
-    Assert.Equal(1.25, result[1], 12);
+    result[0].ShouldBe(4.0, 1e-12);
+    result[1].ShouldBe(1.25, 1e-12);
   }
 
   [Fact]
@@ -117,7 +117,7 @@ public class Zdt5Tests
     // f1 = 1 + 1 = 2
     // g = 1 + (2 + 4) = 7
     // f2 = 7 * (1/2) = 3.5
-    Assert.Equal(2.0, result[0], 12);
-    Assert.Equal(3.5, result[1], 12);
+    result[0].ShouldBe(2.0, 1e-12);
+    result[1].ShouldBe(3.5, 1e-12);
   }
 }

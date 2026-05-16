@@ -17,7 +17,7 @@ public class TravelingSalesmanProblemTests
 
     var problem = new TravelingSalesmanProblem(data);
 
-    Assert.Equal(data, problem.ProblemData);
+    problem.ProblemData.ShouldBe(data);
   }
 
   [Fact]
@@ -38,7 +38,7 @@ public class TravelingSalesmanProblemTests
     // 0 -> 1 = 2
     // 1 -> 2 = 6
     // 2 -> 0 = 15
-    Assert.Equal((ObjectiveVector)23.0, result);
+    result.ShouldBe((ObjectiveVector)23.0);
   }
 
   [Fact]
@@ -59,7 +59,7 @@ public class TravelingSalesmanProblemTests
     // 0 -> 2 = 1
     // 2 -> 1 = 2
     // 1 -> 0 = 5
-    Assert.Equal((ObjectiveVector)8.0, result);
+    result.ShouldBe((ObjectiveVector)8.0);
   }
 
   [Fact]
@@ -71,7 +71,7 @@ public class TravelingSalesmanProblemTests
 
     var result = problem.Evaluate(solution, rng);
 
-    Assert.True(result[0] > 0);
+    (result[0] > 0).ShouldBeTrue();
   }
 
   [Fact]
@@ -83,6 +83,6 @@ public class TravelingSalesmanProblemTests
 
     var result = problem.Evaluate(solution, rng);
 
-    Assert.True(result[0] > 0);
+    (result[0] > 0).ShouldBeTrue();
   }
 }

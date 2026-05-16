@@ -11,11 +11,11 @@ public sealed class SymbolicExpressionTreeNodeTests
     var symbol = new TestSymbol();
     var node = new SymbolicExpressionTreeNode(symbol);
 
-    Assert.Same(symbol, node.Symbol);
-    Assert.Null(node.Parent);
-    Assert.Equal(0, node.SubtreeCount);
-    Assert.Empty(node.Subtrees);
-    Assert.False(node.HasLocalParameters);
+    node.Symbol.ShouldBeSameAs(symbol);
+    node.Parent.ShouldBeNull();
+    node.SubtreeCount.ShouldBe(0);
+    node.Subtrees.ShouldBeEmpty();
+    node.HasLocalParameters.ShouldBeFalse();
   }
 
   [Fact]
@@ -23,7 +23,7 @@ public sealed class SymbolicExpressionTreeNodeTests
   {
     var node = CreateNode();
 
-    Assert.Equal(1, node.GetLength());
+    node.GetLength().ShouldBe(1);
   }
 
   [Fact]
@@ -31,7 +31,7 @@ public sealed class SymbolicExpressionTreeNodeTests
   {
     var node = CreateNode();
 
-    Assert.Equal(1, node.GetDepth());
+    node.GetDepth().ShouldBe(1);
   }
 
   [Fact]
@@ -40,16 +40,16 @@ public sealed class SymbolicExpressionTreeNodeTests
     var root = CreateNode();
     var child = CreateNode();
 
-    Assert.Equal(1, root.GetLength());
-    Assert.Equal(1, root.GetDepth());
+    root.GetLength().ShouldBe(1);
+    root.GetDepth().ShouldBe(1);
 
     root.AddSubtree(child);
 
-    Assert.Equal(1, root.SubtreeCount);
-    Assert.Same(child, root.GetSubtree(0));
-    Assert.Same(root, child.Parent);
-    Assert.Equal(2, root.GetLength());
-    Assert.Equal(2, root.GetDepth());
+    root.SubtreeCount.ShouldBe(1);
+    root.GetSubtree(0).ShouldBeSameAs(child);
+    child.Parent.ShouldBeSameAs(root);
+    root.GetLength().ShouldBe(2);
+    root.GetDepth().ShouldBe(2);
   }
 
   [Fact]
@@ -62,13 +62,13 @@ public sealed class SymbolicExpressionTreeNodeTests
     root.AddSubtree(a);
     root.InsertSubtree(0, b);
 
-    Assert.Equal(2, root.SubtreeCount);
-    Assert.Same(b, root.GetSubtree(0));
-    Assert.Same(a, root.GetSubtree(1));
-    Assert.Same(root, a.Parent);
-    Assert.Same(root, b.Parent);
-    Assert.Equal(3, root.GetLength());
-    Assert.Equal(2, root.GetDepth());
+    root.SubtreeCount.ShouldBe(2);
+    root.GetSubtree(0).ShouldBeSameAs(b);
+    root.GetSubtree(1).ShouldBeSameAs(a);
+    a.Parent.ShouldBeSameAs(root);
+    b.Parent.ShouldBeSameAs(root);
+    root.GetLength().ShouldBe(3);
+    root.GetDepth().ShouldBe(2);
   }
 
   [Fact]
@@ -81,16 +81,16 @@ public sealed class SymbolicExpressionTreeNodeTests
     root.AddSubtree(a);
     root.AddSubtree(b);
 
-    Assert.Equal(3, root.GetLength());
+    root.GetLength().ShouldBe(3);
 
     root.RemoveSubtree(0);
 
-    Assert.Equal(1, root.SubtreeCount);
-    Assert.Same(b, root.GetSubtree(0));
-    Assert.Null(a.Parent);
-    Assert.Same(root, b.Parent);
-    Assert.Equal(2, root.GetLength());
-    Assert.Equal(2, root.GetDepth());
+    root.SubtreeCount.ShouldBe(1);
+    root.GetSubtree(0).ShouldBeSameAs(b);
+    a.Parent.ShouldBeNull();
+    b.Parent.ShouldBeSameAs(root);
+    root.GetLength().ShouldBe(2);
+    root.GetDepth().ShouldBe(2);
   }
 
   [Fact]
@@ -102,17 +102,17 @@ public sealed class SymbolicExpressionTreeNodeTests
     oldChild.AddSubtree(grandChild);
     root.AddSubtree(oldChild);
 
-    Assert.Equal(3, root.GetLength());
-    Assert.Equal(3, root.GetDepth());
+    root.GetLength().ShouldBe(3);
+    root.GetDepth().ShouldBe(3);
 
     var replacement = CreateNode();
     root.ReplaceSubtree(0, replacement);
 
-    Assert.Same(replacement, root.GetSubtree(0));
-    Assert.Same(root, replacement.Parent);
-    Assert.Null(oldChild.Parent);
-    Assert.Equal(2, root.GetLength());
-    Assert.Equal(2, root.GetDepth());
+    root.GetSubtree(0).ShouldBeSameAs(replacement);
+    replacement.Parent.ShouldBeSameAs(root);
+    oldChild.Parent.ShouldBeNull();
+    root.GetLength().ShouldBe(2);
+    root.GetDepth().ShouldBe(2);
   }
 
   [Fact]
@@ -128,11 +128,11 @@ public sealed class SymbolicExpressionTreeNodeTests
 
     root.ReplaceSubtree(oldChild, replacement);
 
-    Assert.Same(replacement, root.GetSubtree(0));
-    Assert.Same(root, replacement.Parent);
-    Assert.Null(oldChild.Parent);
-    Assert.Equal(2, root.GetLength());
-    Assert.Equal(2, root.GetDepth());
+    root.GetSubtree(0).ShouldBeSameAs(replacement);
+    replacement.Parent.ShouldBeSameAs(root);
+    oldChild.Parent.ShouldBeNull();
+    root.GetLength().ShouldBe(2);
+    root.GetDepth().ShouldBe(2);
   }
 
   [Fact]
@@ -141,7 +141,7 @@ public sealed class SymbolicExpressionTreeNodeTests
     var root = CreateNode();
     var original = CreateNode();
     root.AddSubtree(original);
-    Assert.Same(original, root[0]);
+    root[0].ShouldBeSameAs(original);
   }
 
   [Fact]
@@ -156,9 +156,9 @@ public sealed class SymbolicExpressionTreeNodeTests
     root.AddSubtree(b);
     root.AddSubtree(c);
 
-    Assert.Equal(0, root.IndexOfSubtree(a));
-    Assert.Equal(1, root.IndexOfSubtree(b));
-    Assert.Equal(2, root.IndexOfSubtree(c));
+    root.IndexOfSubtree(a).ShouldBe(0);
+    root.IndexOfSubtree(b).ShouldBe(1);
+    root.IndexOfSubtree(c).ShouldBe(2);
   }
 
   [Fact]
@@ -166,7 +166,7 @@ public sealed class SymbolicExpressionTreeNodeTests
   {
     var root = CreateNode();
 
-    Assert.Equal(0, root.GetBranchLevel(root));
+    root.GetBranchLevel(root).ShouldBe(0);
   }
 
   [Fact]
@@ -181,9 +181,9 @@ public sealed class SymbolicExpressionTreeNodeTests
     child.AddSubtree(grandChild);
     grandChild.AddSubtree(greatGrandChild);
 
-    Assert.Equal(1, root.GetBranchLevel(child));
-    Assert.Equal(2, root.GetBranchLevel(grandChild));
-    Assert.Equal(3, root.GetBranchLevel(greatGrandChild));
+    root.GetBranchLevel(child).ShouldBe(1);
+    root.GetBranchLevel(grandChild).ShouldBe(2);
+    root.GetBranchLevel(greatGrandChild).ShouldBe(3);
   }
 
   [Fact]
@@ -195,8 +195,8 @@ public sealed class SymbolicExpressionTreeNodeTests
 
     root.AddSubtree(child);
 
-    Assert.Equal(int.MaxValue, root.GetBranchLevel(outsider));
-    Assert.Equal(int.MaxValue, root.GetBranchLevel(null));
+    root.GetBranchLevel(outsider).ShouldBe(int.MaxValue);
+    root.GetBranchLevel(null).ShouldBe(int.MaxValue);
   }
 
   [Fact]
@@ -217,7 +217,7 @@ public sealed class SymbolicExpressionTreeNodeTests
 
     var result = root.IterateNodesBreadth().ToList();
 
-    Assert.Equal(new[] { root, a, b, a1, a2, b1 }, result);
+    result.ShouldBe(new[] { root, a, b, a1, a2, b1 });
   }
 
   [Fact]
@@ -238,7 +238,7 @@ public sealed class SymbolicExpressionTreeNodeTests
 
     var result = root.IterateNodesPrefix().ToList();
 
-    Assert.Equal(new[] { root, a, a1, a2, b, b1 }, result);
+    result.ShouldBe(new[] { root, a, a1, a2, b, b1 });
   }
 
   [Fact]
@@ -259,7 +259,7 @@ public sealed class SymbolicExpressionTreeNodeTests
 
     var result = root.IterateNodesPostfix().ToList();
 
-    Assert.Equal(new[] { a1, a2, a, b1, b, root }, result);
+    result.ShouldBe(new[] { a1, a2, a, b1, b, root });
   }
 
   [Fact]
@@ -277,7 +277,7 @@ public sealed class SymbolicExpressionTreeNodeTests
     var visited = new List<SymbolicExpressionTreeNode>();
     root.ForEachNodePrefix(visited.Add);
 
-    Assert.Equal(new[] { root, a, a1, b }, visited);
+    visited.ShouldBe(new[] { root, a, a1, b });
   }
 
   [Fact]
@@ -295,7 +295,7 @@ public sealed class SymbolicExpressionTreeNodeTests
     var visited = new List<SymbolicExpressionTreeNode>();
     root.ForEachNodePostfix(visited.Add);
 
-    Assert.Equal(new[] { a1, a, b, root }, visited);
+    visited.ShouldBe(new[] { a1, a, b, root });
   }
 
   [Fact]
@@ -313,20 +313,20 @@ public sealed class SymbolicExpressionTreeNodeTests
 
     var clone = root.Clone();
 
-    Assert.NotSame(root, clone);
-    Assert.Same(root.Symbol, clone.Symbol);
-    Assert.Equal(root.NodeWeight, clone.NodeWeight);
+    clone.ShouldNotBeSameAs(root);
+    clone.Symbol.ShouldBeSameAs(root.Symbol);
+    clone.NodeWeight.ShouldBe(root.NodeWeight);
 
-    Assert.Equal(root.GetLength(), clone.GetLength());
-    Assert.Equal(root.GetDepth(), clone.GetDepth());
+    clone.GetLength().ShouldBe(root.GetLength());
+    clone.GetDepth().ShouldBe(root.GetDepth());
 
-    Assert.Equal(2, clone.SubtreeCount);
-    Assert.NotSame(root.GetSubtree(0), clone.GetSubtree(0));
-    Assert.NotSame(root.GetSubtree(1), clone.GetSubtree(1));
+    clone.SubtreeCount.ShouldBe(2);
+    clone.GetSubtree(0).ShouldNotBeSameAs(root.GetSubtree(0));
+    clone.GetSubtree(1).ShouldNotBeSameAs(root.GetSubtree(1));
 
-    Assert.Same(clone, clone.GetSubtree(0).Parent);
-    Assert.Same(clone, clone.GetSubtree(1).Parent);
-    Assert.Same(clone.GetSubtree(0), clone.GetSubtree(0).GetSubtree(0).Parent);
+    clone.GetSubtree(0).Parent.ShouldBeSameAs(clone);
+    clone.GetSubtree(1).Parent.ShouldBeSameAs(clone);
+    clone.GetSubtree(0).GetSubtree(0).Parent.ShouldBeSameAs(clone.GetSubtree(0));
   }
 
   [Fact]
@@ -339,10 +339,10 @@ public sealed class SymbolicExpressionTreeNodeTests
     var clone = root.Clone();
     clone.AddSubtree(CreateNode());
 
-    Assert.Equal(2, root.GetLength());
-    Assert.Equal(3, clone.GetLength());
-    Assert.Equal(1, root.SubtreeCount);
-    Assert.Equal(2, clone.SubtreeCount);
+    root.GetLength().ShouldBe(2);
+    clone.GetLength().ShouldBe(3);
+    root.SubtreeCount.ShouldBe(1);
+    clone.SubtreeCount.ShouldBe(2);
   }
 
   [Fact]
@@ -355,16 +355,16 @@ public sealed class SymbolicExpressionTreeNodeTests
     root.AddSubtree(child);
     child.AddSubtree(grandChild);
 
-    Assert.Equal(3, root.GetLength());
-    Assert.Equal(3, root.GetDepth());
+    root.GetLength().ShouldBe(3);
+    root.GetDepth().ShouldBe(3);
 
     var newLeaf = CreateNode();
     grandChild.AddSubtree(newLeaf);
 
-    Assert.Equal(4, root.GetLength());
-    Assert.Equal(4, root.GetDepth());
-    Assert.Equal(3, child.GetDepth());
-    Assert.Equal(2, grandChild.GetDepth());
+    root.GetLength().ShouldBe(4);
+    root.GetDepth().ShouldBe(4);
+    child.GetDepth().ShouldBe(3);
+    grandChild.GetDepth().ShouldBe(2);
   }
 
   [Fact]
@@ -372,15 +372,15 @@ public sealed class SymbolicExpressionTreeNodeTests
   {
     var node = CreateNode();
 
-    Assert.Empty(node.Subtrees);
-    Assert.Equal(0, node.SubtreeCount);
+    node.Subtrees.ShouldBeEmpty();
+    node.SubtreeCount.ShouldBe(0);
   }
 
   [Fact]
   public void NodeWeight_CanBeReadAndSet()
   {
     var node = CreateNode(42.25);
-    Assert.Equal(42.25, node.NodeWeight);
+    node.NodeWeight.ShouldBe(42.25);
   }
 
   [Fact]
@@ -397,10 +397,7 @@ public sealed class SymbolicExpressionTreeNodeTests
     clone.Root.ReplaceSubtree(0, CreateNode(999));
 
     // assert no leakage
-    Assert.NotEqual(
-      original.Root.GetSubtree(0).NodeWeight,
-      clone.Root.GetSubtree(0).NodeWeight
-    );
+    clone.Root.GetSubtree(0).NodeWeight.ShouldNotBe(original.Root.GetSubtree(0).NodeWeight);
   }
 
   private static SymbolicExpressionTreeNode CreateNode(double? d = null)

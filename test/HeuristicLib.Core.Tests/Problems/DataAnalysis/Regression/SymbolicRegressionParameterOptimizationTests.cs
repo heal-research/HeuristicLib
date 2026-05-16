@@ -110,7 +110,7 @@ public class SymbolicRegressionParameterOptimizationTests
       problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(),
       10);
 
-    Assert.Equal(0.0, quality, 12);
+    quality.ShouldBe(0.0, 1e-12);
   }
 
   [Fact]
@@ -137,9 +137,9 @@ public class SymbolicRegressionParameterOptimizationTests
       20,
       updateParametersInTree: false);
 
-    Assert.Equal(1.0, variableTreeNode.Weight, 12);
-    Assert.Equal(1.0, numberTreeNode.Value, 12);
-    Assert.True(quality >= 0.0);
+    variableTreeNode.Weight.ShouldBe(1.0, 1e-12);
+    numberTreeNode.Value.ShouldBe(1.0, 1e-12);
+    (quality >= 0.0).ShouldBeTrue();
   }
 
   [Fact]
@@ -163,9 +163,9 @@ public class SymbolicRegressionParameterOptimizationTests
       20,
       updateParametersInTree: true);
 
-    Assert.NotEqual(1.0, variableTreeNode.Weight);
-    Assert.NotEqual(1.0, numberTreeNode.Value);
-    Assert.True(quality >= 0.0);
+    variableTreeNode.Weight.ShouldNotBe(1.0);
+    numberTreeNode.Value.ShouldNotBe(1.0);
+    (quality >= 0.0).ShouldBeTrue();
   }
 
   [Fact]
@@ -198,7 +198,7 @@ public class SymbolicRegressionParameterOptimizationTests
       rows,
       20);
 
-    Assert.True(optimizedQuality >= originalQuality);
+    (optimizedQuality >= originalQuality).ShouldBeTrue();
   }
 
   private static readonly double[,] ConstantTargetData = {
@@ -217,8 +217,8 @@ public class SymbolicRegressionParameterOptimizationTests
     var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
       problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20);
 
-    Assert.Equal(0.0, quality, 12);
-    Assert.Equal(1.0, numberTreeNode.Value, 12);
+    quality.ShouldBe(0.0, 1e-12);
+    numberTreeNode.Value.ShouldBe(1.0, 1e-12);
   }
 
   [Fact]
@@ -239,8 +239,8 @@ public class SymbolicRegressionParameterOptimizationTests
 
     var y = problem.Evaluate(tree)[0];
 
-    Assert.Equal(0.0, y, 1e-8);
-    Assert.True(quality == 0);
+    y.ShouldBe(0.0, 1e-8);
+    (quality == 0).ShouldBeTrue();
   }
 
   private static readonly double[,] DoubleXData = {
@@ -259,8 +259,8 @@ public class SymbolicRegressionParameterOptimizationTests
     var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
       problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20, updateParametersInTree: true);
 
-    Assert.InRange(xNode.Weight, 1.9, 2.1);
-    Assert.True(quality > 0.99);
+    xNode.Weight.ShouldBeInRange(1.9, 2.1);
+    (quality > 0.99).ShouldBeTrue();
   }
 
   private static readonly double[,] ShiftedData = {
@@ -280,13 +280,13 @@ public class SymbolicRegressionParameterOptimizationTests
     add.AddSubtree(cNode);
     tree.Root[0].AddSubtree(add);
 
-    Assert.True(SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree));
+    SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
     var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
       problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20, updateParametersInTree: true);
 
-    Assert.InRange(cNode.Value, 4.9, 5.1);
-    Assert.InRange(xNode.Weight, 0.9, 1.1);
-    Assert.True(quality > 0.99);
+    cNode.Value.ShouldBeInRange(4.9, 5.1);
+    xNode.Weight.ShouldBeInRange(0.9, 1.1);
+    (quality > 0.99).ShouldBeTrue();
   }
 
   [Fact]
@@ -297,7 +297,7 @@ public class SymbolicRegressionParameterOptimizationTests
 
     var xNode = new Variable().CreateTreeNode("x", 1.0);
     tree.Root[0].AddSubtree(xNode);
-    Assert.True(SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree));
+    SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
 
     var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
       problem.Interpreter,
@@ -308,7 +308,7 @@ public class SymbolicRegressionParameterOptimizationTests
       updateVariableWeights: false,
       updateParametersInTree: true);
 
-    Assert.Equal(1.0, xNode.Weight, 12);
+    xNode.Weight.ShouldBe(1.0, 1e-12);
   }
 
   [Fact]
@@ -324,7 +324,7 @@ public class SymbolicRegressionParameterOptimizationTests
     add.AddSubtree(cNode);
     tree.Root[0].AddSubtree(add);
 
-    Assert.True(SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree));
+    SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
     var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
       problem.Interpreter,
       tree,
@@ -334,9 +334,9 @@ public class SymbolicRegressionParameterOptimizationTests
       updateVariableWeights: false,
       updateParametersInTree: true);
 
-    Assert.Equal(1.0, xNode.Weight, 12);
-    Assert.InRange(cNode.Value, 4.9, 5.1);
-    Assert.True(quality > 0.99);
+    xNode.Weight.ShouldBe(1.0, 1e-12);
+    cNode.Value.ShouldBeInRange(4.9, 5.1);
+    (quality > 0.99).ShouldBeTrue();
   }
 
   private static readonly double[,] CubicNoisyData = {
@@ -411,7 +411,7 @@ public class SymbolicRegressionParameterOptimizationTests
     var rows = TrainingRows(problem);
     var rmseBefore = problem.Evaluate(tree)[0];
 
-    Assert.True(SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree));
+    SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
     var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
       problem.Interpreter,
       tree,
@@ -423,9 +423,9 @@ public class SymbolicRegressionParameterOptimizationTests
 
     var rmseAfter = problem.Evaluate(tree)[0];
 
-    Assert.True(rmseAfter < rmseBefore);
-    Assert.True(rmseAfter < 1.04); // broad, robust threshold np is 1.0388867668257762
-    Assert.True(quality > 0.9);
+    (rmseAfter < rmseBefore).ShouldBeTrue();
+    (rmseAfter < 1.04).ShouldBeTrue(); // broad, robust threshold np is 1.0388867668257762
+    (quality > 0.9).ShouldBeTrue();
   }
 
   private static readonly double[,] MultivariateRelevantX1Data = {
@@ -467,7 +467,7 @@ public class SymbolicRegressionParameterOptimizationTests
     var rows = TrainingRows(problem);
     var rmseBefore = problem.Evaluate(tree)[0];
 
-    Assert.True(SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree));
+    SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
     var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
       problem.Interpreter,
       tree,
@@ -483,11 +483,11 @@ public class SymbolicRegressionParameterOptimizationTests
     var x2Coeff = ((NumberTreeNode)term2[0]).Value;
     var bias = biasNode.Value;
 
-    Assert.True(rmseAfter < rmseBefore);
-    Assert.True(rmseAfter < 1e-6);
-    Assert.InRange(x1Coeff, 2.7, 3.1);
-    Assert.InRange(x2Coeff, -0.1, 0.1);
-    Assert.InRange(bias, 0.9, 1.5);
-    Assert.True(quality > 0.99);
+    (rmseAfter < rmseBefore).ShouldBeTrue();
+    (rmseAfter < 1e-6).ShouldBeTrue();
+    x1Coeff.ShouldBeInRange(2.7, 3.1);
+    x2Coeff.ShouldBeInRange(-0.1, 0.1);
+    bias.ShouldBeInRange(0.9, 1.5);
+    (quality > 0.99).ShouldBeTrue();
   }
 }

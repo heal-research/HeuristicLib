@@ -11,7 +11,7 @@ public class RastriginFunctionTests
     var f = new RastriginFunction(3);
     RealVector x = [0.0, 0.0, 0.0];
 
-    Assert.Equal(0.0, f.Evaluate(x), 12);
+    f.Evaluate(x).ShouldBe(0.0, 1e-12);
   }
 
   [Fact]
@@ -22,7 +22,7 @@ public class RastriginFunctionTests
 
     // 10*n + sum(x_i^2 - 10 cos(2pi x_i))
     // = 20 + (1 - 10) + (1 - 10) = 2
-    Assert.Equal(2.0, f.Evaluate(x), 12);
+    f.Evaluate(x).ShouldBe(2.0, 1e-12);
   }
 
   [Fact]
@@ -33,9 +33,9 @@ public class RastriginFunctionTests
 
     var grad = f.EvaluateGradient(x);
 
-    Assert.Equal(0.0, grad[0], 12);
-    Assert.Equal(0.0, grad[1], 12);
-    Assert.Equal(0.0, grad[2], 12);
+    grad[0].ShouldBe(0.0, 1e-12);
+    grad[1].ShouldBe(0.0, 1e-12);
+    grad[2].ShouldBe(0.0, 1e-12);
   }
 
   [Fact]

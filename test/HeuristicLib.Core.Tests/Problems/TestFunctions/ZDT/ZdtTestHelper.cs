@@ -7,11 +7,9 @@ internal static class ZdtTestHelper
 {
   public static void AssertVectorApproximatelyEqual(RealVector expected, RealVector actual, double tolerance = 1e-6)
   {
-    Assert.Equal(expected.Count, actual.Count);
+    actual.Count.ShouldBe(expected.Count);
     for (var i = 0; i < expected.Count; i++) {
-      Assert.True(
-        Math.Abs(expected[i] - actual[i]) <= tolerance,
-        $"Vectors differ at index {i}: expected {expected[i]}, actual {actual[i]}");
+      (Math.Abs(expected[i] - actual[i]) <= tolerance).ShouldBeTrue($"Vectors differ at index {i}: expected {expected[i]}, actual {actual[i]}");
     }
   }
 
@@ -40,7 +38,7 @@ internal static class ZdtTestHelper
   {
     var gradients = problem.EvaluateGradient(point);
 
-    Assert.Equal(2, gradients.Length);
+    gradients.Length.ShouldBe(2);
 
     var numericalF1 = NumericalGradient(x => problem.Evaluate(x)[0], point, epsilon);
     var numericalF2 = NumericalGradient(x => problem.Evaluate(x)[1], point, epsilon);

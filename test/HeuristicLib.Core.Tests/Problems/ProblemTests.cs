@@ -17,8 +17,8 @@ public class FuncProblemTests
       encoding: searchSpace,
       objective: objective);
 
-    Assert.Equal(objective, problem.Objective);
-    Assert.Equal(searchSpace, problem.SearchSpace);
+    problem.Objective.ShouldBe(objective);
+    problem.SearchSpace.ShouldBe(searchSpace);
   }
 
   [Fact]
@@ -38,7 +38,7 @@ public class FuncProblemTests
     var result = problem.Evaluate(4, rng);
 
     // Assert
-    Assert.Equal((ObjectiveVector)10.0, result);
+    result.ShouldBe((ObjectiveVector)10.0);
   }
 
   [Fact]
@@ -63,8 +63,8 @@ public class FuncProblemTests
     var result = problem.Evaluate(42, rng);
 
     // Assert
-    Assert.Equal(42, receivedSolution);
-    Assert.Equal((ObjectiveVector)123.0, result);
+    receivedSolution.ShouldBe(42);
+    result.ShouldBe((ObjectiveVector)123.0);
   }
 
   [Fact]
@@ -87,6 +87,6 @@ public class FuncProblemTests
     problem.Evaluate(1, rng);
     problem.Evaluate(2, rng);
 
-    Assert.Equal(2, calls);
+    calls.ShouldBe(2);
   }
 }

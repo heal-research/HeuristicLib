@@ -23,8 +23,8 @@ public class RotatedGradientTestFunctionTests
     // Rx = (-4, 3)
     // grad inner at Rx = 2 * (-4, 3) = (-8, 6)
     // result = R^T * grad = [0 1; -1 0] * (-8, 6) = (6, 8)
-    Assert.Equal(6.0, gradient[0], 12);
-    Assert.Equal(8.0, gradient[1], 12);
+    gradient[0].ShouldBe(6.0, 1e-12);
+    gradient[1].ShouldBe(8.0, 1e-12);
   }
 
   [Fact]

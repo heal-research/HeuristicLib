@@ -13,7 +13,7 @@ public sealed class IntegerVectorTests
     var vector = IntegerVector.Create(elements);
     elements[0] = 99;
 
-    Assert.Equal(new[] { 1, 2, 3 }, vector.ToArray());
+    vector.ToArray().ShouldBe(new[] { 1, 2, 3 });
   }
 
   [Fact]
@@ -24,7 +24,7 @@ public sealed class IntegerVectorTests
     var vector = IntegerVector.Create(elements);
     elements[0] = 99;
 
-    Assert.Equal(new[] { 1, 2, 3 }, vector.ToArray());
+    vector.ToArray().ShouldBe(new[] { 1, 2, 3 });
   }
 
   [Fact]
@@ -35,7 +35,7 @@ public sealed class IntegerVectorTests
     var vector = IntegerVector.FromOwnedArray(elements);
     elements[0] = 99;
 
-    Assert.Equal(new[] { 99, 2, 3 }, vector.ToArray());
+    vector.ToArray().ShouldBe(new[] { 99, 2, 3 });
   }
 
   [Fact]
@@ -43,9 +43,9 @@ public sealed class IntegerVectorTests
   {
     IntegerVector v = IntegerVector.Create(1, 2, 3);
 
-    Assert.True(v.Equals(v));
-    Assert.True(v == v);
-    Assert.False(v != v);
+    v.Equals(v).ShouldBeTrue();
+    (v == v).ShouldBeTrue();
+    (v != v).ShouldBeFalse();
   }
 
   [Fact]
@@ -53,8 +53,8 @@ public sealed class IntegerVectorTests
   {
     IntegerVector v = IntegerVector.Create(1, 2, 3);
 
-    Assert.False(v.Equals(null));
-    Assert.False(v.Equals((object?)null));
+    v.Equals(null).ShouldBeFalse();
+    v.Equals((object?)null).ShouldBeFalse();
   }
 
   [Fact]
@@ -62,7 +62,7 @@ public sealed class IntegerVectorTests
   {
     IntegerVector v = IntegerVector.Create(1, 2, 3);
 
-    Assert.False(v.Equals("not a vector"));
+    v.Equals("not a vector").ShouldBeFalse();
   }
 
   [Fact]
@@ -71,11 +71,11 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2, 3);
     IntegerVector b = IntegerVector.Create(1, 2, 3);
 
-    Assert.True(a.Equals(b));
-    Assert.True(b.Equals(a));
-    Assert.True(a.Equals((object)b));
-    Assert.True(a == b);
-    Assert.False(a != b);
+    a.Equals(b).ShouldBeTrue();
+    b.Equals(a).ShouldBeTrue();
+    a.Equals((object)b).ShouldBeTrue();
+    (a == b).ShouldBeTrue();
+    (a != b).ShouldBeFalse();
   }
 
   [Fact]
@@ -84,10 +84,10 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2, 3);
     IntegerVector b = IntegerVector.Create(1, 2);
 
-    Assert.False(a.Equals(b));
-    Assert.False(b.Equals(a));
-    Assert.False(a == b);
-    Assert.True(a != b);
+    a.Equals(b).ShouldBeFalse();
+    b.Equals(a).ShouldBeFalse();
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -96,10 +96,10 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2, 3);
     IntegerVector b = IntegerVector.Create(1, 2, 4);
 
-    Assert.False(a.Equals(b));
-    Assert.False(b.Equals(a));
-    Assert.False(a == b);
-    Assert.True(a != b);
+    a.Equals(b).ShouldBeFalse();
+    b.Equals(a).ShouldBeFalse();
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -109,9 +109,9 @@ public sealed class IntegerVectorTests
     IntegerVector b = IntegerVector.Create(1, 2, 3);
     IntegerVector c = IntegerVector.Create(1, 2, 3);
 
-    Assert.True(a.Equals(b));
-    Assert.True(b.Equals(c));
-    Assert.True(a.Equals(c));
+    a.Equals(b).ShouldBeTrue();
+    b.Equals(c).ShouldBeTrue();
+    a.Equals(c).ShouldBeTrue();
   }
 
   [Fact]
@@ -120,8 +120,8 @@ public sealed class IntegerVectorTests
     IntegerVector? a = null;
     IntegerVector? b = null;
 
-    Assert.True(a == b);
-    Assert.False(a != b);
+    (a == b).ShouldBeTrue();
+    (a != b).ShouldBeFalse();
   }
 
   [Fact]
@@ -130,8 +130,8 @@ public sealed class IntegerVectorTests
     IntegerVector? a = null;
     IntegerVector b = IntegerVector.Create(1, 2, 3);
 
-    Assert.False(a == b);
-    Assert.True(a != b);
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -140,8 +140,8 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2, 3);
     IntegerVector? b = null;
 
-    Assert.False(a == b);
-    Assert.True(a != b);
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -150,7 +150,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2, 3);
     IntegerVector b = IntegerVector.Create(1, 2, 3);
 
-    Assert.Equal(a.GetHashCode(), b.GetHashCode());
+    b.GetHashCode().ShouldBe(a.GetHashCode());
   }
 
   [Fact]
@@ -161,7 +161,7 @@ public sealed class IntegerVectorTests
     var h1 = v.GetHashCode();
     var h2 = v.GetHashCode();
 
-    Assert.Equal(h1, h2);
+    h2.ShouldBe(h1);
   }
 
   [Fact]
@@ -173,7 +173,7 @@ public sealed class IntegerVectorTests
 
     set.Add(a);
 
-    Assert.True(set.Contains(b));
+    set.Contains(b).ShouldBeTrue();
   }
 
   [Fact]
@@ -186,7 +186,7 @@ public sealed class IntegerVectorTests
     set.Add(a);
     set.Add(b);
 
-    Assert.Single(set);
+    set.ShouldHaveSingleItem();
   }
 
   [Fact]
@@ -198,8 +198,8 @@ public sealed class IntegerVectorTests
 
     dict[key1] = "value";
 
-    Assert.True(dict.ContainsKey(key2));
-    Assert.Equal("value", dict[key2]);
+    dict.ContainsKey(key2).ShouldBeTrue();
+    dict[key2].ShouldBe("value");
   }
 
   [Fact]
@@ -207,11 +207,11 @@ public sealed class IntegerVectorTests
   {
     IntegerVector v = IntegerVector.Create(10, 20, 30);
 
-    Assert.Equal(3, v.Count);
-    Assert.Equal(10, v[0]);
-    Assert.Equal(20, v[1]);
-    Assert.Equal(30, v[2]);
-    Assert.Equal(new[] { 10, 20, 30 }, v.ToArray());
+    v.Count.ShouldBe(3);
+    v[0].ShouldBe(10);
+    v[1].ShouldBe(20);
+    v[2].ShouldBe(30);
+    v.ToArray().ShouldBe(new[] { 10, 20, 30 });
   }
 
   [Fact]
@@ -219,9 +219,9 @@ public sealed class IntegerVectorTests
   {
     IntegerVector v = IntegerVector.Create(10, 20, 30);
 
-    Assert.Equal(30, v[^1]);
-    Assert.Equal(20, v[^2]);
-    Assert.Equal(10, v[^3]);
+    v[^1].ShouldBe(30);
+    v[^2].ShouldBe(20);
+    v[^3].ShouldBe(10);
   }
 
   [Fact]
@@ -229,8 +229,8 @@ public sealed class IntegerVectorTests
   {
     IntegerVector v = 42;
 
-    Assert.Equal(1, v.Count);
-    Assert.Equal(42, v[0]);
+    v.Count.ShouldBe(1);
+    v[0].ShouldBe(42);
   }
 
   [Fact]
@@ -238,8 +238,8 @@ public sealed class IntegerVectorTests
   {
     IntegerVector v = IntegerVector.Create(1, 2, 3);
 
-    Assert.Equal(3, v.Count);
-    Assert.Equal(new[] { 1, 2, 3 }, v.ToArray());
+    v.Count.ShouldBe(3);
+    v.ToArray().ShouldBe(new[] { 1, 2, 3 });
   }
 
   [Fact]
@@ -249,7 +249,7 @@ public sealed class IntegerVectorTests
 
     RealVector result = input;
 
-    Assert.Equal(new[] { 1.0, -2.0, 3.0 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 1.0, -2.0, 3.0 });
   }
 
   [Fact]
@@ -259,7 +259,7 @@ public sealed class IntegerVectorTests
 
     var result = input.ToRealVector();
 
-    Assert.Equal(new[] { 1.0, -2.0, 3.0 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 1.0, -2.0, 3.0 });
   }
 
   [Fact]
@@ -267,7 +267,7 @@ public sealed class IntegerVectorTests
   {
     IntegerVector input = IntegerVector.Create(1, -2, 3);
 
-    Assert.Equal(-2.0, input.ToRealAt(1));
+    input.ToRealAt(1).ShouldBe(-2.0);
   }
 
   [Fact]
@@ -276,7 +276,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2);
     IntegerVector b = IntegerVector.Create(3, 4);
 
-    Assert.True(IntegerVector.AreCompatible(a, b));
+    IntegerVector.AreCompatible(a, b).ShouldBeTrue();
   }
 
   [Fact]
@@ -285,7 +285,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = 1;
     IntegerVector b = IntegerVector.Create(3, 4, 5);
 
-    Assert.True(IntegerVector.AreCompatible(a, b));
+    IntegerVector.AreCompatible(a, b).ShouldBeTrue();
   }
 
   [Fact]
@@ -294,7 +294,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(3, 4, 5);
     IntegerVector b = 1;
 
-    Assert.True(IntegerVector.AreCompatible(a, b));
+    IntegerVector.AreCompatible(a, b).ShouldBeTrue();
   }
 
   [Fact]
@@ -303,7 +303,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2);
     IntegerVector b = IntegerVector.Create(3, 4, 5);
 
-    Assert.False(IntegerVector.AreCompatible(a, b));
+    IntegerVector.AreCompatible(a, b).ShouldBeFalse();
   }
 
   [Fact]
@@ -312,8 +312,8 @@ public sealed class IntegerVectorTests
     IntegerVector scalar = 1;
     IntegerVector vector = IntegerVector.Create(3, 4, 5);
 
-    Assert.Equal(3, IntegerVector.BroadcastLength(scalar, vector));
-    Assert.Equal(3, IntegerVector.BroadcastLength(vector, scalar));
+    IntegerVector.BroadcastLength(scalar, vector).ShouldBe(3);
+    IntegerVector.BroadcastLength(vector, scalar).ShouldBe(3);
   }
 
   [Fact]
@@ -324,7 +324,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.Add(a, b);
 
-    Assert.Equal(new[] { 11, 22, 33 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 11, 22, 33 });
   }
 
   [Fact]
@@ -335,7 +335,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.Add(scalar, vector);
 
-    Assert.Equal(new[] { 12, 22, 32 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 12, 22, 32 });
   }
 
   [Fact]
@@ -346,7 +346,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.Add(vector, scalar);
 
-    Assert.Equal(new[] { 12, 22, 32 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 12, 22, 32 });
   }
 
   [Fact]
@@ -355,7 +355,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2);
     IntegerVector b = IntegerVector.Create(10, 20, 30);
 
-    Assert.Throws<ArgumentException>(() => IntegerVector.Add(a, b));
+    Should.Throw<ArgumentException>(() => IntegerVector.Add(a, b));
   }
 
   [Fact]
@@ -366,7 +366,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.Subtract(a, b);
 
-    Assert.Equal(new[] { 9, 18, 27 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 9, 18, 27 });
   }
 
   [Fact]
@@ -377,7 +377,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.Multiply(a, b);
 
-    Assert.Equal(new[] { 20, 60, 120 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 20, 60, 120 });
   }
 
   [Fact]
@@ -388,7 +388,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.Divide(a, b);
 
-    Assert.Equal(new[] { 5, 5, 6 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 5, 5, 6 });
   }
 
   [Fact]
@@ -397,10 +397,10 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(10, 20, 30);
     IntegerVector b = IntegerVector.Create(2, 4, 5);
 
-    Assert.Equal(new[] { 12, 24, 35 }, (a + b).ToArray());
-    Assert.Equal(new[] { 8, 16, 25 }, (a - b).ToArray());
-    Assert.Equal(new[] { 20, 80, 150 }, (a * b).ToArray());
-    Assert.Equal(new[] { 5, 5, 6 }, (a / b).ToArray());
+    (a + b).ToArray().ShouldBe(new[] { 12, 24, 35 });
+    (a - b).ToArray().ShouldBe(new[] { 8, 16, 25 });
+    (a * b).ToArray().ShouldBe(new[] { 20, 80, 150 });
+    (a / b).ToArray().ShouldBe(new[] { 5, 5, 6 });
   }
 
   [Fact]
@@ -412,8 +412,8 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.Clamp(input, min, max);
 
-    Assert.Equal(new[] { 0, 2, 5 }, result.ToArray());
-    Assert.NotSame(input, result);
+    result.ToArray().ShouldBe(new[] { 0, 2, 5 });
+    result.ShouldNotBeSameAs(input);
   }
 
   [Fact]
@@ -423,9 +423,9 @@ public sealed class IntegerVectorTests
     IntegerVector min = IntegerVector.Create(0, 1, 2);
     IntegerVector max = IntegerVector.Create(5, 3, 8);
 
-    Assert.Equal(0, input.ClampAt(min, max, 0));
-    Assert.Equal(2, input.ClampAt(min, max, 1));
-    Assert.Equal(8, input.ClampAt(min, max, 2));
+    input.ClampAt(min, max, 0).ShouldBe(0);
+    input.ClampAt(min, max, 1).ShouldBe(2);
+    input.ClampAt(min, max, 2).ShouldBe(8);
   }
 
   [Fact]
@@ -434,7 +434,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 5, 3);
     IntegerVector b = IntegerVector.Create(2, 5, 1);
 
-    Assert.Equal(new[] { false, false, true }, (a > b).ToArray());
+    (a > b).ToArray().ShouldBe(new[] { false, false, true });
   }
 
   [Fact]
@@ -443,7 +443,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 5, 3);
     IntegerVector b = IntegerVector.Create(2, 5, 4);
 
-    Assert.Equal(new[] { true, false, true }, (a < b).ToArray());
+    (a < b).ToArray().ShouldBe(new[] { true, false, true });
   }
 
   [Fact]
@@ -452,7 +452,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 5, 3);
     IntegerVector b = IntegerVector.Create(2, 5, 1);
 
-    Assert.Equal(new[] { false, true, true }, (a >= b).ToArray());
+    (a >= b).ToArray().ShouldBe(new[] { false, true, true });
   }
 
   [Fact]
@@ -461,7 +461,7 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 5, 3);
     IntegerVector b = IntegerVector.Create(2, 5, 3);
 
-    Assert.Equal(new[] { true, true, true }, (a <= b).ToArray());
+    (a <= b).ToArray().ShouldBe(new[] { true, true, true });
   }
 
   [Fact]
@@ -470,10 +470,10 @@ public sealed class IntegerVectorTests
     IntegerVector scalar = 3;
     IntegerVector vector = IntegerVector.Create(1, 3, 5);
 
-    Assert.Equal(new[] { true, false, false }, (scalar > vector).ToArray());
-    Assert.Equal(new[] { false, false, true }, (scalar < vector).ToArray());
-    Assert.Equal(new[] { true, true, false }, (scalar >= vector).ToArray());
-    Assert.Equal(new[] { false, true, true }, (scalar <= vector).ToArray());
+    (scalar > vector).ToArray().ShouldBe(new[] { true, false, false });
+    (scalar < vector).ToArray().ShouldBe(new[] { false, false, true });
+    (scalar >= vector).ToArray().ShouldBe(new[] { true, true, false });
+    (scalar <= vector).ToArray().ShouldBe(new[] { false, true, true });
   }
 
   [Fact]
@@ -482,10 +482,10 @@ public sealed class IntegerVectorTests
     IntegerVector vector = IntegerVector.Create(1, 3, 5);
     IntegerVector scalar = 3;
 
-    Assert.Equal(new[] { false, false, true }, (vector > scalar).ToArray());
-    Assert.Equal(new[] { true, false, false }, (vector < scalar).ToArray());
-    Assert.Equal(new[] { false, true, true }, (vector >= scalar).ToArray());
-    Assert.Equal(new[] { true, true, false }, (vector <= scalar).ToArray());
+    (vector > scalar).ToArray().ShouldBe(new[] { false, false, true });
+    (vector < scalar).ToArray().ShouldBe(new[] { true, false, false });
+    (vector >= scalar).ToArray().ShouldBe(new[] { false, true, true });
+    (vector <= scalar).ToArray().ShouldBe(new[] { true, true, false });
   }
 
   [Fact]
@@ -494,10 +494,10 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(1, 2);
     IntegerVector b = IntegerVector.Create(1, 2, 3);
 
-    Assert.Throws<ArgumentException>(() => a > b);
-    Assert.Throws<ArgumentException>(() => a < b);
-    Assert.Throws<ArgumentException>(() => a >= b);
-    Assert.Throws<ArgumentException>(() => a <= b);
+    Should.Throw<ArgumentException>(() => a > b);
+    Should.Throw<ArgumentException>(() => a < b);
+    Should.Throw<ArgumentException>(() => a >= b);
+    Should.Throw<ArgumentException>(() => a <= b);
   }
 
   [Fact]
@@ -510,7 +510,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.CreateUniform(3, low, high, rng);
 
-    Assert.Equal(3, result.Count);
+    result.Count.ShouldBe(3);
   }
 
   [Fact]
@@ -523,7 +523,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.CreateUniform(3, low, high, rng);
 
-    Assert.Equal(new[] { 12, 11, 10 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 12, 11, 10 });
   }
 
   [Fact]
@@ -536,7 +536,7 @@ public sealed class IntegerVectorTests
 
     var result = IntegerVector.CreateUniform(3, low, high, rng);
 
-    Assert.Equal(new[] { 12, 22, 32 }, result.ToArray());
+    result.ToArray().ShouldBe(new[] { 12, 22, 32 });
   }
 
   [Fact]
@@ -547,7 +547,7 @@ public sealed class IntegerVectorTests
     IntegerVector low = IntegerVector.Create(0, 1);
     IntegerVector high = 10;
 
-    Assert.Throws<ArgumentException>(() => IntegerVector.CreateUniform(3, low, high, rng));
+    Should.Throw<ArgumentException>(() => IntegerVector.CreateUniform(3, low, high, rng));
   }
 
   [Fact]
@@ -558,7 +558,7 @@ public sealed class IntegerVectorTests
     IntegerVector low = 0;
     IntegerVector high = IntegerVector.Create(10, 11);
 
-    Assert.Throws<ArgumentException>(() => IntegerVector.CreateUniform(3, low, high, rng));
+    Should.Throw<ArgumentException>(() => IntegerVector.CreateUniform(3, low, high, rng));
   }
 
   [Fact]
@@ -567,8 +567,8 @@ public sealed class IntegerVectorTests
     IntegerVector a = IntegerVector.Create(Array.Empty<int>());
     IntegerVector b = IntegerVector.Create(Array.Empty<int>());
 
-    Assert.True(a.Equals(b));
-    Assert.Equal(a.GetHashCode(), b.GetHashCode());
+    a.Equals(b).ShouldBeTrue();
+    b.GetHashCode().ShouldBe(a.GetHashCode());
   }
 
   private sealed class StubRandomNumberGenerator : IRandomNumberGenerator

@@ -9,7 +9,7 @@ public class DistanceHelperTests
   {
     var result = DistanceHelper.GetDistance(DistanceMeasure.Euclidean, 0, 0, 3, 4);
 
-    Assert.Equal(5.0, result, 10);
+    result.ShouldBe(5.0, 1e-10);
   }
 
   [Fact]
@@ -17,7 +17,7 @@ public class DistanceHelperTests
   {
     var result = DistanceHelper.GetDistance(DistanceMeasure.RoundedEuclidean, 0, 0, 1, 1);
 
-    Assert.Equal(1.0, result);
+    result.ShouldBe(1.0);
   }
 
   [Fact]
@@ -25,7 +25,7 @@ public class DistanceHelperTests
   {
     var result = DistanceHelper.GetDistance(DistanceMeasure.UpperEuclidean, 0, 0, 1, 1);
 
-    Assert.Equal(2.0, result);
+    result.ShouldBe(2.0);
   }
 
   [Fact]
@@ -33,7 +33,7 @@ public class DistanceHelperTests
   {
     var result = DistanceHelper.GetDistance(DistanceMeasure.Manhattan, 1, 2, 4, 6);
 
-    Assert.Equal(7.0, result);
+    result.ShouldBe(7.0);
   }
 
   [Fact]
@@ -41,7 +41,7 @@ public class DistanceHelperTests
   {
     var result = DistanceHelper.GetDistance(DistanceMeasure.Maximum, 1, 2, 4, 8);
 
-    Assert.Equal(6.0, result);
+    result.ShouldBe(6.0);
   }
 
   [Fact]
@@ -49,7 +49,7 @@ public class DistanceHelperTests
   {
     var result = DistanceHelper.GetDistance(DistanceMeasure.Chebyshev, 1, 2, 4, 8);
 
-    Assert.Equal(6.0, result);
+    result.ShouldBe(6.0);
   }
 
   [Fact]
@@ -57,16 +57,16 @@ public class DistanceHelperTests
   {
     var result = DistanceHelper.GetDistance(DistanceMeasure.Att, 0, 0, 3, 4);
 
-    Assert.Equal(2.0, result);
+    result.ShouldBe(2.0);
   }
 
   [Fact]
   public void GetDistance_Direct_ShouldThrowArgumentException()
   {
-    var ex = Assert.Throws<ArgumentException>(() =>
+    var ex = Should.Throw<ArgumentException>(() =>
       DistanceHelper.GetDistance(DistanceMeasure.Direct, 0, 0, 1, 1));
 
-    Assert.Contains("requires distance matrix", ex.Message);
+    ex.Message.ShouldContain("requires distance matrix");
   }
 
   [Fact]
@@ -74,7 +74,7 @@ public class DistanceHelperTests
   {
     var result = DistanceHelper.GetDistance(DistanceMeasure.Geo, 10, 20, 10, 20);
 
-    Assert.Equal(1.0, result);
+    result.ShouldBe(1.0);
   }
 
   [Fact]
@@ -83,7 +83,7 @@ public class DistanceHelperTests
     var d1 = DistanceHelper.GetDistance(DistanceMeasure.Geo, 10.0, 20.0, 30.0, 40.0);
     var d2 = DistanceHelper.GetDistance(DistanceMeasure.Geo, 30.0, 40.0, 10.0, 20.0);
 
-    Assert.Equal(d1, d2);
+    d2.ShouldBe(d1);
   }
 
   [Fact]
@@ -100,35 +100,35 @@ public class DistanceHelperTests
       distances: distances,
       dimension: 2);
 
-    Assert.Same(distances, result);
+    result.ShouldBeSameAs(distances);
   }
 
   [Fact]
   public void GetDistanceMatrix_ShouldThrow_WhenDirectMeasureHasNoDistanceMatrix()
   {
-    var ex = Assert.Throws<ArgumentException>(() =>
+    var ex = Should.Throw<ArgumentException>(() =>
       DistanceHelper.GetDistanceMatrix(
         DistanceMeasure.Direct,
         coordinates: null,
         distances: null,
         dimension: 2));
 
-    Assert.Equal("distances", ex.ParamName);
-    Assert.Contains("requires a distance matrix", ex.Message);
+    ex.ParamName.ShouldBe("distances");
+    ex.Message.ShouldContain("requires a distance matrix");
   }
 
   [Fact]
   public void GetDistanceMatrix_ShouldThrow_WhenCoordinatesAndDistancesAreMissing()
   {
-    var ex = Assert.Throws<ArgumentNullException>(() =>
+    var ex = Should.Throw<ArgumentNullException>(() =>
       DistanceHelper.GetDistanceMatrix(
         DistanceMeasure.Euclidean,
         coordinates: null,
         distances: null,
         dimension: 2));
 
-    Assert.Equal("coordinates", ex.ParamName);
-    Assert.Contains("Neither distances nor coordinates are provided", ex.Message);
+    ex.ParamName.ShouldBe("coordinates");
+    ex.Message.ShouldContain("Neither distances nor coordinates are provided");
   }
 
   [Fact]
@@ -146,18 +146,18 @@ public class DistanceHelperTests
       distances: null,
       dimension: 3);
 
-    Assert.Equal(0.0, result[0, 0]);
-    Assert.Equal(0.0, result[1, 1]);
-    Assert.Equal(0.0, result[2, 2]);
+    result[0, 0].ShouldBe(0.0);
+    result[1, 1].ShouldBe(0.0);
+    result[2, 2].ShouldBe(0.0);
 
-    Assert.Equal(5.0, result[0, 1], 10);
-    Assert.Equal(5.0, result[1, 0], 10);
+    result[0, 1].ShouldBe(5.0, 1e-10);
+    result[1, 0].ShouldBe(5.0, 1e-10);
 
-    Assert.Equal(10.0, result[0, 2], 10);
-    Assert.Equal(10.0, result[2, 0], 10);
+    result[0, 2].ShouldBe(10.0, 1e-10);
+    result[2, 0].ShouldBe(10.0, 1e-10);
 
-    Assert.Equal(5.0, result[1, 2], 10);
-    Assert.Equal(5.0, result[2, 1], 10);
+    result[1, 2].ShouldBe(5.0, 1e-10);
+    result[2, 1].ShouldBe(5.0, 1e-10);
   }
 
   [Fact]
@@ -174,7 +174,7 @@ public class DistanceHelperTests
       distances: null,
       dimension: 2);
 
-    Assert.Equal(2.0, result[0, 1]);
-    Assert.Equal(2.0, result[1, 0]);
+    result[0, 1].ShouldBe(2.0);
+    result[1, 0].ShouldBe(2.0);
   }
 }

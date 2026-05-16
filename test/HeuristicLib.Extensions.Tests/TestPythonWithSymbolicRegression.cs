@@ -18,7 +18,7 @@ public class TestPythonWithSymbolicRegression
         Iterations = iterations
       },
       callback: _ => i++);
-    Assert.Equal(iterations, i);
+    i.ShouldBe(iterations);
   }
 
   [Fact]
@@ -27,6 +27,6 @@ public class TestPythonWithSymbolicRegression
     const int iterations = 4;
     var i = 0;
     PythonCorrelationAnalysis.RunCorrelationNsga2((_, _) => { i++; }, iterations, 100, ProblemGeneration.SphereRastriginProblem(10, -5, 5, 0.5));
-    Assert.Equal(iterations, i);
+    i.ShouldBe(iterations);
   }
 }

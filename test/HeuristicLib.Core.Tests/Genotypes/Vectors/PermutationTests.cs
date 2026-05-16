@@ -13,7 +13,7 @@ public sealed class PermutationTests
     var permutation = Permutation.Create(elements);
     elements[0] = 1;
 
-    Assert.Equal(new[] { 2, 0, 1 }, permutation.ToArray());
+    permutation.ToArray().ShouldBe(new[] { 2, 0, 1 });
   }
 
   [Fact]
@@ -24,7 +24,7 @@ public sealed class PermutationTests
     var permutation = Permutation.Create(elements);
     elements[0] = 1;
 
-    Assert.Equal(new[] { 2, 0, 1 }, permutation.ToArray());
+    permutation.ToArray().ShouldBe(new[] { 2, 0, 1 });
   }
 
   [Fact]
@@ -35,7 +35,7 @@ public sealed class PermutationTests
     var permutation = Permutation.FromOwnedArray(elements);
     elements[0] = 1;
 
-    Assert.Equal(new[] { 1, 0, 1 }, permutation.ToArray());
+    permutation.ToArray().ShouldBe(new[] { 1, 0, 1 });
   }
 
   [Fact]
@@ -43,8 +43,8 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(2, 0, 1, 3);
 
-    Assert.Equal(4, permutation.Count);
-    Assert.Equal(new[] { 2, 0, 1, 3 }, permutation.ToArray());
+    permutation.Count.ShouldBe(4);
+    permutation.ToArray().ShouldBe(new[] { 2, 0, 1, 3 });
   }
 
   [Fact]
@@ -52,32 +52,32 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(Array.Empty<int>());
 
-    Assert.Equal(0, permutation.Count);
-    Assert.Empty(permutation);
+    permutation.Count.ShouldBe(0);
+    permutation.ShouldBeEmpty();
   }
 
   [Fact]
   public void Constructor_WithDuplicate_ThrowsArgumentException()
   {
-    Assert.Throws<ArgumentException>(() => new Permutation(0, 1, 1));
+    Should.Throw<ArgumentException>(() => new Permutation(0, 1, 1));
   }
 
   [Fact]
   public void Constructor_WithNegativeValue_ThrowsArgumentException()
   {
-    Assert.Throws<ArgumentException>(() => new Permutation(0, -1, 1));
+    Should.Throw<ArgumentException>(() => new Permutation(0, -1, 1));
   }
 
   [Fact]
   public void Constructor_WithValueTooLarge_ThrowsArgumentException()
   {
-    Assert.Throws<ArgumentException>(() => new Permutation(0, 1, 3));
+    Should.Throw<ArgumentException>(() => new Permutation(0, 1, 3));
   }
 
   [Fact]
   public void Constructor_WithMissingValue_ThrowsArgumentException()
   {
-    Assert.Throws<ArgumentException>(() => new Permutation(0, 2));
+    Should.Throw<ArgumentException>(() => new Permutation(0, 2));
   }
 
   [Fact]
@@ -85,8 +85,8 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(1, 0, 2);
 
-    Assert.Equal(3, permutation.Count);
-    Assert.Equal(new[] { 1, 0, 2 }, permutation.ToArray());
+    permutation.Count.ShouldBe(3);
+    permutation.ToArray().ShouldBe(new[] { 1, 0, 2 });
   }
 
   [Fact]
@@ -94,7 +94,7 @@ public sealed class PermutationTests
   {
     var permutation = Permutation.Range(5);
 
-    Assert.Equal(new[] { 0, 1, 2, 3, 4 }, permutation.ToArray());
+    permutation.ToArray().ShouldBe(new[] { 0, 1, 2, 3, 4 });
   }
 
   [Fact]
@@ -102,11 +102,11 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(2, 0, 1);
 
-    Assert.Equal(3, permutation.Count);
-    Assert.Equal(2, permutation[0]);
-    Assert.Equal(0, permutation[1]);
-    Assert.Equal(1, permutation[2]);
-    Assert.Equal(new[] { 2, 0, 1 }, permutation.ToArray());
+    permutation.Count.ShouldBe(3);
+    permutation[0].ShouldBe(2);
+    permutation[1].ShouldBe(0);
+    permutation[2].ShouldBe(1);
+    permutation.ToArray().ShouldBe(new[] { 2, 0, 1 });
   }
 
   [Fact]
@@ -114,9 +114,9 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(2, 0, 1);
 
-    Assert.Equal(1, permutation[^1]);
-    Assert.Equal(0, permutation[^2]);
-    Assert.Equal(2, permutation[^3]);
+    permutation[^1].ShouldBe(1);
+    permutation[^2].ShouldBe(0);
+    permutation[^3].ShouldBe(2);
   }
 
   [Fact]
@@ -124,9 +124,9 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(2, 0, 1);
 
-    Assert.True(permutation.Contains(0));
-    Assert.True(permutation.Contains(1));
-    Assert.True(permutation.Contains(2));
+    permutation.Contains(0).ShouldBeTrue();
+    permutation.Contains(1).ShouldBeTrue();
+    permutation.Contains(2).ShouldBeTrue();
   }
 
   [Fact]
@@ -134,8 +134,8 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(2, 0, 1);
 
-    Assert.False(permutation.Contains(3));
-    Assert.False(permutation.Contains(-1));
+    permutation.Contains(3).ShouldBeFalse();
+    permutation.Contains(-1).ShouldBeFalse();
   }
 
   [Fact]
@@ -148,7 +148,7 @@ public sealed class PermutationTests
       values.Add(value);
     }
 
-    Assert.Equal(new[] { 3, 1, 0, 2 }, values);
+    values.ShouldBe(new[] { 3, 1, 0, 2 });
   }
 
   [Fact]
@@ -157,16 +157,16 @@ public sealed class PermutationTests
     Permutation permutation = Permutation.Create(2, 1, 0);
     var enumerator = permutation.GetEnumerator();
 
-    Assert.True(enumerator.MoveNext());
-    Assert.Equal(2, enumerator.Current);
+    enumerator.MoveNext().ShouldBeTrue();
+    enumerator.Current.ShouldBe(2);
 
-    Assert.True(enumerator.MoveNext());
-    Assert.Equal(1, enumerator.Current);
+    enumerator.MoveNext().ShouldBeTrue();
+    enumerator.Current.ShouldBe(1);
 
     enumerator.Reset();
 
-    Assert.True(enumerator.MoveNext());
-    Assert.Equal(2, enumerator.Current);
+    enumerator.MoveNext().ShouldBeTrue();
+    enumerator.Current.ShouldBe(2);
   }
 
   [Fact]
@@ -176,7 +176,7 @@ public sealed class PermutationTests
 
     var permutation = Permutation.FromOwnedArray(elements);
 
-    Assert.Equal(new[] { 1, 2, 0 }, permutation.ToArray());
+    permutation.ToArray().ShouldBe(new[] { 1, 2, 0 });
   }
 
   [Fact]
@@ -184,7 +184,7 @@ public sealed class PermutationTests
   {
     var elements = new[] { 1, 1, 0 };
 
-    Assert.Throws<ArgumentException>(() => Permutation.FromOwnedArray(elements));
+    Should.Throw<ArgumentException>(() => Permutation.FromOwnedArray(elements));
   }
 
   [Theory]
@@ -194,7 +194,7 @@ public sealed class PermutationTests
   [InlineData(0, 2)]
   public void Create_InvalidPermutation_ThrowsArgumentException(params int[] elements)
   {
-    Assert.Throws<ArgumentException>(() => Permutation.Create(elements));
+    Should.Throw<ArgumentException>(() => Permutation.Create(elements));
   }
 
   [Fact]
@@ -202,9 +202,9 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(1, 0, 2);
 
-    Assert.True(permutation.Equals(permutation));
-    Assert.True(permutation == permutation);
-    Assert.False(permutation != permutation);
+    permutation.Equals(permutation).ShouldBeTrue();
+    (permutation == permutation).ShouldBeTrue();
+    (permutation != permutation).ShouldBeFalse();
   }
 
   [Fact]
@@ -212,8 +212,8 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(1, 0, 2);
 
-    Assert.False(permutation.Equals(null));
-    Assert.False(permutation.Equals((object?)null));
+    permutation.Equals(null).ShouldBeFalse();
+    permutation.Equals((object?)null).ShouldBeFalse();
   }
 
   [Fact]
@@ -221,7 +221,7 @@ public sealed class PermutationTests
   {
     Permutation permutation = Permutation.Create(1, 0, 2);
 
-    Assert.False(permutation.Equals("not a permutation"));
+    permutation.Equals("not a permutation").ShouldBeFalse();
   }
 
   [Fact]
@@ -230,10 +230,10 @@ public sealed class PermutationTests
     Permutation a = Permutation.Create(2, 0, 1, 3);
     Permutation b = Permutation.Create(2, 0, 1, 3);
 
-    Assert.True(a.Equals(b));
-    Assert.True(b.Equals(a));
-    Assert.True(a == b);
-    Assert.False(a != b);
+    a.Equals(b).ShouldBeTrue();
+    b.Equals(a).ShouldBeTrue();
+    (a == b).ShouldBeTrue();
+    (a != b).ShouldBeFalse();
   }
 
   [Fact]
@@ -242,10 +242,10 @@ public sealed class PermutationTests
     Permutation a = Permutation.Create(2, 0, 1, 3);
     Permutation b = Permutation.Create(2, 1, 0, 3);
 
-    Assert.False(a.Equals(b));
-    Assert.False(b.Equals(a));
-    Assert.False(a == b);
-    Assert.True(a != b);
+    a.Equals(b).ShouldBeFalse();
+    b.Equals(a).ShouldBeFalse();
+    (a == b).ShouldBeFalse();
+    (a != b).ShouldBeTrue();
   }
 
   [Fact]
@@ -255,9 +255,9 @@ public sealed class PermutationTests
     Permutation b = Permutation.Create(2, 0, 1, 3);
     Permutation c = Permutation.Create(2, 0, 1, 3);
 
-    Assert.True(a.Equals(b));
-    Assert.True(b.Equals(c));
-    Assert.True(a.Equals(c));
+    a.Equals(b).ShouldBeTrue();
+    b.Equals(c).ShouldBeTrue();
+    a.Equals(c).ShouldBeTrue();
   }
 
   [Fact]
@@ -266,7 +266,7 @@ public sealed class PermutationTests
     Permutation a = Permutation.Create(2, 0, 1, 3);
     Permutation b = Permutation.Create(2, 0, 1, 3);
 
-    Assert.Equal(a.GetHashCode(), b.GetHashCode());
+    b.GetHashCode().ShouldBe(a.GetHashCode());
   }
 
   [Fact]
@@ -277,7 +277,7 @@ public sealed class PermutationTests
     var h1 = permutation.GetHashCode();
     var h2 = permutation.GetHashCode();
 
-    Assert.Equal(h1, h2);
+    h2.ShouldBe(h1);
   }
 
   [Fact]
@@ -288,7 +288,7 @@ public sealed class PermutationTests
     Permutation b = Permutation.Create(2, 0, 1, 3);
 
     set.Add(a);
-    Assert.Contains(b, set);
+    set.ShouldContain(b);
   }
 
   [Fact]
@@ -301,7 +301,7 @@ public sealed class PermutationTests
     set.Add(a);
     set.Add(b);
 
-    Assert.Single(set);
+    set.ShouldHaveSingleItem();
   }
 
   [Fact]
@@ -313,8 +313,8 @@ public sealed class PermutationTests
 
     dict[key1] = "value";
 
-    Assert.True(dict.ContainsKey(key2));
-    Assert.Equal("value", dict[key2]);
+    dict.ContainsKey(key2).ShouldBeTrue();
+    dict[key2].ShouldBe("value");
   }
 
   [Fact]
@@ -324,7 +324,7 @@ public sealed class PermutationTests
 
     var permutation = Permutation.CreateRandom(0, rng);
 
-    Assert.Empty(permutation);
+    permutation.ShouldBeEmpty();
   }
 
   [Fact]
@@ -334,8 +334,8 @@ public sealed class PermutationTests
 
     var permutation = Permutation.CreateRandom(5, rng);
 
-    Assert.Equal(5, permutation.Count);
-    Assert.Equal(Enumerable.Range(0, 5).OrderBy(x => x), permutation.OrderBy(x => x));
+    permutation.Count.ShouldBe(5);
+    permutation.OrderBy(x => x).ShouldBe(Enumerable.Range(0, 5).OrderBy(x => x));
   }
 
   [Fact]
@@ -345,7 +345,7 @@ public sealed class PermutationTests
 
     var permutation = Permutation.CreateRandom(4, rng);
 
-    Assert.Equal(new[] { 1, 2, 3, 0 }, permutation.ToArray());
+    permutation.ToArray().ShouldBe(new[] { 1, 2, 3, 0 });
   }
 
   [Fact]
@@ -356,8 +356,8 @@ public sealed class PermutationTests
 
     var result = Permutation.SwapRandomElements(permutation, rng);
 
-    Assert.Equal(new[] { 0, 3, 2, 1 }, result.ToArray());
-    Assert.Equal(new[] { 0, 1, 2, 3 }, permutation.ToArray());
+    result.ToArray().ShouldBe(new[] { 0, 3, 2, 1 });
+    permutation.ToArray().ShouldBe(new[] { 0, 1, 2, 3 });
   }
 
   [Fact]
@@ -368,8 +368,8 @@ public sealed class PermutationTests
 
     var result = Permutation.SwapRandomElements(permutation, rng);
 
-    Assert.Equal(new[] { 0, 1, 2, 3 }, result.ToArray());
-    Assert.Equal(permutation, result);
+    result.ToArray().ShouldBe(new[] { 0, 1, 2, 3 });
+    result.ShouldBe(permutation);
   }
 
   [Fact]
@@ -380,8 +380,8 @@ public sealed class PermutationTests
 
     var result = Permutation.SwapRandomElements(permutation, rng);
 
-    Assert.Equal(4, result.Count);
-    Assert.Equal(new[] { 0, 1, 2, 3 }, result.OrderBy(x => x));
+    result.Count.ShouldBe(4);
+    result.OrderBy(x => x).ShouldBe(new[] { 0, 1, 2, 3 });
   }
 
   private sealed class StubRandomNumberGenerator : IRandomNumberGenerator

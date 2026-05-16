@@ -14,7 +14,7 @@ public class TravelingSalesmanDistanceMatrixProblemDataTests
 
     var data = new TravelingSalesmanDistanceMatrixProblemData(distances);
 
-    Assert.Equal(2, data.NumberOfCities);
+    data.NumberOfCities.ShouldBe(2);
   }
 
   [Fact]
@@ -25,10 +25,10 @@ public class TravelingSalesmanDistanceMatrixProblemDataTests
       { 3, 4, 5 }
     };
 
-    var ex = Assert.Throws<ArgumentException>(() =>
+    var ex = Should.Throw<ArgumentException>(() =>
       new TravelingSalesmanDistanceMatrixProblemData(distances));
 
-    Assert.Contains("must be square", ex.Message);
+    ex.Message.ShouldContain("must be square");
   }
 
   [Fact]
@@ -36,10 +36,10 @@ public class TravelingSalesmanDistanceMatrixProblemDataTests
   {
     var distances = new double[0, 0];
 
-    var ex = Assert.Throws<ArgumentException>(() =>
+    var ex = Should.Throw<ArgumentException>(() =>
       new TravelingSalesmanDistanceMatrixProblemData(distances));
 
-    Assert.Contains("at least one city", ex.Message);
+    ex.Message.ShouldContain("at least one city");
   }
 
   [Fact]
@@ -52,8 +52,8 @@ public class TravelingSalesmanDistanceMatrixProblemDataTests
 
     var data = new TravelingSalesmanDistanceMatrixProblemData(distances);
 
-    Assert.Equal(7.0, data.GetDistance(0, 1));
-    Assert.Equal(9.0, data.GetDistance(1, 0));
+    data.GetDistance(0, 1).ShouldBe(7.0);
+    data.GetDistance(1, 0).ShouldBe(9.0);
   }
 
   [Fact]
@@ -67,7 +67,7 @@ public class TravelingSalesmanDistanceMatrixProblemDataTests
     var data = new TravelingSalesmanDistanceMatrixProblemData(distances);
     distances[0, 1] = 123;
 
-    Assert.Equal(7.0, data.GetDistance(0, 1));
+    data.GetDistance(0, 1).ShouldBe(7.0);
   }
 
   [Fact]
@@ -81,8 +81,8 @@ public class TravelingSalesmanDistanceMatrixProblemDataTests
     var cloneA = data.Distances;
     var cloneB = data.Distances;
 
-    Assert.NotSame(cloneA, cloneB);
-    Assert.Equal(7.0, cloneA[0, 1]);
-    Assert.Equal(9.0, cloneA[1, 0]);
+    cloneB.ShouldNotBeSameAs(cloneA);
+    cloneA[0, 1].ShouldBe(7.0);
+    cloneA[1, 0].ShouldBe(9.0);
   }
 }

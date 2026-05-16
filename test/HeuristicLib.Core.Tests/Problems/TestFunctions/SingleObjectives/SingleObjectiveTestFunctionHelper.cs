@@ -30,12 +30,10 @@ internal static class SingleObjectiveTestFunctionHelper
     RealVector actual,
     double tolerance = 1e-5)
   {
-    Assert.Equal(expected.Count, actual.Count);
+    actual.Count.ShouldBe(expected.Count);
 
     for (var i = 0; i < expected.Count; i++) {
-      Assert.True(
-        Math.Abs(expected[i] - actual[i]) <= tolerance,
-        $"Vectors differ at index {i}: expected {expected[i]}, actual {actual[i]}");
+      (Math.Abs(expected[i] - actual[i]) <= tolerance).ShouldBeTrue($"Vectors differ at index {i}: expected {expected[i]}, actual {actual[i]}");
     }
   }
 

@@ -86,18 +86,18 @@ public class TreeToAutoDiffTermConverterTests
       out var func,
       out var funcGrad);
 
-    Assert.True(success);
-    Assert.NotNull(parameters);
-    Assert.NotNull(initialParameters);
-    Assert.NotNull(func);
-    Assert.NotNull(funcGrad);
+    success.ShouldBeTrue();
+    parameters.ShouldNotBeNull();
+    initialParameters.ShouldNotBeNull();
+    func.ShouldNotBeNull();
+    funcGrad.ShouldNotBeNull();
 
-    Assert.Empty(parameters);
-    Assert.Single(initialParameters);
-    Assert.Equal(3.5, initialParameters[0], 12);
+    parameters.ShouldBeEmpty();
+    initialParameters.ShouldHaveSingleItem();
+    initialParameters[0].ShouldBe(3.5, 1e-12);
 
     var y = func!([7.0], []);
-    Assert.Equal(7.0, y, 12);
+    y.ShouldBe(7.0, 1e-12);
   }
 
   [Fact]
@@ -117,21 +117,21 @@ public class TreeToAutoDiffTermConverterTests
       out var func,
       out var funcGrad);
 
-    Assert.True(success);
-    Assert.NotNull(parameters);
-    Assert.NotNull(initialParameters);
-    Assert.NotNull(func);
-    Assert.NotNull(funcGrad);
+    success.ShouldBeTrue();
+    parameters.ShouldNotBeNull();
+    initialParameters.ShouldNotBeNull();
+    func.ShouldNotBeNull();
+    funcGrad.ShouldNotBeNull();
 
-    Assert.Single(parameters);
-    Assert.Empty(initialParameters);
+    parameters.ShouldHaveSingleItem();
+    initialParameters.ShouldBeEmpty();
 
-    Assert.Equal("x", parameters[0].VariableName);
-    Assert.Equal(string.Empty, parameters[0].VariableValue);
-    Assert.Equal(0, parameters[0].Lag);
+    parameters[0].VariableName.ShouldBe("x");
+    parameters[0].VariableValue.ShouldBe(string.Empty);
+    parameters[0].Lag.ShouldBe(0);
 
     var y = func([], [4.0]);
-    Assert.Equal(10.0, y, 12);
+    y.ShouldBe(10.0, 1e-12);
   }
 
   [Fact]
@@ -151,18 +151,18 @@ public class TreeToAutoDiffTermConverterTests
       out var func,
       out var funcGrad);
 
-    Assert.True(success);
-    Assert.NotNull(parameters);
-    Assert.NotNull(initialParameters);
-    Assert.NotNull(func);
-    Assert.NotNull(funcGrad);
+    success.ShouldBeTrue();
+    parameters.ShouldNotBeNull();
+    initialParameters.ShouldNotBeNull();
+    func.ShouldNotBeNull();
+    funcGrad.ShouldNotBeNull();
 
-    Assert.Single(parameters);
-    Assert.Single(initialParameters);
-    Assert.Equal(2.5, initialParameters![0], 12);
+    parameters.ShouldHaveSingleItem();
+    initialParameters.ShouldHaveSingleItem();
+    initialParameters![0].ShouldBe(2.5, 1e-12);
 
     var y = func!([3.0], [4.0]);
-    Assert.Equal(12.0, y, 12);
+    y.ShouldBe(12.0, 1e-12);
   }
 
   [Fact]
@@ -184,20 +184,20 @@ public class TreeToAutoDiffTermConverterTests
       out var func,
       out var funcGrad);
 
-    Assert.True(success);
-    Assert.NotNull(parameters);
-    Assert.NotNull(initialParameters);
-    Assert.NotNull(func);
-    Assert.NotNull(funcGrad);
+    success.ShouldBeTrue();
+    parameters.ShouldNotBeNull();
+    initialParameters.ShouldNotBeNull();
+    func.ShouldNotBeNull();
+    funcGrad.ShouldNotBeNull();
 
-    Assert.Single(parameters);
-    Assert.Equal("x", parameters![0].VariableName);
-    Assert.Equal(2, initialParameters!.Length);
-    Assert.Equal(2.0, initialParameters[0], 12);
-    Assert.Equal(3.0, initialParameters[1], 12);
+    parameters.ShouldHaveSingleItem();
+    parameters![0].VariableName.ShouldBe("x");
+    initialParameters!.Length.ShouldBe(2);
+    initialParameters[0].ShouldBe(2.0, 1e-12);
+    initialParameters[1].ShouldBe(3.0, 1e-12);
 
     var y = func([2.0, 3.0], [4.0]);
-    Assert.Equal(20.0, y, 12);
+    y.ShouldBe(20.0, 1e-12);
   }
 
   [Fact]
@@ -220,11 +220,11 @@ public class TreeToAutoDiffTermConverterTests
       out var func,
       out var funcGrad);
 
-    Assert.False(success);
-    Assert.Null(parameters);
-    Assert.Null(initialParameters);
-    Assert.Null(func);
-    Assert.Null(funcGrad);
+    success.ShouldBeFalse();
+    parameters.ShouldBeNull();
+    initialParameters.ShouldBeNull();
+    func.ShouldBeNull();
+    funcGrad.ShouldBeNull();
   }
 
   [Fact]
@@ -247,7 +247,7 @@ public class TreeToAutoDiffTermConverterTests
       out var func,
       out var funcGrad);
 
-    Assert.False(success);
+    success.ShouldBeFalse();
   }
 
   private class DummySymbol() : Symbol(0, 0, 0);
@@ -269,7 +269,7 @@ public class TreeToAutoDiffTermConverterTests
       out var func,
       out var funcGrad);
 
-    Assert.False(success);
+    success.ShouldBeFalse();
   }
 
   [Fact]
@@ -284,13 +284,13 @@ public class TreeToAutoDiffTermConverterTests
 
     tree.Root[0].AddSubtree(power);
 
-    Assert.True(TreeToAutoDiffTermConverter.IsCompatible(tree));
+    TreeToAutoDiffTermConverter.IsCompatible(tree).ShouldBeTrue();
 
     var success = TreeToAutoDiffTermConverter.TryConvertToAutoDiff(
       tree,
       makeVariableWeightsVariable: true,
       out _, out _, out _, out _);
 
-    Assert.False(success);
+    success.ShouldBeFalse();
   }
 }

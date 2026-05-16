@@ -11,7 +11,7 @@ public class RosenbrockFunctionTests
     var f = new RosenbrockFunction(3);
     RealVector x = [1.0, 1.0, 1.0];
 
-    Assert.Equal(0.0, f.Evaluate(x), 12);
+    f.Evaluate(x).ShouldBe(0.0, 1e-12);
   }
 
   [Fact]
@@ -21,7 +21,7 @@ public class RosenbrockFunctionTests
     RealVector x = [0.0, 0.0];
 
     // 100*(0 - 0^2)^2 + (0 - 1)^2 = 1
-    Assert.Equal(1.0, f.Evaluate(x), 12);
+    f.Evaluate(x).ShouldBe(1.0, 1e-12);
   }
 
   [Fact]
@@ -32,9 +32,9 @@ public class RosenbrockFunctionTests
 
     var grad = f.EvaluateGradient(x);
 
-    Assert.Equal(0.0, grad[0], 12);
-    Assert.Equal(0.0, grad[1], 12);
-    Assert.Equal(0.0, grad[2], 12);
+    grad[0].ShouldBe(0.0, 1e-12);
+    grad[1].ShouldBe(0.0, 1e-12);
+    grad[2].ShouldBe(0.0, 1e-12);
   }
 
   [Fact]

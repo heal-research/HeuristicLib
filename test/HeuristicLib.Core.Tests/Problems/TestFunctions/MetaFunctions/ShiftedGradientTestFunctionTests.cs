@@ -20,8 +20,8 @@ public class ShiftedGradientTestFunctionTests
     var gradient = function.EvaluateGradient(x);
 
     // shifted input = (4, 6), grad sphere = (8, 12)
-    Assert.Equal(8.0, gradient[0], 12);
-    Assert.Equal(12.0, gradient[1], 12);
+    gradient[0].ShouldBe(8.0, 1e-12);
+    gradient[1].ShouldBe(12.0, 1e-12);
   }
 
   [Fact]

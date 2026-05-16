@@ -17,8 +17,8 @@ public class RotatedTestFunctionTests
 
     var result = RotatedTestFunction.Rotate(rotation, vector);
 
-    Assert.Equal(17.0, result[0], 12); // 1*5 + 2*6
-    Assert.Equal(39.0, result[1], 12); // 3*5 + 4*6
+    result[0].ShouldBe(17.0, 1e-12); // 1*5 + 2*6
+    result[1].ShouldBe(39.0, 1e-12); // 3*5 + 4*6
   }
 
   [Fact]
@@ -35,7 +35,7 @@ public class RotatedTestFunctionTests
     var result = function.Evaluate(x);
 
     // Rotation gives (-4, 3), sphere value stays 25
-    Assert.Equal(25.0, result, 12);
+    result.ShouldBe(25.0, 1e-12);
   }
 
   [Fact]
@@ -48,7 +48,7 @@ public class RotatedTestFunctionTests
     var inner = new SphereFunction(2);
     var function = new RotatedTestFunction(rotation, inner);
 
-    Assert.Equal(2, function.Dimension);
+    function.Dimension.ShouldBe(2);
   }
 
   [Fact]
@@ -60,6 +60,6 @@ public class RotatedTestFunctionTests
     };
     RealVector vector = [1.0, 2.0, 3.0];
 
-    Assert.Throws<ArgumentOutOfRangeException>(() => RotatedTestFunction.Rotate(rotation, vector));
+    Should.Throw<ArgumentOutOfRangeException>(() => RotatedTestFunction.Rotate(rotation, vector));
   }
 }

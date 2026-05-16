@@ -18,9 +18,9 @@ public sealed class RegressionVariableImpactsCalculatorTests
 
     var impactDict = impacts.ToDictionary(x => x.Item1, x => x.Item2);
 
-    Assert.Equal(2, impactDict.Count);
-    Assert.Contains("x1", impactDict.Keys);
-    Assert.Contains("x2", impactDict.Keys);
+    impactDict.Count.ShouldBe(2);
+    impactDict.Keys.ShouldContain("x1");
+    impactDict.Keys.ShouldContain("x2");
   }
 
   [Fact]
@@ -31,7 +31,7 @@ public sealed class RegressionVariableImpactsCalculatorTests
     var rows = Enumerable.Range(0, problemData.Dataset.Rows).ToArray();
     var modifiableDataset = problemData.Dataset.ToModifiable();
 
-    var ex = Assert.Throws<InvalidOperationException>(() =>
+    var ex = Should.Throw<InvalidOperationException>(() =>
       RegressionVariableImpactsCalculator.CalculateImpact(
         "does_not_exist",
         model,
@@ -40,7 +40,7 @@ public sealed class RegressionVariableImpactsCalculatorTests
         rows,
         RegressionVariableImpactsCalculator.ReplacementMethodType.Average));
 
-    Assert.Contains("does_not_exist", ex.Message);
+    ex.Message.ShouldContain("does_not_exist");
   }
 
   [Fact]
@@ -61,7 +61,7 @@ public sealed class RegressionVariableImpactsCalculatorTests
       RegressionVariableImpactsCalculator.ReplacementMethodType.Average);
 
     var valuesAfterCall = modifiableDataset.GetDoubleValues("x1").ToArray();
-    Assert.Equal(originalValues, valuesAfterCall);
+    valuesAfterCall.ShouldBe(originalValues);
   }
 
   [Fact]
@@ -80,7 +80,7 @@ public sealed class RegressionVariableImpactsCalculatorTests
       rows,
       RegressionVariableImpactsCalculator.ReplacementMethodType.Average);
 
-    Assert.True(impact > 0.5, $"Expected x1 to have a clearly positive impact, but got {impact}.");
+    (impact > 0.5).ShouldBeTrue($"Expected x1 to have a clearly positive impact, but got {impact}.");
   }
 
   [Fact]
@@ -108,11 +108,11 @@ public sealed class RegressionVariableImpactsCalculatorTests
                                                                  .OrderBy(x => x.Item1)
                                                                  .ToArray();
 
-    Assert.Equal(viaConvenienceOverload.Length, viaExplicitOverload.Length);
+    viaExplicitOverload.Length.ShouldBe(viaConvenienceOverload.Length);
 
     for (var i = 0; i < viaConvenienceOverload.Length; i++) {
-      Assert.Equal(viaConvenienceOverload[i].Item1, viaExplicitOverload[i].Item1);
-      Assert.Equal(viaConvenienceOverload[i].Item2, viaExplicitOverload[i].Item2, 10);
+      viaExplicitOverload[i].Item1.ShouldBe(viaConvenienceOverload[i].Item1);
+      viaExplicitOverload[i].Item2.ShouldBe(viaConvenienceOverload[i].Item2, 1e-10);
     }
   }
 
@@ -140,8 +140,7 @@ public sealed class RegressionVariableImpactsCalculatorTests
       rows,
       RegressionVariableImpactsCalculator.ReplacementMethodType.Average);
 
-    Assert.True(x1Impact > x2Impact,
-      $"Expected x1 impact ({x1Impact}) to be larger than x2 impact ({x2Impact}).");
+    (x1Impact > x2Impact).ShouldBeTrue($"Expected x1 impact ({x1Impact}) to be larger than x2 impact ({x2Impact}).");
   }
 
   [Fact]
@@ -166,7 +165,7 @@ public sealed class RegressionVariableImpactsCalculatorTests
       modifiableDataset,
       rows,
       factorReplacementMethod: RegressionVariableImpactsCalculator.FactorReplacementMethodType.Mode);
-    Assert.Equal(1, impact);
+    impact.ShouldBe(1);
   }
 
   private static RegressionProblemData CreateNumericProblemData()

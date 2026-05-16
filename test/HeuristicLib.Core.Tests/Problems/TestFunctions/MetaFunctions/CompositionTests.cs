@@ -20,7 +20,7 @@ public class CompositionTests
     var value = inner.Evaluate(x);
     var gradient = inner.EvaluateGradient(x);
 
-    Assert.True(value > 0);
+    (value > 0).ShouldBeTrue();
     SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(inner, x);
   }
 }

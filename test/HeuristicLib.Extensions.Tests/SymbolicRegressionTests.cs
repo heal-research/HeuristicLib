@@ -79,10 +79,10 @@ public class SymbolicRegressionTests
     var numberNode = new Number().CreateTreeNode(10);
     tree.Root[0].AddSubtree(numberNode);
     var res = problem.Evaluate(tree);
-    Assert.Equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3], res);
+    res.ShouldBe([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3]);
     const ObjectiveDirection min = ObjectiveDirection.Minimize;
     const ObjectiveDirection max = ObjectiveDirection.Maximize;
-    Assert.Equal([min, min, min, min, min, min, min, max, min, min, min], problem.Objective.Directions);
+    problem.Objective.Directions.ShouldBe([min, min, min, min, min, min, min, max, min, min, min]);
   }
 
   [Theory]
@@ -96,10 +96,10 @@ public class SymbolicRegressionTests
     var numberNode = new Number().CreateTreeNode(10);
     startNode.AddSubtree(numberNode);
     var x = problem.Evaluate(tree);
-    Assert.Equal(0, x[0]);
+    x[0].ShouldBe(0);
     numberNode.Value = 11;
     var y = problem.Evaluate(tree);
-    Assert.Equal(1, y[0]);
+    y[0].ShouldBe(1);
     var tree2 = problem.SearchSpace.Grammar.MakeStump(r);
     startNode = tree2.Root[0];
     startNode.AddSubtree(new Variable().CreateTreeNode("x", 1));
@@ -115,7 +115,7 @@ public class SymbolicRegressionTests
     var tree = problem.SearchSpace.Grammar.MakeStump(r);
     tree.Root[0].AddSubtree(new Variable().CreateTreeNode("x", 1));
     var y = problem.Evaluate(tree)[0];
-    Assert.Equal(Math.Sqrt(66), y, 1.0e-15);
+    y.ShouldBe(Math.Sqrt(66), 1.0e-15);
   }
 
   [Theory]
@@ -133,7 +133,7 @@ public class SymbolicRegressionTests
     tree.Root[0].AddSubtree(add);
 
     var y = problem.Evaluate(tree)[0];
-    Assert.Equal(Math.Sqrt(51), y, 1.0e-15);
+    y.ShouldBe(Math.Sqrt(51), 1.0e-15);
   }
 
   [Theory]
@@ -152,7 +152,7 @@ public class SymbolicRegressionTests
     SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData,
       problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(), 10);
     var y = problem.Evaluate(tree)[0];
-    Assert.Equal(0, y, 1.0e-8);
+    y.ShouldBe(0, 1.0e-8);
   }
 
   [Theory]
@@ -165,7 +165,7 @@ public class SymbolicRegressionTests
 
     foreach (var c in creators) {
       var tree = c.Create(r, problem.SearchSpace);
-      Assert.True(problem.SearchSpace.Contains(tree));
+      problem.SearchSpace.Contains(tree).ShouldBeTrue();
       _ = problem.Evaluate(tree);
     }
 
@@ -173,7 +173,7 @@ public class SymbolicRegressionTests
     var invalidCreators = new SymbolicExpressionTreeCreator[] { new FullTreeCreator(), new RampedHalfAndHalfTreeCreator(), new GrowTreeCreator() };
     foreach (var c in invalidCreators) {
       var tree = c.Create(r, problem.SearchSpace);
-      Assert.True(problem.SearchSpace.TreeDepth >= tree.Depth);
+      (problem.SearchSpace.TreeDepth >= tree.Depth).ShouldBeTrue();
       _ = problem.Evaluate(tree);
     }
   }

@@ -16,10 +16,10 @@ public class ExtendedSymbolicRegressionProblemTest
     Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> populationCallback = (ts, os) => os.Select(o => new double[] { o[0], 0, 0, 0, 0 }).ToArray();
 
     var pop = ExtendedSymbolicRegressionProblem.RunDefault(file, 40, individualCallback, populationCallback);
-    Assert.Equal(300, pop.Solutions.Length);
+    pop.Solutions.Length.ShouldBe(300);
     var best = pop.Solutions.OrderByDescending(x => x.ObjectiveVector[0]).First();
 
-    Assert.True(best.ObjectiveVector[0] > 0.4);
+    (best.ObjectiveVector[0] > 0.4).ShouldBeTrue();
 
     //parameters are nonsense,
     //but just for comparison, here values from sklearn:

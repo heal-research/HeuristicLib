@@ -16,7 +16,7 @@ public class HyperVolumeCalculatorTests
       Vec(1, 1),
       Obj(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize));
 
-    Assert.Equal(0.0, hv);
+    hv.ShouldBe(0.0);
   }
 
   [Fact]
@@ -29,7 +29,7 @@ public class HyperVolumeCalculatorTests
       Vec(1, 1),
       Obj(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize));
 
-    Assert.Equal(0.375, hv, precision: 12);
+    hv.ShouldBe(0.375, 1e-12);
   }
 
   [Fact]
@@ -46,7 +46,7 @@ public class HyperVolumeCalculatorTests
       Vec(1, 1),
       Obj(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize));
 
-    Assert.Equal(0.36, hv, precision: 12);
+    hv.ShouldBe(0.36, 1e-12);
   }
 
   [Fact]
@@ -61,7 +61,7 @@ public class HyperVolumeCalculatorTests
       Vec(1, 1),
       Obj(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize));
 
-    Assert.Equal(0.375, hv, precision: 12);
+    hv.ShouldBe(0.375, 1e-12);
   }
 
   [Fact]
@@ -75,13 +75,13 @@ public class HyperVolumeCalculatorTests
       Vec(0, 0),
       Obj(ObjectiveDirection.Maximize, ObjectiveDirection.Maximize));
 
-    Assert.Equal(0.3, hv, precision: 12);
+    hv.ShouldBe(0.3, 1e-12);
   }
 
   [Fact]
   public void Calculate_MoreThanTwoDimensions_WithMaximization_Throws()
   {
-    var ex = Assert.Throws<NotImplementedException>(() =>
+    var ex = Should.Throw<NotImplementedException>(() =>
       HyperVolumeCalculator.Calculate(
         [Vec(1, 1, 1)],
         Vec(0, 0, 0),
@@ -90,7 +90,7 @@ public class HyperVolumeCalculatorTests
           ObjectiveDirection.Maximize,
           ObjectiveDirection.Maximize)));
 
-    Assert.Contains("more than two dimensions", ex.Message);
+    ex.Message.ShouldContain("more than two dimensions");
   }
 
   [Fact]
@@ -106,6 +106,6 @@ public class HyperVolumeCalculatorTests
         ObjectiveDirection.Minimize,
         ObjectiveDirection.Minimize));
 
-    Assert.Equal(0.336, hv, precision: 12);
+    hv.ShouldBe(0.336, 1e-12);
   }
 }

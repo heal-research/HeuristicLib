@@ -62,8 +62,8 @@ public class GenealogyGraphTests
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
     var ares = run.GetAnalyzerResult(analysis);
 
-    Assert.Equal(100, ares.Count);
-    Assert.Equal(100, res.Population.Solutions.Count());
+    ares.Count.ShouldBe(100);
+    res.Population.Solutions.Count().ShouldBe(100);
   }
 
   [Fact(Explicit = true)]
@@ -95,11 +95,11 @@ public class GenealogyGraphTests
     var eres = run.GetAnalyzerResult(evalQualities);
     var gres = run.GetAnalyzerResult(genealogyAnalysis);
 
-    Assert.Equal(gens, qres.Count);
-    Assert.Equal(popsize, res.Population.Solutions.Length);
+    qres.Count.ShouldBe(gens);
+    res.Population.Solutions.Length.ShouldBe(popsize);
     var graphViz = gres.ToGraphViz();
-    Assert.True(graphViz.Length > 0);
-    Assert.Equal(qres[^1].Best.ObjectiveVector, eres.CurrentState[^1].best.ObjectiveVector);
+    (graphViz.Length > 0).ShouldBeTrue();
+    eres.CurrentState[^1].best.ObjectiveVector.ShouldBe(qres[^1].Best.ObjectiveVector);
   }
 
   [Fact(Explicit = true)]
@@ -115,9 +115,9 @@ public class GenealogyGraphTests
     var run = algorithm.WithMaxIterations(100).CreateRun(problem, genealogy);
     var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), null, CancellationToken.None);
     var gres = run.GetAnalyzerResult(genealogy);
-    Assert.Single(res.Population.Solutions);
+    res.Population.Solutions.ShouldHaveSingleItem();
     var graphViz = gres.ToGraphViz();
-    Assert.True(graphViz.Length > 0);
+    (graphViz.Length > 0).ShouldBeTrue();
   }
 
   [Fact(Explicit = true)]
@@ -147,10 +147,10 @@ public class GenealogyGraphTests
     var gres = run.GetAnalyzerResult(genealogy);
     var qres = run.GetAnalyzerResult(qualities);
 
-    Assert.Equal(maximumIterations, qres.Count);
-    Assert.Equal(populationSize, res.Population.Solutions.Length);
+    qres.Count.ShouldBe(maximumIterations);
+    res.Population.Solutions.Length.ShouldBe(populationSize);
     var graphViz = gres.ToGraphViz();
-    Assert.True(graphViz.Length > 0);
+    (graphViz.Length > 0).ShouldBeTrue();
   }
 
   private const int AlgorithmRandomSeed = 42;

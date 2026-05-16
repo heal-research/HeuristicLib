@@ -22,7 +22,7 @@ public class QuadraticAssignmentProblemTests
 
     var problem = new QuadraticAssignmentProblem(data);
 
-    Assert.Equal(data, problem.ProblemData);
+    problem.ProblemData.ShouldBe(data);
   }
 
   [Fact]
@@ -48,7 +48,7 @@ public class QuadraticAssignmentProblemTests
     // flow(0,0)*dist(0,0) + flow(0,1)*dist(0,1)
     // + flow(1,0)*dist(1,0) + flow(1,1)*dist(1,1)
     // = 0*0 + 1*10 + 2*20 + 0*0 = 50
-    Assert.Equal((ObjectiveVector)50.0, result);
+    result.ShouldBe((ObjectiveVector)50.0);
   }
 
   [Fact]
@@ -77,6 +77,6 @@ public class QuadraticAssignmentProblemTests
     // flow(0,0)*dist(1,1) + flow(0,1)*dist(1,0)
     // + flow(1,0)*dist(0,1) + flow(1,1)*dist(0,0)
     // = 0*0 + 1*20 + 2*10 + 0*0 = 40
-    Assert.Equal((ObjectiveVector)40.0, result);
+    result.ShouldBe((ObjectiveVector)40.0);
   }
 }

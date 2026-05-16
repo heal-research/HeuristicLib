@@ -24,8 +24,8 @@ public class ScaledGradientTestFunctionTests
     // grad inner there = (4, 12)
     // multiply by inputScaling and outputScaling:
     // (4,12) * (2,3) * 5 = (40, 180)
-    Assert.Equal(40.0, gradient[0], 12);
-    Assert.Equal(180.0, gradient[1], 12);
+    gradient[0].ShouldBe(40.0, 1e-12);
+    gradient[1].ShouldBe(180.0, 1e-12);
   }
 
   [Fact]
