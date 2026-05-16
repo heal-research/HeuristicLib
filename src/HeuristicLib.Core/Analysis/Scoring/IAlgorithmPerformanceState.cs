@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib.Analysis;
+namespace HEAL.HeuristicLib.Analysis.Scoring;
 
 public interface IAlgorithmPerformanceState
 {

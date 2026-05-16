@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Analysis;
+namespace HEAL.HeuristicLib.Analysis.Scoring;
 
 public record BestQualityAlgorithmScorer<T, TS, TP, TSearchState> : AlgorithmPerformanceEvaluator<T, TS, TP, TSearchState, QualityScorerState>
   where TS : class, ISearchSpace<T>

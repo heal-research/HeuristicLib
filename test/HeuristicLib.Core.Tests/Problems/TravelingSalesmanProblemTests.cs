@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
-using HEAL.HeuristicLib.Tests.Mocks;
+using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Problems;
 

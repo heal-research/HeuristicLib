@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Analysis;
+namespace HEAL.HeuristicLib.Analysis.Scoring;
 
 public abstract record AlgorithmPerformanceEvaluator<T, TS, TP, TSearchState, TExecutionState>(IAlgorithm<T, TS, TP, TSearchState> Algorithm) : Analyzer<T, TS, TP, TSearchState, TExecutionState>(Algorithm)
   where TS : class, ISearchSpace<T>

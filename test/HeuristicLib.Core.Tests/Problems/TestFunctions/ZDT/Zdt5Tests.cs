@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
-using HEAL.HeuristicLib.Tests.Mocks;
+using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Problems.TestFunctions.ZDT;
 

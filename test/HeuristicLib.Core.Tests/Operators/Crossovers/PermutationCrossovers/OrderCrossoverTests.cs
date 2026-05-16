@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
-namespace HEAL.HeuristicLib.Tests;
+namespace HEAL.HeuristicLib.Tests.Operators.Crossovers.PermutationCrossovers;
 
 public class OrderCrossoverTests
 {

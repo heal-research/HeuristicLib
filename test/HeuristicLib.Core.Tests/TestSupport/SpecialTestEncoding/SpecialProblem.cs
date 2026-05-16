@@ -1,0 +1,16 @@
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+
+namespace HEAL.HeuristicLib.Tests.TestSupport.SpecialTestEncoding;
+
+// This is an example problem that do not use any of the standard search spaces and needs to define its own operators
+
+public class SpecialProblem(double data) : SingleSolutionProblem<SpecialGenotype, SpecialSearchSpace>(SingleObjective.Maximize, GeTSearchSpace())
+{
+  public double Data { get; set; } = data;
+
+  public override ObjectiveVector Evaluate(SpecialGenotype solution, IRandomNumberGenerator random) => Data + solution.Value;
+
+  private static SpecialSearchSpace GeTSearchSpace() => new();
+}
