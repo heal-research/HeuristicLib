@@ -13,7 +13,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 using Xunit;
 
-namespace HEAL.HeuristicLib.ApiSpecs.Algorithms;
+namespace HEAL.HeuristicLib.ApiUsageSpecs.Algorithms;
 
 public class AlgorithmAuthoringSpecs
 {

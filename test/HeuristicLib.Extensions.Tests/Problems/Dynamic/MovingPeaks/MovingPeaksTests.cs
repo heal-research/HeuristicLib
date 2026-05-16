@@ -1,8 +1,8 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Extensions.Tests.TestSupport.Random;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Problems.Dynamic.MovingPeaks;
 

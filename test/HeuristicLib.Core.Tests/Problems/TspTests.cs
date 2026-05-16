@@ -7,7 +7,6 @@ using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
-using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 
 #pragma warning disable S1481
@@ -40,40 +39,5 @@ public class TspTests
     result.Population.Solutions.Length.ShouldBe(5);
     result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
     result.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
-  }
-
-  [Fact(Explicit = true)]
-  public void GaWithTSP()
-  {
-    // Load Problem
-    var file = Path.Combine("TestData", "berlin52.tsp");
-    var data = TsplibTspInstanceProvider.LoadData(file);
-    var cdata = data.ToCoordinatesData();
-    var prob = new TravelingSalesmanProblem(cdata);
-
-    // GA
-    var ga = GeneticAlgorithm.GetBuilder(
-      new RandomPermutationCreator(),
-      new EdgeRecombinationCrossover(),
-      new InversionMutator()
-    );
-
-    // ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-    // ga.RandomSeed = 42;
-    ga.PopulationSize = 100;
-    ga.MutationRate = 0.05;
-    ga.Selector = new TournamentSelector<Permutation>(2);
-    ga.Elites = 1;
-    // execute
-    var resGa = ga.Build()
-                  .WithMaxIterations(10)
-                  .RunToCompletion(prob, RandomNumberGenerator.Create(42));
-
-    // look at results
-    var objGa = resGa.Population
-                     .OrderBy(x => x.ObjectiveVector[0])
-                     .First();
-
-    // best possible 7542
   }
 }

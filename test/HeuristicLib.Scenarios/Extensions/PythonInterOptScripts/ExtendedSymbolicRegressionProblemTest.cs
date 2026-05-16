@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.PythonInterOptScripts;
 
-namespace HEAL.HeuristicLib.Extensions.Tests.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.Scenarios.Extensions.PythonInterOptScripts;
 
 public class ExtendedSymbolicRegressionProblemTest
 {

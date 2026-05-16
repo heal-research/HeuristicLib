@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.Extensions.Tests.TestSupport.Random;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
@@ -6,7 +7,6 @@ using HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
-using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Extensions.Tests.Problems.Dynamic.SlidingWindowRegression;
 

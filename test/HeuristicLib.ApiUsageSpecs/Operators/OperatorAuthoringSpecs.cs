@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using Xunit;
 
-namespace HEAL.HeuristicLib.ApiSpecs.Operators;
+namespace HEAL.HeuristicLib.ApiUsageSpecs.Operators;
 
 public class OperatorAuthoringSpecs
 {

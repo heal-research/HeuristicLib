@@ -17,7 +17,7 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-namespace HEAL.HeuristicLib.Extensions.Tests.Problems.MetaOptimization;
+namespace HEAL.HeuristicLib.Scenarios.Extensions.Problems.MetaOptimization;
 
 public class MetaOptimizationTests
 {

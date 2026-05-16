@@ -24,7 +24,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 using Xunit;
 
-namespace HEAL.HeuristicLib.ApiSpecs.Usage;
+namespace HEAL.HeuristicLib.ApiUsageSpecs.Usage;
 
 public class PractitionerUsageSpecs
 {

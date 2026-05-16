@@ -15,7 +15,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 using Xunit;
 
-namespace HEAL.HeuristicLib.ApiSpecs.Analysis;
+namespace HEAL.HeuristicLib.ApiUsageSpecs.Analysis;
 
 public class AnalysisSpecs
 {

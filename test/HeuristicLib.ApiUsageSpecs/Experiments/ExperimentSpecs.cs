@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 using Xunit;
 
-namespace HEAL.HeuristicLib.ApiSpecs.Experiments;
+namespace HEAL.HeuristicLib.ApiUsageSpecs.Experiments;
 
 public class ExperimentSpecs
 {

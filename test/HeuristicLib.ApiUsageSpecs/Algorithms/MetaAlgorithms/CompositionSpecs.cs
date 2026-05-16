@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 using Xunit;
 
-namespace HEAL.HeuristicLib.ApiSpecs.Algorithms.MetaAlgorithms;
+namespace HEAL.HeuristicLib.ApiUsageSpecs.Algorithms.MetaAlgorithms;
 
 public class CompositionSpecs
 {

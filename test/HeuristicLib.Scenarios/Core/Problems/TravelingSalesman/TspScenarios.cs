@@ -6,48 +6,46 @@ using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems.Dynamic;
+using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Extensions.Tests.Problems.Dynamic.TravelingSalesman;
+namespace HEAL.HeuristicLib.Scenarios.Core.Problems.TravelingSalesman;
 
-public class DynamicTSPTests
+public class TspScenarios
 {
   [Fact(Explicit = true)]
-  public void GaWithDynamicTSP()
+  public void GaWithTSP()
   {
-    //Load Problem
+    // Load Problem
     var file = Path.Combine("TestData", "berlin52.tsp");
     var data = TsplibTspInstanceProvider.LoadData(file);
     var cdata = data.ToCoordinatesData();
-    var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
+    var prob = new TravelingSalesmanProblem(cdata);
 
-    //GA
+    // GA
     var ga = GeneticAlgorithm.GetBuilder(
       new RandomPermutationCreator(),
       new EdgeRecombinationCrossover(),
       new InversionMutator()
     );
 
-    //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-    //ga.RandomSeed = 42;
+    // ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
+    // ga.RandomSeed = 42;
     ga.PopulationSize = 100;
     ga.MutationRate = 0.05;
     ga.Selector = new TournamentSelector<Permutation>(2);
     ga.Elites = 1;
-    //ga.Evaluator = prob.WrapEvaluator(ga.Evaluator);
+    // execute
+    var resGa = ga.Build()
+                  .WithMaxIterations(10)
+                  .RunToCompletion(prob, RandomNumberGenerator.Create(42));
 
-    //prob.AttachTo(ga);
-
-    //execute
-    var resGa = ga.Build().WithMaxIterations(1000).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
-
-    //look at results
+    // look at results
     var objGa = resGa.Population
                      .OrderBy(x => x.ObjectiveVector[0])
                      .First();
 
-    //best possible 7542
+    // best possible 7542
   }
 }

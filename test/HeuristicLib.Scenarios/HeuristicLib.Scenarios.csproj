@@ -4,15 +4,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <AssemblyName>HEAL.HeuristicLib.ApiSpecs</AssemblyName>
-    <RootNamespace>HEAL.HeuristicLib.ApiSpecs</RootNamespace>
+    <AssemblyName>HEAL.HeuristicLib.Scenarios</AssemblyName>
+    <RootNamespace>HEAL.HeuristicLib.Scenarios</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\HeuristicLib.Core\HeuristicLib.Core.csproj" />
+    <ProjectReference Include="..\..\src\HeuristicLib.Extensions\HeuristicLib.Extensions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="Shouldly" Version="4.3.0" />
     <PackageReference Include="xunit.analyzers" Version="1.27.0">
@@ -28,6 +30,16 @@
 
   <ItemGroup>
     <Using Include="Shouldly" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TestData\192_vineyard.tsv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestData\berlin52.tsp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
