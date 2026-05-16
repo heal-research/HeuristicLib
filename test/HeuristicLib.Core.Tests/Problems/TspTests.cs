@@ -16,6 +16,32 @@ namespace HEAL.HeuristicLib.Tests.Problems;
 
 public class TspTests
 {
+  [Fact]
+  public void GaWithDefaultTsp_RunToCompletion_ReturnsPopulationWithinProblemSearchSpace()
+  {
+    var problem = TravelingSalesmanProblem.CreateDefault();
+    var ga = GeneticAlgorithm.GetBuilder(
+      new RandomPermutationCreator(),
+      new OrderCrossover(),
+      new InversionMutator()
+    );
+    ga.PopulationSize = 5;
+    ga.MutationRate = 0.5;
+    ga.Selector = new RandomSelector<Permutation>();
+    ga.Elites = 0;
+
+    var result = ga.Build()
+                   .WithMaxIterations(5)
+                   .RunToCompletion(
+                     problem,
+                     RandomNumberGenerator.Create(42),
+                     ct: TestContext.Current.CancellationToken);
+
+    result.Population.Solutions.Length.ShouldBe(5);
+    result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    result.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+  }
+
   [Fact(Explicit = true)]
   public void GaWithTSP()
   {

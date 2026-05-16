@@ -1,38 +1,41 @@
-// using HEAL.HeuristicLib.Algorithms;
-// using HEAL.HeuristicLib.Algorithms.NSGA2;
-// using HEAL.HeuristicLib.Encodings;
-// using HEAL.HeuristicLib.Genotypes;
-// using HEAL.HeuristicLib.Operators;
-// using HEAL.HeuristicLib.Operators.RealVectorOperators;
-// using HEAL.HeuristicLib.Optimization;
-// using HEAL.HeuristicLib.Problems;
-// using HEAL.HeuristicLib.Problems.TestFunctions;
-// 
-// namespace HEAL.HeuristicLib.Core.Tests;
-// 
-// public class NSGA2Tests {
-//   [Fact]
-//   public Task NSGA2_SolveTestFunction() {
-//     var creator = new UniformDistributedCreator();
-//     var crossover = new SinglePointCrossover();
-//     var mutator = new GaussianMutator(0.1, 0.1);
-//     var replacement = new ElitismReplacer<RealVector, RealVectorEncoding>(0);
-//     var terminator = Terminator.OnGeneration<RealVector, RealVectorEncoding, NSGA2Result<RealVector>>(5);
-// 
-//     var nsga = new NSGA2<RealVector, RealVectorEncoding>(
-//       populationSize: 5, 
-//       creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.5,
-//       replacer: replacement,
-//       randomSeed: 42, terminator: terminator
-//     );
-//     var problem = new MultiObjectiveTestFunctionProblem(new ZDT1(dimension: 3));
-// 
-//     var result = nsga.SolvePareto(problem);
-//     
-//     return Verify(result)
-//       .IgnoreMembersWithType<TimeSpan>();
-//   }
-// }
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
+using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
+using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
+namespace HEAL.HeuristicLib.Tests;
 
+#pragma warning disable S101
+public class NSGA2Tests
+#pragma warning restore S101
+{
+  [Fact]
+  public void RunToCompletion_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
+  {
+    var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
+    var algorithm = NSGA2.GetBuilder<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>(
+      new UniformDistributedCreator(problem.SearchSpace),
+      new SinglePointCrossover(),
+      new GaussianMutator(0.1, 0.1));
+    algorithm.PopulationSize = 5;
+    algorithm.MutationRate = 0.5;
 
+    var result = algorithm.Build()
+                          .WithMaxIterations(5)
+                          .RunToCompletion(
+                            problem,
+                            RandomNumberGenerator.Create(42),
+                            ct: TestContext.Current.CancellationToken);
+
+    result.Population.Solutions.Length.ShouldBe(5);
+    result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    result.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 2).ShouldBeTrue();
+  }
+}
