@@ -13,7 +13,7 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Tests.Problems;
 
-public class TspTests
+public class TravelingSalesmanGeneticAlgorithmTests
 {
   [Fact]
   public void GaWithDefaultTsp_RunToCompletion_ReturnsPopulationWithinProblemSearchSpace()

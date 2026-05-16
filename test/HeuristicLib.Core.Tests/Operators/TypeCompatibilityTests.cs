@@ -4,10 +4,10 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
 
-public class TypeCompatabilityTests
+public class TypeCompatibilityTests
 {
   [Fact]
-  public void TestCompatabilityTest1()
+  public void InvalidCodeCompilation_ReturnsErrorDiagnostic()
   {
     var hlAssembly = typeof(ICreator<,,>).Assembly;
     var compilation = CSharpCompilation.Create("asd")

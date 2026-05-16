@@ -19,7 +19,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
 
-public class OperatorCompatabilityTests
+public class OperatorCompatibilityTests
 {
   private static string GetCompilableName(Type type)
   {
