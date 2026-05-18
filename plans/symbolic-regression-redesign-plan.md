@@ -1,0 +1,303 @@
+# Symbolic Regression Redesign Plan
+
+## Goal
+
+Replace symbolic regression's mutable tree candidate with an immutable, compact, postorder/RPN `SymbolicExpression` genotype. Move the current mutable `SymbolicExpressionTree` to a `Legacy` namespace with `[Obsolete]` markers and keep it only for migration, conversion, and golden parity tests.
+
+HeuristicLab is the behavioral reference, not the target architecture. The first reference package is [HeuristicLab.Problems.DataAnalysis.Symbolic.Regression/3.4](https://github.com/heal-research/HeuristicLab/tree/main/HeuristicLab.Problems.DataAnalysis.Symbolic.Regression/3.4).
+
+Implementation order:
+
+- Stage 0: close design holes and add API usage specs.
+- Stage 1: build the immutable scalar expression core and parity harness.
+- Stage 2: rebuild problem composition and the `Refiner` hook around the new genotype.
+- Stage 3: add the unrestricted scalar search space and fast unrestricted search operators.
+- Stage 3.1: add constant optimization with Levenberg-Marquardt and automatic differentiation after the unrestricted operators are stable.
+- Stage 4: add the grammar-constrained scalar search space and grammar-preserving search operators.
+- Stage 5: add extensions in sub-stages: templates, shape constraints, normalization/transformers, vectorial GP, and time-series support.
+
+Non-goals for the scalar Stages 1-4 redesign:
+
+- no HeuristicLab architecture/source copy
+- no full data-layer redesign before Stage 1
+- no first-slice implementation of templates, shape constraints, vectorial GP, or time-series support
+- no long-term compatibility promise for the old mutable tree API
+
+## Design Holes
+
+Resolve these before or during Stage 0:
+
+- **API specs:** add executable usage specs before hardening public APIs.
+- **Legacy boundary:** decide namespace, obsolete message, converter names, in-repo migration order, and whether a temporary forwarding shim is allowed.
+- **Interpreter binding:** define the Stage 1 index-only contract: `VariableReference.Index` maps to `inputVariables[index]`, and the interpreter uses that name to fetch the dataset series.
+- **Parity scope:** maintain a matrix for each legacy symbol/behavior: new target, parity level, test status, and intentional difference.
+- **Instruction validity:** define runtime validation for non-empty code, RPN stack balance, arity, `SubtreeLength`, payload indexes, root position, max length/depth, and invalid opcodes.
+- **Formatting/serialization:** decide the Stage 1 minimum for equality/hash, debug/infix formatting, optional variable names, and whether binary/JSON serialization is included or deferred.
+- **Refiner hook:** replace evaluation-time parameter mutation with a generic pre-evaluation refiner role and basic refinement counters.
+- **Operator validity:** decide bounded retry versus repair behavior for creation, mutation, crossover, and repair failure.
+- **Numeric literal metadata:** settle fixed versus optimizable literal representation and authoring names before Stage 1 hardens the genotype.
+- **Buffer/cache boundary:** scratch buffers and any column caches are interpreter internals, scoped to an evaluation call or execution instance.
+- **Thread safety:** no shared mutable interpreter memory; shared state must be immutable.
+- **Extension migration:** track which examples, Python interop scripts, sliding-window regression, and scenarios migrate in Stage 5 and which stay on legacy during the scalar stages.
+
+## Core Shape
+
+| Concept | Responsibility |
+| --- | --- |
+| `SymbolicExpression` | Immutable genotype: RPN instructions plus side tables for numeric literals and variables. |
+| `ExpressionInstruction` | Opcode, arity, subtree length, and optional payload index. |
+| `SymbolicExpressionOpCode` | Stable `ushort` enum for built-in operations with explicit integer values. |
+| `ExpressionDraft` | Human-friendly authoring layer; not a genotype. |
+| `ExpressionSlice` | Allocation-light subtree view over an immutable expression. |
+| `SymbolicExpressionSearchSpace` | Base scalar expression search-space contract for one expression-valued component. |
+| `UnrestrictedSymbolicExpressionSearchSpace` | Fast scalar validity policy: length, depth, allowed opcodes, and allowed variables; all scalar subtrees are composition-compatible. |
+| `GrammarSymbolicExpressionSearchSpace` | Grammar-constrained scalar validity policy with typed operation signatures and grammar-preserving operators. |
+| `SymbolicExpressionInterpreter` | Executes opcodes over series/batch buffers and maps variable indexes to dataset columns from the supplied dataset/input-variable order. |
+| `SymbolicRegressionProblem` | Composition root for data, search space, interpreter, objectives, bounds policy, and refinement context/services. |
+| `Refiner` | Optional pre-evaluation candidate transformer that returns immutable replacement candidates and refinement counters. |
+
+Boundary rules:
+
+- The genotype owns structure only.
+- The interpreter owns translation from variable index to dataset series; Stage 1 does not add a separate public data-view or translation type.
+- Search spaces and their matching operators generate, mutate, cross, repair, and validate candidates; they do not evaluate them.
+- A symbolic regression problem instance has exactly one expression search-space instance. Unrestricted versus grammar-constrained behavior is selected when the problem is constructed, not switched dynamically during a run.
+- The unrestricted scalar search space is not represented as a `SimpleGrammar`. Fast unrestricted operators must not call grammar predicates or enumerate grammar-derived cut points.
+- Prediction bounds, penalties, and objectives stay outside expression interpretation.
+- Evaluation never mutates candidates. Any numeric constant optimization returns a replacement `SymbolicExpression` before evaluation, and algorithms evaluate and store the refined candidate.
+- Interceptors run after an algorithm step and are too late for refinement that affects offspring fitness or replacement.
+- Determinism is required: the same candidate, problem data, configuration, and explicit random source must produce the same refinement and evaluation result.
+- Metrics compare target and prediction series positionally, like sklearn-style vectorized evaluation.
+
+## Stage 0: Design Closure
+
+Add API usage specs in `test/HeuristicLib.ApiUsageSpecs` for:
+
+- building `x0 + 2 * x1` with `ExpressionDraft`
+- evaluating a compiled expression against regression data
+- constructing a default RMSE symbolic regression problem
+- running GA with the new creator, crossover, and mutator
+- enabling numeric refinement without evaluation-time mutation
+
+Stage 0 specs may include commented or otherwise non-compiled "wish API" sketches when the target API depends on later stages. These sketches are allowed as design probes, but the repository must keep compiling.
+
+Also create the legacy parity matrix and seed it with variable, number, add, subtract, multiply, divide, log, sqrt, and linear scaling.
+
+Stage 0 is done when the intended public flow is executable and every design hole above has a recorded outcome or owner.
+
+## Stage 1: Immutable Scalar Core
+
+Implement:
+
+- `SymbolicExpression` with private instruction, numeric-literal, and variable-reference arrays plus cached length/depth/hash.
+- Copying public factories and clearly named ownership-transfer factories for builders.
+- Runtime validation for the instruction invariants listed above.
+- `ExpressionDraft.Compile()`, `ExpressionSlice`, and formatting with default `x0` names plus optional supplied names.
+- Series/batch interpretation against a supplied `Dataset` and input-variable order.
+- Numeric-literal side-table entries include value plus fixed/optimizable role. The `NumericLiteral` opcode stays singular and references side-table entries by `PayloadIndex`.
+- Draft/builder APIs expose fixed and optimizable literal authoring, tentatively `Fixed(value)` and `Parameter(value)`.
+- Legacy-to-new conversion for the Stage 1 parity matrix.
+- Move old mutable symbolic-expression-tree APIs under a `HEAL.HeuristicLib.Legacy...` namespace. Legacy types and methods get `[Obsolete]` markers. If a legacy member name would clash with new API names, add a `Legacy` prefix or suffix to the legacy member.
+
+Stage 1 opcodes:
+
+```csharp
+public enum SymbolicExpressionOpCode : ushort
+{
+    Invalid = 0,
+    Variable = 1,
+    NumericLiteral = 2,
+    Add = 10,
+    Subtract = 11,
+    Multiply = 12,
+    Divide = 13,
+    Log = 20,
+    Sqrt = 21
+}
+```
+
+Rules:
+
+- `Invalid = 0` is rejected.
+- Instructions are postorder/RPN; root is `Instructions[^1]`.
+- `SubtreeLength` includes the instruction itself.
+- `PayloadIndex == -1` means no side-table payload.
+- Arithmetic factories produce binary operations; legacy n-ary arithmetic lowers deterministically in source order.
+- Variable references store integer indexes. Stage 1 uses index matching only: index `i` means `inputVariables[i]`.
+- Out-of-range variable indexes, missing dataset variables, and non-double variables in scalar regression fail during interpreter setup.
+- The interpreter resolves each used variable index to a dataset series once per evaluation setup. Operators consume one or more input buffers and produce a result buffer for the batch.
+- The interpreter reads numeric literal values and ignores fixed/optimizable metadata.
+- Equality and hashing include numeric literal metadata so evaluator caches distinguish fixed and optimizable candidates with the same literal values.
+- Numeric invalid results produce `NaN` only for now. Clamping, penalties, infinity handling, and objective handling remain outside the interpreter.
+- Variable coefficients lower to `Multiply(coef, variable)`.
+- Linear scaling lowers to ordinary nodes, for example `Add(Multiply(scale, model), offset)`, unless Stage 0 records a dedicated-opcode decision.
+- Expression complexity defaults to instruction count.
+- Stage 1 supports debug/infix formatting only; fully fledged JSON/binary serialization is deferred.
+
+Stage 1 tests: immutability, validation failures, slicing, draft compilation, column/batch interpreter parity, legacy conversion parity, and formatting.
+
+## Stage 2: Problem Composition And Refinement Hook
+
+`SymbolicRegressionProblem` becomes explicit composition of:
+
+- regression data and input-variable order
+- one scalar `SymbolicExpressionSearchSpace`
+- interpreter
+- metric/objectives
+- prediction bound and invalid-value policy
+- optional `Refiner` service/context
+
+Before Stage 2 implementation, choose the concrete problem/search-space type shape. Current preferred direction is `SymbolicRegressionProblem<TSearchSpace>` with convenience factories, but this remains a Stage 2 design decision.
+
+Defaults:
+
+- add a small RMSE factory after specs settle the API
+- RMSE is the only default objective
+- multi-objective behavior remains explicit
+
+Refinement:
+
+- define the algorithm-level `Refiner` contract and where algorithms call it
+- refined immutable candidates replace raw candidates before evaluation
+- replacement and selection must see the refined genotype, not an evaluator-cache side effect
+- global budget accounting is out of scope; refiners expose local counters/status
+
+Stage 2 tests: problem API specs, evaluation composition, metric fixtures, no evaluation-time mutation, refiner contract shape, replacement of raw candidates, and fixed-constant behavior.
+
+## Stage 3: Unrestricted Search Space And Operators
+
+Add the fast default scalar search space and operator family:
+
+- `UnrestrictedSymbolicExpressionSearchSpace` with size, depth, allowed-opcode, and allowed-variable validity.
+- creator, mutator, crossover, and optional repair for unrestricted scalar `SymbolicExpression` candidates.
+- static operator methods that mirror instance entry points, following `docs/design-goals.md`.
+- direct core overloads that take primitive limits and opcode/variable sets when the search space is only a container for those values.
+- RPN-aware internal helpers for subtree metadata, slice selection, splicing, length/depth checks, and parent-independent candidate construction.
+
+Rules:
+
+- All scalar-producing subtrees are mutually composable in this search space.
+- Operators must not require or call a grammar.
+- Operators never mutate parents.
+- Operators preserve search-space validity or fail with documented bounded retry behavior.
+- Shared RPN helper code may be reused by grammar-aware operators, but unrestricted operators remain a separate fast path.
+
+Stage 3 tests: unrestricted search-space containment, creator validity, mutation validity, crossover validity, parent immutability, bounded failure behavior, and one GA usage spec using unrestricted operators.
+
+## Stage 3.1: Constant Optimization And Offspring Refinement
+
+Add the first concrete candidate refiner for symbolic regression:
+
+- optimize numeric literals through Levenberg-Marquardt using automatic differentiation over the immutable `SymbolicExpression`.
+- distinguish optimizable numeric parameters from fixed numeric literals so constants introduced for scaling, structural templates, protected-operation thresholds, or user-authored fixed values can stay unchanged.
+- keep one `NumericLiteral` opcode. Fixed versus optimizable status belongs in the genotype's numeric-literal side table, addressed by `PayloadIndex`; the interpreter reads only the value, while refiners use the metadata.
+- return a new `SymbolicExpression` with optimized numeric-literal payloads; never mutate an existing candidate.
+- refine newly created initial candidates and all offspring after crossover and mutation and before evaluation.
+- evaluate and store the refined candidate in the population; the raw pre-refinement candidate is not the candidate associated with the fitness.
+- expose function/gradient evaluation counters and refinement outcome status.
+- keep refinement budget, maximum iterations, tolerances, and failure behavior explicit.
+- do not add numeric literal bounds in Stage 3.1.
+- expected non-convergence or numeric optimizer failure returns the original candidate with failure status; unexpected programming/configuration errors may throw.
+- crossover and mutation preserve literal metadata for copied subtrees and assign deliberate metadata for newly generated literals.
+
+Algorithm integration:
+
+- Do not attach it to crossover or mutation; refinement must run after the complete variation pipeline and must apply to every candidate selected for refinement, including candidates that were not mutated.
+- Keep GA authoring explicit and friendly: builders expose `Crossover`, `Mutator`, `MutationRate`, and an optional `Refiner`.
+- In Stage 3.1, GA can simply call the configured operators in the required order: select parents, cross, optionally mutate, optionally refine, evaluate, then replace.
+- A shared offspring-pipeline helper (like Jenetics-style alterer chains) may be introduced later if multiple population algorithms duplicate the same variation/refinement/evaluation flow, but it is not part of the Stage 3.1 public or required internal design.
+
+Stage 3.1 tests: no evaluation-time mutation, immutable replacement candidate, initial-population refinement, offspring refinement after mutation, no refinement for fixed or absent constants, Levenberg-Marquardt convergence fixtures, automatic-differentiation gradient fixtures, refinement counters, failure fallback, and one GA usage spec with constant optimization enabled.
+
+## Stage 4: Grammar Search Space And Operators
+
+Add the smallest typed grammar model needed for valid scalar symbolic regression:
+
+- operation signatures and scalar value type first
+- fluent grammar API first; EBNF authoring later as syntax over the same model
+- grammar-preserving creation, mutation, crossover, and repair
+- scalar final-output enforcement for standard regression
+- `GrammarSymbolicExpressionSearchSpace` as a distinct search-space type, not a flag on the unrestricted search space.
+- grammar-specific creator, mutator, crossover, and repair operators.
+
+Rules:
+
+- Grammar-constrained operators may enumerate viable sites, cache grammar-derived metadata, use repair, or use bounded retry.
+- The grammar-aware path may pay grammar costs; the unrestricted path must not.
+- Grammar operators should reuse low-level immutable RPN construction and splicing helpers where practical, but not share the unrestricted selection logic when grammar validity changes the set of legal edits.
+
+Stage 4 tests: typed grammar validity, grammar-preserving operators, scalar output enforcement, grammar-specific bounded failure behavior, and one usage spec showing a restricted grammar such as `log(variable)` only.
+
+## Stage 5: Extensions And Composability
+
+Add later symbolic-regression features without multiplying search-space subclasses by every combination of flavor:
+
+### Stage 5.1: Structure Templates
+
+- Structure templates use a different genotype shape: fixed template plus one expression component per wildcard. Each wildcard chooses an unrestricted or grammar-constrained expression search space. Wildcards should not be nested symbolic-regression problems unless they truly have independent data, objectives, and evaluation semantics.
+
+Stage 5.1 tests: template genotype composition, wildcard-specific search-space containment, template instantiation, and one usage spec showing a future template wildcard owning either unrestricted or grammar-constrained expression search space.
+
+### Stage 5.2: Shape Constraints
+
+- Shape constraints are evaluation components over predictions, derivatives, sampled expression behavior, or other model observations. They should not create `ShapeConstrainedUnrestricted...` and `ShapeConstrainedGrammar...` search-space pairs unless the constraint truly changes local subtree admissibility.
+- Do not add a `ShapeConstrainedSymbolicRegressionProblem` or shape-constraint list on the base problem. Shape-constrained use supplies a metric/constraint evaluator that owns its constraint configuration and consumes shared evaluation context from the problem.
+- Single-objective and multi-objective shape-constrained regression are evaluator configurations: aggregate violations for single-objective use or expose separate violation dimensions for multi-objective use.
+
+Stage 5.2 tests: shape-constraint evaluator ownership, empty-normal-problem API shape, single-objective penalty aggregation, multi-objective violation dimensions, and derivative/sampling fixtures.
+
+### Stage 5.3: Algebraic Normalization And Candidate Transformers
+
+- Algebraic normalization, simplification, constant folding, equivalent-form comparison, and numeric refinement are candidate transformers, comparers, evaluators, or refiners, not new expression search-space flavors.
+
+Stage 5.3 tests: constant folding, candidate immutability, equivalent-form comparison fixtures, and transformer/refiner composition.
+
+### Stage 5.4: Vectorial GP Value-System Support
+
+- Vectorial GP primarily extends expression value metadata, interpreter buffers, operation signatures, and result typing. The interpreter should become value-system-aware instead of assuming only scalar `double` series. If scalar-only assumptions break, add a value-system-aware expression search-space family rather than a cross-product with every other extension.
+
+Stage 5.4 tests: value metadata, vector/scalar operation signatures, interpreter buffer typing, result typing, and search-space containment for value-compatible expressions.
+
+### Stage 5.5: Time-Series Expression Support
+
+- Time-series support follows the same direction as vectorial GP when it changes value metadata or available opcodes. Lag/window semantics belong in operation signatures, interpreter binding, and data-view context before they become separate problem types.
+
+Stage 5.5 tests: lag/window binding, time-aware operation signatures, row-window validity, interpreter parity fixtures, and regression usage specs over time-series data.
+
+### Stage 5 Shared Rules
+
+- Extensions compose around the expression component. A new search-space type is justified only when the feature changes the set of structurally valid candidates or the local closure rules needed by creation, crossover, mutation, or repair.
+
+Follow-up details stay outside this plan unless separately scheduled:
+
+- name-based or schema-based variable matching instead of Stage 1 index-only binding
+- revised invalid-value policy if `NaN` is not sufficient for later objectives or operators
+- n-ary symbolic operators instead of binary-only operator arity
+- immutable data snapshots, builders, versioning, and cache invalidation
+
+## Compatibility
+
+- Use HeuristicLab as behavioral reference only.
+- Prefer reimplemented HeuristicLib fixtures over copied source.
+- Any direct source-code reuse requires an explicit licensing decision.
+- Maintain a matrix with: HeuristicLab source, current legacy type, new target, parity level, porting status, and intentional differences.
+- Put fast invariants in `test/HeuristicLib.Core.Tests`, workflows in `test/HeuristicLib.Scenarios`, and public API shape in `test/HeuristicLib.ApiUsageSpecs`.
+
+## Validation
+
+```powershell
+dotnet restore
+dotnet build --configuration Release --no-restore
+dotnet test --configuration Release --no-restore
+dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error
+```
+
+## Settled Decisions
+
+- Genotype: immutable `SymbolicExpression`, explicit `SymbolicExpressionOpCode : ushort`, binary arity in Stage 1, identical-instruction equality, and `NaN` for invalid numeric results.
+- Binding and execution: variable indexes bind to the supplied input-variable order, interpreter memory is not shared mutably, and Operon remains the postfix/contiguous-encoding reference.
+- Legacy: old mutable symbolic-expression-tree APIs move under `HEAL.HeuristicLib.Legacy...`; obsolete legacy types/methods use `Legacy` prefixes or suffixes only when needed to avoid name clashes.
+- Formatting/serialization: Stage 1 includes debug/infix formatting; full serialization is deferred.
+- Problem and search spaces: one symbolic-regression problem concept, with unrestricted and grammar-constrained scalar search spaces as distinct operator families.
+- Refinement: `Refiner` runs after variation and before evaluation; it returns immutable replacement expressions and keeps GA authoring as `Crossover`, `Mutator`, `MutationRate`, optional `Refiner`.
+- Extensions: compose around expression components; add search-space types only when local structural admissibility changes. Shape constraints live in evaluator/evaluation-strategy objects, not the base problem.

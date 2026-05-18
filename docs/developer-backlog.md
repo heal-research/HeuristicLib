@@ -35,7 +35,7 @@ These are still real open items:
 - island-style population workflow
 - ALPS-style layered workflow
 - richer experiment scenarios
-- symbolic-regression validation scenarios
+- symbolic-regression redesign follow-up, tracked in the [symbolic regression redesign plan](../plans/symbolic-regression-redesign-plan.md)
 - dynamic-problem extension workflow
 - meta-optimization by running an inner algorithm inside `Problem.Evaluate(...)`
 - start building a glossary for the domain concepts the library is about, covering both heuristic optimization concepts and HeuristicLib-specific terms; consider using documentation interrogation workflows such as [grill-with-docs](https://github.com/mattpocock/skills/blob/main/skills/engineering/grill-with-docs/SKILL.md) to extract unclear, overloaded, or underdefined terminology from the existing docs and API specs
