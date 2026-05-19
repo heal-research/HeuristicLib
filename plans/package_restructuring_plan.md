@@ -94,12 +94,48 @@ Avoid creating additional vertical packages until a feature has a distinct depen
 
 1. Document the intended package model in this file.
 2. Rename packages and projects only after the package model has been accepted.
-3. Move Python-specific code into `HEAL.HeuristicLib.PythonInterop`.
-4. Move unstable extension code into `HEAL.HeuristicLib.Experimental` and annotate public experimental APIs with `ExperimentalAttribute`.
-5. Rename the main supported package from the current `Core` role to `HEAL.HeuristicLib`.
-6. Promote mature APIs from experimental to the main package only after tests, examples, and API shape are reviewed.
+3. Adopt the agreed repository coding style before or together with the broad package move, so the mechanical formatting churn is paid once rather than spread across later semantic changes.
+4. Move Python-specific code into `HEAL.HeuristicLib.PythonInterop`.
+5. Move unstable extension code into `HEAL.HeuristicLib.Experimental` and annotate public experimental APIs with `ExperimentalAttribute`.
+6. Rename the main supported package from the current `Core` role to `HEAL.HeuristicLib`.
+7. Promote mature APIs from experimental to the main package only after tests, examples, and API shape are reviewed.
 
 Each migration step should update relevant docs, examples, and tests together with the code move.
+
+## Coding Style Migration
+
+The package restructuring will touch a large portion of the repository through project renames, namespace changes, and file moves. That makes it a good time to also move to a more conventional C# formatting baseline, such as four-space indentation and standard C# brace/newline layout.
+
+The style migration should still be treated as mechanical work. Prefer an isolated formatting commit or a clearly separated phase in the restructuring work, with no behavioral or API changes mixed into the formatting diff. Add the formatting commit to `.git-blame-ignore-revs` so blame views can skip the style-only churn where supported.
+
+The updated `.editorconfig` should start from a mainstream .NET/Visual Studio-style baseline, then deliberately preserve HeuristicLib-specific rules such as verified snapshot-file handling, intentional analyzer suppressions, nullable/code-style preferences, and line-ending policy.
+
+Target indentation by file family:
+
+- C# (`*.cs`): 4 spaces.
+- MSBuild/XML (`*.csproj`, `*.props`, `*.targets`, `*.xml`): 4 spaces.
+- YAML (`*.yml`, `*.yaml`): 2 spaces, matching common YAML and GitHub Actions style.
+- JSON (`*.json`): 2 spaces, matching common Prettier, npm, and tooling defaults.
+- Markdown (`*.md`): Prettier defaults; indentation is 2 spaces, while prose wrapping should stay controlled by Prettier rather than by C# rules.
+- Verified snapshots (`*.received.*`, `*.verified.*`): keep formatting exceptions so generated approval artifacts are not churned.
+
+The migration tooling can be staged through npm scripts so contributors have one repeatable entry point:
+
+```powershell
+npm install
+npm run format
+npm run format:check
+```
+
+Use separate script targets when reviewing or troubleshooting a specific file family:
+
+```powershell
+npm run format:code       # C# whitespace through dotnet format
+npm run format:text       # JSON, YAML, and Markdown through Prettier
+npm run format:xml        # XML, .csproj, .props, and .targets through Prettier XML
+```
+
+The XML formatter needs `@prettier/plugin-xml` and should run with whitespace normalization enabled for MSBuild files, for example `--xml-whitespace-sensitivity ignore --tab-width 4`. Without that option the plugin preserves existing XML whitespace and may leave old two-space `.csproj` and `.props` indentation unchanged.
 
 ## Open Follow-Up Decisions
 
