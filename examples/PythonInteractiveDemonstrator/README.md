@@ -2,7 +2,7 @@
 
 Interactive symbolic regression demo — draw a curve and get a fitted mathematical expression using **HeuristicLib** Genetic Programming via [pythonnet](https://github.com/pythonnet/pythonnet).
 
-This example is part of the [HeuristicLib](../../README.md) project. It uses the `HEAL.HeuristicLib.Extensions` library to run symbolic regression from Python, bridging .NET and Python through pythonnet's CLR hosting.
+This example is part of the [HeuristicLib](../../README.md) project. It uses the `HEAL.HeuristicLib.Experimental` library to run symbolic regression from Python, bridging .NET and Python through pythonnet's CLR hosting.
 
 ## Demo
 

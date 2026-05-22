@@ -3,8 +3,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
-        <AssemblyName>HEAL.HeuristicLib.Extensions.Tests</AssemblyName>
-        <RootNamespace>HEAL.HeuristicLib.Extensions.Tests</RootNamespace>
+        <AssemblyName>HEAL.HeuristicLib.Experimental.Tests</AssemblyName>
+        <RootNamespace>HEAL.HeuristicLib.Experimental.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>

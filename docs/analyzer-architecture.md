@@ -109,7 +109,7 @@ public interface IAnalyzerRunState<out TResult> : IAnalyzerRunState
 }
 ```
 
-There is also a small optional convenience base class in `HEAL.HeuristicLib.Core`:
+There is also a small optional convenience base class in `HEAL.HeuristicLib`:
 
 ```csharp
 public abstract class AnalyzerRunState<TAnalyzer>(TAnalyzer analyzer) : IAnalyzerRunState

@@ -94,7 +94,7 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
         import clr  # noqa: E402
         import sys as _sys
         _sys.path.append(PUBLISH_DIR)
-        clr.AddReference("HEAL.HeuristicLib.Extensions")
+        clr.AddReference("HEAL.HeuristicLib.Experimental")
 
         from HEAL.HeuristicLib.PythonInterOptScripts import (
             InteractiveSymbolicRegression,

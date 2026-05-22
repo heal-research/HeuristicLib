@@ -42,25 +42,25 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{46DC3720-0
 		docs\developer-backlog.md = docs\developer-backlog.md
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Core.Tests", "test\HeuristicLib.Core.Tests\HeuristicLib.Core.Tests.csproj", "{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib.Tests", "test\HeuristicLib.Core.Tests\HeuristicLib.Core.Tests.csproj", "{BF9AD995-F08B-4F8E-BC31-3D69FFE41ABF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.ApiUsageSpecs", "test\HeuristicLib.ApiUsageSpecs\HeuristicLib.ApiUsageSpecs.csproj", "{B17AAE60-E937-4BEA-94ED-5FB1192B86C5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib.ApiUsageSpecs", "test\HeuristicLib.ApiUsageSpecs\HeuristicLib.ApiUsageSpecs.csproj", "{B17AAE60-E937-4BEA-94ED-5FB1192B86C5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Abstractions", "src\HeuristicLib.Abstractions\HeuristicLib.Abstractions.csproj", "{D28E1A98-620B-45C1-B9DE-859B23B34F63}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib.Contracts", "src\HeuristicLib.Abstractions\HeuristicLib.Abstractions.csproj", "{D28E1A98-620B-45C1-B9DE-859B23B34F63}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Core", "src\HeuristicLib.Core\HeuristicLib.Core.csproj", "{69765C53-085D-4FAD-AF3D-2A47F492B7ED}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib", "src\HeuristicLib.Core\HeuristicLib.Core.csproj", "{69765C53-085D-4FAD-AF3D-2A47F492B7ED}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Extensions", "src\HeuristicLib.Extensions\HeuristicLib.Extensions.csproj", "{D858705A-406E-4B3D-A866-65843BE73861}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib.Experimental", "src\HeuristicLib.Extensions\HeuristicLib.Extensions.csproj", "{D858705A-406E-4B3D-A866-65843BE73861}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Extensions.Tests", "test\HeuristicLib.Extensions.Tests\HeuristicLib.Extensions.Tests.csproj", "{669E2E93-9C20-446B-899F-E485C69D7125}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib.Experimental.Tests", "test\HeuristicLib.Extensions.Tests\HeuristicLib.Extensions.Tests.csproj", "{669E2E93-9C20-446B-899F-E485C69D7125}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "analyzers", "analyzers", "{D42FE33C-631E-48BA-A487-CCB84E372009}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Analyzers", "analyzers\HeuristicLib.Analyzers\HeuristicLib.Analyzers.csproj", "{C2CD00CD-2921-4154-A531-6C4FBFB3F9B4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib.Analyzers", "analyzers\HeuristicLib.Analyzers\HeuristicLib.Analyzers.csproj", "{C2CD00CD-2921-4154-A531-6C4FBFB3F9B4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Analyzers.CodeFixes", "analyzers\HeuristicLib.Analyzers.CodeFixes\HeuristicLib.Analyzers.CodeFixes.csproj", "{3569C034-451F-4074-8660-BD2B915198D9}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib.Analyzers.CodeFixes", "analyzers\HeuristicLib.Analyzers.CodeFixes\HeuristicLib.Analyzers.CodeFixes.csproj", "{3569C034-451F-4074-8660-BD2B915198D9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeuristicLib.Scenarios", "test\HeuristicLib.Scenarios\HeuristicLib.Scenarios.csproj", "{20B0D63B-CAF7-4843-8DBE-64D4E22A6BD3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HEAL.HeuristicLib.Scenarios", "test\HeuristicLib.Scenarios\HeuristicLib.Scenarios.csproj", "{20B0D63B-CAF7-4843-8DBE-64D4E22A6BD3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
