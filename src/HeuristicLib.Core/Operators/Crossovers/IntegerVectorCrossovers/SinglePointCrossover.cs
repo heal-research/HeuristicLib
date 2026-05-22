@@ -13,21 +13,23 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 /// </remarks>
 public record SinglePointCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-  public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-    => Cross(parents.Parent1, parents.Parent2, random);
+    public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
+      => Cross(parents.Parent1, parents.Parent2, random);
 
-  public static IntegerVector Cross(IntegerVector parent1, IntegerVector parent2, IRandomNumberGenerator random, int? crossoverPoint = null)
-  {
-    var cutPoint = crossoverPoint ?? random.NextInt(1, parent1.Count);
-    var offspringValues = new int[parent1.Count];
-    for (var i = 0; i < cutPoint; i++) {
-      offspringValues[i] = parent1[i];
+    public static IntegerVector Cross(IntegerVector parent1, IntegerVector parent2, IRandomNumberGenerator random, int? crossoverPoint = null)
+    {
+        var cutPoint = crossoverPoint ?? random.NextInt(1, parent1.Count);
+        var offspringValues = new int[parent1.Count];
+        for (var i = 0; i < cutPoint; i++)
+        {
+            offspringValues[i] = parent1[i];
+        }
+
+        for (var i = cutPoint; i < parent2.Count; i++)
+        {
+            offspringValues[i] = parent2[i];
+        }
+
+        return IntegerVector.FromOwnedArray(offspringValues);
     }
-
-    for (var i = cutPoint; i < parent2.Count; i++) {
-      offspringValues[i] = parent2[i];
-    }
-
-    return IntegerVector.FromOwnedArray(offspringValues);
-  }
 }

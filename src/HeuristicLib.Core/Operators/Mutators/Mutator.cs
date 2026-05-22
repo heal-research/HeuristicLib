@@ -11,22 +11,22 @@ public abstract record Mutator<TGenotype, TSearchSpace, TProblem, TExecutionStat
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TExecutionState : class
 {
-  protected abstract TExecutionState CreateInitialState();
+    protected abstract TExecutionState CreateInitialState();
 
-  protected abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, TExecutionState executionState,
-    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, TExecutionState executionState,
+      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  public IMutatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new MutatorInstance(this, CreateInitialState());
+    public IMutatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+      new MutatorInstance(this, CreateInitialState());
 
-  private sealed class MutatorInstance(Mutator<TGenotype, TSearchSpace, TProblem, TExecutionState> mutator, TExecutionState executionState)
-    : IMutatorInstance<TGenotype, TSearchSpace, TProblem>
-  {
-    public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    private sealed class MutatorInstance(Mutator<TGenotype, TSearchSpace, TProblem, TExecutionState> mutator, TExecutionState executionState)
+      : IMutatorInstance<TGenotype, TSearchSpace, TProblem>
     {
-      return mutator.Mutate(parents, executionState, random, searchSpace, problem);
+        public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            return mutator.Mutate(parents, executionState, random, searchSpace, problem);
+        }
     }
-  }
 }
 
 public abstract record Mutator<TGenotype, TSearchSpace, TExecutionState>
@@ -34,58 +34,58 @@ public abstract record Mutator<TGenotype, TSearchSpace, TExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TExecutionState : class
 {
-  protected abstract TExecutionState CreateInitialState();
+    protected abstract TExecutionState CreateInitialState();
 
-  protected abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, TExecutionState executionState,
-    IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, TExecutionState executionState,
+      IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-  public IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new MutatorInstance(this, CreateInitialState());
+    public IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+      new MutatorInstance(this, CreateInitialState());
 
-  private sealed class MutatorInstance : IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  {
-    private readonly Mutator<TGenotype, TSearchSpace, TExecutionState> mutator;
-    private readonly TExecutionState executionState;
-
-    public MutatorInstance(Mutator<TGenotype, TSearchSpace, TExecutionState> mutator, TExecutionState initialState)
+    private sealed class MutatorInstance : IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
     {
-      this.mutator = mutator;
-      executionState = initialState;
-    }
+        private readonly Mutator<TGenotype, TSearchSpace, TExecutionState> mutator;
+        private readonly TExecutionState executionState;
 
-    public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem)
-    {
-      return mutator.Mutate(parents, executionState, random, searchSpace);
+        public MutatorInstance(Mutator<TGenotype, TSearchSpace, TExecutionState> mutator, TExecutionState initialState)
+        {
+            this.mutator = mutator;
+            executionState = initialState;
+        }
+
+        public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem)
+        {
+            return mutator.Mutate(parents, executionState, random, searchSpace);
+        }
     }
-  }
 }
 
 public abstract record Mutator<TGenotype, TExecutionState>
   : IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   where TExecutionState : class
 {
-  protected abstract TExecutionState CreateInitialState();
+    protected abstract TExecutionState CreateInitialState();
 
-  protected abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, TExecutionState executionState,
-    IRandomNumberGenerator random);
+    protected abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, TExecutionState executionState,
+      IRandomNumberGenerator random);
 
-  public IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new MutatorInstance(this, CreateInitialState());
+    public IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+      new MutatorInstance(this, CreateInitialState());
 
-  private sealed class MutatorInstance : IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  {
-    private readonly Mutator<TGenotype, TExecutionState> mutator;
-    private readonly TExecutionState executionState;
-
-    public MutatorInstance(Mutator<TGenotype, TExecutionState> mutator, TExecutionState initialState)
+    private sealed class MutatorInstance : IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
     {
-      this.mutator = mutator;
-      executionState = initialState;
-    }
+        private readonly Mutator<TGenotype, TExecutionState> mutator;
+        private readonly TExecutionState executionState;
 
-    public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-    {
-      return mutator.Mutate(parents, executionState, random);
+        public MutatorInstance(Mutator<TGenotype, TExecutionState> mutator, TExecutionState initialState)
+        {
+            this.mutator = mutator;
+            executionState = initialState;
+        }
+
+        public IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+        {
+            return mutator.Mutate(parents, executionState, random);
+        }
     }
-  }
 }

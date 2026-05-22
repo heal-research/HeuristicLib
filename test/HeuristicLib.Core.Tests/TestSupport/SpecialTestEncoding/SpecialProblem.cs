@@ -8,9 +8,9 @@ namespace HEAL.HeuristicLib.Tests.TestSupport.SpecialTestEncoding;
 
 public class SpecialProblem(double data) : SingleSolutionProblem<SpecialGenotype, SpecialSearchSpace>(SingleObjective.Maximize, GeTSearchSpace())
 {
-  public double Data { get; set; } = data;
+    public double Data { get; set; } = data;
 
-  public override ObjectiveVector Evaluate(SpecialGenotype solution, IRandomNumberGenerator random) => Data + solution.Value;
+    public override ObjectiveVector Evaluate(SpecialGenotype solution, IRandomNumberGenerator random) => Data + solution.Value;
 
-  private static SpecialSearchSpace GeTSearchSpace() => new();
+    private static SpecialSearchSpace GeTSearchSpace() => new();
 }

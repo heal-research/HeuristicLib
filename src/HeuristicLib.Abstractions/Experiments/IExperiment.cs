@@ -21,10 +21,10 @@ public interface IExperimentInstance<TGenotype, in TSearchSpace, in TProblem, TS
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchState : class, ISearchState
 {
-  IReadOnlyList<KeyValuePair<TAlgorithmKey, IAsyncEnumerable<TSearchState>>> RunStreamingAsync(
-    TProblem problem,
-    IRandomNumberGenerator random,
-    TSearchState? initialState = null,
-    CancellationToken ct = default
-  );
+    IReadOnlyList<KeyValuePair<TAlgorithmKey, IAsyncEnumerable<TSearchState>>> RunStreamingAsync(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TSearchState? initialState = null,
+      CancellationToken ct = default
+    );
 }

@@ -7,5 +7,5 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 /// </summary>
 public sealed class DefunSymbol() : Symbol(1, 1, 1)
 {
-  public override SymbolicExpressionTreeNode CreateTreeNode() => new DefunTreeNode(this, "function");
+    public override SymbolicExpressionTreeNode CreateTreeNode() => new DefunTreeNode(this, "function");
 }

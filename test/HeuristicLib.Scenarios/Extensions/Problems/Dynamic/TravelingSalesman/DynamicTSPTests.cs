@@ -14,44 +14,44 @@ namespace HEAL.HeuristicLib.Scenarios.Extensions.Problems.Dynamic.TravelingSales
 
 public class DynamicTSPTests
 {
-  [Fact]
-  public void GaWithDynamicTSP()
-  {
-    //Load Problem
-    var file = Path.Combine("TestData", "berlin52.tsp");
-    var data = TsplibTspInstanceProvider.LoadData(file);
-    var cdata = data.ToCoordinatesData();
-    var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
+    [Fact]
+    public void GaWithDynamicTSP()
+    {
+        //Load Problem
+        var file = Path.Combine("TestData", "berlin52.tsp");
+        var data = TsplibTspInstanceProvider.LoadData(file);
+        var cdata = data.ToCoordinatesData();
+        var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
 
-    //GA
-    var ga = GeneticAlgorithm.GetBuilder(
-      new RandomPermutationCreator(),
-      new EdgeRecombinationCrossover(),
-      new InversionMutator()
-    );
+        //GA
+        var ga = GeneticAlgorithm.GetBuilder(
+          new RandomPermutationCreator(),
+          new EdgeRecombinationCrossover(),
+          new InversionMutator()
+        );
 
-    //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
-    //ga.RandomSeed = 42;
-    ga.PopulationSize = 100;
-    ga.MutationRate = 0.05;
-    ga.Selector = new TournamentSelector<Permutation>(2);
-    ga.Elites = 1;
-    //ga.Evaluator = prob.WrapEvaluator(ga.Evaluator);
+        //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
+        //ga.RandomSeed = 42;
+        ga.PopulationSize = 100;
+        ga.MutationRate = 0.05;
+        ga.Selector = new TournamentSelector<Permutation>(2);
+        ga.Elites = 1;
+        //ga.Evaluator = prob.WrapEvaluator(ga.Evaluator);
 
-    //prob.AttachTo(ga);
+        //prob.AttachTo(ga);
 
-    //execute
-    var resGa = ga.Build().WithMaxIterations(1000).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        //execute
+        var resGa = ga.Build().WithMaxIterations(1000).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
-    //look at results
-    var objGa = resGa.Population
-                     .OrderBy(x => x.ObjectiveVector[0])
-                     .First();
+        //look at results
+        var objGa = resGa.Population
+                         .OrderBy(x => x.ObjectiveVector[0])
+                         .First();
 
-    resGa.Population.Solutions.Length.ShouldBe(100);
-    resGa.Population.Solutions.All(solution => prob.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-    resGa.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
-    double.IsFinite(objGa.ObjectiveVector[0]).ShouldBeTrue();
-    objGa.ObjectiveVector[0].ShouldBeGreaterThan(0.0);
-  }
+        resGa.Population.Solutions.Length.ShouldBe(100);
+        resGa.Population.Solutions.All(solution => prob.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+        resGa.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+        double.IsFinite(objGa.ObjectiveVector[0]).ShouldBeTrue();
+        objGa.ObjectiveVector[0].ShouldBeGreaterThan(0.0);
+    }
 }

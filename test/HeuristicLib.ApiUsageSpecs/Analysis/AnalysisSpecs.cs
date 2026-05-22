@@ -19,120 +19,122 @@ namespace HEAL.HeuristicLib.ApiUsageSpecs.Analysis;
 
 public class AnalysisSpecs
 {
-  [Fact]
-  public async Task Analyzer_CurrentApi_AttachesAtRunCreation_AndIsReadFromRunStateWrapper()
-  {
-    var problem = CreateRastriginProblem(dimension: 4);
-    var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-    var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
-    var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-      baseAlgorithm,
-      interceptor);
+    [Fact]
+    public async Task Analyzer_CurrentApi_AttachesAtRunCreation_AndIsReadFromRunStateWrapper()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
+        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+          baseAlgorithm,
+          interceptor);
 
-    var run = baseAlgorithm.WithMaxIterations(4).CreateRun(problem, analysis);
+        var run = baseAlgorithm.WithMaxIterations(4).CreateRun(problem, analysis);
 
-    var finalState = await run.RunToCompletionAsync(
-      RandomNumberGenerator.Create(777),
-      cancellationToken: TestContext.Current.CancellationToken);
+        var finalState = await run.RunToCompletionAsync(
+          RandomNumberGenerator.Create(777),
+          cancellationToken: TestContext.Current.CancellationToken);
 
-    var analysisResult = run.GetAnalyzerResult(analysis);
+        var analysisResult = run.GetAnalyzerResult(analysis);
 
-    analysisResult.Count.ShouldBe(4);
-    finalState.Population.Solutions.Length.ShouldBe(16);
-  }
-
-  [Fact]
-  public async Task Analyzer_CurrentApi_CanBeQueriedDuringExecution()
-  {
-    var problem = CreateRastriginProblem(dimension: 4);
-    var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-    var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
-    var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-      baseAlgorithm,
-      interceptor);
-
-    var run = baseAlgorithm.WithMaxIterations(3).CreateRun(problem, analysis);
-
-    await using var enumerator = run.RunStreamingAsync(
-        RandomNumberGenerator.Create(888),
-        cancellationToken: TestContext.Current.CancellationToken)
-      .GetAsyncEnumerator(TestContext.Current.CancellationToken);
-
-    (await enumerator.MoveNextAsync()).ShouldBeTrue();
-    run.GetAnalyzerResult(analysis).Count.ShouldBe(1);
-
-    (await enumerator.MoveNextAsync()).ShouldBeTrue();
-    run.GetAnalyzerResult(analysis).Count.ShouldBe(2);
-
-    while (await enumerator.MoveNextAsync()) {
-      _ = enumerator.Current;
+        analysisResult.Count.ShouldBe(4);
+        finalState.Population.Solutions.Length.ShouldBe(16);
     }
 
-    run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
-  }
+    [Fact]
+    public async Task Analyzer_CurrentApi_CanBeQueriedDuringExecution()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
+        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+          baseAlgorithm,
+          interceptor);
 
-  [Fact]
-  public async Task Analyzer_CurrentApi_CanObserveBothEvaluatorAndInterceptor()
-  {
-    var problem = CreateRastriginProblem(dimension: 4);
-    var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-    var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
-    var analysis = new BestMedianWorstPerEvaluationAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-      baseAlgorithm,
-      [baseAlgorithm.Evaluator],
-      [interceptor]);
+        var run = baseAlgorithm.WithMaxIterations(3).CreateRun(problem, analysis);
 
-    var run = baseAlgorithm.WithMaxIterations(3).CreateRun(problem, analysis);
+        await using var enumerator = run.RunStreamingAsync(
+            RandomNumberGenerator.Create(888),
+            cancellationToken: TestContext.Current.CancellationToken)
+          .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
-    await run.RunToCompletionAsync(
-      RandomNumberGenerator.Create(321),
-      cancellationToken: TestContext.Current.CancellationToken);
+        (await enumerator.MoveNextAsync()).ShouldBeTrue();
+        run.GetAnalyzerResult(analysis).Count.ShouldBe(1);
 
-    var analysisResult = run.GetAnalyzerResult(analysis);
+        (await enumerator.MoveNextAsync()).ShouldBeTrue();
+        run.GetAnalyzerResult(analysis).Count.ShouldBe(2);
 
-    analysisResult.BestSolutions.Count.ShouldBe(3);
-    analysisResult.BestSolutions.All(entry => entry.evaluations > 0).ShouldBeTrue();
-  }
+        while (await enumerator.MoveNextAsync())
+        {
+            _ = enumerator.Current;
+        }
 
-  [Fact]
-  public async Task AnalyzerAttachment_Example_ProducesTypedResult()
-  {
-    var problem = CreateRastriginProblem(dimension: 4);
-    var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-    var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
-    var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-      baseAlgorithm,
-      interceptor);
+        run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
+    }
 
-    var run = baseAlgorithm.WithMaxIterations(4).CreateRun(problem, analysis);
-    var finalState = await run.RunToCompletionAsync(
-      RandomNumberGenerator.Create(333),
-      cancellationToken: TestContext.Current.CancellationToken);
+    [Fact]
+    public async Task Analyzer_CurrentApi_CanObserveBothEvaluatorAndInterceptor()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
+        var analysis = new BestMedianWorstPerEvaluationAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+          baseAlgorithm,
+          [baseAlgorithm.Evaluator],
+          [interceptor]);
 
-    var result = run.GetAnalyzerResult(analysis);
+        var run = baseAlgorithm.WithMaxIterations(3).CreateRun(problem, analysis);
 
-    result.Count.ShouldBe(4);
-    finalState.Population.Solutions.Length.ShouldBe(16);
-  }
+        await run.RunToCompletionAsync(
+          RandomNumberGenerator.Create(321),
+          cancellationToken: TestContext.Current.CancellationToken);
 
-  private static TestFunctionProblem CreateRastriginProblem(int dimension)
-  {
-    return new TestFunctionProblem(new RastriginFunction(dimension));
-  }
+        var analysisResult = run.GetAnalyzerResult(analysis);
 
-  private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
-    TestFunctionProblem problem,
-    IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor)
-  {
-    return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> {
-      PopulationSize = 16,
-      Creator = new UniformDistributedCreator(problem.SearchSpace),
-      Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
-      Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-      Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
-      MutationRate = 0.2,
-      Elites = 1,
-      Interceptor = interceptor
-    };
-  }
+        analysisResult.BestSolutions.Count.ShouldBe(3);
+        analysisResult.BestSolutions.All(entry => entry.evaluations > 0).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task AnalyzerAttachment_Example_ProducesTypedResult()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
+        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+          baseAlgorithm,
+          interceptor);
+
+        var run = baseAlgorithm.WithMaxIterations(4).CreateRun(problem, analysis);
+        var finalState = await run.RunToCompletionAsync(
+          RandomNumberGenerator.Create(333),
+          cancellationToken: TestContext.Current.CancellationToken);
+
+        var result = run.GetAnalyzerResult(analysis);
+
+        result.Count.ShouldBe(4);
+        finalState.Population.Solutions.Length.ShouldBe(16);
+    }
+
+    private static TestFunctionProblem CreateRastriginProblem(int dimension)
+    {
+        return new TestFunctionProblem(new RastriginFunction(dimension));
+    }
+
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
+      TestFunctionProblem problem,
+      IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor)
+    {
+        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            PopulationSize = 16,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
+            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            MutationRate = 0.2,
+            Elites = 1,
+            Interceptor = interceptor
+        };
+    }
 }

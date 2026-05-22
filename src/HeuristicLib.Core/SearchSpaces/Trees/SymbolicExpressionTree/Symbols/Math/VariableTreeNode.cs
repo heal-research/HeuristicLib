@@ -5,10 +5,10 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 public sealed class VariableTreeNode : VariableTreeNodeBase
 {
 
-  private VariableTreeNode(VariableTreeNode original) : base(original) { }
+    private VariableTreeNode(VariableTreeNode original) : base(original) { }
 
-  public VariableTreeNode(Variable variableSymbol) : base(variableSymbol) { }
-  public new Variable Symbol => (Variable)base.Symbol;
+    public VariableTreeNode(Variable variableSymbol) : base(variableSymbol) { }
+    public new Variable Symbol => (Variable)base.Symbol;
 
-  public override SymbolicExpressionTreeNode Clone() => new VariableTreeNode(this);
+    public override SymbolicExpressionTreeNode Clone() => new VariableTreeNode(this);
 }

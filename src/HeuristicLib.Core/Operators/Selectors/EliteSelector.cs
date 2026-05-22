@@ -11,26 +11,26 @@ public record EliteSelector<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  private readonly int elites;
+    private readonly int elites;
 
-  public ISelector<TGenotype, TSearchSpace, TProblem> SelectorForRemaining => InnerSelector;
+    public ISelector<TGenotype, TSearchSpace, TProblem> SelectorForRemaining => InnerSelector;
 
-  public EliteSelector(ISelector<TGenotype, TSearchSpace, TProblem> selectorForRemaining, int elites = 1)
-    : base(selectorForRemaining)
-  {
-    this.elites = elites;
-  }
+    public EliteSelector(ISelector<TGenotype, TSearchSpace, TProblem> selectorForRemaining, int elites = 1)
+      : base(selectorForRemaining)
+    {
+        this.elites = elites;
+    }
 
-  protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-                                                                Objective objective, int count, InnerSelect innerSelect,
-                                                                IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-  {
-    var selectedElites = BestSelector.Select(population, objective, elites);
-    var remainingCount = count - selectedElites.Count;
-    var selecterdRemaining = innerSelect(population, objective, remainingCount, random, searchSpace, problem);
+    protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
+                                                                  Objective objective, int count, InnerSelect innerSelect,
+                                                                  IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    {
+        var selectedElites = BestSelector.Select(population, objective, elites);
+        var remainingCount = count - selectedElites.Count;
+        var selecterdRemaining = innerSelect(population, objective, remainingCount, random, searchSpace, problem);
 
-    return selectedElites.Concat(selecterdRemaining).ToArray();
-  }
+        return selectedElites.Concat(selecterdRemaining).ToArray();
+    }
 }
 
 // public static class EliteSelector

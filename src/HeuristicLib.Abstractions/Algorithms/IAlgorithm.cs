@@ -13,7 +13,7 @@ public interface IAlgorithm<TGenotype, in TSearchSpace, in TProblem, TSearchStat
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchState : class, ISearchState
 {
-  IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; }
+    IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; }
 }
 
 public interface IAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TSearchState>
@@ -22,10 +22,10 @@ public interface IAlgorithmInstance<TGenotype, in TSearchSpace, in TProblem, TSe
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchState : class, ISearchState
 {
-  IAsyncEnumerable<TSearchState> RunStreamingAsync(
-    TProblem problem,
-    IRandomNumberGenerator random,
-    TSearchState? initialState = null,
-    CancellationToken ct = default
-  );
+    IAsyncEnumerable<TSearchState> RunStreamingAsync(
+      TProblem problem,
+      IRandomNumberGenerator random,
+      TSearchState? initialState = null,
+      CancellationToken ct = default
+    );
 }

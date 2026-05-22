@@ -26,20 +26,20 @@ namespace HEAL.HeuristicLib.PythonInterOptScripts;
 public class PythonInterOptEquationScoring(Objective objective, SymbolicExpressionTreeSearchSpace searchSpace, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval)
   : SingleSolutionProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>(objective, searchSpace)
 {
-  public required SymbolicRegressionProblem InnerProblem { get; init; }
+    public required SymbolicRegressionProblem InnerProblem { get; init; }
 
-  public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random)
-  {
-    return myEval(solution, InnerProblem.Evaluate(solution)).ToArray();
-  }
+    public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random)
+    {
+        return myEval(solution, InnerProblem.Evaluate(solution)).ToArray();
+    }
 
-  #region CallTheseFromPython
-  public static PythonInterOptEquationScoring DefaultConf(string file, int trainingRowCount, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval)
-  {
-    var data = RegressionCsvInstanceProvider.ImportData(file, trainingRowCount); //rows are not shuffled
-    var grammar = new SimpleSymbolicExpressionGrammar(); //Trees have 3 node min
-    var root = grammar.AddLinearScaling(); //adds Keijzer scaling to top of tree (+4 Nodes)
-    var symbols = new Symbol[] { //add a bunch of symbols and allow all combinations of them 
+    #region CallTheseFromPython
+    public static PythonInterOptEquationScoring DefaultConf(string file, int trainingRowCount, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval)
+    {
+        var data = RegressionCsvInstanceProvider.ImportData(file, trainingRowCount); //rows are not shuffled
+        var grammar = new SimpleSymbolicExpressionGrammar(); //Trees have 3 node min
+        var root = grammar.AddLinearScaling(); //adds Keijzer scaling to top of tree (+4 Nodes)
+        var symbols = new Symbol[] { //add a bunch of symbols and allow all combinations of them 
       new Addition(),
       new Subtraction(),
       new Multiplication(),
@@ -49,53 +49,55 @@ public class PythonInterOptEquationScoring(Objective objective, SymbolicExpressi
       new Logarithm(),
       new Variable { VariableNames = data.InputVariables }
     };
-    grammar.AddFullyConnectedSymbols(root, symbols);
+        grammar.AddFullyConnectedSymbols(root, symbols);
 
-    var symbolicExpressionTreeSearchSpace = new SymbolicExpressionTreeSearchSpace(grammar, 40, 20);
-    var p = new SymbolicRegressionProblem(data,
-      symbolicExpressionTreeSearchSpace,
-      new PearsonR2Evaluator()
-    // new RootMeanSquaredErrorEvaluator(),
-    // new TreeLengthEvaluator() //... other evaluators
-    ) {
-      ParameterOptimizationIterations = 5 //this is the effort spent on Parameter-Optimization
-    };
+        var symbolicExpressionTreeSearchSpace = new SymbolicExpressionTreeSearchSpace(grammar, 40, 20);
+        var p = new SymbolicRegressionProblem(data,
+          symbolicExpressionTreeSearchSpace,
+          new PearsonR2Evaluator()
+        // new RootMeanSquaredErrorEvaluator(),
+        // new TreeLengthEvaluator() //... other evaluators
+        )
+        {
+            ParameterOptimizationIterations = 5 //this is the effort spent on Parameter-Optimization
+        };
 
-    var directions = new ObjectiveDirection[] {
+        var directions = new ObjectiveDirection[] {
       ObjectiveDirection.Maximize, // Combined Score, overridden by myEval, but we want to maximize it
       ObjectiveDirection.Maximize, // PearsonR2Evaluator score
       ObjectiveDirection.Maximize, // Dimensional Consistency
       ObjectiveDirection.Maximize, // Limits & Trends
       ObjectiveDirection.Maximize, // Symmetry
     };
-    var objective = new Objective(directions, new LexicographicComparer(directions));
+        var objective = new Objective(directions, new LexicographicComparer(directions));
 
-    return new PythonInterOptEquationScoring(
-        objective,
-        symbolicExpressionTreeSearchSpace, myEval) { InnerProblem = p };
-  }
+        return new PythonInterOptEquationScoring(
+            objective,
+            symbolicExpressionTreeSearchSpace, myEval)
+        { InnerProblem = p };
+    }
 
-  public static Population<SymbolicExpressionTree> RunDefault(PythonInterOptEquationScoring p, int seed = 42)
-  {
-    var symRegAllMutator = ChooseOneMutator.Create(
-      new ChangeNodeTypeManipulation(),
-      new FullTreeShaker(),
-      new OnePointShaker(),
-      new RemoveBranchManipulation(),
-      new ReplaceBranchManipulation()
-    );
+    public static Population<SymbolicExpressionTree> RunDefault(PythonInterOptEquationScoring p, int seed = 42)
+    {
+        var symRegAllMutator = ChooseOneMutator.Create(
+          new ChangeNodeTypeManipulation(),
+          new FullTreeShaker(),
+          new OnePointShaker(),
+          new RemoveBranchManipulation(),
+          new ReplaceBranchManipulation()
+        );
 
-    var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), symRegAllMutator);
-    ga.MutationRate = 0.1;
-    ga.Selector = new TournamentSelector<SymbolicExpressionTree>(4);
-    ga.PopulationSize = 300;
+        var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), symRegAllMutator);
+        ga.MutationRate = 0.1;
+        ga.Selector = new TournamentSelector<SymbolicExpressionTree>(4);
+        ga.PopulationSize = 300;
 
-    var res = ga.Build()
-                .WithMaxIterations(200)
-                .RunToCompletion(p, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
-    return res.Population;
-  }
+        var res = ga.Build()
+                    .WithMaxIterations(200)
+                    .RunToCompletion(p, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
+        return res.Population;
+    }
 
-  public static Population<SymbolicExpressionTree> RunDefault(string file, int trainingRowCount, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval, int seed = 42) => RunDefault(DefaultConf(file, trainingRowCount, myEval), seed);
-  #endregion
+    public static Population<SymbolicExpressionTree> RunDefault(string file, int trainingRowCount, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval, int seed = 42) => RunDefault(DefaultConf(file, trainingRowCount, myEval), seed);
+    #endregion
 }

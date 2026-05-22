@@ -16,26 +16,26 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 public class NSGA2Tests
 #pragma warning restore S101
 {
-  [Fact]
-  public void RunToCompletion_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
-  {
-    var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
-    var algorithm = NSGA2.GetBuilder<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>(
-      new UniformDistributedCreator(problem.SearchSpace),
-      new SinglePointCrossover(),
-      new GaussianMutator(0.1, 0.1));
-    algorithm.PopulationSize = 5;
-    algorithm.MutationRate = 0.5;
+    [Fact]
+    public void RunToCompletion_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
+    {
+        var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
+        var algorithm = NSGA2.GetBuilder<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>(
+          new UniformDistributedCreator(problem.SearchSpace),
+          new SinglePointCrossover(),
+          new GaussianMutator(0.1, 0.1));
+        algorithm.PopulationSize = 5;
+        algorithm.MutationRate = 0.5;
 
-    var result = algorithm.Build()
-                          .WithMaxIterations(5)
-                          .RunToCompletion(
-                            problem,
-                            RandomNumberGenerator.Create(42),
-                            ct: TestContext.Current.CancellationToken);
+        var result = algorithm.Build()
+                              .WithMaxIterations(5)
+                              .RunToCompletion(
+                                problem,
+                                RandomNumberGenerator.Create(42),
+                                ct: TestContext.Current.CancellationToken);
 
-    result.Population.Solutions.Length.ShouldBe(5);
-    result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-    result.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 2).ShouldBeTrue();
-  }
+        result.Population.Solutions.Length.ShouldBe(5);
+        result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+        result.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 2).ShouldBeTrue();
+    }
 }

@@ -4,5 +4,5 @@ namespace HEAL.HeuristicLib.States;
 
 public record PopulationState<TGenotype> : SearchState
 {
-  public required Population<TGenotype> Population { get; init; }
+    public required Population<TGenotype> Population { get; init; }
 }

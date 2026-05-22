@@ -6,167 +6,186 @@ namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
 public record PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSearchSpace>
 {
-  private readonly bool atLeastOnce;
-  private readonly double eta;
-  private static double GetVarProb(RealVectorSearchSpace searchSpace) => Math.Min(0.5, 1.0 / searchSpace.Length);
+    private readonly bool atLeastOnce;
+    private readonly double eta;
+    private static double GetVarProb(RealVectorSearchSpace searchSpace) => Math.Min(0.5, 1.0 / searchSpace.Length);
 
-  public PolynomialMutator(double eta = 20, bool atLeastOnce = false)
-  {
-    this.atLeastOnce = atLeastOnce;
-    this.eta = eta;
-  }
-
-  private static bool[] mut_binomial(
-    int n,
-    double prob,
-    bool atLeastOnce,
-    IRandomNumberGenerator randomState)
-  {
-    ArgumentNullException.ThrowIfNull(randomState);
-    // Create an n�m boolean matrix for mutations
-    var matrix = new bool[n];
-
-    // Fill random mask (true with probability 'prob')
-    for (var i = 0; i < n; i++) {
-      if (randomState.NextDouble() < prob) {
-        matrix[i] = true;
-      }
-    }
-
-    if (atLeastOnce) {
-      matrix = RowAtLeastOnceTrue(matrix, randomState);
-    }
-
-    return matrix;
-  }
-
-  private static bool[] RowAtLeastOnceTrue(bool[] matrix, IRandomNumberGenerator randomState)
-  {
-    var n = matrix.Length;
-    var atLeastOnce = false;
-    for (var i = 0; i < n; i++) {
-      if (!matrix[i]) {
-        continue;
-      }
-
-      atLeastOnce = true;
-      break;
-    }
-
-    if (atLeastOnce) {
-      return matrix;
-    }
-
-    var j1 = randomState.NextInt(n); // inclusive lower, exclusive upper
-    matrix[j1] = true;
-    return matrix;
-  }
-
-  public override RealVector Mutate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
-    => Mutate(parent, random, searchSpace, eta, atLeastOnce);
-
-  public static RealVector Mutate(
-    RealVector parent,
-    IRandomNumberGenerator random,
-    RealVectorSearchSpace searchSpace,
-    double eta,
-    bool atLeastOnce)
-    => Mutate(parent, random, eta, atLeastOnce, searchSpace.Minimum, searchSpace.Maximum);
-
-  public static RealVector Mutate(
-    RealVector parent,
-    IRandomNumberGenerator random,
-    double eta,
-    bool atLeastOnce,
-    RealVector minimum,
-    RealVector maximum)
-  {
-    var probVar = Math.Min(0.5, 1.0 / parent.Count);
-    var x = parent.ToArray(); // assume double[] (or expose as such)
-    var xl = minimum;
-    var xu = maximum;
-    var nVar = x.Length;
-
-    var xp = new double[nVar];
-    Array.Copy(x, xp, nVar);
-    var mut = mut_binomial(nVar, probVar, atLeastOnce, random);
-
-    // Do not mutate fixed variables (xl == xu)
-    for (var j = 0; j < nVar; j++) {
-#pragma warning disable S1244
-      // ReSharper disable once CompareOfFloatsByEqualityOperator
-      if (xl[j % xl.Count] == xu[j % xu.Count]) {
-#pragma warning restore S1244
-        mut[j] = false;
-      }
-    }
-
-    // If nothing mutates, still run the (cheap) repair for consistency and return
-    var any = false;
-    for (var j = 0; j < nVar; j++) {
-      if (!mut[j]) {
-        continue;
-      }
-
-      any = true;
-      break;
-    }
-
-    if (!any)
-    // Very unlikely
+    public PolynomialMutator(double eta = 20, bool atLeastOnce = false)
     {
-      return RealVector.Clamp(RealVector.FromOwnedArray(xp), xl, xu);
+        this.atLeastOnce = atLeastOnce;
+        this.eta = eta;
     }
 
-    var mutPow = 1.0 / (eta + 1.0);
+    private static bool[] mut_binomial(
+      int n,
+      double prob,
+      bool atLeastOnce,
+      IRandomNumberGenerator randomState)
+    {
+        ArgumentNullException.ThrowIfNull(randomState);
+        // Create an n�m boolean matrix for mutations
+        var matrix = new bool[n];
 
-    for (var j = 0; j < nVar; j++) {
-      if (!mut[j]) {
-        continue;
-      }
+        // Fill random mask (true with probability 'prob')
+        for (var i = 0; i < n; i++)
+        {
+            if (randomState.NextDouble() < prob)
+            {
+                matrix[i] = true;
+            }
+        }
 
-      var xj = x[j];
-      var lb = xl[j % xl.Count];
-      var ub = xu[j % xu.Count];
-      var denom = ub - lb;
+        if (atLeastOnce)
+        {
+            matrix = RowAtLeastOnceTrue(matrix, randomState);
+        }
 
-      // Safety (shouldn't happen because fixed variables got masked out)
+        return matrix;
+    }
+
+    private static bool[] RowAtLeastOnceTrue(bool[] matrix, IRandomNumberGenerator randomState)
+    {
+        var n = matrix.Length;
+        var atLeastOnce = false;
+        for (var i = 0; i < n; i++)
+        {
+            if (!matrix[i])
+            {
+                continue;
+            }
+
+            atLeastOnce = true;
+            break;
+        }
+
+        if (atLeastOnce)
+        {
+            return matrix;
+        }
+
+        var j1 = randomState.NextInt(n); // inclusive lower, exclusive upper
+        matrix[j1] = true;
+        return matrix;
+    }
+
+    public override RealVector Mutate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
+      => Mutate(parent, random, searchSpace, eta, atLeastOnce);
+
+    public static RealVector Mutate(
+      RealVector parent,
+      IRandomNumberGenerator random,
+      RealVectorSearchSpace searchSpace,
+      double eta,
+      bool atLeastOnce)
+      => Mutate(parent, random, eta, atLeastOnce, searchSpace.Minimum, searchSpace.Maximum);
+
+    public static RealVector Mutate(
+      RealVector parent,
+      IRandomNumberGenerator random,
+      double eta,
+      bool atLeastOnce,
+      RealVector minimum,
+      RealVector maximum)
+    {
+        var probVar = Math.Min(0.5, 1.0 / parent.Count);
+        var x = parent.ToArray(); // assume double[] (or expose as such)
+        var xl = minimum;
+        var xu = maximum;
+        var nVar = x.Length;
+
+        var xp = new double[nVar];
+        Array.Copy(x, xp, nVar);
+        var mut = mut_binomial(nVar, probVar, atLeastOnce, random);
+
+        // Do not mutate fixed variables (xl == xu)
+        for (var j = 0; j < nVar; j++)
+        {
 #pragma warning disable S1244
-      if (denom == 0.0) {
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
+            if (xl[j % xl.Count] == xu[j % xu.Count])
+            {
 #pragma warning restore S1244
-        xp[j] = xj;
-        continue;
-      }
+                mut[j] = false;
+            }
+        }
 
-      var delta1 = (xj - lb) / denom;
-      var delta2 = (ub - xj) / denom;
+        // If nothing mutates, still run the (cheap) repair for consistency and return
+        var any = false;
+        for (var j = 0; j < nVar; j++)
+        {
+            if (!mut[j])
+            {
+                continue;
+            }
 
-      var r = random.NextDouble();
-      double deltaQ;
+            any = true;
+            break;
+        }
 
-      if (r <= 0.5) {
-        var xy = 1.0 - delta1;
-        var val = (2.0 * r) + ((1.0 - (2.0 * r)) * Math.Pow(xy, eta + 1.0));
-        deltaQ = Math.Pow(val, mutPow) - 1.0;
-      } else {
-        var xy = 1.0 - delta2;
-        var val = (2.0 * (1.0 - r)) + (2.0 * (r - 0.5) * Math.Pow(xy, eta + 1.0));
-        deltaQ = 1.0 - Math.Pow(val, mutPow);
-      }
+        if (!any)
+        // Very unlikely
+        {
+            return RealVector.Clamp(RealVector.FromOwnedArray(xp), xl, xu);
+        }
 
-      var y = xj + (deltaQ * denom);
+        var mutPow = 1.0 / (eta + 1.0);
 
-      // Clamp to [lb, ub] (floating-point drift)
-      if (y < lb) {
-        y = lb;
-      } else if (y > ub) {
-        y = ub;
-      }
+        for (var j = 0; j < nVar; j++)
+        {
+            if (!mut[j])
+            {
+                continue;
+            }
 
-      xp[j] = y;
+            var xj = x[j];
+            var lb = xl[j % xl.Count];
+            var ub = xu[j % xu.Count];
+            var denom = ub - lb;
+
+            // Safety (shouldn't happen because fixed variables got masked out)
+#pragma warning disable S1244
+            if (denom == 0.0)
+            {
+#pragma warning restore S1244
+                xp[j] = xj;
+                continue;
+            }
+
+            var delta1 = (xj - lb) / denom;
+            var delta2 = (ub - xj) / denom;
+
+            var r = random.NextDouble();
+            double deltaQ;
+
+            if (r <= 0.5)
+            {
+                var xy = 1.0 - delta1;
+                var val = (2.0 * r) + ((1.0 - (2.0 * r)) * Math.Pow(xy, eta + 1.0));
+                deltaQ = Math.Pow(val, mutPow) - 1.0;
+            }
+            else
+            {
+                var xy = 1.0 - delta2;
+                var val = (2.0 * (1.0 - r)) + (2.0 * (r - 0.5) * Math.Pow(xy, eta + 1.0));
+                deltaQ = 1.0 - Math.Pow(val, mutPow);
+            }
+
+            var y = xj + (deltaQ * denom);
+
+            // Clamp to [lb, ub] (floating-point drift)
+            if (y < lb)
+            {
+                y = lb;
+            }
+            else if (y > ub)
+            {
+                y = ub;
+            }
+
+            xp[j] = y;
+        }
+
+        // Final safety repair (very unlikely to do anything)
+        return RealVector.Clamp(RealVector.FromOwnedArray(xp), xl, xu);
     }
-
-    // Final safety repair (very unlikely to do anything)
-    return RealVector.Clamp(RealVector.FromOwnedArray(xp), xl, xu);
-  }
 }

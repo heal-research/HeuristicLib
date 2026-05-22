@@ -11,27 +11,27 @@ public abstract record SingleSolutionCrossover<TGenotype, TSearchSpace, TProblem
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-    BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace, problem), random);
+    public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+      BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace, problem), random);
 }
 
 public abstract record SingleSolutionCrossover<TGenotype, TSearchSpace>
   : StatelessCrossover<TGenotype, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-  public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
-    BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace), random);
+    public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+      BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace), random);
 }
 
 public abstract record SingleSolutionCrossover<TGenotype>
   : StatelessCrossover<TGenotype>
 {
-  public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random);
+    public abstract TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random);
 
-  public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) =>
-    BatchExecution.Sequential(parents, (p, r) => Cross(p, r), random);
+    public override IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random) =>
+      BatchExecution.Sequential(parents, (p, r) => Cross(p, r), random);
 }

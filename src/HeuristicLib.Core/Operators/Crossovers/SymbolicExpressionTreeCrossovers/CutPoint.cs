@@ -6,51 +6,54 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossover
 
 public class CutPoint
 {
-  public SymbolicExpressionTreeNode Parent { get; }
-  public SymbolicExpressionTreeNode? Child { get; }
-  private readonly ISymbolicExpressionGrammar grammar;
+    public SymbolicExpressionTreeNode Parent { get; }
+    public SymbolicExpressionTreeNode? Child { get; }
+    private readonly ISymbolicExpressionGrammar grammar;
 
-  public int ChildIndex { get; }
+    public int ChildIndex { get; }
 
-  public CutPoint(SymbolicExpressionTreeNode parent, SymbolicExpressionTreeNode child, SymbolicExpressionTreeSearchSpace searchSpace)
-  {
-    Parent = parent;
-    Child = child;
-    ChildIndex = parent.IndexOfSubtree(child);
-    grammar = searchSpace.Grammar;
-  }
-
-  public CutPoint(SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeSearchSpace searchSpace)
-  {
-    Parent = parent;
-    ChildIndex = childIndex;
-    Child = null;
-    grammar = searchSpace.Grammar;
-  }
-
-  public bool IsMatchingPointType(SymbolicExpressionTreeNode? newChild)
-  {
-    if (newChild == null) {
-      // make sure that one subtree can be removed and that only the last subtree is removed 
-      return grammar.GetMinimumSubtreeCount(Parent.Symbol) < Parent.SubtreeCount &&
-        ChildIndex == Parent.SubtreeCount - 1;
+    public CutPoint(SymbolicExpressionTreeNode parent, SymbolicExpressionTreeNode child, SymbolicExpressionTreeSearchSpace searchSpace)
+    {
+        Parent = parent;
+        Child = child;
+        ChildIndex = parent.IndexOfSubtree(child);
+        grammar = searchSpace.Grammar;
     }
 
-    // check syntax constraints of direct parent - child relation
-    if (!grammar.ContainsSymbol(newChild.Symbol) ||
-      !grammar.IsAllowedChildSymbol(Parent.Symbol, newChild.Symbol, ChildIndex)) {
-      return false;
+    public CutPoint(SymbolicExpressionTreeNode parent, int childIndex, SymbolicExpressionTreeSearchSpace searchSpace)
+    {
+        Parent = parent;
+        ChildIndex = childIndex;
+        Child = null;
+        grammar = searchSpace.Grammar;
     }
 
-    var result = true;
-    // check point type for the whole branch
-    newChild.ForEachNodePostfix(n => {
-      result =
-        result &&
-        grammar.ContainsSymbol(n.Symbol) &&
-        n.SubtreeCount >= grammar.GetMinimumSubtreeCount(n.Symbol) &&
-        n.SubtreeCount <= grammar.GetMaximumSubtreeCount(n.Symbol);
-    });
-    return result;
-  }
+    public bool IsMatchingPointType(SymbolicExpressionTreeNode? newChild)
+    {
+        if (newChild == null)
+        {
+            // make sure that one subtree can be removed and that only the last subtree is removed 
+            return grammar.GetMinimumSubtreeCount(Parent.Symbol) < Parent.SubtreeCount &&
+              ChildIndex == Parent.SubtreeCount - 1;
+        }
+
+        // check syntax constraints of direct parent - child relation
+        if (!grammar.ContainsSymbol(newChild.Symbol) ||
+          !grammar.IsAllowedChildSymbol(Parent.Symbol, newChild.Symbol, ChildIndex))
+        {
+            return false;
+        }
+
+        var result = true;
+        // check point type for the whole branch
+        newChild.ForEachNodePostfix(n =>
+        {
+            result =
+              result &&
+              grammar.ContainsSymbol(n.Symbol) &&
+              n.SubtreeCount >= grammar.GetMinimumSubtreeCount(n.Symbol) &&
+              n.SubtreeCount <= grammar.GetMaximumSubtreeCount(n.Symbol);
+        });
+        return result;
+    }
 }

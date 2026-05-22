@@ -2,35 +2,38 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public static class AutoCorrelationCalculator
 {
-  public static double[] Calculate(double[] values, out OnlineCalculatorError error)
-  {
-    if (values.Any(x => double.IsNaN(x) || double.IsInfinity(x))) {
-      error = OnlineCalculatorError.InvalidValueAdded;
+    public static double[] Calculate(double[] values, out OnlineCalculatorError error)
+    {
+        if (values.Any(x => double.IsNaN(x) || double.IsInfinity(x)))
+        {
+            error = OnlineCalculatorError.InvalidValueAdded;
 
-      return [];
+            return [];
+        }
+
+        error = OnlineCalculatorError.None;
+
+        return CircularCrossCorrelation(values, values);
     }
 
-    error = OnlineCalculatorError.None;
+    public static double[] CircularCrossCorrelation(double[] x, double[] y)
+    {
+        var n = Math.Max(x.Length, y.Length);
+        var result = new double[n];
 
-    return CircularCrossCorrelation(values, values);
-  }
+        for (var shift = 0; shift < n; shift++)
+        {
+            var sum = 0.0;
+            for (var i = 0; i < n; i++)
+            {
+                var xi = x[i % x.Length];
+                var yi = y[(i + shift) % y.Length];
+                sum += xi * yi;
+            }
 
-  public static double[] CircularCrossCorrelation(double[] x, double[] y)
-  {
-    var n = Math.Max(x.Length, y.Length);
-    var result = new double[n];
+            result[shift] = sum;
+        }
 
-    for (var shift = 0; shift < n; shift++) {
-      var sum = 0.0;
-      for (var i = 0; i < n; i++) {
-        var xi = x[i % x.Length];
-        var yi = y[(i + shift) % y.Length];
-        sum += xi * yi;
-      }
-
-      result[shift] = sum;
+        return result;
     }
-
-    return result;
-  }
 }

@@ -5,53 +5,58 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 
 public interface ISymbolicExpressionGrammar : ISymbolicExpressionGrammarBase
 {
-  ProgramRootSymbol ProgramRootSymbol { get; }
-  StartSymbol StartSymbol { get; }
+    ProgramRootSymbol ProgramRootSymbol { get; }
+    StartSymbol StartSymbol { get; }
 
-  int MinimumFunctionDefinitions { get; set; }
-  int MaximumFunctionDefinitions { get; set; }
-  int MinimumFunctionArguments { get; set; }
-  int MaximumFunctionArguments { get; set; }
+    int MinimumFunctionDefinitions { get; set; }
+    int MaximumFunctionDefinitions { get; set; }
+    int MinimumFunctionArguments { get; set; }
+    int MaximumFunctionArguments { get; set; }
 
-  bool ReadOnly { get; set; }
+    bool ReadOnly { get; set; }
 
-  bool Conforms(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree);
+    bool Conforms(Genotypes.Trees.SymbolicExpressionTree symbolicExpressionTree);
 }
 
 public static class SymbolicExpressionGrammarExtensions
 {
-  extension(ISymbolicExpressionGrammar grammar)
-  {
-    public Genotypes.Trees.SymbolicExpressionTree MakeStump(IRandomNumberGenerator random)
+    extension(ISymbolicExpressionGrammar grammar)
     {
-      var rootNode = grammar.ProgramRootSymbol.CreateTreeNode();
-      var tree = new Genotypes.Trees.SymbolicExpressionTree(rootNode);
-      if (rootNode.HasLocalParameters) {
-        rootNode.ResetLocalParameters(random);
-      }
+        public Genotypes.Trees.SymbolicExpressionTree MakeStump(IRandomNumberGenerator random)
+        {
+            var rootNode = grammar.ProgramRootSymbol.CreateTreeNode();
+            var tree = new Genotypes.Trees.SymbolicExpressionTree(rootNode);
+            if (rootNode.HasLocalParameters)
+            {
+                rootNode.ResetLocalParameters(random);
+            }
 
-      var startNode = grammar.StartSymbol.CreateTreeNode();
-      if (startNode.HasLocalParameters) {
-        startNode.ResetLocalParameters(random);
-      }
+            var startNode = grammar.StartSymbol.CreateTreeNode();
+            if (startNode.HasLocalParameters)
+            {
+                startNode.ResetLocalParameters(random);
+            }
 
-      rootNode.AddSubtree(startNode);
-      return tree;
-    }
-
-    public void AddFullyConnectedSymbols(Symbol root, params ICollection<Symbol> symbols)
-    {
-      foreach (var symbol in symbols) {
-        grammar.AddSymbol(symbol);
-        grammar.AddAllowedChildSymbol(root, symbol, 0);
-        if (symbol.MaximumArity == 0) {
-          continue;
+            rootNode.AddSubtree(startNode);
+            return tree;
         }
 
-        foreach (var symbol1 in symbols) {
-          grammar.AddAllowedChildSymbol(symbol, symbol1);
+        public void AddFullyConnectedSymbols(Symbol root, params ICollection<Symbol> symbols)
+        {
+            foreach (var symbol in symbols)
+            {
+                grammar.AddSymbol(symbol);
+                grammar.AddAllowedChildSymbol(root, symbol, 0);
+                if (symbol.MaximumArity == 0)
+                {
+                    continue;
+                }
+
+                foreach (var symbol1 in symbols)
+                {
+                    grammar.AddAllowedChildSymbol(symbol, symbol1);
+                }
+            }
         }
-      }
     }
-  }
 }

@@ -17,6 +17,7 @@ HeuristicLib is currently in an early alpha stage. Architecture and public APIs 
 - [`docs/design-goals.md`](docs/design-goals.md) records the durable design principles and clarifies which current patterns are still provisional.
 
 Noticeable differences to HeuristicLab:
+
 - No GUI
   - HeuristicLib focuses on being a library first.
 - No operator graph
@@ -31,16 +32,15 @@ This project supports multiple development environments:
 - **Visual Studio**: Full IDE support for .NET development.
 - **.NET Dev Container**: A containerized environment with .NET SDK, Node.js, npm, ESLint, Git, and common CLI tools pre-installed.
 
-
 ### Setting DevContainer
 
 Use the "Dev Containers: Open Folder in Container" command and wait for the container to build and initialize.
 
 **Prerequisites:**
-  - Docker container environment set up
-  - Visual Studio Code or compatible IDE
-  - C# (.NET) extension installed
 
+- Docker container environment set up
+- Visual Studio Code or compatible IDE
+- C# (.NET) extension installed
 
 **Quick Start:**
 

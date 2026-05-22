@@ -10,22 +10,24 @@ public class ClassificationProblem<TProblemData, TSolution, TSearchSpace>(TProbl
   where TSearchSpace : class, ISearchSpace<TSolution>
   where TSolution : IRegressionModel
 {
-  public List<IClassificationEvaluator> Evaluators { get; set; } = objective.ToList();
+    public List<IClassificationEvaluator> Evaluators { get; set; } = objective.ToList();
 
-  private double[]? trainingTargetCache;
+    private double[]? trainingTargetCache;
 
-  public override ObjectiveVector Evaluate(TSolution solution)
-  {
-    trainingTargetCache ??= ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ToArray();
-    var predictions = solution.Predict(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
-    if (Evaluators.Count == 1) {
-      return new ObjectiveVector(Evaluators[0].Evaluate(trainingTargetCache, predictions));
+    public override ObjectiveVector Evaluate(TSolution solution)
+    {
+        trainingTargetCache ??= ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ToArray();
+        var predictions = solution.Predict(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
+        if (Evaluators.Count == 1)
+        {
+            return new ObjectiveVector(Evaluators[0].Evaluate(trainingTargetCache, predictions));
+        }
+
+        if (predictions is not ICollection<double> materialPredictions)
+        {
+            materialPredictions = predictions.ToArray();
+        }
+
+        return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(trainingTargetCache, materialPredictions)).ToArray());
     }
-
-    if (predictions is not ICollection<double> materialPredictions) {
-      materialPredictions = predictions.ToArray();
-    }
-
-    return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(trainingTargetCache, materialPredictions)).ToArray());
-  }
 }

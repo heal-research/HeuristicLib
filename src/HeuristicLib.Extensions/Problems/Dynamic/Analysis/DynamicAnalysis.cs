@@ -14,13 +14,13 @@ public abstract class DynamicAnalysis<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : IDynamicProblem<TGenotype, TSearchSpace>
 {
-  protected readonly TProblem Problem;
+    protected readonly TProblem Problem;
 
-  protected DynamicAnalysis(TProblem problem)
-  {
-    problem.OnEvaluation += Problem_OnEvaluation;
-    Problem = problem;
-  }
+    protected DynamicAnalysis(TProblem problem)
+    {
+        problem.OnEvaluation += Problem_OnEvaluation;
+        Problem = problem;
+    }
 
-  protected abstract void Problem_OnEvaluation(object? sender, IReadOnlyList<(TGenotype, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog);
+    protected abstract void Problem_OnEvaluation(object? sender, IReadOnlyList<(TGenotype, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog);
 }

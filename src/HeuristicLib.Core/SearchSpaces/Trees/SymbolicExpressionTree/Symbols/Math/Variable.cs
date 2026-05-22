@@ -4,10 +4,11 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public sealed class Variable : VariableBase
 {
-  public override SymbolicExpressionTreeNode CreateTreeNode() => new VariableTreeNode(this);
+    public override SymbolicExpressionTreeNode CreateTreeNode() => new VariableTreeNode(this);
 
-  public VariableTreeNode CreateTreeNode(string variable, double weight) => new(this) {
-    Weight = weight,
-    VariableName = variable
-  };
+    public VariableTreeNode CreateTreeNode(string variable, double weight) => new(this)
+    {
+        Weight = weight,
+        VariableName = variable
+    };
 }

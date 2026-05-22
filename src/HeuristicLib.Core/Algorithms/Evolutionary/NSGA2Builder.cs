@@ -21,22 +21,23 @@ public record NSGA2Builder<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  public int PopulationSize { get; set; } = 100;
-  public ISelector<TG, TS, TP> Selector { get; set; } = new ParetoCrowdingTournamentSelector<TG>(false, 2);
+    public int PopulationSize { get; set; } = 100;
+    public ISelector<TG, TS, TP> Selector { get; set; } = new ParetoCrowdingTournamentSelector<TG>(false, 2);
 
-  public required ICreator<TG, TS, TP> Creator { get; set; }
-  public required ICrossover<TG, TS, TP> Crossover { get; set; }
-  public required IMutator<TG, TS, TP> Mutator { get; set; }
-  public double MutationRate { get; set; } = 0.05;
+    public required ICreator<TG, TS, TP> Creator { get; set; }
+    public required ICrossover<TG, TS, TP> Crossover { get; set; }
+    public required IMutator<TG, TS, TP> Mutator { get; set; }
+    public double MutationRate { get; set; } = 0.05;
 
-  public override NSGA2<TG, TS, TP> Build() => new() {
-    PopulationSize = PopulationSize,
-    Creator = Creator,
-    Crossover = Crossover,
-    Selector = Selector,
-    Evaluator = Evaluator,
-    Replacer = new ParetoCrowdingReplacer<TG>(true),
-    Interceptor = Interceptor,
-    Mutator = Mutator.WithRate(MutationRate)
-  };
+    public override NSGA2<TG, TS, TP> Build() => new()
+    {
+        PopulationSize = PopulationSize,
+        Creator = Creator,
+        Crossover = Crossover,
+        Selector = Selector,
+        Evaluator = Evaluator,
+        Replacer = new ParetoCrowdingReplacer<TG>(true),
+        Interceptor = Interceptor,
+        Mutator = Mutator.WithRate(MutationRate)
+    };
 }

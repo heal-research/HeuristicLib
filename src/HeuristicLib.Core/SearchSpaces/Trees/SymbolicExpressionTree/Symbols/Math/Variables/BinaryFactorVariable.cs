@@ -4,11 +4,11 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public sealed class BinaryFactorVariable : VariableBase
 {
-  private readonly Dictionary<string, List<string>> variableValues = new();
+    private readonly Dictionary<string, List<string>> variableValues = new();
 
-  public IReadOnlyDictionary<string, List<string>> VariableValues => variableValues;
+    public IReadOnlyDictionary<string, List<string>> VariableValues => variableValues;
 
-  public override SymbolicExpressionTreeNode CreateTreeNode() => new BinaryFactorVariableTreeNode(this);
+    public override SymbolicExpressionTreeNode CreateTreeNode() => new BinaryFactorVariableTreeNode(this);
 
-  public IEnumerable<string> GetVariableValues(string variableName) => variableValues[variableName];
+    public IEnumerable<string> GetVariableValues(string variableName) => variableValues[variableName];
 }

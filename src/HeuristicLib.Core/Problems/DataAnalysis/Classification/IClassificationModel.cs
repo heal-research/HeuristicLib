@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
 /// </summary>
 public interface IClassificationModel
 {
-  IEnumerable<double> Predict(Dataset data, IEnumerable<int> rows);
+    IEnumerable<double> Predict(Dataset data, IEnumerable<int> rows);
 
-  double Predict(Dataset data, int rows) => Predict(data, [rows]).First();
+    double Predict(Dataset data, int rows) => Predict(data, [rows]).First();
 }

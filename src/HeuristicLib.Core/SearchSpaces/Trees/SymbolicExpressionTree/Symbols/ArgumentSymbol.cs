@@ -5,5 +5,5 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 /// </summary>
 public sealed class ArgumentSymbol(int argumentIndex) : Symbol(0, 0, 0)
 {
-  public int ArgumentIndex => argumentIndex;
+    public int ArgumentIndex => argumentIndex;
 }

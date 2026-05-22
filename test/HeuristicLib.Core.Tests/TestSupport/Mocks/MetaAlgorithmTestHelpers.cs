@@ -6,15 +6,15 @@ namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 public static class MetaAlgorithmTestHelpers
 {
-  public static IProblem<int, DummySearchSpace<int>> CreateIntegerProblem()
-  {
-    return FuncProblem.Create<int, DummySearchSpace<int>>(
-      evaluateFunc: x => x,
-      encoding: DummySearchSpace<int>.Instance,
-      objective: SingleObjective.Minimize);
-  }
+    public static IProblem<int, DummySearchSpace<int>> CreateIntegerProblem()
+    {
+        return FuncProblem.Create<int, DummySearchSpace<int>>(
+          evaluateFunc: x => x,
+          encoding: DummySearchSpace<int>.Instance,
+          objective: SingleObjective.Minimize);
+    }
 
-  public static int StateGenotype(PopulationState<int> state) => state.Population.Solutions.Single().Genotype;
+    public static int StateGenotype(PopulationState<int> state) => state.Population.Solutions.Single().Genotype;
 
-  public static double StateObjective(PopulationState<int> state) => state.Population.Solutions.Single().ObjectiveVector[0];
+    public static double StateObjective(PopulationState<int> state) => state.Population.Solutions.Single().ObjectiveVector[0];
 }

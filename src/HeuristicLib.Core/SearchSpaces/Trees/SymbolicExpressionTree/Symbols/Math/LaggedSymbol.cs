@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public abstract class LaggedSymbol(int minArity, int defaultArity, int maximumArity) : Symbol(minArity, defaultArity, maximumArity)
 {
-  public virtual int MinLag { get; set; }
-  public virtual int MaxLag { get; set; }
-  public override SymbolicExpressionTreeNode CreateTreeNode() => new LaggedTreeNode(this);
+    public virtual int MinLag { get; set; }
+    public virtual int MaxLag { get; set; }
+    public override SymbolicExpressionTreeNode CreateTreeNode() => new LaggedTreeNode(this);
 }

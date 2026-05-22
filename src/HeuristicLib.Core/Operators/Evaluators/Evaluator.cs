@@ -12,22 +12,22 @@ public abstract record Evaluator<TGenotype, TSearchSpace, TProblem, TExecutionSt
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TExecutionState : class
 {
-  protected abstract TExecutionState CreateInitialState();
+    protected abstract TExecutionState CreateInitialState();
 
-  protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
-    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
+      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  public IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new EvaluatorInstance(this, CreateInitialState());
+    public IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+      new EvaluatorInstance(this, CreateInitialState());
 
-  private sealed class EvaluatorInstance(Evaluator<TGenotype, TSearchSpace, TProblem, TExecutionState> evaluator, TExecutionState executionState)
-    : IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>
-  {
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    private sealed class EvaluatorInstance(Evaluator<TGenotype, TSearchSpace, TProblem, TExecutionState> evaluator, TExecutionState executionState)
+      : IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>
     {
-      return evaluator.Evaluate(genotypes, executionState, random, searchSpace, problem);
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            return evaluator.Evaluate(genotypes, executionState, random, searchSpace, problem);
+        }
     }
-  }
 }
 
 public abstract record Evaluator<TGenotype, TSearchSpace, TExecutionState>
@@ -35,42 +35,42 @@ public abstract record Evaluator<TGenotype, TSearchSpace, TExecutionState>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TExecutionState : class
 {
-  protected abstract TExecutionState CreateInitialState();
+    protected abstract TExecutionState CreateInitialState();
 
-  protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
-    IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
+      IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-  public IEvaluatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new EvaluatorInstance(this, CreateInitialState());
+    public IEvaluatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+      new EvaluatorInstance(this, CreateInitialState());
 
-  private sealed class EvaluatorInstance(Evaluator<TGenotype, TSearchSpace, TExecutionState> evaluator, TExecutionState executionState)
-    : IEvaluatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  {
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem)
+    private sealed class EvaluatorInstance(Evaluator<TGenotype, TSearchSpace, TExecutionState> evaluator, TExecutionState executionState)
+      : IEvaluatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
     {
-      return evaluator.Evaluate(genotypes, executionState, random, searchSpace);
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem)
+        {
+            return evaluator.Evaluate(genotypes, executionState, random, searchSpace);
+        }
     }
-  }
 }
 
 public abstract record Evaluator<TGenotype, TExecutionState>
   : IEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
   where TExecutionState : class
 {
-  protected abstract TExecutionState CreateInitialState();
+    protected abstract TExecutionState CreateInitialState();
 
-  protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
-    IRandomNumberGenerator random);
+    protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
+      IRandomNumberGenerator random);
 
-  public IEvaluatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new EvaluatorInstance(this, CreateInitialState());
+    public IEvaluatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+      new EvaluatorInstance(this, CreateInitialState());
 
-  private sealed class EvaluatorInstance(Evaluator<TGenotype, TExecutionState> evaluator, TExecutionState executionState)
-    : IEvaluatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  {
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+    private sealed class EvaluatorInstance(Evaluator<TGenotype, TExecutionState> evaluator, TExecutionState executionState)
+      : IEvaluatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
     {
-      return evaluator.Evaluate(genotypes, executionState, random);
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+        {
+            return evaluator.Evaluate(genotypes, executionState, random);
+        }
     }
-  }
 }

@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
 
 public class TreeComplexityEvaluator : IRegressionEvaluator<SymbolicExpressionTree>
 {
-  public ObjectiveDirection Direction => ObjectiveDirection.Minimize;
+    public ObjectiveDirection Direction => ObjectiveDirection.Minimize;
 
-  public double Evaluate(SymbolicExpressionTree solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => TreeComplexityCalculator.CalculateComplexity(solution);
+    public double Evaluate(SymbolicExpressionTree solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => TreeComplexityCalculator.CalculateComplexity(solution);
 }

@@ -6,18 +6,18 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 public record RandomCrossover<TGenotype>
   : SingleSolutionCrossover<TGenotype>
 {
-  public double Bias { get; }
+    public double Bias { get; }
 
-  public RandomCrossover(double bias = 0.5)
-  {
-    ArgumentOutOfRangeException.ThrowIfLessThan(bias, 0);
-    ArgumentOutOfRangeException.ThrowIfGreaterThan(bias, 1);
+    public RandomCrossover(double bias = 0.5)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(bias, 0);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(bias, 1);
 
-    Bias = bias;
-  }
+        Bias = bias;
+    }
 
-  public override TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random)
-  {
-    return random.NextDouble() < Bias ? parents.Parent1 : parents.Parent2;
-  }
+    public override TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random)
+    {
+        return random.NextDouble() < Bias ? parents.Parent1 : parents.Parent2;
+    }
 }

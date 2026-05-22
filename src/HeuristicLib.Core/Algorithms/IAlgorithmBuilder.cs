@@ -21,5 +21,5 @@ public interface IAlgorithmBuilder<TG, TS, TP, TR, out TA>
   where TP : class, IProblem<TG, TS>
   where TR : class, ISearchState
 {
-  TA Build();
+    TA Build();
 }

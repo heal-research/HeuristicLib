@@ -48,4 +48,3 @@ In this repository, `Solution<TGenotype>` is a simple record implementing `ISolu
 
 - [Problem](problem.md)
 - [Operators](operators.md)
-

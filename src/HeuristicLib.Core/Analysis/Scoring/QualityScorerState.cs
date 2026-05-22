@@ -4,5 +4,5 @@ namespace HEAL.HeuristicLib.Analysis.Scoring;
 
 public class QualityScorerState : IAlgorithmPerformanceState
 {
-  public required ObjectiveVector CurrentScore { get; set; }
+    public required ObjectiveVector CurrentScore { get; set; }
 }

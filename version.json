@@ -1,6 +1,4 @@
 {
   "version": "0.1-alpha",
-  "publicReleaseRefSpec": [
-    "^refs/heads/main$"
-  ]
+  "publicReleaseRefSpec": ["^refs/heads/main$"]
 }

@@ -6,73 +6,79 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode
 {
 
-  private FactorVariableTreeNode(FactorVariableTreeNode original) : base(original)
-  {
-    VariableName = original.VariableName;
-    if (original.Weights == null) {
-      return;
-    }
-    Weights = new double[original.Weights.Length];
-    Array.Copy(original.Weights, Weights, Weights.Length);
-  }
-
-  public FactorVariableTreeNode(FactorVariable variableSymbol)
-    : base(variableSymbol)
-  {
-  }
-  public new FactorVariable Symbol => (FactorVariable)base.Symbol;
-  public double[]? Weights { get; set; }
-  public string VariableName { get; set; } = "";
-
-  public override bool HasLocalParameters => true;
-
-  public override SymbolicExpressionTreeNode Clone() => new FactorVariableTreeNode(this);
-
-  public override void ResetLocalParameters(IRandomNumberGenerator random)
-  {
-    base.ResetLocalParameters(random);
-    VariableName = Symbol.VariableNames.SampleRandom(random);
-    Weights =
-      Symbol.GetVariableValues(VariableName)
-        .Select(_ => random.NextNormal()).ToArray();
-  }
-
-  public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
-  {
-    // mutate only one randomly selected weight
-    var idx = random.NextInt(Weights!.Length);
-    // 50% additive & 50% multiplicative
-    if (random.NextDouble() < 0.5) {
-      var x = random.NextNormal(Symbol.WeightManipulatorMu,
-        Symbol.WeightManipulatorSigma);
-      Weights[idx] += x * shakingFactor;
-    } else {
-      var x = random.NextNormal(1.0, Symbol.MultiplicativeWeightManipulatorSigma);
-      Weights[idx] *= x;
+    private FactorVariableTreeNode(FactorVariableTreeNode original) : base(original)
+    {
+        VariableName = original.VariableName;
+        if (original.Weights == null)
+        {
+            return;
+        }
+        Weights = new double[original.Weights.Length];
+        Array.Copy(original.Weights, Weights, Weights.Length);
     }
 
-    if (random.NextDouble() >= Symbol.VariableChangeProbability) {
-      return;
+    public FactorVariableTreeNode(FactorVariable variableSymbol)
+      : base(variableSymbol)
+    {
+    }
+    public new FactorVariable Symbol => (FactorVariable)base.Symbol;
+    public double[]? Weights { get; set; }
+    public string VariableName { get; set; } = "";
+
+    public override bool HasLocalParameters => true;
+
+    public override SymbolicExpressionTreeNode Clone() => new FactorVariableTreeNode(this);
+
+    public override void ResetLocalParameters(IRandomNumberGenerator random)
+    {
+        base.ResetLocalParameters(random);
+        VariableName = Symbol.VariableNames.SampleRandom(random);
+        Weights =
+          Symbol.GetVariableValues(VariableName)
+            .Select(_ => random.NextNormal()).ToArray();
     }
 
-    VariableName = Symbol.VariableNames.SampleRandom(random);
-    if (Weights.Length != Symbol.GetVariableValues(VariableName).Count()) {
-      // if the length of the weight array does not match => re-initialize weights
-      Weights =
-        Symbol.GetVariableValues(VariableName)
-          .Select(_ => random.NextNormal())
-          .ToArray();
+    public override void ShakeLocalParameters(IRandomNumberGenerator random, double shakingFactor)
+    {
+        // mutate only one randomly selected weight
+        var idx = random.NextInt(Weights!.Length);
+        // 50% additive & 50% multiplicative
+        if (random.NextDouble() < 0.5)
+        {
+            var x = random.NextNormal(Symbol.WeightManipulatorMu,
+              Symbol.WeightManipulatorSigma);
+            Weights[idx] += x * shakingFactor;
+        }
+        else
+        {
+            var x = random.NextNormal(1.0, Symbol.MultiplicativeWeightManipulatorSigma);
+            Weights[idx] *= x;
+        }
+
+        if (random.NextDouble() >= Symbol.VariableChangeProbability)
+        {
+            return;
+        }
+
+        VariableName = Symbol.VariableNames.SampleRandom(random);
+        if (Weights.Length != Symbol.GetVariableValues(VariableName).Count())
+        {
+            // if the length of the weight array does not match => re-initialize weights
+            Weights =
+              Symbol.GetVariableValues(VariableName)
+                .Select(_ => random.NextNormal())
+                .ToArray();
+        }
     }
-  }
 
-  public double GetValue(string cat) => Weights![Symbol.GetIndexForValue(VariableName, cat)];
+    public double GetValue(string cat) => Weights![Symbol.GetIndexForValue(VariableName, cat)];
 
-  public override string ToString()
-  {
-    var weightStr = string.Join("; ",
-      Symbol.GetVariableValues(VariableName).Select(value => value + ": " + GetValue(value).ToString("E4")));
+    public override string ToString()
+    {
+        var weightStr = string.Join("; ",
+          Symbol.GetVariableValues(VariableName).Select(value => value + ": " + GetValue(value).ToString("E4")));
 
-    return VariableName + " (factor) "
-      + "[" + weightStr + "]";
-  }
+        return VariableName + " (factor) "
+          + "[" + weightStr + "]";
+    }
 }

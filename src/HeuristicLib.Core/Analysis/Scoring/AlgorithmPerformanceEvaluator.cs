@@ -12,5 +12,5 @@ public abstract record AlgorithmPerformanceEvaluator<T, TS, TP, TSearchState, TE
   where TSearchState : class, ISearchState
   where TExecutionState : class, IAlgorithmPerformanceState
 {
-  public abstract Objective Objective { get; }
+    public abstract Objective Objective { get; }
 }

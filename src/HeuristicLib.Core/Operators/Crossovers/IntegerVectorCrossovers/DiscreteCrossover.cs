@@ -13,25 +13,26 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 /// Genetic algorithms reference Volume I Crossover for single-objective numerical optimization problems, p.17.
 public record DiscreteCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-  public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
-    => Cross(random, [parents.Parent1, parents.Parent2]);
+    public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
+      => Cross(random, [parents.Parent1, parents.Parent2]);
 
-  public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents)
-  {
-    var n = parents.Count;
-    if (n < 2)
-      throw new ArgumentException("DiscreteCrossover: There are less than two parents to cross.");
-    int length = parents[0].Count;
+    public static IntegerVector Cross(IRandomNumberGenerator random, IReadOnlyList<IntegerVector> parents)
+    {
+        var n = parents.Count;
+        if (n < 2)
+            throw new ArgumentException("DiscreteCrossover: There are less than two parents to cross.");
+        int length = parents[0].Count;
 
-    for (int i = 0; i < n; i++) {
-      if (parents[i].Count != length)
-        throw new ArgumentException("DiscreteCrossover: The parents' vectors are of different length.", nameof(parents));
+        for (int i = 0; i < n; i++)
+        {
+            if (parents[i].Count != length)
+                throw new ArgumentException("DiscreteCrossover: The parents' vectors are of different length.", nameof(parents));
+        }
+
+        var result = new int[length];
+        for (int i = 0; i < length; i++)
+            result[i] = parents[random.NextInt(n)][i];
+
+        return IntegerVector.FromOwnedArray(result);
     }
-
-    var result = new int[length];
-    for (int i = 0; i < length; i++)
-      result[i] = parents[random.NextInt(n)][i];
-
-    return IntegerVector.FromOwnedArray(result);
-  }
 }

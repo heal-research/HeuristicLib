@@ -4,5 +4,5 @@ namespace HEAL.HeuristicLib.Tests.TestSupport.SpecialTestEncoding;
 
 public record SpecialSearchSpace : SearchSpace<SpecialGenotype>
 {
-  public override bool Contains(SpecialGenotype genotype) => true;
+    public override bool Contains(SpecialGenotype genotype) => true;
 }

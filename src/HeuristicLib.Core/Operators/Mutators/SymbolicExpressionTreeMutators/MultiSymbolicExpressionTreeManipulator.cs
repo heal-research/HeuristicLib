@@ -8,10 +8,10 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
 [Equatable]
 public sealed partial record MultiSymbolicExpressionTreeManipulator : SymbolicExpressionTreeManipulator
 {
-  [OrderedEquality] public IReadOnlyList<SymbolicExpressionTreeManipulator> SubOperators { get; } = [];
+    [OrderedEquality] public IReadOnlyList<SymbolicExpressionTreeManipulator> SubOperators { get; } = [];
 
-  public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
-  {
-    return SubOperators.SampleRandom(random).Mutate(parent, random, searchSpace);
-  }
+    public override SymbolicExpressionTree Mutate(SymbolicExpressionTree parent, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace)
+    {
+        return SubOperators.SampleRandom(random).Mutate(parent, random, searchSpace);
+    }
 }

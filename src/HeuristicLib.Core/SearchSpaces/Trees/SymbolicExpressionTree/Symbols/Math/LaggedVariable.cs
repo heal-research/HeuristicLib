@@ -4,9 +4,9 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public class LaggedVariable : VariableBase
 {
-  public int MinLag { get; set; }
+    public int MinLag { get; set; }
 
-  public int MaxLag { get; set; }
+    public int MaxLag { get; set; }
 
-  public override SymbolicExpressionTreeNode CreateTreeNode() => new LaggedVariableTreeNode(this);
+    public override SymbolicExpressionTreeNode CreateTreeNode() => new LaggedVariableTreeNode(this);
 }

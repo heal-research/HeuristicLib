@@ -13,56 +13,61 @@ public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, Qual
   where TR : class, ISearchState
 
 {
-  private IEvaluator<T, TS, TP>[] Evaluators { get; }
+    private IEvaluator<T, TS, TP>[] Evaluators { get; }
 
-  public QualityCurveAnalysis(IAlgorithm<T, TS, TP, TR> Algorithm, params IEvaluator<T, TS, TP>[] Evaluators) : base(Algorithm)
-  {
-    this.Evaluators = Evaluators;
-  }
-
-  public void AfterEvaluation(QualityCurve<T> state, IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<T, ISearchSpace<T>> problem)
-  {
-    for (var i = 0; i < genotypes.Count; i++) {
-      var genotype = genotypes[i];
-      var q = objectiveVectors[i];
-      state.EvalCount++;
-
-      if (state.Best is not null) {
-        var comp = problem.Objective.TotalOrderComparer;
-        if (NoTotalOrderComparer.Instance.Equals(comp)) {
-          comp = new LexicographicComparer(problem.Objective.Directions);
-        }
-
-        if (comp.Compare(q, state.Best.ObjectiveVector) >= 0) {
-          continue;
-        }
-      }
-
-      state.Add(new Solution<T>(genotype, q));
+    public QualityCurveAnalysis(IAlgorithm<T, TS, TP, TR> Algorithm, params IEvaluator<T, TS, TP>[] Evaluators) : base(Algorithm)
+    {
+        this.Evaluators = Evaluators;
     }
-  }
 
-  public override QualityCurve<T> CreateInitialResult() => new();
+    public void AfterEvaluation(QualityCurve<T> state, IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<T, ISearchSpace<T>> problem)
+    {
+        for (var i = 0; i < genotypes.Count; i++)
+        {
+            var genotype = genotypes[i];
+            var q = objectiveVectors[i];
+            state.EvalCount++;
 
-  public override void RegisterObservations(ObservationPlan observations, QualityCurve<T> curve)
-  {
-    foreach (var evaluator in Evaluators) {
-      observations.Observe(evaluator, (genotypes, objectiveVectors, _, problem) => AfterEvaluation(curve, genotypes, objectiveVectors, problem));
+            if (state.Best is not null)
+            {
+                var comp = problem.Objective.TotalOrderComparer;
+                if (NoTotalOrderComparer.Instance.Equals(comp))
+                {
+                    comp = new LexicographicComparer(problem.Objective.Directions);
+                }
+
+                if (comp.Compare(q, state.Best.ObjectiveVector) >= 0)
+                {
+                    continue;
+                }
+            }
+
+            state.Add(new Solution<T>(genotype, q));
+        }
     }
-  }
+
+    public override QualityCurve<T> CreateInitialResult() => new();
+
+    public override void RegisterObservations(ObservationPlan observations, QualityCurve<T> curve)
+    {
+        foreach (var evaluator in Evaluators)
+        {
+            observations.Observe(evaluator, (genotypes, objectiveVectors, _, problem) => AfterEvaluation(curve, genotypes, objectiveVectors, problem));
+        }
+    }
 }
 
 public sealed class QualityCurve<TGenotype>
 {
-  private readonly List<(ISolution<TGenotype> best, int evalCount)> currentState = [];
-  public IReadOnlyList<(ISolution<TGenotype> best, int evalCount)> CurrentState => currentState;
+    private readonly List<(ISolution<TGenotype> best, int evalCount)> currentState = [];
+    public IReadOnlyList<(ISolution<TGenotype> best, int evalCount)> CurrentState => currentState;
 
-  public void Add(ISolution<TGenotype> solution)
-  {
-    Best = solution;
-    currentState.Add((solution, EvalCount));
-  }
+    public void Add(ISolution<TGenotype> solution)
+    {
+        Best = solution;
+        currentState.Add((solution, EvalCount));
+    }
 
-  public int EvalCount { get; set; }
-  public ISolution<TGenotype>? Best { get; private set; }
+    public int EvalCount { get; set; }
+    public ISolution<TGenotype>? Best { get; private set; }
 }

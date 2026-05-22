@@ -9,12 +9,12 @@ public abstract class DataAnalysisProblem<TProblemData, TISolution, TSearchSpace
   where TProblemData : DataAnalysisProblemData
   where TSearchSpace : class, ISearchSpace<TISolution>
 {
-  public virtual TProblemData ProblemData
-  {
-    get;
-  } = problemData;
+    public virtual TProblemData ProblemData
+    {
+        get;
+    } = problemData;
 
-  // Maybe earlier in the hierarchy for general deterministic problems?
-  public sealed override ObjectiveVector Evaluate(TISolution solution, IRandomNumberGenerator random) => Evaluate(solution);
-  public abstract ObjectiveVector Evaluate(TISolution solution);
+    // Maybe earlier in the hierarchy for general deterministic problems?
+    public sealed override ObjectiveVector Evaluate(TISolution solution, IRandomNumberGenerator random) => Evaluate(solution);
+    public abstract ObjectiveVector Evaluate(TISolution solution);
 }

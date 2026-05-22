@@ -19,13 +19,15 @@ This example is part of the [HeuristicLib](../../README.md) project. It uses the
 ## Prerequisites
 
 **Easy way** use the available **PythonInteroperability devcontainer**
-  - uses  *.NET 10.0 SDK*, *Python 3.12* and installs `requirements.txt`
-  - proceed with `dotnet publish` 
-  - and `python examples/PythonInteractiveDemonstrator/app.py`
+
+- uses _.NET 10.0 SDK_, _Python 3.12_ and installs `requirements.txt`
+- proceed with `dotnet publish`
+- and `python examples/PythonInteractiveDemonstrator/app.py`
 
 **Manual way**:
-- *.NET 10.0 SDK* — required to build the HeuristicLib .NET libraries.
-- *Python 3.10+* — with the packages listed in `requirements.txt`.
+
+- _.NET 10.0 SDK_ — required to build the HeuristicLib .NET libraries.
+- _Python 3.10+_ — with the packages listed in `requirements.txt`.
 
 ### Build HeuristicLib
 
@@ -47,14 +49,13 @@ python app.py
 
 Then open `http://localhost:8765` in your browser.
 
-
-
 ## Credits
 
-A great *Thank You* to my dear friends and colleagues:
+A great _Thank You_ to my dear friends and colleagues:
+
 - **Bernhard Werth** ([@BernhardWerth](https://github.com/BernhardWerth)) and **Philipp Fleck** ([@NimZwei](https://github.com/NimZwei)) — for bringing HeuristicLib to life
 - **Lukas Kammerer** ([@LukasCamera](https://github.com/LukasCamera)) — for the original C# implementation and concept this app is based on
 
-
 And credits to:
+
 - **Claude Opus** — for code generation

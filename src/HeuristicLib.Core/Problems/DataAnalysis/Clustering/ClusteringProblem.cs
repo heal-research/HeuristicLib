@@ -9,19 +9,21 @@ public class ClusteringProblem<TProblemData, TSolution, TSearchSpace>(TProblemDa
   where TSearchSpace : class, ISearchSpace<TSolution>
   where TSolution : IClusteringModel
 {
-  public List<IClusteringEvaluator> Evaluators { get; set; } = objective.ToList();
+    public List<IClusteringEvaluator> Evaluators { get; set; } = objective.ToList();
 
-  public override ObjectiveVector Evaluate(TSolution solution)
-  {
-    var predictions = solution.GetClusterValues(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
-    if (Evaluators.Count == 1) {
-      return new ObjectiveVector(Evaluators[0].Evaluate(ProblemData, DataAnalysisProblemData.PartitionType.Training, predictions));
+    public override ObjectiveVector Evaluate(TSolution solution)
+    {
+        var predictions = solution.GetClusterValues(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
+        if (Evaluators.Count == 1)
+        {
+            return new ObjectiveVector(Evaluators[0].Evaluate(ProblemData, DataAnalysisProblemData.PartitionType.Training, predictions));
+        }
+
+        if (predictions is not ICollection<int> materialPredictions)
+        {
+            materialPredictions = predictions.ToArray();
+        }
+
+        return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(ProblemData, DataAnalysisProblemData.PartitionType.Training, materialPredictions)).ToArray());
     }
-
-    if (predictions is not ICollection<int> materialPredictions) {
-      materialPredictions = predictions.ToArray();
-    }
-
-    return new ObjectiveVector(Evaluators.Select(x => x.Evaluate(ProblemData, DataAnalysisProblemData.PartitionType.Training, materialPredictions)).ToArray());
-  }
 }

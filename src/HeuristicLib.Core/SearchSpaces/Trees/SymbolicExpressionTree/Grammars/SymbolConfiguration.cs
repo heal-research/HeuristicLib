@@ -7,5 +7,5 @@ public record SymbolConfiguration(
   List<Symbol> AllowedChildSymbols,
   Dictionary<int, List<Symbol>> AllowedChildSymbolsPerIndex)
 {
-  public (int minSubTreeCount, int maxSubTreeCount) SymbolSubtreeCount { get; set; } = SymbolSubtreeCount;
+    public (int minSubTreeCount, int maxSubTreeCount) SymbolSubtreeCount { get; set; } = SymbolSubtreeCount;
 }

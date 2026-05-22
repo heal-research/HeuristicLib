@@ -4,5 +4,5 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public interface IGradientTestFunction : ITestFunction
 {
-  RealVector EvaluateGradient(RealVector solution);
+    RealVector EvaluateGradient(RealVector solution);
 }

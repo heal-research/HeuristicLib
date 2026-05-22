@@ -5,34 +5,34 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 public sealed class SubFunctionTreeNode : SymbolicExpressionTreeNode
 {
 
-  #region Cloning
+    #region Cloning
 
-  public override SymbolicExpressionTreeNode Clone() => new SubFunctionTreeNode(this);
+    public override SymbolicExpressionTreeNode Clone() => new SubFunctionTreeNode(this);
 
-  #endregion
+    #endregion
 
-  public override string? ToString() => string.IsNullOrEmpty(Name) ? base.ToString() : $"{Name}({string.Join(",", Arguments)})";
+    public override string? ToString() => string.IsNullOrEmpty(Name) ? base.ToString() : $"{Name}({string.Join(",", Arguments)})";
 
-  #region Properties
+    #region Properties
 
-  public new SubFunctionSymbol Symbol => (SubFunctionSymbol)base.Symbol;
+    public new SubFunctionSymbol Symbol => (SubFunctionSymbol)base.Symbol;
 
-  public IEnumerable<string> Arguments { get; set; } = [];
+    public IEnumerable<string> Arguments { get; set; } = [];
 
-  public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-  #endregion
+    #endregion
 
-  #region Constructors
+    #region Constructors
 
-  public SubFunctionTreeNode(SubFunctionSymbol symbol) : base(symbol) { }
+    public SubFunctionTreeNode(SubFunctionSymbol symbol) : base(symbol) { }
 
-  private SubFunctionTreeNode(SubFunctionTreeNode original) : base(original)
-  {
-    Arguments = original.Arguments;
-    Name = original.Name;
-  }
+    private SubFunctionTreeNode(SubFunctionTreeNode original) : base(original)
+    {
+        Arguments = original.Arguments;
+        Name = original.Name;
+    }
 
-  #endregion
+    #endregion
 
 }

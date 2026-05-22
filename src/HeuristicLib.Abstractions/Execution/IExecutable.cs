@@ -5,7 +5,7 @@ public interface IExecutable;
 public interface IExecutable<out TExecutionInstance> : IExecutable
   where TExecutionInstance : IExecutionInstance
 {
-  TExecutionInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+    TExecutionInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
 public interface IExecutionInstance;

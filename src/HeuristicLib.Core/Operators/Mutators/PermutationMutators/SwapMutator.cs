@@ -5,8 +5,8 @@ namespace HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 
 public record SwapSingleSolutionMutator : SingleSolutionMutator<Permutation>
 {
-  public override Permutation Mutate(Permutation solution, IRandomNumberGenerator random)
-  {
-    return random.Swap(solution);
-  }
+    public override Permutation Mutate(Permutation solution, IRandomNumberGenerator random)
+    {
+        return random.Swap(solution);
+    }
 }

@@ -12,15 +12,15 @@ public partial record AnyTerminator<TGenotype, TSearchSpace, TProblem, TSearchSt
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public AnyTerminator(params ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>> terminators)
-    : base(terminators)
-  {
-  }
+    public AnyTerminator(params ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>> terminators)
+      : base(terminators)
+    {
+    }
 
-  protected override bool ShouldTerminate(TSearchState searchState,
-    IReadOnlyList<InnerShouldTerminate> innerTerminators,
-    TSearchSpace searchSpace, TProblem problem)
-  {
-    return innerTerminators.Any(t => t(searchState, searchSpace, problem));
-  }
+    protected override bool ShouldTerminate(TSearchState searchState,
+      IReadOnlyList<InnerShouldTerminate> innerTerminators,
+      TSearchSpace searchSpace, TProblem problem)
+    {
+        return innerTerminators.Any(t => t(searchState, searchSpace, problem));
+    }
 }

@@ -11,47 +11,51 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  public ICreator<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutions => InnerCreator;
+    public ICreator<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutions => InnerCreator;
 
-  [OrderedEquality] public ImmutableArray<TGenotype> PredefinedSolutions { get; init; }
+    [OrderedEquality] public ImmutableArray<TGenotype> PredefinedSolutions { get; init; }
 
-  public PredefinedSolutionsCreator(ImmutableArray<TGenotype> predefinedSolutions, ICreator<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutions)
-    : base(creatorForRemainingSolutions)
-  {
-    PredefinedSolutions = predefinedSolutions;
-  }
-
-  protected override ExecutionState CreateInitialState() => new();
-
-  protected override IReadOnlyList<TGenotype> Create(int count, ExecutionState executionState, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-  {
-    var offspring = new TGenotype[count];
-
-    var countPredefined = Math.Min(PredefinedSolutions.Length - executionState.CurrentSolutionIndex, count);
-    if (countPredefined > 0) {
-      for (var i = 0; i < countPredefined; i++) {
-        offspring[i] = PredefinedSolutions[executionState.CurrentSolutionIndex + i];
-      }
-
-      executionState.CurrentSolutionIndex += countPredefined;
+    public PredefinedSolutionsCreator(ImmutableArray<TGenotype> predefinedSolutions, ICreator<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutions)
+      : base(creatorForRemainingSolutions)
+    {
+        PredefinedSolutions = predefinedSolutions;
     }
 
-    var countRemaining = count - countPredefined;
-    if (countRemaining <= 0) {
-      return offspring;
+    protected override ExecutionState CreateInitialState() => new();
+
+    protected override IReadOnlyList<TGenotype> Create(int count, ExecutionState executionState, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    {
+        var offspring = new TGenotype[count];
+
+        var countPredefined = Math.Min(PredefinedSolutions.Length - executionState.CurrentSolutionIndex, count);
+        if (countPredefined > 0)
+        {
+            for (var i = 0; i < countPredefined; i++)
+            {
+                offspring[i] = PredefinedSolutions[executionState.CurrentSolutionIndex + i];
+            }
+
+            executionState.CurrentSolutionIndex += countPredefined;
+        }
+
+        var countRemaining = count - countPredefined;
+        if (countRemaining <= 0)
+        {
+            return offspring;
+        }
+
+        var remainingRandom = random.Fork(1);
+        var remaining = innerCreate(countRemaining, remainingRandom, searchSpace, problem);
+        for (var i = 0; i < remaining.Count; i++)
+        {
+            offspring[countPredefined + i] = remaining[i];
+        }
+
+        return offspring;
     }
 
-    var remainingRandom = random.Fork(1);
-    var remaining = innerCreate(countRemaining, remainingRandom, searchSpace, problem);
-    for (var i = 0; i < remaining.Count; i++) {
-      offspring[countPredefined + i] = remaining[i];
+    public sealed class ExecutionState
+    {
+        public int CurrentSolutionIndex { get; set; } = 0;
     }
-
-    return offspring;
-  }
-
-  public sealed class ExecutionState
-  {
-    public int CurrentSolutionIndex { get; set; } = 0;
-  }
 }

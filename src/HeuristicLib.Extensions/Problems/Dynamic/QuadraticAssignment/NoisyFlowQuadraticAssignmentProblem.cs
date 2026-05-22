@@ -9,53 +9,57 @@ namespace HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
 public sealed class NoisyFlowQuadraticAssignmentProblem
   : DynamicProblem<Permutation, PermutationSearchSpace>
 {
-  private readonly QuadraticAssignmentProblemData baseProblemData;
+    private readonly QuadraticAssignmentProblemData baseProblemData;
 
-  private readonly double[,] noisyFlows; // current state
-  private readonly double sigma;
+    private readonly double[,] noisyFlows; // current state
+    private readonly double sigma;
 
-  public NoisyFlowQuadraticAssignmentProblem(
-    QuadraticAssignmentProblemData problemData,
-    IRandomNumberGenerator environmentRandom,
-    double sigma,
-    UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-    int epochLength = int.MaxValue
-  ) : base(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size), environmentRandom, updatePolicy, epochLength)
-  {
-    ArgumentOutOfRangeException.ThrowIfNegative(sigma);
+    public NoisyFlowQuadraticAssignmentProblem(
+      QuadraticAssignmentProblemData problemData,
+      IRandomNumberGenerator environmentRandom,
+      double sigma,
+      UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+      int epochLength = int.MaxValue
+    ) : base(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size), environmentRandom, updatePolicy, epochLength)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(sigma);
 
-    baseProblemData = problemData;
-    this.sigma = sigma;
-    noisyFlows = (double[,])baseProblemData.Flows.Clone();
-    Update(); // initialize state (or call RebuildNoisyFlows() directly)
-  }
-
-  public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
-  {
-    var n = baseProblemData.Size;
-    var cost = 0.0;
-
-    for (var i = 0; i < n; i++) {
-      var li = solution[i];
-      for (var j = 0; j < n; j++) {
-        var lj = solution[j];
-        cost += noisyFlows[i, j] * baseProblemData.Distances[li, lj];
-      }
+        baseProblemData = problemData;
+        this.sigma = sigma;
+        noisyFlows = (double[,])baseProblemData.Flows.Clone();
+        Update(); // initialize state (or call RebuildNoisyFlows() directly)
     }
 
-    return cost;
-  }
+    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    {
+        var n = baseProblemData.Size;
+        var cost = 0.0;
 
-  protected override void Update()
-  {
-    // fresh noise each update (non-cumulative)
-    var n = baseProblemData.Size;
-    var f0 = baseProblemData.Flows;
+        for (var i = 0; i < n; i++)
+        {
+            var li = solution[i];
+            for (var j = 0; j < n; j++)
+            {
+                var lj = solution[j];
+                cost += noisyFlows[i, j] * baseProblemData.Distances[li, lj];
+            }
+        }
 
-    for (var i = 0; i < n; i++) {
-      for (var j = 0; j < n; j++) {
-        noisyFlows[i, j] = f0[i, j] + EnvironmentRandom.NextNormal(0, sigma);
-      }
+        return cost;
     }
-  }
+
+    protected override void Update()
+    {
+        // fresh noise each update (non-cumulative)
+        var n = baseProblemData.Size;
+        var f0 = baseProblemData.Flows;
+
+        for (var i = 0; i < n; i++)
+        {
+            for (var j = 0; j < n; j++)
+            {
+                noisyFlows[i, j] = f0[i, j] + EnvironmentRandom.NextNormal(0, sigma);
+            }
+        }
+    }
 }

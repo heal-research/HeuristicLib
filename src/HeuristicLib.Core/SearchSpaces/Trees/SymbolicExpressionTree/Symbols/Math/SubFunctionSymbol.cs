@@ -4,5 +4,5 @@ namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Ma
 
 public sealed class SubFunctionSymbol() : Symbol(0, 1, 1)
 {
-  public override SymbolicExpressionTreeNode CreateTreeNode() => new SubFunctionTreeNode(this);
+    public override SymbolicExpressionTreeNode CreateTreeNode() => new SubFunctionTreeNode(this);
 }

@@ -11,5 +11,5 @@ public interface IIterativeAlgorithm<TGenotype, in TSearchSpace, in TProblem, TS
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TSearchState : class, ISearchState
 {
-  IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
+    IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
 }

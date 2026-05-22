@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public interface IRegressionEvaluator<in TGenotype>
 {
-  ObjectiveDirection Direction { get; }
+    ObjectiveDirection Direction { get; }
 
-  double Evaluate(TGenotype solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues);
+    double Evaluate(TGenotype solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues);
 }

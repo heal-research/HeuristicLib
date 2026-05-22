@@ -11,69 +11,77 @@ namespace HEAL.HeuristicLib.Execution;
 
 public static class BatchExecution
 {
-  // ToDo: Think about if we treat the "count-version" as "list-version" with the list being the generated indices.
-  public static IReadOnlyList<TOut> Sequential<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
-  {
-    var result = new TOut[count];
-    for (int i = 0; i < count; i++) {
-      var rng = random.Fork(i);
-      result[i] = func(rng);
+    // ToDo: Think about if we treat the "count-version" as "list-version" with the list being the generated indices.
+    public static IReadOnlyList<TOut> Sequential<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
+    {
+        var result = new TOut[count];
+        for (int i = 0; i < count; i++)
+        {
+            var rng = random.Fork(i);
+            result[i] = func(rng);
+        }
+
+        return result;
     }
 
-    return result;
-  }
+    public static IReadOnlyList<TOut> Sequential<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
+    {
+        var result = new TOut[list.Count];
+        for (int i = 0; i < list.Count; i++)
+        {
+            var rng = random.Fork(i);
+            result[i] = func(list[i], rng);
+        }
 
-  public static IReadOnlyList<TOut> Sequential<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
-  {
-    var result = new TOut[list.Count];
-    for (int i = 0; i < list.Count; i++) {
-      var rng = random.Fork(i);
-      result[i] = func(list[i], rng);
+        return result;
     }
 
-    return result;
-  }
+    public static IReadOnlyList<TOut> Parallel<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(maxDegreeOfParallelism);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, -1);
+        if (maxDegreeOfParallelism == 1)
+        {
+            return Sequential(count, func, random);
+        }
 
-  public static IReadOnlyList<TOut> Parallel<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
-  {
-    ArgumentOutOfRangeException.ThrowIfZero(maxDegreeOfParallelism);
-    ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, -1);
-    if (maxDegreeOfParallelism == 1) {
-      return Sequential(count, func, random);
+        var partitions = Partitioner.Create(0, count);
+        var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
+        var result = new TOut[count];
+        System.Threading.Tasks.Parallel.ForEach(partitions, options, range =>
+        {
+            var (start, end) = range;
+            for (int i = start; i < end; i++)
+            {
+                var rng = random.Fork(i);
+                result[i] = func(rng);
+            }
+        });
+        return result;
     }
 
-    var partitions = Partitioner.Create(0, count);
-    var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
-    var result = new TOut[count];
-    System.Threading.Tasks.Parallel.ForEach(partitions, options, range => {
-      var (start, end) = range;
-      for (int i = start; i < end; i++) {
-        var rng = random.Fork(i);
-        result[i] = func(rng);
-      }
-    });
-    return result;
-  }
+    public static IReadOnlyList<TOut> Parallel<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(maxDegreeOfParallelism);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, -1);
 
-  public static IReadOnlyList<TOut> Parallel<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
-  {
-    ArgumentOutOfRangeException.ThrowIfZero(maxDegreeOfParallelism);
-    ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, -1);
+        if (maxDegreeOfParallelism == 1)
+        {
+            return Sequential(list, func, random);
+        }
 
-    if (maxDegreeOfParallelism == 1) {
-      return Sequential(list, func, random);
+        var partitions = Partitioner.Create(0, list.Count);
+        var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
+        var result = new TOut[list.Count];
+        System.Threading.Tasks.Parallel.ForEach(partitions, options, range =>
+        {
+            var (start, end) = range;
+            for (int i = start; i < end; i++)
+            {
+                var rng = random.Fork(i);
+                result[i] = func(list[i], rng);
+            }
+        });
+        return result;
     }
-
-    var partitions = Partitioner.Create(0, list.Count);
-    var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
-    var result = new TOut[list.Count];
-    System.Threading.Tasks.Parallel.ForEach(partitions, options, range => {
-      var (start, end) = range;
-      for (int i = start; i < end; i++) {
-        var rng = random.Fork(i);
-        result[i] = func(list[i], rng);
-      }
-    });
-    return result;
-  }
 }

@@ -2,14 +2,14 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public interface IAnalyzer
 {
-  IAnalyzerRunState CreateAnalyzerState();
+    IAnalyzerRunState CreateAnalyzerState();
 }
 
 public interface IAnalyzer<out TResult> : IAnalyzer
   where TResult : class
 {
-  new IAnalyzerRunState<TResult> CreateAnalyzerState();
+    new IAnalyzerRunState<TResult> CreateAnalyzerState();
 
-  IAnalyzerRunState IAnalyzer.CreateAnalyzerState() => CreateAnalyzerState();
+    IAnalyzerRunState IAnalyzer.CreateAnalyzerState() => CreateAnalyzerState();
 }
 

@@ -13,33 +13,33 @@ public abstract partial record MultiEvaluator<TGenotype, TSearchSpace, TProblem,
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  [OrderedEquality] protected ImmutableArray<IEvaluator<TGenotype, TSearchSpace, TProblem>> InnerEvaluators { get; }
+    [OrderedEquality] protected ImmutableArray<IEvaluator<TGenotype, TSearchSpace, TProblem>> InnerEvaluators { get; }
 
-  protected delegate IReadOnlyList<ObjectiveVector> InnerEvaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected delegate IReadOnlyList<ObjectiveVector> InnerEvaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-  protected MultiEvaluator(ImmutableArray<IEvaluator<TGenotype, TSearchSpace, TProblem>> innerEvaluators)
-  {
-    InnerEvaluators = innerEvaluators;
-  }
-
-  public IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-    new Instance(this, InnerEvaluators.Select(instanceRegistry.Resolve).Select(x => (InnerEvaluate)x.Evaluate).ToArray(), CreateInitialState());
-
-  protected abstract TExecutionState CreateInitialState();
-
-  protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
-    IReadOnlyList<InnerEvaluate> innerEvaluators,
-    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-  private sealed class Instance(MultiEvaluator<TGenotype, TSearchSpace, TProblem, TExecutionState> multiEvaluator,
-    IReadOnlyList<InnerEvaluate> innerEvaluators, TExecutionState executionState)
-    : IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>
-  {
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    protected MultiEvaluator(ImmutableArray<IEvaluator<TGenotype, TSearchSpace, TProblem>> innerEvaluators)
     {
-      return multiEvaluator.Evaluate(genotypes, executionState, innerEvaluators, random, searchSpace, problem);
+        InnerEvaluators = innerEvaluators;
     }
-  }
+
+    public IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+      new Instance(this, InnerEvaluators.Select(instanceRegistry.Resolve).Select(x => (InnerEvaluate)x.Evaluate).ToArray(), CreateInitialState());
+
+    protected abstract TExecutionState CreateInitialState();
+
+    protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
+      IReadOnlyList<InnerEvaluate> innerEvaluators,
+      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Instance(MultiEvaluator<TGenotype, TSearchSpace, TProblem, TExecutionState> multiEvaluator,
+      IReadOnlyList<InnerEvaluate> innerEvaluators, TExecutionState executionState)
+      : IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>
+    {
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            return multiEvaluator.Evaluate(genotypes, executionState, innerEvaluators, random, searchSpace, problem);
+        }
+    }
 }
 
 public abstract record MultiEvaluator<TGenotype, TSearchSpace, TProblem>
@@ -47,19 +47,19 @@ public abstract record MultiEvaluator<TGenotype, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-  protected MultiEvaluator(ImmutableArray<IEvaluator<TGenotype, TSearchSpace, TProblem>> innerEvaluators)
-    : base(innerEvaluators)
-  {
-  }
+    protected MultiEvaluator(ImmutableArray<IEvaluator<TGenotype, TSearchSpace, TProblem>> innerEvaluators)
+      : base(innerEvaluators)
+    {
+    }
 
-  protected sealed override NoState CreateInitialState() => NoState.Instance;
+    protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-  protected sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, NoState executionState,
-    IReadOnlyList<InnerEvaluate> innerEvaluators,
-    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    => Evaluate(genotypes, innerEvaluators, random, searchSpace, problem);
+    protected sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, NoState executionState,
+      IReadOnlyList<InnerEvaluate> innerEvaluators,
+      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+      => Evaluate(genotypes, innerEvaluators, random, searchSpace, problem);
 
-  protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
-    IReadOnlyList<InnerEvaluate> innerEvaluators,
-    IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
+      IReadOnlyList<InnerEvaluate> innerEvaluators,
+      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

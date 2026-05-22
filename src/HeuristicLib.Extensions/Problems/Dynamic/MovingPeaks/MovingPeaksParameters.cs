@@ -18,23 +18,24 @@ public readonly record struct MovingPeaksParameters(
 
 public static class MovingPeaksDefaults
 {
-  public static readonly ImmutableArray<int> Scenario2PeakCounts = [5, 10, 20, 50];
+    public static readonly ImmutableArray<int> Scenario2PeakCounts = [5, 10, 20, 50];
 
-  public static readonly ImmutableArray<int> Scenario2Dimensions = [5, 10, 20, 50];
+    public static readonly ImmutableArray<int> Scenario2Dimensions = [5, 10, 20, 50];
 
-  // Canonical “scenario 2”
-  public static MovingPeaksParameters Scenario2() => new(
-    5, 10,
-    0, 100,
-    30, 70,
-    1, 12,
-    1.0, 7.0, 1.0
-  );
+    // Canonical “scenario 2”
+    public static MovingPeaksParameters Scenario2() => new(
+      5, 10,
+      0, 100,
+      30, 70,
+      1, 12,
+      1.0, 7.0, 1.0
+    );
 
-  // “Static landscape” control
-  public static MovingPeaksParameters Scenario2_Static() => Scenario2() with {
-    ShiftSeverity = 0.0,
-    HeightSeverity = 0.0,
-    WidthSeverity = 0.0
-  };
+    // “Static landscape” control
+    public static MovingPeaksParameters Scenario2_Static() => Scenario2() with
+    {
+        ShiftSeverity = 0.0,
+        HeightSeverity = 0.0,
+        WidthSeverity = 0.0
+    };
 }

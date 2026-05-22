@@ -9,5 +9,5 @@ public interface IVariableStrengthMutator<TG, in TS, in TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-  double MutationStrength { get; [Obsolete("Should not be mutable")] set; }
+    double MutationStrength { get; [Obsolete("Should not be mutable")] set; }
 }

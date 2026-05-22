@@ -1,32 +1,30 @@
 <Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <AssemblyName>HEAL.HeuristicLib.Core</AssemblyName>
+        <RootNamespace>HEAL.HeuristicLib</RootNamespace>
+        <Description>Composable heuristic optimization algorithms, operators, search spaces and built-in problems.</Description>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>HEAL.HeuristicLib.Core</AssemblyName>
-    <RootNamespace>HEAL.HeuristicLib</RootNamespace>
-    <Description>Composable heuristic optimization algorithms, operators, search spaces and built-in problems.</Description>
-  </PropertyGroup>
+    <ItemGroup>
+        <Using Include="System.Collections.Immutable" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Using Include="System.Collections.Immutable" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\HeuristicLib.Abstractions\HeuristicLib.Abstractions.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\HeuristicLib.Abstractions\HeuristicLib.Abstractions.csproj" />
-  </ItemGroup>
-  
-  <ItemGroup>
-    <ProjectReference Include="..\..\analyzers\HeuristicLib.Analyzers\HeuristicLib.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
-    <ProjectReference Include="..\..\analyzers\HeuristicLib.Analyzers.CodeFixes\HeuristicLib.Analyzers.CodeFixes.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\analyzers\HeuristicLib.Analyzers\HeuristicLib.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+        <ProjectReference Include="..\..\analyzers\HeuristicLib.Analyzers.CodeFixes\HeuristicLib.Analyzers.CodeFixes.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="AutoDiff" Version="1.2.2" />
-    <PackageReference Include="Generator.Equals" Version="3.3.0" />
-    <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta2" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.2" />
-    <PackageReference Include="morelinq" Version="4.4.0" />
-    <PackageReference Include="System.Linq.Async" Version="7.0.0" />
-  </ItemGroup>
-
+    <ItemGroup>
+        <PackageReference Include="AutoDiff" Version="1.2.2" />
+        <PackageReference Include="Generator.Equals" Version="3.3.0" />
+        <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta2" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.2" />
+        <PackageReference Include="morelinq" Version="4.4.0" />
+        <PackageReference Include="System.Linq.Async" Version="7.0.0" />
+    </ItemGroup>
 </Project>
