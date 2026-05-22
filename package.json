@@ -1,0 +1,22 @@
+{
+  "name": "heuristiclib",
+  "private": true,
+  "scripts": {
+    "format": "npm run format:code && npm run format:text && npm run format:xml",
+    "format:check": "npm run format:check:code && npm run format:check:text && npm run format:check:xml",
+    "format:code": "dotnet format whitespace ./HEAL.HeuristicLib.sln --no-restore",
+    "format:check:code": "dotnet format whitespace ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore",
+    "style:check": "dotnet format style ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error",
+    "analyzers:check": "dotnet format analyzers ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error",
+    "format:text": "prettier --write \"**/*.{json,yml,yaml}\"",
+    "format:check:text": "prettier --check \"**/*.{json,yml,yaml}\"",
+    "format:docs": "prettier --write \"**/*.md\"",
+    "format:check:docs": "prettier --check \"**/*.md\"",
+    "format:xml": "prettier --write --plugin @prettier/plugin-xml --parser xml --print-width 999 --tab-width 4 --xml-whitespace-sensitivity ignore \"**/*.{xml,csproj,props,targets}\"",
+    "format:check:xml": "prettier --check --plugin @prettier/plugin-xml --parser xml --print-width 999 --tab-width 4 --xml-whitespace-sensitivity ignore \"**/*.{xml,csproj,props,targets}\""
+  },
+  "devDependencies": {
+    "@prettier/plugin-xml": "^3.4.2",
+    "prettier": "^3.8.3"
+  }
+}
