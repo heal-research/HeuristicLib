@@ -31,13 +31,13 @@ This example is part of the [HeuristicLib](../../README.md) project. It uses the
 
 ### Build HeuristicLib
 
-Before running the app, publish the `HeuristicLib.Extensions` project so pythonnet can load the assemblies:
+Before running the app, publish the `HeuristicLib.Experimental` project so pythonnet can load the assemblies:
 
 ```bash
-dotnet publish src/HeuristicLib.Extensions -c Release
+dotnet publish src/HeuristicLib.Experimental -c Release
 ```
 
-This produces the assemblies in `src/HeuristicLib.Extensions/bin/Release/net10.0/publish/`, which `app.py` references.
+This produces the assemblies in `src/HeuristicLib.Experimental/bin/Release/net10.0/publish/`, which `app.py` references.
 
 ### Usage
 

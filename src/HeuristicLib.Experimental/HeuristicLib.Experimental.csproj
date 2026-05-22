@@ -8,6 +8,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\HeuristicLib.Core\HeuristicLib.Core.csproj" />
+        <ProjectReference Include="..\HeuristicLib\HeuristicLib.csproj" />
     </ItemGroup>
 </Project>

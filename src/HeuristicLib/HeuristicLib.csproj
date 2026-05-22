@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\HeuristicLib.Abstractions\HeuristicLib.Abstractions.csproj" />
+        <ProjectReference Include="..\HeuristicLib.Contracts\HeuristicLib.Contracts.csproj" />
     </ItemGroup>
 
     <ItemGroup>

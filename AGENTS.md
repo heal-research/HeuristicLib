@@ -4,11 +4,11 @@ Contributor contract for this repository. Durable architectural rationale lives 
 
 ## Repository map
 
-- `src/HeuristicLib.Abstractions`: small public contracts shared across the library.
-- `src/HeuristicLib.Core`: core algorithms, operators, search spaces, genotypes, problems, random engines, and analysis primitives.
-- `src/HeuristicLib.Extensions`: extension problems, workflows, and integration-oriented features.
-- `test/HeuristicLib.Core.Tests`: fast unit tests for core library behavior and invariants.
-- `test/HeuristicLib.Extensions.Tests`: fast unit tests for extension library behavior and invariants.
+- `src/HeuristicLib.Contracts`: small public contracts shared across the library.
+- `src/HeuristicLib`: core algorithms, operators, search spaces, genotypes, problems, random engines, and analysis primitives.
+- `src/HeuristicLib.Experimental`: experimental problems, workflows, and integration-oriented features.
+- `test/HeuristicLib.Tests`: fast unit tests for core library behavior and invariants.
+- `test/HeuristicLib.Experimental.Tests`: fast unit tests for experimental library behavior and invariants.
 - `test/HeuristicLib.Scenarios`: broader workflow, runtime, and data-backed scenarios that may span core and extensions.
 - `test/HeuristicLib.ApiUsageSpecs`: executable API usage specs; see `test/README.md` before editing specs.
 - `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.

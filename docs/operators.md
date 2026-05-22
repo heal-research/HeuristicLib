@@ -37,7 +37,7 @@ This consistency reduces cognitive load: once you’ve implemented one operator,
 
 ## Choosing a base class
 
-The base classes in `src/HeuristicLib.Core/Operators` are authoring conveniences on top of the role interfaces.
+The base classes in `src/HeuristicLib/Operators` are authoring conveniences on top of the role interfaces.
 
 Use this checklist:
 

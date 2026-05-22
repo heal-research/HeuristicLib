@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 
 HERE = Path(__file__).resolve().parent
 PUBLISH_DIR = str(
-    (HERE / ".." / ".." / "src" / "HeuristicLib.Extensions" / "bin" / "Release" / "net10.0" / "publish").resolve()
+    (HERE / ".." / ".." / "src" / "HeuristicLib.Experimental" / "bin" / "Release" / "net10.0" / "publish").resolve()
 )
 
 # ---------------------------------------------------------------------------
