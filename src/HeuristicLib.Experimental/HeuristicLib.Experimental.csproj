@@ -4,7 +4,7 @@
         <AssemblyName>HEAL.HeuristicLib.Experimental</AssemblyName>
         <PackageId>HEAL.HeuristicLib.Experimental</PackageId>
         <RootNamespace>HEAL.HeuristicLib</RootNamespace>
-        <Description>Experimental features of HeuristicLib.</Description>
+        <Description>Experimental HeuristicLib APIs and research-oriented features.</Description>
     </PropertyGroup>
 
     <ItemGroup>

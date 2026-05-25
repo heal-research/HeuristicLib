@@ -4,7 +4,7 @@
         <AssemblyName>HEAL.HeuristicLib</AssemblyName>
         <PackageId>HEAL.HeuristicLib</PackageId>
         <RootNamespace>HEAL.HeuristicLib</RootNamespace>
-        <Description>Composable heuristic optimization algorithms, operators, search spaces and built-in problems.</Description>
+        <Description>Composable heuristic optimization algorithms, operators, search spaces and built-in optimization problems.</Description>
     </PropertyGroup>
 
     <ItemGroup>

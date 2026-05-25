@@ -14,10 +14,10 @@ These items have meaningful progress behind them, but should still stay on the b
 - role-aware mating and parent selection pressure differences
 - decide and document one common rule for record configuration style: primary constructor parameters versus explicit init-only properties, including naming and when each form is allowed
 - audit all solution candidate types used as `TGenotype` and refactor the model so solution candidates are immutable everywhere
-- finish project and assembly layering so the solution structure matches responsibility boundaries; the current [package restructuring plan](../plans/package_restructuring_plan.md) uses package-level opt-in for experimental APIs, keeps promoted APIs in the same user-facing namespaces where possible, and separates Python-facing interop code into `HEAL.HeuristicLib.PythonInterop`
 - revisit whether core and experimental unit tests should remain separate projects or be merged into one unit-test package; the current compromise keeps separate test projects for reporting while using stable `HEAL.HeuristicLib.Tests` namespaces so promotion from experimental to core does not require namespace churn
 - reconsider `ExperimentalAttribute` once the main package has a meaningful stable API baseline; while HeuristicLib is still early alpha and all public APIs may change, package-level experimental opt-in is likely enough and avoids annotation ceremony that users may simply suppress wholesale
-- reduce namespace sprawl so common usage requires fewer `using` statements, while keeping a clear folder-level code organization
+- define a concrete namespace ergonomics target from real examples: reduce the `using` lists in `docs/getting-started.md`, `docs/overview.md`, and the symbolic-regression examples by deciding which user-facing namespaces should be flattened while keeping folder organization detailed where useful
+- improve the main `README.md` as the repository and NuGet front door: add install commands, a compact representative code example, a package overview, links to usage guides, and a visible example of what HeuristicLib can do, such as the Python interactive demonstrator GIF
 - move to a more standard C# formatting baseline, including a more conventional editor configuration and CI enforcement that fails pull requests on formatting violations
 
 Why these are only partial today:

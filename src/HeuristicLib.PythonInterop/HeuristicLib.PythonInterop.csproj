@@ -4,7 +4,7 @@
         <AssemblyName>HEAL.HeuristicLib.PythonInterop</AssemblyName>
         <PackageId>HEAL.HeuristicLib.PythonInterop</PackageId>
         <RootNamespace>HEAL.HeuristicLib.PythonInterop</RootNamespace>
-        <Description>Python-facing interoperability helpers and workflows for HeuristicLib.</Description>
+        <Description>Python-facing interop helpers and workflows for HeuristicLib.</Description>
     </PropertyGroup>
 
     <ItemGroup>
