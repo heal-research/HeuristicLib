@@ -1,8 +1,8 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.PythonInterOptScripts;
+using HEAL.HeuristicLib.PythonInterop;
 
-namespace HEAL.HeuristicLib.Extensions.Tests.Optimization;
+namespace HEAL.HeuristicLib.Tests.Optimization;
 
 public class MultiObjectiveTests
 {

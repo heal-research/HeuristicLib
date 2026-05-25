@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-namespace HEAL.HeuristicLib.Extensions.Tests.Problems.DataAnalysis.Regression;
+namespace HEAL.HeuristicLib.Tests.Problems.DataAnalysis.Regression;
 
 public class SymbolicRegressionTests
 {

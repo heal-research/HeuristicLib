@@ -4,11 +4,12 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
         <AssemblyName>HEAL.HeuristicLib.Experimental.Tests</AssemblyName>
-        <RootNamespace>HEAL.HeuristicLib.Experimental.Tests</RootNamespace>
+        <RootNamespace>HEAL.HeuristicLib.Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\HeuristicLib.Experimental\HeuristicLib.Experimental.csproj" />
+        <ProjectReference Include="..\..\src\HeuristicLib.PythonInterop\HeuristicLib.PythonInterop.csproj" />
     </ItemGroup>
 
     <ItemGroup>

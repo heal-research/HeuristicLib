@@ -19,7 +19,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
 using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
 
-namespace HEAL.HeuristicLib.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.PythonInterop;
 
 public class ProblemGeneration
 {

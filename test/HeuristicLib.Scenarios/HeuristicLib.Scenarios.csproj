@@ -10,6 +10,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\src\HeuristicLib\HeuristicLib.csproj" />
         <ProjectReference Include="..\..\src\HeuristicLib.Experimental\HeuristicLib.Experimental.csproj" />
+        <ProjectReference Include="..\..\src\HeuristicLib.PythonInterop\HeuristicLib.PythonInterop.csproj" />
     </ItemGroup>
 
     <ItemGroup>

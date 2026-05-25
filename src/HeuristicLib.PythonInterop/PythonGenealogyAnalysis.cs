@@ -29,7 +29,7 @@ using HEAL.HeuristicLib.States;
 #pragma warning disable S1104
 #pragma warning disable S1104
 
-namespace HEAL.HeuristicLib.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.PythonInterop;
 
 public class PythonGenealogyAnalysis
 {

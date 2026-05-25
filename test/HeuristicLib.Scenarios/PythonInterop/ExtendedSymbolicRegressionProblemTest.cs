@@ -1,8 +1,8 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.PythonInterOptScripts;
+using HEAL.HeuristicLib.PythonInterop;
 
-namespace HEAL.HeuristicLib.Scenarios.Extensions.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.Scenarios.PythonInterop;
 
 public class ExtendedSymbolicRegressionProblemTest
 {

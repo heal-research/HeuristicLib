@@ -19,7 +19,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-namespace HEAL.HeuristicLib.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.PythonInterop;
 
 public record EquationScoringEvaluator(Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> PythonCallback)
   : StatelessEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem> //This evaluator only works with your custom Problem

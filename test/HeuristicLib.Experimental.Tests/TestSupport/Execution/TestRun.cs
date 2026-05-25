@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 
-namespace HEAL.HeuristicLib.Extensions.Tests.TestSupport.Execution;
+namespace HEAL.HeuristicLib.Tests.TestSupport.Execution;
 
 internal sealed class TestRun : Run
 {

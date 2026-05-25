@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-namespace HEAL.HeuristicLib.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.PythonInterop;
 
 #region Parameters
 

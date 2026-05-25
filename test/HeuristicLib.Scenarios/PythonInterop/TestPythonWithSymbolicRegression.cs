@@ -1,6 +1,6 @@
-using HEAL.HeuristicLib.PythonInterOptScripts;
+using HEAL.HeuristicLib.PythonInterop;
 
-namespace HEAL.HeuristicLib.Scenarios.Extensions.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.Scenarios.PythonInterop;
 
 public class TestPythonWithSymbolicRegression
 {
@@ -12,7 +12,7 @@ public class TestPythonWithSymbolicRegression
         const int iterations = 200;
         var i = 0;
         var file = Path.Combine("TestData", "192_vineyard.tsv");
-        var res = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
+        _ = PythonGenealogyAnalysis.RunSymbolicRegressionConfigurable(file,
           new SymRegExperimentParameters
           {
               Seed = AlgorithmRandomSeed,

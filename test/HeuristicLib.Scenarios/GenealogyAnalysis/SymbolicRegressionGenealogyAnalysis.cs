@@ -22,7 +22,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.States;
 using RandomNumberGenerator = HEAL.HeuristicLib.Random.RandomNumberGenerator;
 
-namespace HEAL.HeuristicLib.Scenarios.Extensions.GenealogyAnalysis;
+namespace HEAL.HeuristicLib.Scenarios.GenealogyAnalysis;
 
 public class GenealogyGraphTests
 {

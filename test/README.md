@@ -8,7 +8,7 @@ Use the project split to keep the fast unit-test loop separate from broader runt
 
 - `HeuristicLib.Tests`: fast unit tests for core types, operators, algorithms, and invariants owned by the core assembly.
 - `HeuristicLib.Experimental.Tests`: fast unit tests for experimental types and invariants owned by the experimental assembly.
-- `HeuristicLib.Scenarios`: broader workflow tests, runtime composition tests, data-backed checks, and other scenarios that may span the main and experimental libraries.
+- `HeuristicLib.Scenarios`: broader workflow tests, runtime composition tests, data-backed checks, and other scenarios that may span the main, experimental, and integration libraries.
 - `HeuristicLib.ApiUsageSpecs`: executable usage-shape specs that document intended public API usage.
 
 Choose `HeuristicLib.ApiUsageSpecs` when the main value of the test is that it communicates intended public API usage clearly, compiles cleanly, and runs in normal test flow.

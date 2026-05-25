@@ -27,7 +27,7 @@ from fastapi.staticfiles import StaticFiles
 
 HERE = Path(__file__).resolve().parent
 PUBLISH_DIR = str(
-    (HERE / ".." / ".." / "src" / "HeuristicLib.Experimental" / "bin" / "Release" / "net10.0" / "publish").resolve()
+    (HERE / ".." / ".." / "src" / "HeuristicLib.PythonInterop" / "bin" / "Release" / "net10.0" / "publish").resolve()
 )
 
 # ---------------------------------------------------------------------------
@@ -94,9 +94,9 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
         import clr  # noqa: E402
         import sys as _sys
         _sys.path.append(PUBLISH_DIR)
-        clr.AddReference("HEAL.HeuristicLib.Experimental")
+        clr.AddReference("HEAL.HeuristicLib.PythonInterop")
 
-        from HEAL.HeuristicLib.PythonInterOptScripts import (
+        from HEAL.HeuristicLib.PythonInterop import (
             InteractiveSymbolicRegression,
             InteractiveSymRegParameters,
         )

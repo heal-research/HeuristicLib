@@ -1,6 +1,6 @@
-using HEAL.HeuristicLib.PythonInterOptScripts;
+using HEAL.HeuristicLib.PythonInterop;
 
-namespace HEAL.HeuristicLib.Scenarios.Extensions.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.Scenarios.PythonInterop;
 
 public class PythonInterOptEquationScoringTest
 {

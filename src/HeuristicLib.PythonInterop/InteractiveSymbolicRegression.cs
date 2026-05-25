@@ -22,7 +22,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-namespace HEAL.HeuristicLib.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.PythonInterop;
 
 /// <summary>
 /// Parameters for interactive symbolic regression, configurable from Python.

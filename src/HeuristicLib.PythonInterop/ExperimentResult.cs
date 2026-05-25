@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib.PythonInterOptScripts;
+namespace HEAL.HeuristicLib.PythonInterop;
 
 public record ExperimentResult<T>(
   string Graph,

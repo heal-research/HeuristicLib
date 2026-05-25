@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Scenarios.Extensions.Problems.Dynamic.TravelingSalesman;
+namespace HEAL.HeuristicLib.Scenarios.Problems.Dynamic.TravelingSalesman;
 
 public class DynamicTSPTests
 {

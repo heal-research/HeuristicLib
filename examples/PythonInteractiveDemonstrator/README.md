@@ -2,7 +2,7 @@
 
 Interactive symbolic regression demo — draw a curve and get a fitted mathematical expression using **HeuristicLib** Genetic Programming via [pythonnet](https://github.com/pythonnet/pythonnet).
 
-This example is part of the [HeuristicLib](../../README.md) project. It uses the `HEAL.HeuristicLib.Experimental` library to run symbolic regression from Python, bridging .NET and Python through pythonnet's CLR hosting.
+This example is part of the [HeuristicLib](../../README.md) project. It uses the `HEAL.HeuristicLib.PythonInterop` library to run symbolic regression from Python, bridging .NET and Python through pythonnet's CLR hosting.
 
 ## Demo
 
@@ -31,13 +31,13 @@ This example is part of the [HeuristicLib](../../README.md) project. It uses the
 
 ### Build HeuristicLib
 
-Before running the app, publish the `HeuristicLib.Experimental` project so pythonnet can load the assemblies:
+Before running the app, publish the `HeuristicLib.PythonInterop` project so pythonnet can load the assemblies:
 
 ```bash
-dotnet publish src/HeuristicLib.Experimental -c Release
+dotnet publish src/HeuristicLib.PythonInterop -c Release
 ```
 
-This produces the assemblies in `src/HeuristicLib.Experimental/bin/Release/net10.0/publish/`, which `app.py` references.
+This produces the assemblies in `src/HeuristicLib.PythonInterop/bin/Release/net10.0/publish/`, which `app.py` references.
 
 ### Usage
 

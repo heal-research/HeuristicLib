@@ -1,13 +1,13 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Extensions.Tests.TestSupport.Execution;
-using HEAL.HeuristicLib.Extensions.Tests.TestSupport.Random;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Tests.TestSupport.Execution;
+using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
-namespace HEAL.HeuristicLib.Extensions.Tests.Problems.Dynamic.TravelingSalesman;
+namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.TravelingSalesman;
 
 public class TravelingSalesmanProblemTests
 {
