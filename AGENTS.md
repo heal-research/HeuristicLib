@@ -9,9 +9,9 @@ Contributor contract for this repository. Durable architectural rationale lives 
 - `src/HeuristicLib.Experimental`: experimental problems, workflows, and integration-oriented features.
 - `src/HeuristicLib.PythonInterop`: Python-specific integration code, adapters, and workflows.
 - `test/HeuristicLib.Tests`: fast unit tests for core library behavior and invariants.
-- `test/HeuristicLib.Experimental.Tests`: fast unit tests for experimental library behavior and invariants.
-- `test/HeuristicLib.Scenarios`: broader workflow, runtime, and data-backed scenarios that may span core, experimental, and integration packages.
-- `test/HeuristicLib.ApiUsageSpecs`: executable API usage specs; see `test/README.md` before editing specs.
+- `test/HeuristicLib.Tests.Experimental`: fast unit tests for experimental library behavior and invariants.
+- `test/HeuristicLib.Tests.Scenarios`: broader workflow, runtime, and data-backed scenarios that may span core, experimental, and integration packages.
+- `test/HeuristicLib.Tests.ApiUsageSpecs`: executable API usage specs; see `test/README.md` before editing specs.
 - `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.
 - `docs`: user-facing and design documentation.
 - `examples`: runnable examples and external-language demonstrations.

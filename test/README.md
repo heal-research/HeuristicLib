@@ -7,11 +7,11 @@ Use the project split to keep the fast unit-test loop separate from broader runt
 ## Where New Tests Go
 
 - `HeuristicLib.Tests`: fast unit tests for core types, operators, algorithms, and invariants owned by the core assembly.
-- `HeuristicLib.Experimental.Tests`: fast unit tests for experimental types and invariants owned by the experimental assembly.
-- `HeuristicLib.Scenarios`: broader workflow tests, runtime composition tests, data-backed checks, and other scenarios that may span the main, experimental, and integration libraries.
-- `HeuristicLib.ApiUsageSpecs`: executable usage-shape specs that document intended public API usage.
+- `HeuristicLib.Tests.Experimental`: fast unit tests for experimental types and invariants owned by the experimental assembly.
+- `HeuristicLib.Tests.Scenarios`: broader workflow tests, runtime composition tests, data-backed checks, and other scenarios that may span the main, experimental, and integration libraries.
+- `HeuristicLib.Tests.ApiUsageSpecs`: executable usage-shape specs that document intended public API usage.
 
-Choose `HeuristicLib.ApiUsageSpecs` when the main value of the test is that it communicates intended public API usage clearly, compiles cleanly, and runs in normal test flow.
+Choose `HeuristicLib.Tests.ApiUsageSpecs` when the main value of the test is that it communicates intended public API usage clearly, compiles cleanly, and runs in normal test flow.
 
 Typical API usage spec characteristics:
 
@@ -35,7 +35,7 @@ Typical unit-test characteristics:
 - focused assertions about behavior or invariants
 - deterministic and quick to run
 
-Choose `HeuristicLib.Scenarios` when the test is mainly about a composed workflow rather than one local invariant.
+Choose `HeuristicLib.Tests.Scenarios` when the test is mainly about a composed workflow rather than one local invariant.
 
 Typical scenario characteristics:
 
@@ -44,4 +44,4 @@ Typical scenario characteristics:
 - validates longer-running or more story-shaped execution flows
 - may be slower and broader than unit tests, so it should not be treated as the inner TDD test cycle
 
-When both views matter, keep the narrow invariant in the unit-test project and add one representative end-to-end check in `HeuristicLib.Scenarios`.
+When both views matter, keep the narrow invariant in the unit-test project and add one representative end-to-end check in `HeuristicLib.Tests.Scenarios`.
