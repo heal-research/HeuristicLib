@@ -29,7 +29,7 @@ Resolve these before or during Stage 0:
 
 - **API specs:** add executable usage specs before hardening public APIs.
 - **Legacy boundary:** decide namespace, obsolete message, converter names, in-repo migration order, and whether a temporary forwarding shim is allowed.
-- **Interpreter binding:** define the Stage 1 index-only contract: `VariableReference.Index` maps to `inputVariables[index]`, and the interpreter uses that name to fetch the dataset series.
+- **Interpreter binding:** define the Stage 1 name-first authoring contract: `ExpressionDraft.Variable(name)` interns names into the compiled expression variable table, variable instructions store payload indexes into that table, and the interpreter uses those names to fetch dataset series.
 - **Parity scope:** maintain a matrix for each legacy symbol/behavior: new target, parity level, test status, and intentional difference.
 - **Instruction validity:** define runtime validation for non-empty code, RPN stack balance, arity, `SubtreeLength`, payload indexes, root position, max length/depth, and invalid opcodes.
 - **Formatting/serialization:** decide the Stage 1 minimum for equality/hash, debug/infix formatting, optional variable names, and whether binary/JSON serialization is included or deferred.
@@ -44,22 +44,23 @@ Resolve these before or during Stage 0:
 
 | Concept | Responsibility |
 | --- | --- |
-| `SymbolicExpression` | Immutable genotype: RPN instructions plus side tables for numeric literals and variables. |
+| `SymbolicExpression` | Immutable genotype: RPN instructions plus side tables for numeric literals and variable references. |
 | `ExpressionInstruction` | Opcode, arity, subtree length, and optional payload index. |
 | `SymbolicExpressionOpCode` | Stable `ushort` enum for built-in operations with explicit integer values. |
 | `ExpressionDraft` | Human-friendly authoring layer; not a genotype. |
 | `ExpressionSlice` | Allocation-light subtree view over an immutable expression. |
-| `SymbolicExpressionSearchSpace` | Base scalar expression search-space contract for one expression-valued component. |
+| `SymbolicExpressionSearchSpace` | Base scalar expression search-space contract for one expression-valued component, with discoverable factories such as `SymbolicExpressionSearchSpace.Unrestricted(...)`. |
 | `UnrestrictedSymbolicExpressionSearchSpace` | Fast scalar validity policy: length, depth, allowed opcodes, and allowed variables; all scalar subtrees are composition-compatible. |
 | `GrammarSymbolicExpressionSearchSpace` | Grammar-constrained scalar validity policy with typed operation signatures and grammar-preserving operators. |
 | `SymbolicExpressionInterpreter` | Executes opcodes over series/batch buffers and maps variable indexes to dataset columns from the supplied dataset/input-variable order. |
-| `SymbolicRegressionProblem` | Composition root for data, search space, interpreter, objectives, bounds policy, and refinement context/services. |
-| `Refiner` | Optional pre-evaluation candidate transformer that returns immutable replacement candidates and refinement counters. |
+| `SymbolicRegressionProblem` | Composition root for data, search space, interpreter, objectives, bounds policy, and problem context needed by typed operators. |
+| `SymbolicExpressionRefiner` | Discoverable factory surface for symbolic-expression refiners, for example `SymbolicExpressionRefiner.OptimizeNumericParameters(...)`. |
+| `Refiner` | Optional pre-evaluation algorithm operator that receives candidates, random source, search space, and problem, then returns immutable replacement candidates and refinement counters. |
 
 Boundary rules:
 
 - The genotype owns structure only.
-- The interpreter owns translation from variable index to dataset series; Stage 1 does not add a separate public data-view or translation type.
+- The interpreter owns translation from compiled variable-reference names to dataset series; Stage 1 does not add a separate public data-view or translation type.
 - Search spaces and their matching operators generate, mutate, cross, repair, and validate candidates; they do not evaluate them.
 - A symbolic regression problem instance has exactly one expression search-space instance. Unrestricted versus grammar-constrained behavior is selected when the problem is constructed, not switched dynamically during a run.
 - The unrestricted scalar search space is not represented as a `SimpleGrammar`. Fast unrestricted operators must not call grammar predicates or enumerate grammar-derived cut points.
@@ -75,11 +76,12 @@ Add API usage specs in `test/HeuristicLib.ApiUsageSpecs` for:
 
 - building `x0 + 2 * x1` with `ExpressionDraft`
 - evaluating a compiled expression against regression data
-- constructing a default RMSE symbolic regression problem
+- constructing a default symbolic regression problem with an explicit RMSE metric/loss object
 - running GA with the new creator, crossover, and mutator
 - enabling numeric refinement without evaluation-time mutation
+- configuring GA with a problem-specific numeric refiner
 
-Stage 0 specs may include commented or otherwise non-compiled "wish API" sketches when the target API depends on later stages. These sketches are allowed as design probes, but the repository must keep compiling.
+Stage 0 specs may include commented or otherwise non-compiled "wish API" sketches when the target API depends on later stages. These sketches are allowed as design probes, but the repository must keep compiling. As implementation reaches a sketched API, comment the code back in so the usage spec compiles and fails normally if the API shape drifts. Once behavior-level invariants matter more than authoring shape, promote the relevant sketch into regular unit tests in the owning test project.
 
 Also create the legacy parity matrix and seed it with variable, number, add, subtract, multiply, divide, log, sqrt, and linear scaling.
 
@@ -92,7 +94,7 @@ Implement:
 - `SymbolicExpression` with private instruction, numeric-literal, and variable-reference arrays plus cached length/depth/hash.
 - Copying public factories and clearly named ownership-transfer factories for builders.
 - Runtime validation for the instruction invariants listed above.
-- `ExpressionDraft.Compile()`, `ExpressionSlice`, and formatting with default `x0` names plus optional supplied names.
+- `ExpressionDraft.Compile()`, `ExpressionSlice`, and formatting from compiled variable names.
 - Series/batch interpretation against a supplied `Dataset` and input-variable order.
 - Numeric-literal side-table entries include value plus fixed/optimizable role. The `NumericLiteral` opcode stays singular and references side-table entries by `PayloadIndex`.
 - Draft/builder APIs expose fixed and optimizable literal authoring, tentatively `Fixed(value)` and `Parameter(value)`.
@@ -123,9 +125,10 @@ Rules:
 - `SubtreeLength` includes the instruction itself.
 - `PayloadIndex == -1` means no side-table payload.
 - Arithmetic factories produce binary operations; legacy n-ary arithmetic lowers deterministically in source order.
-- Variable references store integer indexes. Stage 1 uses index matching only: index `i` means `inputVariables[i]`.
-- Out-of-range variable indexes, missing dataset variables, and non-double variables in scalar regression fail during interpreter setup.
-- The interpreter resolves each used variable index to a dataset series once per evaluation setup. Operators consume one or more input buffers and produce a result buffer for the batch.
+- Expression drafts author variables by name, for example `ExpressionDraft.Variable("x0")`.
+- Compiled variable references are interned into a variable side table. Variable instructions store a `PayloadIndex` into that table, not the raw name.
+- Missing dataset variables and non-double variables in scalar regression fail during interpreter setup.
+- The interpreter resolves each used variable reference name to a dataset series once per evaluation setup. Operators consume one or more input buffers and produce a result buffer for the batch.
 - The interpreter reads numeric literal values and ignores fixed/optimizable metadata.
 - Equality and hashing include numeric literal metadata so evaluator caches distinguish fixed and optimizable candidates with the same literal values.
 - Numeric invalid results produce `NaN` only for now. Clamping, penalties, infinity handling, and objective handling remain outside the interpreter.
@@ -143,21 +146,25 @@ Stage 1 tests: immutability, validation failures, slicing, draft compilation, co
 - regression data and input-variable order
 - one scalar `SymbolicExpressionSearchSpace`
 - interpreter
-- metric/objectives
+- metric/loss/objectives
 - prediction bound and invalid-value policy
-- optional `Refiner` service/context
+- problem context needed by typed refiners, such as data, input variables, target values, interpreter, bounds policy, and refinement-relevant options
 
 Before Stage 2 implementation, choose the concrete problem/search-space type shape. Current preferred direction is `SymbolicRegressionProblem<TSearchSpace>` with convenience factories, but this remains a Stage 2 design decision.
 
 Defaults:
 
-- add a small RMSE factory after specs settle the API
-- RMSE is the only default objective
+- if a `CreateDefault` convenience factory is added, it remains metric-agnostic and accepts an explicit metric/loss object; it must not encode metric names such as RMSE into method names
+- provide common regression metrics through object shortcuts such as `Metrics.RMSE`
+- RMSE may be the default metric only when no metric/loss is supplied
 - multi-objective behavior remains explicit
 
 Refinement:
 
 - define the algorithm-level `Refiner` contract and where algorithms call it
+- keep refiners as algorithm operators, not problem properties; a concrete refiner can be problem-specific and extract required context from the typed problem instance
+- the general refiner call shape includes candidates, explicit random source, search space, and problem, matching other operators; it does not accept symbolic-regression-specific arguments such as input variables or target variable directly
+- expose symbolic-expression refiner factories through `SymbolicExpressionRefiner`; numeric-parameter optimization is authored as `SymbolicExpressionRefiner.OptimizeNumericParameters(...)`, even if the first implementation uses Levenberg-Marquardt internally
 - refined immutable candidates replace raw candidates before evaluation
 - replacement and selection must see the refined genotype, not an evaluator-cache side effect
 - global budget accounting is out of scope; refiners expose local counters/status
@@ -169,6 +176,7 @@ Stage 2 tests: problem API specs, evaluation composition, metric fixtures, no ev
 Add the fast default scalar search space and operator family:
 
 - `UnrestrictedSymbolicExpressionSearchSpace` with size, depth, allowed-opcode, and allowed-variable validity.
+- expose the common unrestricted factory as `SymbolicExpressionSearchSpace.Unrestricted(...)`; the concrete unrestricted type may still be returned for operator typing and validation.
 - creator, mutator, crossover, and optional repair for unrestricted scalar `SymbolicExpression` candidates.
 - static operator methods that mirror instance entry points, following `docs/design-goals.md`.
 - direct core overloads that take primitive limits and opcode/variable sets when the search space is only a container for those values.
@@ -188,6 +196,8 @@ Stage 3 tests: unrestricted search-space containment, creator validity, mutation
 
 Add the first concrete candidate refiner for symbolic regression:
 
+- implement Levenberg-Marquardt numeric refinement as a problem-specific operator for `SymbolicExpression` and `SymbolicRegressionProblem`; it reads input variables, target data, interpreter, and bounds/refinement configuration from the problem/search-space context passed through the generic refiner contract.
+- provide `SymbolicExpressionRefiner.OptimizeNumericParameters(...)` as the user-facing factory for this operator; avoid requiring users to name the optimizer algorithm in the common authoring path.
 - optimize numeric literals through Levenberg-Marquardt using automatic differentiation over the immutable `SymbolicExpression`.
 - distinguish optimizable numeric parameters from fixed numeric literals so constants introduced for scaling, structural templates, protected-operation thresholds, or user-authored fixed values can stay unchanged.
 - keep one `NumericLiteral` opcode. Fixed versus optimizable status belongs in the genotype's numeric-literal side table, addressed by `PayloadIndex`; the interpreter reads only the value, while refiners use the metadata.
@@ -270,7 +280,7 @@ Stage 5.5 tests: lag/window binding, time-aware operation signatures, row-window
 
 Follow-up details stay outside this plan unless separately scheduled:
 
-- name-based or schema-based variable matching instead of Stage 1 index-only binding
+- schema-based variable matching beyond Stage 1 name binding
 - revised invalid-value policy if `NaN` is not sufficient for later objectives or operators
 - n-ary symbolic operators instead of binary-only operator arity
 - immutable data snapshots, builders, versioning, and cache invalidation
@@ -295,9 +305,9 @@ dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severit
 ## Settled Decisions
 
 - Genotype: immutable `SymbolicExpression`, explicit `SymbolicExpressionOpCode : ushort`, binary arity in Stage 1, identical-instruction equality, and `NaN` for invalid numeric results.
-- Binding and execution: variable indexes bind to the supplied input-variable order, interpreter memory is not shared mutably, and Operon remains the postfix/contiguous-encoding reference.
+- Binding and execution: draft authoring is name-first, compiled variable instructions use payload indexes into an expression variable table, interpreter memory is not shared mutably, and Operon remains the postfix/contiguous-encoding reference.
 - Legacy: old mutable symbolic-expression-tree APIs move under `HEAL.HeuristicLib.Legacy...`; obsolete legacy types/methods use `Legacy` prefixes or suffixes only when needed to avoid name clashes.
 - Formatting/serialization: Stage 1 includes debug/infix formatting; full serialization is deferred.
 - Problem and search spaces: one symbolic-regression problem concept, with unrestricted and grammar-constrained scalar search spaces as distinct operator families.
-- Refinement: `Refiner` runs after variation and before evaluation; it returns immutable replacement expressions and keeps GA authoring as `Crossover`, `Mutator`, `MutationRate`, optional `Refiner`.
+- Refinement: `Refiner` is an algorithm-level, problem-typed operator that runs after variation and before evaluation; it receives candidates, random source, search space, and problem, returns immutable replacement expressions, and keeps GA authoring as `Crossover`, `Mutator`, `MutationRate`, optional `Refiner`.
 - Extensions: compose around expression components; add search-space types only when local structural admissibility changes. Shape constraints live in evaluator/evaluation-strategy objects, not the base problem.
