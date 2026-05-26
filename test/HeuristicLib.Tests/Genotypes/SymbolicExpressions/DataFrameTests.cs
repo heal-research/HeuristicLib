@@ -36,6 +36,8 @@ public sealed class DataFrameTests
         data.RowCount.ShouldBe(2);
         data.GetDoubleSeries("x0").Values.ToArray().ShouldBe([5.0, 2.0]);
         data.GetDoubleSeries("x1").Values.ToArray().ShouldBe([3.0, 4.0]);
+        data.GetDoubleSeries("x0").Name.ShouldBe("x0");
+        data.GetDoubleSeries("x1").Name.ShouldBe("x1");
     }
 
     [Fact]
@@ -52,6 +54,8 @@ public sealed class DataFrameTests
         data.RowCount.ShouldBe(2);
         data.GetDoubleSeries("x0").Values.ToArray().ShouldBe([1.0, 2.0]);
         data.GetDoubleSeries("x1").Values.ToArray().ShouldBe([3.0, 4.0]);
+        data.GetDoubleSeries("x0").Name.ShouldBe("x0");
+        data.GetDoubleSeries("x1").Name.ShouldBe("x1");
     }
 
     [Fact]
@@ -82,6 +86,15 @@ public sealed class DataFrameTests
     }
 
     [Fact]
+    public void Constructor_RejectsMismatchedNamedSeries()
+    {
+        Should.Throw<ArgumentException>(() =>
+          new DataFrame([
+            KeyValuePair.Create("x0", Series<double>.Create([1.0], name: "other"))
+          ]));
+    }
+
+    [Fact]
     public void GetDoubleSeries_RejectsUnknownName()
     {
         var data = new DataFrame([
@@ -95,10 +108,11 @@ public sealed class DataFrameTests
     public void SeriesCreate_CopiesInput()
     {
         var values = new[] { 1.0 };
-        var series = Series<double>.Create(values);
+        var series = Series<double>.Create(values, name: "y");
 
         values[0] = 2.0;
 
         series.Values.ToArray().ShouldBe([1.0]);
+        series.Name.ShouldBe("y");
     }
 }

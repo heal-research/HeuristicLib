@@ -9,15 +9,17 @@ public static class SymbolicExpressionInterpreter
         if (variableValues.Length != expression.VariableReferences.Count)
         {
             throw new ArgumentException(
-              $"Expected {expression.VariableReferences.Count} variable values but received {variableValues.Length}.",
-              nameof(variableValues));
+                $"Expected {expression.VariableReferences.Count} variable values but received {variableValues.Length}.",
+                nameof(variableValues));
         }
 
         var series = new KeyValuePair<string, Series<double>>[expression.VariableReferences.Count];
         for (var i = 0; i < series.Length; i++)
         {
             var variable = expression.VariableReferences[i];
-            series[i] = KeyValuePair.Create(variable.Name, Series<double>.FromOwnedArray([variableValues[variable.Index]]));
+            series[i] = KeyValuePair.Create(
+                variable.Name,
+                Series<double>.FromOwnedArray([variableValues[variable.Index]], variable.Name));
         }
 
         Span<double> result = stackalloc double[1];
@@ -31,8 +33,8 @@ public static class SymbolicExpressionInterpreter
             throw new ArgumentException("Variable names and values must have the same count.", nameof(variableValues));
 
         var row = new DataFrame(
-          variableNames.Select((name, index) =>
-            KeyValuePair.Create(name, Series<double>.FromOwnedArray([variableValues[index]]))));
+            variableNames.Select((name, index) =>
+                KeyValuePair.Create(name, Series<double>.FromOwnedArray([variableValues[index]], name))));
 
         Span<double> result = stackalloc double[1];
         Interpret(expression, row, result);
@@ -42,8 +44,7 @@ public static class SymbolicExpressionInterpreter
     public static double Interpret(SymbolicExpression expression, IReadOnlyDictionary<string, double> variableValues)
     {
         var row = new DataFrame(
-          variableValues.Select(pair =>
-            KeyValuePair.Create(pair.Key, Series<double>.FromOwnedArray([pair.Value]))));
+            variableValues.Select(pair => KeyValuePair.Create(pair.Key, Series<double>.FromOwnedArray([pair.Value], pair.Key))));
 
         Span<double> result = stackalloc double[1];
         Interpret(expression, row, result);
@@ -67,16 +68,16 @@ public static class SymbolicExpressionInterpreter
         if (destination.Length < data.RowCount)
         {
             throw new ArgumentException(
-              $"Destination must contain at least {data.RowCount} values but contains {destination.Length}.",
-              nameof(destination));
+                $"Destination must contain at least {data.RowCount} values but contains {destination.Length}.",
+                nameof(destination));
         }
 
         var workspaceLength = GetWorkspaceLength(expression, data);
         if (workspace.Length < workspaceLength)
         {
             throw new ArgumentException(
-              $"Workspace must contain at least {workspaceLength} values but contains {workspace.Length}.",
-              nameof(workspace));
+                $"Workspace must contain at least {workspaceLength} values but contains {workspace.Length}.",
+                nameof(workspace));
         }
 
         var stack = new EvaluationStack(workspace, data.RowCount);
@@ -85,7 +86,7 @@ public static class SymbolicExpressionInterpreter
     }
 
     public static int GetWorkspaceLength(SymbolicExpression expression, DataFrame data) =>
-      expression.Instructions.Count * data.RowCount;
+        expression.Instructions.Count * data.RowCount;
 
     private static void Execute(SymbolicExpression expression, DataFrame data, ref EvaluationStack stack)
     {

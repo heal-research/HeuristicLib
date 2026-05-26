@@ -12,6 +12,13 @@ public sealed class DataFrame
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Series name must not be empty.", nameof(doubleSeries));
 
+            if (series.Name is not null && !StringComparer.Ordinal.Equals(series.Name, name))
+            {
+                throw new ArgumentException(
+                    $"Series name '{series.Name}' does not match data frame column name '{name}'.",
+                    nameof(doubleSeries));
+            }
+
             if (!doubleSeriesByName.TryAdd(name, series))
                 throw new ArgumentException($"Series '{name}' is specified more than once.", nameof(doubleSeries));
 
@@ -32,11 +39,10 @@ public sealed class DataFrame
     public IReadOnlyCollection<string> DoubleSeriesNames => doubleSeriesByName.Keys;
 
     public static DataFrame FromColumns(IEnumerable<KeyValuePair<string, Series<double>>> columns) =>
-      new(columns);
+        new(columns);
 
     public static DataFrame FromOwnedColumns(IEnumerable<KeyValuePair<string, double[]>> columns) =>
-      new(columns.Select(column =>
-        KeyValuePair.Create(column.Key, Series<double>.FromOwnedArray(column.Value))));
+        new(columns.Select(column => KeyValuePair.Create(column.Key, Series<double>.FromOwnedArray(column.Value, column.Key))));
 
     public static DataFrame FromMatrix(IReadOnlyList<string> names, double[,] values)
     {

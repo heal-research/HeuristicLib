@@ -42,9 +42,7 @@ public class SymbolicRegressionRedesignSpecs
     [Fact]
     public void Interpreter_AuthoringShape_EvaluatesCompiledExpressionAgainstRegressionData()
     {
-        var data = CreateLinearDataset();
-
-        /*
+        var data = CreateLinearRegressionData();
         var expression = ExpressionDraft
           .Add(
             ExpressionDraft.Variable("x0"),
@@ -53,17 +51,12 @@ public class SymbolicRegressionRedesignSpecs
               ExpressionDraft.Variable("x1")))
           .Compile();
 
-        var interpreter = new SymbolicExpressionInterpreter();
-        var predictions = interpreter.Evaluate(
-          expression,
-          data.Dataset,
-          rows: data.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
+        var predictions = expression.Evaluate(data.TrainingInputs);
 
         predictions.ShouldBe([7.0, 10.0, 13.0], tolerance: 1e-12);
-        */
-
-        data.Dataset.GetVariableNames().ShouldBe(["x0", "x1", "y"]);
-        data.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ShouldBe([7.0, 10.0, 13.0]);
+        data.TrainingInputs.DoubleSeriesNames.Order().ShouldBe(["x0", "x1"]);
+        data.TargetName.ShouldBe("y");
+        data.TrainingTarget.Values.ToArray().ShouldBe([7.0, 10.0, 13.0]);
     }
 
     [Fact]
@@ -230,4 +223,16 @@ public class SymbolicRegressionRedesignSpecs
           allowedInputVariables: ["x0", "x1"],
           trainingRange: new Range(0, 3));
     }
+
+    private static RegressionData CreateLinearRegressionData() =>
+      RegressionData.Training(
+        DataFrame.FromMatrix(
+          ["x0", "x1"],
+          new double[,]
+          {
+              { 1.0, 3.0 },
+              { 2.0, 4.0 },
+              { 3.0, 5.0 }
+          }),
+        Series<double>.Create([7.0, 10.0, 13.0], name: "y"));
 }

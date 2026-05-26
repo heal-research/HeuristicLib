@@ -69,6 +69,7 @@ Boundary rules:
 - Interceptors run after an algorithm step and are too late for refinement that affects offspring fitness or replacement.
 - Determinism is required: the same candidate, problem data, configuration, and explicit random source must produce the same refinement and evaluation result.
 - Metrics compare target and prediction series positionally, like sklearn-style vectorized evaluation.
+- Regression data is the first concrete data-analysis shape. Keep the current implementation regression-focused, but leave room to generalize the same `DataFrame`/named-target split into supervised-learning data shapes for classification and other target types later.
 
 ## Stage 0: Design Closure
 
