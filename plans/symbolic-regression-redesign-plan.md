@@ -36,7 +36,7 @@ Resolve these before or during Stage 0:
 - **Refiner hook:** replace evaluation-time parameter mutation with a generic pre-evaluation refiner role and basic refinement counters.
 - **Operator validity:** decide bounded retry versus repair behavior for creation, mutation, crossover, and repair failure.
 - **Numeric literal metadata:** settle fixed versus optimizable literal representation and authoring names before Stage 1 hardens the genotype.
-- **Buffer/cache boundary:** scratch buffers and any column caches are interpreter internals, scoped to an evaluation call or execution instance.
+- **Buffer/cache boundary:** scratch buffers and any column caches are interpreter internals, scoped to an evaluation call or execution instance. If repeated symbolic-regression evaluation makes manual buffer handling noisy, consider a small reusable interpretation context that owns per-data scratch buffers and optional variable-column lookup caches, but do not add it before the concrete evaluation path shows that need.
 - **Thread safety:** no shared mutable interpreter memory; shared state must be immutable.
 - **Extension migration:** track which examples, Python interop scripts, sliding-window regression, and scenarios migrate in Stage 5 and which stay on legacy during the scalar stages.
 

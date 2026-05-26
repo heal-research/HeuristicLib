@@ -27,15 +27,16 @@ public class SymbolicRegressionRedesignSpecs
           .Select(instruction => instruction.PayloadIndex)
           .ShouldBe([0, 1]);
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
-        expression.Evaluate(
-            ["x0", "x1"],
-            new double[,]
-            {
-                { 1.0, 3.0 },
-                { 2.0, 4.0 },
-                { 3.0, 5.0 }
-            })
-          .ShouldBe([7.0, 10.0, 13.0]);
+        var data = DataFrame.FromMatrix(
+          ["x0", "x1"],
+          new double[,]
+          {
+              { 1.0, 3.0 },
+              { 2.0, 4.0 },
+              { 3.0, 5.0 }
+          });
+
+        expression.Evaluate(data).ShouldBe([7.0, 10.0, 13.0]);
     }
 
     [Fact]

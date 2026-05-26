@@ -211,15 +211,35 @@ public sealed class SymbolicExpressionTests
               ExpressionDraft.Fixed(2.0),
               ExpressionDraft.Variable("x1")))
           .Compile();
+        var data = DataFrame.FromMatrix(
+          ["x0", "x1"],
+          new double[,]
+          {
+              { 1.0, 3.0 },
+              { 2.0, 4.0 },
+              { 3.0, 5.0 }
+          });
 
-        var values = new double[,]
-        {
-            { 1.0, 3.0 },
-            { 2.0, 4.0 },
-            { 3.0, 5.0 }
-        };
+        expression.Evaluate(data).ShouldBe([7.0, 10.0, 13.0]);
+    }
 
-        expression.Evaluate(values).ShouldBe([7.0, 10.0, 13.0]);
+    [Fact]
+    public void Interpreter_UsesDataFrameColumns()
+    {
+        var expression = ExpressionDraft
+          .Add(
+            ExpressionDraft.Variable("x0"),
+            ExpressionDraft.Multiply(
+              ExpressionDraft.Fixed(2.0),
+              ExpressionDraft.Variable("x1")))
+          .Compile();
+        var data = new DataFrame([
+          KeyValuePair.Create("x0", Series<double>.Create([1.0, 2.0, 3.0])),
+          KeyValuePair.Create("x1", Series<double>.Create([3.0, 4.0, 5.0]))
+        ]);
+
+        SymbolicExpressionInterpreter.Interpret(expression, data).ShouldBe([7.0, 10.0, 13.0]);
+        expression.Evaluate(data).ShouldBe([7.0, 10.0, 13.0]);
     }
 
     [Fact]
@@ -232,69 +252,96 @@ public sealed class SymbolicExpressionTests
               ExpressionDraft.Fixed(2.0),
               ExpressionDraft.Variable("x1")))
           .Compile();
+        var data = DataFrame.FromMatrix(
+          ["x1", "x0", "unused"],
+          new double[,]
+          {
+              { 3.0, 1.0, 100.0 },
+              { 4.0, 2.0, 100.0 },
+              { 5.0, 3.0, 100.0 }
+          });
 
-        var values = new double[,]
-        {
-            { 3.0, 1.0, 100.0 },
-            { 4.0, 2.0, 100.0 },
-            { 5.0, 3.0, 100.0 }
-        };
-
-        expression.Evaluate(["x1", "x0", "unused"], values).ShouldBe([7.0, 10.0, 13.0]);
+        expression.Evaluate(data).ShouldBe([7.0, 10.0, 13.0]);
     }
 
     [Fact]
     public void Evaluate_WritesIntoDestination()
     {
         var expression = ExpressionDraft.Variable("x0").Compile();
-        var values = new double[,]
-        {
-            { 1.0 },
-            { 2.0 }
-        };
+        var data = DataFrame.FromMatrix(
+          ["x0"],
+          new double[,]
+          {
+              { 1.0 },
+              { 2.0 }
+          });
         var destination = new[] { double.NaN, double.NaN, 42.0 };
 
-        expression.Evaluate(values, destination);
+        expression.Evaluate(data, destination);
 
         destination.ShouldBe([1.0, 2.0, 42.0]);
     }
 
     [Fact]
-    public void Evaluate_RejectsWrongVariableColumnCountForTableOrder()
+    public void Evaluate_UsesCallerProvidedWorkspace()
+    {
+        var expression = ExpressionDraft
+          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Fixed(2.0))
+          .Compile();
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
+        ]);
+        var destination = new[] { double.NaN, double.NaN };
+        var workspace = new double[SymbolicExpressionInterpreter.GetWorkspaceLength(expression, data)];
+
+        expression.Evaluate(data, destination, workspace);
+
+        destination.ShouldBe([3.0, 4.0]);
+    }
+
+    [Fact]
+    public void Evaluate_ReturnsEmptyResultForEmptyDataFrame()
+    {
+        var expression = ExpressionDraft
+          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Fixed(2.0))
+          .Compile();
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x0", Array.Empty<double>())
+        ]);
+
+        expression.Evaluate(data).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Evaluate_RejectsTooSmallWorkspace()
     {
         var expression = ExpressionDraft.Variable("x0").Compile();
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
+        ]);
 
-        Should.Throw<ArgumentException>(() => expression.Evaluate(new double[,] { { 1.0, 2.0 } }));
+        Should.Throw<ArgumentException>(() => expression.Evaluate(data, new double[2], new double[1]));
     }
 
     [Fact]
     public void Evaluate_RejectsTooSmallDestination()
     {
         var expression = ExpressionDraft.Variable("x0").Compile();
-        var values = new double[,]
-        {
-            { 1.0 },
-            { 2.0 }
-        };
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
+        ]);
 
-        Should.Throw<ArgumentException>(() => expression.Evaluate(values, new double[1]));
+        Should.Throw<ArgumentException>(() => expression.Evaluate(data, new double[1]));
     }
 
     [Fact]
     public void Evaluate_RejectsMissingNamedColumn()
     {
         var expression = ExpressionDraft.Variable("x0").Compile();
-        var values = new double[,] { { 1.0 } };
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x1", new[] { 1.0 })
+        ]);
 
-        Should.Throw<ArgumentException>(() => expression.Evaluate(["x1"], values));
-    }
-
-    [Fact]
-    public void Evaluate_RejectsDuplicateNamedColumn()
-    {
-        var expression = ExpressionDraft.Variable("x0").Compile();
-        var values = new double[,] { { 1.0, 2.0 } };
-
-        Should.Throw<ArgumentException>(() => expression.Evaluate(["x0", "x0"], values));
+        Should.Throw<ArgumentException>(() => expression.Evaluate(data));
     }
 }
