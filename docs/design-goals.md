@@ -115,6 +115,17 @@ The design may place an explicit evaluator layer between algorithms and `Problem
 
 Shared operators should prefer batch-first APIs when batch context is the honest semantic model.
 
+### Hot-path performance without hostile APIs
+
+Optimization runs repeatedly exercise hot paths: evaluation, creation, selection, crossover, mutation, replacement, refinement, and problem-specific helpers. These paths should be designed so allocation pressure can be controlled when it matters.
+
+- Keep ergonomic allocating APIs for ordinary use, examples, and tests.
+- For hot optimization paths, prefer overloads or execution-state/context objects that let callers own reusable scratch memory, output buffers, caches, and other temporary storage.
+- Avoid one-off scratch-memory conventions on isolated operators. When a role needs caller-provided storage, make the ownership and lifetime rules consistent with the surrounding operator or execution-state model.
+- Allocation-free execution is an optimization target for repeated hot loops, not a blanket requirement for every public method.
+- Immutable solution candidates may still allocate when a new candidate is the real result. The goal is to avoid accidental temporary allocations around that result.
+- Do not add complexity for hypothetical performance wins; introduce low-allocation paths where profiling, algorithm structure, or repeated-use semantics make the allocation cost credible.
+
 ### Humans first, AI compatible
 
 Humans are the primary users. AI compatibility is a design constraint, not the main goal.
