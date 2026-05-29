@@ -1,0 +1,135 @@
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
+using HEAL.HeuristicLib.Problems.TravelingSalesman;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.Tests.TestSupport.Execution;
+using HEAL.HeuristicLib.Tests.TestSupport.Random;
+
+namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.TravelingSalesman;
+
+public class TravelingSalesmanProblemTests
+{
+    private static readonly double[,] D = { { 0, 1, 2, 3 }, { 1, 0, 4, 5 }, { 2, 4, 0, 6 }, { 3, 5, 6, 0 } };
+
+    [Fact]
+    public void Update_SwitchProbZero_StateUnchanged()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var env = RandomNumberGenerator.Create(0);
+        var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, false], 0.0);
+
+        var before = p.CurrentState.ToArray();
+        p.UpdateOnce();
+        p.CurrentState.ShouldBe(before);
+    }
+
+    [Fact]
+    public void Evaluate_AllActive_EqualsFullCycleCost()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
+        var p = new ActivatedTravelingSalesmanProblem(data, env, 1.0, 0.0);
+        p.CurrentState.ShouldBe([true, true, true, true]);
+        Permutation tour = [0, 1, 2, 3];
+        var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
+        // Full cycle: 0->1->2->3->0 = 1 + 4 + 6 + 3 = 14
+        cost.ShouldBe(14.0, 1e-10);
+        p.UpdateOnce();
+        var cost1 = p.Evaluate(tour, TestRandoms.NoRandom)[0];
+        cost1.ShouldBe(14.0, 1e-10);
+    }
+
+    [Fact]
+    public void Evaluate_SkipsInactiveCities_ReconnectsTour()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
+        var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, true], 0.0);
+        Permutation tour = [0, 1, 2, 3];
+        var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
+        // 0->2 (2) + 2->3 (6) + 3->0 (3) = 11
+        cost.ShouldBe(11.0, 1e-10);
+        p.UpdateOnce();
+        var cost1 = p.Evaluate(tour, env)[0];
+        cost1.ShouldBe(11.0, 1e-10);
+    }
+
+    [Fact]
+    public void Evaluate_NoActiveCities_ReturnsZero()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
+        var p = new ActivatedTravelingSalesmanProblem(data, env, [false, false, false, false], 0.0);
+        Permutation tour = [0, 1, 2, 3];
+
+        var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
+        cost.ShouldBe(0.0, 1e-10);
+        p.UpdateOnce();
+        var cost1 = p.Evaluate(tour, TestRandoms.NoRandom)[0];
+        cost1.ShouldBe(0.0, 1e-10);
+    }
+
+    [Fact]
+    public void Evaluate_OneActiveCity_ReturnsZero()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
+        var p = new ActivatedTravelingSalesmanProblem(data, env, [false, true, false, false], 0.0);
+
+        Permutation tour = [0, 1, 2, 3];
+
+        var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
+        cost.ShouldBe(0.0, 1e-10);
+        p.UpdateOnce();
+        var cost1 = p.Evaluate(tour, TestRandoms.NoRandom)[0];
+        cost1.ShouldBe(0.0, 1e-10);
+    }
+
+    [Fact]
+    public void Update_SwitchProbOne_FlipsAllBits()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var env = RandomNumberGenerator.Create(0); // irrelevant for evaluation
+        var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, true, false], 1.0);
+        p.UpdateOnce();
+        p.CurrentState.ShouldBe([false, true, false, true]);
+    }
+
+    [Fact]
+    public void Evaluate_TwoActiveCities_IsTwoWayEdgeSum()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var env = RandomNumberGenerator.Create(0);
+        var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 0.0);
+
+        Permutation tour = [0, 1, 2, 3];
+        var cost = p.Evaluate(tour, TestRandoms.NoRandom)[0];
+
+        // filtered tour: [0,3] => 0->3 (3) + 3->0 (3) = 6
+        cost.ShouldBe(6.0, 1e-10);
+    }
+
+    [Fact]
+    public void MyCachedTestCase()
+    {
+        var data = new TravelingSalesmanDistanceMatrixProblemData(D);
+        var env = RandomNumberGenerator.Create(0);
+        var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 1.0, epochLength: 200);
+        Permutation tour = [0, 1, 2, 3];
+        var cachedEval = p.CreateEvaluator().WithCache().CreateExecutionInstance(TestRun.Instance);
+        p.EpochClock.CurrentEpoch.ShouldBe(0);
+
+        var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
+        var r2 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
+        r2.ToArray().ShouldBe(r1.ToArray());
+
+        p.UpdateOnce();
+        p.EpochClock.CurrentEpoch.ShouldBe(1);
+
+        var r3 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
+
+        r3.ShouldNotBeNull();
+    }
+}

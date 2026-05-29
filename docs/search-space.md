@@ -53,4 +53,3 @@ Console.WriteLine(space.Contains(new double[] { 0.0, 1.0, -2.0 })); // True
 
 - [Problem](problem.md)
 - [Operators](operators.md)
-

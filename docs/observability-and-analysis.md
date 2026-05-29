@@ -1,6 +1,6 @@
 # Observability & analysis
 
-HeuristicLib supports *observing* algorithms and operators without changing what they compute.
+HeuristicLib supports _observing_ algorithms and operators without changing what they compute.
 
 The core pattern is:
 
@@ -20,7 +20,7 @@ An observer must behave like a **read-only tap**.
 Concretely:
 
 - Do not mutate objects that the algorithm will use later.
-  - Many parameters are passed as `IReadOnlyList<...>`, but the *elements* may still be mutable.
+  - Many parameters are passed as `IReadOnlyList<...>`, but the _elements_ may still be mutable.
 - Do not depend on observer execution order.
 - Do not call back into the algorithm or operator in a way that changes future behavior.
 
@@ -223,15 +223,15 @@ Use **analyzers** when you want a **run-owned analysis object**.
 
 ### Comparison table
 
-| Question | Observable operators | Analyzers |
-|---|---|---|
-| Main purpose | local callback / instrumentation | reusable run-scoped analysis |
-| Lifetime | execution-instance-driven | run-driven |
-| State lives where? | usually in an external sink or observer object | in the analyzer result returned by the run |
-| Retrieval model | you keep the sink yourself | `run.GetAnalyzerResult(analyzer)` |
-| Number of hook points | often one | one or many |
-| Best for | logging, counters, quick diagnostics | quality curves, genealogy, reusable analysis modules |
-| Relation to the other system | foundation | built on top of observable operators |
+| Question                     | Observable operators                           | Analyzers                                            |
+| ---------------------------- | ---------------------------------------------- | ---------------------------------------------------- |
+| Main purpose                 | local callback / instrumentation               | reusable run-scoped analysis                         |
+| Lifetime                     | execution-instance-driven                      | run-driven                                           |
+| State lives where?           | usually in an external sink or observer object | in the analyzer result returned by the run           |
+| Retrieval model              | you keep the sink yourself                     | `run.GetAnalyzerResult(analyzer)`                    |
+| Number of hook points        | often one                                      | one or many                                          |
+| Best for                     | logging, counters, quick diagnostics           | quality curves, genealogy, reusable analysis modules |
+| Relation to the other system | foundation                                     | built on top of observable operators                 |
 
 ### Which one should library users prefer?
 
@@ -248,7 +248,7 @@ Observable wrappers follow a consistent pattern:
 - Wrap a definition.
 - Resolve underlying dependencies via `ExecutionInstanceRegistry`.
 - Delegate to the underlying instance.
-- Notify observers *after* the operation.
+- Notify observers _after_ the operation.
 
 Examples include observable wrappers for mutators, crossovers, evaluators, terminators, selectors, replacers, interceptors, and creators.
 

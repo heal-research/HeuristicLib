@@ -1,4 +1,4 @@
-﻿# Analyzer architecture
+# Analyzer architecture
 
 This page explains the current analyzer system in HeuristicLib.
 
@@ -109,7 +109,7 @@ public interface IAnalyzerRunState<out TResult> : IAnalyzerRunState
 }
 ```
 
-There is also a small optional convenience base class in `HEAL.HeuristicLib.Core`:
+There is also a small optional convenience base class in `HEAL.HeuristicLib`:
 
 ```csharp
 public abstract class AnalyzerRunState<TAnalyzer>(TAnalyzer analyzer) : IAnalyzerRunState
@@ -203,7 +203,7 @@ There is currently **no separate publish step**. The analyzer run state exposes 
 
 ## Why the run is the right scope
 
-`ExecutionInstanceRegistry` still matters, but it is not the right place to *own* analysis data.
+`ExecutionInstanceRegistry` still matters, but it is not the right place to _own_ analysis data.
 
 A registry controls the lifetime of operator and algorithm execution instances.
 This is useful for:
@@ -321,9 +321,9 @@ Instead:
 
 This keeps concerns separate:
 
-- wrappers define *where* callbacks happen
-- analyzers define *which* callbacks they want
-- analyzer results define *how* data is accumulated
+- wrappers define _where_ callbacks happen
+- analyzers define _which_ callbacks they want
+- analyzer results define _how_ data is accumulated
 
 ## When to use analyzers vs plain observable operators
 

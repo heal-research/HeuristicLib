@@ -1,0 +1,59 @@
+{
+  Encoding: {
+    Length: 10,
+    Minimum: [
+      -5.0
+    ],
+    Maximum: [
+      5.0
+    ]
+  },
+  PopulationSize: 200,
+  Creator: {
+    $type: UniformDistributedCreator,
+    Minimum: null,
+    Maximum: [
+      3.0
+    ]
+  },
+  Crossover: {
+    $type: SinglePointCrossover
+  },
+  Mutator: {
+    $type: GaussianMutator,
+    MutationRate: 0.1,
+    MutationStrength: 0.1
+  },
+  MutationRate: 0.05,
+  Decoder: {
+    $type: IdentityDecoder<RealVector>
+  },
+  Evaluator: {
+    $type: GeneticAlgorithmTests.RealVectorMockEvaluator
+  },
+  Objective: {
+    Directions: [
+      Minimize
+    ],
+    TotalOrderComparer: {
+      $type: SingleObjectiveComparer
+    }
+  },
+  RandomSource: {
+    $type: FixedRandomSource,
+    Seed: 42
+  },
+  Selector: {
+    $type: RandomSelector
+  },
+  Replacer: {
+    $type: PlusSelectionReplacer
+  },
+  Interceptor: {
+    $type: IdentityInterceptor<EvolutionResult<RealVector>>
+  },
+  Terminator: {
+    $type: MaximumGenerationTerminator<EvolutionResult<RealVector>>,
+    MaximumGeneration: 5
+  }
+}

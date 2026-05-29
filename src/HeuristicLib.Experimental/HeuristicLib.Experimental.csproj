@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <AssemblyName>HEAL.HeuristicLib.Experimental</AssemblyName>
+        <PackageId>HEAL.HeuristicLib.Experimental</PackageId>
+        <RootNamespace>HEAL.HeuristicLib</RootNamespace>
+        <Description>Experimental HeuristicLib APIs and research-oriented features.</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\HeuristicLib\HeuristicLib.csproj" />
+    </ItemGroup>
+</Project>

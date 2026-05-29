@@ -1,3 +1,3 @@
-﻿namespace csProject;
+namespace csProject;
 public class Class1
 {}

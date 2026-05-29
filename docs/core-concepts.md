@@ -8,18 +8,18 @@ The goal is a single dominant mental model:
 
 ## The contracts at a glance
 
-| Concept | What it is | Where it lives |
-|---|---|---|
-| Genotype | Your candidate representation | Generic type parameter `TGenotype` (usually a class/record) |
-| Search space | Validity predicate for genotypes | `ISearchSpace<TGenotype>` |
-| Objective | Defines direction(s) and ordering | `Objective`, `ObjectiveDirection` |
-| Objective vector | The measured outcome of evaluation | `ObjectiveVector` |
-| Solution | Genotype + objective vector | `ISolution<TGenotype>` |
-| Problem | Owns objective + search space + evaluation | `IProblem<TGenotype, TSearchSpace>` |
-| Search state | The public progress value produced by algorithms | `ISearchState` |
-| Algorithm loop | The step-based algorithm authoring model | `IterativeAlgorithm<...>` |
-| Execution state | Hidden per-run mutable execution state | `TExecutionState` on `IterativeAlgorithm<...>` |
-| Operators | Pluggable building blocks used by algorithms | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor` |
+| Concept          | What it is                                       | Where it lives                                                                                              |
+| ---------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Genotype         | Your candidate representation                    | Generic type parameter `TGenotype` (usually a class/record)                                                 |
+| Search space     | Validity predicate for genotypes                 | `ISearchSpace<TGenotype>`                                                                                   |
+| Objective        | Defines direction(s) and ordering                | `Objective`, `ObjectiveDirection`                                                                           |
+| Objective vector | The measured outcome of evaluation               | `ObjectiveVector`                                                                                           |
+| Solution         | Genotype + objective vector                      | `ISolution<TGenotype>`                                                                                      |
+| Problem          | Owns objective + search space + evaluation       | `IProblem<TGenotype, TSearchSpace>`                                                                         |
+| Search state     | The public progress value produced by algorithms | `ISearchState`                                                                                              |
+| Algorithm loop   | The step-based algorithm authoring model         | `IterativeAlgorithm<...>`                                                                                   |
+| Execution state  | Hidden per-run mutable execution state           | `TExecutionState` on `IterativeAlgorithm<...>`                                                              |
+| Operators        | Pluggable building blocks used by algorithms     | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor` |
 
 ## How the types fit together
 

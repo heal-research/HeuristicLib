@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <RootNamespace>HEAL.HeuristicLib</RootNamespace>
+        <AssemblyName>HEAL.HeuristicLib.Contracts</AssemblyName>
+        <PackageId>HEAL.HeuristicLib.Contracts</PackageId>
+        <Description>Foundational public contracts shared across HeuristicLib packages.</Description>
+    </PropertyGroup>
+
+    <ItemGroup />
+</Project>

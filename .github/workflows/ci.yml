@@ -1,12 +1,12 @@
-﻿name: CI
+name: CI
 
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 permissions:
   contents: read
@@ -14,6 +14,7 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_VERSION: 10.0.x
+  NODE_VERSION: 22.x
   CONFIGURATION: Release
 
 jobs:
@@ -81,12 +82,29 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           global-json-file: global.json
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v5.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
       - name: Restore
         run: dotnet restore
 
+      - name: Install formatting tools
+        run: npm ci
+
       - name: Verify formatting
         continue-on-error: true
-        run: dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error
+        run: npm run format:check
+
+      - name: Check code style
+        continue-on-error: true
+        run: npm run style:check
+
+      - name: Check analyzers
+        continue-on-error: true
+        run: npm run analyzers:check
 
   pack:
     name: Pack
@@ -149,4 +167,3 @@ jobs:
         env:
           NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
         run: dotnet nuget push "./artifacts/packages/*.nupkg" --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
-

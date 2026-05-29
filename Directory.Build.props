@@ -1,27 +1,36 @@
 <Project>
-  <PropertyGroup>
-    <LangVersion>default</LangVersion>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <WarningsAsErrors>Nullable</WarningsAsErrors>
-    <DebugType>embedded</DebugType>
-  </PropertyGroup>
+    <PropertyGroup>
+        <LangVersion>default</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <WarningsAsErrors>Nullable</WarningsAsErrors>
+        <DebugType>embedded</DebugType>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <Authors>Heuristic and Evolutionary Algorithms Laboratory (HEAL)</Authors>
-    <Company>University of Applied Sciences Upper Austria</Company>
-    <Copyright>(c) Heuristic and Evolutionary Algorithms Laboratory (HEAL)</Copyright>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-  </PropertyGroup>
-    
-  <ItemGroup>
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.19.0.132793">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Nerdbank.GitVersioning" Version="3.9.50">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
+    <PropertyGroup>
+        <Authors>Heuristic and Evolutionary Algorithms Laboratory (HEAL)</Authors>
+        <Company>University of Applied Sciences Upper Austria</Company>
+        <Copyright>(c) Heuristic and Evolutionary Algorithms Laboratory (HEAL)</Copyright>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageProjectUrl>https://github.com/heal-research/HeuristicLib</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/heal-research/HeuristicLib</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>metaheuristic-optimization; evolutionary-algorithms</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(IsPackable)' != 'false'">
+        <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="SonarAnalyzer.CSharp" Version="10.19.0.132793">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Nerdbank.GitVersioning" Version="3.9.50">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
 </Project>

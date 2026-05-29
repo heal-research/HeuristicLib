@@ -58,4 +58,3 @@ foreach (var state in algorithm.RunStreaming(problem, rng, initialState: last)) 
 
 - [Algorithm](algorithm.md)
 - [Execution model](execution-model.md)
-

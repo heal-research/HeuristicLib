@@ -11,7 +11,7 @@ dll_dir = os.path.join(_here, "csProject", "bin", "Release", "net10.0", "publish
 if dll_dir not in sys.path:
     sys.path.append(dll_dir)
 
-clr.AddReference("HEAL.HeuristicLib.Core") # type: ignore # noqa: E1101
+clr.AddReference("HEAL.HeuristicLib") # type: ignore # noqa: E1101
 
 from System import Array, Double, Int32  # type: ignore  # noqa: E402 # noqa: E0401
 

@@ -98,29 +98,34 @@ HeuristicLib intentionally builds random sampling in layers above `IRandomNumber
 The goal is that each layer adds one kind of convenience without creating a parallel implementation path.
 
 1. Primitive RNG
-  - Vehicle: instance methods on `IRandomNumberGenerator`
-  - Typical API: `NextDouble()`, `NextInt()`, `Fork(...)`
-  - Use when: you need raw draws or are implementing a higher random layer
+   - Vehicle: instance methods on `IRandomNumberGenerator`
+   - Typical API: `NextDouble()`, `NextInt()`, `Fork(...)`
+   - Use when: you need raw draws or are implementing a higher random layer
+
 2. Scalar helpers
-  - Vehicle: extension blocks on `IRandomNumberGenerator` in `HEAL.HeuristicLib.Random`
-  - Typical API: ranged `NextDouble(low, high)`, `NextBool(...)`, `NextBools(...)`, `NextNormal(...)`, `NextNormals(...)`, `NextDoubles(...)`, `NextInts(...)`
-  - Use when: the desired result is a scalar or scalar array
+   - Vehicle: extension blocks on `IRandomNumberGenerator` in `HEAL.HeuristicLib.Random`
+   - Typical API: ranged `NextDouble(low, high)`, `NextBool(...)`, `NextBools(...)`, `NextNormal(...)`, `NextNormals(...)`, `NextDoubles(...)`, `NextInts(...)`
+   - Use when: the desired result is a scalar or scalar array
+
 3. Typed output helpers
-  - Vehicle: extension blocks on `IRandomNumberGenerator` grouped by output type
-  - Typical API: `NextRealVectorUniform(...)`, `NextRealVectorNormal(...)`, `NextIntegerVectorUniform(...)`, `NextIntegerVectorNormal(...)`, `NextPermutation(...)`
-  - Use when: the desired result is a domain type and you want the type-specific construction logic handled for you
+   - Vehicle: extension blocks on `IRandomNumberGenerator` grouped by output type
+   - Typical API: `NextRealVectorUniform(...)`, `NextRealVectorNormal(...)`, `NextIntegerVectorUniform(...)`, `NextIntegerVectorNormal(...)`, `NextPermutation(...)`
+   - Use when: the desired result is a domain type and you want the type-specific construction logic handled for you
+
 4. Search-space convenience helpers
-  - Vehicle: extension blocks on `IRandomNumberGenerator` that accept search-space objects
-  - Typical API: `NextRealVectorUniform(searchSpace)`, `NextRealVectorNormal(searchSpace, ...)`, `NextIntegerVectorUniform(searchSpace)`, `NextIntegerVectorNormal(searchSpace, ...)`, `NextPermutation(searchSpace)`
-  - Use when: you already have a search space and want a matching valid sample
+   - Vehicle: extension blocks on `IRandomNumberGenerator` that accept search-space objects
+   - Typical API: `NextRealVectorUniform(searchSpace)`, `NextRealVectorNormal(searchSpace, ...)`, `NextIntegerVectorUniform(searchSpace)`, `NextIntegerVectorNormal(searchSpace, ...)`, `NextPermutation(searchSpace)`
+   - Use when: you already have a search space and want a matching valid sample
+
 5. Operator creators
-  - Vehicle: creator instances plus static `Create(...)` methods
-  - Typical API: `UniformDistributedCreator`, `NormalDistributedCreator`, `RandomPermutationCreator`
-  - Use when: you are configuring an algorithm or want to invoke the operator role directly
+   - Vehicle: creator instances plus static `Create(...)` methods
+   - Typical API: `UniformDistributedCreator`, `NormalDistributedCreator`, `RandomPermutationCreator`
+   - Use when: you are configuring an algorithm or want to invoke the operator role directly
+
 6. Type-level factory aliases
-  - Vehicle: static factory methods on output types such as `RealVector` or `IntegerVector`
-  - Typical API: `RealVector.CreateUniform(...)`, `RealVector.CreateNormal(...)`, `IntegerVector.CreateUniform(...)`
-  - Use when: you prefer starting from the output type; these are ergonomic aliases only
+   - Vehicle: static factory methods on output types such as `RealVector` or `IntegerVector`
+   - Typical API: `RealVector.CreateUniform(...)`, `RealVector.CreateNormal(...)`, `IntegerVector.CreateUniform(...)`
+   - Use when: you prefer starting from the output type; these are ergonomic aliases only
 
 ### Naming rule
 

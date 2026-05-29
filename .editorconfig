@@ -2,46 +2,13 @@
 root = true
 
 [*]
-# Indentation and spacing
-indent_size = 2
+indent_size = 4
 indent_style = space
-tab_width = 2
-
-# New line preferences
-end_of_line = crlf
+tab_width = 4
+charset = utf-8
+end_of_line = lf
 insert_final_newline = true
-dotnet_style_operator_placement_when_wrapping = beginning_of_line
-dotnet_style_coalesce_expression = true:suggestion
-dotnet_style_null_propagation = true:suggestion
-dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggestion
-dotnet_style_prefer_auto_properties = true:silent
-dotnet_style_object_initializer = true:suggestion
-dotnet_style_collection_initializer = true:suggestion
-dotnet_style_prefer_simplified_boolean_expressions = true:suggestion
-dotnet_style_prefer_conditional_expression_over_assignment = true:silent
-dotnet_style_prefer_conditional_expression_over_return = true:silent
-dotnet_style_explicit_tuple_names = true:suggestion
-dotnet_style_prefer_inferred_tuple_names = true:suggestion
-dotnet_style_prefer_inferred_anonymous_type_member_names = true:suggestion
-dotnet_style_prefer_compound_assignment = true:suggestion
-dotnet_style_prefer_simplified_interpolation = true:suggestion
-dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
-dotnet_style_namespace_match_folder = true:suggestion
-dotnet_style_readonly_field = true:suggestion
-dotnet_style_predefined_type_for_locals_parameters_members = true:silent
-dotnet_style_predefined_type_for_member_access = true:silent
-dotnet_style_require_accessibility_modifiers = for_non_interface_members:silent
-dotnet_style_allow_multiple_blank_lines_experimental = true:silent
-dotnet_style_allow_statement_immediately_after_block_experimental = true:silent
-dotnet_code_quality_unused_parameters = all:suggestion
-dotnet_style_parentheses_in_arithmetic_binary_operators = always_for_clarity:silent
-dotnet_style_parentheses_in_other_binary_operators = always_for_clarity:silent
-dotnet_style_parentheses_in_relational_binary_operators = always_for_clarity:silent
-dotnet_style_parentheses_in_other_operators = never_if_unnecessary:silent
-dotnet_style_qualification_for_field = false:silent
-dotnet_style_qualification_for_property = false:silent
-dotnet_style_qualification_for_method = false:silent
-dotnet_style_qualification_for_event = false:silent
+trim_trailing_whitespace = true
 
 # C# files
 [*.cs]
@@ -87,6 +54,7 @@ dotnet_style_prefer_compound_assignment = true
 dotnet_style_prefer_conditional_expression_over_assignment = true
 dotnet_style_prefer_conditional_expression_over_return = true
 dotnet_style_prefer_foreach_explicit_cast_in_source = when_strongly_typed
+dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
 dotnet_style_prefer_inferred_anonymous_type_member_names = true
 dotnet_style_prefer_inferred_tuple_names = true
 dotnet_style_prefer_is_null_check_over_reference_equality_method = true
@@ -174,12 +142,12 @@ csharp_style_allow_embedded_statements_on_same_line_experimental = true:silent
 #### C# Formatting Rules ####
 
 # New line preferences
-csharp_new_line_before_catch = false
-csharp_new_line_before_else = false
-csharp_new_line_before_finally = false
-csharp_new_line_before_members_in_anonymous_types = false
-csharp_new_line_before_members_in_object_initializers = false
-csharp_new_line_before_open_brace = types, methods, properties, indexers, events
+csharp_new_line_before_catch = true
+csharp_new_line_before_else = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_open_brace = all
 csharp_new_line_between_query_expression_clauses = true
 
 # Indentation preferences
@@ -271,10 +239,13 @@ csharp_prefer_system_threading_lock = true:suggestion
 csharp_prefer_static_anonymous_function = true:suggestion
 csharp_style_prefer_readonly_struct_member = true:suggestion
 
+# Prettier-managed text files
+[*.{json,yml,yaml,md}]
+indent_size = 2
+tab_width = 2
+
 # Verify settings
 [*.{received,verified}.{json,txt,xml}]
-charset = "utf-8-bom"
-end_of_line = lf
 indent_size = unset
 indent_style = unset
 insert_final_newline = false
