@@ -49,21 +49,28 @@ The intended pattern is:
 For iterative algorithms, the default loop is:
 
 1. start from `previousState = initialState`
-2. enumerate iteration indices `0, 1, 2, ...`
-3. for each iteration:
+2. enumerate yielded-state counts `0, 1, 2, ...`
+3. for each yielded-state count:
+   - stop if the algorithm has internally completed
    - check cancellation
-   - fork the RNG using the iteration index
+   - fork the RNG using the yielded-state count
    - compute the next state with `ExecuteStep(...)`
    - optionally transform it with the configured interceptor
    - yield the produced state
    - continue from that state
 
-Those iteration indices are internal to that specific iterative loop. They are useful for execution concerns such as deterministic RNG forking, but they are not part of the public search-state contract and do not define a cross-algorithm notion of iteration for nested or meta-algorithm execution.
+Those yielded-state counts are internal to that specific iterative loop. They are useful for execution concerns such as deterministic RNG forking and internal budgets, but they are not part of the public search-state contract and do not define a cross-algorithm notion of iteration, generation, or step for nested or meta-algorithm execution.
 
 So the model supports both:
 
 - fresh runs, where `initialState == null`
 - resumed runs, where an existing state is passed back in
+
+A supplied `initialState` is resume input from outside the current execution; it is not a newly produced state. The default execution model therefore does not yield that state or treat it as something state-based external terminators have observed. External terminators such as `TerminatableAlgorithm` check only produced public states, after the state has been yielded, and a matching state stops future consumption rather than removing the state that triggered the stop.
+
+Some algorithms also expose internal budget properties. For example, `GeneticAlgorithm.MaximumGenerations` is part of the genetic algorithm's own completion semantics and counts produced generation states from the current execution. A resumed run does not count the supplied `initialState` toward that budget. This differs from `WithMaxIterations(...)`, which wraps an algorithm with external early stopping over the yielded stream.
+
+In this documentation, **completed** means the algorithm has internally finished producing states, either because an algorithm-owned budget or completion rule fired or because the algorithm has structurally no next state to produce. External early stopping is different: it stops consumption of a stream from the outside, but does not redefine whether the wrapped algorithm itself completed.
 
 ## Runs and analyzers
 

@@ -50,6 +50,80 @@ public class GeneticAlgorithmSolvingTests
     }
 
     [Fact]
+    public void RunStreaming_WithMaximumGenerationsOne_YieldsOnlyGeneratedInitialPopulation()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            MaximumGenerations = 1
+        };
+
+        var results = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(1);
+        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfGenerationStates()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            MaximumGenerations = 3
+        };
+
+        var results = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(3);
+        results.All(result => result.Population.Solutions.Length == 5).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void RunStreaming_WithMaximumGenerationsAndInitialState_CountsOnlyNewlyProducedStates()
+    {
+        var problem = CreateProblem();
+        var initialState = (CreateUnwrappedAlgorithm(problem) with
+        {
+            MaximumGenerations = 1
+        }).RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken).Single();
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            MaximumGenerations = 2
+        };
+
+        var results = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(43),
+          initialState,
+          TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(2);
+        results.All(result => result.Population.Solutions.Length == 5).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Constructor_Throws_WhenMaximumGenerationsIsNotPositive()
+    {
+        var problem = CreateProblem();
+
+        Should.Throw<ArgumentOutOfRangeException>(() => CreateUnwrappedAlgorithm(problem) with
+        {
+            MaximumGenerations = 0
+        });
+    }
+
+    [Fact]
     public void RunToCompletion_ReturnsSameFinalStateAsRunStreamingLastState()
     {
         var problem = CreateProblem();
@@ -77,6 +151,12 @@ public class GeneticAlgorithmSolvingTests
     private static TerminatableAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>> CreateAlgorithm(
       TestFunctionProblem problem)
     {
+        return CreateUnwrappedAlgorithm(problem).WithMaxIterations(5);
+    }
+
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateUnwrappedAlgorithm(
+      TestFunctionProblem problem)
+    {
         return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 5,
@@ -86,6 +166,6 @@ public class GeneticAlgorithmSolvingTests
             MutationRate = 0.5,
             Selector = new RandomSelector<RealVector>(),
             Elites = 0
-        }.WithMaxIterations(5);
+        };
     }
 }

@@ -64,12 +64,6 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TSearchState> : Algorithm
 
     public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TP problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        // ToDo: IMPORTANT: probably we should actually not check the termination condition here, as we advance terminator state on accident
-        if (initialState is not null && Terminator.ShouldTerminate(initialState, problem.SearchSpace, problem))
-        {
-            yield break;
-        }
-
         await foreach (var state in Algorithm.RunStreamingAsync(problem, random, initialState, ct))
         {
             yield return state;

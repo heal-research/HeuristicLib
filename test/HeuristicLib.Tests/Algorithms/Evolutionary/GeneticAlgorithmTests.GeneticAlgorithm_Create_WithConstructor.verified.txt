@@ -15,6 +15,7 @@
     MutationRate: 0.1,
     MutationStrength: 0.1
   },
+  MaximumGenerations: null,
   Elites: 1,
   MutationRate: 0.15,
   Selector: {

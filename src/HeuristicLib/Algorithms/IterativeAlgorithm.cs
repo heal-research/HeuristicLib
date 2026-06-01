@@ -30,6 +30,12 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
       TProblem problem,
       IRandomNumberGenerator random);
 
+    protected virtual bool HasCompleted(
+      int yieldedStateCount,
+      TSearchState? previousState,
+      TExecutionState executionState,
+      TProblem problem) => false;
+
     protected sealed override IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState)
     {
         return new Instance(this, run, executionState);
@@ -56,10 +62,15 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
         {
             var previousState = initialState;
 
-            foreach (var currentIteration in Enumerable.InfiniteSequence(0, 1))
+            foreach (var yieldedStateCount in Enumerable.InfiniteSequence(0, 1))
             {
+                if (algorithm.HasCompleted(yieldedStateCount, previousState, executionState, problem))
+                {
+                    yield break;
+                }
+
                 ct.ThrowIfCancellationRequested();
-                var iterationRandom = random.Fork(currentIteration);
+                var iterationRandom = random.Fork(yieldedStateCount);
                 var newState = ExecuteStep(previousState, problem, iterationRandom);
                 if (interceptor is not null)
                 {

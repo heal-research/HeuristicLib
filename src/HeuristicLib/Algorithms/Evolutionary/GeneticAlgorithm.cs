@@ -28,6 +28,14 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
     public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
     public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
+    public int? MaximumGenerations
+    {
+        get;
+        init => field = value is null or > 0
+          ? value
+          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
+    }
+
     public int Elites { get; init; } = 1;
 
     public double MutationRate
@@ -53,6 +61,15 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
             Mutator = resolver.Resolve(effectiveMutator),
             Selector = resolver.Resolve(Selector)
         };
+    }
+
+    protected override bool HasCompleted(
+      int yieldedStateCount,
+      PopulationState<TGenotype>? previousState,
+      ExecutionState executionState,
+      TProblem problem)
+    {
+        return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
     }
 
     protected override PopulationState<TGenotype> ExecuteStep(
