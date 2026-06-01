@@ -22,12 +22,14 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
         public required ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
         public required IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
         public required ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+        public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? Terminator { get; init; }
     }
 
     public required int PopulationSize { get; init; }
     public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
     public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
     public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
+    public ITerminator<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? Terminator { get; init; }
     public int? MaximumGenerations
     {
         get;
@@ -59,7 +61,8 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
             Creator = resolver.Resolve(Creator),
             Crossover = resolver.Resolve(Crossover),
             Mutator = resolver.Resolve(effectiveMutator),
-            Selector = resolver.Resolve(Selector)
+            Selector = resolver.Resolve(Selector),
+            Terminator = Terminator is not null ? resolver.Resolve(Terminator) : null
         };
     }
 
@@ -70,6 +73,16 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
       TProblem problem)
     {
         return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
+    }
+
+    protected override bool IsTerminalState(
+      PopulationState<TGenotype> state,
+      int yieldedStateCount,
+      PopulationState<TGenotype>? previousState,
+      ExecutionState executionState,
+      TProblem problem)
+    {
+        return executionState.Terminator?.ShouldTerminate(state, problem.SearchSpace, problem) == true;
     }
 
     protected override PopulationState<TGenotype> ExecuteStep(

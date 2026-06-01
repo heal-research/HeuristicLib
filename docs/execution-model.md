@@ -57,6 +57,7 @@ For iterative algorithms, the default loop is:
    - compute the next state with `ExecuteStep(...)`
    - optionally transform it with the configured interceptor
    - yield the produced state
+   - stop if the produced state is terminal
    - continue from that state
 
 Those yielded-state counts are internal to that specific iterative loop. They are useful for execution concerns such as deterministic RNG forking and internal budgets, but they are not part of the public search-state contract and do not define a cross-algorithm notion of iteration, generation, or step for nested or meta-algorithm execution.
@@ -68,7 +69,7 @@ So the model supports both:
 
 A supplied `initialState` is resume input from outside the current execution; it is not a newly produced state. The default execution model therefore does not yield that state or treat it as something state-based external terminators have observed. External terminators such as `TerminatableAlgorithm` check only produced public states, after the state has been yielded, and a matching state stops future consumption rather than removing the state that triggered the stop.
 
-Some algorithms also expose internal budget properties. For example, `GeneticAlgorithm.MaximumGenerations` is part of the genetic algorithm's own completion semantics and counts produced generation states from the current execution. A resumed run does not count the supplied `initialState` toward that budget. This differs from `WithMaxIterations(...)`, which wraps an algorithm with external early stopping over the yielded stream.
+Some algorithms also expose internal budget properties and state-based internal terminators. For example, `GeneticAlgorithm.MaximumGenerations` is part of the genetic algorithm's own completion semantics and counts produced generation states from the current execution. A resumed run does not count the supplied `initialState` toward that budget. If a genetic algorithm has a custom internal `Terminator`, it is checked only against states yielded by the current execution, not against a supplied `initialState`. This differs from `WithMaxIterations(...)`, which wraps an algorithm with external early stopping over the yielded stream.
 
 In this documentation, **completed** means the algorithm has internally finished producing states, either because an algorithm-owned budget or completion rule fired or because the algorithm has structurally no next state to produce. External early stopping is different: it stops consumption of a stream from the outside, but does not redefine whether the wrapped algorithm itself completed.
 

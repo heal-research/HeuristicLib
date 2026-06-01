@@ -6,6 +6,7 @@ using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
@@ -124,6 +125,94 @@ public class GeneticAlgorithmSolvingTests
     }
 
     [Fact]
+    public void RunStreaming_WithInternalTerminator_IncludesTriggeringState()
+    {
+        var problem = CreateProblem();
+        var terminator = new RecordingPopulationTerminator(2);
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            Terminator = terminator
+        };
+
+        var results = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(2);
+        terminator.CheckedStates.Count.ShouldBe(2);
+        terminator.CheckedStates.ShouldBe(results);
+    }
+
+    [Fact]
+    public void RunStreaming_WithInternalTerminatorAndInitialState_DoesNotCheckSuppliedInitialState()
+    {
+        var problem = CreateProblem();
+        var initialState = (CreateUnwrappedAlgorithm(problem) with
+        {
+            MaximumGenerations = 1
+        }).RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken).Single();
+        var terminator = new RecordingPopulationTerminator(1);
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            Terminator = terminator
+        };
+
+        var results = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(43),
+          initialState,
+          TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(1);
+        terminator.CheckedStates.Count.ShouldBe(1);
+        ReferenceEquals(terminator.CheckedStates.Single(), initialState).ShouldBeFalse();
+        terminator.CheckedStates.Single().ShouldBe(results.Single());
+    }
+
+    [Fact]
+    public void RunStreaming_MaximumGenerationsAndInternalTerminator_ComposeWithStopIfAnySemantics()
+    {
+        var problem = CreateProblem();
+        var terminator = new RecordingPopulationTerminator(2);
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            MaximumGenerations = 10,
+            Terminator = terminator
+        };
+
+        var results = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(2);
+        terminator.CheckedStates.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void RunStreaming_WithInternalTerminator_InvokesTerminatorOncePerProducedState()
+    {
+        var problem = CreateProblem();
+        var terminator = new RecordingPopulationTerminator(3);
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            Terminator = terminator
+        };
+
+        var results = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(3);
+        terminator.CheckedStates.ShouldBe(results);
+    }
+
+    [Fact]
     public void RunToCompletion_ReturnsSameFinalStateAsRunStreamingLastState()
     {
         var problem = CreateProblem();
@@ -167,5 +256,20 @@ public class GeneticAlgorithmSolvingTests
             Selector = new RandomSelector<RealVector>(),
             Elites = 0
         };
+    }
+
+    private sealed record RecordingPopulationTerminator(int StopOnInvocation)
+      : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+    {
+        public List<PopulationState<RealVector>> CheckedStates { get; } = [];
+
+        public override bool ShouldTerminate(
+          PopulationState<RealVector> state,
+          RealVectorSearchSpace searchSpace,
+          TestFunctionProblem problem)
+        {
+            CheckedStates.Add(state);
+            return CheckedStates.Count >= StopOnInvocation;
+        }
     }
 }

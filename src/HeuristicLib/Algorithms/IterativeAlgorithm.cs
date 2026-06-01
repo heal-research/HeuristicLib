@@ -36,6 +36,13 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
       TExecutionState executionState,
       TProblem problem) => false;
 
+    protected virtual bool IsTerminalState(
+      TSearchState state,
+      int yieldedStateCount,
+      TSearchState? previousState,
+      TExecutionState executionState,
+      TProblem problem) => false;
+
     protected sealed override IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState)
     {
         return new Instance(this, run, executionState);
@@ -78,6 +85,11 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
                 }
 
                 yield return newState;
+
+                if (algorithm.IsTerminalState(newState, yieldedStateCount + 1, previousState, executionState, problem))
+                {
+                    yield break;
+                }
 
                 await Task.Yield();
 
