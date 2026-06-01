@@ -14,7 +14,7 @@ The core roles used across algorithms in this repository are:
 - **Crossover** (`ICrossover`): combines parent genotypes into offspring genotypes.
 - **Mutator** (`IMutator`): perturbs genotypes to create variation.
 - **Replacer** (`IReplacer`): decides how to form the next population.
-- **Terminator** (`ITerminator`): decides whether another iteration should run.
+- **Terminator** (`ITerminator`): observes produced search states and decides whether the owning lifecycle should stop.
 - **Interceptor** (`IInterceptor`): transforms the produced iteration state.
 
 The genetic algorithm (`GeneticAlgorithm<...>`) is the easiest place to see all of these roles working together.
@@ -84,6 +84,19 @@ Use this checklist:
 - operator that wraps one operator -> `Wrapping*<..., TExecutionState>`
 - operator that coordinates several operators -> `Multi*<..., TExecutionState>`
 - full custom behavior -> implement the contract directly and handle execution instances yourself
+
+## Terminator ownership
+
+`ITerminator` is a state-based stopping role: it receives a produced public search state and returns whether execution should stop after that state has been observed.
+
+The owner of the terminator determines what that stop means:
+
+- If an algorithm exposes a `Terminator` property, the terminator is part of that algorithm's internal completion semantics.
+- If a wrapper such as `WithMaxIterations(...)` or `TerminatableAlgorithm` owns the terminator, the terminator is external early stopping over the yielded stream.
+
+In both cases, the produced state that satisfies the terminator remains part of the stream. The terminator stops future production or consumption; it does not remove the triggering state.
+
+Supplying an `initialState` to resume an algorithm does not make that state newly produced. Terminators should be invoked only for states produced by the current execution.
 
 ## Composition helpers
 

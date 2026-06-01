@@ -58,8 +58,7 @@ public class CompositionSpecs
           TestFunctionProblem,
           SingleSolutionState<RealVector>>(ImmutableArray.Create(stages))
         {
-            MaximumCycles = 2,
-            NewExecutionInstancesPerCycle = true
+            MaximumCycles = 2
         };
 
         var finalState = await cycle.RunToCompletionAsync(
