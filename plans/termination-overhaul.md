@@ -9,6 +9,16 @@ HeuristicLib currently has several pieces of termination machinery, but the desi
 
 This plan establishes the terminology and semantic rules that should guide the next API and documentation changes.
 
+## Implementation Progress
+
+- `TerminatableAlgorithm` no longer checks a supplied `initialState`; external state-based termination now observes only states produced by the current execution.
+- `IterativeAlgorithm` now separates pre-step internal completion (`HasCompleted(...)`) from produced-state termination (`IsTerminalState(...)`) and structural exhaustion (`TryExecuteStep(...)` returning `false`).
+- `GeneticAlgorithm` has algorithm-owned `MaximumGenerations` and optional internal `Terminator` support, with stop-if-any semantics.
+- `HillClimber` structurally completes when no strictly improving neighbor exists, instead of yielding an unchanged previous state.
+- `CycleAlgorithm` has a reference spec for inner GA budgets plus external early stopping over the composed stream, including partial-cycle behavior.
+- API usage specs now distinguish ordinary algorithm-owned completion from external early stopping; examples keep `WithMaxIterations(...)` only where the caller is intentionally applying an outside cap.
+- Documentation has been updated in `docs/execution-model.md` and `docs/operators.md` for internal completion, external early stopping, initial-state resume semantics, state-based terminator timing, and structural completion.
+
 ## Core Terminology
 
 ### Internal termination
@@ -235,18 +245,20 @@ The same terminology pressure applies to run and execution method names. Names s
 
 ## Expected Follow-Up Work
 
-- Update `docs/execution-model.md` with the terminology, precedence rule, and internal/external usage guidance.
-- Update `docs/operators.md` to explain that `ITerminator` can be owned internally by an algorithm or externally by a wrapper.
-- Document state-based terminator check timing, structural completion, supplied versus generated initial states, and the stateful terminator invocation contract.
-- Document budget-unit naming guidance and make evaluation-count budget boundaries explicit in examples.
-- Add desired-state API specs for genetic algorithm internal termination:
+- [x] Update `docs/execution-model.md` with the terminology, precedence rule, and internal/external usage guidance.
+- [x] Update `docs/operators.md` to explain that `ITerminator` can be owned internally by an algorithm or externally by a wrapper.
+- [x] Document state-based terminator check timing, structural completion, supplied versus generated initial states, and the stateful terminator invocation contract.
+- [x] Add desired-state API specs for genetic algorithm internal termination:
   - simple budget property
   - optional internal terminator
   - budget and terminator composed with stop-if-any semantics
-- Add a scenario or spec for cycle plus external early stopping using the 100 x 5 capped-at-250 reference scenario.
-- Use `GeneticAlgorithm` as the first implementation slice after the terminology is documented.
-- Revisit `ShouldTerminate`, `Run`, `Execute`, `Resume`, and `Continue` naming as follow-up API design work.
-- Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
+- [x] Use `GeneticAlgorithm` as the first implementation slice after the terminology is documented.
+- [x] Add a reference spec for cycle plus external early stopping. The implemented spec uses a small 3 x 5 capped-at-8 scenario rather than the illustrative 100 x 5 capped-at-250 numbers.
+- [x] Add structural-completion behavior and specs for local search.
+- [ ] Document budget-unit naming guidance and make evaluation-count budget boundaries explicit in examples.
+- [ ] Revisit `ShouldTerminate`, `Run`, `Execute`, `Resume`, and `Continue` naming as follow-up API design work.
+- [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
+- [ ] Audit other iterative algorithms for ordinary internal budgets or structural completion opportunities, especially algorithms that still rely on `WithMaxIterations(...)` in normal usage examples.
 
 ## Assumptions
 
