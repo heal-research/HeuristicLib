@@ -201,13 +201,14 @@ public class PractitionerUsageSpecs
         var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 24,
+            MaximumGenerations = 8,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
             MutationRate = 0.2,
             Elites = 1
-        }.WithMaxIterations(8);
+        };
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,
@@ -216,6 +217,62 @@ public class PractitionerUsageSpecs
 
         finalState.Population.Solutions.Length.ShouldBe(24);
         finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_InternalBudgetAndExternalEarlyStopping_AreDistinct()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var internallyCappedAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 2
+        };
+        var externallyCappedAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var cannotExtendPastInternalCompletion = internallyCappedAlgorithm
+          .WithMaxIterations(5)
+          .RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(456),
+            ct: TestContext.Current.CancellationToken)
+          .ToList();
+        var canStopEarlierThanInternalCompletion = externallyCappedAlgorithm
+          .WithMaxIterations(2)
+          .RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(456),
+            ct: TestContext.Current.CancellationToken)
+          .ToList();
+
+        cannotExtendPastInternalCompletion.Count.ShouldBe(2);
+        canStopEarlierThanInternalCompletion.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_ExternalEarlyStopping_DoesNotInternallyCompleteAlgorithm()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var internalTerminator = new RecordingPopulationTerminator(5);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            Terminator = internalTerminator
+        };
+
+        var earlyStoppedStates = algorithm
+          .WithMaxIterations(2)
+          .RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(789),
+            ct: TestContext.Current.CancellationToken)
+          .ToList();
+
+        earlyStoppedStates.Count.ShouldBe(2);
+        internalTerminator.CheckedStateCount.ShouldBe(2);
+        internalTerminator.HasTerminated.ShouldBeFalse();
     }
 
     [Fact]
@@ -307,5 +364,37 @@ public class PractitionerUsageSpecs
     private static TestFunctionProblem CreateRastriginProblem(int dimension)
     {
         return new TestFunctionProblem(new RastriginFunction(dimension));
+    }
+
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
+      TestFunctionProblem problem)
+    {
+        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            PopulationSize = 16,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
+            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            MutationRate = 0.2,
+            Elites = 1
+        };
+    }
+
+    private sealed record RecordingPopulationTerminator(int StopOnInvocation)
+      : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+    {
+        public int CheckedStateCount { get; private set; }
+        public bool HasTerminated { get; private set; }
+
+        public override bool ShouldTerminate(
+          PopulationState<RealVector> state,
+          RealVectorSearchSpace searchSpace,
+          TestFunctionProblem problem)
+        {
+            CheckedStateCount++;
+            HasTerminated = CheckedStateCount >= StopOnInvocation;
+            return HasTerminated;
+        }
     }
 }

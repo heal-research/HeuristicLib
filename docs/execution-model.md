@@ -56,8 +56,9 @@ For iterative algorithms, the default loop is:
    - fork the RNG using the yielded-state count
    - compute the next state with `ExecuteStep(...)`
    - optionally transform it with the configured interceptor
+   - decide whether the produced public state is terminal
    - yield the produced state
-   - stop if the produced state is terminal
+   - stop before producing another state if the yielded state was terminal
    - continue from that state
 
 Those yielded-state counts are internal to that specific iterative loop. They are useful for execution concerns such as deterministic RNG forking and internal budgets, but they are not part of the public search-state contract and do not define a cross-algorithm notion of iteration, generation, or step for nested or meta-algorithm execution.

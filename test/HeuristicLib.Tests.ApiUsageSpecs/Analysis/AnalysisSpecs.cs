@@ -24,12 +24,12 @@ public class AnalysisSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
         var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
           baseAlgorithm,
           interceptor);
 
-        var run = baseAlgorithm.WithMaxIterations(4).CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, analysis);
 
         var finalState = await run.RunToCompletionAsync(
           RandomNumberGenerator.Create(777),
@@ -46,12 +46,12 @@ public class AnalysisSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
         var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
           baseAlgorithm,
           interceptor);
 
-        var run = baseAlgorithm.WithMaxIterations(3).CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, analysis);
 
         await using var enumerator = run.RunStreamingAsync(
             RandomNumberGenerator.Create(888),
@@ -77,13 +77,13 @@ public class AnalysisSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
         var analysis = new BestMedianWorstPerEvaluationAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
           baseAlgorithm,
           [baseAlgorithm.Evaluator],
           [interceptor]);
 
-        var run = baseAlgorithm.WithMaxIterations(3).CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, analysis);
 
         await run.RunToCompletionAsync(
           RandomNumberGenerator.Create(321),
@@ -100,12 +100,12 @@ public class AnalysisSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
-        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor);
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
         var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
           baseAlgorithm,
           interceptor);
 
-        var run = baseAlgorithm.WithMaxIterations(4).CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, analysis);
         var finalState = await run.RunToCompletionAsync(
           RandomNumberGenerator.Create(333),
           cancellationToken: TestContext.Current.CancellationToken);
@@ -123,11 +123,13 @@ public class AnalysisSpecs
 
     private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
       TestFunctionProblem problem,
-      IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor)
+      IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
+      int maximumGenerations)
     {
         return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 16,
+            MaximumGenerations = maximumGenerations,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),

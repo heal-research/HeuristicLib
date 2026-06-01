@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
@@ -237,10 +236,13 @@ public class GeneticAlgorithmSolvingTests
         return new TestFunctionProblem(new SphereFunction(dimension: 3));
     }
 
-    private static TerminatableAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>> CreateAlgorithm(
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(
       TestFunctionProblem problem)
     {
-        return CreateUnwrappedAlgorithm(problem).WithMaxIterations(5);
+        return CreateUnwrappedAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
     }
 
     private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateUnwrappedAlgorithm(

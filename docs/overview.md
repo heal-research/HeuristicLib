@@ -22,7 +22,6 @@ The example below solves the built-in Traveling Salesman example problem using a
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
@@ -38,6 +37,7 @@ var rng = new SystemRandomNumberGenerator(seed: 123);
 
 var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
    PopulationSize = 200,
+   MaximumGenerations = 200,
    Creator = new RandomPermutationCreator(),
    Crossover = new OrderCrossover(),
    Mutator = new SwapSingleSolutionMutator(),
@@ -47,11 +47,9 @@ var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSale
    Evaluator = new DirectEvaluator<Permutation>()
 };
 
-var algorithm = ga.WithMaxIterations(maxIterations: 200);
-
 var step = 0;
 
-await foreach (var state in algorithm.RunStreamingAsync(problem, rng))
+await foreach (var state in ga.RunStreamingAsync(problem, rng))
 {
    var best = state.Population.Solutions
       .MinBy(s => s.ObjectiveVector, problem.Objective.TotalOrderComparer)!;

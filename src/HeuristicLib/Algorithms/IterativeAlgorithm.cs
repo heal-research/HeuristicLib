@@ -84,9 +84,11 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
                     newState = interceptor.Transform(newState, previousState, problem.SearchSpace, problem);
                 }
 
+                var isTerminalState = algorithm.IsTerminalState(newState, yieldedStateCount + 1, previousState, executionState, problem);
+
                 yield return newState;
 
-                if (algorithm.IsTerminalState(newState, yieldedStateCount + 1, previousState, executionState, problem))
+                if (isTerminalState)
                 {
                     yield break;
                 }
