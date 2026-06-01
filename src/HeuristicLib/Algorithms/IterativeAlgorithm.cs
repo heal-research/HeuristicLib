@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
@@ -30,6 +31,17 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
       TProblem problem,
       IRandomNumberGenerator random);
 
+    protected virtual bool TryExecuteStep(
+      TSearchState? previousState,
+      TExecutionState executionState,
+      TProblem problem,
+      IRandomNumberGenerator random,
+      [NotNullWhen(true)] out TSearchState? nextState)
+    {
+        nextState = ExecuteStep(previousState, executionState, problem, random);
+        return true;
+    }
+
     protected virtual bool HasCompleted(
       int yieldedStateCount,
       TSearchState? previousState,
@@ -56,9 +68,9 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
     {
         private readonly IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>? interceptor = executionState.Interceptor;
 
-        private TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
+        private bool TryExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)
         {
-            return algorithm.ExecuteStep(previousState, executionState, problem, random);
+            return algorithm.TryExecuteStep(previousState, executionState, problem, random, out nextState);
         }
 
         public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(
@@ -78,7 +90,11 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
 
                 ct.ThrowIfCancellationRequested();
                 var iterationRandom = random.Fork(yieldedStateCount);
-                var newState = ExecuteStep(previousState, problem, iterationRandom);
+                if (!TryExecuteStep(previousState, problem, iterationRandom, out var newState))
+                {
+                    yield break;
+                }
+
                 if (interceptor is not null)
                 {
                     newState = interceptor.Transform(newState, previousState, problem.SearchSpace, problem);

@@ -169,18 +169,20 @@ public class PractitionerUsageSpecs
         var evaluations = DirectEvaluator.Evaluate([parent], RandomNumberGenerator.Create(2034), problem);
         evaluations.Count.ShouldBe(1);
 
-        IReadOnlyList<ISolution<RealVector>> solutions = [
-          new Solution<RealVector>(parent, new ObjectiveVector(2.0)),
-      new Solution<RealVector>(otherParent, new ObjectiveVector(1.0))
+        IReadOnlyList<ISolution<RealVector>> solutions =
+        [
+            new Solution<RealVector>(parent, new ObjectiveVector(2.0)),
+            new Solution<RealVector>(otherParent, new ObjectiveVector(1.0))
         ];
 
         RandomSelector.Select(solutions, count: 2, RandomNumberGenerator.Create(2035)).Count.ShouldBe(2);
         ProportionalSelector.Select(solutions, problem.Objective, count: 2, RandomNumberGenerator.Create(2036), windowing: true).Count.ShouldBe(2);
         CommaSelectionReplacer.Replace(solutions, problem.Objective, count: 1).Single().ShouldBe(solutions[1]);
 
-        IReadOnlyList<ISolution<RealVector>> offspring = [
-          new Solution<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
-      new Solution<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
+        IReadOnlyList<ISolution<RealVector>> offspring =
+        [
+            new Solution<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
+            new Solution<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
         ];
         var paretoReplacement = ParetoCrowdingReplacer.Replace(solutions, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
         paretoReplacement.Select(solution => solution.ObjectiveVector[0]).Order().ToArray().ShouldBe([0.5, 1.0]);
@@ -294,6 +296,28 @@ public class PractitionerUsageSpecs
           ct: TestContext.Current.CancellationToken);
 
         problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void HillClimber_StructuralCompletion_DoesNotRequireExternalIterationCap()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Mutator = NoChangeMutator<RealVector>.Instance,
+            Direction = LocalSearchDirection.FirstImprovement,
+            BatchSize = 4,
+            MaxNeighbors = 12
+        };
+
+        var states = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(654),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Count.ShouldBe(1);
+        problem.SearchSpace.Contains(states.Single().Solution.Genotype).ShouldBeTrue();
     }
 
     [Fact]

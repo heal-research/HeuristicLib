@@ -44,6 +44,8 @@ The intended pattern is:
 - store those resolved execution instances in `TExecutionState`
 - reuse them in every `ExecuteStep(...)` call
 
+Algorithms that can exhaust their own structure while trying to produce the next state can override `TryExecuteStep(...)` instead. Returning `false` means the algorithm has structurally completed and the stream ends without yielding another state.
+
 ## Iterative loop semantics
 
 For iterative algorithms, the default loop is:
@@ -54,7 +56,8 @@ For iterative algorithms, the default loop is:
    - stop if the algorithm has internally completed
    - check cancellation
    - fork the RNG using the yielded-state count
-   - compute the next state with `ExecuteStep(...)`
+   - compute the next state with `TryExecuteStep(...)` / `ExecuteStep(...)`
+   - stop if no next state can be produced
    - optionally transform it with the configured interceptor
    - decide whether the produced public state is terminal
    - yield the produced state
@@ -73,6 +76,8 @@ A supplied `initialState` is resume input from outside the current execution; it
 Some algorithms also expose internal budget properties and state-based internal terminators. For example, `GeneticAlgorithm.MaximumGenerations` is part of the genetic algorithm's own completion semantics and counts produced generation states from the current execution. A resumed run does not count the supplied `initialState` toward that budget. If a genetic algorithm has a custom internal `Terminator`, it is checked only against states yielded by the current execution, not against a supplied `initialState`. This differs from `WithMaxIterations(...)`, which wraps an algorithm with external early stopping over the yielded stream.
 
 In this documentation, **completed** means the algorithm has internally finished producing states, either because an algorithm-owned budget or completion rule fired or because the algorithm has structurally no next state to produce. External early stopping is different: it stops consumption of a stream from the outside, but does not redefine whether the wrapped algorithm itself completed.
+
+For example, a local search that evaluates its configured neighborhood and finds no improving move has structurally completed. It should exhaust the stream instead of yielding another copy of the previous state.
 
 ## Runs and analyzers
 

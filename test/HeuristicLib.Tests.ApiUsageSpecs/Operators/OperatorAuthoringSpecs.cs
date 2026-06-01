@@ -27,7 +27,7 @@ public class OperatorAuthoringSpecs
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 3,
             MaxNeighbors = 3
-        }.WithMaxIterations(1);
+        };
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,
@@ -45,10 +45,10 @@ public class OperatorAuthoringSpecs
         {
             Creator = new ConstantOneCreator(),
             Mutator = new PreferFirstMultiMutator(
-            [
-              new PullTowardZeroMutator(),
-          new PushAwayFromZeroMutator()
-            ]),
+                [
+                    new PullTowardZeroMutator(),
+                    new PushAwayFromZeroMutator()
+                ]),
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 2,
             MaxNeighbors = 2

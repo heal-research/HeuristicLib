@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Selectors;
@@ -44,42 +45,79 @@ public record HillClimber<TGenotype, TSearchSpace, TProblem>
       TProblem problem,
       IRandomNumberGenerator random)
     {
+        return TryExecuteStep(previousState, executionState, problem, random, out var nextState)
+          ? nextState!
+          : throw new InvalidOperationException("HillClimber has structurally completed and cannot produce another step.");
+    }
+
+    protected override bool TryExecuteStep(
+      SingleSolutionState<TGenotype>? previousState,
+      ExecutionState executionState,
+      TProblem problem,
+      IRandomNumberGenerator random,
+      [NotNullWhen(true)] out SingleSolutionState<TGenotype>? nextState)
+    {
         if (previousState is null)
         {
-            var initialSolution = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-            var initialFitness = executionState.Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
-            return new SingleSolutionState<TGenotype>
-            {
-                Population = Population.From([initialSolution], [initialFitness])
-            };
+            nextState = CreateInitialState(executionState, problem, random);
+            return true;
         }
 
-        var sol = previousState.Solution;
-        var newISolution = sol;
+        if (!TryFindImprovement(previousState.Solution, executionState, problem, random, out var improvement))
+        {
+            nextState = null;
+            return false;
+        }
+
+        nextState = ToState(improvement);
+        return true;
+    }
+
+    private static SingleSolutionState<TGenotype> CreateInitialState(
+      ExecutionState executionState,
+      TProblem problem,
+      IRandomNumberGenerator random)
+    {
+        var initialSolution = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
+        var initialFitness = executionState.Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
+        return ToState(new Solution<TGenotype>(initialSolution, initialFitness));
+    }
+
+    private bool TryFindImprovement(
+      ISolution<TGenotype> current,
+      ExecutionState executionState,
+      TProblem problem,
+      IRandomNumberGenerator random,
+      [NotNullWhen(true)] out ISolution<TGenotype>? improvement)
+    {
+        improvement = null;
 
         for (var i = 0; i < MaxNeighbors; i += BatchSize)
         {
-            var child = executionState.Mutator.Mutate(Enumerable.Repeat(sol.Genotype, BatchSize).ToArray(), random, problem.SearchSpace, problem);
-            var res = executionState.Evaluator.Evaluate(child, random, problem.SearchSpace, problem);
-            var best = BestSelector.Select(res.Append(sol.ObjectiveVector).ToArray(), problem.Objective, 1)[0];
-            if (best == BatchSize)
+            var candidates = executionState.Mutator.Mutate(Enumerable.Repeat(current.Genotype, BatchSize).ToArray(), random, problem.SearchSpace, problem);
+            var objectiveVectors = executionState.Evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
+            var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
+
+            if (problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
             {
                 continue;
             }
 
-            newISolution = new Solution<TGenotype>(child[best], res[best]);
+            improvement = new Solution<TGenotype>(candidates[bestIndex], objectiveVectors[bestIndex]);
             if (Direction == LocalSearchDirection.FirstImprovement)
             {
-                return new SingleSolutionState<TGenotype>
-                {
-                    Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector])
-                };
+                return true;
             }
         }
 
+        return improvement is not null;
+    }
+
+    private static SingleSolutionState<TGenotype> ToState(ISolution<TGenotype> solution)
+    {
         return new SingleSolutionState<TGenotype>
         {
-            Population = Population.From([newISolution.Genotype], [newISolution.ObjectiveVector])
+            Population = Population.From([solution])
         };
     }
 }

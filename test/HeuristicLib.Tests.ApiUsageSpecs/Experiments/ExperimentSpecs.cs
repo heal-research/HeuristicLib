@@ -80,7 +80,7 @@ public class ExperimentSpecs
             stream.Add(entry);
         }
 
-        stream.Count.ShouldBe(6);
+        stream.Count.ShouldBeLessThanOrEqualTo(6);
         stream.Select(entry => entry.Key.Repetition).Distinct().Order().ShouldBe([0, 1, 2]);
         stream.All(entry => problem.SearchSpace.Contains(entry.Value.Solution.Genotype)).ShouldBeTrue();
     }

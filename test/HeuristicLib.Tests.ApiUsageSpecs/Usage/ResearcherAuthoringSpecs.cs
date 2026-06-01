@@ -77,7 +77,7 @@ public class ResearcherAuthoringSpecs
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 4,
             MaxNeighbors = 12
-        }.WithMaxIterations(1);
+        };
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,
