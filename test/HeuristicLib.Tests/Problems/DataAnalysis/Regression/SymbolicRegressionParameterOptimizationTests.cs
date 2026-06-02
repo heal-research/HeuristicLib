@@ -21,39 +21,41 @@ public class SymbolicRegressionParameterOptimizationTests
         var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
 
         IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
-          ? [
-            new MaxAbsoluteErrorEvaluator(),
-        new MeanAbsoluteErrorEvaluator(),
-        new MeanLogErrorEvaluator(),
-        new MeanRelativeErrorEvaluator(),
-        new MeanSquaredErrorCalculator(),
-        new NormalizedMeanSquaredErrorEvaluator(),
-        new NumberOfVariablesEvaluator(),
-        new PearsonR2Evaluator(),
-        new RootMeanSquaredErrorEvaluator(),
-        new TreeComplexityEvaluator(),
-        new TreeLengthEvaluator()
-          ]
-          : [new RootMeanSquaredErrorEvaluator()];
+            ?
+            [
+                new MaxAbsoluteErrorEvaluator(),
+                new MeanAbsoluteErrorEvaluator(),
+                new MeanLogErrorEvaluator(),
+                new MeanRelativeErrorEvaluator(),
+                new MeanSquaredErrorCalculator(),
+                new NormalizedMeanSquaredErrorEvaluator(),
+                new NumberOfVariablesEvaluator(),
+                new PearsonR2Evaluator(),
+                new RootMeanSquaredErrorEvaluator(),
+                new TreeComplexityEvaluator(),
+                new TreeLengthEvaluator()
+            ]
+            : [new RootMeanSquaredErrorEvaluator()];
         var problem = new SymbolicRegressionProblem(problemData, objectives)
         {
             LowerPredictionBound = -100,
             UpperPredictionBound = 100,
-            SearchSpace = {
-        TreeDepth = treeLength,
-        TreeLength = treeLength
-      },
+            SearchSpace =
+            {
+                TreeDepth = treeLength,
+                TreeLength = treeLength
+            },
             ParameterOptimizationIterations = constOptIteration
         };
         return problem;
     }
 
     private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(
-      double[,] data,
-      string[]? variableNames = null,
-      int treeLength = 40,
-      bool multiObjective = false,
-      int constOptIteration = 5)
+        double[,] data,
+        string[]? variableNames = null,
+        int treeLength = 40,
+        bool multiObjective = false,
+        int constOptIteration = 5)
     {
         variableNames ??= ["x", "y"];
 
@@ -62,35 +64,37 @@ public class SymbolicRegressionParameterOptimizationTests
         var problemData = new RegressionProblemData(dataF, variableNames[^1], variableNames[..^1], trange);
 
         IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
-          ? [
-            new MaxAbsoluteErrorEvaluator(),
-        new MeanAbsoluteErrorEvaluator(),
-        new MeanLogErrorEvaluator(),
-        new MeanRelativeErrorEvaluator(),
-        new MeanSquaredErrorCalculator(),
-        new NormalizedMeanSquaredErrorEvaluator(),
-        new NumberOfVariablesEvaluator(),
-        new PearsonR2Evaluator(),
-        new RootMeanSquaredErrorEvaluator(),
-        new TreeComplexityEvaluator(),
-        new TreeLengthEvaluator()
-          ]
-          : [new RootMeanSquaredErrorEvaluator()];
+            ?
+            [
+                new MaxAbsoluteErrorEvaluator(),
+                new MeanAbsoluteErrorEvaluator(),
+                new MeanLogErrorEvaluator(),
+                new MeanRelativeErrorEvaluator(),
+                new MeanSquaredErrorCalculator(),
+                new NormalizedMeanSquaredErrorEvaluator(),
+                new NumberOfVariablesEvaluator(),
+                new PearsonR2Evaluator(),
+                new RootMeanSquaredErrorEvaluator(),
+                new TreeComplexityEvaluator(),
+                new TreeLengthEvaluator()
+            ]
+            : [new RootMeanSquaredErrorEvaluator()];
 
         return new SymbolicRegressionProblem(problemData, objectives)
         {
             LowerPredictionBound = -100,
             UpperPredictionBound = 100,
-            SearchSpace = {
-        TreeDepth = treeLength,
-        TreeLength = treeLength
-      },
+            SearchSpace =
+            {
+                TreeDepth = treeLength,
+                TreeLength = treeLength
+            },
             ParameterOptimizationIterations = constOptIteration
         };
     }
 
     private static int[] TrainingRows(SymbolicRegressionProblem problem) =>
-      problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray();
+        problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray();
 
     private static SymbolicExpressionTree CreateEmptyTree(SymbolicRegressionProblem problem)
     {
@@ -106,11 +110,11 @@ public class SymbolicRegressionParameterOptimizationTests
         tree.Root[0].AddSubtree(new Number().CreateTreeNode(42.0));
 
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter,
-          tree,
-          problem.ProblemData,
-          problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(),
-          10);
+            problem.Interpreter,
+            tree,
+            problem.ProblemData,
+            problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(),
+            10);
 
         quality.ShouldBe(0.0, 1e-12);
     }
@@ -132,12 +136,12 @@ public class SymbolicRegressionParameterOptimizationTests
         var originalConstant = numberTreeNode.Value;
 
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter,
-          tree,
-          problem.ProblemData,
-          problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(),
-          20,
-          updateParametersInTree: false);
+            problem.Interpreter,
+            tree,
+            problem.ProblemData,
+            problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(),
+            20,
+            updateParametersInTree: false);
 
         variableTreeNode.Weight.ShouldBe(1.0, 1e-12);
         numberTreeNode.Value.ShouldBe(1.0, 1e-12);
@@ -158,12 +162,12 @@ public class SymbolicRegressionParameterOptimizationTests
         tree.Root[0].AddSubtree(add);
 
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter,
-          tree,
-          problem.ProblemData,
-          problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(),
-          20,
-          updateParametersInTree: true);
+            problem.Interpreter,
+            tree,
+            problem.ProblemData,
+            problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(),
+            20,
+            updateParametersInTree: true);
 
         variableTreeNode.Weight.ShouldNotBe(1.0);
         numberTreeNode.Value.ShouldNotBe(1.0);
@@ -187,26 +191,21 @@ public class SymbolicRegressionParameterOptimizationTests
         var rows = problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray();
 
         var originalQuality = problem.ProblemData.Evaluate(
-          model,
-          rows,
-          [new PearsonR2Evaluator()],
-          double.MinValue,
-          double.MaxValue)[0];
+            model,
+            rows,
+            [new PearsonR2Evaluator()])[0];
 
         var optimizedQuality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter,
-          tree,
-          problem.ProblemData,
-          rows,
-          20);
+            problem.Interpreter,
+            tree,
+            problem.ProblemData,
+            rows,
+            20);
 
         (optimizedQuality >= originalQuality).ShouldBeTrue();
     }
 
-    private static readonly double[,] ConstantTargetData = {
-    { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 },
-    { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 }
-  };
+    private static readonly double[,] ConstantTargetData = { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
 
     [Fact]
     public void OptimizeParameters_NumberOnlyTree_DoesNotOptimizeAndReturnsZero()
@@ -217,7 +216,7 @@ public class SymbolicRegressionParameterOptimizationTests
         tree.Root[0].AddSubtree(numberTreeNode);
 
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20);
+            problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20);
 
         quality.ShouldBe(0.0, 1e-12);
         numberTreeNode.Value.ShouldBe(1.0, 1e-12);
@@ -237,7 +236,7 @@ public class SymbolicRegressionParameterOptimizationTests
         tree.Root[0].AddSubtree(add);
 
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20, updateParametersInTree: true);
+            problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20, updateParametersInTree: true);
 
         var y = problem.Evaluate(tree)[0];
 
@@ -245,9 +244,7 @@ public class SymbolicRegressionParameterOptimizationTests
         (quality == 0).ShouldBeTrue();
     }
 
-    private static readonly double[,] DoubleXData = {
-    { 0, 0 }, { 1, 2 }, { 2, 4 }, { 3, 6 }, { 4, 8 }, { 5, 10 }
-  };
+    private static readonly double[,] DoubleXData = { { 0, 0 }, { 1, 2 }, { 2, 4 }, { 3, 6 }, { 4, 8 }, { 5, 10 } };
 
     [Fact]
     public void OptimizeParameters_VariableWeight_OptimizesLinearScaling()
@@ -259,15 +256,13 @@ public class SymbolicRegressionParameterOptimizationTests
         tree.Root[0].AddSubtree(xNode);
 
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20, updateParametersInTree: true);
+            problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20, updateParametersInTree: true);
 
         xNode.Weight.ShouldBeInRange(1.9, 2.1);
         (quality > 0.99).ShouldBeTrue();
     }
 
-    private static readonly double[,] ShiftedData = {
-    { 0, 5 }, { 1, 6 }, { 2, 7 }, { 3, 8 }, { 4, 9 }, { 5, 10 }
-  };
+    private static readonly double[,] ShiftedData = { { 0, 5 }, { 1, 6 }, { 2, 7 }, { 3, 8 }, { 4, 9 }, { 5, 10 } };
 
     [Fact]
     public void OptimizeParameters_NumberNode_OptimizesIntercept()
@@ -284,7 +279,7 @@ public class SymbolicRegressionParameterOptimizationTests
 
         SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20, updateParametersInTree: true);
+            problem.Interpreter, tree, problem.ProblemData, TrainingRows(problem), 20, updateParametersInTree: true);
 
         cNode.Value.ShouldBeInRange(4.9, 5.1);
         xNode.Weight.ShouldBeInRange(0.9, 1.1);
@@ -302,13 +297,13 @@ public class SymbolicRegressionParameterOptimizationTests
         SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
 
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter,
-          tree,
-          problem.ProblemData,
-          TrainingRows(problem),
-          20,
-          updateVariableWeights: false,
-          updateParametersInTree: true);
+            problem.Interpreter,
+            tree,
+            problem.ProblemData,
+            TrainingRows(problem),
+            20,
+            updateVariableWeights: false,
+            updateParametersInTree: true);
 
         xNode.Weight.ShouldBe(1.0, 1e-12);
     }
@@ -328,28 +323,20 @@ public class SymbolicRegressionParameterOptimizationTests
 
         SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter,
-          tree,
-          problem.ProblemData,
-          TrainingRows(problem),
-          20,
-          updateVariableWeights: false,
-          updateParametersInTree: true);
+            problem.Interpreter,
+            tree,
+            problem.ProblemData,
+            TrainingRows(problem),
+            20,
+            updateVariableWeights: false,
+            updateParametersInTree: true);
 
         xNode.Weight.ShouldBe(1.0, 1e-12);
         cNode.Value.ShouldBeInRange(4.9, 5.1);
         (quality > 0.99).ShouldBeTrue();
     }
 
-    private static readonly double[,] CubicNoisyData = {
-    { -3, -18.65 },
-    { -2, -9.10 },
-    { -1, 0.45 },
-    { 0, 4.10 },
-    { 1, 3.55 },
-    { 2, 2.90 },
-    { 3, 5.35 }
-  };
+    private static readonly double[,] CubicNoisyData = { { -3, -18.65 }, { -2, -9.10 }, { -1, 0.45 }, { 0, 4.10 }, { 1, 3.55 }, { 2, 2.90 }, { 3, 5.35 } };
 
     [Fact]
     public void OptimizeParameters_CubicPolynomialWithNoise_ImprovesFit()
@@ -415,13 +402,13 @@ public class SymbolicRegressionParameterOptimizationTests
 
         SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter,
-          tree,
-          problem.ProblemData,
-          rows,
-          50,
-          updateVariableWeights: false,
-          updateParametersInTree: true);
+            problem.Interpreter,
+            tree,
+            problem.ProblemData,
+            rows,
+            50,
+            updateVariableWeights: false,
+            updateParametersInTree: true);
 
         var rmseAfter = problem.Evaluate(tree)[0];
 
@@ -430,21 +417,14 @@ public class SymbolicRegressionParameterOptimizationTests
         (quality > 0.9).ShouldBeTrue();
     }
 
-    private static readonly double[,] MultivariateRelevantX1Data = {
-    { 0, 10, 1 },
-    { 1, 7, 4 },
-    { 2, 4, 7 },
-    { 3, 9, 10 },
-    { 4, 3, 13 },
-    { 5, 8, 16 }
-  };
+    private static readonly double[,] MultivariateRelevantX1Data = { { 0, 10, 1 }, { 1, 7, 4 }, { 2, 4, 7 }, { 3, 9, 10 }, { 4, 3, 13 }, { 5, 8, 16 } };
 
     [Fact]
     public void OptimizeParameters_MultivariateProblem_FindsRelevantVariable()
     {
         var problem = CreateTestSymbolicRegressionProblem(
-          MultivariateRelevantX1Data,
-          ["x1", "x2", "y"], constOptIteration: -1);
+            MultivariateRelevantX1Data,
+            ["x1", "x2", "y"], constOptIteration: -1);
         var tree = CreateEmptyTree(problem);
 
         var term1 = new SymbolicExpressionTreeNode(new Multiplication());
@@ -471,13 +451,13 @@ public class SymbolicRegressionParameterOptimizationTests
 
         SymbolicRegressionParameterOptimization.CanOptimizeParameters(tree).ShouldBeTrue();
         var quality = SymbolicRegressionParameterOptimization.OptimizeParameters(
-          problem.Interpreter,
-          tree,
-          problem.ProblemData,
-          rows,
-          50,
-          updateVariableWeights: false,
-          updateParametersInTree: true);
+            problem.Interpreter,
+            tree,
+            problem.ProblemData,
+            rows,
+            50,
+            updateVariableWeights: false,
+            updateParametersInTree: true);
 
         var rmseAfter = problem.Evaluate(tree)[0];
 

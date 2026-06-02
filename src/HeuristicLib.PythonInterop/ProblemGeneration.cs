@@ -44,13 +44,14 @@ public class ProblemGeneration
     public static SymbolicRegressionProblem CreateSymbolicRegressionProblem(string file, SymRegExperimentParameters parameters)
     {
         var problemData = SymRegCache.GetOrAdd((file, parameters.TrainingSplit),
-          valueFactory: key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
+            valueFactory: key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
         var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator(), new TreeLengthEvaluator())
         {
-            SearchSpace = {
-        TreeDepth = parameters.TreeDepth,
-        TreeLength = parameters.TreeLength
-      },
+            SearchSpace =
+            {
+                TreeDepth = parameters.TreeDepth,
+                TreeLength = parameters.TreeLength
+            },
             ParameterOptimizationIterations = parameters.ParameterOptimizationIterations
         };
         var root = problem.SearchSpace.Grammar.AddLinearScaling();
@@ -65,8 +66,8 @@ public class ProblemGeneration
     public static MultiObjectiveTestFunctionProblem SphereRastriginProblem(int dimensions, double min, double max, double shift)
     {
         var testFunction = new CombinedGradientTestFunction(
-          new ShiftedGradientTestFunction(-shift, new SphereFunction(dimensions)),
-          new RastriginFunction(dimensions));
+            new ShiftedGradientTestFunction(-shift, new SphereFunction(dimensions)),
+            new RastriginFunction(dimensions));
         var encoding = new RealVectorSearchSpace(dimensions, min, max);
         var prob = new MultiObjectiveTestFunctionProblem(testFunction, encoding);
 
@@ -76,7 +77,7 @@ public class ProblemGeneration
     public static MultiObjectiveTravellingSalesmanProblem CreateMultiObjectiveRealVectorTravellingSalesmanProblem(params string[] files) => new(files.Select(CreateTravellingSalesmanProblem).ToArray());
 
     public class PythonProblem(CustomFunc cfunc, int dimensions, double min, double max, bool[] maximization)
-      : RealVectorProblem(MultiObjective.Create(maximization), new RealVectorSearchSpace(dimensions, min, max))
+        : RealVectorProblem(MultiObjective.Create(maximization), new RealVectorSearchSpace(dimensions, min, max))
     {
         public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random) => cfunc(solution);
     }
@@ -95,10 +96,10 @@ public class ProblemGeneration
     }
 
     public class MultiObjectiveTravellingSalesmanProblem(TravelingSalesmanProblem[] tsps) :
-      RealVectorProblem(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
-        new RealVectorSearchSpace(
-          tsps.Max(x => x.ProblemData.NumberOfCities),
-          [0.0], [1.0]))
+        RealVectorProblem(MultiObjective.Create(tsps.Select(_ => false).ToArray()),
+            new RealVectorSearchSpace(
+                tsps.Max(x => x.ProblemData.NumberOfCities),
+                [0.0], [1.0]))
     {
         private readonly TravelingSalesmanProblem[] tsps = tsps.ToArray();
 
