@@ -54,6 +54,41 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
+    public void WithMaxEvaluatedGenotypes_StopsAfterObservedEvaluatedGenotypeCount()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxEvaluatedGenotypes(2).RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(42),
+            ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(1);
+        results.Single().Population.Solutions.Length.ShouldBe(5);
+    }
+
+    [Fact]
+    public void WithMaxEvaluatedGenotypes_AllowsAnotherStateWhenBudgetIsNotReached()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxEvaluatedGenotypes(6).RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(42),
+            ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(2);
+    }
+
+    [Fact]
     public void WithMaxOperatorCalls_CanObserveExplicitOperator()
     {
         var problem = CreateProblem();
@@ -66,7 +101,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             maximumCalls: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
-                observedOperator.ObserveWith((_, _) => counter.IncrementBy(1)))
+                observedOperator.CountEvaluatorCalls(counter))
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -77,7 +112,7 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void Constructor_Throws_WhenMaximumCallsIsNotPositive()
+    public void Constructor_Throws_WhenMaximumCountIsNotPositive()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
@@ -93,9 +128,9 @@ public class OperatorBudgetAlgorithmTests
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
-                MaximumCalls = 0,
+                MaximumCount = 0,
                 CountedOperatorFactory = static (observedOperator, counter) =>
-                    observedOperator.ObserveWith((_, _) => counter.IncrementBy(1))
+                    observedOperator.CountEvaluatorCalls(counter)
             });
     }
 

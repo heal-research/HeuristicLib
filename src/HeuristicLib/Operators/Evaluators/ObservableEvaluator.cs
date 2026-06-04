@@ -59,12 +59,19 @@ public static class ObservableEvaluatorExtensions
           => evaluator.ObserveWith(new ActionEvaluatorObserver<TG, TS, TP>(afterEvaluation));
         public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>> afterEvaluation)
           => evaluator.ObserveWith(new ActionEvaluatorObserver<TG, TS, TP>((genotypes, objectiveVectors, _, _) => afterEvaluation(genotypes, objectiveVectors)));
-        public IEvaluator<TG, TS, TP> CountInvocations(InvocationCounter counter)
-          => evaluator.ObserveWith((_, objectives) => counter.IncrementBy(objectives.Count));
-        public IEvaluator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
+        public IEvaluator<TG, TS, TP> CountEvaluatorCalls(InvocationCounter counter)
+          => evaluator.ObserveWith((_, _) => counter.IncrementBy(1));
+        public IEvaluator<TG, TS, TP> CountEvaluatorCalls(out InvocationCounter counter)
         {
             counter = new InvocationCounter();
-            return evaluator.CountInvocations(counter);
+            return evaluator.CountEvaluatorCalls(counter);
+        }
+        public IEvaluator<TG, TS, TP> CountEvaluatedGenotypes(InvocationCounter counter)
+          => evaluator.ObserveWith((genotypes, _) => counter.IncrementBy(genotypes.Count));
+        public IEvaluator<TG, TS, TP> CountEvaluatedGenotypes(out InvocationCounter counter)
+        {
+            counter = new InvocationCounter();
+            return evaluator.CountEvaluatedGenotypes(counter);
         }
     }
 }

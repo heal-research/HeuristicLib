@@ -22,12 +22,12 @@ public record OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObse
     public required TOperator ObservedOperator { get; init; }
     public required Func<TOperator, InvocationCounter, IOperator<TObservedInstance>> CountedOperatorFactory { get; init; }
 
-    public int MaximumCalls
+    public int MaximumCount
     {
         get;
         init => field = value > 0
           ? value
-          : throw new ArgumentOutOfRangeException(nameof(MaximumCalls), "MaximumCalls must be positive.");
+          : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
     }
 
     public IEvaluator<TG, TS, TP> Evaluator => Algorithm.Evaluator;
@@ -42,7 +42,7 @@ public record OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObse
         return new OperatorBudgetAlgorithmInstance<TG, TS, TP, TSearchState>(
             childRegistry.Resolve(Algorithm),
             counter,
-            MaximumCalls);
+            MaximumCount);
     }
 }
 
@@ -102,7 +102,7 @@ public static class OperatorBudgetAlgorithmExtensions
             {
                 Algorithm = algorithm,
                 ObservedOperator = observedOperator,
-                MaximumCalls = maximumCalls,
+                MaximumCount = maximumCalls,
                 CountedOperatorFactory = countedOperatorFactory
             };
         }
@@ -113,12 +113,20 @@ public static class OperatorBudgetAlgorithmExtensions
         where TP : class, IProblem<TG, TS>
         where TSearchState : class, ISearchState
     {
-        public OperatorBudgetAlgorithm<TG,TS,TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorCalls(int maximumCalls)
+        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorCalls(int maximumCalls)
         {
             return algorithm.WithMaxOperatorCalls(
                 algorithm.Evaluator,
                 maximumCalls,
-                static (observedOperator, counter) => observedOperator.ObserveWith((_, _) => counter.IncrementBy(1)));
+                static (observedOperator, counter) => observedOperator.CountEvaluatorCalls(counter));
+        }
+
+        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatedGenotypes(int maximumGenotypes)
+        {
+            return algorithm.WithMaxOperatorCalls(
+                algorithm.Evaluator,
+                maximumGenotypes,
+                static (observedOperator, counter) => observedOperator.CountEvaluatedGenotypes(counter));
         }
     }
 }

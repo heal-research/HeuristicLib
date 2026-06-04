@@ -82,7 +82,7 @@ public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgor
         {
             Genotype = genotype;
             var alg = racer.AlgBuilder(genotype);
-            algorithm = alg with { Evaluator = alg.Evaluator.CountInvocations(out counter) };
+            algorithm = alg with { Evaluator = alg.Evaluator.CountEvaluatedGenotypes(out counter) };
             running = algorithm.RunStreaming(problem, random, initialState, ct).GetEnumerator();
             LastState = initialState;
         }

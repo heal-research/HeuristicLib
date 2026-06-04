@@ -299,6 +299,35 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
+    public void GeneticAlgorithm_EvaluatorCallAndEvaluatedGenotypeBudgets_CountDifferentUnits()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var statesByEvaluatorCalls = algorithm
+            .WithMaxEvaluatorCalls(2)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+        var statesByEvaluatedGenotypes = algorithm
+            .WithMaxEvaluatedGenotypes(2)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        statesByEvaluatorCalls.Count.ShouldBe(2);
+        statesByEvaluatedGenotypes.Count.ShouldBe(1);
+        statesByEvaluatedGenotypes.Single().Population.Solutions.Length.ShouldBe(16);
+    }
+
+    [Fact]
     public async Task HillClimber_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);

@@ -89,6 +89,7 @@ Budget names should say what they count.
 - `MaximumCycles` counts completed cycles owned by a cycle algorithm.
 - `WithMaxIterations(...)` is an external early-stopping wrapper. It counts yielded stream states from the wrapped algorithm or composition, regardless of whether those states are generations, local-search moves, pipeline outputs, or cycle outputs.
 - `WithMaxEvaluatorCalls(...)` is an external early-stopping wrapper over observed `Evaluate(...)` calls. It installs a counted evaluator replacement for the run and stops future stream consumption after the configured call count has been observed; it does not make the wrapped algorithm internally complete.
+- `WithMaxEvaluatedGenotypes(...)` is an external early-stopping wrapper over genotypes processed inside observed evaluator batches. If one batch crosses the configured genotype count, the produced state for that batch is still yielded and future stream consumption stops afterward.
 - Evaluation-count budgets must identify the observed boundary and unit. Counting `Evaluate(...)` calls, evaluated genotypes inside those calls, requests to a caching evaluator, and calls that reach the wrapped direct evaluator are different budgets.
 
 Avoid treating "iteration" as a universal synonym for generation, step, cycle, evaluation, or yielded state. It is only the right public word when an algorithm explicitly defines iteration as its own progress unit.

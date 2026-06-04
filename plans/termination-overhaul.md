@@ -17,7 +17,7 @@ This plan establishes the terminology and semantic rules that should guide the n
 - `EvolutionStrategy`, `NSGA2`, `AlpsGeneticAlgorithm`, and `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` now also expose algorithm-owned `MaximumGenerations` budgets.
 - `HillClimber` structurally completes when no strictly improving neighbor exists, instead of yielding an unchanged previous state.
 - `CycleAlgorithm` has a reference spec for inner GA budgets plus external early stopping over the composed stream, including partial-cycle behavior.
-- `OperatorBudgetAlgorithm` can apply external early stopping over observed operator usage by installing a counted runtime replacement through the execution-instance registry. `WithMaxEvaluatorCalls(...)` is the first ergonomic helper and observes `Evaluate(...)` calls on the algorithm's configured evaluator.
+- `OperatorBudgetAlgorithm` can apply external early stopping over observed operator usage by installing a counted runtime replacement through the execution-instance registry. `WithMaxEvaluatorCalls(...)` observes `Evaluate(...)` calls on the algorithm's configured evaluator, while `WithMaxEvaluatedGenotypes(...)` observes genotypes processed inside those evaluator batches.
 - API usage specs now distinguish ordinary algorithm-owned completion from external early stopping; examples keep `WithMaxIterations(...)` only where the caller is intentionally applying an outside cap.
 - Documentation has been updated in `docs/execution-model.md` and `docs/operators.md` for internal completion, external early stopping, initial-state resume semantics, state-based terminator timing, and structural completion.
 
@@ -308,15 +308,18 @@ Current decision:
 - Do not add `MaximumEvaluations` as a routine algorithm property in this branch.
 - Treat operator-budget termination as external early stopping by default. If an evaluator, selector, mutator, or other operator reaches a call-count, time, or resource budget, the inner algorithm is not necessarily complete; the surrounding execution policy stopped consuming it.
 - Keep a clear manual model for advanced users: wrap the operator whose boundary should be observed, configure the algorithm to use that wrapper, and attach a terminator or external stop policy to the wrapper's runtime count.
-- Do not require ordinary users to manually wire the counted wrapper and the matching terminator as separate objects for common cases. A helper such as `WithMaxEvaluatorCalls(...)` should perform the correct replacement and attach the corresponding external early-stopping policy.
+- Do not require ordinary users to manually wire the counted wrapper and the matching terminator as separate objects for common cases. Helpers such as `WithMaxEvaluatorCalls(...)` and `WithMaxEvaluatedGenotypes(...)` should perform the correct replacement and attach the corresponding external early-stopping policy.
 - Prefer ordinary terminators, operator counters, wrappers, and helper APIs for less universal budgets such as maximum evaluations, maximum operator invocations, stagnation, target quality, or runtime.
+- Avoid the word "invocation" for public counter APIs because it hides the counted unit. Use `Calls` for method calls at one observed operator boundary and domain-specific item names such as `EvaluatedGenotypes` for batched elements processed inside those calls. HeuristicLib currently uses `Genotype` as the generic solution-candidate term; if the library later renames that concept, these APIs should be revisited together.
+- Start the counter naming cleanup with evaluators: `CountEvaluatorCalls(...)` counts `Evaluate(...)` method calls, while `CountEvaluatedGenotypes(...)` counts genotypes processed inside evaluator batches. Avoid also adding a generic `CountCalls(...)` alias for evaluators because it creates two public names for the same counter.
 
 Open operator-budget API questions:
 
 - What exactly counts as an evaluation: requests to the algorithm's configured evaluator, evaluated genotypes inside batched evaluator calls, cache misses in a wrapped evaluator, objective-function calls, or something else?
 - If an evaluator batch would exceed the budget, should the system reject the batch, partially evaluate it, finish the batch and stop afterward, or require algorithms to request budget before producing offspring?
-- What helper names and return types best express the common case: `WithMaxEvaluatorCalls(...)`, `WithMaxEvaluatedGenotypes(...)`, `WithMaxOperatorCalls(...)`, `TakeUntilOperatorCount(...)`, or another form?
+- What helper names and return types best express broader operator-budget cases beyond evaluators: `WithMaxOperatorCalls(...)`, `TakeUntilOperatorCount(...)`, or another form?
 - How should helper APIs discover or replace the relevant operator on an algorithm configuration without requiring every algorithm to expose the same evaluator property shape?
+- Should the old `CountInvocations(...)` helpers on non-evaluator operators be renamed directly to operator-family-specific call counters such as `CountMutatorCalls(...)`, `CountSelectorCalls(...)`, and `CountCreatorCalls(...)`, or should each operator family first get both call-count and item-count names where applicable?
 - Would a future internal termination configuration object give a better long-term API than accumulating separate nullable budget properties?
 
 Nullable budget properties versus a single internal termination configuration:
@@ -343,7 +346,8 @@ Nullable budget properties versus a single internal termination configuration:
 - [x] Rename state-based terminator checks from `ShouldTerminate(...)` to `IsTerminalState(...)`.
 - [ ] Decide the broader naming scheme for terminal states, completion, early stopping, and future run/resume/continue APIs.
 - [x] Decide whether evaluation-based budgets belong on algorithms, terminators, wrappers, evaluator decorators, or a more general internal termination configuration.
-- [x] Add the first operator-budget wrapper and `WithMaxEvaluatorCalls(...)` helper so users do not manually wire matching counted evaluator-call wrappers and terminators.
+- [x] Add the first operator-budget wrapper and evaluator helpers so users do not manually wire matching counted evaluator wrappers and terminators.
+- [x] Start counter naming cleanup with evaluator counters: `CountEvaluatorCalls(...)` and `CountEvaluatedGenotypes(...)`.
 - [ ] Decide whether and how to generalize operator-budget helpers beyond evaluator calls, including helper names, counted units such as evaluated genotypes, and operator replacement discovery.
 - [ ] Decide whether to add a graceful external stop adapter distinct from run-level `CancellationToken` cancellation and state-based terminal-state checks.
 - [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
