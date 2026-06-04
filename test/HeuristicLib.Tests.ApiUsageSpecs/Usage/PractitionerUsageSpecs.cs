@@ -187,7 +187,7 @@ public class PractitionerUsageSpecs
         var paretoReplacement = ParetoCrowdingReplacer.Replace(solutions, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
         paretoReplacement.Select(solution => solution.ObjectiveVector[0]).Order().ToArray().ShouldBe([0.5, 1.0]);
 
-        NeverTerminator.ShouldTerminate().ShouldBeFalse();
+        NeverTerminator.IsTerminalState().ShouldBeFalse();
 
         var state = new SingleSolutionState<RealVector>
         {
@@ -281,7 +281,7 @@ public class PractitionerUsageSpecs
     public async Task HillClimber_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -332,25 +332,14 @@ public class PractitionerUsageSpecs
             BatchSize = 4,
             MaxNeighbors = 12
         }.WithMaxIterations(6);
-        var repeated = new RepeatAlgorithm<
-          RealVector,
-          RealVectorSearchSpace,
-          TestFunctionProblem,
-          SingleSolutionState<RealVector>,
-          TerminatableAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>
+        var repeated = new RepeatAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
+          IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>
         {
             Algorithm = algorithm,
             Repetitions = 3
         };
 
-        var results = await MultiStreamAlgorithmExtensions.RunToCompletionAsync<
-          RealVector,
-          RealVectorSearchSpace,
-          TestFunctionProblem,
-          SingleSolutionState<RealVector>,
-          TerminatableAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>,
-          int>(
-          repeated,
+        var results = await repeated.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(999),
           cancellationToken: TestContext.Current.CancellationToken);
@@ -412,7 +401,7 @@ public class PractitionerUsageSpecs
         public int CheckedStateCount { get; private set; }
         public bool HasTerminated { get; private set; }
 
-        public override bool ShouldTerminate(
+        public override bool IsTerminalState(
           PopulationState<RealVector> state,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)

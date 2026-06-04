@@ -23,7 +23,7 @@ public record StagnationTerminator<TGenotype>
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override bool ShouldTerminate(PopulationState<TGenotype> algorithmState, ExecutionState executionState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+    protected override bool IsTerminalState(PopulationState<TGenotype> algorithmState, ExecutionState executionState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
     {
         executionState.BestQualitySoFar ??= problem.Objective.Worst;
 

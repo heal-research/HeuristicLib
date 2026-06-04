@@ -13,7 +13,7 @@ public record AfterOperatorCountTerminator<TGenotype> : StatelessTerminator<TGen
     private readonly InvocationCounter counter;
     private readonly int maximumCount;
 
-    public override bool ShouldTerminate()
+    public override bool IsTerminalState()
     {
         return counter.CurrentCount >= maximumCount;
     }

@@ -92,7 +92,7 @@ Use this checklist:
 The owner of the terminator determines what that stop means:
 
 - If an algorithm exposes a `Terminator` property, the terminator is part of that algorithm's internal completion semantics.
-- If a wrapper such as `WithMaxIterations(...)` or `TerminatableAlgorithm` owns the terminator, the terminator is external early stopping over the yielded stream.
+- If a wrapper such as `WithMaxIterations(...)` or `StateTerminatedAlgorithm` owns the terminator, the terminator is external early stopping over the yielded stream.
 
 In both cases, the produced state that satisfies the terminator remains part of the stream. The terminator stops future production or consumption; it does not remove the triggering state.
 

@@ -26,12 +26,12 @@ public partial record ObservableTerminator<TG, TS, TP, TR>
     {
     }
 
-    protected override bool ShouldTerminate(TR algorithmState, InnerShouldTerminate innerShouldTerminate, TS searchSpace, TP problem)
+    protected override bool IsTerminalState(TR searchState, InnerIsTerminalState innerIsTerminalState, TS searchSpace, TP problem)
     {
-        var result = innerShouldTerminate(algorithmState, searchSpace, problem);
+        var result = innerIsTerminalState(searchState, searchSpace, problem);
         foreach (var observer in Observers)
         {
-            observer.AfterTerminationCheck(result, algorithmState, searchSpace, problem);
+            observer.AfterTerminalStateCheck(result, searchState, searchSpace, problem);
         }
         return result;
     }
@@ -43,7 +43,7 @@ public interface ITerminatorObserver<in TG, in TS, in TP, in TR>
   where TP : class, IProblem<TG, TS>
   where TR : class, ISearchState
 {
-    void AfterTerminationCheck(bool shouldTerminate, TR state, TS searchSpace, TP problem);
+    void AfterTerminalStateCheck(bool isTerminalState, TR state, TS searchSpace, TP problem);
 }
 
 public static class ObservableTerminatorExtensions
@@ -57,10 +57,10 @@ public static class ObservableTerminatorExtensions
           => new ObservableTerminator<TG, TS, TP, TR>(terminator, observer);
         public ITerminator<TG, TS, TP, TR> ObserveWith(params IEnumerable<ITerminatorObserver<TG, TS, TP, TR>> observers)
           => new ObservableTerminator<TG, TS, TP, TR>(terminator, observers);
-        public ITerminator<TG, TS, TP, TR> ObserveWith(Action<bool, TR, TS, TP> afterTerminationCheck)
-          => terminator.ObserveWith(new ActionTerminatorObserver<TG, TS, TP, TR>(afterTerminationCheck));
-        public ITerminator<TG, TS, TP, TR> ObserveWith(Action<bool> afterTerminationCheck)
-          => terminator.ObserveWith(new ActionTerminatorObserver<TG, TS, TP, TR>((shouldTerminate, _, _, _) => afterTerminationCheck(shouldTerminate)));
+        public ITerminator<TG, TS, TP, TR> ObserveWith(Action<bool, TR, TS, TP> afterTerminalStateCheck)
+          => terminator.ObserveWith(new ActionTerminatorObserver<TG, TS, TP, TR>(afterTerminalStateCheck));
+        public ITerminator<TG, TS, TP, TR> ObserveWith(Action<bool> afterTerminalStateCheck)
+          => terminator.ObserveWith(new ActionTerminatorObserver<TG, TS, TP, TR>((isTerminalState, _, _, _) => afterTerminalStateCheck(isTerminalState)));
         public ITerminator<TG, TS, TP, TR> CountInvocations(InvocationCounter counter)
           => terminator.ObserveWith(_ => counter.IncrementBy(1));
         public ITerminator<TG, TS, TP, TR> CountInvocations(out InvocationCounter counter)
@@ -71,11 +71,10 @@ public static class ObservableTerminatorExtensions
     }
 }
 
-public sealed class ActionTerminatorObserver<TG, TS, TP, TR>(Action<bool, TR, TS, TP> afterTerminateCheck) : ITerminatorObserver<TG, TS, TP, TR>
+public sealed class ActionTerminatorObserver<TG, TS, TP, TR>(Action<bool, TR, TS, TP> afterTerminalStateCheck) : ITerminatorObserver<TG, TS, TP, TR>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TR : class, ISearchState
 {
-    public void AfterTerminationCheck(bool shouldTerminate, TR state, TS searchSpace, TP problem) => afterTerminateCheck(shouldTerminate, state, searchSpace, problem);
+    public void AfterTerminalStateCheck(bool isTerminalState, TR state, TS searchSpace, TP problem) => afterTerminalStateCheck(isTerminalState, state, searchSpace, problem);
 }
-

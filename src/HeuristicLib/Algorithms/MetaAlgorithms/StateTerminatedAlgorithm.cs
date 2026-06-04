@@ -9,9 +9,9 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-// ToDo: Think about if we really want to handle termination via decorators. Maybe as additional mechanism for algorithms that do not hav inner termination criterion, but otherwise, this feels overcomplicated.
-public record TerminatableAlgorithm<TG, TS, TP, TSearchState>
-  : Algorithm<TG, TS, TP, TSearchState, TerminatableAlgorithm<TG, TS, TP, TSearchState>.ExecutionState>
+// Adapter for algorithms that do not have an inner termination criterion; revisit if every algorithm exposes a terminal-state hook.
+public record StateTerminatedAlgorithm<TG, TS, TP, TSearchState>
+  : Algorithm<TG, TS, TP, TSearchState, StateTerminatedAlgorithm<TG, TS, TP, TSearchState>.ExecutionState>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TSearchState : class, ISearchState
@@ -36,9 +36,9 @@ public record TerminatableAlgorithm<TG, TS, TP, TSearchState>
         };
     }
 
-    protected override TerminatableAlgorithmInstance<TG, TS, TP, TSearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState)
+    protected override StateTerminatedAlgorithmInstance<TG, TS, TP, TSearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState)
     {
-        return new TerminatableAlgorithmInstance<TG, TS, TP, TSearchState>(
+        return new StateTerminatedAlgorithmInstance<TG, TS, TP, TSearchState>(
           run,
           executionState.Evaluator,
           executionState.Algorithm,
@@ -47,7 +47,7 @@ public record TerminatableAlgorithm<TG, TS, TP, TSearchState>
     }
 }
 
-public class TerminatableAlgorithmInstance<TG, TS, TP, TSearchState> : AlgorithmInstance<TG, TS, TP, TSearchState>
+public class StateTerminatedAlgorithmInstance<TG, TS, TP, TSearchState> : AlgorithmInstance<TG, TS, TP, TSearchState>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
   where TSearchState : class, ISearchState
@@ -55,7 +55,7 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TSearchState> : Algorithm
     protected readonly IAlgorithmInstance<TG, TS, TP, TSearchState> Algorithm;
     protected readonly ITerminatorInstance<TG, TS, TP, TSearchState> Terminator;
 
-    public TerminatableAlgorithmInstance(Run run, IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm, ITerminatorInstance<TG, TS, TP, TSearchState> terminator)
+    public StateTerminatedAlgorithmInstance(Run run, IEvaluatorInstance<TG, TS, TP> evaluator, IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm, ITerminatorInstance<TG, TS, TP, TSearchState> terminator)
       : base(run, evaluator)
     {
         Algorithm = algorithm;
@@ -68,7 +68,7 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TSearchState> : Algorithm
         {
             yield return state;
 
-            if (Terminator.ShouldTerminate(state, problem.SearchSpace, problem))
+            if (Terminator.IsTerminalState(state, problem.SearchSpace, problem))
             {
                 yield break;
             }
@@ -76,16 +76,16 @@ public class TerminatableAlgorithmInstance<TG, TS, TP, TSearchState> : Algorithm
     }
 }
 
-public static class TerminatableAlgorithmExtensions
+public static class StateTerminatedAlgorithmExtensions
 {
     extension<TG, TS, TP, TSearchState>(IAlgorithm<TG, TS, TP, TSearchState> algorithm)
       where TS : class, ISearchSpace<TG>
       where TP : class, IProblem<TG, TS>
       where TSearchState : class, ISearchState
     {
-        public TerminatableAlgorithm<TG, TS, TP, TSearchState> WithMaxIterations(int maxIterations)
+        public StateTerminatedAlgorithm<TG, TS, TP, TSearchState> WithMaxIterations(int maxIterations)
         {
-            return new TerminatableAlgorithm<TG, TS, TP, TSearchState>
+            return new StateTerminatedAlgorithm<TG, TS, TP, TSearchState>
             {
                 Algorithm = algorithm,
                 Terminator = new AfterIterationsTerminator<TG>(maxIterations)

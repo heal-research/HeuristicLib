@@ -17,8 +17,8 @@ public partial record AnyTerminator<TGenotype, TSearchSpace, TProblem, TSearchSt
     {
     }
 
-    protected override bool ShouldTerminate(TSearchState searchState,
-      IReadOnlyList<InnerShouldTerminate> innerTerminators,
+    protected override bool IsTerminalState(TSearchState searchState,
+      IReadOnlyList<InnerIsTerminalState> innerTerminators,
       TSearchSpace searchSpace, TProblem problem)
     {
         return innerTerminators.Any(t => t(searchState, searchSpace, problem));

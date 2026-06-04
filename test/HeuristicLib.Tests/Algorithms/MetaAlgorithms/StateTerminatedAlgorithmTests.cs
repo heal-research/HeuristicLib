@@ -9,14 +9,14 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
-public class TerminatableAlgorithmTests
+public class StateTerminatedAlgorithmTests
 {
     [Fact]
     public void RunStreaming_DoesNotCheckSuppliedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => false);
-        var algorithm = CreateTerminatableAlgorithm(terminator);
+        var algorithm = CreateStateTerminatedAlgorithm(terminator);
         var initialState = CreateState(41);
 
         var states = algorithm.RunStreaming(
@@ -34,7 +34,7 @@ public class TerminatableAlgorithmTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => true);
-        var algorithm = CreateTerminatableAlgorithm(terminator);
+        var algorithm = CreateStateTerminatedAlgorithm(terminator);
         var initialState = CreateState(41);
 
         var states = algorithm.RunStreaming(
@@ -52,7 +52,7 @@ public class TerminatableAlgorithmTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => true);
-        var algorithm = CreateTerminatableAlgorithm(terminator);
+        var algorithm = CreateStateTerminatedAlgorithm(terminator);
 
         var states = algorithm.RunStreaming(
           problem,
@@ -63,10 +63,10 @@ public class TerminatableAlgorithmTests
         terminator.CheckedGenotypes.ShouldBe([1]);
     }
 
-    private static TerminatableAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateTerminatableAlgorithm(
+    private static StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateStateTerminatedAlgorithm(
       RecordingTerminator terminator)
     {
-        return new TerminatableAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        return new StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
         {
             Algorithm = new AdditiveStepAlgorithm(1),
             Terminator = terminator
@@ -86,7 +86,7 @@ public class TerminatableAlgorithmTests
     {
         public List<int> CheckedGenotypes { get; } = [];
 
-        public override bool ShouldTerminate(
+        public override bool IsTerminalState(
           PopulationState<int> state,
           DummySearchSpace<int> searchSpace,
           IProblem<int, DummySearchSpace<int>> problem)

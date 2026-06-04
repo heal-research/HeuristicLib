@@ -82,7 +82,7 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
       ExecutionState executionState,
       TProblem problem)
     {
-        return executionState.Terminator?.ShouldTerminate(state, problem.SearchSpace, problem) == true;
+        return executionState.Terminator?.IsTerminalState(state, problem.SearchSpace, problem) == true;
     }
 
     protected override PopulationState<TGenotype> ExecuteStep(

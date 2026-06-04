@@ -17,7 +17,7 @@ public record AfterIterationsTerminator<TGenotype>
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override bool ShouldTerminate(ExecutionState executionState)
+    protected override bool IsTerminalState(ExecutionState executionState)
     {
         executionState.CurrentCounter += 1;
         return executionState.CurrentCounter >= maximumIterations;

@@ -11,7 +11,7 @@ This plan establishes the terminology and semantic rules that should guide the n
 
 ## Implementation Progress
 
-- `TerminatableAlgorithm` no longer checks a supplied `initialState`; external state-based termination now observes only states produced by the current execution.
+- `StateTerminatedAlgorithm` no longer checks a supplied `initialState`; external state-based termination now observes only states produced by the current execution.
 - `IterativeAlgorithm` now separates pre-step internal completion (`HasCompleted(...)`) from produced-state termination (`IsTerminalState(...)`) and structural exhaustion (`TryExecuteStep(...)` returning `false`).
 - `GeneticAlgorithm` has algorithm-owned `MaximumGenerations` and optional internal `Terminator` support, with stop-if-any semantics.
 - `EvolutionStrategy`, `NSGA2`, `AlpsGeneticAlgorithm`, and `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` now also expose algorithm-owned `MaximumGenerations` budgets.
@@ -91,7 +91,7 @@ Algorithm execution continues only while both of these are true:
 
 Internal termination is authoritative. External termination can shorten a run, but it cannot extend a run past internal completion.
 
-That means an external wrapper such as `TerminatableAlgorithm` is an early-stopping tool. It is not a way to force an algorithm beyond its own completion condition. If a caller wants an algorithm to run longer, it should configure the algorithm's internal termination differently or explicitly start a new run, restart, cycle, or other meta-algorithm behavior.
+That means an external wrapper such as `StateTerminatedAlgorithm` is an early-stopping tool. It is not a way to force an algorithm beyond its own completion condition. If a caller wants an algorithm to run longer, it should configure the algorithm's internal termination differently or explicitly start a new run, restart, cycle, or other meta-algorithm behavior.
 
 ## State Production And Check Timing
 
@@ -123,7 +123,7 @@ For example, a genetic algorithm with no supplied `initialState` may produce gen
 
 ## Stateful Terminator Invocation Contract
 
-`ITerminatorInstance.ShouldTerminate(...)` may mutate run-local state. An execution instance must treat it as an effectful transition, not as an idempotent predicate.
+`ITerminatorInstance.IsTerminalState(...)` may mutate run-local state. An execution instance must treat it as an effectful transition, not as an idempotent predicate.
 
 The owning execution instance should call a terminator instance at most once for each produced public state, and never for speculative probing.
 
@@ -153,7 +153,7 @@ For example:
 InternalStop =
   MaximumGenerationsReached
   OR EvaluationBudgetReached
-  OR CustomTerminator.ShouldTerminate(...)
+  OR CustomTerminator.IsTerminalState(...)
   OR StructuralAlgorithmCompletion
 ```
 
@@ -251,12 +251,12 @@ Users who need independent counters should use distinct terminator configuration
 
 ## Naming Follow-Up
 
-`ITerminatorInstance.ShouldTerminate(...)` is legacy wording and should not be treated as advisory. A `true` result means the owning lifecycle must stop according to that owner's semantics:
+`ITerminatorInstance.IsTerminalState(...)` is authoritative. A `true` result means the owning lifecycle must stop according to that owner's semantics:
 
 - internal completion for algorithm-owned terminators
 - external early stopping for wrapper-owned terminators
 
-Future API naming should consider whether this method should be renamed or split so the name communicates an authoritative transition rather than a suggestion.
+This replaced the older `ShouldTerminate(...)` wording because the decision is not advisory.
 
 The same terminology pressure applies to run and execution method names. Names such as `Run`, `Execute`, `Resume`, and `Continue` should be revisited when continuation becomes a first-class API question, especially to avoid implying that a completed execution instance can be extended.
 
@@ -275,7 +275,10 @@ The same terminology pressure applies to run and execution method names. Names s
 - [x] Add regular generation budgets to the other evolutionary algorithms where the unit is intuitive: ES, NSGA2, ALPS GA, and OERAPGA.
 - [x] Audit remaining `IterativeAlgorithm` subclasses for ordinary internal budgets, structural completion, or wrapper-only semantics.
 - [x] Document budget-unit naming guidance and make evaluation-count budget boundaries explicit in examples.
-- [ ] Revisit `ShouldTerminate`, `Run`, `Execute`, `Resume`, and `Continue` naming as follow-up API design work.
+- [x] Rename state-based terminator checks from `ShouldTerminate(...)` to `IsTerminalState(...)`.
+- [ ] Decide the broader naming scheme for terminal states, completion, early stopping, and future run/resume/continue APIs.
+- [ ] Decide whether evaluation-based budgets belong on algorithms, terminators, wrappers, evaluator decorators, or a more general internal termination configuration.
+- [ ] Decide whether to add a graceful external stop adapter distinct from run-level `CancellationToken` cancellation and state-based terminal-state checks.
 - [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
 
 ## Assumptions

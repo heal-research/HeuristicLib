@@ -265,7 +265,7 @@ public class GeneticAlgorithmSolvingTests
     {
         public List<PopulationState<RealVector>> CheckedStates { get; } = [];
 
-        public override bool ShouldTerminate(
+        public override bool IsTerminalState(
           PopulationState<RealVector> state,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)

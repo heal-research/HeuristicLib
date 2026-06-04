@@ -28,11 +28,10 @@ public abstract class ExperimentInstance<TGenotype, TSearchSpace, TProblem, TSea
 
 public static class MultiStreamAlgorithmExtensions
 {
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm, TAlgorithmKey>(IExperiment<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> algorithm)
+    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>(IExperiment<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> algorithm)
       where TSearchSpace : class, ISearchSpace<TGenotype>
       where TProblem : class, IProblem<TGenotype, TSearchSpace>
       where TSearchState : class, ISearchState
-      where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
     {
         // public Run CreateRuns(TProblem problem)
         // {
@@ -82,15 +81,14 @@ public static class MultiStreamAlgorithmExtensions
         {
             Run run = null!;
             var algorithmInstance = algorithm.CreateExecutionInstance(run);
-            return algorithmInstance.RunToCompletionAsync<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm, TAlgorithmKey>(problem, random, initialState, ct).GetAwaiter().GetResult();
+            return algorithmInstance.RunToCompletionAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
         }
     }
 
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm, TAlgorithmKey>(IExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> algorithmInstance)
+    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>(IExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> algorithmInstance)
       where TSearchSpace : class, ISearchSpace<TGenotype>
       where TProblem : class, IProblem<TGenotype, TSearchSpace>
       where TSearchState : class, ISearchState
-      where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
     {
         public async Task<IReadOnlyList<KeyValuePair<TAlgorithmKey, TSearchState>>> RunToCompletionAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
         {
@@ -117,7 +115,7 @@ public static class MultiStreamAlgorithmExtensions
           CancellationToken ct = default
         )
         {
-            return algorithmInstance.RunToCompletionAsync<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm, TAlgorithmKey>(problem, random, initialState, ct).GetAwaiter().GetResult();
+            return algorithmInstance.RunToCompletionAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
         }
     }
 }

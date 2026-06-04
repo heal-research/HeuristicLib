@@ -96,10 +96,10 @@ public static class ObservationPlanExtensions
           where TR : class, ISearchState
           => observations.Observe<ITerminator<TG, TS, TP, TR>, ITerminatorInstance<TG, TS, TP, TR>, ITerminatorObserver<TG, TS, TP, TR>>(terminator, observer, static (t, o) => t.ObserveWith(o));
 
-        public void Observe<TG, TS, TP, TR>(ITerminator<TG, TS, TP, TR> terminator, Action<bool, TR, TS, TP> afterTerminationCheck)
+        public void Observe<TG, TS, TP, TR>(ITerminator<TG, TS, TP, TR> terminator, Action<bool, TR, TS, TP> afterTerminalStateCheck)
           where TS : class, ISearchSpace<TG>
           where TP : class, IProblem<TG, TS>
           where TR : class, ISearchState
-          => observations.Observe(terminator, new ActionTerminatorObserver<TG, TS, TP, TR>(afterTerminationCheck));
+          => observations.Observe(terminator, new ActionTerminatorObserver<TG, TS, TP, TR>(afterTerminalStateCheck));
     }
 }

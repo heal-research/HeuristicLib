@@ -52,7 +52,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = new TerminatableAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
         {
             Algorithm = innerAlgorithm,
             Terminator = new FirstEvaluatedStateTerminator()
@@ -109,7 +109,7 @@ public class ResearcherAuthoringSpecs
     private sealed record FirstEvaluatedStateTerminator
       : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
-        public override bool ShouldTerminate(
+        public override bool IsTerminalState(
           SingleSolutionState<RealVector> state,
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)

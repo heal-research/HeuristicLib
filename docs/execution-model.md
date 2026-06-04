@@ -71,11 +71,13 @@ So the model supports both:
 - fresh runs, where `initialState == null`
 - resumed runs, where an existing state is passed back in
 
-A supplied `initialState` is resume input from outside the current execution; it is not a newly produced state. The default execution model therefore does not yield that state or treat it as something state-based external terminators have observed. External terminators such as `TerminatableAlgorithm` check only produced public states, after the state has been yielded, and a matching state stops future consumption rather than removing the state that triggered the stop.
+A supplied `initialState` is resume input from outside the current execution; it is not a newly produced state. The default execution model therefore does not yield that state or treat it as something state-based external terminators have observed. External terminators such as `StateTerminatedAlgorithm` check only produced public states, after the state has been yielded, and a matching state stops future consumption rather than removing the state that triggered the stop.
 
 Some algorithms also expose internal budget properties and state-based internal terminators. For example, `MaximumGenerations` on evolutionary algorithms such as `GeneticAlgorithm`, `EvolutionStrategy`, `NSGA2`, `AlpsGeneticAlgorithm`, and `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` is part of the algorithm's own execution budget and counts produced generation states from the current execution. A resumed run does not count the supplied `initialState` toward that budget. If an algorithm has a custom internal `Terminator`, it is checked only against states yielded by the current execution, not against a supplied `initialState`. This differs from `WithMaxIterations(...)`, which wraps an algorithm with external early stopping over the yielded stream.
 
 In this documentation, **completed** means the algorithm has internally finished producing states, either because an algorithm-owned budget or completion rule fired or because the algorithm has structurally no next state to produce. External early stopping is different: it stops consumption of a stream from the outside, but does not redefine whether the wrapped algorithm itself completed.
+
+For many simple runs, the observable state sequence can be the same either way. This is similar to LINQ: a source that naturally contains `n` items and a longer source consumed through `Take(n)` may produce the same items to the caller. The distinction matters when ownership and composition matter: whether the algorithm definition carries its own budget, whether the same configured algorithm can be reused without that limit, whether a wrapper is only adapting stream consumption, and whether future completion metadata should describe the inner algorithm as completed or merely externally stopped.
 
 For example, a local search that evaluates its configured neighborhood and finds no improving move has structurally completed. It should exhaust the stream instead of yielding another copy of the previous state.
 
@@ -120,7 +122,7 @@ Normal algorithm authoring should work through execution state and resolved exec
 
 ## Meta algorithms
 
-Meta algorithms such as `PipelineAlgorithm`, `CycleAlgorithm`, and `TerminatableAlgorithm` still work closer to the low-level execution model because they orchestrate other algorithms directly.
+Meta algorithms such as `PipelineAlgorithm`, `CycleAlgorithm`, and `StateTerminatedAlgorithm` still work closer to the low-level execution model because they orchestrate other algorithms directly.
 
 That is a separate concern from the simplified authoring path for ordinary iterative algorithms.
 

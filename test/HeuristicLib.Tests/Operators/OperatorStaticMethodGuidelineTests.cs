@@ -64,8 +64,8 @@ public class OperatorStaticMethodGuidelineTests
         };
         var target = new ObjectiveVector(1.0);
 
-        var viaInstance = new TargetTerminator<int>(target).ShouldTerminate(state, DummySearchSpace<int>.Instance, problem);
-        var viaCore = TargetTerminator.ShouldTerminate(state, problem, target);
+        var viaInstance = new TargetTerminator<int>(target).IsTerminalState(state, DummySearchSpace<int>.Instance, problem);
+        var viaCore = TargetTerminator.IsTerminalState(state, problem, target);
 
         viaCore.ShouldBe(viaInstance);
     }
