@@ -122,7 +122,7 @@ A generated initial state is different. When an algorithm starts without a suppl
 
 For example, a genetic algorithm with no supplied `initialState` may produce generation 0, yield generation 0, and then stop before generation 1 if a state-based terminator is satisfied. A resumed genetic algorithm should use the supplied state as the previous state, then yield and check only the next newly produced generation.
 
-## Stateful Terminator Invocation Contract
+## Stateful Terminator Check Contract
 
 `ITerminatorInstance.IsTerminalState(...)` may mutate run-local state. An execution instance must treat it as an effectful transition, not as an idempotent predicate.
 
@@ -282,14 +282,15 @@ Current decisions:
 - `StateTerminatedAlgorithm` remains useful as an adapter and composition tool for applying state-based early stopping around algorithms or workflows without changing their reusable configuration.
 - `CancellationToken` is the run-level cancellation mechanism. Cancellation is not internal completion, not a terminal search state, and not normal external early stopping.
 - `CancellationTokenTerminator(...)` is the graceful external-stop counterpart to run-level cancellation. A run-level `CancellationToken` may interrupt the current iteration wherever the algorithm or an operator checks it. A cancellation-token terminator checks only after a produced state has been yielded or observed, so the current iteration completes and only future consumption stops.
-- Determinism is expected only when algorithm configuration does not depend on outside mutable state. A `CancellationTokenTerminator(...)` captures a live external token, so reusing the same terminator after cancellation will stop later executions immediately after their first produced state. Future wall-clock/runtime termination has the same outside-state caveat.
+- `AfterElapsedTimeTerminator(...)` is the graceful external-stop mechanism for elapsed runtime budgets. It uses `TimeProvider` for testable time access and measures elapsed time from terminator execution-instance creation. `StateTerminatedAlgorithm` resolves terminators before wrapped algorithms so this starts as early as that wrapper can control, including wrapped algorithm instancing. If a caller needs an exact call-site start time, it can create a timeout `CancellationTokenSource` immediately before calling `Run...(...)` and use `CancellationTokenTerminator(...)`.
+- Determinism is expected only when algorithm configuration does not depend on outside mutable state. A `CancellationTokenTerminator(...)` captures a live external token, so reusing the same terminator after cancellation will stop later executions immediately after their first produced state. `AfterElapsedTimeTerminator(...)` and future operator-duration timing have the same outside-state caveat.
 - `PauseTokenTerminator` should not be restored as a state-based terminator. A pause/stop signal from outside execution is execution control, not a fact about a produced search state.
 
 Remaining naming and lifecycle questions:
 
 - Revisit run-method names later with a clear story for completed versus early-stopped execution instances.
 - If a future completion-result API reports stop reasons, decide method names and result shape together so lifecycle vocabulary aligns.
-- Add wall-clock/runtime termination as a future slice. It should be explicit about time provider/testability and should follow the same post-state early-stopping semantics as other external budget wrappers unless a pre-step/runtime-interruption API is deliberately designed.
+- Add operator-duration timing as a future slice. It is a different budget unit from general elapsed run time and needs its own naming and observation design.
 
 External termination should be understood primarily as ownership. It means something outside the algorithm decides, using whatever policy it owns, whether to continue drawing states from the stream. In many simple runs this can produce the same visible sequence as an internal budget, much like LINQ `Take(n)` can expose the same first `n` items as a naturally finite source, but the ownership distinction matters for reusable configuration, composition, continuation, and future lifecycle metadata.
 
@@ -313,7 +314,7 @@ Current decision:
 - Keep the lower-level counter-plus-terminator style for advanced cases, especially when one budget is shared across several observed operators. `AfterOperatorCountTerminator(...)` remains useful there because it terminates from a shared counter without owning how that counter is incremented.
 - Do not require ordinary users to manually wire the counted wrapper and the matching terminator as separate objects for common evaluator cases. Helpers such as `WithMaxEvaluatorCalls(...)` and `WithMaxEvaluatedGenotypes(...)` should perform the correct replacement and attach the corresponding external early-stopping policy. Broader operator budgets should use the general `WithMaxCount(...)` factory shape unless a helper clearly earns its place.
 - Keep `WithMaxCount(...)` as the general operator-budget helper. Evaluator budgets are common enough to keep `WithMaxEvaluatorCalls(...)` and `WithMaxEvaluatedGenotypes(...)` as convenience helpers, but other operator families should use `WithMaxCount(...)` unless repeated real usage shows that a specific shortcut earns its place.
-- Prefer ordinary terminators, operator counters, wrappers, and helper APIs for less universal budgets such as maximum evaluations, maximum operator invocations, stagnation, target quality, or runtime.
+- Prefer ordinary terminators, operator counters, wrappers, and helper APIs for less universal budgets such as maximum evaluations, maximum operator calls, stagnation, target quality, or runtime.
 - Avoid the word "invocation" for public counter APIs because it hides the counted unit. Use `Calls` for method calls at one observed operator boundary and domain-specific item names such as `EvaluatedGenotypes` for batched elements processed inside those calls. HeuristicLib currently uses `Genotype` as the generic solution-candidate term; if the library later renames that concept, these APIs should be revisited together.
 - Start the counter naming cleanup with evaluators: `CountEvaluatorCalls(...)` counts `Evaluate(...)` method calls, while `CountEvaluatedGenotypes(...)` counts genotypes processed inside evaluator batches. Avoid also adding a generic `CountCalls(...)` alias for evaluators because it creates two public names for the same counter.
 
@@ -358,8 +359,10 @@ Nullable budget properties versus a single internal termination configuration:
 - [x] Keep broader operator-budget use cases on the generic `WithMaxCount(...)` factory shape instead of adding selector-specific helper methods.
 - [x] Decide whether and how to generalize operator-budget helpers beyond evaluator calls: keep `WithMaxCount(...)` as the general factory shape, with evaluator-specific helpers as common-case conveniences.
 - [x] Add and document `CancellationTokenTerminator(...)` for graceful external stop after the current produced state, distinct from immediate run-level `CancellationToken` cancellation.
-- [ ] Add wall-clock/runtime termination with clear time-provider and post-state versus immediate-interruption semantics.
+- [x] Add wall-clock/runtime termination with clear time-provider and post-state versus immediate-interruption semantics.
+- [ ] Add operator-duration timing as a separate future design, including naming and observed-boundary semantics.
 - [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
+- [ ] Before deleting this overhaul plan, move every durable design decision and important explanation from this file into the appropriate long-lived documentation file so the architectural rationale is not lost.
 
 ## Assumptions
 

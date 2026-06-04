@@ -28,11 +28,13 @@ public record StateTerminatedAlgorithm<TG, TS, TP, TSearchState>
 
     protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
     {
+        // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start at the earliest point this wrapper controls, including wrapped algorithm instancing.
+        var terminator = resolver.Resolve(Terminator);
         return new ExecutionState
         {
             Evaluator = resolver.Resolve(Evaluator),
             Algorithm = resolver.Resolve(Algorithm),
-            Terminator = resolver.Resolve(Terminator)
+            Terminator = terminator
         };
     }
 
@@ -83,12 +85,12 @@ public static class StateTerminatedAlgorithmExtensions
       where TP : class, IProblem<TG, TS>
       where TSearchState : class, ISearchState
     {
-        public StateTerminatedAlgorithm<TG, TS, TP, TSearchState> WithMaxIterations(int maxIterations)
+        public StateTerminatedAlgorithm<TG, TS, TP, TSearchState> WithMaxIterations(int maximumIterations)
         {
             return new StateTerminatedAlgorithm<TG, TS, TP, TSearchState>
             {
                 Algorithm = algorithm,
-                Terminator = new AfterIterationsTerminator<TG>(maxIterations)
+                Terminator = new AfterIterationsTerminator<TG>(maximumIterations)
             };
         }
     }

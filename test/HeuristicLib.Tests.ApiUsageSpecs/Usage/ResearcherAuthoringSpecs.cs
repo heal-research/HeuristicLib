@@ -97,6 +97,37 @@ public class ResearcherAuthoringSpecs
     }
 
     [Fact]
+    public void AfterElapsedTimeTerminator_Example_StopsGracefullyAfterProducedState()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(2));
+        var innerAlgorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            Direction = LocalSearchDirection.FirstImprovement,
+            BatchSize = 4,
+            MaxNeighbors = 12
+        };
+
+        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+        {
+            Algorithm = innerAlgorithm,
+            Terminator = new AfterElapsedTimeTerminator<RealVector>(
+              TimeSpan.FromSeconds(1),
+              timeProvider)
+        };
+
+        var states = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(8642),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Count.ShouldBe(1);
+        problem.SearchSpace.Contains(states.Single().Solution.Genotype).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task ProblemSpecificOperator_AuthoringExample_CanUseProblemType()
     {
         var problem = CreateRastriginProblem(dimension: 4);
@@ -157,6 +188,20 @@ public class ResearcherAuthoringSpecs
           TestFunctionProblem problem)
         {
             return RealVector.Repeat(0.0, problem.TestFunction.Dimension);
+        }
+    }
+
+    private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
+    {
+        private long timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp()
+        {
+            var current = timestamp;
+            timestamp += step.Ticks;
+            return current;
         }
     }
 }

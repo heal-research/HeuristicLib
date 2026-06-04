@@ -106,6 +106,8 @@ HeuristicLib includes a few small composition patterns that keep calling code cl
 - `ChooseOne*` helpers choose among several operators using weights
 - `Pipeline*` helpers apply several operators in sequence
 
+Operator observation helpers also follow explicit budget-unit names. For example, `CountMutatorCalls(...)` counts calls to the observed mutator boundary, while `CountMutatedGenotypes(...)` counts genotypes returned by those batched mutator calls. See [Observability & analysis](observability-and-analysis.md) for the counter and observation model.
+
 ## Next
 
 - [Algorithm](algorithm.md)

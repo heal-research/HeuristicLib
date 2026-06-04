@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
@@ -281,9 +282,11 @@ public class PractitionerUsageSpecs
     public void GeneticAlgorithm_MaxEvaluatorCalls_IsExternalBudgetOverObservedEvaluatorUsage()
     {
         var problem = CreateRastriginProblem(dimension: 4);
+        var internalTerminator = new RecordingPopulationTerminator(5);
         var algorithm = CreateSimpleGeneticAlgorithm(problem) with
         {
-            MaximumGenerations = 5
+            MaximumGenerations = 5,
+            Terminator = internalTerminator
         };
 
         var states = algorithm
@@ -296,6 +299,8 @@ public class PractitionerUsageSpecs
 
         states.Count.ShouldBe(2);
         states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        internalTerminator.CheckedStateCount.ShouldBe(2);
+        internalTerminator.HasTerminated.ShouldBeFalse();
     }
 
     [Fact]
@@ -361,7 +366,41 @@ public class PractitionerUsageSpecs
             .ToList();
 
         statesByMutatorCalls.Count.ShouldBe(2);
+        statesByMutatorCalls.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
         statesByMutatedGenotypes.Count.ShouldBe(3);
+        statesByMutatedGenotypes.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_SharedOperatorCounter_CanDriveExternalEarlyStopping()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var counter = new ObservationCounter();
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+        var observedAlgorithm = baseAlgorithm with
+        {
+            Crossover = baseAlgorithm.Crossover.CountCrossoverCalls(counter),
+            Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
+        };
+        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+        {
+            Algorithm = observedAlgorithm,
+            Terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 2)
+        };
+
+        var states = algorithm.RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(987),
+            ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(2);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        counter.CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
     [Fact]
@@ -482,19 +521,19 @@ public class PractitionerUsageSpecs
         };
     }
 
-    private sealed record RecordingPopulationTerminator(int StopOnInvocation)
-      : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+    private sealed record RecordingPopulationTerminator(int StopOnCheckedStateCount)
+        : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
         public int CheckedStateCount { get; private set; }
         public bool HasTerminated { get; private set; }
 
         public override bool IsTerminalState(
-          PopulationState<RealVector> state,
-          RealVectorSearchSpace searchSpace,
-          TestFunctionProblem problem)
+            PopulationState<RealVector> state,
+            RealVectorSearchSpace searchSpace,
+            TestFunctionProblem problem)
         {
             CheckedStateCount++;
-            HasTerminated = CheckedStateCount >= StopOnInvocation;
+            HasTerminated = CheckedStateCount >= StopOnCheckedStateCount;
             return HasTerminated;
         }
     }

@@ -5,21 +5,27 @@ public record AfterIterationsTerminator<TGenotype>
 {
     public sealed class ExecutionState
     {
-        public int CurrentCounter { get; set; }
+        public int CurrentCount { get; set; }
     }
-
-    private readonly int maximumIterations;
 
     public AfterIterationsTerminator(int maximumIterations)
     {
-        this.maximumIterations = maximumIterations;
+        MaximumIterations = maximumIterations;
+    }
+
+    public int MaximumIterations
+    {
+        get;
+        init => field = value > 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(MaximumIterations), "MaximumIterations must be positive.");
     }
 
     protected override ExecutionState CreateInitialState() => new();
 
     protected override bool IsTerminalState(ExecutionState executionState)
     {
-        executionState.CurrentCounter += 1;
-        return executionState.CurrentCounter >= maximumIterations;
+        executionState.CurrentCount += 1;
+        return executionState.CurrentCount >= MaximumIterations;
     }
 }

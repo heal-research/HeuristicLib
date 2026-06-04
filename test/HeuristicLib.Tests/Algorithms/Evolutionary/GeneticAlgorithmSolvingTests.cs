@@ -260,18 +260,18 @@ public class GeneticAlgorithmSolvingTests
         };
     }
 
-    private sealed record RecordingPopulationTerminator(int StopOnInvocation)
-      : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+    private sealed record RecordingPopulationTerminator(int StopOnCheckedStateCount)
+        : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
         public List<PopulationState<RealVector>> CheckedStates { get; } = [];
 
         public override bool IsTerminalState(
-          PopulationState<RealVector> state,
-          RealVectorSearchSpace searchSpace,
-          TestFunctionProblem problem)
+            PopulationState<RealVector> state,
+            RealVectorSearchSpace searchSpace,
+            TestFunctionProblem problem)
         {
             CheckedStates.Add(state);
-            return CheckedStates.Count >= StopOnInvocation;
+            return CheckedStates.Count >= StopOnCheckedStateCount;
         }
     }
 }
