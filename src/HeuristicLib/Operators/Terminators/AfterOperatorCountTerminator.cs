@@ -4,17 +4,24 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record AfterOperatorCountTerminator<TGenotype> : StatelessTerminator<TGenotype>
 {
-    public AfterOperatorCountTerminator(InvocationCounter counter, int maximumCount)
+    public AfterOperatorCountTerminator(ObservationCounter counter, int maximumCount)
     {
-        this.counter = counter;
-        this.maximumCount = maximumCount;
+        Counter = counter;
+        MaximumCount = maximumCount;
     }
 
-    private readonly InvocationCounter counter;
-    private readonly int maximumCount;
+    public ObservationCounter Counter { get; }
+
+    public int MaximumCount
+    {
+        get;
+        init => field = value > 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
+    }
 
     public override bool IsTerminalState()
     {
-        return counter.CurrentCount >= maximumCount;
+        return Counter.CurrentCount >= MaximumCount;
     }
 }

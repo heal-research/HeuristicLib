@@ -67,6 +67,36 @@ public class ResearcherAuthoringSpecs
     }
 
     [Fact]
+    public void CancellationTokenTerminator_Example_StopsGracefullyAfterProducedState()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        using var stopAfterCurrentState = new CancellationTokenSource();
+        stopAfterCurrentState.Cancel();
+        var innerAlgorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            Direction = LocalSearchDirection.FirstImprovement,
+            BatchSize = 4,
+            MaxNeighbors = 12
+        };
+
+        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+        {
+            Algorithm = innerAlgorithm,
+            Terminator = new CancellationTokenTerminator<RealVector>(stopAfterCurrentState.Token)
+        };
+
+        var states = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(2468),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Count.ShouldBe(1);
+        problem.SearchSpace.Contains(states.Single().Solution.Genotype).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task ProblemSpecificOperator_AuthoringExample_CanUseProblemType()
     {
         var problem = CreateRastriginProblem(dimension: 4);

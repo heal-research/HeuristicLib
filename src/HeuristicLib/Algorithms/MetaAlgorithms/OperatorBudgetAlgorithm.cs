@@ -20,7 +20,7 @@ public record OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObse
 {
     public required IAlgorithm<TG, TS, TP, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
-    public required Func<TOperator, InvocationCounter, IOperator<TObservedInstance>> CountedOperatorFactory { get; init; }
+    public required Func<TOperator, ObservationCounter, IOperator<TObservedInstance>> CountedOperatorFactory { get; init; }
 
     public int MaximumCount
     {
@@ -34,7 +34,7 @@ public record OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObse
 
     public IAlgorithmInstance<TG, TS, TP, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var countedOperator = CountedOperatorFactory(ObservedOperator, counter);
         var childRegistry = instanceRegistry.CreateChildRegistry();
         childRegistry.PreRegister(ObservedOperator, countedOperator);
@@ -53,12 +53,12 @@ public sealed class OperatorBudgetAlgorithmInstance<TG, TS, TP, TSearchState>
     where TSearchState : class, ISearchState
 {
     private readonly IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm;
-    private readonly InvocationCounter counter;
+    private readonly ObservationCounter counter;
     private readonly int maximumCount;
 
     public OperatorBudgetAlgorithmInstance(
         IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm,
-        InvocationCounter counter,
+        ObservationCounter counter,
         int maximumCount)
     {
         this.algorithm = algorithm;
@@ -95,7 +95,7 @@ public static class OperatorBudgetAlgorithmExtensions
         public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObservedInstance> WithMaxCount<TOperator>(
             TOperator observedOperator,
             int maximumCount,
-            Func<TOperator, InvocationCounter, IOperator<TObservedInstance>> countedOperatorFactory)
+            Func<TOperator, ObservationCounter, IOperator<TObservedInstance>> countedOperatorFactory)
             where TOperator : IOperator<TObservedInstance>
         {
             return new OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObservedInstance>

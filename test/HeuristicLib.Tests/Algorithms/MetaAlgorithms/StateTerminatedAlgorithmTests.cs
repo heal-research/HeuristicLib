@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -63,8 +64,38 @@ public class StateTerminatedAlgorithmTests
         terminator.CheckedGenotypes.ShouldBe([1]);
     }
 
+    [Fact]
+    public void RunStreaming_WithCanceledRunToken_InterruptsBeforeProducingState()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Should.Throw<OperationCanceledException>(() =>
+            new AdditiveStepAlgorithm(1).RunStreaming(
+              problem,
+              RandomNumberGenerator.Create(42),
+              ct: cts.Token).ToList());
+    }
+
+    [Fact]
+    public void RunStreaming_WithCanceledTerminatorToken_YieldsProducedStateThenStops()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var algorithm = CreateStateTerminatedAlgorithm(new CancellationTokenTerminator<int>(cts.Token));
+
+        var states = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([1]);
+    }
+
     private static StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateStateTerminatedAlgorithm(
-      RecordingTerminator terminator)
+      ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> terminator)
     {
         return new StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
         {

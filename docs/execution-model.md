@@ -22,6 +22,8 @@ IAsyncEnumerable<TSearchState> RunStreamingAsync(
 
 Convenience methods such as `RunToCompletion(...)` are just ways of consuming that stream.
 
+Run-level `CancellationToken` parameters are for immediate execution interruption. Algorithms and operators may check that token before or during a step, so cancellation can stop the current iteration before it produces another state.
+
 ## The main authoring model
 
 Ordinary iterative algorithms should be authored through `IterativeAlgorithm<...>`.
@@ -73,11 +75,15 @@ So the model supports both:
 
 A supplied `initialState` is resume input from outside the current execution; it is not a newly produced state. The default execution model therefore does not yield that state or treat it as something state-based external terminators have observed. External terminators such as `StateTerminatedAlgorithm` check only produced public states, after the state has been yielded, and a matching state stops future consumption rather than removing the state that triggered the stop.
 
+`CancellationTokenTerminator(...)` is different from passing a token to `Run...(...)`. It models graceful external early stopping: the wrapped algorithm finishes producing the current state, that state is yielded, and the terminator then stops future consumption if its token has been canceled. Use the run parameter token when the current iteration should be interrupted immediately; use the terminator form when a UI, service, or caller wants to stop after the current produced state.
+
 Some algorithms also expose internal budget properties and state-based internal terminators. For example, `MaximumGenerations` on evolutionary algorithms such as `GeneticAlgorithm`, `EvolutionStrategy`, `NSGA2`, `AlpsGeneticAlgorithm`, and `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` is part of the algorithm's own execution budget and counts produced generation states from the current execution. A resumed run does not count the supplied `initialState` toward that budget. If an algorithm has a custom internal `Terminator`, it is checked only against states yielded by the current execution, not against a supplied `initialState`. This differs from `WithMaxIterations(...)`, which wraps an algorithm with external early stopping over the yielded stream.
 
 In this documentation, **completed** means the algorithm has internally finished producing states, either because an algorithm-owned budget or completion rule fired or because the algorithm has structurally no next state to produce. External early stopping is different: it stops consumption of a stream from the outside, but does not redefine whether the wrapped algorithm itself completed.
 
 For many simple runs, the observable state sequence can be the same either way. This is similar to LINQ: a source that naturally contains `n` items and a longer source consumed through `Take(n)` may produce the same items to the caller. The distinction matters when ownership and composition matter: whether the algorithm definition carries its own budget, whether the same configured algorithm can be reused without that limit, whether a wrapper is only adapting stream consumption, and whether future completion metadata should describe the inner algorithm as completed or merely externally stopped.
+
+HeuristicLib aims for deterministic execution when the algorithm configuration, problem, initial state, and random seed are the same. That expectation only holds while the configuration does not depend on outside mutable state. Terminators or operators that observe external state, such as a live `CancellationToken` or a future wall-clock budget, can make otherwise identical executions produce different streams. For example, reusing a `CancellationTokenTerminator(...)` after its token has already been canceled will stop the next execution immediately after its first produced state.
 
 For example, a local search that evaluates its configured neighborhood and finds no improving move has structurally completed. It should exhaust the stream instead of yielding another copy of the previous state.
 

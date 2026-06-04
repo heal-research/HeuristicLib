@@ -22,7 +22,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountCreatorCalls_IncrementsOncePerCreateCall()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var creator = new SequenceCreator().CountCreatorCalls(counter);
         var instance = creator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -36,7 +36,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountCreatedGenotypes_IncrementsByReturnedGenotypeCount()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var creator = new SequenceCreator().CountCreatedGenotypes(counter);
         var instance = creator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -50,7 +50,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountMutatorCalls_IncrementsOncePerMutateCall()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var mutator = new AddOneMutator().CountMutatorCalls(counter);
         var instance = mutator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -64,7 +64,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountMutatedGenotypes_IncrementsByReturnedGenotypeCount()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var mutator = new AddOneMutator().CountMutatedGenotypes(counter);
         var instance = mutator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -78,7 +78,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountCrossoverCalls_IncrementsOncePerCrossCall()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var crossover = new SumParentsCrossover().CountCrossoverCalls(counter);
         var instance = crossover.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -100,7 +100,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountCrossedGenotypes_IncrementsByReturnedGenotypeCount()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var crossover = new SumParentsCrossover().CountCrossedGenotypes(counter);
         var instance = crossover.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -122,7 +122,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountSelectorCalls_IncrementsOncePerSelectCall()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var selector = new FirstSolutionsSelector().CountSelectorCalls(counter);
         var instance = selector.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -136,7 +136,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountSelectedSolutions_IncrementsByReturnedSolutionCount()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var selector = new FirstSolutionsSelector().CountSelectedSolutions(counter);
         var instance = selector.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -150,7 +150,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountReplacerCalls_IncrementsOncePerReplaceCall()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var replacer = new FirstReplacementSolutionsReplacer().CountReplacerCalls(counter);
         var instance = replacer.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -178,7 +178,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountReplacementSolutions_IncrementsByReturnedSolutionCount()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var replacer = new FirstReplacementSolutionsReplacer().CountReplacementSolutions(counter);
         var instance = replacer.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -206,7 +206,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountInterceptorCalls_IncrementsOncePerTransformCall()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var interceptor = new AddOneInterceptor().CountInterceptorCalls(counter);
         var instance = interceptor.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -220,7 +220,7 @@ public class ObservableOperatorCounterTests
     [Fact]
     public void CountTerminatorCalls_IncrementsOncePerTerminalStateCheck()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var terminator = new NeverTerminalStateTerminator().CountTerminatorCalls(counter);
         var instance = terminator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();

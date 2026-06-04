@@ -166,7 +166,7 @@ public class OperatorBudgetAlgorithmTests
     public void AfterOperatorCountTerminator_CanUseSharedCounterAcrossObservedOperators()
     {
         var problem = CreateProblem();
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var baseAlgorithm = CreateAlgorithm(problem);
         var algorithm = baseAlgorithm with
         {
@@ -192,6 +192,15 @@ public class OperatorBudgetAlgorithmTests
 
         results.Count.ShouldBe(2);
         counter.CurrentCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public void AfterOperatorCountTerminator_Throws_WhenMaximumCountIsNotPositive()
+    {
+        var counter = new ObservationCounter();
+
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 0));
     }
 
     [Fact]

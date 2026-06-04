@@ -15,7 +15,7 @@ public class ObservableEvaluatorTests
     [Fact]
     public void CountEvaluatorCalls_IncrementsOncePerEvaluateCall()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatorCalls(counter);
         var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
@@ -29,7 +29,7 @@ public class ObservableEvaluatorTests
     [Fact]
     public void CountEvaluatedGenotypes_IncrementsByBatchSize()
     {
-        var counter = new InvocationCounter();
+        var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatedGenotypes(counter);
         var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();

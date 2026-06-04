@@ -75,7 +75,7 @@ Examples include:
 
 - a shared experiment cutoff applied uniformly to many different algorithm configurations
 - an interactive UI, notebook, or service that stops consuming progress once it has enough
-- cancellation, pause, wall-clock, or request-timeout policies
+- cancellation, graceful stop, pause, wall-clock, or request-timeout policies
 - a meta-optimizer that cuts off poor candidate configurations early
 - an orchestration layer that switches strategy once an observed target quality is reached
 - a one-off run policy that should not become part of the reusable algorithm configuration
@@ -194,7 +194,7 @@ Use external wrapping termination when the stop rule belongs to outside ownershi
 
 - applying one experiment cutoff to many algorithm configurations
 - stopping a dashboard or notebook stream once enough progress was shown
-- enforcing service-level cancellation, pause, wall-clock, or request-time policies
+- enforcing service-level cancellation, graceful stop, pause, wall-clock, or request-time policies
 - cutting off weak configurations during meta-optimization
 - stopping a larger composed workflow early without changing the reusable inner algorithm configurations
 
@@ -281,13 +281,15 @@ Current decisions:
 - Internal algorithm-owned terminal-state checks and external wrapper-owned terminal-state checks can share the same interface when both inspect produced states. The important distinction is ownership, not necessarily mechanism.
 - `StateTerminatedAlgorithm` remains useful as an adapter and composition tool for applying state-based early stopping around algorithms or workflows without changing their reusable configuration.
 - `CancellationToken` is the run-level cancellation mechanism. Cancellation is not internal completion, not a terminal search state, and not normal external early stopping.
+- `CancellationTokenTerminator(...)` is the graceful external-stop counterpart to run-level cancellation. A run-level `CancellationToken` may interrupt the current iteration wherever the algorithm or an operator checks it. A cancellation-token terminator checks only after a produced state has been yielded or observed, so the current iteration completes and only future consumption stops.
+- Determinism is expected only when algorithm configuration does not depend on outside mutable state. A `CancellationTokenTerminator(...)` captures a live external token, so reusing the same terminator after cancellation will stop later executions immediately after their first produced state. Future wall-clock/runtime termination has the same outside-state caveat.
 - `PauseTokenTerminator` should not be restored as a state-based terminator. A pause/stop signal from outside execution is execution control, not a fact about a produced search state.
 
 Remaining naming and lifecycle questions:
 
 - Revisit run-method names later with a clear story for completed versus early-stopped execution instances.
 - If a future completion-result API reports stop reasons, decide method names and result shape together so lifecycle vocabulary aligns.
-- Consider whether HeuristicLib needs a graceful external stop adapter distinct from cancellation and distinct from `ITerminator`, for policies such as "stop consuming before the next state when this outside signal is set" without throwing `OperationCanceledException`.
+- Add wall-clock/runtime termination as a future slice. It should be explicit about time provider/testability and should follow the same post-state early-stopping semantics as other external budget wrappers unless a pre-step/runtime-interruption API is deliberately designed.
 
 External termination should be understood primarily as ownership. It means something outside the algorithm decides, using whatever policy it owns, whether to continue drawing states from the stream. In many simple runs this can produce the same visible sequence as an internal budget, much like LINQ `Take(n)` can expose the same first `n` items as a naturally finite source, but the ownership distinction matters for reusable configuration, composition, continuation, and future lifecycle metadata.
 
@@ -355,7 +357,8 @@ Nullable budget properties versus a single internal termination configuration:
 - [x] Add item-count helpers for other batched operator outputs, including created genotypes, crossed genotypes, mutated genotypes, evaluated genotypes, selected solutions, and replacement solutions.
 - [x] Keep broader operator-budget use cases on the generic `WithMaxCount(...)` factory shape instead of adding selector-specific helper methods.
 - [x] Decide whether and how to generalize operator-budget helpers beyond evaluator calls: keep `WithMaxCount(...)` as the general factory shape, with evaluator-specific helpers as common-case conveniences.
-- [ ] Decide whether to add a graceful external stop adapter distinct from run-level `CancellationToken` cancellation and state-based terminal-state checks.
+- [x] Add and document `CancellationTokenTerminator(...)` for graceful external stop after the current produced state, distinct from immediate run-level `CancellationToken` cancellation.
+- [ ] Add wall-clock/runtime termination with clear time-provider and post-state versus immediate-interruption semantics.
 - [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
 
 ## Assumptions

@@ -99,11 +99,11 @@ var observed = mutator.ObserveWith(offspring => {
 });
 ```
 
-## External sinks: `InvocationCounter`
+## External sinks: `ObservationCounter`
 
 Analysis usually needs to write somewhere.
 
-HeuristicLib often models this as writing to an **external sink**. A minimal example is `InvocationCounter`, which is just a thread-safe counter.
+HeuristicLib often models this as writing to an **external sink**. A minimal example is `ObservationCounter`, which is just a thread-safe counter.
 
 ### Count operator calls with an existing sink
 
@@ -111,7 +111,7 @@ If you already have a sink (for example, a counter owned by an experiment runner
 
 ```csharp
 IMutator<TG, TS, TP> mutator = /* ... */;
-var counter = new InvocationCounter();
+var counter = new ObservationCounter();
 
 var observed = mutator.CountMutatorCalls(counter);
 
@@ -124,7 +124,7 @@ Use `CountMutatedGenotypes(...)` when the budget should count the mutated genoty
 
 ```csharp
 IMutator<TG, TS, TP> mutator = /* ... */;
-var counter = new InvocationCounter();
+var counter = new ObservationCounter();
 
 var observed = mutator.CountMutatedGenotypes(counter);
 
@@ -182,7 +182,7 @@ Typical characteristics:
 - scope is tied to the wrapped definition and the execution instances created for it
 - you usually provide a callback, observer object, logger, or external sink
 - the result typically lives **outside** the run
-  - for example in an `InvocationCounter`, a logger, a list you own, or a custom observer instance
+  - for example in an `ObservationCounter`, a logger, a list you own, or a custom observer instance
 - best for lightweight instrumentation, diagnostics, logging, counters, and ad-hoc experiments
 
 Typical API shape:
