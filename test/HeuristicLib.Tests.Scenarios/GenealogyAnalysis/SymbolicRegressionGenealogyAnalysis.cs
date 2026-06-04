@@ -54,11 +54,15 @@ public class GenealogyGraphTests
         //builder.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
         var ga = builder.Build();
         var interceptor = ga.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
-        ga = ga with { Interceptor = interceptor };
+        ga = ga with
+        {
+            Interceptor = interceptor,
+            MaximumGenerations = 6
+        };
 
         var analysis = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(ga, ga.Interceptor!);
 
-        var run = ga.WithMaxIterations(6).CreateRun(problem, analysis);
+        var run = ga.CreateRun(problem, analysis);
         var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
         var ares = run.GetAnalyzerResult(analysis);
 
@@ -85,13 +89,17 @@ public class GenealogyGraphTests
 
         var algorithm = ga.Build();
         var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
-        algorithm = algorithm with { Interceptor = interceptor };
+        algorithm = algorithm with
+        {
+            Interceptor = interceptor,
+            MaximumGenerations = gens
+        };
 
         var evalQualities = new QualityCurveAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Evaluator);
         var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Interceptor!);
         var genealogyAnalysis = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
 
-        var run = algorithm.WithMaxIterations(gens).CreateRun(problem, evalQualities, qualities, genealogyAnalysis);
+        var run = algorithm.CreateRun(problem, evalQualities, qualities, genealogyAnalysis);
         var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
 
         var qres = run.GetAnalyzerResult(qualities);
@@ -146,12 +154,16 @@ public class GenealogyGraphTests
 
         var algorithm = nsga2.Build();
         var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
-        algorithm = algorithm with { Interceptor = interceptor };
+        algorithm = algorithm with
+        {
+            Interceptor = interceptor,
+            MaximumGenerations = maximumIterations
+        };
 
         var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
         var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Interceptor!);
 
-        var run = algorithm.WithMaxIterations(maximumIterations).CreateRun(problem, genealogy, qualities);
+        var run = algorithm.CreateRun(problem, genealogy, qualities);
         var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.GetAnalyzerResult(genealogy);
         var qres = run.GetAnalyzerResult(qualities);

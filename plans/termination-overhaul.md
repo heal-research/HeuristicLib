@@ -14,10 +14,27 @@ This plan establishes the terminology and semantic rules that should guide the n
 - `TerminatableAlgorithm` no longer checks a supplied `initialState`; external state-based termination now observes only states produced by the current execution.
 - `IterativeAlgorithm` now separates pre-step internal completion (`HasCompleted(...)`) from produced-state termination (`IsTerminalState(...)`) and structural exhaustion (`TryExecuteStep(...)` returning `false`).
 - `GeneticAlgorithm` has algorithm-owned `MaximumGenerations` and optional internal `Terminator` support, with stop-if-any semantics.
+- `EvolutionStrategy`, `NSGA2`, `AlpsGeneticAlgorithm`, and `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` now also expose algorithm-owned `MaximumGenerations` budgets.
 - `HillClimber` structurally completes when no strictly improving neighbor exists, instead of yielding an unchanged previous state.
 - `CycleAlgorithm` has a reference spec for inner GA budgets plus external early stopping over the composed stream, including partial-cycle behavior.
 - API usage specs now distinguish ordinary algorithm-owned completion from external early stopping; examples keep `WithMaxIterations(...)` only where the caller is intentionally applying an outside cap.
 - Documentation has been updated in `docs/execution-model.md` and `docs/operators.md` for internal completion, external early stopping, initial-state resume semantics, state-based terminator timing, and structural completion.
+
+## Iterative Algorithm Audit
+
+Current `IterativeAlgorithm` subclasses fall into these buckets:
+
+- `GeneticAlgorithm`: done for this pass. It has `MaximumGenerations`, optional internal `Terminator`, and tests for fresh runs, resume, invalid budgets, and stop-if-any composition.
+- `EvolutionStrategy`: done for the ordinary generation-budget pass. It has `MaximumGenerations`; no custom internal terminator hook was added in this slice.
+- `NSGA2`: done for the ordinary generation-budget pass. It has `MaximumGenerations`; no custom internal terminator hook was added in this slice.
+- `AlpsGeneticAlgorithm`: done for the ordinary generation-budget pass. It has `MaximumGenerations`, but the real ALPS age-layer mechanics remain separate backlog work.
+- `HillClimber`: done for this pass. It structurally completes when no strictly improving neighbor exists.
+- `OpenEndedRelevantAllelesPreservingGeneticAlgorithm`: done for the ordinary generation-budget pass. It has `MaximumGenerations` as a normal execution budget; its open-ended search logic still has no structural completion condition.
+- `DynamicRacingAlgorithm`: leave for a later experimental-workflow pass. It is an orchestration/racing algorithm around inner executions and dynamic epochs, so the right completion unit may be epoch, race, evaluation budget, or an external workflow cap rather than a plain generation count.
+- `ParameterlessPopulationPyramid`: ignored for this pass because it is currently commented-out code.
+- API-spec-only toy algorithms in `AlgorithmAuthoringSpecs`: leave wrapper-capped. They exist to document authoring mechanics, not to model production completion semantics.
+
+Future refactoring may introduce a shared evolutionary-algorithm base class or helper layer. If that happens, `MaximumGenerations` is a strong candidate for that shared responsibility because it now has the same meaning across generation-producing evolutionary algorithms.
 
 ## Core Terminology
 
@@ -255,10 +272,11 @@ The same terminology pressure applies to run and execution method names. Names s
 - [x] Use `GeneticAlgorithm` as the first implementation slice after the terminology is documented.
 - [x] Add a reference spec for cycle plus external early stopping. The implemented spec uses a small 3 x 5 capped-at-8 scenario rather than the illustrative 100 x 5 capped-at-250 numbers.
 - [x] Add structural-completion behavior and specs for local search.
+- [x] Add regular generation budgets to the other evolutionary algorithms where the unit is intuitive: ES, NSGA2, ALPS GA, and OERAPGA.
+- [x] Audit remaining `IterativeAlgorithm` subclasses for ordinary internal budgets, structural completion, or wrapper-only semantics.
 - [ ] Document budget-unit naming guidance and make evaluation-count budget boundaries explicit in examples.
 - [ ] Revisit `ShouldTerminate`, `Run`, `Execute`, `Resume`, and `Continue` naming as follow-up API design work.
 - [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
-- [ ] Audit other iterative algorithms for ordinary internal budgets or structural completion opportunities, especially algorithms that still rely on `WithMaxIterations(...)` in normal usage examples.
 
 ## Assumptions
 

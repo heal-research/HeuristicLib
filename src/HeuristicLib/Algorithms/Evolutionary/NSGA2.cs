@@ -32,6 +32,13 @@ public record NSGA2<TGenotype, TSearchSpace, TProblem>
     public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
     public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
     public required IReplacer<TGenotype, TSearchSpace, TProblem> Replacer { get; init; }
+    public int? MaximumGenerations
+    {
+        get;
+        init => field = value is null or > 0
+          ? value
+          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
+    }
 
     protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
     {
@@ -45,6 +52,15 @@ public record NSGA2<TGenotype, TSearchSpace, TProblem>
             Selector = resolver.Resolve(Selector),
             Replacer = resolver.Resolve(Replacer)
         };
+    }
+
+    protected override bool HasCompleted(
+      int yieldedStateCount,
+      PopulationState<TGenotype>? previousState,
+      ExecutionState executionState,
+      TProblem problem)
+    {
+        return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
     }
 
     protected override PopulationState<TGenotype> ExecuteStep(

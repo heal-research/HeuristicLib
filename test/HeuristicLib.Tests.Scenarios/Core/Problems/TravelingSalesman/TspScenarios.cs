@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
@@ -37,9 +36,10 @@ public class TspScenarios
         ga.Selector = new TournamentSelector<Permutation>(2);
         ga.Elites = 1;
         // execute
-        var resGa = ga.Build()
-                      .WithMaxIterations(10)
-                      .RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var resGa = (ga.Build() with
+        {
+            MaximumGenerations = 10
+        }).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         // look at results
         var objGa = resGa.Population

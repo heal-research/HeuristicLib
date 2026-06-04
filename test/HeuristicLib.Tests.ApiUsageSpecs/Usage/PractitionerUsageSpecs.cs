@@ -373,8 +373,9 @@ public class PractitionerUsageSpecs
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Crossover = null,
             Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
-            InitialMutationStrength = 0.15
-        }.WithMaxIterations(5);
+            InitialMutationStrength = 0.15,
+            MaximumGenerations = 5
+        };
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,
