@@ -10,16 +10,17 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-public record OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TObservedInstance>
+public record OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObservedInstance>
     : IAlgorithm<TG, TS, TP, TSearchState>
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
     where TSearchState : class, ISearchState
+    where TOperator : IOperator<TObservedInstance>
     where TObservedInstance : class, IOperatorInstance
 {
     public required IAlgorithm<TG, TS, TP, TSearchState> Algorithm { get; init; }
-    public required IOperator<TObservedInstance> ObservedOperator { get; init; }
-    public required Func<IOperator<TObservedInstance>, InvocationCounter, IOperator<TObservedInstance>> CountedOperatorFactory { get; init; }
+    public required TOperator ObservedOperator { get; init; }
+    public required Func<TOperator, InvocationCounter, IOperator<TObservedInstance>> CountedOperatorFactory { get; init; }
 
     public int MaximumCalls
     {
@@ -91,12 +92,13 @@ public static class OperatorBudgetAlgorithmExtensions
         where TSearchState : class, ISearchState
         where TObservedInstance : class, IOperatorInstance
     {
-        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TObservedInstance> WithMaxOperatorCalls(
-            IOperator<TObservedInstance> observedOperator,
+        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObservedInstance> WithMaxOperatorCalls<TOperator>(
+            TOperator observedOperator,
             int maximumCalls,
-            Func<IOperator<TObservedInstance>, InvocationCounter, IOperator<TObservedInstance>> countedOperatorFactory)
+            Func<TOperator, InvocationCounter, IOperator<TObservedInstance>> countedOperatorFactory)
+            where TOperator : IOperator<TObservedInstance>
         {
-            return new OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TObservedInstance>
+            return new OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObservedInstance>
             {
                 Algorithm = algorithm,
                 ObservedOperator = observedOperator,
@@ -111,13 +113,12 @@ public static class OperatorBudgetAlgorithmExtensions
         where TP : class, IProblem<TG, TS>
         where TSearchState : class, ISearchState
     {
-        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorCalls(int maximumCalls)
+        public OperatorBudgetAlgorithm<TG,TS,TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorCalls(int maximumCalls)
         {
             return algorithm.WithMaxOperatorCalls(
                 algorithm.Evaluator,
                 maximumCalls,
-                static (observedOperator, counter) =>
-                    ((IEvaluator<TG, TS, TP>)observedOperator).ObserveWith((_, _) => counter.IncrementBy(1)));
+                static (observedOperator, counter) => observedOperator.ObserveWith((_, _) => counter.IncrementBy(1)));
         }
     }
 }

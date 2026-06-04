@@ -66,7 +66,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             maximumCalls: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
-                ((IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>)observedOperator).ObserveWith((_, _) => counter.IncrementBy(1)))
+                observedOperator.ObserveWith((_, _) => counter.IncrementBy(1)))
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -88,13 +88,14 @@ public class OperatorBudgetAlgorithmTests
                 RealVectorSearchSpace,
                 TestFunctionProblem,
                 PopulationState<RealVector>,
+                IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>,
                 IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
                 MaximumCalls = 0,
                 CountedOperatorFactory = static (observedOperator, counter) =>
-                    ((IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>)observedOperator).ObserveWith((_, _) => counter.IncrementBy(1))
+                    observedOperator.ObserveWith((_, _) => counter.IncrementBy(1))
             });
     }
 

@@ -261,6 +261,70 @@ This replaced the older `ShouldTerminate(...)` wording because the decision is n
 
 The same terminology pressure applies to run and execution method names. Names such as `Run`, `Execute`, `Resume`, and `Continue` should be revisited when continuation becomes a first-class API question, especially to avoid implying that a completed execution instance can be extended.
 
+## Naming Decision Sketch
+
+The current implementation keeps the `ITerminator` / `ITerminatorInstance` type names while using `IsTerminalState(...)` for the state-based check.
+
+Current leaning:
+
+- Prefer `IsTerminalState(...)` over the old `ShouldTerminate(...)` wording for state-based terminator checks. A terminator result is authoritative for its owning lifecycle, so "should" was too advisory.
+- Keep `ITerminator` / `ITerminatorInstance` as type names for now. They are recognizable domain names, and there is no clearly better type name yet. The misleading part is the advisory method name, not necessarily the role name.
+- Keep completion wording consistent for internally completed executions. This may eventually put pressure on names such as `RunToCompletion(...)`, but run-method naming should wait until continuation semantics are clearer.
+- Use completion wording for pre-step algorithm-owned done-ness (`HasCompleted(...)`) and terminal-state wording for post-state checks (`IsTerminalState(...)`).
+- Keep `RunToCompletion(...)`, `Run(...)`, and `RunStreaming(...)` naming out of this branch unless a small local rename becomes unavoidable. The run-method naming scheme is a broader API design topic and should get its own plan or branch.
+- Keep run results as search states in this branch. A distinct completion-result object is a larger result-model decision and is tracked separately in the developer backlog.
+
+Current decisions:
+
+- The state-based check method has been renamed from `ShouldTerminate(...)` to `IsTerminalState(...)`.
+- `ITerminator` / `ITerminatorInstance` remain the type names unless a future design finds a materially clearer replacement.
+- Internal algorithm-owned terminal-state checks and external wrapper-owned terminal-state checks can share the same interface when both inspect produced states. The important distinction is ownership, not necessarily mechanism.
+- `StateTerminatedAlgorithm` remains useful as an adapter and composition tool for applying state-based early stopping around algorithms or workflows without changing their reusable configuration.
+- `CancellationToken` is the run-level cancellation mechanism. Cancellation is not internal completion, not a terminal search state, and not normal external early stopping.
+- `PauseTokenTerminator` should not be restored as a state-based terminator. A pause/stop signal from outside execution is execution control, not a fact about a produced search state.
+
+Remaining naming and lifecycle questions:
+
+- Revisit run-method names later with a clear story for completed versus early-stopped execution instances.
+- If a future completion-result API reports stop reasons, decide method names and result shape together so lifecycle vocabulary aligns.
+- Consider whether HeuristicLib needs a graceful external stop adapter distinct from cancellation and distinct from `ITerminator`, for policies such as "stop consuming before the next state when this outside signal is set" without throwing `OperationCanceledException`.
+
+External termination should be understood primarily as ownership. It means something outside the algorithm decides, using whatever policy it owns, whether to continue drawing states from the stream. In many simple runs this can produce the same visible sequence as an internal budget, much like LINQ `Take(n)` can expose the same first `n` items as a naturally finite source, but the ownership distinction matters for reusable configuration, composition, continuation, and future lifecycle metadata.
+
+## Evaluation And Operator Budget Decision
+
+Evaluation-count and operator-budget limits are common in optimization experiments, but they are trickier than generation or cycle budgets because the observed boundary matters.
+
+Options to compare:
+
+- Add algorithm properties such as `MaximumEvaluations` where users naturally expect them.
+- Offer evaluation budgets through terminators or wrapper algorithms that observe an explicit evaluator boundary.
+- Model evaluation budgets through evaluator or general-operator decorators such as counting or limiting wrappers, then create a max-operator-count terminator for that counted operator. The eventual API should probably hide the ceremony behind a small helper that creates the counter and terminator together.
+- Introduce a more general internal termination configuration object instead of pre-loading every algorithm with separate properties such as `MaximumGenerations`, `MaximumEvaluations`, `MaximumRuntime`, `MaximumStagnation`, and so on.
+
+Current decision:
+
+- Keep only the most essential algorithm-native budgets as dedicated properties. `MaximumGenerations` qualifies because it is a common, obvious unit for generation-producing evolutionary algorithms.
+- Do not add `MaximumEvaluations` as a routine algorithm property in this branch.
+- Treat operator-budget termination as external early stopping by default. If an evaluator, selector, mutator, or other operator reaches a call-count, time, or resource budget, the inner algorithm is not necessarily complete; the surrounding execution policy stopped consuming it.
+- Keep a clear manual model for advanced users: wrap the operator whose boundary should be observed, configure the algorithm to use that wrapper, and attach a terminator or external stop policy to the wrapper's runtime count.
+- Do not require ordinary users to manually wire the counted wrapper and the matching terminator as separate objects for common cases. A helper such as `WithMaxEvaluatorCalls(...)` should perform the correct replacement and attach the corresponding external early-stopping policy.
+- Prefer ordinary terminators, operator counters, wrappers, and helper APIs for less universal budgets such as maximum evaluations, maximum operator invocations, stagnation, target quality, or runtime.
+
+Open operator-budget API questions:
+
+- What exactly counts as an evaluation: requests to the algorithm's configured evaluator, evaluated genotypes inside batched evaluator calls, cache misses in a wrapped evaluator, objective-function calls, or something else?
+- If an evaluator batch would exceed the budget, should the system reject the batch, partially evaluate it, finish the batch and stop afterward, or require algorithms to request budget before producing offspring?
+- What helper names and return types best express the common case: `WithMaxEvaluatorCalls(...)`, `WithMaxEvaluatedGenotypes(...)`, `WithMaxOperatorCalls(...)`, `TakeUntilOperatorCount(...)`, or another form?
+- How should helper APIs discover or replace the relevant operator on an algorithm configuration without requiring every algorithm to expose the same evaluator property shape?
+- Would a future internal termination configuration object give a better long-term API than accumulating separate nullable budget properties?
+
+Nullable budget properties versus a single internal termination configuration:
+
+- Many nullable properties are very discoverable for common cases and read well in object initializers, but they can bloat algorithm APIs, create unclear precedence rules, and encourage every algorithm to accumulate a different menu of stop criteria.
+- A single internal termination configuration scales better for many criteria and can compose policies uniformly, but it may be less discoverable, more verbose for the common case, and may hide important domain units behind a generic abstraction.
+- A hybrid may be the best long-term shape: keep first-class properties only for the few domain-native budgets users expect on the algorithm itself, and use explicit terminator/configuration objects for richer or less universal criteria.
+
 ## Expected Follow-Up Work
 
 - [x] Update `docs/execution-model.md` with the terminology, precedence rule, and internal/external usage guidance.
