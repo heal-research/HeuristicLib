@@ -17,6 +17,7 @@ This plan establishes the terminology and semantic rules that should guide the n
 - `EvolutionStrategy`, `NSGA2`, `AlpsGeneticAlgorithm`, and `OpenEndedRelevantAllelesPreservingGeneticAlgorithm` now also expose algorithm-owned `MaximumGenerations` budgets.
 - `HillClimber` structurally completes when no strictly improving neighbor exists, instead of yielding an unchanged previous state.
 - `CycleAlgorithm` has a reference spec for inner GA budgets plus external early stopping over the composed stream, including partial-cycle behavior.
+- `OperatorBudgetAlgorithm` can apply external early stopping over observed operator usage by installing a counted runtime replacement through the execution-instance registry. `WithMaxEvaluatorCalls(...)` is the first ergonomic helper and observes `Evaluate(...)` calls on the algorithm's configured evaluator.
 - API usage specs now distinguish ordinary algorithm-owned completion from external early stopping; examples keep `WithMaxIterations(...)` only where the caller is intentionally applying an outside cap.
 - Documentation has been updated in `docs/execution-model.md` and `docs/operators.md` for internal completion, external early stopping, initial-state resume semantics, state-based terminator timing, and structural completion.
 
@@ -277,7 +278,9 @@ The same terminology pressure applies to run and execution method names. Names s
 - [x] Document budget-unit naming guidance and make evaluation-count budget boundaries explicit in examples.
 - [x] Rename state-based terminator checks from `ShouldTerminate(...)` to `IsTerminalState(...)`.
 - [ ] Decide the broader naming scheme for terminal states, completion, early stopping, and future run/resume/continue APIs.
-- [ ] Decide whether evaluation-based budgets belong on algorithms, terminators, wrappers, evaluator decorators, or a more general internal termination configuration.
+- [x] Decide whether evaluation-based budgets belong on algorithms, terminators, wrappers, evaluator decorators, or a more general internal termination configuration.
+- [x] Add the first operator-budget wrapper and `WithMaxEvaluatorCalls(...)` helper so users do not manually wire matching counted evaluator-call wrappers and terminators.
+- [ ] Decide whether and how to generalize operator-budget helpers beyond evaluator calls, including helper names, counted units such as evaluated genotypes, and operator replacement discovery.
 - [ ] Decide whether to add a graceful external stop adapter distinct from run-level `CancellationToken` cancellation and state-based terminal-state checks.
 - [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
 

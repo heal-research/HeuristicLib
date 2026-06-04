@@ -278,6 +278,27 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
+    public void GeneticAlgorithm_MaxEvaluatorCalls_IsExternalBudgetOverObservedEvaluatorUsage()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var states = algorithm
+            .WithMaxEvaluatorCalls(2)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(2);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task HillClimber_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
