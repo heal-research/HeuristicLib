@@ -58,12 +58,19 @@ public static class ObservableMutatorExtensions
           => mutator.ObserveWith(new ActionMutatorObserver<TG, TS, TP>(afterMutate));
         public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterMutate)
           => mutator.ObserveWith(new ActionMutatorObserver<TG, TS, TP>((offspring, _, _, _) => afterMutate(offspring)));
-        public IMutator<TG, TS, TP> CountInvocations(InvocationCounter counter)
+        public IMutator<TG, TS, TP> CountMutatorCalls(InvocationCounter counter)
           => mutator.ObserveWith(_ => counter.IncrementBy(1));
-        public IMutator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
+        public IMutator<TG, TS, TP> CountMutatorCalls(out InvocationCounter counter)
         {
             counter = new InvocationCounter();
-            return mutator.CountInvocations(counter);
+            return mutator.CountMutatorCalls(counter);
+        }
+        public IMutator<TG, TS, TP> CountMutatedGenotypes(InvocationCounter counter)
+          => mutator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
+        public IMutator<TG, TS, TP> CountMutatedGenotypes(out InvocationCounter counter)
+        {
+            counter = new InvocationCounter();
+            return mutator.CountMutatedGenotypes(counter);
         }
     }
 }

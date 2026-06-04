@@ -60,12 +60,19 @@ public static class ObservableReplacerExtensions
             => afterReplacement(newPopulation, previousPopulation, offspringPopulation, searchSpace, problem)));
         public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterReplacement)
           => replacer.ObserveWith(new ActionReplacerObserver<TG, TS, TP>((newPopulation, _, _, _, _, _) => afterReplacement(newPopulation)));
-        public IReplacer<TG, TS, TP> CountInvocations(InvocationCounter counter)
+        public IReplacer<TG, TS, TP> CountReplacerCalls(InvocationCounter counter)
           => replacer.ObserveWith(_ => counter.IncrementBy(1));
-        public IReplacer<TG, TS, TP> CountInvocations(out InvocationCounter counter)
+        public IReplacer<TG, TS, TP> CountReplacerCalls(out InvocationCounter counter)
         {
             counter = new InvocationCounter();
-            return replacer.CountInvocations(counter);
+            return replacer.CountReplacerCalls(counter);
+        }
+        public IReplacer<TG, TS, TP> CountReplacementSolutions(InvocationCounter counter)
+          => replacer.ObserveWith(newPopulation => counter.IncrementBy(newPopulation.Count));
+        public IReplacer<TG, TS, TP> CountReplacementSolutions(out InvocationCounter counter)
+        {
+            counter = new InvocationCounter();
+            return replacer.CountReplacementSolutions(counter);
         }
     }
 }

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
@@ -6,8 +7,10 @@ using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
@@ -89,7 +92,55 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxOperatorCalls_CanObserveExplicitOperator()
+    public void WithMaxCount_CanObserveMutatorCalls()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var results = algorithm.WithMaxCount(
+            algorithm.Mutator,
+            maximumCount: 1,
+            countedOperatorFactory: static (observedOperator, counter) =>
+                observedOperator.CountMutatorCalls(counter))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void WithMaxCount_CanObserveMutatedGenotypes()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var results = algorithm.WithMaxCount(
+            algorithm.Mutator,
+            maximumCount: 6,
+            countedOperatorFactory: static (observedOperator, counter) =>
+                observedOperator.CountMutatedGenotypes(counter))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void WithMaxCount_CanObserveExplicitOperator()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
@@ -97,9 +148,9 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxOperatorCalls(
+        var results = algorithm.WithMaxCount(
             algorithm.Evaluator,
-            maximumCalls: 1,
+            maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
                 observedOperator.CountEvaluatorCalls(counter))
             .RunStreaming(
@@ -109,6 +160,38 @@ public class OperatorBudgetAlgorithmTests
             .ToList();
 
         results.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void AfterOperatorCountTerminator_CanUseSharedCounterAcrossObservedOperators()
+    {
+        var problem = CreateProblem();
+        var counter = new InvocationCounter();
+        var baseAlgorithm = CreateAlgorithm(problem);
+        var algorithm = baseAlgorithm with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0,
+            Evaluator = baseAlgorithm.Evaluator.CountEvaluatorCalls(counter),
+            Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
+        };
+        var externallyStoppedAlgorithm = new StateTerminatedAlgorithm<
+            RealVector,
+            RealVectorSearchSpace,
+            TestFunctionProblem,
+            PopulationState<RealVector>>
+        {
+            Algorithm = algorithm,
+            Terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 3)
+        };
+
+        var results = externallyStoppedAlgorithm.RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(42),
+            ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(2);
+        counter.CurrentCount.ShouldBe(3);
     }
 
     [Fact]

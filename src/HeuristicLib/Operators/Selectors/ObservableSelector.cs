@@ -60,12 +60,19 @@ public static class ObservableSelectorExtensions
           => selector.ObserveWith(new ActionSelectorObserver<TG, TS, TP>(afterSelection));
         public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterSelection)
           => selector.ObserveWith(new ActionSelectorObserver<TG, TS, TP>((selected, _, _, _, _, _) => afterSelection(selected)));
-        public ISelector<TG, TS, TP> CountInvocations(InvocationCounter counter)
+        public ISelector<TG, TS, TP> CountSelectorCalls(InvocationCounter counter)
           => selector.ObserveWith(_ => counter.IncrementBy(1));
-        public ISelector<TG, TS, TP> CountInvocations(out InvocationCounter counter)
+        public ISelector<TG, TS, TP> CountSelectorCalls(out InvocationCounter counter)
         {
             counter = new InvocationCounter();
-            return selector.CountInvocations(counter);
+            return selector.CountSelectorCalls(counter);
+        }
+        public ISelector<TG, TS, TP> CountSelectedSolutions(InvocationCounter counter)
+          => selector.ObserveWith(selected => counter.IncrementBy(selected.Count));
+        public ISelector<TG, TS, TP> CountSelectedSolutions(out InvocationCounter counter)
+        {
+            counter = new InvocationCounter();
+            return selector.CountSelectedSolutions(counter);
         }
     }
 }

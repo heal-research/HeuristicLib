@@ -61,12 +61,12 @@ public static class ObservableTerminatorExtensions
           => terminator.ObserveWith(new ActionTerminatorObserver<TG, TS, TP, TR>(afterTerminalStateCheck));
         public ITerminator<TG, TS, TP, TR> ObserveWith(Action<bool> afterTerminalStateCheck)
           => terminator.ObserveWith(new ActionTerminatorObserver<TG, TS, TP, TR>((isTerminalState, _, _, _) => afterTerminalStateCheck(isTerminalState)));
-        public ITerminator<TG, TS, TP, TR> CountInvocations(InvocationCounter counter)
+        public ITerminator<TG, TS, TP, TR> CountTerminatorCalls(InvocationCounter counter)
           => terminator.ObserveWith(_ => counter.IncrementBy(1));
-        public ITerminator<TG, TS, TP, TR> CountInvocations(out InvocationCounter counter)
+        public ITerminator<TG, TS, TP, TR> CountTerminatorCalls(out InvocationCounter counter)
         {
             counter = new InvocationCounter();
-            return terminator.CountInvocations(counter);
+            return terminator.CountTerminatorCalls(counter);
         }
     }
 }

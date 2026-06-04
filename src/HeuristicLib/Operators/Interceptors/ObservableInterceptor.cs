@@ -61,12 +61,12 @@ public static class ObservableInterceptorExtensions
           => interceptor.ObserveWith(new ActionInterceptorObserver<TG, TS, TP, TR>(afterInterception));
         public IInterceptor<TG, TS, TP, TR> ObserveWith(Action<TR> afterInterception)
           => interceptor.ObserveWith(new ActionInterceptorObserver<TG, TS, TP, TR>((newState, _, _, _, _) => afterInterception(newState)));
-        public IInterceptor<TG, TS, TP, TR> CountInvocations(InvocationCounter counter)
+        public IInterceptor<TG, TS, TP, TR> CountInterceptorCalls(InvocationCounter counter)
           => interceptor.ObserveWith(_ => counter.IncrementBy(1));
-        public IInterceptor<TG, TS, TP, TR> CountInvocations(out InvocationCounter counter)
+        public IInterceptor<TG, TS, TP, TR> CountInterceptorCalls(out InvocationCounter counter)
         {
             counter = new InvocationCounter();
-            return interceptor.CountInvocations(counter);
+            return interceptor.CountInterceptorCalls(counter);
         }
     }
 }

@@ -328,6 +328,43 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
+    public void GeneticAlgorithm_GenericOperatorBudget_CanCountMutatorCallsOrMutatedGenotypes()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var statesByMutatorCalls = algorithm
+            .WithMaxCount(
+                algorithm.Mutator,
+                maximumCount: 1,
+                countedOperatorFactory: static (mutator, counter) =>
+                    mutator.CountMutatorCalls(counter))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+        var statesByMutatedGenotypes = algorithm
+            .WithMaxCount(
+                algorithm.Mutator,
+                maximumCount: 20,
+                countedOperatorFactory: static (mutator, counter) =>
+                    mutator.CountMutatedGenotypes(counter))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        statesByMutatorCalls.Count.ShouldBe(2);
+        statesByMutatedGenotypes.Count.ShouldBe(3);
+    }
+
+    [Fact]
     public async Task HillClimber_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);

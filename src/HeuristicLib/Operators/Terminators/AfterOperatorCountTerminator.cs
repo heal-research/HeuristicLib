@@ -18,5 +18,3 @@ public record AfterOperatorCountTerminator<TGenotype> : StatelessTerminator<TGen
         return counter.CurrentCount >= maximumCount;
     }
 }
-
-// ToDo: add extensions for common counter hooks, e.g. after evaluations count terminator.

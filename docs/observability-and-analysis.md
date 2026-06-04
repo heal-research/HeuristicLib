@@ -105,7 +105,7 @@ Analysis usually needs to write somewhere.
 
 HeuristicLib often models this as writing to an **external sink**. A minimal example is `InvocationCounter`, which is just a thread-safe counter.
 
-### Count invocations with an existing sink
+### Count operator calls with an existing sink
 
 If you already have a sink (for example, a counter owned by an experiment runner), pass it in:
 
@@ -113,21 +113,34 @@ If you already have a sink (for example, a counter owned by an experiment runner
 IMutator<TG, TS, TP> mutator = /* ... */;
 var counter = new InvocationCounter();
 
-var observed = mutator.CountInvocations(counter);
+var observed = mutator.CountMutatorCalls(counter);
 
-// later: counter.CurrentCount contains total mutator invocations
+// later: counter.CurrentCount contains total mutator calls
 ```
 
-For `ObservableMutator`, `CountInvocations(...)` increments once per mutation call.
+For `ObservableMutator`, `CountMutatorCalls(...)` increments once per mutation call.
 
-### Count invocations with a fresh sink returned via `out`
+Use `CountMutatedGenotypes(...)` when the budget should count the mutated genotypes returned by those batched mutation calls instead:
+
+```csharp
+IMutator<TG, TS, TP> mutator = /* ... */;
+var counter = new InvocationCounter();
+
+var observed = mutator.CountMutatedGenotypes(counter);
+
+// later: counter.CurrentCount contains total mutated genotypes
+```
+
+The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedGenotypes(...)`, `CountCrossedGenotypes(...)`, `CountEvaluatedGenotypes(...)`, `CountSelectedSolutions(...)`, and `CountReplacementSolutions(...)`.
+
+### Count operator calls with a fresh sink returned via `out`
 
 For quick usage, many wrappers offer an overload that creates the sink and returns it:
 
 ```csharp
 IMutator<TG, TS, TP> mutator = /* ... */;
 
-var observed = mutator.CountInvocations(out var counter);
+var observed = mutator.CountMutatorCalls(out var counter);
 
 // run observed mutator as part of an algorithm
 // then read counter.CurrentCount

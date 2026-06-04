@@ -65,12 +65,19 @@ public static class ObservableCreatorExtensions
           => creator.ObserveWith(new ActionCreatorObserver<TG, TS, TP>(afterCreation));
         public ICreator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterCreation)
           => creator.ObserveWith(new ActionCreatorObserver<TG, TS, TP>((offspring, _, _, _) => afterCreation(offspring)));
-        public ICreator<TG, TS, TP> CountInvocations(InvocationCounter counter)
+        public ICreator<TG, TS, TP> CountCreatorCalls(InvocationCounter counter)
           => creator.ObserveWith(_ => counter.IncrementBy(1));
-        public ICreator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
+        public ICreator<TG, TS, TP> CountCreatorCalls(out InvocationCounter counter)
         {
             counter = new InvocationCounter();
-            return creator.CountInvocations(counter);
+            return creator.CountCreatorCalls(counter);
+        }
+        public ICreator<TG, TS, TP> CountCreatedGenotypes(InvocationCounter counter)
+          => creator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
+        public ICreator<TG, TS, TP> CountCreatedGenotypes(out InvocationCounter counter)
+        {
+            counter = new InvocationCounter();
+            return creator.CountCreatedGenotypes(counter);
         }
     }
 }

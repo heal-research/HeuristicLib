@@ -26,8 +26,8 @@ public record OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObse
     {
         get;
         init => field = value > 0
-          ? value
-          : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
     }
 
     public IEvaluator<TG, TS, TP> Evaluator => Algorithm.Evaluator;
@@ -54,16 +54,16 @@ public sealed class OperatorBudgetAlgorithmInstance<TG, TS, TP, TSearchState>
 {
     private readonly IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm;
     private readonly InvocationCounter counter;
-    private readonly int maximumCalls;
+    private readonly int maximumCount;
 
     public OperatorBudgetAlgorithmInstance(
         IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm,
         InvocationCounter counter,
-        int maximumCalls)
+        int maximumCount)
     {
         this.algorithm = algorithm;
         this.counter = counter;
-        this.maximumCalls = maximumCalls;
+        this.maximumCount = maximumCount;
     }
 
     public async IAsyncEnumerable<TSearchState> RunStreamingAsync(
@@ -76,7 +76,7 @@ public sealed class OperatorBudgetAlgorithmInstance<TG, TS, TP, TSearchState>
         {
             yield return state;
 
-            if (counter.CurrentCount >= maximumCalls)
+            if (counter.CurrentCount >= maximumCount)
             {
                 yield break;
             }
@@ -92,9 +92,9 @@ public static class OperatorBudgetAlgorithmExtensions
         where TSearchState : class, ISearchState
         where TObservedInstance : class, IOperatorInstance
     {
-        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObservedInstance> WithMaxOperatorCalls<TOperator>(
+        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObservedInstance> WithMaxCount<TOperator>(
             TOperator observedOperator,
-            int maximumCalls,
+            int maximumCount,
             Func<TOperator, InvocationCounter, IOperator<TObservedInstance>> countedOperatorFactory)
             where TOperator : IOperator<TObservedInstance>
         {
@@ -102,7 +102,7 @@ public static class OperatorBudgetAlgorithmExtensions
             {
                 Algorithm = algorithm,
                 ObservedOperator = observedOperator,
-                MaximumCount = maximumCalls,
+                MaximumCount = maximumCount,
                 CountedOperatorFactory = countedOperatorFactory
             };
         }
@@ -115,7 +115,7 @@ public static class OperatorBudgetAlgorithmExtensions
     {
         public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorCalls(int maximumCalls)
         {
-            return algorithm.WithMaxOperatorCalls(
+            return algorithm.WithMaxCount(
                 algorithm.Evaluator,
                 maximumCalls,
                 static (observedOperator, counter) => observedOperator.CountEvaluatorCalls(counter));
@@ -123,7 +123,7 @@ public static class OperatorBudgetAlgorithmExtensions
 
         public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatedGenotypes(int maximumGenotypes)
         {
-            return algorithm.WithMaxOperatorCalls(
+            return algorithm.WithMaxCount(
                 algorithm.Evaluator,
                 maximumGenotypes,
                 static (observedOperator, counter) => observedOperator.CountEvaluatedGenotypes(counter));
