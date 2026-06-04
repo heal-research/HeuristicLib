@@ -46,6 +46,7 @@ await foreach (var state in algorithm.RunStreamingAsync(problem, rng)) {
 This is the intended everyday style:
 
 - configure an algorithm directly
+- use algorithm-owned budgets such as `MaximumGenerations` for ordinary algorithm setup
 - keep behavior-affecting dependencies explicit
 - stream states when you want progress
 

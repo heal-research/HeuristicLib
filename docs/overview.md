@@ -12,7 +12,7 @@ This documentation focuses on the mental model and the stable contracts that sha
 
 - **Composable algorithms** built out of small operator roles (creator, evaluator, selector, crossover, mutator, replacer, terminator).
 - **Explicit randomness** via `IRandomNumberGenerator` for reproducibility and deterministic testing (see [Randomness (RNG) design](randomness.md)).
-- **Two execution styles**: run to completion, or stream iteration states.
+- **Two execution styles**: run to completion, or stream produced search states.
 - **Strong typing**: genotype, search space, and problem fit together through generics.
 
 ## A quick end-to-end example
@@ -47,19 +47,19 @@ var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSale
    Evaluator = new DirectEvaluator<Permutation>()
 };
 
-var step = 0;
+var generation = 0;
 
 await foreach (var state in ga.RunStreamingAsync(problem, rng))
 {
    var best = state.Population.Solutions
       .MinBy(s => s.ObjectiveVector, problem.Objective.TotalOrderComparer)!;
 
-   Console.WriteLine($"Step {step++,4}: best = {best.ObjectiveVector}");
+   Console.WriteLine($"Generation {generation++,4}: best = {best.ObjectiveVector}");
 }
 ```
 
 > [!NOTE]
-> The default execution loop is streaming-first. If you want progress reporting, `RunStreamingAsync(...)` is the most natural hook.
+> The default execution loop is streaming-first. If you want progress reporting, `RunStreamingAsync(...)` is the most natural hook. For this genetic algorithm, each streamed population state is one generation.
 
 ## Where to go next
 

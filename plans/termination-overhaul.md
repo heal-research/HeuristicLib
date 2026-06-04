@@ -220,11 +220,11 @@ External termination cannot meaningfully extend that algorithm. Continuing after
 
 ### Cycle with inner budgets and external early stop
 
-A `CycleAlgorithm` may run an inner algorithm with `MaximumGenerations = 100` for `MaximumCycles = 5`, yielding up to 500 inner iterations.
+A `CycleAlgorithm` may run an inner algorithm with `MaximumGenerations = 100` for `MaximumCycles = 5`, yielding up to 500 inner generation states.
 
 If the cycle re-instantiates the inner algorithm each cycle, each cycle gets a fresh independent 100-generation internal budget.
 
-Wrapping that cycle with an external 250-iteration early stop should produce two full cycles plus 50 iterations of the third cycle.
+Wrapping that cycle with an external cap of 250 yielded states should produce two full cycles plus 50 generation states of the third cycle.
 
 This scenario should become a reference spec because it exercises all key semantics:
 
@@ -274,7 +274,7 @@ The same terminology pressure applies to run and execution method names. Names s
 - [x] Add structural-completion behavior and specs for local search.
 - [x] Add regular generation budgets to the other evolutionary algorithms where the unit is intuitive: ES, NSGA2, ALPS GA, and OERAPGA.
 - [x] Audit remaining `IterativeAlgorithm` subclasses for ordinary internal budgets, structural completion, or wrapper-only semantics.
-- [ ] Document budget-unit naming guidance and make evaluation-count budget boundaries explicit in examples.
+- [x] Document budget-unit naming guidance and make evaluation-count budget boundaries explicit in examples.
 - [ ] Revisit `ShouldTerminate`, `Run`, `Execute`, `Resume`, and `Continue` naming as follow-up API design work.
 - [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
 

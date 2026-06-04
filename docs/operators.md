@@ -15,7 +15,7 @@ The core roles used across algorithms in this repository are:
 - **Mutator** (`IMutator`): perturbs genotypes to create variation.
 - **Replacer** (`IReplacer`): decides how to form the next population.
 - **Terminator** (`ITerminator`): observes produced search states and decides whether the owning lifecycle should stop.
-- **Interceptor** (`IInterceptor`): transforms the produced iteration state.
+- **Interceptor** (`IInterceptor`): transforms the produced search state.
 
 The genetic algorithm (`GeneticAlgorithm<...>`) is the easiest place to see all of these roles working together.
 

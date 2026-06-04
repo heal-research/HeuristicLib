@@ -79,6 +79,17 @@ In this documentation, **completed** means the algorithm has internally finished
 
 For example, a local search that evaluates its configured neighborhood and finds no improving move has structurally completed. It should exhaust the stream instead of yielding another copy of the previous state.
 
+## Budget units
+
+Budget names should say what they count.
+
+- `MaximumGenerations` counts produced generation states owned by a generation-producing evolutionary algorithm.
+- `MaximumCycles` counts completed cycles owned by a cycle algorithm.
+- `WithMaxIterations(...)` is an external early-stopping wrapper. It counts yielded stream states from the wrapped algorithm or composition, regardless of whether those states are generations, local-search moves, pipeline outputs, or cycle outputs.
+- Evaluation-count budgets must identify the observed boundary. Counting requests to a caching evaluator and counting calls that reach the wrapped direct evaluator are different budgets.
+
+Avoid treating "iteration" as a universal synonym for generation, step, cycle, evaluation, or yielded state. It is only the right public word when an algorithm explicitly defines iteration as its own progress unit.
+
 ## Runs and analyzers
 
 `CreateRun(problem, analyzers...)` creates one logical execution.
