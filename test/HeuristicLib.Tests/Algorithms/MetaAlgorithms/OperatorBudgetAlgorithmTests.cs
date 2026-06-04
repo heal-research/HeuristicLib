@@ -92,6 +92,74 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
+    public void WithMaxEvaluatorDuration_StopsAfterObservedEvaluatorDuration()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxEvaluatorDuration(
+            TimeSpan.FromSeconds(3),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void WithMaxEvaluatorDuration_YieldsCrossingStateBeforeStopping()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxEvaluatorDuration(
+            TimeSpan.FromSeconds(1),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(1);
+        results.Single().Population.Solutions.Length.ShouldBe(5);
+    }
+
+    [Fact]
+    public void WithMaxEvaluatorDuration_DoesNotInternallyCompleteAlgorithm()
+    {
+        var problem = CreateProblem();
+        var internalTerminator = new RecordingPopulationTerminator(5);
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            Terminator = internalTerminator
+        };
+
+        var results = algorithm.WithMaxEvaluatorDuration(
+            TimeSpan.FromSeconds(3),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
+        internalTerminator.CheckedStateCount.ShouldBe(2);
+        internalTerminator.HasTerminated.ShouldBeFalse();
+    }
+
+    [Fact]
     public void WithMaxCount_CanObserveMutatorCalls()
     {
         var problem = CreateProblem();
@@ -204,6 +272,30 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
+    public void AfterOperatorDurationTerminator_IsTerminalAtMaximumDuration()
+    {
+        var duration = new ObservationDuration();
+        var terminator = new AfterOperatorDurationTerminator<RealVector>(
+            duration,
+            maximumDuration: TimeSpan.FromSeconds(2));
+
+        duration.AddDuration(TimeSpan.FromSeconds(1));
+        terminator.IsTerminalState().ShouldBeFalse();
+
+        duration.AddDuration(TimeSpan.FromSeconds(1));
+        terminator.IsTerminalState().ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AfterOperatorDurationTerminator_Throws_WhenMaximumDurationIsNotPositive()
+    {
+        var duration = new ObservationDuration();
+
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new AfterOperatorDurationTerminator<RealVector>(duration, maximumDuration: TimeSpan.Zero));
+    }
+
+    [Fact]
     public void Constructor_Throws_WhenMaximumCountIsNotPositive()
     {
         var problem = CreateProblem();
@@ -226,6 +318,29 @@ public class OperatorBudgetAlgorithmTests
             });
     }
 
+    [Fact]
+    public void DurationBudgetConstructor_Throws_WhenMaximumDurationIsNotPositive()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem);
+
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new OperatorDurationBudgetAlgorithm<
+                RealVector,
+                RealVectorSearchSpace,
+                TestFunctionProblem,
+                PopulationState<RealVector>,
+                IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>,
+                IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>>
+            {
+                Algorithm = algorithm,
+                ObservedOperator = algorithm.Evaluator,
+                MaximumDuration = TimeSpan.Zero,
+                MeasuredOperatorFactory = static (observedOperator, duration, timeProvider) =>
+                    observedOperator.MeasureEvaluatorDuration(duration, timeProvider)
+            });
+    }
+
     private static TestFunctionProblem CreateProblem()
     {
         return new TestFunctionProblem(new SphereFunction(dimension: 3));
@@ -244,5 +359,36 @@ public class OperatorBudgetAlgorithmTests
             Selector = new RandomSelector<RealVector>(),
             Elites = 0
         };
+    }
+
+    private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
+    {
+        private long timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp()
+        {
+            var current = timestamp;
+            timestamp += step.Ticks;
+            return current;
+        }
+    }
+
+    private sealed record RecordingPopulationTerminator(int StopOnCheckedStateCount)
+        : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+    {
+        public int CheckedStateCount { get; private set; }
+        public bool HasTerminated { get; private set; }
+
+        public override bool IsTerminalState(
+            PopulationState<RealVector> state,
+            RealVectorSearchSpace searchSpace,
+            TestFunctionProblem problem)
+        {
+            CheckedStateCount++;
+            HasTerminated = CheckedStateCount >= StopOnCheckedStateCount;
+            return HasTerminated;
+        }
     }
 }

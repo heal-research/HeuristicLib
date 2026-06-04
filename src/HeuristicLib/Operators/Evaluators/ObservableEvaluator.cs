@@ -73,6 +73,20 @@ public static class ObservableEvaluatorExtensions
             counter = new ObservationCounter();
             return evaluator.CountEvaluatedGenotypes(counter);
         }
+        public IEvaluator<TG, TS, TP> MeasureEvaluatorDuration(ObservationDuration duration)
+          => evaluator.MeasureEvaluatorDuration(duration, TimeProvider.System);
+        public IEvaluator<TG, TS, TP> MeasureEvaluatorDuration(ObservationDuration duration, TimeProvider timeProvider)
+          => new DurationMeasuringEvaluator<TG, TS, TP>(evaluator, duration, timeProvider);
+        public IEvaluator<TG, TS, TP> MeasureEvaluatorDuration(out ObservationDuration duration)
+        {
+            duration = new ObservationDuration();
+            return evaluator.MeasureEvaluatorDuration(duration);
+        }
+        public IEvaluator<TG, TS, TP> MeasureEvaluatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        {
+            duration = new ObservationDuration();
+            return evaluator.MeasureEvaluatorDuration(duration, timeProvider);
+        }
     }
 }
 

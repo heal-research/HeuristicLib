@@ -148,6 +148,23 @@ var observed = mutator.CountMutatorCalls(out var counter);
 
 This pattern keeps call sites tidy while still giving you access to the collected data.
 
+## External sinks: `ObservationDuration`
+
+`ObservationDuration` is the duration counterpart to `ObservationCounter`. It stores cumulative measured work duration in an external sink.
+
+For evaluators, `MeasureEvaluatorDuration(...)` measures around the inner `Evaluate(...)` call:
+
+```csharp
+IEvaluator<TG, TS, TP> evaluator = /* ... */;
+var duration = new ObservationDuration();
+
+var measured = evaluator.MeasureEvaluatorDuration(duration);
+
+// later: duration.CurrentDuration contains total observed evaluator work duration
+```
+
+This is not whole-run elapsed time. It increases only while the measured evaluator call is executing. Duration is recorded even if the observed evaluator call throws, because the failed call still consumed evaluator work time. Use `AfterElapsedTimeTerminator(...)` when the budget should include idle time between stream pulls; use evaluator duration when the budget should apply only to observed evaluator work.
+
 ## Relationship to analyzers
 
 Observable wrappers are the callback mechanism; analyzers are the run-scoped architecture built on top of that mechanism.

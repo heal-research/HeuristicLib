@@ -18,6 +18,7 @@ This plan establishes the terminology and semantic rules that should guide the n
 - `HillClimber` structurally completes when no strictly improving neighbor exists, instead of yielding an unchanged previous state.
 - `CycleAlgorithm` has a reference spec for inner GA budgets plus external early stopping over the composed stream, including partial-cycle behavior.
 - `OperatorBudgetAlgorithm` can apply external early stopping over observed operator usage by installing a counted runtime replacement through the execution-instance registry. `WithMaxEvaluatorCalls(...)` observes `Evaluate(...)` calls on the algorithm's configured evaluator, `WithMaxEvaluatedGenotypes(...)` observes genotypes processed inside those evaluator batches, and `WithMaxCount(...)` covers other explicit operator-budget cases with a counted replacement factory.
+- Operator-duration termination is being implemented as an evaluator-first slice. It records measured `before call -> inner call -> after call` work duration through `ObservationDuration`, applies graceful external early stopping with `WithMaxEvaluatorDuration(...)`, and leaves duration helpers for other operator families plus possible active algorithm-duration measurement for later.
 - API usage specs now distinguish ordinary algorithm-owned completion from external early stopping; examples keep `WithMaxIterations(...)` only where the caller is intentionally applying an outside cap.
 - Documentation has been updated in `docs/execution-model.md` and `docs/operators.md` for internal completion, external early stopping, initial-state resume semantics, state-based terminator timing, and structural completion.
 
@@ -283,6 +284,7 @@ Current decisions:
 - `CancellationToken` is the run-level cancellation mechanism. Cancellation is not internal completion, not a terminal search state, and not normal external early stopping.
 - `CancellationTokenTerminator(...)` is the graceful external-stop counterpart to run-level cancellation. A run-level `CancellationToken` may interrupt the current iteration wherever the algorithm or an operator checks it. A cancellation-token terminator checks only after a produced state has been yielded or observed, so the current iteration completes and only future consumption stops.
 - `AfterElapsedTimeTerminator(...)` is the graceful external-stop mechanism for elapsed runtime budgets. It uses `TimeProvider` for testable time access and measures elapsed time from terminator execution-instance creation. `StateTerminatedAlgorithm` resolves terminators before wrapped algorithms so this starts as early as that wrapper can control, including wrapped algorithm instancing. If a caller needs an exact call-site start time, it can create a timeout `CancellationTokenSource` immediately before calling `Run...(...)` and use `CancellationTokenTerminator(...)`.
+- `AfterOperatorDurationTerminator(...)` is the graceful external-stop mechanism for observed operator-duration budgets. Unlike elapsed time, operator duration measures only active work around a specific observed operator call. Duration is recorded even when the observed operator call throws, because the failed call still consumed observed work time. The first implementation slice covers evaluators through `MeasureEvaluatorDuration(...)` and `WithMaxEvaluatorDuration(...)`; remaining operator families are deferred.
 - Determinism is expected only when algorithm configuration does not depend on outside mutable state. A `CancellationTokenTerminator(...)` captures a live external token, so reusing the same terminator after cancellation will stop later executions immediately after their first produced state. `AfterElapsedTimeTerminator(...)` and future operator-duration timing have the same outside-state caveat.
 - `PauseTokenTerminator` should not be restored as a state-based terminator. A pause/stop signal from outside execution is execution control, not a fact about a produced search state.
 
@@ -325,6 +327,28 @@ Open operator-budget API questions:
 - How should helper APIs discover or replace the relevant operator on an algorithm configuration without requiring every algorithm to expose the same evaluator property shape?
 - Would a future internal termination configuration object give a better long-term API than accumulating separate nullable budget properties?
 
+## Operator Budget Rollout Matrix
+
+Keep the generic factory helpers as the advanced escape hatch:
+
+- `WithMaxCount(observedOperator, maximumCount, countedOperatorFactory)`
+- planned `WithMaxOperatorDuration(observedOperator, maximumDuration, measuredOperatorFactory)`
+
+Add typed convenience helpers per operator family where they avoid factory ceremony. For non-evaluator operators, helpers should take the observed operator explicitly, for example `algorithm.WithMaxMutatorDuration(algorithm.Mutator, maximumDuration)`. Avoid configured-operator shortcuts such as `algorithm.WithMaxMutatorDuration(maximumDuration)` until algorithms expose those operator roles through common interfaces. Evaluator remains the exception because `IAlgorithm` already exposes `Evaluator`.
+
+| Operator family | Low-level count observers | Count budget helpers | Duration measuring wrapper | Duration budget helpers |
+| --- | --- | --- | --- | --- |
+| Evaluator | [x] `CountEvaluatorCalls(...)`, `CountEvaluatedGenotypes(...)` | [x] configured `WithMaxEvaluatorCalls(...)`, `WithMaxEvaluatedGenotypes(...)`; [ ] explicit evaluator overloads if needed | [x] `MeasureEvaluatorDuration(...)` via `DurationMeasuringEvaluator` | [x] configured `WithMaxEvaluatorDuration(...)`; [ ] explicit evaluator overload if needed |
+| Creator | [x] `CountCreatorCalls(...)`, `CountCreatedGenotypes(...)` | [ ] `WithMaxCreatorCalls(creator, ...)`, `WithMaxCreatedGenotypes(creator, ...)` | [ ] `MeasureCreatorDuration(...)` plus wrapper | [ ] `WithMaxCreatorDuration(creator, ...)` |
+| Crossover | [x] `CountCrossoverCalls(...)`, `CountCrossedGenotypes(...)` | [ ] `WithMaxCrossoverCalls(crossover, ...)`, `WithMaxCrossedGenotypes(crossover, ...)` | [ ] `MeasureCrossoverDuration(...)` plus wrapper | [ ] `WithMaxCrossoverDuration(crossover, ...)` |
+| Mutator | [x] `CountMutatorCalls(...)`, `CountMutatedGenotypes(...)` | [ ] `WithMaxMutatorCalls(mutator, ...)`, `WithMaxMutatedGenotypes(mutator, ...)` | [ ] `MeasureMutatorDuration(...)` plus wrapper | [ ] `WithMaxMutatorDuration(mutator, ...)` |
+| Selector | [x] `CountSelectorCalls(...)`, `CountSelectedSolutions(...)` | [ ] `WithMaxSelectorCalls(selector, ...)`, `WithMaxSelectedSolutions(selector, ...)` | [ ] `MeasureSelectorDuration(...)` plus wrapper | [ ] `WithMaxSelectorDuration(selector, ...)` |
+| Replacer | [x] `CountReplacerCalls(...)`, `CountReplacementSolutions(...)` | [ ] `WithMaxReplacerCalls(replacer, ...)`, `WithMaxReplacementSolutions(replacer, ...)` | [ ] `MeasureReplacerDuration(...)` plus wrapper | [ ] `WithMaxReplacerDuration(replacer, ...)` |
+| Interceptor | [x] `CountInterceptorCalls(...)` | [ ] `WithMaxInterceptorCalls(interceptor, ...)` | [ ] `MeasureInterceptorDuration(...)` plus wrapper | [ ] `WithMaxInterceptorDuration(interceptor, ...)` |
+| Terminator | [x] `CountTerminatorCalls(...)` | [ ] `WithMaxTerminatorCalls(terminator, ...)`, if a compelling use case appears | [ ] `MeasureTerminatorDuration(...)` plus wrapper, if a compelling use case appears | [ ] `WithMaxTerminatorDuration(terminator, ...)`, if a compelling use case appears |
+
+Duration measurement should record elapsed work in a `finally` block so failed operator calls still count as consumed observed work time.
+
 Nullable budget properties versus a single internal termination configuration:
 
 - Many nullable properties are very discoverable for common cases and read well in object initializers, but they can bloat algorithm APIs, create unclear precedence rules, and encourage every algorithm to accumulate a different menu of stop criteria.
@@ -360,7 +384,7 @@ Nullable budget properties versus a single internal termination configuration:
 - [x] Decide whether and how to generalize operator-budget helpers beyond evaluator calls: keep `WithMaxCount(...)` as the general factory shape, with evaluator-specific helpers as common-case conveniences.
 - [x] Add and document `CancellationTokenTerminator(...)` for graceful external stop after the current produced state, distinct from immediate run-level `CancellationToken` cancellation.
 - [x] Add wall-clock/runtime termination with clear time-provider and post-state versus immediate-interruption semantics.
-- [ ] Add operator-duration timing as a separate future design, including naming and observed-boundary semantics.
+- [ ] Add operator-duration timing. First evaluator-duration slice: persist the plan here, add `ObservationDuration`, `MeasureEvaluatorDuration(...)`, `AfterOperatorDurationTerminator(...)`, and `WithMaxEvaluatorDuration(...)`; defer other operators and possible active algorithm-duration measurement.
 - [ ] Consider whether a future completion-result API should expose a typed stop reason. Ending a stream can mean internal completion, external early stopping, cancellation, or failure, but this plan does not require that API.
 - [ ] Before deleting this overhaul plan, move every durable design decision and important explanation from this file into the appropriate long-lived documentation file so the architectural rationale is not lost.
 

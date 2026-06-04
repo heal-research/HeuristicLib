@@ -333,6 +333,29 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
+    public void GeneticAlgorithm_MaxEvaluatorDuration_IsExternalBudgetOverObservedEvaluatorWork()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var states = algorithm
+            .WithMaxEvaluatorDuration(
+                TimeSpan.FromSeconds(3),
+                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(2);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
     public void GeneticAlgorithm_GenericOperatorBudget_CanCountMutatorCallsOrMutatedGenotypes()
     {
         var problem = CreateRastriginProblem(dimension: 4);
@@ -535,6 +558,20 @@ public class PractitionerUsageSpecs
             CheckedStateCount++;
             HasTerminated = CheckedStateCount >= StopOnCheckedStateCount;
             return HasTerminated;
+        }
+    }
+
+    private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
+    {
+        private long timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp()
+        {
+            var current = timestamp;
+            timestamp += step.Ticks;
+            return current;
         }
     }
 }
