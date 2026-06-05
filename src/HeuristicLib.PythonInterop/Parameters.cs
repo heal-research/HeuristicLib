@@ -7,10 +7,18 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
+//these classes are used for cross language purposes
+//public fields instead of properties & public ctors
+
+// ReSharper disable MemberCanBeProtected.Global
+// ReSharper disable ConvertToConstant.Global
+// ReSharper disable FieldCanBeMadeReadOnly.Global
+// ReSharper disable UnusedMember.Global
+#pragma warning disable S1104
+
 namespace HEAL.HeuristicLib.PythonInterop;
 
 #region Parameters
-
 public class ExperimentParameters<T, TE> where TE : class, ISearchSpace<T>
 {
     public string AlgorithmName = "ga";
@@ -84,5 +92,4 @@ public class TestFunctionExperimentParameters : ExperimentParameters<RealVector,
 
     public TestFunctionExperimentParameters(TestFunctionExperimentParameters parameters) : base(parameters) { }
 }
-
 #endregion

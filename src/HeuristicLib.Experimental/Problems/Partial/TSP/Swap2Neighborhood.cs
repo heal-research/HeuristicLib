@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
@@ -6,12 +7,13 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.Problems.Partial.TSP;
 
 public sealed record Swap2Neighborhood
-    : IReversibleNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Swap2Neighborhood.Move>,
-      IIncrementalObjectiveNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Swap2Neighborhood.Move>
+    : StatelessReversibleNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Swap2Neighborhood.Move>,
+      IIncrementalObjectiveNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Swap2Neighborhood.Move>,
+      IIncrementalObjectiveNeighborhoodInstance<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Swap2Neighborhood.Move>
 {
     public readonly record struct Move(int IndexA, int IndexB);
 
-    public IEnumerable<Move> Moves(
+    public override IEnumerable<Move> Moves(
         Permutation genotype,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
@@ -24,7 +26,7 @@ public sealed record Swap2Neighborhood
         }
     }
 
-    public bool RandomMove(
+    public override bool RandomMove(
         Permutation genotype,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
@@ -46,7 +48,7 @@ public sealed record Swap2Neighborhood
         return true;
     }
 
-    public Permutation ApplyMove(
+    public override Permutation ApplyMove(
         Permutation genotype,
         Move move,
         PermutationSearchSpace searchSpace,
@@ -57,14 +59,14 @@ public sealed record Swap2Neighborhood
         return new Permutation(values);
     }
 
-    public Permutation RevertMove(
+    public override Permutation RevertMove(
         Permutation genotype,
         Move move,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
         => ApplyMove(genotype, move, searchSpace, problem);
 
-    public ObjectiveVector EvaluateIncrement(
+    ObjectiveVector IIncrementalObjectiveNeighborhoodInstance<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move>.EvaluateIncrement(
         Permutation genotype,
         Move move,
         IRandomNumberGenerator random,
@@ -75,4 +77,6 @@ public sealed record Swap2Neighborhood
         var after = problem.TourLength(ApplyMove(genotype, move, searchSpace, problem));
         return after - before;
     }
+
+    IIncrementalObjectiveNeighborhoodInstance<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move> IIncrementalObjectiveNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 }

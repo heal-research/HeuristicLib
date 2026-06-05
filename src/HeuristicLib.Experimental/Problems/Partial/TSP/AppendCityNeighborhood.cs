@@ -5,11 +5,12 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Problems.Partial.TSP;
 
-public sealed record AppendCityNeighborhood : IIncrementalBoundNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, AppendCityNeighborhood.Move>
+public sealed record AppendCityNeighborhood
+    : StatelessIncrementalBoundNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, AppendCityNeighborhood.Move>
 {
     public readonly record struct Move(int City);
 
-    public IEnumerable<Move> Moves(
+    public override IEnumerable<Move> Moves(
         Permutation genotype,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
@@ -22,7 +23,7 @@ public sealed record AppendCityNeighborhood : IIncrementalBoundNeighborhood<Perm
                 yield return new Move(city);
     }
 
-    public bool RandomMove(
+    public override bool RandomMove(
         Permutation genotype,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
@@ -39,14 +40,14 @@ public sealed record AppendCityNeighborhood : IIncrementalBoundNeighborhood<Perm
         return true;
     }
 
-    public Permutation ApplyMove(
+    public override Permutation ApplyMove(
         Permutation genotype,
         Move move,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
         => new(genotype.Append(move.City).ToArray());
 
-    public ObjectiveVector BoundIncrement(
+    public override ObjectiveVector BoundIncrement(
         Permutation genotype,
         Move move,
         IRandomNumberGenerator random,
