@@ -45,16 +45,30 @@ public static class OperatorCountBudgetExtensions
     {
         public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorCalls(int maximumCalls)
         {
+            return algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, maximumCalls);
+        }
+
+        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorCalls(
+            IEvaluator<TG, TS, TP> evaluator,
+            int maximumCalls)
+        {
             return algorithm.WithMaxCount(
-                algorithm.Evaluator,
+                evaluator,
                 maximumCalls,
                 static (observedOperator, counter) => observedOperator.CountEvaluatorCalls(counter));
         }
 
         public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatedGenotypes(int maximumGenotypes)
         {
+            return algorithm.WithMaxEvaluatedGenotypes(algorithm.Evaluator, maximumGenotypes);
+        }
+
+        public OperatorBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatedGenotypes(
+            IEvaluator<TG, TS, TP> evaluator,
+            int maximumGenotypes)
+        {
             return algorithm.WithMaxCount(
-                algorithm.Evaluator,
+                evaluator,
                 maximumGenotypes,
                 static (observedOperator, counter) => observedOperator.CountEvaluatedGenotypes(counter));
         }

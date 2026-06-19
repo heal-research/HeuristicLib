@@ -1,7 +1,7 @@
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
@@ -57,6 +57,24 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
+    public void WithMaxEvaluatorCalls_CanObserveExplicitEvaluator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 1).RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(42),
+            ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(1);
+        results.Single().Population.Solutions.Length.ShouldBe(5);
+    }
+
+    [Fact]
     public void WithMaxEvaluatedGenotypes_StopsAfterObservedEvaluatedGenotypeCount()
     {
         var problem = CreateProblem();
@@ -66,6 +84,24 @@ public class OperatorBudgetAlgorithmTests
         };
 
         var results = algorithm.WithMaxEvaluatedGenotypes(2).RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(42),
+            ct: TestContext.Current.CancellationToken).ToList();
+
+        results.Count.ShouldBe(1);
+        results.Single().Population.Solutions.Length.ShouldBe(5);
+    }
+
+    [Fact]
+    public void WithMaxEvaluatedGenotypes_CanObserveExplicitEvaluator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxEvaluatedGenotypes(algorithm.Evaluator, 2).RunStreaming(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -179,6 +215,95 @@ public class OperatorBudgetAlgorithmTests
             .ToList();
 
         results.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void WithMaxAlgorithmDuration_StopsAfterObservedStateProductionDuration()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxAlgorithmDuration(
+            TimeSpan.FromSeconds(3),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void WithMaxAlgorithmDuration_YieldsCrossingStateBeforeStopping()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxAlgorithmDuration(
+            TimeSpan.FromSeconds(1),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(1);
+        results.Single().Population.Solutions.Length.ShouldBe(5);
+    }
+
+    [Fact]
+    public void WithMaxAlgorithmDuration_DoesNotInternallyCompleteAlgorithm()
+    {
+        var problem = CreateProblem();
+        var internalTerminator = new RecordingPopulationTerminator(5);
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            Terminator = internalTerminator
+        };
+
+        var results = algorithm.WithMaxAlgorithmDuration(
+            TimeSpan.FromSeconds(3),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
+        internalTerminator.CheckedStateCount.ShouldBe(2);
+        internalTerminator.HasTerminated.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void WithMaxAlgorithmDuration_CompletesNormally_WhenInnerAlgorithmCompletesFirst()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 2
+        };
+
+        var results = algorithm.WithMaxAlgorithmDuration(
+            TimeSpan.FromSeconds(10),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -563,7 +688,7 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void DurationBudgetConstructor_Throws_WhenMaximumDurationIsNotPositive()
+    public void OperatorDurationBudgetConstructor_Throws_WhenMaximumDurationIsNotPositive()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
@@ -582,6 +707,24 @@ public class OperatorBudgetAlgorithmTests
                 MaximumDuration = TimeSpan.Zero,
                 MeasuredOperatorFactory = static (observedOperator, duration, timeProvider) =>
                     observedOperator.MeasureEvaluatorDuration(duration, timeProvider)
+            });
+    }
+
+    [Fact]
+    public void AlgorithmDurationBudgetConstructor_Throws_WhenMaximumDurationIsNotPositive()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem);
+
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new AlgorithmDurationBudgetAlgorithm<
+                RealVector,
+                RealVectorSearchSpace,
+                TestFunctionProblem,
+                PopulationState<RealVector>>
+            {
+                Algorithm = algorithm,
+                MaximumDuration = TimeSpan.Zero
             });
     }
 

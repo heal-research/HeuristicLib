@@ -356,6 +356,29 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
+    public void GeneticAlgorithm_MaxAlgorithmDuration_IsExternalBudgetOverActiveStateProductionWork()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var states = algorithm
+            .WithMaxAlgorithmDuration(
+                TimeSpan.FromSeconds(3),
+                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(2);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
     public void GeneticAlgorithm_TypedOperatorBudgets_CanCountMutatorCallsOrMutatedGenotypes()
     {
         var problem = CreateRastriginProblem(dimension: 4);
