@@ -332,16 +332,16 @@ Open operator-budget API questions:
 Keep the generic factory helpers as the advanced escape hatch:
 
 - `WithMaxCount(observedOperator, maximumCount, countedOperatorFactory)`
-- planned `WithMaxOperatorDuration(observedOperator, maximumDuration, measuredOperatorFactory)`
+- `WithMaxOperatorDuration(observedOperator, maximumDuration, measuredOperatorFactory)`
 
 Add typed convenience helpers per operator family where they avoid factory ceremony. For non-evaluator operators, helpers should take the observed operator explicitly, for example `algorithm.WithMaxMutatorDuration(algorithm.Mutator, maximumDuration)`. Avoid configured-operator shortcuts such as `algorithm.WithMaxMutatorDuration(maximumDuration)` until algorithms expose those operator roles through common interfaces. Evaluator remains the exception because `IAlgorithm` already exposes `Evaluator`.
 
 | Operator family | Low-level count observers | Count budget helpers | Duration measuring wrapper | Duration budget helpers |
 | --- | --- | --- | --- | --- |
-| Evaluator | [x] `CountEvaluatorCalls(...)`, `CountEvaluatedGenotypes(...)` | [x] configured `WithMaxEvaluatorCalls(...)`, `WithMaxEvaluatedGenotypes(...)`; [ ] explicit evaluator overloads if needed | [x] `MeasureEvaluatorDuration(...)` via `DurationMeasuringEvaluator` | [x] configured `WithMaxEvaluatorDuration(...)`; [ ] explicit evaluator overload if needed |
+| Evaluator | [x] `CountEvaluatorCalls(...)`, `CountEvaluatedGenotypes(...)` | [x] configured `WithMaxEvaluatorCalls(...)`, `WithMaxEvaluatedGenotypes(...)`; [ ] explicit evaluator overloads if needed | [x] `MeasureEvaluatorDuration(...)` via `DurationMeasuringEvaluator` | [x] configured `WithMaxEvaluatorDuration(...)`; [x] explicit evaluator overload |
 | Creator | [x] `CountCreatorCalls(...)`, `CountCreatedGenotypes(...)` | [ ] `WithMaxCreatorCalls(creator, ...)`, `WithMaxCreatedGenotypes(creator, ...)` | [ ] `MeasureCreatorDuration(...)` plus wrapper | [ ] `WithMaxCreatorDuration(creator, ...)` |
 | Crossover | [x] `CountCrossoverCalls(...)`, `CountCrossedGenotypes(...)` | [ ] `WithMaxCrossoverCalls(crossover, ...)`, `WithMaxCrossedGenotypes(crossover, ...)` | [ ] `MeasureCrossoverDuration(...)` plus wrapper | [ ] `WithMaxCrossoverDuration(crossover, ...)` |
-| Mutator | [x] `CountMutatorCalls(...)`, `CountMutatedGenotypes(...)` | [ ] `WithMaxMutatorCalls(mutator, ...)`, `WithMaxMutatedGenotypes(mutator, ...)` | [ ] `MeasureMutatorDuration(...)` plus wrapper | [ ] `WithMaxMutatorDuration(mutator, ...)` |
+| Mutator | [x] `CountMutatorCalls(...)`, `CountMutatedGenotypes(...)` | [x] `WithMaxMutatorCalls(mutator, ...)`, `WithMaxMutatedGenotypes(mutator, ...)` | [x] `MeasureMutatorDuration(...)` plus wrapper | [x] `WithMaxMutatorDuration(mutator, ...)` |
 | Selector | [x] `CountSelectorCalls(...)`, `CountSelectedSolutions(...)` | [ ] `WithMaxSelectorCalls(selector, ...)`, `WithMaxSelectedSolutions(selector, ...)` | [ ] `MeasureSelectorDuration(...)` plus wrapper | [ ] `WithMaxSelectorDuration(selector, ...)` |
 | Replacer | [x] `CountReplacerCalls(...)`, `CountReplacementSolutions(...)` | [ ] `WithMaxReplacerCalls(replacer, ...)`, `WithMaxReplacementSolutions(replacer, ...)` | [ ] `MeasureReplacerDuration(...)` plus wrapper | [ ] `WithMaxReplacerDuration(replacer, ...)` |
 | Interceptor | [x] `CountInterceptorCalls(...)` | [ ] `WithMaxInterceptorCalls(interceptor, ...)` | [ ] `MeasureInterceptorDuration(...)` plus wrapper | [ ] `WithMaxInterceptorDuration(interceptor, ...)` |

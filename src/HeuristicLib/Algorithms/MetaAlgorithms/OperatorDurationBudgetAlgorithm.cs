@@ -84,39 +84,3 @@ public sealed class OperatorDurationBudgetAlgorithmInstance<TG, TS, TP, TSearchS
         }
     }
 }
-
-public static class OperatorDurationBudgetAlgorithmExtensions
-{
-    extension<TG, TS, TP, TSearchState>(IAlgorithm<TG, TS, TP, TSearchState> algorithm)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
-        where TSearchState : class, ISearchState
-    {
-        public OperatorDurationBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorDuration(
-            TimeSpan maximumDuration)
-        {
-            return algorithm.WithMaxEvaluatorDuration(maximumDuration, TimeProvider.System);
-        }
-
-        public OperatorDurationBudgetAlgorithm<TG, TS, TP, TSearchState, IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>> WithMaxEvaluatorDuration(
-            TimeSpan maximumDuration,
-            TimeProvider timeProvider)
-        {
-            return new OperatorDurationBudgetAlgorithm<
-                TG,
-                TS,
-                TP,
-                TSearchState,
-                IEvaluator<TG, TS, TP>,
-                IEvaluatorInstance<TG, TS, TP>>
-            {
-                Algorithm = algorithm,
-                ObservedOperator = algorithm.Evaluator,
-                MaximumDuration = maximumDuration,
-                TimeProvider = timeProvider,
-                MeasuredOperatorFactory = static (observedOperator, duration, timeProvider) =>
-                    observedOperator.MeasureEvaluatorDuration(duration, timeProvider)
-            };
-        }
-    }
-}

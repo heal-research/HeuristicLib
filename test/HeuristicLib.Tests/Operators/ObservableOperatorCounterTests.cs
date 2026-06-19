@@ -76,6 +76,21 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void MeasureMutatorDuration_AddsElapsedMutatorExecutionDuration()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var mutator = new AddOneMutator().MeasureMutatorDuration(duration, timeProvider);
+        var instance = mutator.CreateExecutionInstance(TestRun.Instance);
+        var problem = CreateProblem();
+
+        instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        instance.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
     public void CountCrossoverCalls_IncrementsOncePerCrossCall()
     {
         var counter = new ObservationCounter();
@@ -344,5 +359,19 @@ public class ObservableOperatorCounterTests
     private sealed record CounterState : SearchState
     {
         public required int Value { get; init; }
+    }
+
+    private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
+    {
+        private long timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp()
+        {
+            var current = timestamp;
+            timestamp += step.Ticks;
+            return current;
+        }
     }
 }

@@ -160,6 +160,52 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
+    public void WithMaxEvaluatorDuration_CanObserveExplicitEvaluator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxEvaluatorDuration(
+            algorithm.Evaluator,
+            TimeSpan.FromSeconds(1),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void WithMaxOperatorDuration_CanObserveExplicitOperator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxOperatorDuration(
+            algorithm.Evaluator,
+            TimeSpan.FromSeconds(1),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)),
+            static (observedOperator, duration, timeProvider) =>
+                observedOperator.MeasureEvaluatorDuration(duration, timeProvider))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(1);
+    }
+
+    [Fact]
     public void WithMaxCount_CanObserveMutatorCalls()
     {
         var problem = CreateProblem();
@@ -174,6 +220,28 @@ public class OperatorBudgetAlgorithmTests
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
                 observedOperator.CountMutatorCalls(counter))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void WithMaxMutatorCalls_CanObserveExplicitMutator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var results = algorithm.WithMaxMutatorCalls(
+            algorithm.Mutator,
+            maximumCalls: 1)
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -205,6 +273,51 @@ public class OperatorBudgetAlgorithmTests
             .ToList();
 
         results.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void WithMaxMutatedGenotypes_CanObserveExplicitMutator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var results = algorithm.WithMaxMutatedGenotypes(
+            algorithm.Mutator,
+            maximumGenotypes: 6)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void WithMaxMutatorDuration_CanObserveExplicitMutator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var results = algorithm.WithMaxMutatorDuration(
+            algorithm.Mutator,
+            TimeSpan.FromSeconds(1),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
     }
 
     [Fact]
