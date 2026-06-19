@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -60,20 +59,6 @@ public static class ObservableSelectorExtensions
           => selector.ObserveWith(new ActionSelectorObserver<TG, TS, TP>(afterSelection));
         public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterSelection)
           => selector.ObserveWith(new ActionSelectorObserver<TG, TS, TP>((selected, _, _, _, _, _) => afterSelection(selected)));
-        public ISelector<TG, TS, TP> CountSelectorCalls(ObservationCounter counter)
-          => selector.ObserveWith(_ => counter.IncrementBy(1));
-        public ISelector<TG, TS, TP> CountSelectorCalls(out ObservationCounter counter)
-        {
-            counter = new ObservationCounter();
-            return selector.CountSelectorCalls(counter);
-        }
-        public ISelector<TG, TS, TP> CountSelectedSolutions(ObservationCounter counter)
-          => selector.ObserveWith(selected => counter.IncrementBy(selected.Count));
-        public ISelector<TG, TS, TP> CountSelectedSolutions(out ObservationCounter counter)
-        {
-            counter = new ObservationCounter();
-            return selector.CountSelectedSolutions(counter);
-        }
     }
 }
 

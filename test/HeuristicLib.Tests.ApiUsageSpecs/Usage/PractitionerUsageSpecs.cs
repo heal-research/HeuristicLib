@@ -356,7 +356,7 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void GeneticAlgorithm_GenericOperatorBudget_CanCountMutatorCallsOrMutatedGenotypes()
+    public void GeneticAlgorithm_TypedOperatorBudgets_CanCountMutatorCallsOrMutatedGenotypes()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleGeneticAlgorithm(problem) with
@@ -366,17 +366,66 @@ public class PractitionerUsageSpecs
         };
 
         var statesByMutatorCalls = algorithm
-            .WithMaxCount(
+            .WithMaxMutatorCalls(
                 algorithm.Mutator,
-                maximumCount: 1,
-                countedOperatorFactory: static (mutator, counter) =>
-                    mutator.CountMutatorCalls(counter))
+                maximumCalls: 1)
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
             .ToList();
         var statesByMutatedGenotypes = algorithm
+            .WithMaxMutatedGenotypes(
+                algorithm.Mutator,
+                maximumGenotypes: 20)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        statesByMutatorCalls.Count.ShouldBe(2);
+        statesByMutatorCalls.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        statesByMutatedGenotypes.Count.ShouldBe(3);
+        statesByMutatedGenotypes.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_TypedOperatorDurationBudget_CanMeasureMutatorWork()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var states = algorithm
+            .WithMaxMutatorDuration(
+                algorithm.Mutator,
+                TimeSpan.FromSeconds(3),
+                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(3);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_GenericOperatorBudget_CanUseCustomCountedOperatorFactory()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var states = algorithm
             .WithMaxCount(
                 algorithm.Mutator,
                 maximumCount: 20,
@@ -388,10 +437,8 @@ public class PractitionerUsageSpecs
                 ct: TestContext.Current.CancellationToken)
             .ToList();
 
-        statesByMutatorCalls.Count.ShouldBe(2);
-        statesByMutatorCalls.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
-        statesByMutatedGenotypes.Count.ShouldBe(3);
-        statesByMutatedGenotypes.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        states.Count.ShouldBe(3);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
     }
 
     [Fact]

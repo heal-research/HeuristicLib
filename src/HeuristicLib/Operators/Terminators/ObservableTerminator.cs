@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
@@ -61,13 +60,6 @@ public static class ObservableTerminatorExtensions
           => terminator.ObserveWith(new ActionTerminatorObserver<TG, TS, TP, TR>(afterTerminalStateCheck));
         public ITerminator<TG, TS, TP, TR> ObserveWith(Action<bool> afterTerminalStateCheck)
           => terminator.ObserveWith(new ActionTerminatorObserver<TG, TS, TP, TR>((isTerminalState, _, _, _) => afterTerminalStateCheck(isTerminalState)));
-        public ITerminator<TG, TS, TP, TR> CountTerminatorCalls(ObservationCounter counter)
-          => terminator.ObserveWith(_ => counter.IncrementBy(1));
-        public ITerminator<TG, TS, TP, TR> CountTerminatorCalls(out ObservationCounter counter)
-        {
-            counter = new ObservationCounter();
-            return terminator.CountTerminatorCalls(counter);
-        }
     }
 }
 

@@ -206,6 +206,137 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
+    public void WithMaxCreatorCalls_CanObserveExplicitCreator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxCreatorCalls(
+            algorithm.Creator,
+            maximumCalls: 1)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void WithMaxCreatedGenotypes_CanObserveExplicitCreator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxCreatedGenotypes(
+            algorithm.Creator,
+            maximumGenotypes: 2)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void WithMaxCreatorDuration_CanObserveExplicitCreator()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var results = algorithm.WithMaxCreatorDuration(
+            algorithm.Creator,
+            TimeSpan.FromSeconds(1),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public void WithMaxCrossoverCalls_CanObserveExplicitCrossover()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 0.0
+        };
+
+        var results = algorithm.WithMaxCrossoverCalls(
+            algorithm.Crossover,
+            maximumCalls: 1)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void WithMaxCrossedGenotypes_CanObserveExplicitCrossover()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 0.0
+        };
+
+        var results = algorithm.WithMaxCrossedGenotypes(
+            algorithm.Crossover,
+            maximumGenotypes: 6)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void WithMaxCrossoverDuration_CanObserveExplicitCrossover()
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 0.0
+        };
+
+        var results = algorithm.WithMaxCrossoverDuration(
+            algorithm.Crossover,
+            TimeSpan.FromSeconds(1),
+            new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(42),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        results.Count.ShouldBe(2);
+    }
+
+    [Fact]
     public void WithMaxCount_CanObserveMutatorCalls()
     {
         var problem = CreateProblem();

@@ -48,6 +48,21 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void MeasureCreatorDuration_AddsElapsedCreatorExecutionDuration()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var creator = new SequenceCreator().MeasureCreatorDuration(duration, timeProvider);
+        var instance = creator.CreateExecutionInstance(TestRun.Instance);
+        var problem = CreateProblem();
+
+        instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        instance.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
     public void CountMutatorCalls_IncrementsOncePerMutateCall()
     {
         var counter = new ObservationCounter();
@@ -135,6 +150,29 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void MeasureCrossoverDuration_AddsElapsedCrossoverExecutionDuration()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var crossover = new SumParentsCrossover().MeasureCrossoverDuration(duration, timeProvider);
+        var instance = crossover.CreateExecutionInstance(TestRun.Instance);
+        var problem = CreateProblem();
+
+        instance.Cross(
+            [new Parents<int>(1, 10), new Parents<int>(2, 20), new Parents<int>(3, 30)],
+            RandomNumberGenerator.Create(1),
+            problem.SearchSpace,
+            problem);
+        instance.Cross(
+            [new Parents<int>(4, 40)],
+            RandomNumberGenerator.Create(2),
+            problem.SearchSpace,
+            problem);
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
     public void CountSelectorCalls_IncrementsOncePerSelectCall()
     {
         var counter = new ObservationCounter();
@@ -160,6 +198,21 @@ public class ObservableOperatorCounterTests
         instance.Select(CreateSolutions([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public void MeasureSelectorDuration_AddsElapsedSelectorExecutionDuration()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var selector = new FirstSolutionsSelector().MeasureSelectorDuration(duration, timeProvider);
+        var instance = selector.CreateExecutionInstance(TestRun.Instance);
+        var problem = CreateProblem();
+
+        instance.Select(CreateSolutions([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        instance.Select(CreateSolutions([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
@@ -219,6 +272,35 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void MeasureReplacerDuration_AddsElapsedReplacerExecutionDuration()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var replacer = new FirstReplacementSolutionsReplacer().MeasureReplacerDuration(duration, timeProvider);
+        var instance = replacer.CreateExecutionInstance(TestRun.Instance);
+        var problem = CreateProblem();
+
+        instance.Replace(
+            CreateSolutions([1, 2, 3]),
+            CreateSolutions([10, 20]),
+            problem.Objective,
+            2,
+            RandomNumberGenerator.Create(1),
+            problem.SearchSpace,
+            problem);
+        instance.Replace(
+            CreateSolutions([4]),
+            CreateSolutions([40]),
+            problem.Objective,
+            1,
+            RandomNumberGenerator.Create(2),
+            problem.SearchSpace,
+            problem);
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
     public void CountInterceptorCalls_IncrementsOncePerTransformCall()
     {
         var counter = new ObservationCounter();
@@ -233,6 +315,21 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void MeasureInterceptorDuration_AddsElapsedInterceptorExecutionDuration()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var interceptor = new AddOneInterceptor().MeasureInterceptorDuration(duration, timeProvider);
+        var instance = interceptor.CreateExecutionInstance(TestRun.Instance);
+        var problem = CreateProblem();
+
+        instance.Transform(new CounterState { Value = 1 }, previousState: null, problem.SearchSpace, problem);
+        instance.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, problem.SearchSpace, problem);
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
     public void CountTerminatorCalls_IncrementsOncePerTerminalStateCheck()
     {
         var counter = new ObservationCounter();
@@ -244,6 +341,21 @@ public class ObservableOperatorCounterTests
         instance.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void MeasureTerminatorDuration_AddsElapsedTerminatorExecutionDuration()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var terminator = new NeverTerminalStateTerminator().MeasureTerminatorDuration(duration, timeProvider);
+        var instance = terminator.CreateExecutionInstance(TestRun.Instance);
+        var problem = CreateProblem();
+
+        instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
+        instance.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()

@@ -163,7 +163,11 @@ var measured = evaluator.MeasureEvaluatorDuration(duration);
 // later: duration.CurrentDuration contains total observed evaluator work duration
 ```
 
-This is not whole-run elapsed time. It increases only while the measured evaluator call is executing. Duration is recorded even if the observed evaluator call throws, because the failed call still consumed evaluator work time. Use `AfterElapsedTimeTerminator(...)` when the budget should include idle time between stream pulls; use evaluator duration when the budget should apply only to observed evaluator work.
+The same measurement pattern is available for other operator families, for example `MeasureCreatorDuration(...)`, `MeasureCrossoverDuration(...)`, `MeasureMutatorDuration(...)`, `MeasureSelectorDuration(...)`, `MeasureReplacerDuration(...)`, `MeasureInterceptorDuration(...)`, and `MeasureTerminatorDuration(...)`.
+
+This is not whole-run elapsed time. It increases only while the measured operator call is executing. Duration is recorded even if the observed operator call throws, because the failed call still consumed observed work time. Use `AfterElapsedTimeTerminator(...)` when the budget should include idle time between stream pulls; use operator duration when the budget should apply only to observed operator work.
+
+Terminator duration and call-count instrumentation exists for consistency because terminators are operators too. Treat it as an advanced diagnostic or budgeting tool for expensive or shared terminator checks, not as the ordinary way to cap a run.
 
 ## Relationship to analyzers
 
