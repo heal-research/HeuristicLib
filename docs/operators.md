@@ -98,6 +98,8 @@ In both cases, the produced state that satisfies the terminator remains part of 
 
 Supplying an `initialState` to resume an algorithm does not make that state newly produced. Terminators should be invoked only for states produced by the current execution.
 
+`ITerminatorInstance.IsTerminalState(...)` may update run-local state. Treat it as an effectful transition, not as an idempotent predicate for speculative probing. An owning execution instance should call a terminator instance at most once for each produced public state. Sharing the same stateful terminator instance between an algorithm-owned internal criterion and a wrapper-owned external criterion should happen only when shared state is intentional.
+
 ## Composition helpers
 
 HeuristicLib includes a few small composition patterns that keep calling code clean:
