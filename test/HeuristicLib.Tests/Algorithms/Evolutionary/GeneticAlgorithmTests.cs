@@ -134,48 +134,6 @@ public class GeneticAlgorithmTests
     // }
 
     // [Fact]
-    // public async Task GeneticAlgorithm_TerminateWithPauseToken() {
-    //   var searchSpace = new RealVectorSearchSpace(5, -5, +5);
-    //   var creator = new UniformDistributedCreator(minimum: null, maximum: null);
-    //   var crossover = new SinglePointCrossover();
-    //   var mutator = new GaussianMutator(0.1, 0.1);
-    //   var decoder = Decoder.Identity<RealVector>();
-    //   var DirectEvaluator = new RealVectorMockEvaluator();
-    //   var selector = new ProportionalSelector();
-    //   var replacement = new PlusSelectionReplacer();
-    //   var pauseToken = new PauseToken();
-    //   var terminator = new PauseTokenTerminator<PopulationIterationState<RealVector>>(pauseToken);
-    //   var problem = new EncodedProblem<RealVector, RealVector, RealVectorSearchSpace> {
-    //     SearchSpace = searchSpace, Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize
-    //   };
-    // 
-    //   var firstAlg = new GeneticAlgorithm<RealVector, RealVectorSearchSpace>(
-    //     //SearchSpace = searchSpace,
-    //     populationSize: 5,
-    //     creator: creator, crossover: crossover, mutator: mutator, mutationRate: 0.05, 
-    //     //Decoder = decoder, DirectEvaluator = DirectEvaluator, Objective = SingleObjective.Minimize,
-    //     selector: selector, replacer: replacement, 
-    //     randomSeed: 42, terminator: terminator
-    //   );
-    //   
-    //   var task = Task.Run(() => firstAlg.Execute(problem));
-    // 
-    //   await Task.Delay(200);
-    //   
-    //   task.Status.ShouldBe(TaskStatus.Running);
-    //   
-    //   pauseToken.RequestPause();
-    // 
-    //   var finalState = await task;
-    //   
-    //   
-    //   task.Status.ShouldBe(TaskStatus.RanToCompletion);
-    //   
-    //   finalState.ShouldNotBeNull();
-    //   finalState.TotalGenerations.ShouldBeGreaterThan(0);
-    // }
-
-    // [Fact]
     // public async Task GeneticAlgorithm_ExecuteAndContinueWithOtherAlg() {
     //   var searchSpace = new RealVectorEncoding(3, -5, +5);
     //   var creator = new UniformDistributedCreator(minimum: null, maximum: null);

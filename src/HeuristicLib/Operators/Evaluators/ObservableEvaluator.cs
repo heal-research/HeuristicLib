@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -59,13 +58,6 @@ public static class ObservableEvaluatorExtensions
           => evaluator.ObserveWith(new ActionEvaluatorObserver<TG, TS, TP>(afterEvaluation));
         public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>> afterEvaluation)
           => evaluator.ObserveWith(new ActionEvaluatorObserver<TG, TS, TP>((genotypes, objectiveVectors, _, _) => afterEvaluation(genotypes, objectiveVectors)));
-        public IEvaluator<TG, TS, TP> CountInvocations(InvocationCounter counter)
-          => evaluator.ObserveWith((_, objectives) => counter.IncrementBy(objectives.Count));
-        public IEvaluator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
-        {
-            counter = new InvocationCounter();
-            return evaluator.CountInvocations(counter);
-        }
     }
 }
 

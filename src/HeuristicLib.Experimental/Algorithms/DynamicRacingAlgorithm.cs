@@ -73,7 +73,7 @@ public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgor
         private readonly IAlgorithm<TG, TS, TP, TA> algorithm;
         public readonly MetaOptimizationGenotype Genotype;
         public TA? LastState { get; private set; }
-        private readonly InvocationCounter counter;
+        private readonly ObservationCounter counter;
 
         public int UsedCount => counter.CurrentCount;
 
@@ -82,7 +82,7 @@ public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgor
         {
             Genotype = genotype;
             var alg = racer.AlgBuilder(genotype);
-            algorithm = alg with { Evaluator = alg.Evaluator.CountInvocations(out counter) };
+            algorithm = alg with { Evaluator = alg.Evaluator.CountEvaluatedGenotypes(out counter) };
             running = algorithm.RunStreaming(problem, random, initialState, ct).GetEnumerator();
             LastState = initialState;
         }

@@ -44,6 +44,13 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
     public required ICrossover<TGenotype, TSearchSpace, TProblem>? Crossover { get; init; }
     public double InitialMutationStrength { get; init; } = 1.0;
     public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+    public int? MaximumGenerations
+    {
+        get;
+        init => field = value is null or > 0
+          ? value
+          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
+    }
 
     protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
     {
@@ -57,6 +64,15 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
             Crossover = Crossover is not null ? resolver.Resolve(Crossover) : null,
             VariableStrengthMutator = Mutator as IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem>
         };
+    }
+
+    protected override bool HasCompleted(
+      int yieldedStateCount,
+      EvolutionStrategyState<TGenotype>? previousState,
+      ExecutionState executionState,
+      TProblem problem)
+    {
+        return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
     }
 
     protected override EvolutionStrategyState<TGenotype> ExecuteStep(

@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
@@ -29,8 +28,10 @@ public class TravelingSalesmanGeneticAlgorithmTests
         ga.Selector = new RandomSelector<Permutation>();
         ga.Elites = 0;
 
-        var result = ga.Build()
-                       .WithMaxIterations(5)
+        var result = (ga.Build() with
+        {
+            MaximumGenerations = 5
+        })
                        .RunToCompletion(
                          problem,
                          RandomNumberGenerator.Create(42),

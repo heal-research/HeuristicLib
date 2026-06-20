@@ -13,7 +13,6 @@ The most important current ideas are:
 ```csharp
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
@@ -29,6 +28,7 @@ var rng = new SystemRandomNumberGenerator(seed: 123);
 
 var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
   PopulationSize = 200,
+  MaximumGenerations = 200,
   Creator = new RandomPermutationCreator(),
   Crossover = new OrderCrossover(),
   Mutator = new SwapSingleSolutionMutator(),
@@ -36,7 +36,7 @@ var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, Travel
   Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
   Elites = 2,
   Evaluator = new DirectEvaluator<Permutation>()
-}.WithMaxIterations(maxIterations: 200);
+};
 
 await foreach (var state in algorithm.RunStreamingAsync(problem, rng)) {
   Console.WriteLine(state.Population.Solutions.Count);
@@ -46,6 +46,7 @@ await foreach (var state in algorithm.RunStreamingAsync(problem, rng)) {
 This is the intended everyday style:
 
 - configure an algorithm directly
+- use algorithm-owned budgets such as `MaximumGenerations` for ordinary algorithm setup
 - keep behavior-affecting dependencies explicit
 - stream states when you want progress
 

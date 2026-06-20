@@ -15,13 +15,13 @@ public record TargetTerminator<TGenotype>
         Target = target;
     }
 
-    public override bool ShouldTerminate(PopulationState<TGenotype> state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-      => TargetTerminator.ShouldTerminate(state, problem, Target);
+    public override bool IsTerminalState(PopulationState<TGenotype> state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+      => TargetTerminator.IsTerminalState(state, problem, Target);
 }
 
 public static class TargetTerminator
 {
-    public static bool ShouldTerminate<TGenotype>(
+    public static bool IsTerminalState<TGenotype>(
       PopulationState<TGenotype> state,
       IProblem<TGenotype, ISearchSpace<TGenotype>> problem,
       ObjectiveVector target)

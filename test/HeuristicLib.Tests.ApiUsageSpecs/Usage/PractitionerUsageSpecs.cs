@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
@@ -169,23 +170,25 @@ public class PractitionerUsageSpecs
         var evaluations = DirectEvaluator.Evaluate([parent], RandomNumberGenerator.Create(2034), problem);
         evaluations.Count.ShouldBe(1);
 
-        IReadOnlyList<ISolution<RealVector>> solutions = [
-          new Solution<RealVector>(parent, new ObjectiveVector(2.0)),
-      new Solution<RealVector>(otherParent, new ObjectiveVector(1.0))
+        IReadOnlyList<ISolution<RealVector>> solutions =
+        [
+            new Solution<RealVector>(parent, new ObjectiveVector(2.0)),
+            new Solution<RealVector>(otherParent, new ObjectiveVector(1.0))
         ];
 
         RandomSelector.Select(solutions, count: 2, RandomNumberGenerator.Create(2035)).Count.ShouldBe(2);
         ProportionalSelector.Select(solutions, problem.Objective, count: 2, RandomNumberGenerator.Create(2036), windowing: true).Count.ShouldBe(2);
         CommaSelectionReplacer.Replace(solutions, problem.Objective, count: 1).Single().ShouldBe(solutions[1]);
 
-        IReadOnlyList<ISolution<RealVector>> offspring = [
-          new Solution<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
-      new Solution<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
+        IReadOnlyList<ISolution<RealVector>> offspring =
+        [
+            new Solution<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
+            new Solution<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
         ];
         var paretoReplacement = ParetoCrowdingReplacer.Replace(solutions, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
         paretoReplacement.Select(solution => solution.ObjectiveVector[0]).Order().ToArray().ShouldBe([0.5, 1.0]);
 
-        NeverTerminator.ShouldTerminate().ShouldBeFalse();
+        NeverTerminator.IsTerminalState().ShouldBeFalse();
 
         var state = new SingleSolutionState<RealVector>
         {
@@ -201,13 +204,14 @@ public class PractitionerUsageSpecs
         var algorithm = new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             PopulationSize = 24,
+            MaximumGenerations = 8,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
             MutationRate = 0.2,
             Elites = 1
-        }.WithMaxIterations(8);
+        };
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,
@@ -219,10 +223,284 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
+    public void GeneticAlgorithm_InternalBudgetAndExternalEarlyStopping_AreDistinct()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var internallyCappedAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 2
+        };
+        var externallyCappedAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var cannotExtendPastInternalCompletion = internallyCappedAlgorithm
+          .WithMaxIterations(5)
+          .RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(456),
+            ct: TestContext.Current.CancellationToken)
+          .ToList();
+        var canStopEarlierThanInternalCompletion = externallyCappedAlgorithm
+          .WithMaxIterations(2)
+          .RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(456),
+            ct: TestContext.Current.CancellationToken)
+          .ToList();
+
+        cannotExtendPastInternalCompletion.Count.ShouldBe(2);
+        canStopEarlierThanInternalCompletion.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_ExternalEarlyStopping_DoesNotInternallyCompleteAlgorithm()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var internalTerminator = new RecordingPopulationTerminator(5);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            Terminator = internalTerminator
+        };
+
+        var earlyStoppedStates = algorithm
+          .WithMaxIterations(2)
+          .RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(789),
+            ct: TestContext.Current.CancellationToken)
+          .ToList();
+
+        earlyStoppedStates.Count.ShouldBe(2);
+        internalTerminator.CheckedStateCount.ShouldBe(2);
+        internalTerminator.HasTerminated.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_MaxEvaluatorCalls_IsExternalBudgetOverObservedEvaluatorUsage()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var internalTerminator = new RecordingPopulationTerminator(5);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            Terminator = internalTerminator
+        };
+
+        var states = algorithm
+            .WithMaxEvaluatorCalls(2)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(2);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        internalTerminator.CheckedStateCount.ShouldBe(2);
+        internalTerminator.HasTerminated.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_EvaluatorCallAndEvaluatedGenotypeBudgets_CountDifferentUnits()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var statesByEvaluatorCalls = algorithm
+            .WithMaxEvaluatorCalls(2)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+        var statesByEvaluatedGenotypes = algorithm
+            .WithMaxEvaluatedGenotypes(2)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        statesByEvaluatorCalls.Count.ShouldBe(2);
+        statesByEvaluatedGenotypes.Count.ShouldBe(1);
+        statesByEvaluatedGenotypes.Single().Population.Solutions.Length.ShouldBe(16);
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_MaxEvaluatorDuration_IsExternalBudgetOverObservedEvaluatorWork()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var states = algorithm
+            .WithMaxEvaluatorDuration(
+                TimeSpan.FromSeconds(3),
+                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(2);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_MaxAlgorithmDuration_IsExternalBudgetOverActiveStateProductionWork()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5
+        };
+
+        var states = algorithm
+            .WithMaxAlgorithmDuration(
+                TimeSpan.FromSeconds(3),
+                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(2);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_TypedOperatorBudgets_CanCountMutatorCallsOrMutatedGenotypes()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var statesByMutatorCalls = algorithm
+            .WithMaxMutatorCalls(
+                algorithm.Mutator,
+                maximumCalls: 1)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+        var statesByMutatedGenotypes = algorithm
+            .WithMaxMutatedGenotypes(
+                algorithm.Mutator,
+                maximumGenotypes: 20)
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        statesByMutatorCalls.Count.ShouldBe(2);
+        statesByMutatorCalls.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        statesByMutatedGenotypes.Count.ShouldBe(3);
+        statesByMutatedGenotypes.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_TypedOperatorDurationBudget_CanMeasureMutatorWork()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var states = algorithm
+            .WithMaxMutatorDuration(
+                algorithm.Mutator,
+                TimeSpan.FromSeconds(3),
+                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(3);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_GenericOperatorBudget_CanUseCustomCountedOperatorFactory()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+
+        var states = algorithm
+            .WithMaxCount(
+                algorithm.Mutator,
+                maximumCount: 20,
+                countedOperatorFactory: static (mutator, counter) =>
+                    mutator.CountMutatedGenotypes(counter))
+            .RunStreaming(
+                problem,
+                RandomNumberGenerator.Create(987),
+                ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(3);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void GeneticAlgorithm_SharedOperatorCounter_CanDriveExternalEarlyStopping()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var counter = new ObservationCounter();
+        var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
+        {
+            MaximumGenerations = 5,
+            MutationRate = 1.0
+        };
+        var observedAlgorithm = baseAlgorithm with
+        {
+            Crossover = baseAlgorithm.Crossover.CountCrossoverCalls(counter),
+            Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
+        };
+        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+        {
+            Algorithm = observedAlgorithm,
+            Terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 2)
+        };
+
+        var states = algorithm.RunStreaming(
+            problem,
+            RandomNumberGenerator.Create(987),
+            ct: TestContext.Current.CancellationToken)
+            .ToList();
+
+        states.Count.ShouldBe(2);
+        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        counter.CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
     public async Task HillClimber_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
@@ -240,6 +518,28 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
+    public void HillClimber_StructuralCompletion_DoesNotRequireExternalIterationCap()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Mutator = NoChangeMutator<RealVector>.Instance,
+            Direction = LocalSearchDirection.FirstImprovement,
+            BatchSize = 4,
+            MaxNeighbors = 12
+        };
+
+        var states = algorithm.RunStreaming(
+          problem,
+          RandomNumberGenerator.Create(654),
+          ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Count.ShouldBe(1);
+        problem.SearchSpace.Contains(states.Single().Solution.Genotype).ShouldBeTrue();
+    }
+
+    [Fact]
     public async Task RepeatedExecution_Example_RunsEachRepetition()
     {
         var problem = CreateRastriginProblem(dimension: 4);
@@ -251,25 +551,14 @@ public class PractitionerUsageSpecs
             BatchSize = 4,
             MaxNeighbors = 12
         }.WithMaxIterations(6);
-        var repeated = new RepeatAlgorithm<
-          RealVector,
-          RealVectorSearchSpace,
-          TestFunctionProblem,
-          SingleSolutionState<RealVector>,
-          TerminatableAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>
+        var repeated = new RepeatAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
+          IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>
         {
             Algorithm = algorithm,
             Repetitions = 3
         };
 
-        var results = await MultiStreamAlgorithmExtensions.RunToCompletionAsync<
-          RealVector,
-          RealVectorSearchSpace,
-          TestFunctionProblem,
-          SingleSolutionState<RealVector>,
-          TerminatableAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>,
-          int>(
-          repeated,
+        var results = await repeated.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(999),
           cancellationToken: TestContext.Current.CancellationToken);
@@ -292,8 +581,9 @@ public class PractitionerUsageSpecs
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Crossover = null,
             Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
-            InitialMutationStrength = 0.15
-        }.WithMaxIterations(5);
+            InitialMutationStrength = 0.15,
+            MaximumGenerations = 5
+        };
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,
@@ -307,5 +597,51 @@ public class PractitionerUsageSpecs
     private static TestFunctionProblem CreateRastriginProblem(int dimension)
     {
         return new TestFunctionProblem(new RastriginFunction(dimension));
+    }
+
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
+      TestFunctionProblem problem)
+    {
+        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            PopulationSize = 16,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
+            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            MutationRate = 0.2,
+            Elites = 1
+        };
+    }
+
+    private sealed record RecordingPopulationTerminator(int StopOnCheckedStateCount)
+        : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+    {
+        public int CheckedStateCount { get; private set; }
+        public bool HasTerminated { get; private set; }
+
+        public override bool IsTerminalState(
+            PopulationState<RealVector> state,
+            RealVectorSearchSpace searchSpace,
+            TestFunctionProblem problem)
+        {
+            CheckedStateCount++;
+            HasTerminated = CheckedStateCount >= StopOnCheckedStateCount;
+            return HasTerminated;
+        }
+    }
+
+    private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
+    {
+        private long timestamp;
+
+        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
+
+        public override long GetTimestamp()
+        {
+            var current = timestamp;
+            timestamp += step.Ticks;
+            return current;
+        }
     }
 }

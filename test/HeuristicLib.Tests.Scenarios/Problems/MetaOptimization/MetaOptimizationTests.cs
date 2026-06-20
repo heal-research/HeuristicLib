@@ -47,7 +47,7 @@ public class MetaOptimizationTests
         var metaProblem = problem.AsMetaProblem(metaSpace, x =>
         {
             var alg = ga with { Mutator = mutatorExtractor(x) };
-            return alg.WithMaxIterations(1000 / alg.PopulationSize); // now with fancy cross dependent parameters
+            return alg with { MaximumGenerations = 1000 / alg.PopulationSize }; // now with fancy cross dependent parameters
         });
 
         //build meta alg

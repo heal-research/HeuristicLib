@@ -14,8 +14,8 @@ The core roles used across algorithms in this repository are:
 - **Crossover** (`ICrossover`): combines parent genotypes into offspring genotypes.
 - **Mutator** (`IMutator`): perturbs genotypes to create variation.
 - **Replacer** (`IReplacer`): decides how to form the next population.
-- **Terminator** (`ITerminator`): decides whether another iteration should run.
-- **Interceptor** (`IInterceptor`): transforms the produced iteration state.
+- **Terminator** (`ITerminator`): observes produced search states and decides whether the owning lifecycle should stop.
+- **Interceptor** (`IInterceptor`): transforms the produced search state.
 
 The genetic algorithm (`GeneticAlgorithm<...>`) is the easiest place to see all of these roles working together.
 
@@ -85,6 +85,21 @@ Use this checklist:
 - operator that coordinates several operators -> `Multi*<..., TExecutionState>`
 - full custom behavior -> implement the contract directly and handle execution instances yourself
 
+## Terminator ownership
+
+`ITerminator` is a state-based stopping role: it receives a produced public search state and returns whether execution should stop after that state has been observed.
+
+The owner of the terminator determines what that stop means:
+
+- If an algorithm exposes a `Terminator` property, the terminator is part of that algorithm's internal completion semantics.
+- If a wrapper such as `WithMaxIterations(...)` or `StateTerminatedAlgorithm` owns the terminator, the terminator is external early stopping over the yielded stream.
+
+In both cases, the produced state that satisfies the terminator remains part of the stream. The terminator stops future production or consumption; it does not remove the triggering state.
+
+Supplying an `initialState` to resume an algorithm does not make that state newly produced. Terminators should be invoked only for states produced by the current execution.
+
+`ITerminatorInstance.IsTerminalState(...)` may update run-local state. Treat it as an effectful transition, not as an idempotent predicate for speculative probing. An owning execution instance should call a terminator instance at most once for each produced public state. Sharing the same stateful terminator instance between an algorithm-owned internal criterion and a wrapper-owned external criterion should happen only when shared state is intentional.
+
 ## Composition helpers
 
 HeuristicLib includes a few small composition patterns that keep calling code clean:
@@ -92,6 +107,8 @@ HeuristicLib includes a few small composition patterns that keep calling code cl
 - `mutator.WithRate(mutationRate)` wraps a mutator with a no-op mutator to achieve a per-offspring mutation probability
 - `ChooseOne*` helpers choose among several operators using weights
 - `Pipeline*` helpers apply several operators in sequence
+
+Operator observation helpers also follow explicit budget-unit names. For example, `CountMutatorCalls(...)` counts calls to the observed mutator boundary, while `CountMutatedGenotypes(...)` counts genotypes returned by those batched mutator calls. See [Observability & analysis](observability-and-analysis.md) for the counter and observation model.
 
 ## Next
 

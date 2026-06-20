@@ -15,7 +15,7 @@ public abstract partial record MultiTerminator<TGenotype, TSearchState, TSearchS
 {
     [OrderedEquality] protected ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>> InnerTerminators { get; }
 
-    protected delegate bool InnerShouldTerminate(TSearchState searchState, TSearchSpace searchSpace, TProblem problem);
+    protected delegate bool InnerIsTerminalState(TSearchState searchState, TSearchSpace searchSpace, TProblem problem);
 
     protected MultiTerminator(ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>> innerTerminators)
     {
@@ -23,22 +23,22 @@ public abstract partial record MultiTerminator<TGenotype, TSearchState, TSearchS
     }
 
     public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new Instance(this, InnerTerminators.Select(instanceRegistry.Resolve).Select(x => (InnerShouldTerminate)x.ShouldTerminate).ToArray(), CreateInitialState());
+      new Instance(this, InnerTerminators.Select(instanceRegistry.Resolve).Select(x => (InnerIsTerminalState)x.IsTerminalState).ToArray(), CreateInitialState());
 
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract bool ShouldTerminate(TSearchState searchState, TExecutionState executionState,
-      IReadOnlyList<InnerShouldTerminate> innerTerminators,
+    protected abstract bool IsTerminalState(TSearchState searchState, TExecutionState executionState,
+      IReadOnlyList<InnerIsTerminalState> innerTerminators,
       TSearchSpace searchSpace, TProblem problem);
 
     private sealed class Instance(MultiTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, TExecutionState> multiTerminator,
-      IReadOnlyList<InnerShouldTerminate> innerTerminators,
+      IReadOnlyList<InnerIsTerminalState> innerTerminators,
       TExecutionState executionState)
       : ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
     {
-        public bool ShouldTerminate(TSearchState state, TSearchSpace searchSpace, TProblem problem)
+        public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
         {
-            return multiTerminator.ShouldTerminate(state, executionState, innerTerminators, searchSpace, problem);
+            return multiTerminator.IsTerminalState(state, executionState, innerTerminators, searchSpace, problem);
         }
     }
 }
@@ -56,12 +56,12 @@ public abstract record MultiTerminator<TGenotype, TSearchSpace, TProblem, TSearc
 
     protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-    protected sealed override bool ShouldTerminate(TSearchState searchState, NoState executionState,
-      IReadOnlyList<InnerShouldTerminate> innerTerminators,
+    protected sealed override bool IsTerminalState(TSearchState searchState, NoState executionState,
+      IReadOnlyList<InnerIsTerminalState> innerTerminators,
       TSearchSpace searchSpace, TProblem problem)
-      => ShouldTerminate(searchState, innerTerminators, searchSpace, problem);
+      => IsTerminalState(searchState, innerTerminators, searchSpace, problem);
 
-    protected abstract bool ShouldTerminate(TSearchState searchState,
-      IReadOnlyList<InnerShouldTerminate> innerTerminators,
+    protected abstract bool IsTerminalState(TSearchState searchState,
+      IReadOnlyList<InnerIsTerminalState> innerTerminators,
       TSearchSpace searchSpace, TProblem problem);
 }
