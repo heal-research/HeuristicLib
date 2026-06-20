@@ -26,8 +26,8 @@ public record EquationScoringEvaluator(Func<SymbolicExpressionTree[], ObjectiveV
 {
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<SymbolicExpressionTree> genotypes, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem)
     {
-        //you could also call evaluate directly but DirectEvaluator does things in parallel for us, and I am lazy
-        var normalObjectives = new DirectEvaluator<SymbolicExpressionTree>().Evaluate(genotypes, random, searchSpace, problem);
+        // You could also call evaluate directly, but ProblemEvaluator does things in parallel for us.
+        var normalObjectives = new ProblemEvaluator<SymbolicExpressionTree>().Evaluate(genotypes, random, searchSpace, problem);
         var betterObjectives = PythonCallback(genotypes.ToArray(), normalObjectives.ToArray()); //passing Arrays is not strictly needed but might be better for interopt
         return betterObjectives.Select(x => (ObjectiveVector)x).ToArray(); //make sure that Length of new Objectives matches what the problem promised
     }
@@ -139,4 +139,3 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
     }
     #endregion
 }
-

@@ -58,7 +58,7 @@ public record VisualizationCallbackEvaluator(
       SymbolicRegressionProblem problem)
     {
 
-        var objectives = new DirectEvaluator<SymbolicExpressionTree>()
+        var objectives = new ProblemEvaluator<SymbolicExpressionTree>()
           .Evaluate(genotypes, random, searchSpace, problem);
 
         // Call Python callback for visualization side-effects.

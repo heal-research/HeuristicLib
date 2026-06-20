@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
@@ -126,7 +127,7 @@ public class SymbolicRegressionRedesignSpecs
     }
 
     [Fact]
-    public void Refinement_AuthoringShape_EnablesNumericRefinementWithoutEvaluationTimeMutation()
+    public void Evaluator_AuthoringShape_EnablesNumericOptimizationWithoutInPlaceMutation()
     {
         /*
         var problem = SymbolicRegressionProblem.CreateDefault(
@@ -142,30 +143,26 @@ public class SymbolicRegressionRedesignSpecs
           .Add(ExpressionDraft.Parameter(1.0), ExpressionDraft.Variable("x0"))
           .Compile();
 
-        var refiner = SymbolicExpressionRefiner.OptimizeNumericParameters(
+        var evaluator = SymbolicExpressionEvaluator.OptimizeNumericParameters(
           maxIterations: 25,
           tolerance: 1e-8);
 
-        var result = refiner.Refine(
+        var solution = evaluator.Evaluate(
           [rawExpression],
           RandomNumberGenerator.Create(123),
           problem.SearchSpace,
-          problem);
+          problem).Single();
 
-        result.Candidates.Single().ShouldNotBeSameAs(rawExpression);
+        solution.Genotype.ShouldNotBeSameAs(rawExpression);
         rawExpression.NumericLiterals.Single().Value.ShouldBe(1.0);
-        result.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
+        evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
 
-        var currentParameterOptimizationRunsDuringEvaluation = typeof(SymbolicRegressionProblem)
-          .GetProperty(nameof(SymbolicRegressionProblem.ParameterOptimizationIterations))
-          is not null;
-
-        currentParameterOptimizationRunsDuringEvaluation.ShouldBeTrue();
+        typeof(ProblemEvaluator<>).ShouldNotBeNull();
     }
 
     [Fact]
-    public void GeneticAlgorithm_AuthoringShape_ConfiguresProblemSpecificNumericRefiner()
+    public void GeneticAlgorithm_AuthoringShape_ConfiguresProblemSpecificNumericOptimizingEvaluator()
     {
         var data = CreateLinearDataset();
 
@@ -186,7 +183,7 @@ public class SymbolicRegressionRedesignSpecs
             Crossover = new UnrestrictedSymbolicExpressionCrossover(),
             Mutator = new UnrestrictedSymbolicExpressionMutator(),
             MutationRate = 0.2,
-            Refiner = SymbolicExpressionRefiner.OptimizeNumericParameters(
+            Evaluator = SymbolicExpressionEvaluator.OptimizeNumericParameters(
               maxIterations: 25,
               tolerance: 1e-8),
             Selector = new TournamentSelector<SymbolicExpression>(tournamentSize: 2),
@@ -199,7 +196,7 @@ public class SymbolicRegressionRedesignSpecs
           ct: TestContext.Current.CancellationToken);
 
         finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        algorithm.Refiner.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
+        algorithm.Evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
 
         data.InputVariables.ShouldBe(["x0", "x1"]);

@@ -17,7 +17,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
   IDisposable
   where TSearchSpace : class, ISearchSpace<TGenotype>
 {
-    private readonly ConcurrentBag<(TGenotype solution, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
+    private readonly ConcurrentBag<(TGenotype genotype, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
     private readonly ReaderWriterLockSlim rwLock = new();
 
     public readonly UpdatePolicy UpdatePolicy;
@@ -42,7 +42,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
     public event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
 
     // this method will be called in parallel
-    public override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random)
+    public override ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random)
     {
         // PredictAndTrain in parallel read lock
         var timing = EpochClock.IncreaseCount();
@@ -51,11 +51,11 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
         ObjectiveVector r;
         try
         {
-            r = Evaluate(solution, random, timing);
+            r = Evaluate(genotype, random, timing);
         }
         finally { rwLock.ExitReadLock(); }
 
-        evaluationLog.Add((solution, r, timing));
+        evaluationLog.Add((genotype, r, timing));
 
         if (UpdatePolicy == UpdatePolicy.Asynchronous)
         {

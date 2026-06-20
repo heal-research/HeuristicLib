@@ -166,7 +166,11 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(2033));
         edgeChild.Order().ToArray().ShouldBe([0, 1, 2, 3]);
 
-        var evaluations = DirectEvaluator.Evaluate([parent], RandomNumberGenerator.Create(2034), problem);
+        var evaluations = new ProblemEvaluator<RealVector>().Evaluate(
+            [parent],
+            RandomNumberGenerator.Create(2034),
+            problem.SearchSpace,
+            problem);
         evaluations.Count.ShouldBe(1);
 
         IReadOnlyList<ISolution<RealVector>> solutions = [

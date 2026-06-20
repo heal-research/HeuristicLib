@@ -22,7 +22,7 @@ public abstract record Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState
     }
 
     // NOTE: Evaluator remains part of the base algorithm contract for now.
-    public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TGenotype>();
+    public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TGenotype>();
 
     protected abstract TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
 

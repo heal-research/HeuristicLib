@@ -34,7 +34,7 @@ public static class PythonCorrelationAnalysis
     public static double[] GetCorrelations(IReadOnlyList<RealVector> solutions, RealVectorProblem problem, double[] delta, int count, int seed = 0)
     {
         var random = RandomNumberGenerator.Create(seed);
-        var evaluator = new DirectEvaluator<RealVector>();
+        var evaluator = new ProblemEvaluator<RealVector>();
         var res = new double[solutions.Count];
         var sigma = RealVector.Create(delta);
         Parallel.ForEach(solutions, (vector, state, i) =>
@@ -67,7 +67,7 @@ public static class PythonCorrelationAnalysis
     public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem)
     {
         var random = RandomNumberGenerator.Create(42);
-        var evaluator = new DirectEvaluator<RealVector>();
+        var evaluator = new ProblemEvaluator<RealVector>();
 
         return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
     }

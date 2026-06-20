@@ -14,7 +14,7 @@ public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg>
   where TR : class, ISearchState
   where TAlg : IAlgorithm<TG, TS, TP, TR>
 {
-    public IEvaluator<TG, TS, TP> Evaluator { get; set; } = new DirectEvaluator<TG>();
+    public IEvaluator<TG, TS, TP> Evaluator { get; set; } = new ProblemEvaluator<TG>();
 
     public IInterceptor<TG, TS, TP, TR>? Interceptor { get; set; }
 

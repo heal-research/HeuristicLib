@@ -15,6 +15,6 @@ public abstract class DataAnalysisProblem<TProblemData, TISolution, TSearchSpace
     } = problemData;
 
     // Maybe earlier in the hierarchy for general deterministic problems?
-    public sealed override ObjectiveVector Evaluate(TISolution solution, IRandomNumberGenerator random) => Evaluate(solution);
+    public sealed override ObjectiveVector Evaluate(TISolution genotype, IRandomNumberGenerator random) => Evaluate(genotype);
     public abstract ObjectiveVector Evaluate(TISolution solution);
 }

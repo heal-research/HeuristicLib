@@ -5,11 +5,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Problems;
 
 public interface IProblem<in TGenotype, out TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+    where TSearchSpace : class, ISearchSpace<TGenotype>
 {
     TSearchSpace SearchSpace { get; }
     Objective Objective { get; }
 
-    //ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random);
-    IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random);
+    ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random);
 }

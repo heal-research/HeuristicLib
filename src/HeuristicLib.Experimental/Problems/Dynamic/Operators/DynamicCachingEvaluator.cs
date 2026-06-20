@@ -175,12 +175,12 @@ public static class DynamicCachedEvaluatorExtension
       where TSearchSpace : class, ISearchSpace<TGenotype>
       where TProblem : DynamicProblem<TGenotype, TSearchSpace>
       where TGenotype : class
-      where TKey : notnull => new(new DirectEvaluator<TGenotype>(), problem, keySelector);
+      where TKey : notnull => new(new ProblemEvaluator<TGenotype>(), problem, keySelector);
 
     public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>
       WithCache<TGenotype, TSearchSpace, TProblem>(this TProblem problem)
       where TSearchSpace : class, ISearchSpace<TGenotype>
       where TProblem : DynamicProblem<TGenotype, TSearchSpace>
       where TGenotype : class
-      => new(new DirectEvaluator<TGenotype>(), problem, x => x);
+      => new(new ProblemEvaluator<TGenotype>(), problem, x => x);
 }

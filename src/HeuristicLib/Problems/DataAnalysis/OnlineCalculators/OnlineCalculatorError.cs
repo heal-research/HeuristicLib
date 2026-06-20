@@ -14,7 +14,7 @@ public enum OnlineCalculatorError
     InvalidValueAdded = 1,
 
     /// <summary>
-    ///   The number of elements added to the DirectEvaluator is not sufficient to calculate the result value
+    ///   The number of elements added to the evaluator is not sufficient to calculate the result value
     /// </summary>
     InsufficientElementsAdded = 2
 }

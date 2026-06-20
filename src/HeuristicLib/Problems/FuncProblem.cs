@@ -29,5 +29,5 @@ public class FuncProblem<TGenotype, TSearchSpace> : SingleSolutionProblem<TGenot
 
     private Func<TGenotype, ObjectiveVector> EvaluateFunc { get; }
 
-    public override ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random) => EvaluateFunc(solution);
+    public override ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random) => EvaluateFunc(genotype);
 }

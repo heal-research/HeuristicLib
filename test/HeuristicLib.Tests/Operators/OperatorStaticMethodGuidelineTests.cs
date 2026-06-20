@@ -144,7 +144,7 @@ public class OperatorStaticMethodGuidelineTests
         public ISearchSpace<TGenotype> SearchSpace { get; } = searchSpace;
         public Objective Objective { get; } = objective;
 
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random)
+        public ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random)
           => throw new NotSupportedException();
     }
 

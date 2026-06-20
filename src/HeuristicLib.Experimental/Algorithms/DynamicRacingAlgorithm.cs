@@ -27,7 +27,7 @@ public class EmptyMetaOptProblem : MetaOptimizationProblem
 
     public MetaOptimizationSearchSpace SearchSpace { get; }
     public Objective Objective => throw new NotImplementedException();
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<MetaOptimizationGenotype> genotypes, IRandomNumberGenerator random) => throw new NotImplementedException();
+    public ObjectiveVector Evaluate(MetaOptimizationGenotype genotype, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgorithm<TG, TS, TP, TA, DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs>.State>
