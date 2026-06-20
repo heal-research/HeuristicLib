@@ -21,9 +21,10 @@ public class CompositionSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
 
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>[] stages = [
-          CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2),
-      CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(3)
+        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>[] stages =
+        [
+            CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2),
+            CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(3)
         ];
 
         var pipeline = new PipelineAlgorithm<
@@ -46,9 +47,10 @@ public class CompositionSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
 
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>[] stages = [
-          CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2),
-      CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(2)
+        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>[] stages =
+        [
+            CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2),
+            CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(2)
         ];
 
         var cycle = new CycleAlgorithm<
@@ -58,8 +60,7 @@ public class CompositionSpecs
           TestFunctionProblem,
           SingleSolutionState<RealVector>>(ImmutableArray.Create(stages))
         {
-            MaximumCycles = 2,
-            NewExecutionInstancesPerCycle = true
+            MaximumCycles = 2
         };
 
         var finalState = await cycle.RunToCompletionAsync(

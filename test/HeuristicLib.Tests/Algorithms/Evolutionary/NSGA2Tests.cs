@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
@@ -27,12 +26,13 @@ public class NSGA2Tests
         algorithm.PopulationSize = 5;
         algorithm.MutationRate = 0.5;
 
-        var result = algorithm.Build()
-                              .WithMaxIterations(5)
-                              .RunToCompletion(
-                                problem,
-                                RandomNumberGenerator.Create(42),
-                                ct: TestContext.Current.CancellationToken);
+        var result = (algorithm.Build() with
+        {
+            MaximumGenerations = 5
+        }).RunToCompletion(
+          problem,
+          RandomNumberGenerator.Create(42),
+          ct: TestContext.Current.CancellationToken);
 
         result.Population.Solutions.Length.ShouldBe(5);
         result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();

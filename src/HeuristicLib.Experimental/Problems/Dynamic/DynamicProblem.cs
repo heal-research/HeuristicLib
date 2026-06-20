@@ -10,22 +10,22 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 // ToDo: A DynamicProblem should be, foremost, a Problem. It "being" also an Observer, is an interesting way of implementing about it, but we have to think if this is really what we want.
 public abstract class DynamicProblem<TGenotype, TSearchSpace> :
-  SingleSolutionProblem<TGenotype, TSearchSpace>,
-  IDynamicProblem<TGenotype, TSearchSpace>,
-  IEvaluatorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
-  IInterceptorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, ISearchState>,
-  IDisposable
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+    SingleSolutionProblem<TGenotype, TSearchSpace>,
+    IDynamicProblem<TGenotype, TSearchSpace>,
+    IEvaluatorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>>,
+    IInterceptorObserver<TGenotype, TSearchSpace, DynamicProblem<TGenotype, TSearchSpace>, ISearchState>,
+    IDisposable
+    where TSearchSpace : class, ISearchSpace<TGenotype>
 {
     private readonly ConcurrentBag<(TGenotype genotype, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
     private readonly ReaderWriterLockSlim rwLock = new();
-
-    public readonly UpdatePolicy UpdatePolicy;
+    private readonly UpdatePolicy updatePolicy;
+    private bool disposed;
 
     protected DynamicProblem(Objective objective, TSearchSpace searchSpace, IRandomNumberGenerator environmentRandom, UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) : base(objective, searchSpace)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochLength);
-        UpdatePolicy = updatePolicy;
+        this.updatePolicy = updatePolicy;
         EpochClock = new EvaluationClock(epochLength);
         EnvironmentRandom = environmentRandom;
     }
@@ -33,17 +33,12 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
     public EvaluationClock EpochClock { get; }
     protected IRandomNumberGenerator EnvironmentRandom { get; }
 
-    public void Dispose()
-    {
-        Dispose(true);
-        GC.SuppressFinalize(this);
-    }
-
     public event EventHandler<IReadOnlyList<(TGenotype, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
 
     // this method will be called in parallel
     public override ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random)
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         // PredictAndTrain in parallel read lock
         var timing = EpochClock.IncreaseCount();
 
@@ -53,11 +48,14 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
         {
             r = Evaluate(genotype, random, timing);
         }
-        finally { rwLock.ExitReadLock(); }
+        finally
+        {
+            rwLock.ExitReadLock();
+        }
 
         evaluationLog.Add((genotype, r, timing));
 
-        if (UpdatePolicy == UpdatePolicy.Asynchronous)
+        if (updatePolicy == UpdatePolicy.Asynchronous)
         {
             ResolvePendingUpdates();
         }
@@ -67,12 +65,11 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
 
     public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing);
 
-
     public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
     {
         OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
         evaluationLog.Clear();
-        if (UpdatePolicy == UpdatePolicy.AfterEvaluation)
+        if (updatePolicy == UpdatePolicy.AfterEvaluation)
         {
             ResolvePendingUpdates();
         }
@@ -80,15 +77,29 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
 
     public void AfterInterception(ISearchState newState, ISearchState currentState, ISearchState? previousState, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
     {
-        if (UpdatePolicy == UpdatePolicy.AfterInterception)
+        if (updatePolicy == UpdatePolicy.AfterInterception)
         {
             ResolvePendingUpdates();
         }
     }
 
-    ~DynamicProblem() => Dispose(false);
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposed)
+            return;
 
-    protected void Dispose(bool disposing) => rwLock.Dispose();
+        if (!disposing)
+            return;
+
+        disposed = true;
+        rwLock.Dispose();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
 
     protected abstract void Update();
 
@@ -100,6 +111,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
 
     private void ResolvePendingUpdates()
     {
+        ObjectDisposedException.ThrowIf(disposed, this);
         if (EpochClock.PendingEpochs == 0)
         {
             return; // pre-check
@@ -110,6 +122,9 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
         {
             EpochClock.ResolvePendingEpochs(Update);
         }
-        finally { rwLock.ExitWriteLock(); }
+        finally
+        {
+            rwLock.ExitWriteLock();
+        }
     }
 }

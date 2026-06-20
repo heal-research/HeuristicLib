@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -65,12 +64,5 @@ public static class ObservableCreatorExtensions
           => creator.ObserveWith(new ActionCreatorObserver<TG, TS, TP>(afterCreation));
         public ICreator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterCreation)
           => creator.ObserveWith(new ActionCreatorObserver<TG, TS, TP>((offspring, _, _, _) => afterCreation(offspring)));
-        public ICreator<TG, TS, TP> CountInvocations(InvocationCounter counter)
-          => creator.ObserveWith(_ => counter.IncrementBy(1));
-        public ICreator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
-        {
-            counter = new InvocationCounter();
-            return creator.CountInvocations(counter);
-        }
     }
 }

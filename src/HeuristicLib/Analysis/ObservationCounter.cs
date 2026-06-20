@@ -1,6 +1,6 @@
 namespace HEAL.HeuristicLib.Analysis;
 
-public sealed class InvocationCounter
+public sealed class ObservationCounter
 {
     private int currentCount;
 

@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -59,13 +58,6 @@ public static class ObservableCrossoverExtensions
           => crossover.ObserveWith(new ActionCrossoverObserver<TG, TS, TP>(afterCross));
         public ICrossover<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterCross)
           => crossover.ObserveWith(new ActionCrossoverObserver<TG, TS, TP>((offspring, _, _, _) => afterCross(offspring)));
-        public ICrossover<TG, TS, TP> CountInvocations(InvocationCounter counter)
-          => crossover.ObserveWith(_ => counter.IncrementBy(1));
-        public ICrossover<TG, TS, TP> CountInvocations(out InvocationCounter counter)
-        {
-            counter = new InvocationCounter();
-            return crossover.CountInvocations(counter);
-        }
     }
 }
 

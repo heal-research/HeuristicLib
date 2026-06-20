@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -60,13 +59,6 @@ public static class ObservableReplacerExtensions
             => afterReplacement(newPopulation, previousPopulation, offspringPopulation, searchSpace, problem)));
         public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterReplacement)
           => replacer.ObserveWith(new ActionReplacerObserver<TG, TS, TP>((newPopulation, _, _, _, _, _) => afterReplacement(newPopulation)));
-        public IReplacer<TG, TS, TP> CountInvocations(InvocationCounter counter)
-          => replacer.ObserveWith(_ => counter.IncrementBy(1));
-        public IReplacer<TG, TS, TP> CountInvocations(out InvocationCounter counter)
-        {
-            counter = new InvocationCounter();
-            return replacer.CountInvocations(counter);
-        }
     }
 }
 

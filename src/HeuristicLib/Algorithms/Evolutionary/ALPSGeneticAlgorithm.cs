@@ -37,6 +37,13 @@ public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
     public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
 
     public int Elites { get; init; }
+    public int? MaximumGenerations
+    {
+        get;
+        init => field = value is null or > 0
+          ? value
+          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
+    }
 
     public double MutationRate
     {
@@ -59,6 +66,15 @@ public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
             Mutator = resolver.Resolve(effectiveMutator),
             Selector = resolver.Resolve(Selector)
         };
+    }
+
+    protected override bool HasCompleted(
+      int yieldedStateCount,
+      AlpsState<TGenotype>? previousState,
+      ExecutionState executionState,
+      TProblem problem)
+    {
+        return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
     }
 
     protected override AlpsState<TGenotype> ExecuteStep(
@@ -87,10 +103,11 @@ public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
         var parentPairs = new IParents<TGenotype>[offspringCount];
         var offspringAges = new int[offspringCount];
+        var nextAge = previousState.Ages[0].DefaultIfEmpty(0).Max() + 1;
         for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
         {
             parentPairs[i] = new Parents<TGenotype>(selectedParents[j].Genotype, selectedParents[j + 1].Genotype);
-            offspringAges[i] = Math.Max(previousState.Ages[0][j], previousState.Ages[0][j + 1]) + 1;
+            offspringAges[i] = nextAge;
         }
 
         var offspring = executionState.Crossover.Cross(parentPairs, random, searchSpace, problem);

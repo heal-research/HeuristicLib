@@ -2,7 +2,6 @@ using System.Collections;
 using System.Globalization;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
@@ -243,8 +242,10 @@ public static class InteractiveSymbolicRegression
           ? parameters.Seed
           : System.Random.Shared.Next();
 
-        var res = ga.Build()
-          .WithMaxIterations(parameters.Generations)
+        var res = (ga.Build() with
+        {
+            MaximumGenerations = parameters.Generations
+        })
           .RunToCompletion(problem, RandomNumberGenerator.Create(seed), null, ct);
 
         return res.Population;

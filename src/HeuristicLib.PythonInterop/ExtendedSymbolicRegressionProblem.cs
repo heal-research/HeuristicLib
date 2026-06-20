@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
@@ -132,9 +131,10 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
             Evaluator = new EquationScoringEvaluator(populationwidePythonCallback)
         };
 
-        var res = ga.Build()
-                    .WithMaxIterations(200)
-                    .RunToCompletion(problem, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
+        var res = (ga.Build() with
+        {
+            MaximumGenerations = 200
+        }).RunToCompletion(problem, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
         return res.Population;
     }
     #endregion

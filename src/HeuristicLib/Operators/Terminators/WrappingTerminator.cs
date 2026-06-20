@@ -11,7 +11,7 @@ public abstract record WrappingTerminator<TGenotype, TSearchState, TSearchSpace,
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-    protected delegate bool InnerShouldTerminate(TSearchState state, TSearchSpace searchSpace, TProblem problem);
+    protected delegate bool InnerIsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 
     protected ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState> InnerTerminator { get; }
 
@@ -21,21 +21,21 @@ public abstract record WrappingTerminator<TGenotype, TSearchState, TSearchSpace,
     }
 
     public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new Instance(this, instanceRegistry.Resolve(InnerTerminator).ShouldTerminate, CreateInitialState());
+      new Instance(this, instanceRegistry.Resolve(InnerTerminator).IsTerminalState, CreateInitialState());
 
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract bool ShouldTerminate(TSearchState searchState, TExecutionState executionState,
-      InnerShouldTerminate innerShouldTerminate,
+    protected abstract bool IsTerminalState(TSearchState searchState, TExecutionState executionState,
+      InnerIsTerminalState innerIsTerminalState,
       TSearchSpace searchSpace, TProblem problem);
 
     private sealed class Instance(WrappingTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, TExecutionState> wrappingTerminator,
-      InnerShouldTerminate innerShouldTerminate, TExecutionState executionState)
+      InnerIsTerminalState innerIsTerminalState, TExecutionState executionState)
       : ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
     {
-        public bool ShouldTerminate(TSearchState state, TSearchSpace searchSpace, TProblem problem)
+        public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
         {
-            return wrappingTerminator.ShouldTerminate(state, executionState, innerShouldTerminate, searchSpace, problem);
+            return wrappingTerminator.IsTerminalState(state, executionState, innerIsTerminalState, searchSpace, problem);
         }
     }
 }
@@ -53,12 +53,12 @@ public abstract record WrappingTerminator<TGenotype, TSearchSpace, TProblem, TSe
 
     protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-    protected sealed override bool ShouldTerminate(TSearchState searchState, NoState executionState,
-      InnerShouldTerminate innerShouldTerminate,
+    protected sealed override bool IsTerminalState(TSearchState searchState, NoState executionState,
+      InnerIsTerminalState innerIsTerminalState,
       TSearchSpace searchSpace, TProblem problem)
-      => ShouldTerminate(searchState, innerShouldTerminate, searchSpace, problem);
+      => IsTerminalState(searchState, innerIsTerminalState, searchSpace, problem);
 
-    protected abstract bool ShouldTerminate(TSearchState searchState,
-      InnerShouldTerminate innerShouldTerminate,
+    protected abstract bool IsTerminalState(TSearchState searchState,
+      InnerIsTerminalState innerIsTerminalState,
       TSearchSpace searchSpace, TProblem problem);
 }

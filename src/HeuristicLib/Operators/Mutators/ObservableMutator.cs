@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -58,13 +57,6 @@ public static class ObservableMutatorExtensions
           => mutator.ObserveWith(new ActionMutatorObserver<TG, TS, TP>(afterMutate));
         public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterMutate)
           => mutator.ObserveWith(new ActionMutatorObserver<TG, TS, TP>((offspring, _, _, _) => afterMutate(offspring)));
-        public IMutator<TG, TS, TP> CountInvocations(InvocationCounter counter)
-          => mutator.ObserveWith(_ => counter.IncrementBy(1));
-        public IMutator<TG, TS, TP> CountInvocations(out InvocationCounter counter)
-        {
-            counter = new InvocationCounter();
-            return mutator.CountInvocations(counter);
-        }
     }
 }
 

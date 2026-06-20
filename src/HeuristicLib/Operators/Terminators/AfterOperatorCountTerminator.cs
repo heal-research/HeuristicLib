@@ -4,19 +4,24 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record AfterOperatorCountTerminator<TGenotype> : StatelessTerminator<TGenotype>
 {
-    public AfterOperatorCountTerminator(InvocationCounter counter, int maximumCount)
+    public AfterOperatorCountTerminator(ObservationCounter counter, int maximumCount)
     {
-        this.counter = counter;
-        this.maximumCount = maximumCount;
+        Counter = counter;
+        MaximumCount = maximumCount;
     }
 
-    private readonly InvocationCounter counter;
-    private readonly int maximumCount;
+    public ObservationCounter Counter { get; }
 
-    public override bool ShouldTerminate()
+    public int MaximumCount
     {
-        return counter.CurrentCount >= maximumCount;
+        get;
+        init => field = value > 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
+    }
+
+    public override bool IsTerminalState()
+    {
+        return Counter.CurrentCount >= MaximumCount;
     }
 }
-
-// ToDo: add extensions for common counter hooks, e.g. after evaluations count terminator.

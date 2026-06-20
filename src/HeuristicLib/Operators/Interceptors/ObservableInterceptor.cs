@@ -1,5 +1,4 @@
 using Generator.Equals;
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
@@ -61,13 +60,6 @@ public static class ObservableInterceptorExtensions
           => interceptor.ObserveWith(new ActionInterceptorObserver<TG, TS, TP, TR>(afterInterception));
         public IInterceptor<TG, TS, TP, TR> ObserveWith(Action<TR> afterInterception)
           => interceptor.ObserveWith(new ActionInterceptorObserver<TG, TS, TP, TR>((newState, _, _, _, _) => afterInterception(newState)));
-        public IInterceptor<TG, TS, TP, TR> CountInvocations(InvocationCounter counter)
-          => interceptor.ObserveWith(_ => counter.IncrementBy(1));
-        public IInterceptor<TG, TS, TP, TR> CountInvocations(out InvocationCounter counter)
-        {
-            counter = new InvocationCounter();
-            return interceptor.CountInvocations(counter);
-        }
     }
 }
 

@@ -34,6 +34,13 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
     public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
     public int Elites { get; init; } = 1;
     public required int MaxEffort { get; init; }
+    public int? MaximumGenerations
+    {
+        get;
+        init => field = value is null or > 0
+          ? value
+          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
+    }
 
     protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
     {
@@ -46,6 +53,15 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
             Mutator = resolver.Resolve(Mutator),
             Selector = resolver.Resolve(Selector)
         };
+    }
+
+    protected override bool HasCompleted(
+      int yieldedStateCount,
+      PopulationState<TGenotype>? previousState,
+      ExecutionState executionState,
+      TProblem problem)
+    {
+        return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
     }
 
     protected override PopulationState<TGenotype> ExecuteStep(

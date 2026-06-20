@@ -38,35 +38,35 @@ public class PythonGenealogyAnalysis
     #region public methods
     #region BatchRuns
     private static ExperimentResult<T>[]
-      RunConfigurableRepeated<T>(int repetitions, Func<int, ExperimentResult<T>> experiment, int seed)
+        RunConfigurableRepeated<T>(int repetitions, Func<int, ExperimentResult<T>> experiment, int seed)
     {
         return BatchExecution.Parallel<ExperimentResult<T>>(repetitions, r => experiment(r.NextInt()), RandomNumberGenerator.Create(seed), maxDegreeOfParallelism: -1)
                              .ToArray();
     }
 
     public static ExperimentResult<SymbolicExpressionTree>[] RunSymbolicRegressionConfigurable(string file, SymRegExperimentParameters parameters, int repetitions) =>
-      RunConfigurableRepeated(
-        repetitions,
-        experiment: seed => RunSymbolicRegressionConfigurable(file, new SymRegExperimentParameters(parameters) { Seed = seed }),
-        parameters.Seed);
+        RunConfigurableRepeated(
+            repetitions,
+            experiment: seed => RunSymbolicRegressionConfigurable(file, new SymRegExperimentParameters(parameters) { Seed = seed }),
+            parameters.Seed);
 
     public static ExperimentResult<Permutation>[] RunTravelingSalesmanConfigurable(string file, TravelingSalesmanExperimentParameters parameters, int repetitions) =>
-      RunConfigurableRepeated(
-        repetitions,
-        experiment: seed => RunTravelingSalesmanConfigurable(file, new TravelingSalesmanExperimentParameters(parameters) { Seed = seed }),
-        parameters.Seed);
+        RunConfigurableRepeated(
+            repetitions,
+            experiment: seed => RunTravelingSalesmanConfigurable(file, new TravelingSalesmanExperimentParameters(parameters) { Seed = seed }),
+            parameters.Seed);
 
     public static ExperimentResult<RealVector>[] RunTestFunctionConfigurable(string file, TestFunctionExperimentParameters parameters, int repetitions) =>
-      RunConfigurableRepeated(
-        repetitions,
-        experiment: seed => RunTestFunctionConfigurable(file, new TestFunctionExperimentParameters(parameters) { Seed = seed }),
-        parameters.Seed);
+        RunConfigurableRepeated(
+            repetitions,
+            experiment: seed => RunTestFunctionConfigurable(file, new TestFunctionExperimentParameters(parameters) { Seed = seed }),
+            parameters.Seed);
     #endregion
 
     public static ExperimentResult<SymbolicExpressionTree> RunSymbolicRegressionConfigurable(
-      string file,
-      SymRegExperimentParameters parameters,
-      GenerationCallback? callback = null)
+        string file,
+        SymRegExperimentParameters parameters,
+        GenerationCallback? callback = null)
     {
         parameters = new SymRegExperimentParameters(parameters)
         {
@@ -81,9 +81,9 @@ public class PythonGenealogyAnalysis
     }
 
     public static ExperimentResult<Permutation> RunTravelingSalesmanConfigurable(
-      string file,
-      TravelingSalesmanExperimentParameters parameters,
-      GenerationCallback? callback = null)
+        string file,
+        TravelingSalesmanExperimentParameters parameters,
+        GenerationCallback? callback = null)
     {
         var problem = ProblemGeneration.CreateTravellingSalesmanProblem(file);
 
@@ -99,9 +99,9 @@ public class PythonGenealogyAnalysis
     }
 
     public static ExperimentResult<RealVector> RunTestFunctionConfigurable(
-      string file,
-      TestFunctionExperimentParameters parameters,
-      GenerationCallback? callback = null)
+        string file,
+        TestFunctionExperimentParameters parameters,
+        GenerationCallback? callback = null)
     {
         parameters = new TestFunctionExperimentParameters(parameters)
         {
@@ -118,9 +118,9 @@ public class PythonGenealogyAnalysis
 
     #region generic helpers
     public static ExperimentResult<T> RunAlgorithmConfigurable<T, TE>(
-      IProblem<T, TE> problem,
-      Action<PopulationState<T>>? callback,
-      ExperimentParameters<T, TE> parameters) where T : notnull where TE : class, ISearchSpace<T>
+        IProblem<T, TE> problem,
+        Action<PopulationState<T>>? callback,
+        ExperimentParameters<T, TE> parameters) where T : notnull where TE : class, ISearchSpace<T>
     {
         //var terminator = new AfterIterationsTerminator<T>(parameters.Iterations);
         if (parameters.NoChildren < 0)
@@ -144,10 +144,7 @@ public class PythonGenealogyAnalysis
                     var gaAlgorithm = ga.Build();
                     if (callback is not null && gaAlgorithm.Interceptor is null)
                     {
-                        gaAlgorithm = gaAlgorithm with
-                        {
-                            Interceptor = new IdentityInterceptor<T, PopulationState<T>>()
-                        };
+                        gaAlgorithm = gaAlgorithm with { Interceptor = new IdentityInterceptor<T, PopulationState<T>>() };
                     }
 
                     var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
@@ -175,10 +172,7 @@ public class PythonGenealogyAnalysis
                     var esAlgorithm = es.Build();
                     if (callback is not null && esAlgorithm.Interceptor is null)
                     {
-                        esAlgorithm = esAlgorithm with
-                        {
-                            Interceptor = new IdentityInterceptor<T, EvolutionStrategyState<T>>()
-                        };
+                        esAlgorithm = esAlgorithm with { Interceptor = new IdentityInterceptor<T, EvolutionStrategyState<T>>() };
                     }
 
                     var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
@@ -209,10 +203,7 @@ public class PythonGenealogyAnalysis
                     var nsga2Algorithm = nsga2.Build();
                     if (callback is not null && nsga2Algorithm.Interceptor is null)
                     {
-                        nsga2Algorithm = nsga2Algorithm with
-                        {
-                            Interceptor = new IdentityInterceptor<T, PopulationState<T>>()
-                        };
+                        nsga2Algorithm = nsga2Algorithm with { Interceptor = new IdentityInterceptor<T, PopulationState<T>>() };
                     }
 
                     var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
@@ -226,20 +217,20 @@ public class PythonGenealogyAnalysis
     }
 
     private interface IAnalyzerSet<T>
-      where T : notnull
+        where T : notnull
     {
         ExperimentResult<T> ToExperimentResult(Run run);
         IReadOnlyList<IAnalyzer> GetAll();
     }
 
     private sealed record MyAnalyzers<T>(
-      Analyzer<List<BestMedianWorstEntry<T>>> Qualities,
-      Analyzer<RankState<T>>? RankAnalysis,
-      Analyzer<QualityCurve<T>> QualityCurve,
-      Analyzer<List<ISolution<T>[]>>? AllPopulations,
-      Analyzer<object>? CallbackAnalyzer)
-      : IAnalyzerSet<T>
-      where T : notnull
+        Analyzer<List<BestMedianWorstEntry<T>>> Qualities,
+        Analyzer<RankState<T>>? RankAnalysis,
+        Analyzer<QualityCurve<T>> QualityCurve,
+        Analyzer<List<ISolution<T>[]>>? AllPopulations,
+        Analyzer<object>? CallbackAnalyzer)
+        : IAnalyzerSet<T>
+        where T : notnull
     {
         public ExperimentResult<T> ToExperimentResult(Run run)
         {
@@ -250,7 +241,7 @@ public class PythonGenealogyAnalysis
 
             if (RankAnalysis is not null)
             {
-                var rankResult = run.GetAnalyzerResult(RankAnalysis).Result;
+                var rankResult = run.GetAnalyzerResult(RankAnalysis).Result();
                 rankGraph = rankResult.Graph.ToGraphViz();
                 rankLines = rankResult.Ranks.Select(x => x.ToList()).ToArray();
             }
@@ -266,7 +257,11 @@ public class PythonGenealogyAnalysis
 
         public IReadOnlyList<IAnalyzer> GetAll()
         {
-            var analyzers = new List<IAnalyzer> { Qualities, QualityCurve };
+            var analyzers = new List<IAnalyzer>
+            {
+                Qualities,
+                QualityCurve
+            };
             if (RankAnalysis is not null)
             {
                 analyzers.Add(RankAnalysis);
@@ -284,13 +279,13 @@ public class PythonGenealogyAnalysis
     }
 
     private sealed record CallbackAnalysis<T, TS, TP, TR>(
-      IAlgorithm<T, TS, TP, TR> Algorithm,
-      IInterceptor<T, TS, TP, TR> Interceptor,
-      Action<PopulationState<T>> Callback)
-      : Analyzer<T, TS, TP, TR, object>(Algorithm)
-      where TS : class, ISearchSpace<T>
-      where TP : class, IProblem<T, TS>
-      where TR : PopulationState<T>, ISearchState
+        IAlgorithm<T, TS, TP, TR> Algorithm,
+        IInterceptor<T, TS, TP, TR> Interceptor,
+        Action<PopulationState<T>> Callback)
+        : Analyzer<T, TS, TP, TR, object>(Algorithm)
+        where TS : class, ISearchSpace<T>
+        where TP : class, IProblem<T, TS>
+        where TR : PopulationState<T>, ISearchState
     {
         public override object CreateInitialResult() => new();
 
@@ -301,15 +296,15 @@ public class PythonGenealogyAnalysis
     }
 
     private static MyAnalyzers<T> CreateAnalyzers<T, TE, TP, TR>(
-      ExperimentParameters<T, TE> parameters,
-      IIterativeAlgorithm<T, TE, TP, TR> algorithm,
-      ICrossover<T, TE, TP>? crossover,
-      IMutator<T, TE, TP>? mutator,
-      Action<PopulationState<T>>? callback)
-      where T : notnull
-      where TE : class, ISearchSpace<T>
-      where TP : class, IProblem<T, TE>
-      where TR : PopulationState<T>
+        ExperimentParameters<T, TE> parameters,
+        IIterativeAlgorithm<T, TE, TP, TR> algorithm,
+        ICrossover<T, TE, TP>? crossover,
+        IMutator<T, TE, TP>? mutator,
+        Action<PopulationState<T>>? callback)
+        where T : notnull
+        where TE : class, ISearchSpace<T>
+        where TP : class, IProblem<T, TE>
+        where TR : PopulationState<T>
     {
         var interceptor = algorithm.Interceptor ?? throw new InvalidOperationException("Population-based analysis requires an interceptor.");
         var qualities = new BestMedianWorstAnalysis<T, TE, TP, TR>(algorithm, interceptor);
@@ -323,11 +318,11 @@ public class PythonGenealogyAnalysis
     private static ChooseOneMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
     {
         return ChooseOneMutator.Create(
-          new ChangeNodeTypeManipulation(),
-          new FullTreeShaker(),
-          new OnePointShaker(),
-          new RemoveBranchManipulation(),
-          new ReplaceBranchManipulation());
+            new ChangeNodeTypeManipulation(),
+            new FullTreeShaker(),
+            new OnePointShaker(),
+            new RemoveBranchManipulation(),
+            new ReplaceBranchManipulation());
     }
     #endregion
 }

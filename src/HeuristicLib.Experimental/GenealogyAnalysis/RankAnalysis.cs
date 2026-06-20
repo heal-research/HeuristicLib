@@ -8,10 +8,10 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.GenealogyAnalysis;
 
 public record RankAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, RankState<T>>
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
-  where TR : PopulationState<T>
-  where T : notnull
+    where TS : class, ISearchSpace<T>
+    where TP : class, IProblem<T, TS>
+    where TR : PopulationState<T>
+    where T : notnull
 {
     private readonly GenealogyAnalysis<T, TS, TP, TR> graphBuilder;
     private readonly IInterceptor<T, TS, TP, TR>? interceptor;
@@ -63,5 +63,5 @@ public class RankState<T> where T : notnull
 
     public GenealogyGraph<T> Graph { get; }
 
-    public RankAnalysisResult<T> Result => new(Graph, Ranks.Select(x => (IReadOnlyList<double>)x.ToArray()).ToArray());
+    public RankAnalysisResult<T> Result() => new(Graph, Ranks.Select(IReadOnlyList<double> (x) => x.ToArray()).ToArray());
 }

@@ -13,7 +13,7 @@ public record LimitEvaluator<TG, TS, TP>
 {
     public sealed class ExecutionState
     {
-        public InvocationCounter Counter { get; } = new();
+        public ObservationCounter Counter { get; } = new();
     }
 
     private readonly int maxEvaluations;

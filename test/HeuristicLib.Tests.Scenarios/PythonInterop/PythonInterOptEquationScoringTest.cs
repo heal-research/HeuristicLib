@@ -12,7 +12,7 @@ public class PythonInterOptEquationScoringTest
     {
         var file = Path.Combine("TestData", "192_vineyard.tsv");
         var p = PythonInterOptEquationScoring.DefaultConf(file, 30, (x, y) => [y[0], y[0], 0.9, 0.9, 0.9]);
-        var pop = PythonInterOptEquationScoring.RunDefault(p, 42);
+        var pop = PythonInterOptEquationScoring.RunDefault(p);
         pop.Solutions.Length.ShouldBe(300);
         pop.Solutions.All(solution => solution.ObjectiveVector.Count == 5).ShouldBeTrue();
         pop.Solutions.All(solution => solution.ObjectiveVector.All(double.IsFinite)).ShouldBeTrue();

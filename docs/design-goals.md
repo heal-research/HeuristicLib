@@ -170,6 +170,16 @@ Convenience layers may include:
 
 These should serve the core model, not define it.
 
+### Extension concerns
+
+Extension methods should be grouped by user-facing concern rather than by implementation accident or target type alone.
+
+Observation hooks, counting helpers, duration measurement helpers, budget-composition helpers, factory helpers, and conversion helpers should live in separate extension classes when they represent different user intents. This keeps API discovery focused and prevents generic `*Extensions` classes from becoming unrelated method buckets.
+
+Source folders may group related extension concerns under a descriptive concern folder such as `Instrumentation` when the helpers belong to the same broad API area. This applies both to operator-level helpers, such as counted or measured operator wrappers, and to algorithm-level helpers, such as meta-algorithm budget composition. Folder organization does not have to create a matching public namespace; namespaces should follow the user-facing concept, while folders may serve maintainers by separating base types, implementations, and cross-cutting helper concerns.
+
+Concrete wrappers used only to implement an extension concern should remain private or internal unless callers have a clear reason to depend on their concrete type.
+
 ### Patterns are tools, not law
 
 Some current patterns are promising, but should remain justified by use:

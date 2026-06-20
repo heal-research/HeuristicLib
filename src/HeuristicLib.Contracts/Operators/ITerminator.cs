@@ -16,5 +16,5 @@ public interface ITerminatorInstance<TGenotype, in TSearchSpace, in TProblem, in
   where TProblem : IProblem<TGenotype, TSearchSpace>
   where TSearchState : ISearchState
 {
-    bool ShouldTerminate(TSearchState state, TSearchSpace searchSpace, TProblem problem);
+    bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 }

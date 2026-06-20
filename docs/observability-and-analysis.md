@@ -99,41 +99,85 @@ var observed = mutator.ObserveWith(offspring => {
 });
 ```
 
-## External sinks: `InvocationCounter`
+## External sinks: `ObservationCounter`
 
 Analysis usually needs to write somewhere.
 
-HeuristicLib often models this as writing to an **external sink**. A minimal example is `InvocationCounter`, which is just a thread-safe counter.
+HeuristicLib often models this as writing to an **external sink**. A minimal example is `ObservationCounter`, which is just a thread-safe counter.
 
-### Count invocations with an existing sink
+### Count operator calls with an existing sink
 
 If you already have a sink (for example, a counter owned by an experiment runner), pass it in:
 
 ```csharp
 IMutator<TG, TS, TP> mutator = /* ... */;
-var counter = new InvocationCounter();
+var counter = new ObservationCounter();
 
-var observed = mutator.CountInvocations(counter);
+var observed = mutator.CountMutatorCalls(counter);
 
-// later: counter.CurrentCount contains total mutator invocations
+// later: counter.CurrentCount contains total mutator calls
 ```
 
-For `ObservableMutator`, `CountInvocations(...)` increments once per mutation call.
+For `ObservableMutator`, `CountMutatorCalls(...)` increments once per mutation call.
 
-### Count invocations with a fresh sink returned via `out`
+Use `CountMutatedGenotypes(...)` when the budget should count the mutated genotypes returned by those batched mutation calls instead:
+
+```csharp
+IMutator<TG, TS, TP> mutator = /* ... */;
+var counter = new ObservationCounter();
+
+var observed = mutator.CountMutatedGenotypes(counter);
+
+// later: counter.CurrentCount contains total mutated genotypes
+```
+
+The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedGenotypes(...)`, `CountCrossedGenotypes(...)`, `CountEvaluatedGenotypes(...)`, `CountSelectedSolutions(...)`, and `CountReplacementSolutions(...)`.
+
+The observed boundary is part of the budget. For example, these are different budgets:
+
+- calls made to a caching evaluator, including cache hits
+- calls that pass through the cache and reach the wrapped direct evaluator
+- genotypes processed inside evaluator batches
+
+Advanced users can pass the same `ObservationCounter` to several observed operators when one shared budget should aggregate work across those boundaries.
+
+### Count operator calls with a fresh sink returned via `out`
 
 For quick usage, many wrappers offer an overload that creates the sink and returns it:
 
 ```csharp
 IMutator<TG, TS, TP> mutator = /* ... */;
 
-var observed = mutator.CountInvocations(out var counter);
+var observed = mutator.CountMutatorCalls(out var counter);
 
 // run observed mutator as part of an algorithm
 // then read counter.CurrentCount
 ```
 
 This pattern keeps call sites tidy while still giving you access to the collected data.
+
+## External sinks: `ObservationDuration`
+
+`ObservationDuration` is the duration counterpart to `ObservationCounter`. It stores cumulative measured work duration in an external sink.
+
+For evaluators, `MeasureEvaluatorDuration(...)` measures around the inner `Evaluate(...)` call:
+
+```csharp
+IEvaluator<TG, TS, TP> evaluator = /* ... */;
+var duration = new ObservationDuration();
+
+var measured = evaluator.MeasureEvaluatorDuration(duration);
+
+// later: duration.CurrentDuration contains total observed evaluator work duration
+```
+
+The same measurement pattern is available for other operator families, for example `MeasureCreatorDuration(...)`, `MeasureCrossoverDuration(...)`, `MeasureMutatorDuration(...)`, `MeasureSelectorDuration(...)`, `MeasureReplacerDuration(...)`, `MeasureInterceptorDuration(...)`, and `MeasureTerminatorDuration(...)`.
+
+This is not whole-run elapsed time or active algorithm duration. It increases only while the measured operator call is executing. Duration is recorded even if the observed operator call throws, because the failed call still consumed observed work time. Use `AfterElapsedTimeTerminator(...)` when the budget should include idle time between stream pulls, use `WithMaxAlgorithmDuration(...)` when the budget should cover active state-production work by the wrapped algorithm, and use operator duration when the budget should apply only to observed operator work.
+
+Terminator duration and call-count instrumentation exists for consistency because terminators are operators too. Treat it as an advanced diagnostic or budgeting tool for expensive or shared terminator checks, not as the ordinary way to cap a run.
+
+Budget helpers such as `WithMaxEvaluatorCalls(...)`, `WithMaxMutatorDuration(...)`, and `WithMaxCount(...)` install the observed replacement for the run and attach the matching external early-stopping policy. The helper form exists so ordinary users do not need to manually create a sink, wrap the operator, replace that operator on the algorithm, and wire a separate terminator against the same sink.
 
 ## Relationship to analyzers
 
@@ -169,7 +213,7 @@ Typical characteristics:
 - scope is tied to the wrapped definition and the execution instances created for it
 - you usually provide a callback, observer object, logger, or external sink
 - the result typically lives **outside** the run
-  - for example in an `InvocationCounter`, a logger, a list you own, or a custom observer instance
+  - for example in an `ObservationCounter`, a logger, a list you own, or a custom observer instance
 - best for lightweight instrumentation, diagnostics, logging, counters, and ad-hoc experiments
 
 Typical API shape:

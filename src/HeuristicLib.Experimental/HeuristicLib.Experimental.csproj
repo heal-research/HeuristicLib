@@ -6,6 +6,9 @@
         <RootNamespace>HEAL.HeuristicLib</RootNamespace>
         <Description>Experimental HeuristicLib APIs and research-oriented features.</Description>
     </PropertyGroup>
+    <ItemGroup>
+      <PackageReference Include="TreesearchLib" Version="1.3.0" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\HeuristicLib\HeuristicLib.csproj" />
