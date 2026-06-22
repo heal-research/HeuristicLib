@@ -14,7 +14,7 @@ The goal is a single dominant mental model:
 | Search space     | Validity predicate for genotypes                 | `ISearchSpace<TGenotype>`                                                                                   |
 | Objective        | Defines direction(s) and ordering                | `Objective`, `ObjectiveDirection`                                                                           |
 | Objective vector | The measured outcome of evaluation               | `ObjectiveVector`                                                                                           |
-| Solution         | Genotype + objective vector                      | `ISolution<TGenotype>`                                                                                      |
+| Solution         | Genotype + objective vector                      | `Solution<TGenotype>`                                                                                       |
 | Problem          | Owns objective + search space + evaluation       | `IProblem<TGenotype, TSearchSpace>`                                                                         |
 | Search state     | The public progress value produced by algorithms | `ISearchState`                                                                                              |
 | Algorithm loop   | The step-based algorithm authoring model         | `IterativeAlgorithm<...>`                                                                                   |

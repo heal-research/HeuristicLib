@@ -32,7 +32,7 @@ For convenience:
 
 ## Solution
 
-`ISolution<TGenotype>` combines:
+`Solution<TGenotype>` combines:
 
 - `TGenotype Genotype`
 - `ObjectiveVector ObjectiveVector`
@@ -42,7 +42,7 @@ This separation is intentional:
 - Genotype = representation (what you search over)
 - Objective vector = evaluation (what you optimize)
 
-In this repository, `Solution<TGenotype>` is a simple record implementing `ISolution<TGenotype>`.
+In this repository, `Solution<TGenotype>` is a simple record.
 
 ## Related pages
 

@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public interface IPartialSolutionProblem<in TGenotype, out TSearchSpace>
+public interface IPartialSolutionProblem<TGenotype, out TSearchSpace>
     : IProblem<TGenotype, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TGenotype>
 {
@@ -13,7 +13,7 @@ public interface IPartialSolutionProblem<in TGenotype, out TSearchSpace>
     ObjectiveVector? EvaluatePartial(TGenotype genotype, IRandomNumberGenerator random);
 }
 
-public interface IBoundedProblem<in TGenotype, out TSearchSpace>
+public interface IBoundedProblem<TGenotype, out TSearchSpace>
     : IProblem<TGenotype, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TGenotype>
 {

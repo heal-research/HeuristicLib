@@ -35,7 +35,7 @@ var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, Travel
   MutationRate = 0.20,
   Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
   Elites = 2,
-  Evaluator = new DirectEvaluator<Permutation>()
+  Evaluator = new ProblemEvaluator<Permutation>()
 };
 
 await foreach (var state in algorithm.RunStreamingAsync(problem, rng)) {

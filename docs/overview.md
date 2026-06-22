@@ -44,7 +44,7 @@ var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSale
    MutationRate = 0.20,
    Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
    Elites = 2,
-   Evaluator = new DirectEvaluator<Permutation>()
+   Evaluator = new ProblemEvaluator<Permutation>()
 };
 
 var generation = 0;

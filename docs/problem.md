@@ -13,17 +13,15 @@ It is the boundary between “search” and “domain”:
 
 - `TSearchSpace SearchSpace { get; }`
 - `Objective Objective { get; }`
-- `ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random)`
+- `IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random)`
 
 This makes problems self-contained: they own both evaluation and the objective definition (directions + ordering).
 
-## The base class in this repository
+## Base classes
 
-In `HEAL.HeuristicLib` there is a convenient abstract base class:
+In `HEAL.HeuristicLib`, `Problem<TSolution, TSearchSpace>` is the batch native base class. It stores `Objective` and `SearchSpace` and leaves batch `Evaluate(...)` abstract.
 
-- `Problem<TSolution, TSearchSpace>`
-
-It stores `Objective` and `SearchSpace` and leaves `Evaluate(...)` abstract.
+For the common case where each candidate can be evaluated independently, use `SingleSolutionProblem<TSolution, TSearchSpace>`. It derives from `Problem<TSolution, TSearchSpace>`, leaves scalar `Evaluate(...)` abstract and provides the batch implementation through `BatchExecution`.
 
 ## Deterministic vs stochastic evaluation
 
