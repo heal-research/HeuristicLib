@@ -12,13 +12,13 @@ public record GenderSpecificSelector<TGenotype, TSearchSpace, TProblem>
 {
     public GenderSpecificSelector(ImmutableArray<ISelector<TGenotype, TSearchSpace, TProblem>> innerSelectors) : base(innerSelectors) { }
 
-    protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IReadOnlyList<InnerSelect> innerSelectors, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    protected override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IReadOnlyList<InnerSelect> innerSelectors, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         ArgumentOutOfRangeException.ThrowIfNotEqual(count % innerSelectors.Count, 0);
         var n = count / innerSelectors.Count;
         var r = innerSelectors.Select(select => select(population, objective, n, random, searchSpace, problem)).ToArray();
 
-        var res = new ISolution<TGenotype>[count];
+        var res = new Solution<TGenotype>[count];
         var c = 0;
         for (int j = 0; j < n; j++)
         {

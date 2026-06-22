@@ -20,7 +20,7 @@ public static class Extensions
         }
     }
 
-    extension<TGenotype>(IReadOnlyList<ISolution<TGenotype>> parents)
+    extension<TGenotype>(IReadOnlyList<Solution<TGenotype>> parents)
     {
         public IParents<TGenotype>[] ToParents(Objective? objective = null)
         {
@@ -40,10 +40,10 @@ public static class Extensions
             return parentPairs;
         }
 
-        public (ISolution<TGenotype>, ISolution<TGenotype>)[] ToSolutionPairs()
+        public (Solution<TGenotype>, Solution<TGenotype>)[] ToSolutionPairs()
         {
             var offspringCount = parents.Count / 2;
-            var parentPairs = new (ISolution<TGenotype>, ISolution<TGenotype>)[offspringCount];
+            var parentPairs = new (Solution<TGenotype>, Solution<TGenotype>)[offspringCount];
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
             {
                 parentPairs[i] = (parents[j], parents[j + 1]);

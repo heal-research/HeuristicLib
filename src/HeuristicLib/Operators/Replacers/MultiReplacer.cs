@@ -15,7 +15,7 @@ public abstract partial record MultiReplacer<TGenotype, TSearchSpace, TProblem, 
 {
     [OrderedEquality] protected ImmutableArray<IReplacer<TGenotype, TSearchSpace, TProblem>> InnerReplacers { get; }
 
-    protected delegate IReadOnlyList<ISolution<TGenotype>> InnerReplace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected delegate IReadOnlyList<Solution<TGenotype>> InnerReplace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     protected MultiReplacer(ImmutableArray<IReplacer<TGenotype, TSearchSpace, TProblem>> innerReplacers)
     {
@@ -27,8 +27,8 @@ public abstract partial record MultiReplacer<TGenotype, TSearchSpace, TProblem, 
 
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, TExecutionState executionState,
+    protected abstract IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation,
+      IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, TExecutionState executionState,
       IReadOnlyList<InnerReplace> innerReplacers,
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
@@ -36,7 +36,7 @@ public abstract partial record MultiReplacer<TGenotype, TSearchSpace, TProblem, 
       IReadOnlyList<InnerReplace> innerReplacers, TExecutionState executionState)
       : IReplacerInstance<TGenotype, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             return multiReplacer.Replace(previousPopulation, offspringPopulation, objective, count, executionState, innerReplacers, random, searchSpace, problem);
         }
@@ -55,14 +55,14 @@ public abstract record MultiReplacer<TGenotype, TSearchSpace, TProblem>
 
     protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-    protected sealed override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, NoState executionState,
+    protected sealed override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation,
+      IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, NoState executionState,
       IReadOnlyList<InnerReplace> innerReplacers,
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
       => Replace(previousPopulation, offspringPopulation, objective, count, innerReplacers, random, searchSpace, problem);
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count,
+    protected abstract IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation,
+      IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count,
       IReadOnlyList<InnerReplace> innerReplacers,
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

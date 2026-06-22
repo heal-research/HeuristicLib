@@ -34,7 +34,7 @@ public class OperatorStaticMethodGuidelineTests
     [Fact]
     public void ParetoCrowdingTournamentSelector_InstanceAndStaticProduceSameSelection()
     {
-        IReadOnlyList<ISolution<int>> population = [
+        IReadOnlyList<Solution<int>> population = [
           new Solution<int>(0, new ObjectiveVector(0.0, 10.0)),
       new Solution<int>(1, new ObjectiveVector(10.0, 0.0)),
       new Solution<int>(2, new ObjectiveVector(2.0, 9.0)),
@@ -116,7 +116,7 @@ public class OperatorStaticMethodGuidelineTests
         AssertImmutableDeclaredProperties(typeof(RemoveDuplicatesInterceptor<string, PopulationState<string>>));
     }
 
-    private static IReadOnlyList<ISolution<int>> CreateSingleObjectivePopulation()
+    private static IReadOnlyList<Solution<int>> CreateSingleObjectivePopulation()
     {
         return [
           new Solution<int>(0, new ObjectiveVector(4.0)),

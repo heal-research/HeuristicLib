@@ -4,5 +4,5 @@ namespace HEAL.HeuristicLib.States;
 
 public record SingleSolutionState<T> : PopulationState<T>
 {
-    public ISolution<T> Solution => Population.Single();
+    public Solution<T> Solution => Population.Single();
 }

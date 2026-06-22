@@ -14,14 +14,14 @@ public record ProportionalSelector<TGenotype>
     // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
     public bool Windowing { get; init; }
 
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
       => ProportionalSelector.Select(population, objective, count, random, Windowing);
 }
 
 public static class ProportionalSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> population,
+    public static IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(
+      IReadOnlyList<Solution<TGenotype>> population,
       Objective objective,
       int count,
       IRandomNumberGenerator random,
@@ -67,7 +67,7 @@ public static class ProportionalSelector
         var list = qualities.ToArray();
         var qualitySum = list.Sum();
 
-        var selected = new ISolution<TGenotype>[count];
+        var selected = new Solution<TGenotype>[count];
         for (var i = 0; i < selected.Length; i++)
         {
             var selectedQuality = random.NextDouble() * qualitySum;

@@ -16,7 +16,7 @@ public abstract partial record MultiSelector<TGenotype, TSearchSpace, TProblem, 
     [OrderedEquality]
     protected ImmutableArray<ISelector<TGenotype, TSearchSpace, TProblem>> InnerSelectors { get; }
 
-    protected delegate IReadOnlyList<ISolution<TGenotype>> InnerSelect(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected delegate IReadOnlyList<Solution<TGenotype>> InnerSelect(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     protected MultiSelector(ImmutableArray<ISelector<TGenotype, TSearchSpace, TProblem>> innerSelectors)
     {
@@ -28,7 +28,7 @@ public abstract partial record MultiSelector<TGenotype, TSearchSpace, TProblem, 
 
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
+    protected abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population,
                                                                   Objective objective, int count, TExecutionState state, IReadOnlyList<InnerSelect> innerSelectors,
                                                                   IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
@@ -38,7 +38,7 @@ public abstract partial record MultiSelector<TGenotype, TSearchSpace, TProblem, 
       TExecutionState executionState)
       : ISelectorInstance<TGenotype, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             return multiSelector.Select(population, objective, count, executionState, innerSelectors, random, searchSpace, problem);
         }
@@ -56,13 +56,13 @@ public abstract record MultiSelector<TGenotype, TSearchSpace, TProblem>
 
     protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-    protected sealed override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
+    protected sealed override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population,
                                                                          Objective objective, int count, NoState state,
                                                                          IReadOnlyList<InnerSelect> innerSelectors,
                                                                          IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
       => Select(population, objective, count, innerSelectors, random, searchSpace, problem);
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
+    protected abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population,
                                                                   Objective objective, int count, IReadOnlyList<InnerSelect> innerSelectors,
                                                                   IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

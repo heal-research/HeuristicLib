@@ -13,14 +13,14 @@ public record TournamentSelector<TGenotype>
         TournamentSize = tournamentSize;
     }
 
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
       => TournamentSelector.Select(population, objective, count, random, TournamentSize);
 }
 
 public static class TournamentSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> population,
+    public static IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(
+      IReadOnlyList<Solution<TGenotype>> population,
       Objective objective,
       int count,
       IRandomNumberGenerator random,

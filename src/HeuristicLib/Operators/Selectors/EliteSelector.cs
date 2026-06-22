@@ -21,7 +21,7 @@ public record EliteSelector<TGenotype, TSearchSpace, TProblem>
         this.elites = elites;
     }
 
-    protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
+    protected override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population,
                                                                   Objective objective, int count, InnerSelect innerSelect,
                                                                   IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {

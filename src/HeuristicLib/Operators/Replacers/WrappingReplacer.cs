@@ -12,7 +12,7 @@ public abstract record WrappingReplacer<TGenotype, TSearchSpace, TProblem, TExec
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TExecutionState : class
 {
-    protected delegate IReadOnlyList<ISolution<TGenotype>> InnerReplace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected delegate IReadOnlyList<Solution<TGenotype>> InnerReplace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     protected IReplacer<TGenotype, TSearchSpace, TProblem> InnerReplacer { get; }
 
@@ -26,8 +26,8 @@ public abstract record WrappingReplacer<TGenotype, TSearchSpace, TProblem, TExec
 
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, TExecutionState executionState,
+    protected abstract IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation,
+      IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, TExecutionState executionState,
       InnerReplace innerReplace, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem);
 
@@ -35,7 +35,7 @@ public abstract record WrappingReplacer<TGenotype, TSearchSpace, TProblem, TExec
       InnerReplace innerReplace, TExecutionState executionState)
       : IReplacerInstance<TGenotype, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             return wrappingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, executionState, innerReplace, random, searchSpace, problem);
         }
@@ -54,14 +54,14 @@ public abstract record WrappingReplacer<TGenotype, TSearchSpace, TProblem>
 
     protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-    protected sealed override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, NoState executionState,
+    protected sealed override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation,
+      IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, NoState executionState,
       InnerReplace innerReplace, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem)
       => Replace(previousPopulation, offspringPopulation, objective, count, innerReplace, random, searchSpace, problem);
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count,
+    protected abstract IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation,
+      IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count,
       InnerReplace innerReplace, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem);
 }

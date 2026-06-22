@@ -366,7 +366,7 @@ public class ObservableOperatorCounterTests
             objective: SingleObjective.Minimize);
     }
 
-    private static IReadOnlyList<ISolution<int>> CreateSolutions(IReadOnlyList<int> genotypes)
+    private static IReadOnlyList<Solution<int>> CreateSolutions(IReadOnlyList<int> genotypes)
     {
         return genotypes
             .Select(genotype => new Solution<int>(genotype, new ObjectiveVector(genotype)))
@@ -415,8 +415,8 @@ public class ObservableOperatorCounterTests
     private sealed record FirstSolutionsSelector
       : StatelessSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<ISolution<int>> Select(
-            IReadOnlyList<ISolution<int>> population,
+        public override IReadOnlyList<Solution<int>> Select(
+            IReadOnlyList<Solution<int>> population,
             Objective objective,
             int count,
             IRandomNumberGenerator random,
@@ -430,9 +430,9 @@ public class ObservableOperatorCounterTests
     private sealed record FirstReplacementSolutionsReplacer
       : StatelessReplacer<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<ISolution<int>> Replace(
-            IReadOnlyList<ISolution<int>> previousPopulation,
-            IReadOnlyList<ISolution<int>> offspringPopulation,
+        public override IReadOnlyList<Solution<int>> Replace(
+            IReadOnlyList<Solution<int>> previousPopulation,
+            IReadOnlyList<Solution<int>> offspringPopulation,
             Objective objective,
             int count,
             IRandomNumberGenerator random,

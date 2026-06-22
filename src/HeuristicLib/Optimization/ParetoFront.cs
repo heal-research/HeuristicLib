@@ -12,7 +12,7 @@ public static class ParetoFront
           .ToList();
     }
 
-    public static IReadOnlyList<ISolution<TGenotype>> ExtractFrom<TGenotype>(IEnumerable<ISolution<TGenotype>> population, Objective objective)
+    public static IReadOnlyList<Solution<TGenotype>> ExtractFrom<TGenotype>(IEnumerable<Solution<TGenotype>> population, Objective objective)
       where TGenotype : IEquatable<TGenotype>
     {
         var uniqueISolutions = population.Distinct().ToList();

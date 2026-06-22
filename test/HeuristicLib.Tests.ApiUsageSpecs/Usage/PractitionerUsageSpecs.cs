@@ -174,7 +174,7 @@ public class PractitionerUsageSpecs
             problem);
         evaluations.Count.ShouldBe(1);
 
-        IReadOnlyList<ISolution<RealVector>> solutions =
+        IReadOnlyList<Solution<RealVector>> solutions =
         [
             new Solution<RealVector>(parent, new ObjectiveVector(2.0)),
             new Solution<RealVector>(otherParent, new ObjectiveVector(1.0))
@@ -184,7 +184,7 @@ public class PractitionerUsageSpecs
         ProportionalSelector.Select(solutions, problem.Objective, count: 2, RandomNumberGenerator.Create(2036), windowing: true).Count.ShouldBe(2);
         CommaSelectionReplacer.Replace(solutions, problem.Objective, count: 1).Single().ShouldBe(solutions[1]);
 
-        IReadOnlyList<ISolution<RealVector>> offspring =
+        IReadOnlyList<Solution<RealVector>> offspring =
         [
             new Solution<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
             new Solution<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))

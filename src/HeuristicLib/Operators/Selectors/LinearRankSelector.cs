@@ -6,14 +6,14 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 public record LinearRankSelector<TGenotype>
   : StatelessSelector<TGenotype>
 {
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
       => LinearRankSelector.Select(population, objective, count, random);
 }
 
 public static class LinearRankSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> population,
+    public static IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(
+      IReadOnlyList<Solution<TGenotype>> population,
       Objective objective,
       int count,
       IRandomNumberGenerator random)
@@ -21,7 +21,7 @@ public static class LinearRankSelector
         var list = population.OrderByDescending(x => x.ObjectiveVector, objective.TotalOrderComparer).ToList();
 
         int lotSum = list.Count * (list.Count + 1) / 2;
-        var selected = new ISolution<TGenotype>[count];
+        var selected = new Solution<TGenotype>[count];
         for (int i = 0; i < count; i++)
         {
             int selectedLot = random.NextInt(lotSum);

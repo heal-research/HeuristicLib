@@ -129,11 +129,5 @@ public class CrowdingDistanceTests
 
     // ---------------- helpers ----------------
 
-    private static ISolution<T> Sol<T>(params double[] objs) => new TestSolution<T>(new ObjectiveVector(objs));
-
-    private sealed class TestSolution<T>(ObjectiveVector ov) : ISolution<T>
-    {
-        public T Genotype => throw new NotImplementedException();
-        public ObjectiveVector ObjectiveVector { get; } = ov;
-    }
+    private static Solution<T> Sol<T>(params double[] objs) => new(default!, new ObjectiveVector(objs));
 }

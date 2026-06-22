@@ -59,15 +59,15 @@ public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, Qual
 
 public sealed class QualityCurve<TGenotype>
 {
-    private readonly List<(ISolution<TGenotype> best, int evalCount)> currentState = [];
-    public IReadOnlyList<(ISolution<TGenotype> best, int evalCount)> CurrentState => currentState;
+    private readonly List<(Solution<TGenotype> best, int evalCount)> currentState = [];
+    public IReadOnlyList<(Solution<TGenotype> best, int evalCount)> CurrentState => currentState;
 
-    public void Add(ISolution<TGenotype> solution)
+    public void Add(Solution<TGenotype> solution)
     {
         Best = solution;
         currentState.Add((solution, EvalCount));
     }
 
     public int EvalCount { get; set; }
-    public ISolution<TGenotype>? Best { get; private set; }
+    public Solution<TGenotype>? Best { get; private set; }
 }

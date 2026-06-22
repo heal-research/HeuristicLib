@@ -49,8 +49,8 @@ public static class SelectorDurationExtensions
         private ObservationDuration Duration { get; }
         private TimeProvider TimeProvider { get; }
 
-        protected override IReadOnlyList<ISolution<TG>> Select(
-            IReadOnlyList<ISolution<TG>> population,
+        protected override IReadOnlyList<Solution<TG>> Select(
+            IReadOnlyList<Solution<TG>> population,
             Objective objective,
             int count,
             InnerSelect innerSelect,

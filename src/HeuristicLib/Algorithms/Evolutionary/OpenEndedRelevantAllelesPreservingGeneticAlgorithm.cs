@@ -82,7 +82,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
 
         var oldPopulation = previousState.Population.Solutions;
 
-        IReadOnlyList<ISolution<TGenotype>> newPop;
+        IReadOnlyList<Solution<TGenotype>> newPop;
         if (oldPopulation.Length <= 0)
         {
             var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
@@ -114,7 +114,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
         };
     }
 
-    private static ObjectiveVector Combine((ISolution<TGenotype>, ISolution<TGenotype>) parents, Objective problemObjective, double strictness = 1.0)
+    private static ObjectiveVector Combine((Solution<TGenotype>, Solution<TGenotype>) parents, Objective problemObjective, double strictness = 1.0)
     {
         var o1 = parents.Item1.ObjectiveVector;
         var o2 = parents.Item2.ObjectiveVector;

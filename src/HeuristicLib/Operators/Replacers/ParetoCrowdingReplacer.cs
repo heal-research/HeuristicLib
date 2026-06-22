@@ -13,15 +13,15 @@ public record ParetoCrowdingReplacer<TGenotype>
         this.dominateOnEqualities = dominateOnEqualities;
     }
 
-    public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
       => ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, dominateOnEqualities);
 }
 
 public static class ParetoCrowdingReplacer
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Replace<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation,
+    public static IReadOnlyList<Solution<TGenotype>> Replace<TGenotype>(
+      IReadOnlyList<Solution<TGenotype>> previousPopulation,
+      IReadOnlyList<Solution<TGenotype>> offspringPopulation,
       Objective objective,
       int count,
       bool dominateOnEqualities)
@@ -29,7 +29,7 @@ public static class ParetoCrowdingReplacer
         var all = previousPopulation.Concat(offspringPopulation).ToArray();
         var fronts = DominationCalculator.CalculateAllParetoFronts(all, objective, out _, dominateOnEqualities);
 
-        var l = new List<ISolution<TGenotype>>();
+        var l = new List<Solution<TGenotype>>();
         var size = count;
         foreach (var front in fronts)
         {

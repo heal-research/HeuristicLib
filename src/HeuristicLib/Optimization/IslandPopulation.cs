@@ -4,7 +4,7 @@ using Generator.Equals;
 namespace HEAL.HeuristicLib.Optimization;
 
 [Equatable]
-public partial record IslandPopulation<TGenotype> : IISolutionLayout<TGenotype>
+public partial record IslandPopulation<TGenotype> : ISolutionLayout<TGenotype>
 {
     [OrderedEquality]
     public IReadOnlyList<Population<TGenotype>> Islands { get; init; }
@@ -13,7 +13,7 @@ public partial record IslandPopulation<TGenotype> : IISolutionLayout<TGenotype>
     {
         this.Islands = Islands;
     }
-    public IEnumerator<ISolution<TGenotype>> GetEnumerator() => Islands.SelectMany(island => island.Solutions).GetEnumerator();
+    public IEnumerator<Solution<TGenotype>> GetEnumerator() => Islands.SelectMany(island => island.Solutions).GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

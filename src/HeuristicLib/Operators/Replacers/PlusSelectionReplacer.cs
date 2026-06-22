@@ -6,14 +6,14 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 public record PlusSelectionReplacer<TGenotype>
   : StatelessReplacer<TGenotype>
 {
-    public override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
     {
         return Replace(previousPopulation, offspringPopulation, objective, count);
     }
 
-    public static IReadOnlyList<ISolution<TGenotype>> Replace(
-      IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation,
+    public static IReadOnlyList<Solution<TGenotype>> Replace(
+      IReadOnlyList<Solution<TGenotype>> previousPopulation,
+      IReadOnlyList<Solution<TGenotype>> offspringPopulation,
       Objective objective,
       int count)
     {

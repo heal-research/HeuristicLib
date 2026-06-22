@@ -49,9 +49,9 @@ public static class ReplacerDurationExtensions
         private ObservationDuration Duration { get; }
         private TimeProvider TimeProvider { get; }
 
-        protected override IReadOnlyList<ISolution<TG>> Replace(
-            IReadOnlyList<ISolution<TG>> previousPopulation,
-            IReadOnlyList<ISolution<TG>> offspringPopulation,
+        protected override IReadOnlyList<Solution<TG>> Replace(
+            IReadOnlyList<Solution<TG>> previousPopulation,
+            IReadOnlyList<Solution<TG>> offspringPopulation,
             Objective objective,
             int count,
             InnerReplace innerReplace,

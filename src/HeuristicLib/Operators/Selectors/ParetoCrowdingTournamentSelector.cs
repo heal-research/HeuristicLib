@@ -15,8 +15,8 @@ public record ParetoCrowdingTournamentSelector<TGenotype>
         TournamentSize = tournamentSize;
     }
 
-    public override IReadOnlyList<ISolution<TGenotype>> Select(
-      IReadOnlyList<ISolution<TGenotype>> population,
+    public override IReadOnlyList<Solution<TGenotype>> Select(
+      IReadOnlyList<Solution<TGenotype>> population,
       Objective objective,
       int count,
       IRandomNumberGenerator random)
@@ -25,8 +25,8 @@ public record ParetoCrowdingTournamentSelector<TGenotype>
 
 public static class ParetoCrowdingTournamentSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> population,
+    public static IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(
+      IReadOnlyList<Solution<TGenotype>> population,
       Objective objective,
       int count,
       IRandomNumberGenerator random,
@@ -36,8 +36,8 @@ public static class ParetoCrowdingTournamentSelector
         var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
 
         // Key by solution instead of ObjectiveVector
-        var crowdingBySolution = new Dictionary<ISolution<TGenotype>, double>(ReferenceEqualityComparer.Instance);
-        var res = new ISolution<TGenotype>[count];
+        var crowdingBySolution = new Dictionary<Solution<TGenotype>, double>(ReferenceEqualityComparer.Instance);
+        var res = new Solution<TGenotype>[count];
 
         var calculatedFront = new HashSet<int>();
 

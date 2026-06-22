@@ -25,7 +25,7 @@ public class MultiObjectiveTests
     [Fact]
     public void EmptyInput_ReturnsNoFronts_AndEmptyRank()
     {
-        var solutions = Array.Empty<ISolution<object>>();
+        var solutions = Array.Empty<Solution<object>>();
         var objective = MinimizeAll(2);
 
         var fronts = DominationCalculator.CalculateAllParetoFronts(solutions, objective, out var rank);
@@ -100,7 +100,7 @@ public class MultiObjectiveTests
         ids[2].ShouldBe(["C"]);
     }
 
-    private static string[][] FrontIds(List<List<ISolution<string>>> fronts)
+    private static string[][] FrontIds(List<List<Solution<string>>> fronts)
       => fronts.Select(f => f.Select(s => s.Genotype).OrderBy(x => x).ToArray()).ToArray();
 
     private static Solution<string> Sol(string id, params double[] values) => new(id, values);

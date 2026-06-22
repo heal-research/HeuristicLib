@@ -12,13 +12,13 @@ public record NoSameMatesSelector<TGenotype, TSearchSpace, TProblem>(
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-    protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    protected override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         int selectedParents = 0;
         int poolCount = 0;
 
-        var selected = new ISolution<TGenotype>[count];
-        var parentsPool = new ISolution<TGenotype>[count];
+        var selected = new Solution<TGenotype>[count];
+        var parentsPool = new Solution<TGenotype>[count];
         // repeat until enough parents are selected or max attempts are reached
         for (int attempts = 1; attempts <= MaxAttempts && selectedParents < count; attempts++)
         {

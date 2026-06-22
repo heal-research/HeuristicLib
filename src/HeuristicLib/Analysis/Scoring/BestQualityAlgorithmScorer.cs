@@ -64,9 +64,9 @@ public record HyperVolumeAlgorithmScorer<T, TS, TP, TSearchState>(IAlgorithm<T, 
 public class ParetoState<T>
 {
     protected Lazy<ObjectiveVector>? HyperVolume;
-    private List<ISolution<T>> Front { get; } = [];
+    private List<Solution<T>> Front { get; } = [];
 
-    public void AddPoints(IEnumerable<ISolution<T>> solutions, Objective objective, ObjectiveVector referencePoint)
+    public void AddPoints(IEnumerable<Solution<T>> solutions, Objective objective, ObjectiveVector referencePoint)
     {
         var t = false;
         foreach (var solution in solutions)

@@ -84,11 +84,11 @@ public record HillClimber<TGenotype, TSearchSpace, TProblem>
     }
 
     private bool TryFindImprovement(
-        ISolution<TGenotype> current,
+        Solution<TGenotype> current,
         ExecutionState executionState,
         TProblem problem,
         IRandomNumberGenerator random,
-        [NotNullWhen(true)] out ISolution<TGenotype>? improvement)
+        [NotNullWhen(true)] out Solution<TGenotype>? improvement)
     {
         improvement = null;
 
@@ -113,7 +113,7 @@ public record HillClimber<TGenotype, TSearchSpace, TProblem>
         return improvement is not null;
     }
 
-    private static SingleSolutionState<TGenotype> ToState(ISolution<TGenotype> solution)
+    private static SingleSolutionState<TGenotype> ToState(Solution<TGenotype> solution)
     {
         return new SingleSolutionState<TGenotype>
         {

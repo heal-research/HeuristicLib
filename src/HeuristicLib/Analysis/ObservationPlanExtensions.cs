@@ -75,7 +75,7 @@ public static class ObservationPlanExtensions
           where TP : class, IProblem<TG, TS>
           => observations.Observe<IReplacer<TG, TS, TP>, IReplacerInstance<TG, TS, TP>, IReplacerObserver<TG, TS, TP>>(replacer, observer, static (r, o) => r.ObserveWith(o));
 
-        public void Observe<TG, TS, TP>(IReplacer<TG, TS, TP> replacer, Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, TS, TP> afterReplacement)
+        public void Observe<TG, TS, TP>(IReplacer<TG, TS, TP> replacer, Action<IReadOnlyList<Solution<TG>>, IReadOnlyList<Solution<TG>>, IReadOnlyList<Solution<TG>>, Objective, TS, TP> afterReplacement)
           where TS : class, ISearchSpace<TG>
           where TP : class, IProblem<TG, TS>
           => observations.Observe(replacer, new ActionReplacerObserver<TG, TS, TP>(afterReplacement));
@@ -85,7 +85,7 @@ public static class ObservationPlanExtensions
           where TP : class, IProblem<TG, TS>
           => observations.Observe<ISelector<TG, TS, TP>, ISelectorInstance<TG, TS, TP>, ISelectorObserver<TG, TS, TP>>(selector, observer, static (s, o) => s.ObserveWith(o));
 
-        public void Observe<TG, TS, TP>(ISelector<TG, TS, TP> selector, Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection)
+        public void Observe<TG, TS, TP>(ISelector<TG, TS, TP> selector, Action<IReadOnlyList<Solution<TG>>, IReadOnlyList<Solution<TG>>, Objective, int, TS, TP> afterSelection)
           where TS : class, ISearchSpace<TG>
           where TP : class, IProblem<TG, TS>
           => observations.Observe(selector, new ActionSelectorObserver<TG, TS, TP>(afterSelection));
