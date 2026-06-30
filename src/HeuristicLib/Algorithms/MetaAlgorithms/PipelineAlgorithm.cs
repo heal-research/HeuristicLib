@@ -81,8 +81,10 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
         foreach (var (algorithm, index) in Algorithms.Select((a, i) => (a, i)))
         {
             var algRng = random.Fork(index);
-            // run a new fresh stream here
-            await foreach (var newState in algorithm.RunStreamingAsync(problem, algRng, state, ct))
+            var registry = Run.CreateNewRegistry();
+            var algorithmInstance = algorithm.CreateExecutionInstance(registry);
+
+            await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algRng, state, ct))
             {
                 state = newState;
                 yield return newState;

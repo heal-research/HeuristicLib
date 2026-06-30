@@ -4,7 +4,15 @@ This glossary defines the canonical terminology used in HeuristicLib.
 
 It is a user-facing reference for library users, advanced users, contributors, and AI agents. It should keep common domain and API terms consistent across documentation, examples, tests, plans, and public API discussions.
 
-The glossary is not a replacement for the user guide or API reference. Entries should define terms concisely and link to deeper documentation when a longer explanation belongs elsewhere.
+The glossary is not a replacement for the user guide or API reference. Entries should define terms concisely and leave workflows, examples, rationale, and implementation details to the focused documentation pages.
+
+## Writing Entries
+
+Each entry should answer what the term means in HeuristicLib and what it must not be confused with.
+
+Prefer adding or keeping an entry when the term is project-specific, overloaded in common use, easy to confuse with another HeuristicLib term, or important for consistent API and documentation language. Prefer omitting or trimming an entry when the term is already obvious to the target audience or when the text mainly repeats another documentation page.
+
+Entries should stay short. Use examples only when they disambiguate the term. Mention code names only when they are part of the user-facing vocabulary. Use `See also` only for relationships that clarify the meaning of the current term.
 
 ## Terminology Status
 
@@ -24,11 +32,41 @@ Status: `Canonical`
 
 An algorithm defines the search process for a problem.
 
-In a run, an algorithm advances from one search state to the next until the run stops. This transition may depend on the previous search state, private runtime state, the problem, randomness, and child operators. One-shot algorithms are still algorithms; they produce a search process with a single state.
+In a run, an algorithm advances search state until the run stops. This may depend on previous search state, private execution state, the problem, randomness, and child operators. One-shot algorithms are still algorithms; they produce a search process with a single state.
 
-Use algorithm for the reusable configuration unless the text explicitly says algorithm runtime.
+Use algorithm for the reusable configuration unless the text explicitly says algorithm execution instance.
 
-See also: Configuration, Operator, Run, Runtime, Search state.
+See also: Configuration, Execution instance, Operator, Run, Search state.
+
+## Meta-algorithm
+
+Status: `Canonical`
+
+A meta-algorithm is an algorithm whose search process is defined by coordinating one or more child algorithms.
+
+A meta-algorithm is still an algorithm: it produces search states as part of a run and may be used wherever an algorithm is expected. The distinction is that a meta-algorithm coordinates algorithms, not just operators.
+
+Do not confuse a meta-algorithm with an experiment. A meta-algorithm composes child algorithms inside one run; an experiment coordinates multiple independent runs.
+
+Related terms:
+
+- `Composed algorithm`: descriptive related term. Prefer meta-algorithm for the canonical concept.
+
+See also: Algorithm, Experiment, Run.
+
+## Analyzer
+
+Status: `Canonical`
+
+An analyzer is a reusable, run-scoped analysis configuration.
+
+An analyzer declares which observations it needs and exposes analysis results through the run. It records or derives information about execution; it should not control optimization behavior.
+
+Related terms:
+
+- `Analyzer result`: the run-owned result exposed by an analyzer.
+
+See also: Observation, Run.
 
 ## Candidate
 
@@ -36,17 +74,30 @@ Status: `Canonical`
 
 A candidate is the algorithm-facing object being searched, created, transformed, evaluated, selected, or replaced.
 
-Candidates are the values that algorithms and operators manipulate directly. In many problems, a candidate is also the domain object a user would casually call a solution. In other cases, the algorithm-facing candidate and the domain-facing solution may differ.
-
-Use candidate when precision matters around unevaluated or intermediate values. Candidate does not imply that the value is good, final, feasible in the broader domain sense, or already evaluated.
+Candidates are the values that algorithms and operators manipulate directly. Use candidate when precision matters around unevaluated or intermediate values. Candidate does not imply that the value is good, final, feasible in the broader domain sense, or already evaluated.
 
 Related terms:
 
 - `Genotype`: `Alias`. Use when an evolutionary-algorithm-flavored distinction between encoded representation and phenotype/domain expression is useful.
-- `Solution`: `Alias`. Use in user-facing or domain-facing prose when the candidate is being discussed as a possible answer to the problem. Avoid solution when the distinction between unevaluated candidates and evaluated candidates matters.
+- `Solution`: `Alias`. Use in user-facing or domain-facing prose when the candidate is discussed as a possible answer to the problem. Avoid solution when the distinction between unevaluated and evaluated candidates matters.
 - `Evaluated candidate`: a candidate paired with objective values.
 
 See also: Evaluated candidate, Search space, Search state.
+
+## Encoding
+
+Status: `Canonical`
+
+An encoding is the representation scheme used to express domain-facing solutions as candidates.
+
+In HeuristicLib, encoding is usually reflected by the candidate type and the way a problem interprets candidates. It is not normally a separate object. Do not use encoding as a synonym for search space: the search space defines which candidate values are valid for a problem, while the encoding describes how candidate values represent possible solutions.
+
+Related terms:
+
+- `Representation`: `Alias`. Common in optimization and evolutionary-algorithm literature.
+- `Genotype`: related evolutionary-algorithm term for the encoded candidate.
+
+See also: Candidate, Problem, Search space.
 
 ## Evaluated candidate
 
@@ -54,7 +105,7 @@ Status: `Canonical`
 
 An evaluated candidate is a candidate paired with objective values produced by evaluating it.
 
-Use evaluated candidate when the distinction between the searched object and its evaluation matters. An evaluated candidate is not necessarily final, optimal, feasible in every domain sense, or selected for future search steps.
+Use evaluated candidate when the distinction between the searched object and its evaluation matters. An evaluated candidate is not necessarily final, optimal, or selected for future search steps.
 
 See also: Candidate, Evaluation, Evaluator, Search state.
 
@@ -74,11 +125,23 @@ Status: `Canonical`
 
 An evaluator is the operator that turns candidates into evaluated candidates.
 
-The evaluator may evaluate the input candidate as-is, or it may first produce a transformed candidate and then evaluate that transformed candidate. In either case, the objective value(s) in the evaluated candidate must describe the candidate that is returned as evaluated, not merely the original input candidate.
+The evaluator may return the input candidate as evaluated, or return a transformed candidate as evaluated. In either case, the objective value(s) must describe the candidate that is returned as evaluated.
 
 Use evaluator for the operator role. Use evaluation for the act of obtaining objective value(s).
 
 See also: Candidate, Evaluated candidate, Evaluation, Objective value(s).
+
+## Experiment
+
+Status: `Provisional`
+
+An experiment is an execution setup that coordinates multiple independent runs.
+
+An experiment is not an algorithm: it does not produce one continuous stream of search states and does not pass search state from one run to the next. A repeated experiment executes the same algorithm configuration multiple times. A comparative experiment executes different algorithm configurations, parameter settings, problems, or problem instances.
+
+Seed policy is an important part of an experiment because it defines how random seeds are assigned to independent runs, especially when stochastic algorithms are repeated or executed in parallel.
+
+See also: Algorithm, Problem, Problem instance, Run.
 
 ## Objective value(s)
 
@@ -86,9 +149,9 @@ Status: `Canonical`
 
 An objective value is a numeric value produced by evaluating a candidate for one objective.
 
-Use objective value for one value and objective values for one or more values. A single-objective setting has exactly one objective value per evaluated candidate. A multi-objective setting has more than one objective value per evaluated candidate.
+Use objective value for one value and objective values for one or more values.
 
-Objective values are not enough to decide what is better on their own. They must be interpreted together with objective directions or another explicit comparison rule. Some algorithms and operators require exactly one objective value or require a comparison rule that turns multiple objective values into a usable order.
+Objective values do not decide what is better on their own. They must be interpreted together with objective directions or another explicit comparison rule.
 
 Related terms:
 
@@ -99,19 +162,32 @@ Related terms:
 
 See also: Candidate, Evaluated candidate, Objective direction(s).
 
+## Observation
+
+Status: `Canonical`
+
+An observation is a read-only capture at a defined algorithm or operator boundary.
+
+An observation may record data, but it must not change the observed operation's inputs, outputs, or internal computation. Explicit policies may later read observation data to make decisions, such as stopping a run.
+
+Related terms:
+
+- `Observer`: the callback object or function that receives an observation.
+- `Observable operator`: an operator wrapper that installs observers around an operator boundary.
+
+See also: Analyzer, Operator, Run.
+
 ## Operator
 
 Status: `Canonical`
 
 An operator is a reusable building block that an algorithm or another operator calls to perform one named operation in the search process.
 
-Examples of operator roles include creators, evaluators, selectors, crossovers, mutators, replacers, terminators, and interceptors. Operators may create candidates, evaluate candidates, select evaluated candidates, recombine candidates, mutate candidates, replace populations, decide termination, or transform produced search states.
+Examples include creators, evaluators, selectors, crossovers, mutators, replacers, terminators, and interceptors. An operator does not own the overall search process or define the run's stream of search states.
 
-An operator does not own the overall search process and does not define the run's stream of search states.
+Use operator for the reusable configuration unless the text explicitly says operator execution instance.
 
-Use operator for the reusable configuration unless the text explicitly says operator runtime.
-
-See also: Algorithm, Configuration, Evaluator, Runtime.
+See also: Algorithm, Configuration, Evaluator, Execution instance.
 
 ## Problem
 
@@ -119,9 +195,7 @@ Status: `Canonical`
 
 A problem is the complete runnable optimization task that an algorithm operates on.
 
-A problem defines the search space of candidates, the evaluation semantics that produce objective value(s), the objective direction(s) used to interpret those values, and the concrete data or parameters needed for evaluation.
-
-A problem may contain its concrete data directly or refer to separately modeled problem instance data.
+A problem defines the search space, the evaluation semantics that produce objective value(s), the objective direction(s), and the concrete data or parameters needed for evaluation.
 
 See also: Candidate, Evaluation, Objective direction(s), Objective value(s), Problem instance, Search space.
 
@@ -131,7 +205,7 @@ Status: `Canonical`
 
 A population is a collection of evaluated candidates maintained together by a population-based algorithm.
 
-In HeuristicLib terminology, population implies evaluated candidates. Collections of candidates that have not yet been evaluated should be described more specifically, such as created candidates, offspring candidates, selected candidates, or candidate batch.
+In HeuristicLib terminology, population implies evaluated candidates. Collections of unevaluated candidates should be described more specifically.
 
 See also: Candidate, Evaluated candidate, Population structure, Search state.
 
@@ -151,8 +225,6 @@ Status: `Canonical`
 
 A problem instance is the concrete domain data or parameterization for a problem when that part is useful to discuss separately.
 
-Examples include a TSP distance matrix, TSP coordinates, a symbolic-regression dataset and target variable, or benchmark-function parameters such as dimension, bounds, shift, rotation, noise, or instance id.
-
 Do not use problem instance to mean an ordinary programming-language object instance of a problem class.
 
 See also: Problem.
@@ -167,7 +239,7 @@ Use objective direction for one objective. Use objective directions for the dire
 
 Objective directions do not, by themselves, define a full ordering of evaluated candidates with multiple objective values. Multi-objective cases may need an additional comparison rule.
 
-See also: Objective value.
+See also: Objective value(s).
 
 ## Search space
 
@@ -175,7 +247,7 @@ Status: `Canonical`
 
 A search space is the algorithm-facing domain of valid candidates.
 
-The search space defines which candidates algorithms and operators may create, transform, and evaluate. It is not necessarily the same as the broader domain-facing solution space. Their relationship depends on the representation used for search: they may be identical, the search space may intentionally cover only part of the solution space, multiple candidates may correspond to the same domain solution, or the two spaces may be structurally different.
+The search space defines which candidates algorithms and operators may create, transform, and evaluate. It is not necessarily the same as the broader domain-facing solution space; their relationship depends on the representation used for search.
 
 Related terms:
 
@@ -189,11 +261,7 @@ Status: `Canonical`
 
 A configuration is a reusable algorithm or operator object that users set up before execution.
 
-A configuration can contain user-selected parameters, references to child algorithm or operator configurations, validation or helper logic, and the mechanism that creates run-scoped runtime objects. It is not required to be a passive data object.
-
-When mutable run-local state is needed, execution creates a separate run-scoped runtime object or runtime state. Stateless operators may let the same object serve both the configuration role and the runtime role because there is no run-local state to isolate.
-
-Records are often used for configuration objects because value-style construction and copying are convenient, not because configuration objects must be dumb data containers.
+A configuration can contain parameters, child configurations, validation or helper logic, and the mechanism that creates execution instances. It is not required to be a passive data object. Mutable execution data belongs in execution state, not in the reusable configuration.
 
 Use more specific terms when the context benefits from them:
 
@@ -204,7 +272,7 @@ Related terms:
 
 - `Definition`: `Legacy`. Older docs may use definition for the reusable configured object graph. Prefer configuration in new text.
 
-See also: Algorithm, Operator, Run, Runtime.
+See also: Algorithm, Execution instance, Operator, Run.
 
 ## Configuration graph
 
@@ -212,23 +280,53 @@ Status: `Canonical`
 
 A configuration graph is the graph of reusable configuration objects connected by references.
 
-Configuration graph edges usually represent composition or use relationships, such as an algorithm configuration referencing creator, evaluator, crossover, mutator, selector, replacer, terminator, interceptor, or child algorithm configurations.
-
 Use graph rather than tree because the same configuration object may be shared from more than one place. Do not use DAG as the glossary term; ordinary configuration graphs are expected to be acyclic, but the glossary term should not encode that stricter shape.
 
-See also: Configuration, Runtime graph.
+See also: Configuration, Execution graph.
+
+## Execution graph
+
+Status: `Canonical`
+
+An execution graph is a graph of execution instances created from a configuration graph during a run.
+
+A run may contain more than one execution graph over time, for example when meta-algorithms create fresh execution instances for nested algorithms.
+
+See also: Configuration graph, Execution instance, Run.
+
+## Random number generator (RNG)
+
+Status: `Canonical`
+
+A random number generator is the explicit source of randomness passed to algorithms, operators, problems, and execution helpers.
+
+Drawing random values from an RNG changes its state, so draw order matters. Forking an RNG creates deterministic child RNGs without drawing random values from the parent. A user-provided seed creates the root RNG.
+
+See also: Experiment, Run.
 
 ## Run
 
 Status: `Canonical`
 
-A run is one concrete invocation context for an algorithm configuration.
+A run is one logical execution of an algorithm configuration on a problem.
 
-A run combines the algorithm configuration with a problem, optional analyzers, and the run-bound runtime machinery needed to produce search states. A run can exist before execution starts, while execution is in progress, and after execution has finished.
+When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Users usually interact with runs through methods such as `CreateRun(...)`, `RunStreaming(...)`, and `RunToCompletion(...)`. Beginner-facing documentation should prefer run terminology over runtime terminology unless the runtime machinery itself is the topic.
+Analyzers are attached to a run, so their observations and results can span nested algorithms and multiple short-lived execution instances.
 
-See also: Configuration, Runtime.
+See also: Analyzer, Configuration, Execution instance, Search state.
+
+## Termination
+
+Status: `Canonical`
+
+Termination is the stopping of a run or algorithm stream after a produced search state or because the algorithm cannot produce another search state.
+
+Distinguish algorithm-owned termination from external early stopping. Algorithm-owned termination is part of the algorithm's own search process. External early stopping is applied around an algorithm or meta-algorithm stream, such as a wrapper that stops after a maximum number of yielded states, elapsed time, or observed operator work.
+
+A terminator is the operator role that decides whether execution should stop after observing a produced search state.
+
+See also: Algorithm, Meta-algorithm, Operator, Run, Search state.
 
 ## Search state
 
@@ -236,103 +334,63 @@ Status: `Canonical`
 
 A search state is the public state value produced by an algorithm while it searches a search space.
 
-Search states describe the current visible progress of a search process, such as the current evaluated candidate or current set of evaluated candidates. They are part of the algorithm output surface and may be streamed, inspected, analyzed, or returned as the final state of a run.
+Search states describe the visible progress of a search process, such as the current evaluated candidate or current population. They may be streamed, inspected, analyzed, or returned as the final state of a run.
 
-Search state is distinct from runtime state. Runtime state is private run-bound machinery used to produce progress; search state is the public value that represents that progress.
+Search state is distinct from execution state. Execution state is private machinery used to produce progress; search state is the public value that represents that progress.
 
 Use search terminology for the state and the search space, but do not use search algorithm as the default term for every HeuristicLib algorithm. Prefer algorithm, optimization algorithm, metaheuristic, or a more specific algorithm family where appropriate.
 
-See also: Candidate, Evaluated candidate, Run, Runtime state, Search space.
+See also: Candidate, Evaluated candidate, Execution state, Run, Search space.
 
-## Runtime
+## Execution instance
 
-Status: `Provisional`
+Status: `Canonical`
 
-Runtime is the current preferred family term for the run-bound world created when reusable configurations are activated for a concrete run. This term is provisional because `execution` remains a plausible alternative if `runtime` proves too overloaded.
+An execution instance is the concrete algorithm or operator object created from a configuration for use during a run.
 
-The runtime world contains the resolved executable objects, private runtime state, and object graph that belong to that run-scoped activation. Runtime objects do not need to be actively executing at every moment. They may be dormant between calls while still holding resolved dependencies and run-local state.
+Execution instances perform the work of an algorithm or operator after configuration has been resolved for execution. They may hold private execution state and resolved child execution instances.
 
-Use runtime as the direct noun when it is combined with a specific role. Prefer role-specific runtime terms over generic wording:
+An execution instance can be shorter-lived than the run. Meta-algorithms may create fresh execution instances for nested algorithms while all of those nested execution instances still belong to the same run.
 
-- `algorithm runtime`
-- `operator runtime`
-- `creator runtime`
-- `evaluator runtime`
-- `crossover runtime`
-- `mutator runtime`
+Use role-specific terms when the context benefits from them:
 
-Do not use runtime as a synonym for the .NET runtime or process environment in HeuristicLib terminology.
+- `algorithm execution instance`
+- `operator execution instance`
+- `creator execution instance`
+- `evaluator execution instance`
+- `crossover execution instance`
+- `mutator execution instance`
 
-Related terms:
+See also: Configuration, Execution state, Run.
 
-- `Execution`: the act or process of running an algorithm, consuming a stream, or producing states. Execution remains useful for process-level phrases such as execution model or streaming execution, but should not be the preferred family term for run-bound objects and state.
-- `Runtime object`: `Alias`. Use this only when a generic noun is necessary. Prefer role-specific terms such as algorithm runtime or operator runtime when possible.
-- `Execution instance`: `Legacy`. Current docs and code use this term for the run-bound object created from a configuration. Prefer runtime terminology in new glossary language.
-- `Runtime instance`: `Avoid`. Prefer runtime object when a generic noun is necessary; instance is too easily confused with ordinary .NET object instances and singleton `Instance` members.
-- `Execution state`: `Legacy`. Current docs and code use this term for private run-bound state containers. Prefer runtime state in new glossary language.
+## Execution instance registry
 
-See also: Configuration, Run.
+Status: `Canonical`
 
-## Runtime graph
+An execution instance registry is the advanced mechanism that resolves configurations to execution instances during a run.
 
-Status: `Provisional`
+The registry controls execution-instance identity and sharing. Ordinary algorithm and operator authoring should usually use an execution instance resolver rather than managing a registry directly.
 
-A runtime graph is the run-bound graph of runtime objects created from a configuration graph for a run.
+See also: Configuration, Execution graph, Execution instance, Execution instance resolver, Run.
 
-Runtime graph edges represent resolved runtime relationships, such as an algorithm runtime holding operator runtimes or a wrapping operator runtime holding the runtime it wraps. The runtime graph may preserve sharing from the configuration graph when the same configuration object resolves to the same runtime object within a runtime registry.
+## Execution instance resolver
 
-Use graph rather than tree because runtime objects may be shared. Do not use DAG as the glossary term; ordinary runtime graphs are expected to be acyclic, but advanced runtime mechanics should not make the glossary term depend on that stricter shape.
+Status: `Canonical`
 
-Related terms:
+An execution instance resolver is the restricted resolving capability used by ordinary authoring code to obtain child execution instances.
 
-- `Execution graph`: `Legacy`. Older docs may use execution graph for this concept. Prefer runtime graph when describing the configuration-to-runtime model.
+It lets an algorithm or operator resolve the configured child algorithms or operators it depends on.
 
-See also: Configuration graph, Run, Runtime.
+See also: Configuration, Execution graph, Execution instance, Execution instance registry.
 
-## Runtime registry
+## Execution state
 
-Status: `Provisional`
+Status: `Canonical`
 
-A runtime registry is the run-bound mechanism that resolves eligible source objects to runtime objects.
+Execution state is private mutable state owned by an execution instance.
 
-A runtime registry controls runtime object identity and sharing: within one registry, resolving the same source object should return the same runtime object unless replacement or explicit registry behavior says otherwise. Advanced runtime plumbing can also use a runtime registry to pre-register runtime objects, pre-register replacement source objects, or create child registries.
+Execution state can contain resolved child execution instances, counters, caches, buffers, or other data that must not be shared through the reusable configuration.
 
-Ordinary algorithm and operator authoring should usually receive a runtime resolver rather than the full runtime registry.
+Execution state is distinct from search state. Search states describe visible progress through the search and may be streamed, inspected, analyzed, or returned as the final state of a run.
 
-Related terms:
-
-- `Runtime resolver`: the restricted resolving capability exposed to ordinary authoring code.
-- `Execution instance registry`: `Legacy`. Current docs and code use this term for the registry that creates and caches execution instances. Prefer runtime registry when describing the configuration-to-runtime model.
-
-See also: Runtime, Runtime graph, Runtime resolver.
-
-## Runtime resolver
-
-Status: `Provisional`
-
-A runtime resolver is the restricted resolving view of a runtime registry.
-
-Authoring APIs use a runtime resolver when they only need to resolve child runtime objects from source objects. A runtime resolver should not expose registry-management capabilities such as pre-registration, replacement registration, or child-registry creation.
-
-Related terms:
-
-- `Runtime registry`: the full mechanism that usually backs a runtime resolver.
-- `Execution instance resolver`: `Legacy`. Current docs and code use this term for the narrow resolution API passed to authoring code. Prefer runtime resolver when describing the configuration-to-runtime model.
-
-See also: Runtime, Runtime registry.
-
-## Runtime state
-
-Status: `Provisional`
-
-Runtime state is mutable or otherwise run-local state owned by an algorithm runtime or operator runtime.
-
-Runtime state is created for a run or for a runtime object within a run. It can contain resolved runtime dependencies, counters, caches, buffers, or other data that must not be shared through the reusable configuration.
-
-Runtime state is distinct from the public search states produced by an algorithm. Search states describe progress through the search; runtime state is private machinery used to produce that progress.
-
-Related terms:
-
-- `Execution state`: `Legacy`. Current docs and code use execution state for this concept. Prefer runtime state when describing the configuration-to-runtime model.
-
-See also: Configuration, Run, Runtime, Search state.
+See also: Configuration, Execution instance, Run, Search state.
