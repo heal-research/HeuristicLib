@@ -12,6 +12,8 @@
       href: developer-backlog.md
 - name: Fundamentals
   items:
+    - name: Glossary
+      href: glossary.md
     - name: Core concepts
       href: core-concepts.md
     - name: Problem
@@ -28,7 +30,7 @@
       href: algorithm-state.md
     - name: Execution model
       href: execution-model.md
-    - name: Definition vs execution instances
+    - name: Configuration vs execution instances
       href: execution-instances.md
     - name: Observability & analysis
       href: observability-and-analysis.md

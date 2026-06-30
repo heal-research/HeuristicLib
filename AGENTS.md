@@ -2,6 +2,8 @@
 
 Contributor contract for this repository. Durable architectural rationale lives in [docs/design-goals.md](docs/design-goals.md).
 
+Use [docs/glossary.md](docs/glossary.md) for canonical HeuristicLib terminology when editing code, docs, tests, examples, and plans. Prefer glossary terms over legacy or ad hoc wording unless a local context explicitly defines a narrower meaning.
+
 ## Repository map
 
 - `src/HeuristicLib.Contracts`: small public contracts shared across the library.
@@ -10,7 +12,7 @@ Contributor contract for this repository. Durable architectural rationale lives 
 - `src/HeuristicLib.PythonInterop`: Python-specific integration code, adapters, and workflows.
 - `test/HeuristicLib.Tests`: fast unit tests for core library behavior and invariants.
 - `test/HeuristicLib.Tests.Experimental`: fast unit tests for experimental library behavior and invariants.
-- `test/HeuristicLib.Tests.Scenarios`: broader workflow, runtime, and data-backed scenarios that may span core, experimental, and integration packages.
+- `test/HeuristicLib.Tests.Scenarios`: broader workflow, execution, and data-backed scenarios that may span core, experimental, and integration packages.
 - `test/HeuristicLib.Tests.ApiUsageSpecs`: executable API usage specs; see `test/README.md` before editing specs.
 - `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.
 - `docs`: user-facing and design documentation.

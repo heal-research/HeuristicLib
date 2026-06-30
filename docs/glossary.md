@@ -26,49 +26,29 @@ Glossary entries may identify related terms by status:
 
 When a legacy or avoid-listed term appears in repository text, prefer changing it to the canonical term as part of nearby edits. Public type names do not need to carry these qualifiers when the unqualified type name is the primary user-facing API, such as `GeneticAlgorithm` rather than `GeneticAlgorithmConfiguration`.
 
-## Algorithm
+## Optimization Domain
+
+### Problem
 
 Status: `Canonical`
 
-An algorithm defines the search process for a problem.
+A problem is the complete runnable optimization task that an algorithm operates on.
 
-In a run, an algorithm advances search state until the run stops. This may depend on previous search state, private execution state, the problem, randomness, and child operators. One-shot algorithms are still algorithms; they produce a search process with a single state.
+A problem defines the search space, the evaluation semantics that produce objective value(s), the objective direction(s), and the concrete data or parameters needed for evaluation.
 
-Use algorithm for the reusable configuration unless the text explicitly says algorithm execution instance.
+See also: Candidate, Evaluation, Objective direction(s), Objective value(s), Problem instance, Search space.
 
-See also: Configuration, Execution instance, Operator, Run, Search state.
-
-## Meta-algorithm
+### Problem instance
 
 Status: `Canonical`
 
-A meta-algorithm is an algorithm whose search process is defined by coordinating one or more child algorithms.
+A problem instance is the concrete domain data or parameterization for a problem when that part is useful to discuss separately.
 
-A meta-algorithm is still an algorithm: it produces search states as part of a run and may be used wherever an algorithm is expected. The distinction is that a meta-algorithm coordinates algorithms, not just operators.
+Do not use problem instance to mean an ordinary programming-language object instance of a problem class.
 
-Do not confuse a meta-algorithm with an experiment. A meta-algorithm composes child algorithms inside one run; an experiment coordinates multiple independent runs.
+See also: Problem.
 
-Related terms:
-
-- `Composed algorithm`: descriptive related term. Prefer meta-algorithm for the canonical concept.
-
-See also: Algorithm, Experiment, Run.
-
-## Analyzer
-
-Status: `Canonical`
-
-An analyzer is a reusable, run-scoped analysis configuration.
-
-An analyzer declares which observations it needs and exposes analysis results through the run. It records or derives information about execution; it should not control optimization behavior.
-
-Related terms:
-
-- `Analyzer result`: the run-owned result exposed by an analyzer.
-
-See also: Observation, Run.
-
-## Candidate
+### Candidate
 
 Status: `Canonical`
 
@@ -84,7 +64,7 @@ Related terms:
 
 See also: Evaluated candidate, Search space, Search state.
 
-## Encoding
+### Encoding
 
 Status: `Canonical`
 
@@ -99,7 +79,7 @@ Related terms:
 
 See also: Candidate, Problem, Search space.
 
-## Evaluated candidate
+### Evaluated candidate
 
 Status: `Canonical`
 
@@ -109,7 +89,21 @@ Use evaluated candidate when the distinction between the searched object and its
 
 See also: Candidate, Evaluation, Evaluator, Search state.
 
-## Evaluation
+### Search space
+
+Status: `Canonical`
+
+A search space is the algorithm-facing domain of valid candidates.
+
+The search space defines which candidates algorithms and operators may create, transform, and evaluate. It is not necessarily the same as the broader domain-facing solution space; their relationship depends on the representation used for search.
+
+Related terms:
+
+- `Solution space`: the domain-facing space of possible answers to a problem. It is related to, but not a synonym for, search space.
+
+See also: Candidate.
+
+### Evaluation
 
 Status: `Canonical`
 
@@ -119,31 +113,7 @@ Use evaluation for the problem-level meaning: applying the problem's evaluation 
 
 See also: Candidate, Evaluated candidate, Objective value(s), Evaluator.
 
-## Evaluator
-
-Status: `Canonical`
-
-An evaluator is the operator that turns candidates into evaluated candidates.
-
-The evaluator may return the input candidate as evaluated, or return a transformed candidate as evaluated. In either case, the objective value(s) must describe the candidate that is returned as evaluated.
-
-Use evaluator for the operator role. Use evaluation for the act of obtaining objective value(s).
-
-See also: Candidate, Evaluated candidate, Evaluation, Objective value(s).
-
-## Experiment
-
-Status: `Provisional`
-
-An experiment is an execution setup that coordinates multiple independent runs.
-
-An experiment is not an algorithm: it does not produce one continuous stream of search states and does not pass search state from one run to the next. A repeated experiment executes the same algorithm configuration multiple times. A comparative experiment executes different algorithm configurations, parameter settings, problems, or problem instances.
-
-Seed policy is an important part of an experiment because it defines how random seeds are assigned to independent runs, especially when stochastic algorithms are repeated or executed in parallel.
-
-See also: Algorithm, Problem, Problem instance, Run.
-
-## Objective value(s)
+### Objective value(s)
 
 Status: `Canonical`
 
@@ -162,74 +132,7 @@ Related terms:
 
 See also: Candidate, Evaluated candidate, Objective direction(s).
 
-## Observation
-
-Status: `Canonical`
-
-An observation is a read-only capture at a defined algorithm or operator boundary.
-
-An observation may record data, but it must not change the observed operation's inputs, outputs, or internal computation. Explicit policies may later read observation data to make decisions, such as stopping a run.
-
-Related terms:
-
-- `Observer`: the callback object or function that receives an observation.
-- `Observable operator`: an operator wrapper that installs observers around an operator boundary.
-
-See also: Analyzer, Operator, Run.
-
-## Operator
-
-Status: `Canonical`
-
-An operator is a reusable building block that an algorithm or another operator calls to perform one named operation in the search process.
-
-Examples include creators, evaluators, selectors, crossovers, mutators, replacers, terminators, and interceptors. An operator does not own the overall search process or define the run's stream of search states.
-
-Use operator for the reusable configuration unless the text explicitly says operator execution instance.
-
-See also: Algorithm, Configuration, Evaluator, Execution instance.
-
-## Problem
-
-Status: `Canonical`
-
-A problem is the complete runnable optimization task that an algorithm operates on.
-
-A problem defines the search space, the evaluation semantics that produce objective value(s), the objective direction(s), and the concrete data or parameters needed for evaluation.
-
-See also: Candidate, Evaluation, Objective direction(s), Objective value(s), Problem instance, Search space.
-
-## Population
-
-Status: `Canonical`
-
-A population is a collection of evaluated candidates maintained together by a population-based algorithm.
-
-In HeuristicLib terminology, population implies evaluated candidates. Collections of unevaluated candidates should be described more specifically.
-
-See also: Candidate, Evaluated candidate, Population structure, Search state.
-
-## Population structure
-
-Status: `Canonical`
-
-Population structure is the organization of a population beyond a flat collection.
-
-Population structures may contain subpopulations, islands, layers, or other groupings used by an algorithm. Use population topology only for graph-like or neighborhood-like relationships within a population structure.
-
-See also: Population.
-
-## Problem instance
-
-Status: `Canonical`
-
-A problem instance is the concrete domain data or parameterization for a problem when that part is useful to discuss separately.
-
-Do not use problem instance to mean an ordinary programming-language object instance of a problem class.
-
-See also: Problem.
-
-## Objective direction(s)
+### Objective direction(s)
 
 Status: `Canonical`
 
@@ -241,21 +144,75 @@ Objective directions do not, by themselves, define a full ordering of evaluated 
 
 See also: Objective value(s).
 
-## Search space
+## Algorithms And Operators
+
+### Algorithm
 
 Status: `Canonical`
 
-A search space is the algorithm-facing domain of valid candidates.
+An algorithm defines the search process for a problem.
 
-The search space defines which candidates algorithms and operators may create, transform, and evaluate. It is not necessarily the same as the broader domain-facing solution space; their relationship depends on the representation used for search.
+In a run, an algorithm advances search state until the run stops. This may depend on previous search state, private execution state, the problem, randomness, and child operators. One-shot algorithms are still algorithms; they produce a search process with a single state.
+
+Use algorithm for the reusable configuration unless the text explicitly says algorithm execution instance.
+
+See also: Configuration, Execution instance, Operator, Run, Search state.
+
+### Meta-algorithm
+
+Status: `Canonical`
+
+A meta-algorithm is an algorithm whose search process is defined by coordinating one or more child algorithms.
+
+A meta-algorithm is still an algorithm: it produces search states as part of a run and may be used wherever an algorithm is expected. The distinction is that a meta-algorithm coordinates algorithms, not just operators.
+
+Do not confuse a meta-algorithm with an experiment. A meta-algorithm composes child algorithms inside one run; an experiment coordinates multiple independent runs.
 
 Related terms:
 
-- `Solution space`: the domain-facing space of possible answers to a problem. It is related to, but not a synonym for, search space.
+- `Composed algorithm`: descriptive related term. Prefer meta-algorithm for the canonical concept.
 
-See also: Candidate.
+See also: Algorithm, Experiment, Run.
 
-## Configuration
+### Operator
+
+Status: `Canonical`
+
+An operator is a reusable building block that an algorithm or another operator calls to perform one named operation in the search process.
+
+Examples include creators, evaluators, selectors, crossovers, mutators, replacers, terminators, and interceptors. An operator does not own the overall search process or define the run's stream of search states.
+
+Use operator for the reusable configuration unless the text explicitly says operator execution instance.
+
+See also: Algorithm, Configuration, Evaluator, Execution instance.
+
+### Evaluator
+
+Status: `Canonical`
+
+An evaluator is the operator that turns candidates into evaluated candidates.
+
+The evaluator may return the input candidate as evaluated, or return a transformed candidate as evaluated. In either case, the objective value(s) must describe the candidate that is returned as evaluated.
+
+Use evaluator for the operator role. Use evaluation for the act of obtaining objective value(s).
+
+See also: Candidate, Evaluated candidate, Evaluation, Objective value(s).
+
+### Termination
+
+Status: `Canonical`
+
+Termination is the stopping of a run or algorithm stream after a produced search state or because the algorithm cannot produce another search state.
+
+Distinguish algorithm-owned termination from external early stopping. Algorithm-owned termination is part of the algorithm's own search process. External early stopping is applied around an algorithm or meta-algorithm stream, such as a wrapper that stops after a maximum number of yielded states, elapsed time, or observed operator work.
+
+A terminator is the operator role that decides whether execution should stop after observing a produced search state.
+
+See also: Algorithm, Meta-algorithm, Operator, Run, Search state.
+
+## Execution Model
+
+### Configuration
 
 Status: `Canonical`
 
@@ -274,7 +231,7 @@ Related terms:
 
 See also: Algorithm, Execution instance, Operator, Run.
 
-## Configuration graph
+### Configuration graph
 
 Status: `Canonical`
 
@@ -284,27 +241,7 @@ Use graph rather than tree because the same configuration object may be shared f
 
 See also: Configuration, Execution graph.
 
-## Execution graph
-
-Status: `Canonical`
-
-An execution graph is a graph of execution instances created from a configuration graph during a run.
-
-A run may contain more than one execution graph over time, for example when meta-algorithms create fresh execution instances for nested algorithms.
-
-See also: Configuration graph, Execution instance, Run.
-
-## Random number generator (RNG)
-
-Status: `Canonical`
-
-A random number generator is the explicit source of randomness passed to algorithms, operators, problems, and execution helpers.
-
-Drawing random values from an RNG changes its state, so draw order matters. Forking an RNG creates deterministic child RNGs without drawing random values from the parent. A user-provided seed creates the root RNG.
-
-See also: Experiment, Run.
-
-## Run
+### Run
 
 Status: `Canonical`
 
@@ -316,19 +253,7 @@ Analyzers are attached to a run, so their observations and results can span nest
 
 See also: Analyzer, Configuration, Execution instance, Search state.
 
-## Termination
-
-Status: `Canonical`
-
-Termination is the stopping of a run or algorithm stream after a produced search state or because the algorithm cannot produce another search state.
-
-Distinguish algorithm-owned termination from external early stopping. Algorithm-owned termination is part of the algorithm's own search process. External early stopping is applied around an algorithm or meta-algorithm stream, such as a wrapper that stops after a maximum number of yielded states, elapsed time, or observed operator work.
-
-A terminator is the operator role that decides whether execution should stop after observing a produced search state.
-
-See also: Algorithm, Meta-algorithm, Operator, Run, Search state.
-
-## Search state
+### Search state
 
 Status: `Canonical`
 
@@ -342,7 +267,7 @@ Use search terminology for the state and the search space, but do not use search
 
 See also: Candidate, Evaluated candidate, Execution state, Run, Search space.
 
-## Execution instance
+### Execution instance
 
 Status: `Canonical`
 
@@ -363,27 +288,7 @@ Use role-specific terms when the context benefits from them:
 
 See also: Configuration, Execution state, Run.
 
-## Execution instance registry
-
-Status: `Canonical`
-
-An execution instance registry is the advanced mechanism that resolves configurations to execution instances during a run.
-
-The registry controls execution-instance identity and sharing. Ordinary algorithm and operator authoring should usually use an execution instance resolver rather than managing a registry directly.
-
-See also: Configuration, Execution graph, Execution instance, Execution instance resolver, Run.
-
-## Execution instance resolver
-
-Status: `Canonical`
-
-An execution instance resolver is the restricted resolving capability used by ordinary authoring code to obtain child execution instances.
-
-It lets an algorithm or operator resolve the configured child algorithms or operators it depends on.
-
-See also: Configuration, Execution graph, Execution instance, Execution instance registry.
-
-## Execution state
+### Execution state
 
 Status: `Canonical`
 
@@ -394,3 +299,86 @@ Execution state can contain resolved child execution instances, counters, caches
 Execution state is distinct from search state. Search states describe visible progress through the search and may be streamed, inspected, analyzed, or returned as the final state of a run.
 
 See also: Configuration, Execution instance, Run, Search state.
+
+### Execution graph
+
+Status: `Canonical`
+
+An execution graph is a graph of execution instances created from a configuration graph during a run.
+
+A run may contain more than one execution graph over time, for example when meta-algorithms create fresh execution instances for nested algorithms.
+
+See also: Configuration graph, Execution instance, Run.
+
+### Execution instance registry
+
+Status: `Canonical`
+
+An execution instance registry is the advanced mechanism that resolves configurations to execution instances during a run.
+
+The registry controls execution-instance identity and sharing. Ordinary algorithm and operator authoring should usually use an execution instance resolver rather than managing a registry directly.
+
+See also: Configuration, Execution graph, Execution instance, Execution instance resolver, Run.
+
+### Execution instance resolver
+
+Status: `Canonical`
+
+An execution instance resolver is the restricted resolving capability used by ordinary authoring code to obtain child execution instances.
+
+It lets an algorithm or operator resolve the configured child algorithms or operators it depends on.
+
+See also: Configuration, Execution graph, Execution instance, Execution instance registry.
+
+### Random number generator (RNG)
+
+Status: `Canonical`
+
+A random number generator is the explicit source of randomness passed to algorithms, operators, problems, and execution helpers.
+
+Drawing random values from an RNG changes its state, so draw order matters. Forking an RNG creates deterministic child RNGs without drawing random values from the parent. A user-provided seed creates the root RNG.
+
+See also: Experiment, Run.
+
+## Analysis And Experiments
+
+### Analyzer
+
+Status: `Canonical`
+
+An analyzer is a reusable, run-scoped analysis configuration.
+
+An analyzer declares which observations it needs and exposes analysis results through the run. It records or derives information about execution; it should not control optimization behavior.
+
+Related terms:
+
+- `Analyzer result`: the run-owned result exposed by an analyzer.
+
+See also: Observation, Run.
+
+### Observation
+
+Status: `Canonical`
+
+An observation is a read-only capture at a defined algorithm or operator boundary.
+
+An observation may record data, but it must not change the observed operation's inputs, outputs, or internal computation. Explicit policies may later read observation data to make decisions, such as stopping a run.
+
+Related terms:
+
+- `Observer`: the callback object or function that receives an observation.
+- `Observable operator`: an operator wrapper that installs observers around an operator boundary.
+
+See also: Analyzer, Operator, Run.
+
+### Experiment
+
+Status: `Provisional`
+
+An experiment is an execution setup that coordinates multiple independent runs.
+
+An experiment is not an algorithm: it does not produce one continuous stream of search states and does not pass search state from one run to the next. A repeated experiment executes the same algorithm configuration multiple times. A comparative experiment executes different algorithm configurations, parameter settings, problems, or problem instances.
+
+Seed policy is an important part of an experiment because it defines how random seeds are assigned to independent runs, especially when stochastic algorithms are repeated or executed in parallel.
+
+See also: Algorithm, Problem, Problem instance, Run.
