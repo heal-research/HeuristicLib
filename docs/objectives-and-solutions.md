@@ -19,7 +19,7 @@ For single-objective problems, the repository provides `SingleObjective` helpers
 
 ## ObjectiveVector
 
-`ObjectiveVector` is what problem evaluation returns.
+`ObjectiveVector` is what problem evaluation returns. It is the score for a genotype under a problem.
 
 It is a small value object that behaves like a read-only list of doubles and includes multi-objective helpers:
 
@@ -43,6 +43,8 @@ This separation is intentional:
 - Objective vector = evaluation (what you optimize)
 
 In this repository, `Solution<TGenotype>` is a simple record.
+
+Evaluator operators return solutions. This allows an evaluator to return the exact candidate that was evaluated, including repaired or refined candidates, while still keeping `Problem.Evaluate(...)` focused on genotype to objective-vector scoring.
 
 ## Related pages
 

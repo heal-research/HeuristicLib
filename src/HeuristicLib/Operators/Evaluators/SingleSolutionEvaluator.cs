@@ -13,9 +13,9 @@ public abstract record SingleSolutionEvaluator<TGenotype, TSearchSpace, TProblem
 {
     public int MaxDegreeOfParallelism { get; init; } = -1;
 
-    public abstract ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    public abstract Solution<TGenotype> Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+    public override IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
       BatchExecution.Parallel(genotypes, (g, r) => Evaluate(g, r, searchSpace, problem), random, MaxDegreeOfParallelism);
 }
 
@@ -25,9 +25,9 @@ public abstract record SingleSolutionEvaluator<TGenotype, TSearchSpace>
 {
     public int MaxDegreeOfParallelism { get; init; } = -1;
 
-    public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    public abstract Solution<TGenotype> Evaluate(TGenotype solution, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+    public override IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
       BatchExecution.Parallel(genotypes, (g, r) => Evaluate(g, r, searchSpace), random, MaxDegreeOfParallelism);
 }
 
@@ -36,8 +36,8 @@ public abstract record SingleSolutionEvaluator<TGenotype>
 {
     public int MaxDegreeOfParallelism { get; init; } = -1;
 
-    public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random);
+    public abstract Solution<TGenotype> Evaluate(TGenotype solution, IRandomNumberGenerator random);
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random) =>
+    public override IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random) =>
       BatchExecution.Parallel(genotypes, (g, r) => Evaluate(g, r), random, MaxDegreeOfParallelism);
 }

@@ -47,11 +47,11 @@ public sealed record AdditiveStepAlgorithm(int Increment)
 
             var current = initialState?.Population.Solutions.Single().Genotype ?? 0;
             var next = current + increment;
-            var objective = Evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
+            var solution = Evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
 
             yield return new PopulationState<int>
             {
-                Population = Population.From([Solution.From(next, objective)])
+                Population = Population.From([solution])
             };
 
             await Task.CompletedTask;

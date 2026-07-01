@@ -17,6 +17,8 @@ It is the boundary between “search” and “domain”:
 
 This makes problems self-contained: they own both evaluation and the objective definition (directions + ordering).
 
+The problem contract deliberately returns objective vectors, not `Solution<TGenotype>` values. A problem defines how a genotype scores. The evaluator layer is responsible for turning evaluated candidates into `Solution<TGenotype>` values that algorithms pass through selection, replacement, logging, and analysis.
+
 ## Base classes
 
 In `HEAL.HeuristicLib`, `Problem<TSolution, TSearchSpace>` is the batch native base class. It stores `Objective` and `SearchSpace` and leaves batch `Evaluate(...)` abstract.

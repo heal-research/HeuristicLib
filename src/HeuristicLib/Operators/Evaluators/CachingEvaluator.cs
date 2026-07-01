@@ -35,7 +35,7 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
 
     protected override ExecutionState CreateInitialState() => new(SizeLimit);
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(
+    protected override IReadOnlyList<Solution<TGenotype>> Evaluate(
       IReadOnlyList<TGenotype> genotypes,
       ExecutionState executionState,
       InnerEvaluate innerEvaluate,
@@ -45,7 +45,7 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
     {
         var cache = executionState.Cache;
         var n = genotypes.Count;
-        var results = new ObjectiveVector[n];
+        var results = new Solution<TGenotype>[n];
 
         var uncachedGenotypes = new List<TGenotype>();
         var uncachedKeys = new List<TKey>();
@@ -56,7 +56,7 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
             var genotype = genotypes[i];
             var key = KeySelector(genotype);
 
-            if (cache.TryGetValue(key, out ObjectiveVector? cached))
+            if (cache.TryGetValue(key, out Solution<TGenotype>? cached))
             {
                 results[i] = cached!;
                 continue;
@@ -80,19 +80,19 @@ public record CachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
             return results;
         }
 
-        var newObjectives = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
+        var newSolutions = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
 
         for (var k = 0; k < uncachedKeys.Count; k++)
         {
-            cache.Set(uncachedKeys[k], newObjectives[k], new MemoryCacheEntryOptions { Size = 1 });
+            cache.Set(uncachedKeys[k], newSolutions[k], new MemoryCacheEntryOptions { Size = 1 });
         }
 
         foreach (var (_, entry) in uncachedMap)
         {
-            var objectiveVector = newObjectives[entry.j];
+            var solution = newSolutions[entry.j];
             foreach (var i in entry.indices)
             {
-                results[i] = objectiveVector;
+                results[i] = solution;
             }
         }
 

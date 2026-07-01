@@ -126,11 +126,11 @@ public class AlgorithmAuthoringSpecs
           IRandomNumberGenerator random)
         {
             var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-            var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+            var solution = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
             return new SingleSolutionState<RealVector>
             {
-                Population = Population.From([candidate], [objective])
+                Population = Population.From([solution])
             };
         }
     }
@@ -168,11 +168,11 @@ public class AlgorithmAuthoringSpecs
             var first = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
             var second = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
             RealVector candidate = [first[0], second[0], executionState.Steps];
-            var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+            var solution = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
             return new SingleSolutionState<RealVector>
             {
-                Population = Population.From([candidate], [objective])
+                Population = Population.From([solution])
             };
         }
     }
@@ -261,11 +261,11 @@ public class AlgorithmAuthoringSpecs
 
         private sealed class Instance(InstancingEvaluator owner) : IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> genotypes, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public IReadOnlyList<Solution<RealVector>> Evaluate(IReadOnlyList<RealVector> genotypes, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {
                 owner.EvaluateCalls++;
-                return Enumerable.Range(0, genotypes.Count)
-                                 .Select(_ => new ObjectiveVector(0.0))
+                return genotypes
+                                 .Select(x => Solution.From(x, new ObjectiveVector(0.0)))
                                  .ToArray();
             }
         }

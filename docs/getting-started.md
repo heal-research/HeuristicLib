@@ -101,10 +101,10 @@ public sealed record MyAlgorithm<TGenotype, TSearchSpace, TProblem>
     IRandomNumberGenerator random)
   {
     var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-    var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+    var solution = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
     return new SingleSolutionState<TGenotype> {
-      Population = Population.From([candidate], [objective])
+      Population = Population.From([solution])
     };
   }
 }
@@ -113,6 +113,8 @@ public sealed record MyAlgorithm<TGenotype, TSearchSpace, TProblem>
 Here the public search state is the current solution. If your algorithm needs other public progress data, add it explicitly to your concrete search-state type.
 
 When the algorithm depends on operators, resolve them in `CreateInitialExecutionState(...)` and store the resulting execution instances and other per-run mutable data in the nested `ExecutionState`.
+
+Evaluator output is authoritative. A custom algorithm should pass the returned `Solution<TGenotype>` forward, because an evaluator may return a repaired, refined or otherwise replaced genotype together with its objective vector.
 
 ## What not to learn first
 

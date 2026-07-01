@@ -65,7 +65,7 @@ public abstract class DynamicProblem<TGenotype, TSearchSpace> :
 
     public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, EvaluationTiming timing);
 
-    public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
+    public void AfterEvaluation(IReadOnlyList<TGenotype> genotypes, IReadOnlyList<Solution<TGenotype>> solutions, TSearchSpace searchSpace, DynamicProblem<TGenotype, TSearchSpace> problem)
     {
         OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
         evaluationLog.Clear();

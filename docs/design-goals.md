@@ -113,6 +113,8 @@ The design may place an explicit evaluator layer between algorithms and `Problem
 - dynamic-problem-aware behavior
 - specialized scheduling
 
+Problems score genotypes by returning objective vectors. Evaluators return the authoritative evaluated `Solution<TGenotype>`, so an evaluator may return the original candidate or an explicit replacement candidate together with its objective vector.
+
 Shared operators should prefer batch-first APIs when batch context is the honest semantic model.
 
 ### Hot-path performance without hostile APIs

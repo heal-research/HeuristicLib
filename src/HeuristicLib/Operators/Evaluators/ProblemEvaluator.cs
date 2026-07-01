@@ -8,12 +8,14 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 public record ProblemEvaluator<TGenotype>
     : StatelessEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
 {
-    public override IReadOnlyList<ObjectiveVector> Evaluate(
+    public override IReadOnlyList<Solution<TGenotype>> Evaluate(
         IReadOnlyList<TGenotype> genotypes,
         IRandomNumberGenerator random,
         ISearchSpace<TGenotype> searchSpace,
         IProblem<TGenotype, ISearchSpace<TGenotype>> problem) =>
-        problem.Evaluate(genotypes, random);
+        problem.Evaluate(genotypes, random)
+            .Select((objectiveVector, index) => Solution.From(genotypes[index], objectiveVector))
+            .ToArray();
 }
 
 public static class ProblemEvaluatorExtensions

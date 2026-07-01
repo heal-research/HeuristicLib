@@ -23,12 +23,13 @@ namespace HEAL.HeuristicLib.PythonInterop;
 public record EquationScoringEvaluator(Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> PythonCallback)
   : StatelessEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem> //This evaluator only works with your custom Problem
 {
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<SymbolicExpressionTree> genotypes, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem)
+    public override IReadOnlyList<Solution<SymbolicExpressionTree>> Evaluate(IReadOnlyList<SymbolicExpressionTree> genotypes, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem)
     {
         // You could also call evaluate directly, but ProblemEvaluator does things in parallel for us.
-        var normalObjectives = new ProblemEvaluator<SymbolicExpressionTree>().Evaluate(genotypes, random, searchSpace, problem);
-        var betterObjectives = PythonCallback(genotypes.ToArray(), normalObjectives.ToArray()); //passing Arrays is not strictly needed but might be better for interopt
-        return betterObjectives.Select(x => (ObjectiveVector)x).ToArray(); //make sure that Length of new Objectives matches what the problem promised
+        var solutions = new ProblemEvaluator<SymbolicExpressionTree>().Evaluate(genotypes, random, searchSpace, problem);
+        var normalObjectives = solutions.Select(x => x.ObjectiveVector).ToArray();
+        var betterObjectives = PythonCallback(genotypes.ToArray(), normalObjectives); //passing Arrays is not strictly needed but might be better for interopt
+        return betterObjectives.Select((x, i) => Solution.From(solutions[i].Genotype, (ObjectiveVector)x)).ToArray(); //make sure that Length of new Objectives matches what the problem promised
     }
 }
 

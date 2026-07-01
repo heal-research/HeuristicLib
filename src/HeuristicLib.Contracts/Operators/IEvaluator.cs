@@ -5,15 +5,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IEvaluator<in TGenotype, in TSearchSpace, in TProblem>
+public interface IEvaluator<TGenotype, in TSearchSpace, in TProblem>
   : IOperator<IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>>
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>;
 
-public interface IEvaluatorInstance<in TGenotype, in TSearchSpace, in TProblem>
+public interface IEvaluatorInstance<TGenotype, in TSearchSpace, in TProblem>
   : IOperatorInstance
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-    IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

@@ -72,10 +72,10 @@ public record NSGA2<TGenotype, TSearchSpace, TProblem>
         if (previousState is null)
         {
             var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
-            var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+            var evaluatedInitialSolutions = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
             return new PopulationState<TGenotype>
             {
-                Population = Population.From(initialSolutions, initialFitnesses)
+                Population = Population.From(evaluatedInitialSolutions)
             };
         }
 
@@ -83,8 +83,8 @@ public record NSGA2<TGenotype, TSearchSpace, TProblem>
         var parents = executionState.Selector.Select(previousState.Population.Solutions, problem.Objective, offspringCount * 2, random, problem.SearchSpace, problem).ToParents(problem.Objective);
         var children = executionState.Crossover.Cross(parents, random, problem.SearchSpace, problem);
         var mutants = executionState.Mutator.Mutate(children, random, problem.SearchSpace, problem);
-        var newPopulation = Population.From(mutants, executionState.Evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
-        var nextPopulation = executionState.Replacer.Replace(previousState.Population.Solutions, newPopulation.Solutions, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
+        var newPopulation = executionState.Evaluator.Evaluate(mutants, random, problem.SearchSpace, problem);
+        var nextPopulation = executionState.Replacer.Replace(previousState.Population.Solutions, newPopulation, problem.Objective, PopulationSize, random, problem.SearchSpace, problem);
 
         return new PopulationState<TGenotype>
         {

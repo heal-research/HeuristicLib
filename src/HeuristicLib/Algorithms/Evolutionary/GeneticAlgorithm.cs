@@ -94,10 +94,10 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
         if (previousState is null)
         {
             var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
-            var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+            var evaluatedInitialSolutions = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
             return new PopulationState<TGenotype>
             {
-                Population = Population.From(initialSolutions, initialFitnesses)
+                Population = Population.From(evaluatedInitialSolutions)
             };
         }
 
@@ -110,8 +110,7 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
 
         var offspring = executionState.Crossover.Cross(parents.ToParentPairs(), random, problem.SearchSpace, problem);
         offspring = executionState.Mutator.Mutate(offspring, random, problem.SearchSpace, problem);
-        var fitnesses = executionState.Evaluator.Evaluate(offspring, random, problem.SearchSpace, problem);
-        var offspringPopulation = Population.From(offspring, fitnesses).Solutions;
+        var offspringPopulation = executionState.Evaluator.Evaluate(offspring, random, problem.SearchSpace, problem);
 
         var newPopulation = ElitismReplacer<TGenotype>.Replace(oldPopulation, offspringPopulation, problem.Objective, PopulationSize, Elites);
 

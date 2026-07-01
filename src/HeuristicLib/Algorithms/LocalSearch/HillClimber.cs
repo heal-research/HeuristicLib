@@ -79,8 +79,8 @@ public record HillClimber<TGenotype, TSearchSpace, TProblem>
         IRandomNumberGenerator random)
     {
         var initialSolution = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-        var initialFitness = executionState.Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
-        return ToState(new Solution<TGenotype>(initialSolution, initialFitness));
+        var evaluatedInitialSolution = executionState.Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
+        return ToState(evaluatedInitialSolution);
     }
 
     private bool TryFindImprovement(
@@ -95,15 +95,16 @@ public record HillClimber<TGenotype, TSearchSpace, TProblem>
         for (var i = 0; i < MaxNeighbors; i += BatchSize)
         {
             var candidates = executionState.Mutator.Mutate(Enumerable.Repeat(current.Genotype, BatchSize).ToArray(), random, problem.SearchSpace, problem);
-            var objectiveVectors = executionState.Evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
-            var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
+            var evaluatedCandidates = executionState.Evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
+            var candidateObjectives = evaluatedCandidates.Select(x => x.ObjectiveVector).ToArray();
+            var bestIndex = BestSelector.Select(candidateObjectives, problem.Objective, count: 1)[0];
 
-            if (problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
+            if (problem.Objective.TotalOrderComparer.Compare(evaluatedCandidates[bestIndex].ObjectiveVector, current.ObjectiveVector) >= 0)
             {
                 continue;
             }
 
-            improvement = new Solution<TGenotype>(candidates[bestIndex], objectiveVectors[bestIndex]);
+            improvement = evaluatedCandidates[bestIndex];
             if (Direction == LocalSearchDirection.FirstImprovement)
             {
                 return true;

@@ -15,5 +15,6 @@ public record DummyEvaluator<TGenotype, TSearchSpace, TProblem> : SingleSolution
   where TSearchSpace : class, ISearchSpace<TGenotype>
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
-    public override ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => DummyEvaluator.DummyObjectives;
+    public override Solution<TGenotype> Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        => Solution.From(genotype, DummyEvaluator.DummyObjectives);
 }

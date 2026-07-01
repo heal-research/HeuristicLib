@@ -50,20 +50,21 @@ public record VisualizationCallbackEvaluator(
   : StatelessEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, SymbolicRegressionProblem>
 {
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(
+    public override IReadOnlyList<Solution<SymbolicExpressionTree>> Evaluate(
       IReadOnlyList<SymbolicExpressionTree> genotypes,
       IRandomNumberGenerator random,
       SymbolicExpressionTreeSearchSpace searchSpace,
       SymbolicRegressionProblem problem)
     {
 
-        var objectives = new ProblemEvaluator<SymbolicExpressionTree>()
+        var solutions = new ProblemEvaluator<SymbolicExpressionTree>()
           .Evaluate(genotypes, random, searchSpace, problem);
+        var objectives = solutions.Select(x => x.ObjectiveVector).ToArray();
 
         // Call Python callback for visualization side-effects.
         // Callback returns the objectives to use (allows pass-through).
-        var result = PopulationCallback(genotypes.ToArray(), objectives.ToArray());
-        return result.Select(x => (ObjectiveVector)x).ToArray();
+        var result = PopulationCallback(genotypes.ToArray(), objectives);
+        return result.Select((x, i) => Solution.From(solutions[i].Genotype, (ObjectiveVector)x)).ToArray();
     }
 }
 

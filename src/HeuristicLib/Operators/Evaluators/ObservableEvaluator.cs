@@ -26,7 +26,7 @@ public partial record ObservableEvaluator<TG, TS, TP>
     {
     }
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    protected override IReadOnlyList<Solution<TG>> Evaluate(IReadOnlyList<TG> genotypes, InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
         var result = innerEvaluate(genotypes, random, searchSpace, problem);
         foreach (var observer in Observers)
@@ -37,11 +37,11 @@ public partial record ObservableEvaluator<TG, TS, TP>
     }
 }
 
-public interface IEvaluatorObserver<in TG, in TS, in TP>
+public interface IEvaluatorObserver<TG, in TS, in TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-    void AfterEvaluation(IReadOnlyList<TG> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TS searchSpace, TP problem);
+    void AfterEvaluation(IReadOnlyList<TG> genotypes, IReadOnlyList<Solution<TG>> solutions, TS searchSpace, TP problem);
 }
 
 public static class ObservableEvaluatorExtensions
@@ -54,16 +54,16 @@ public static class ObservableEvaluatorExtensions
           => new ObservableEvaluator<TG, TS, TP>(evaluator, observer);
         public IEvaluator<TG, TS, TP> ObserveWith(params IEnumerable<IEvaluatorObserver<TG, TS, TP>> observers)
           => new ObservableEvaluator<TG, TS, TP>(evaluator, observers);
-        public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, TS, TP> afterEvaluation)
+        public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<Solution<TG>>, TS, TP> afterEvaluation)
           => evaluator.ObserveWith(new ActionEvaluatorObserver<TG, TS, TP>(afterEvaluation));
-        public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>> afterEvaluation)
-          => evaluator.ObserveWith(new ActionEvaluatorObserver<TG, TS, TP>((genotypes, objectiveVectors, _, _) => afterEvaluation(genotypes, objectiveVectors)));
+        public IEvaluator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<Solution<TG>>> afterEvaluation)
+          => evaluator.ObserveWith(new ActionEvaluatorObserver<TG, TS, TP>((genotypes, solutions, _, _) => afterEvaluation(genotypes, solutions)));
     }
 }
 
-public sealed class ActionEvaluatorObserver<TG, TS, TP>(Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, TS, TP> afterEvaluation) : IEvaluatorObserver<TG, TS, TP>
+public sealed class ActionEvaluatorObserver<TG, TS, TP>(Action<IReadOnlyList<TG>, IReadOnlyList<Solution<TG>>, TS, TP> afterEvaluation) : IEvaluatorObserver<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-    public void AfterEvaluation(IReadOnlyList<TG> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, TS searchSpace, TP problem) => afterEvaluation(genotypes, objectiveVectors, searchSpace, problem);
+    public void AfterEvaluation(IReadOnlyList<TG> genotypes, IReadOnlyList<Solution<TG>> solutions, TS searchSpace, TP problem) => afterEvaluation(genotypes, solutions, searchSpace, problem);
 }

@@ -9,7 +9,7 @@ The design intent is that many algorithm variants can be expressed by **swapping
 The core roles used across algorithms in this repository are:
 
 - **Creator** (`ICreator`): creates initial genotypes.
-- **Evaluator** (`IEvaluator`): evaluates genotypes to objective vectors.
+- **Evaluator** (`IEvaluator`): evaluates genotypes and returns the authoritative evaluated solutions.
 - **Selector** (`ISelector`): selects solutions (usually parents) from a population.
 - **Crossover** (`ICrossover`): combines parent genotypes into offspring genotypes.
 - **Mutator** (`IMutator`): perturbs genotypes to create variation.
@@ -109,6 +109,14 @@ HeuristicLib includes a few small composition patterns that keep calling code cl
 - `Pipeline*` helpers apply several operators in sequence
 
 Operator observation helpers also follow explicit budget-unit names. For example, `CountMutatorCalls(...)` counts calls to the observed mutator boundary, while `CountMutatedGenotypes(...)` counts genotypes returned by those batched mutator calls. See [Observability & analysis](observability-and-analysis.md) for the counter and observation model.
+
+## Evaluators return solutions
+
+`IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>.Evaluate(...)` returns `IReadOnlyList<Solution<TGenotype>>`.
+
+This is intentional. `Problem.Evaluate(...)` is the pure problem boundary and returns objective vectors for given genotypes. An evaluator is an operator boundary between algorithms and problems. It may simply call the problem and pair each input genotype with its objective vector, as `ProblemEvaluator<TGenotype>` does. It may also cache, repeat, repair, refine, or otherwise replace a candidate before returning the solution that should continue through the algorithm.
+
+Algorithms must treat evaluator output as authoritative. Replacement, selection, logging, and analysis should consume the returned `Solution<TGenotype>` instead of rebuilding a solution from the original input genotype.
 
 ## Next
 

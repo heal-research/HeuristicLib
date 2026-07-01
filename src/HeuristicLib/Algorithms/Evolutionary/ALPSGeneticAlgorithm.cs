@@ -88,11 +88,11 @@ public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
         if (previousState is null)
         {
             var initialLayerPopulation = executionState.Creator.Create(PopulationSize, random, searchSpace, problem);
-            var initialFitnesses = executionState.Evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem);
+            var evaluatedInitialLayerPopulation = executionState.Evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem);
 
             return new AlpsState<TGenotype>
             {
-                Population = [Population.From(initialLayerPopulation, initialFitnesses)],
+                Population = [Population.From(evaluatedInitialLayerPopulation)],
                 Ages = [Enumerable.Repeat(0, PopulationSize).ToArray()]
             };
         }
@@ -113,8 +113,7 @@ public record AlpsGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
         var offspring = executionState.Crossover.Cross(parentPairs, random, searchSpace, problem);
         offspring = executionState.Mutator.Mutate(offspring, random, searchSpace, problem);
 
-        var fitnesses = executionState.Evaluator.Evaluate(offspring, random, searchSpace, problem);
-        var offspringPopulation = Population.From(offspring, fitnesses).Solutions;
+        var offspringPopulation = executionState.Evaluator.Evaluate(offspring, random, searchSpace, problem);
         var newPopulation = ElitismReplacer<TGenotype>.Replace(oldPopulation, offspringPopulation, problem.Objective, offspringCount, Elites);
 
         return new AlpsState<TGenotype>

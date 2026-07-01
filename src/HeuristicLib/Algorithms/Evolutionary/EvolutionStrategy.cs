@@ -84,10 +84,10 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
         if (previousState is null)
         {
             var initialPopulation = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
-            var objectives = executionState.Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
+            var evaluatedInitialPopulation = executionState.Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
             return new EvolutionStrategyState<TGenotype>
             {
-                Population = Population.From(initialPopulation, objectives),
+                Population = Population.From(evaluatedInitialPopulation),
                 MutationStrength = InitialMutationStrength
             };
         }
@@ -121,13 +121,13 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
         }
 
         var children = executionState.Mutator.Mutate(parents, random, problem.SearchSpace, problem);
-        var fitnesses = executionState.Evaluator.Evaluate(children, random, problem.SearchSpace, problem);
+        var evaluatedChildren = executionState.Evaluator.Evaluate(children, random, problem.SearchSpace, problem);
 
         var newMutationStrength = previousState.MutationStrength;
         if (executionState.VariableStrengthMutator is not null)
         {
-            var successes = parentQualities.Zip(fitnesses)
-              .Count(t => t.Second.CompareTo(t.First, problem.Objective) == DominanceRelation.Dominates);
+            var successes = parentQualities.Zip(evaluatedChildren)
+              .Count(t => t.Second.ObjectiveVector.CompareTo(t.First, problem.Objective) == DominanceRelation.Dominates);
             var successRate = successes / (double)PopulationSize;
             newMutationStrength *= successRate switch
             {
@@ -138,11 +138,10 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
             executionState.VariableStrengthMutator.MutationStrength = newMutationStrength;
         }
 
-        var population = Population.From(children, fitnesses);
         var newPopulation = Strategy switch
         {
-            EvolutionStrategyType.Comma => ElitismReplacer<TGenotype>.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, NumberOfChildren, 0),
-            EvolutionStrategyType.Plus => PlusSelectionReplacer<TGenotype>.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, NumberOfChildren),
+            EvolutionStrategyType.Comma => ElitismReplacer<TGenotype>.Replace(previousState.Population.Solutions, evaluatedChildren, problem.Objective, NumberOfChildren, 0),
+            EvolutionStrategyType.Plus => PlusSelectionReplacer<TGenotype>.Replace(previousState.Population.Solutions, evaluatedChildren, problem.Objective, NumberOfChildren),
             _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
         };
 

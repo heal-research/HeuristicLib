@@ -43,8 +43,8 @@ public static class PythonCorrelationAnalysis
             var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, sigma, vector.Count, false)).ToArray();
             var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
             var d = OnlinePearsonsRCalculator.Calculate(
-              objectives.Select(x => x[0]),
-              objectives.Select(x => x[1]), out _);
+              objectives.Select(x => x.ObjectiveVector[0]),
+              objectives.Select(x => x.ObjectiveVector[1]), out _);
             res[i] = d;
         });
 
@@ -69,7 +69,9 @@ public static class PythonCorrelationAnalysis
         var random = RandomNumberGenerator.Create(42);
         var evaluator = new ProblemEvaluator<RealVector>();
 
-        return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
+        return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem)
+                        .Select(x => x.ObjectiveVector)
+                        .ToArray();
     }
 
     public static ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)

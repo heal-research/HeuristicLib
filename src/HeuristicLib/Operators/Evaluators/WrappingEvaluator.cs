@@ -12,7 +12,7 @@ public abstract record WrappingEvaluator<TGenotype, TSearchSpace, TProblem, TExe
   where TProblem : class, IProblem<TGenotype, TSearchSpace>
   where TExecutionState : class
 {
-    protected delegate IReadOnlyList<ObjectiveVector> InnerEvaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected delegate IReadOnlyList<Solution<TGenotype>> InnerEvaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     protected IEvaluator<TGenotype, TSearchSpace, TProblem> InnerEvaluator { get; }
 
@@ -26,7 +26,7 @@ public abstract record WrappingEvaluator<TGenotype, TSearchSpace, TProblem, TExe
 
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
+    protected abstract IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
       InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem);
 
@@ -34,7 +34,7 @@ public abstract record WrappingEvaluator<TGenotype, TSearchSpace, TProblem, TExe
       InnerEvaluate innerEvaluate, TExecutionState executionState)
       : IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             return wrappingEvaluator.Evaluate(genotypes, executionState, innerEvaluate, random, searchSpace, problem);
         }
@@ -53,12 +53,12 @@ public abstract record WrappingEvaluator<TGenotype, TSearchSpace, TProblem>
 
     protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-    protected sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, NoState executionState,
+    protected sealed override IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, NoState executionState,
       InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem)
       => Evaluate(genotypes, innerEvaluate, random, searchSpace, problem);
 
-    protected abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
+    protected abstract IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes,
       InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem);
 }

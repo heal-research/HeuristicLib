@@ -43,7 +43,7 @@ public static class ObservationPlanExtensions
           where TP : class, IProblem<TG, TS>
           => observations.Observe<IEvaluator<TG, TS, TP>, IEvaluatorInstance<TG, TS, TP>, IEvaluatorObserver<TG, TS, TP>>(evaluator, observer, static (e, o) => e.ObserveWith(o));
 
-        public void Observe<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator, Action<IReadOnlyList<TG>, IReadOnlyList<ObjectiveVector>, TS, TP> afterEvaluation)
+        public void Observe<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator, Action<IReadOnlyList<TG>, IReadOnlyList<Solution<TG>>, TS, TP> afterEvaluation)
           where TS : class, ISearchSpace<TG>
           where TP : class, IProblem<TG, TS>
           => observations.Observe(evaluator, new ActionEvaluatorObserver<TG, TS, TP>(afterEvaluation));

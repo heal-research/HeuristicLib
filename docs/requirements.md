@@ -34,6 +34,7 @@ This page records what HeuristicLib must support, what it should optimize for, w
 - It must preserve strong compile-time compatibility for representation-specific, domain-specific, and problem-specific operators.
 - It must support evolutionary mating schemes with explicit parent roles and different selection pressure per role when needed.
 - It must allow an explicit evaluator layer between algorithms and `Problem.Evaluate(...)`.
+- Evaluator output must be the authoritative evaluated solution so evaluator-driven repair, refinement, caching, and dynamic-problem behavior can be expressed without mutating input candidates.
 - It must support strong defaults for standard algorithm families while still allowing deep customization.
 - It must support island and other multi-population workflows, including age-layered variants such as ALPS.
 - It must distinguish between population topology and per-member side metadata.

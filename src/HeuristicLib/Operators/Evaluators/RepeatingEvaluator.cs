@@ -37,7 +37,7 @@ public record RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
         this.aggregator = aggregator;
     }
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
+    protected override IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes,
       InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem)
     {
@@ -48,7 +48,9 @@ public record RepeatingEvaluator<TGenotype, TSearchSpace, TProblem>
             var reevaluationResult = innerEvaluate(genotypes, random, searchSpace, problem);
             for (var j = 0; j < results.Length; j++)
             {
-                results[j] = aggregator(results[j], reevaluationResult[j]);
+                results[j] = Solution.From(
+                    results[j].Genotype,
+                    aggregator(results[j].ObjectiveVector, reevaluationResult[j].ObjectiveVector));
             }
         }
 
@@ -73,7 +75,7 @@ public record RepeatedEvaluator<TGenotype, TSearchSpace, TProblem>
         this.maxDegreeOfParallelism = maxDegreeOfParallelism;
     }
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes,
+    protected override IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes,
       InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem)
     {
@@ -83,8 +85,9 @@ public record RepeatedEvaluator<TGenotype, TSearchSpace, TProblem>
           random,
           maxDegreeOfParallelism: maxDegreeOfParallelism);
         return Enumerable.Range(0, genotypes.Count)
-                         .Select(i => Enumerable.Range(0, repeats).Select(j => res[j][i]).ToArray())
-                         .Select(aggregator)
+                         .Select(i => Solution.From(
+                             res[0][i].Genotype,
+                             aggregator(Enumerable.Range(0, repeats).Select(j => res[j][i].ObjectiveVector).ToArray())))
                          .ToArray();
     }
 }

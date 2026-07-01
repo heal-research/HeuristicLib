@@ -196,7 +196,7 @@ public class PractitionerUsageSpecs
 
         var state = new SingleSolutionState<RealVector>
         {
-            Population = Population.From([parent], [evaluations[0]])
+            Population = Population.From([evaluations[0]])
         };
         IdentityInterceptor.Transform(state, previousState: null).ShouldBe(state);
     }

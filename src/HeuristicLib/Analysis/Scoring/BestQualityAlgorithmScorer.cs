@@ -25,7 +25,7 @@ public record BestQualityAlgorithmScorer<T, TS, TP, TSearchState> : AlgorithmPer
         foreach (var evaluator in Evaluator)
         {
             observations.Observe(evaluator,
-              (_, objectives, _, _) => result.CurrentScore = objectives.OrderBy(x => x, Objective.TotalOrderComparer).First());
+              (_, solutions, _, _) => result.CurrentScore = solutions.Select(x => x.ObjectiveVector).OrderBy(x => x, Objective.TotalOrderComparer).First());
         }
     }
 
@@ -46,9 +46,9 @@ public record HyperVolumeAlgorithmScorer<T, TS, TP, TSearchState>(IAlgorithm<T, 
         foreach (var evaluator in Evaluator)
         {
             observations.Observe(evaluator,
-              (genotypes, objectives, _, _) =>
+              (_, solutions, _, _) =>
               {
-                  result.AddPoints(genotypes.Zip(objectives).Select(x => new Solution<T>(x.First, x.Second)), ProblemObjective, ReferencePoint);
+                  result.AddPoints(solutions, ProblemObjective, ReferencePoint);
               });
         }
     }

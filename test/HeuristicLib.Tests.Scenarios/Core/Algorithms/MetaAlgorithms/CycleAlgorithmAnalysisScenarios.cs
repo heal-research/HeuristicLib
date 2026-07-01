@@ -97,14 +97,14 @@ public class CycleAlgorithmAnalysisScenarios
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(
+        protected override IReadOnlyList<Solution<int>> Evaluate(
           IReadOnlyList<int> genotypes,
           ExecutionState executionState,
           IRandomNumberGenerator random,
           DummySearchSpace<int> searchSpace,
           IProblem<int, DummySearchSpace<int>> problem)
         {
-            return genotypes.Select(_ => new ObjectiveVector(++executionState.Value)).ToArray();
+            return genotypes.Select(x => Solution.From(x, new ObjectiveVector(++executionState.Value))).ToArray();
         }
     }
 
@@ -159,10 +159,10 @@ public class CycleAlgorithmAnalysisScenarios
             {
                 ct.ThrowIfCancellationRequested();
 
-                var objectiveVector = Evaluator.Evaluate([genotype], random, problem.SearchSpace, problem).Single();
+                var solution = Evaluator.Evaluate([genotype], random, problem.SearchSpace, problem).Single();
                 var currentState = new PopulationState<int>
                 {
-                    Population = Population.From([Solution.From(genotype, objectiveVector)])
+                    Population = Population.From([solution])
                 };
 
                 yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
@@ -178,7 +178,7 @@ public class CycleAlgorithmAnalysisScenarios
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.AddObjectiveValues(objectiveVectors));
+            observations.Observe(Evaluator, (_, solutions, _, _) => result.AddObjectiveValues(solutions.Select(x => x.ObjectiveVector).ToArray()));
         }
 
         public sealed class ExecutionState

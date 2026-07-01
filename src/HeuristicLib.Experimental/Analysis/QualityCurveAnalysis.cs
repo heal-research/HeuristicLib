@@ -20,12 +20,12 @@ public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, Qual
         this.Evaluators = Evaluators;
     }
 
-    public void AfterEvaluation(QualityCurve<T> state, IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<T, ISearchSpace<T>> problem)
+    public void AfterEvaluation(QualityCurve<T> state, IReadOnlyList<Solution<T>> solutions, IProblem<T, TS> problem)
     {
-        for (var i = 0; i < genotypes.Count; i++)
+        for (var i = 0; i < solutions.Count; i++)
         {
-            var genotype = genotypes[i];
-            var q = objectiveVectors[i];
+            var solution = solutions[i];
+            var q = solution.ObjectiveVector;
             state.EvalCount++;
 
             if (state.Best is not null)
@@ -42,7 +42,7 @@ public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, Qual
                 }
             }
 
-            state.Add(new Solution<T>(genotype, q));
+            state.Add(solution);
         }
     }
 
@@ -52,7 +52,7 @@ public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, Qual
     {
         foreach (var evaluator in Evaluators)
         {
-            observations.Observe(evaluator, (genotypes, objectiveVectors, _, problem) => AfterEvaluation(curve, genotypes, objectiveVectors, problem));
+            observations.Observe(evaluator, (_, solutions, _, problem) => AfterEvaluation(curve, solutions, problem));
         }
     }
 }

@@ -53,7 +53,7 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
         return executionState;
     }
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(
+    protected override IReadOnlyList<Solution<TGenotype>> Evaluate(
       IReadOnlyList<TGenotype> genotypes,
       ExecutionState executionState,
       InnerEvaluate innerEvaluate,
@@ -67,7 +67,7 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
         var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
 
         var n = genotypes.Count;
-        var results = new ObjectiveVector[n];
+        var results = new Solution<TGenotype>[n];
 
         var uncachedGenotypes = new List<TGenotype>();
         var uncachedKeys = new List<TKey>();
@@ -78,7 +78,7 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
             var genotype = genotypes[i];
             var key = keySelector(genotype);
 
-            if (cache.TryGetValue(key, out ObjectiveVector? cached))
+            if (cache.TryGetValue(key, out Solution<TGenotype>? cached))
             {
                 results[i] = cached!;
                 continue;
@@ -99,18 +99,18 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
 
         if (uncachedGenotypes.Count > 0)
         {
-            var newObjectives = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
+            var newSolutions = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
             for (var k = 0; k < uncachedKeys.Count; k++)
             {
-                cache.Set(uncachedKeys[k], newObjectives[k], new MemoryCacheEntryOptions { Size = 1 });
+                cache.Set(uncachedKeys[k], newSolutions[k], new MemoryCacheEntryOptions { Size = 1 });
             }
 
             foreach (var (_, entry) in uncachedMap)
             {
-                var objectiveVector = newObjectives[entry.j];
+                var solution = newSolutions[entry.j];
                 foreach (var i in entry.indices)
                 {
-                    results[i] = objectiveVector;
+                    results[i] = solution;
                 }
             }
         }

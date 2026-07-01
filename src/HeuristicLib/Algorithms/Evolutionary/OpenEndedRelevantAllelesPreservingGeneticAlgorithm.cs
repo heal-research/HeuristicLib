@@ -73,10 +73,10 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
         if (previousState is null)
         {
             var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
-            var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+            var evaluatedInitialSolutions = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
             return new PopulationState<TGenotype>
             {
-                Population = Population.From(initialSolutions, initialFitnesses)
+                Population = Population.From(evaluatedInitialSolutions)
             };
         }
 
@@ -86,19 +86,16 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
         if (oldPopulation.Length <= 0)
         {
             var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
-            var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-            newPop = Population.From(initialSolutions, initialFitnesses).Solutions;
+            newPop = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
         }
         else
         {
             var selected = executionState.Selector.Select(oldPopulation, problem.Objective, MaxEffort * 2, random, problem.SearchSpace, problem);
             var population = executionState.Crossover.Cross(selected.ToParents(problem.Objective), random, problem.SearchSpace, problem);
             population = executionState.Mutator.Mutate(population, random, problem.SearchSpace, problem);
-            var fitnesses = executionState.Evaluator.Evaluate(population, random, problem.SearchSpace, problem);
+            var evaluatedPopulation = executionState.Evaluator.Evaluate(population, random, problem.SearchSpace, problem);
 
-            newPop = Population
-                     .From(population, fitnesses)
-                     .Solutions
+            newPop = evaluatedPopulation
                      .Zip(selected.ToSolutionPairs())
                      .Where(f => f.Item1.ObjectiveVector.Dominates(Combine(f.Item2, problem.Objective, Strictness), problem.Objective))
                      .Select(f => f.Item1)

@@ -50,8 +50,8 @@ public record ReevaluationInterceptor<T, TE, TP, TR>
             }
 
             var genotypes = result.Population.Genotypes.ToArray();
-            var objectiveVectors = evaluator.Evaluate(genotypes, null!, searchSpace, problem); // random is not available in the interceptor contract.
-            result = result with { Population = Population.From(genotypes, objectiveVectors) };
+            var solutions = evaluator.Evaluate(genotypes, null!, searchSpace, problem); // ERROR: random is not available in the interceptor contract.
+            result = result with { Population = Population.From(solutions) };
 
             return result;
         }

@@ -49,7 +49,7 @@ public static class EvaluatorDurationExtensions
         private ObservationDuration Duration { get; }
         private TimeProvider TimeProvider { get; }
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(
+        protected override IReadOnlyList<Solution<TG>> Evaluate(
             IReadOnlyList<TG> genotypes,
             InnerEvaluate innerEvaluate,
             IRandomNumberGenerator random,

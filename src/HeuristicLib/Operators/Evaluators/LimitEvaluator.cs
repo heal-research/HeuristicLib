@@ -31,7 +31,7 @@ public record LimitEvaluator<TG, TS, TP>
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, ExecutionState executionState,
+    protected override IReadOnlyList<Solution<TG>> Evaluate(IReadOnlyList<TG> genotypes, ExecutionState executionState,
       InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
         var remainingEvaluations = maxEvaluations - executionState.Counter.CurrentCount;
@@ -40,7 +40,7 @@ public record LimitEvaluator<TG, TS, TP>
 
         if (remainingEvaluations <= 0)
         {
-            return Enumerable.Repeat(alternative, genotypes.Count).ToArray();
+            return genotypes.Select(genotype => Solution.From(genotype, alternative)).ToArray();
         }
 
         if (strict && remainingEvaluations < genotypes.Count)
@@ -50,7 +50,7 @@ public record LimitEvaluator<TG, TS, TP>
 
             var evaluated = innerEvaluate(genotypesToEvaluate, random, searchSpace, problem);
             executionState.Counter.IncrementBy(genotypesToEvaluate.Count);
-            var skipped = Enumerable.Repeat(alternative, genotypesToSkip.Count);
+            var skipped = genotypesToSkip.Select(genotype => Solution.From(genotype, alternative));
 
             return evaluated.Concat(skipped).ToArray();
         }

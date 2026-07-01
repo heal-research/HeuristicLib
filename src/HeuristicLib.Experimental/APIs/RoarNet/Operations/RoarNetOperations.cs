@@ -147,9 +147,9 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     public IRoarNetSolution<TG> EmptySolution() => new RoarNetSolution<TG>(ec.Create(1, rng, SearchSpace, Problem)[0], this);
     public IRoarNetSolution<TG> RandomSolution() => new RoarNetSolution<TG>(rc.Create(1, rng, SearchSpace, Problem)[0], this);
     public IRoarNetSolution<TG> HeuristicSolution() => new RoarNetSolution<TG>(hc.Create(1, rng, SearchSpace, Problem)[0], this);
-    public double? LowerBound(TG genotype) => boundsInstance.Evaluate([genotype], rng, SearchSpace, Problem)[0][0];
+    public double? LowerBound(TG genotype) => boundsInstance.Evaluate([genotype], rng, SearchSpace, Problem)[0].ObjectiveVector[0];
 
-    public double? Objective(TG genotype) => evaluatorInstance.Evaluate([genotype], rng, SearchSpace, Problem)[0][0];
+    public double? Objective(TG genotype) => evaluatorInstance.Evaluate([genotype], rng, SearchSpace, Problem)[0].ObjectiveVector[0];
 
     public RoarNetOperations<TG> GetOperations() => RoarNetOperations<TG>.Instance;
 }

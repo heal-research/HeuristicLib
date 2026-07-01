@@ -123,7 +123,7 @@ public class TravelingSalesmanProblemTests
 
         var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
         var r2 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
-        r2.ToArray().ShouldBe(r1.ToArray());
+        r2.ObjectiveVector.ToArray().ShouldBe(r1.ObjectiveVector.ToArray());
 
         p.UpdateOnce();
         p.EpochClock.CurrentEpoch.ShouldBe(1);
