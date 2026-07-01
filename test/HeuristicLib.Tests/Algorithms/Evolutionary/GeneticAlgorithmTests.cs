@@ -1,10 +1,17 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
@@ -28,6 +35,34 @@ public class GeneticAlgorithmTests
         };
 
         return Verify(ga);
+    }
+
+    [Fact]
+    public async Task GeneticAlgorithm_InitialPopulation_UsesEvaluatorReturnedSolutions()
+    {
+        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
+            evaluateFunc: x => x,
+            encoding: DummySearchSpace<int>.Instance,
+            objective: SingleObjective.Minimize);
+        var ga = new GeneticAlgorithm<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        {
+            PopulationSize = 1,
+            MaximumGenerations = 1,
+            Creator = new ConstantCreator(1),
+            Crossover = new PassThroughCrossover(),
+            Mutator = new PassThroughMutator(),
+            MutationRate = 0.0,
+            Evaluator = new ReplacingEvaluator(42),
+            Selector = new RandomSelector<int>(),
+            Elites = 0
+        };
+
+        var state = await ga.RunToCompletionAsync(
+            problem,
+            RandomNumberGenerator.Create(123),
+            ct: TestContext.Current.CancellationToken);
+
+        state.Population.Solutions.Single().ShouldBe(Solution.From(42, new ObjectiveVector(42.0)));
     }
 
     // [Fact]
@@ -276,4 +311,48 @@ public class GeneticAlgorithmTests
     // 
     //     await Verify(finalState);
     //   }
+
+    private sealed record ConstantCreator(int Value)
+        : StatelessCreator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<int> Create(
+            int count,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem)
+            => Enumerable.Repeat(Value, count).ToArray();
+    }
+
+    private sealed record PassThroughCrossover
+        : StatelessCrossover<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<int> Cross(
+            IReadOnlyList<IParents<int>> parents,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem)
+            => parents.Select(x => x.Parent1).ToArray();
+    }
+
+    private sealed record PassThroughMutator
+        : StatelessMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<int> Mutate(
+            IReadOnlyList<int> parents,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem)
+            => parents;
+    }
+
+    private sealed record ReplacingEvaluator(int Replacement)
+        : StatelessEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<Solution<int>> Evaluate(
+            IReadOnlyList<int> genotypes,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem)
+            => genotypes.Select(_ => Solution.From(Replacement, problem.Evaluate(Replacement, random))).ToArray();
+    }
 }
