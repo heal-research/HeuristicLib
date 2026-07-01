@@ -2,14 +2,14 @@
 
 ## Goal
 
-Replace symbolic regression's mutable tree candidate with an immutable, compact, postorder/RPN `SymbolicExpression` genotype. Move the current mutable `SymbolicExpressionTree` to a `Legacy` namespace with `[Obsolete]` markers and keep it only for migration, conversion, and golden parity tests.
+Replace symbolic regression's mutable tree candidate with an immutable, compact, postorder/RPN `SymbolicExpression` genotype. Move the current mutable `SymbolicExpressionTree` to a `Legacy` namespace with `[Obsolete]` markers and keep it only for temporary migration and golden reference behavior tests until the new system fully replaces it.
 
 HeuristicLab is the behavioral reference, not the target architecture. The first reference package is [HeuristicLab.Problems.DataAnalysis.Symbolic.Regression/3.4](https://github.com/heal-research/HeuristicLab/tree/main/HeuristicLab.Problems.DataAnalysis.Symbolic.Regression/3.4).
 
 Implementation order:
 
 - Stage 0: close design holes and add API usage specs.
-- Stage 1: build the immutable scalar expression core and parity harness.
+- Stage 1: build the immutable scalar expression core and reference behavior harness.
 - Stage 2: rebuild problem composition and the evaluator contract around the new genotype.
 - Stage 3: add the unrestricted scalar search space and fast unrestricted search operators.
 - Stage 3.1: add constant optimization with Levenberg-Marquardt and automatic differentiation after the unrestricted operators are stable.
@@ -28,9 +28,9 @@ Non-goals for the scalar Stages 1-4 redesign:
 Resolve these before or during Stage 0:
 
 - **API specs:** add executable usage specs before hardening public APIs.
-- **Legacy boundary:** decide namespace, obsolete message, converter names, in-repo migration order, and whether a temporary forwarding shim is allowed.
+- **Legacy boundary:** decide namespace, obsolete message, in-repo migration order, and whether a temporary forwarding shim is allowed.
 - **Interpreter binding:** define the Stage 1 name-first authoring contract: `ExpressionDraft.Variable(name)` interns names into the compiled expression variable table, variable instructions store payload indexes into that table, and the interpreter uses those names to fetch dataset series.
-- **Parity scope:** maintain a matrix for each legacy symbol/behavior: new target, parity level, test status, and intentional difference.
+- **Reference behavior scope:** maintain a matrix for each legacy symbol/behavior: new target, reference level, test status, and intentional difference.
 - **Instruction validity:** define runtime validation for non-empty code, RPN stack balance, arity, `SubtreeLength`, payload indexes, root position, max length/depth, and invalid opcodes.
 - **Formatting/serialization:** decide the Stage 1 minimum for equality/hash, debug/infix formatting, optional variable names, and whether binary/JSON serialization is included or deferred.
 - **Evaluator contract:** allow evaluators to return the authoritative `Solution<TGenotype>`, not only objective values, so evaluation can explicitly return a refined or repaired candidate together with its objectives.
@@ -48,7 +48,7 @@ Resolve these before or during Stage 0:
 | `ExpressionInstruction`                     | Opcode, arity, subtree length, and optional payload index.                                                                                                                                                                       |
 | `SymbolicExpressionOpCode`                  | Stable `ushort` enum for built-in operations with explicit integer values.                                                                                                                                                       |
 | `ExpressionDraft`                           | Human-friendly authoring layer; not a genotype.                                                                                                                                                                                  |
-| `ExpressionSlice`                           | Allocation-light subtree view over an immutable expression.                                                                                                                                                                      |
+| `SymbolicSubExpression`                     | Allocation-light subtree view over an immutable expression, exposed through tree-style navigation from `SymbolicExpression.Root`.                                                                                                |
 | `SymbolicExpressionSearchSpace`             | Base scalar expression search-space contract for one expression-valued component, with discoverable factories such as `SymbolicExpressionSearchSpace.Unrestricted(...)`.                                                         |
 | `UnrestrictedSymbolicExpressionSearchSpace` | Fast scalar validity policy: length, depth, allowed opcodes, and allowed variables; all scalar subtrees are composition-compatible.                                                                                              |
 | `GrammarSymbolicExpressionSearchSpace`      | Grammar-constrained scalar validity policy with typed operation signatures and grammar-preserving operators.                                                                                                                     |
@@ -85,7 +85,7 @@ Add API usage specs in `test/HeuristicLib.Tests.ApiUsageSpecs` for:
 
 Stage 0 specs may include commented or otherwise non-compiled "wish API" sketches when the target API depends on later stages. These sketches are allowed as design probes, but the repository must keep compiling. As implementation reaches a sketched API, comment the code back in so the usage spec compiles and fails normally if the API shape drifts. Once behavior-level invariants matter more than authoring shape, promote the relevant sketch into regular unit tests in the owning test project.
 
-Also create the legacy parity matrix and seed it with variable, number, add, subtract, multiply, divide, log, sqrt, and linear scaling.
+Also create the reference behavior matrix and seed it with variable, number, add, subtract, multiply, divide, log, sqrt, and linear scaling.
 
 Stage 0 is done when the intended public flow is executable and every design hole above has a recorded outcome or owner.
 
@@ -100,7 +100,6 @@ Implement:
 - Series/batch interpretation against a supplied `Dataset` and input-variable order.
 - Numeric-literal side-table entries include value plus fixed/optimizable role. The `NumericLiteral` opcode stays singular and references side-table entries by `PayloadIndex`.
 - Draft/builder APIs expose fixed and optimizable literal authoring, tentatively `Fixed(value)` and `Parameter(value)`.
-- Legacy-to-new conversion for the Stage 1 parity matrix.
 - Move old mutable symbolic-expression-tree APIs under a `HEAL.HeuristicLib.Legacy...` namespace. Legacy types and methods get `[Obsolete]` markers. If a legacy member name would clash with new API names, add a `Legacy` prefix or suffix to the legacy member.
 
 Stage 1 opcodes:
@@ -126,7 +125,7 @@ Rules:
 - Instructions are postorder/RPN; root is `Instructions[^1]`.
 - `SubtreeLength` includes the instruction itself.
 - `PayloadIndex == -1` means no side-table payload.
-- Arithmetic factories produce binary operations; legacy n-ary arithmetic lowers deterministically in source order.
+- Arithmetic factories produce binary operations; n-ary arithmetic behavior is represented with deterministic left-associative binary expression fixtures when old behavior is used as a reference.
 - Expression drafts author variables by name, for example `ExpressionDraft.Variable("x0")`.
 - Compiled variable references are interned into a variable side table. Variable instructions store a `PayloadIndex` into that table, not the raw name.
 - Missing dataset variables and non-double variables in scalar regression fail during interpreter setup.
@@ -139,7 +138,7 @@ Rules:
 - Expression complexity defaults to instruction count.
 - Stage 1 supports debug/infix formatting only; fully fledged JSON/binary serialization is deferred.
 
-Stage 1 tests: immutability, validation failures, slicing, draft compilation, column/batch interpreter parity, legacy conversion parity, and formatting.
+Stage 1 tests: immutability, validation failures, sub-expression navigation, draft compilation, column/batch interpreter behavior, reference behavior fixtures, and formatting.
 
 ## Stage 2: Problem Composition And Evaluation Contract
 
@@ -275,7 +274,7 @@ Stage 5.4 tests: value metadata, vector/scalar operation signatures, interpreter
 
 - Time-series support follows the same direction as vectorial GP when it changes value metadata or available opcodes. Lag/window semantics belong in operation signatures, interpreter binding, and data-view context before they become separate problem types.
 
-Stage 5.5 tests: lag/window binding, time-aware operation signatures, row-window validity, interpreter parity fixtures, and regression usage specs over time-series data.
+Stage 5.5 tests: lag/window binding, time-aware operation signatures, row-window validity, interpreter behavior fixtures, and regression usage specs over time-series data.
 
 ### Stage 5 Shared Rules
 
@@ -293,7 +292,7 @@ Follow-up details stay outside this plan unless separately scheduled:
 - Use HeuristicLab as behavioral reference only.
 - Prefer reimplemented HeuristicLib fixtures over copied source.
 - Any direct source-code reuse requires an explicit licensing decision.
-- Maintain a matrix with: HeuristicLab source, current legacy type, new target, parity level, porting status, and intentional differences.
+- Maintain a matrix with: HeuristicLab source, current legacy type, new target, reference level, porting status, and intentional differences. Do not add a legacy-to-new converter; reference behavior is checked through independently authored fixtures for the new implementation.
 - Put fast invariants in `test/HeuristicLib.Tests`, workflows in `test/HeuristicLib.Tests.Scenarios` and public API shape in `test/HeuristicLib.Tests.ApiUsageSpecs`.
 
 ## Validation

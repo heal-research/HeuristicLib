@@ -1,10 +1,6 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public readonly record struct ExpressionInstruction(
-  SymbolicExpressionOpCode OpCode,
-  int Arity,
-  int SubtreeLength,
-  int PayloadIndex = -1)
+public readonly record struct ExpressionInstruction(SymbolicExpressionOpCode OpCode, int Arity, int SubtreeLength, int PayloadIndex = -1)
 {
     public static ExpressionInstruction Variable(int payloadIndex) =>
       new(SymbolicExpressionOpCode.Variable, Arity: 0, SubtreeLength: 1, payloadIndex);

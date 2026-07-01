@@ -61,6 +61,33 @@ public class SymbolicRegressionRedesignSpecs
     }
 
     [Fact]
+    public void SymbolicExpression_AuthoringShape_NavigatesSubExpressionsAsTree()
+    {
+        var expression = ExpressionDraft
+          .Add(
+            ExpressionDraft.Variable("x0"),
+            ExpressionDraft.Multiply(
+              ExpressionDraft.Fixed(2.0),
+              ExpressionDraft.Variable("x1")))
+          .Compile();
+
+        var root = expression.Root;
+        var left = root.Child(0);
+        var right = root.Child(1);
+        var rightLeft = right.Child(0);
+        var rightRight = right.Child(1);
+
+        root.OpCode.ShouldBe(SymbolicExpressionOpCode.Add);
+        left.TryGetVariableReference(out var leftVariable).ShouldBeTrue();
+        leftVariable.Name.ShouldBe("x0");
+        right.OpCode.ShouldBe(SymbolicExpressionOpCode.Multiply);
+        rightLeft.TryGetNumericLiteral(out var literal).ShouldBeTrue();
+        rightRight.TryGetVariableReference(out var rightVariable).ShouldBeTrue();
+        literal.ShouldBe(new NumericLiteral(2.0, NumericLiteralKind.Fixed));
+        rightVariable.Name.ShouldBe("x1");
+    }
+
+    [Fact]
     public void Problem_AuthoringShape_ConstructsDefaultSymbolicRegressionProblemWithRmseMetric()
     {
         var data = CreateLinearRegressionData();

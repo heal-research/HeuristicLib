@@ -7,11 +7,7 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
     private readonly VariableReference[] variableReferences;
     private readonly int hashCode;
 
-    private SymbolicExpression(
-      ExpressionInstruction[] instructions,
-      NumericLiteral[] numericLiterals,
-      VariableReference[] variableReferences,
-      bool takeOwnership)
+    private SymbolicExpression(ExpressionInstruction[] instructions, NumericLiteral[] numericLiterals, VariableReference[] variableReferences, bool takeOwnership)
     {
         this.instructions = takeOwnership ? instructions : instructions.ToArray();
         this.numericLiterals = takeOwnership ? numericLiterals : numericLiterals.ToArray();
@@ -27,28 +23,31 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
     public int Length => instructions.Length;
     public int Complexity => Length;
     public int Depth { get; }
+    public SymbolicSubExpression Root => CreateSubExpression(instructions.Length - 1);
 
-    public static SymbolicExpression Create(
-      IEnumerable<ExpressionInstruction> instructions,
-      IEnumerable<NumericLiteral> numericLiterals,
-      IEnumerable<VariableReference> variableReferences)
+    public static SymbolicExpression Create(IEnumerable<ExpressionInstruction> instructions, IEnumerable<NumericLiteral> numericLiterals, IEnumerable<VariableReference> variableReferences)
     {
-        return new SymbolicExpression(
-          instructions.ToArray(),
-          numericLiterals.ToArray(),
-          variableReferences.ToArray(),
-          takeOwnership: true);
+        return new SymbolicExpression(instructions.ToArray(), numericLiterals.ToArray(), variableReferences.ToArray(), takeOwnership: true);
     }
 
     /// <summary>
     /// Creates an expression backed by the supplied arrays. The caller transfers ownership and must not mutate them afterwards.
     /// </summary>
-    public static SymbolicExpression FromOwnedArrays(
-      ExpressionInstruction[] instructions,
-      NumericLiteral[] numericLiterals,
-      VariableReference[] variableReferences)
+    public static SymbolicExpression FromOwnedArrays(ExpressionInstruction[] instructions, NumericLiteral[] numericLiterals, VariableReference[] variableReferences)
     {
         return new SymbolicExpression(instructions, numericLiterals, variableReferences, takeOwnership: true);
+    }
+
+    internal SymbolicSubExpression CreateSubExpression(int rootInstructionIndex)
+    {
+        if ((uint)rootInstructionIndex >= (uint)instructions.Length)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rootInstructionIndex));
+        }
+
+        var root = instructions[rootInstructionIndex];
+        var start = rootInstructionIndex - root.SubtreeLength + 1;
+        return new SymbolicSubExpression(instructions.AsSpan(start, root.SubtreeLength), numericLiterals, variableReferences);
     }
 
     public string ToInfixString()
@@ -96,7 +95,8 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
     {
         return other is not null
                && (ReferenceEquals(this, other)
-                   || instructions.SequenceEqual(other.instructions)
+                   || hashCode == other.hashCode
+                   && instructions.SequenceEqual(other.instructions)
                    && numericLiterals.SequenceEqual(other.numericLiterals)
                    && variableReferences.SequenceEqual(other.variableReferences));
     }
@@ -122,10 +122,7 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
         stack.Push($"{functionName}({child})");
     }
 
-    private static int ValidateAndCalculateDepth(
-      IReadOnlyList<ExpressionInstruction> instructions,
-      IReadOnlyList<NumericLiteral> numericLiterals,
-      IReadOnlyList<VariableReference> variableReferences)
+    private static int ValidateAndCalculateDepth(IReadOnlyList<ExpressionInstruction> instructions, IReadOnlyList<NumericLiteral> numericLiterals, IReadOnlyList<VariableReference> variableReferences)
     {
         if (instructions.Count == 0)
             throw new ArgumentException("Expression must contain at least one instruction.", nameof(instructions));
@@ -179,10 +176,7 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
         }
     }
 
-    private static void ValidateInstructionShape(
-      ExpressionInstruction instruction,
-      IReadOnlyList<NumericLiteral> numericLiterals,
-      IReadOnlyList<VariableReference> variableReferences)
+    private static void ValidateInstructionShape(ExpressionInstruction instruction, IReadOnlyList<NumericLiteral> numericLiterals, IReadOnlyList<VariableReference> variableReferences)
     {
         if (instruction.OpCode == SymbolicExpressionOpCode.Invalid)
             throw new ArgumentException("Invalid opcode is not allowed.");

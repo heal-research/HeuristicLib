@@ -100,6 +100,107 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
+    public void Root_ReturnsSubExpressionOverWholeExpression()
+    {
+        var expression = CreateLinearExpression();
+
+        var root = expression.Root;
+
+        root.Length.ShouldBe(5);
+        root.OpCode.ShouldBe(SymbolicExpressionOpCode.Add);
+        root.Arity.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Child_NavigatesToSubExpression()
+    {
+        var expression = CreateLinearExpression();
+
+        var root = expression.Root;
+        var left = root.Child(0);
+        var right = root.Child(1);
+
+        left.OpCode.ShouldBe(SymbolicExpressionOpCode.Variable);
+        left.TryGetVariableReference(out var leftVariable).ShouldBeTrue();
+        leftVariable.Name.ShouldBe("x0");
+        right.OpCode.ShouldBe(SymbolicExpressionOpCode.Multiply);
+        right.Length.ShouldBe(3);
+        var rightLeft = right.Child(0);
+        var rightRight = right.Child(1);
+        rightLeft.TryGetNumericLiteral(out var literal).ShouldBeTrue();
+        rightRight.TryGetVariableReference(out var rightVariable).ShouldBeTrue();
+        literal.Value.ShouldBe(2.0);
+        rightVariable.Name.ShouldBe("x1");
+    }
+
+    [Fact]
+    public void Child_PreservesLeftToRightOrder()
+    {
+        var expression = ExpressionDraft
+          .Subtract(ExpressionDraft.Variable("left"), ExpressionDraft.Variable("right"))
+          .Compile();
+
+        var root = expression.Root;
+
+        root.OpCode.ShouldBe(SymbolicExpressionOpCode.Subtract);
+        var left = root.Child(0);
+        var right = root.Child(1);
+        left.TryGetVariableReference(out var leftVariable).ShouldBeTrue();
+        right.TryGetVariableReference(out var rightVariable).ShouldBeTrue();
+        leftVariable.Name.ShouldBe("left");
+        rightVariable.Name.ShouldBe("right");
+    }
+
+    [Fact]
+    public void Child_NavigatesUnarySubExpression()
+    {
+        var expression = ExpressionDraft.Sqrt(ExpressionDraft.Variable("x0")).Compile();
+
+        var root = expression.Root;
+        var child = root.Child(0);
+
+        root.OpCode.ShouldBe(SymbolicExpressionOpCode.Sqrt);
+        root.Arity.ShouldBe(1);
+        child.OpCode.ShouldBe(SymbolicExpressionOpCode.Variable);
+        child.TryGetVariableReference(out var variable).ShouldBeTrue();
+        variable.Name.ShouldBe("x0");
+    }
+
+    [Fact]
+    public void Child_RejectsIndexOutsideArity()
+    {
+        var expression = CreateLinearExpression();
+
+        Should.Throw<ArgumentOutOfRangeException>(() => ChildAtRoot(expression, 2));
+    }
+
+    [Fact]
+    public void Child_RejectsChildAccessOnLeaf()
+    {
+        var expression = ExpressionDraft.Variable("x0").Compile();
+
+        Should.Throw<ArgumentOutOfRangeException>(() => ChildAtRoot(expression, 0));
+    }
+
+    [Fact]
+    public void TryGetNumericLiteral_ReturnsFalseForNonLiteralSubExpression()
+    {
+        var expression = CreateLinearExpression();
+        var root = expression.Root;
+
+        root.TryGetNumericLiteral(out _).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void TryGetVariableReference_ReturnsFalseForNonVariableSubExpression()
+    {
+        var expression = CreateLinearExpression();
+        var literal = expression.Root.Child(1).Child(0);
+
+        literal.TryGetVariableReference(out _).ShouldBeFalse();
+    }
+
+    [Fact]
     public void Create_CopiesPublicFactoryInputs()
     {
         var instructions = new[]
@@ -343,5 +444,21 @@ public sealed class SymbolicExpressionTests
         ]);
 
         Should.Throw<ArgumentException>(() => expression.Evaluate(data));
+    }
+
+    private static SymbolicExpression CreateLinearExpression()
+    {
+        return ExpressionDraft
+          .Add(
+            ExpressionDraft.Variable("x0"),
+            ExpressionDraft.Multiply(
+              ExpressionDraft.Fixed(2.0),
+              ExpressionDraft.Variable("x1")))
+          .Compile();
+    }
+
+    private static void ChildAtRoot(SymbolicExpression expression, int index)
+    {
+        expression.Root.Child(index);
     }
 }
