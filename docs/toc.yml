@@ -21,7 +21,7 @@
     - name: Search spaces
       href: search-space.md
     - name: Objective vectors and evaluated candidates
-      href: objectives-and-solutions.md
+      href: objective-vectors-and-evaluated-candidates.md
     - name: Operators
       href: operators.md
     - name: Algorithm

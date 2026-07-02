@@ -27,10 +27,10 @@ public class ObservableEvaluatorTests
     }
 
     [Fact]
-    public void CountEvaluatedGenotypes_IncrementsByBatchSize()
+    public void CountEvaluatedCandidates_IncrementsByBatchSize()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatedGenotypes(counter);
+        var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
         var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 

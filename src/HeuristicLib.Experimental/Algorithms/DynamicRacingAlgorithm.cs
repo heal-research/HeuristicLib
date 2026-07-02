@@ -82,7 +82,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         {
             Candidate = candidate;
             var alg = racer.AlgBuilder(candidate);
-            algorithm = alg with { Evaluator = alg.Evaluator.CountEvaluatedGenotypes(out counter) };
+            algorithm = alg with { Evaluator = alg.Evaluator.CountEvaluatedCandidates(out counter) };
             running = algorithm.RunStreaming(problem, random, initialState, ct).GetEnumerator();
             LastState = initialState;
         }

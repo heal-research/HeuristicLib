@@ -19,13 +19,13 @@ public static class EvaluatorCounterExtensions
             return evaluator.CountEvaluatorCalls(counter);
         }
 
-        public IEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatedGenotypes(ObservationCounter counter)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatedCandidates(ObservationCounter counter)
             => evaluator.ObserveWith((candidates, _) => counter.IncrementBy(candidates.Count));
 
-        public IEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatedGenotypes(out ObservationCounter counter)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return evaluator.CountEvaluatedGenotypes(counter);
+            return evaluator.CountEvaluatedCandidates(counter);
         }
     }
 }

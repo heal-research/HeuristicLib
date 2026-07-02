@@ -19,13 +19,13 @@ public static class ReplacerCounterExtensions
             return replacer.CountReplacerCalls(counter);
         }
 
-        public IReplacer<TCandidate, TSearchSpace, TProblem> CountReplacementSolutions(ObservationCounter counter)
+        public IReplacer<TCandidate, TSearchSpace, TProblem> CountReplacementCandidates(ObservationCounter counter)
             => replacer.ObserveWith(newPopulation => counter.IncrementBy(newPopulation.Count));
 
-        public IReplacer<TCandidate, TSearchSpace, TProblem> CountReplacementSolutions(out ObservationCounter counter)
+        public IReplacer<TCandidate, TSearchSpace, TProblem> CountReplacementCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return replacer.CountReplacementSolutions(counter);
+            return replacer.CountReplacementCandidates(counter);
         }
     }
 }

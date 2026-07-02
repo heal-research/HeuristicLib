@@ -49,7 +49,7 @@ The execution state is the hidden carrier for resolved execution instances and p
 
 - [Problem](problem.md)
 - [Search spaces](search-space.md)
-- [Objective vectors and evaluated candidates](objectives-and-solutions.md)
+- [Objective vectors and evaluated candidates](objective-vectors-and-evaluated-candidates.md)
 - [Operators](operators.md)
 - [Algorithm](algorithm.md)
 - [Search state](algorithm-state.md)

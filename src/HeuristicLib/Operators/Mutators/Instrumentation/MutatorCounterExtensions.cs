@@ -19,13 +19,13 @@ public static class MutatorCounterExtensions
             return mutator.CountMutatorCalls(counter);
         }
 
-        public IMutator<TCandidate, TSearchSpace, TProblem> CountMutatedGenotypes(ObservationCounter counter)
+        public IMutator<TCandidate, TSearchSpace, TProblem> CountMutatedCandidates(ObservationCounter counter)
             => mutator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
 
-        public IMutator<TCandidate, TSearchSpace, TProblem> CountMutatedGenotypes(out ObservationCounter counter)
+        public IMutator<TCandidate, TSearchSpace, TProblem> CountMutatedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return mutator.CountMutatedGenotypes(counter);
+            return mutator.CountMutatedCandidates(counter);
         }
     }
 }

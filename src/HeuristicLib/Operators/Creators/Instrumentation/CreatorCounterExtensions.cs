@@ -19,13 +19,13 @@ public static class CreatorCounterExtensions
             return creator.CountCreatorCalls(counter);
         }
 
-        public ICreator<TCandidate, TSearchSpace, TProblem> CountCreatedGenotypes(ObservationCounter counter)
+        public ICreator<TCandidate, TSearchSpace, TProblem> CountCreatedCandidates(ObservationCounter counter)
             => creator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
 
-        public ICreator<TCandidate, TSearchSpace, TProblem> CountCreatedGenotypes(out ObservationCounter counter)
+        public ICreator<TCandidate, TSearchSpace, TProblem> CountCreatedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return creator.CountCreatedGenotypes(counter);
+            return creator.CountCreatedCandidates(counter);
         }
     }
 }

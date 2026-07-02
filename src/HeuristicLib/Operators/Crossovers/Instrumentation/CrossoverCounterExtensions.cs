@@ -19,13 +19,13 @@ public static class CrossoverCounterExtensions
             return crossover.CountCrossoverCalls(counter);
         }
 
-        public ICrossover<TCandidate, TSearchSpace, TProblem> CountCrossedGenotypes(ObservationCounter counter)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> CountCrossedCandidates(ObservationCounter counter)
             => crossover.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
 
-        public ICrossover<TCandidate, TSearchSpace, TProblem> CountCrossedGenotypes(out ObservationCounter counter)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> CountCrossedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return crossover.CountCrossedGenotypes(counter);
+            return crossover.CountCrossedCandidates(counter);
         }
     }
 }

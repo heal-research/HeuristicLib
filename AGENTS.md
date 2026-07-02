@@ -7,7 +7,7 @@ Use [docs/glossary.md](docs/glossary.md) for canonical HeuristicLib terminology 
 ## Repository map
 
 - `src/HeuristicLib.Contracts`: small public contracts shared across the library.
-- `src/HeuristicLib`: core algorithms, operators, search spaces, genotypes, problems, random engines, and analysis primitives.
+- `src/HeuristicLib`: core algorithms, operators, search spaces, candidate representations, problems, random engines, and analysis primitives.
 - `src/HeuristicLib.Experimental`: experimental problems, workflows, and integration-oriented features.
 - `src/HeuristicLib.PythonInterop`: Python-specific integration code, adapters, and workflows.
 - `test/HeuristicLib.Tests`: fast unit tests for core library behavior and invariants.

@@ -56,5 +56,5 @@ var problem = FuncProblem.Create<Candidate, AnyCandidateSpace>(
 ## Related pages
 
 - [Search spaces](search-space.md)
-- [Objective vectors and evaluated candidates](objectives-and-solutions.md)
+- [Objective vectors and evaluated candidates](objective-vectors-and-evaluated-candidates.md)
 - [Operators](operators.md)

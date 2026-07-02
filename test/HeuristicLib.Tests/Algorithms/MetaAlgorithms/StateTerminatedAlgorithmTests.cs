@@ -29,8 +29,8 @@ public class StateTerminatedAlgorithmTests
           initialState,
           TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([42]);
-        terminator.CheckedGenotypes.ShouldBe([42]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([42]);
+        terminator.CheckedCandidates.ShouldBe([42]);
     }
 
     [Fact]
@@ -47,8 +47,8 @@ public class StateTerminatedAlgorithmTests
           initialState,
           TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([42]);
-        terminator.CheckedGenotypes.ShouldBe([42]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([42]);
+        terminator.CheckedCandidates.ShouldBe([42]);
     }
 
     [Fact]
@@ -63,8 +63,8 @@ public class StateTerminatedAlgorithmTests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([1]);
-        terminator.CheckedGenotypes.ShouldBe([1]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
+        terminator.CheckedCandidates.ShouldBe([1]);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class StateTerminatedAlgorithmTests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([1]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class StateTerminatedAlgorithmTests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([1]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class StateTerminatedAlgorithmTests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([1]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
 
     [Fact]
@@ -192,15 +192,15 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingTerminator(Func<int, bool> ShouldStop)
       : StatelessTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public List<int> CheckedGenotypes { get; } = [];
+        public List<int> CheckedCandidates { get; } = [];
 
         public override bool IsTerminalState(
           PopulationState<int> state,
           DummySearchSpace<int> searchSpace,
           IProblem<int, DummySearchSpace<int>> problem)
         {
-            var candidate = MetaAlgorithmTestHelpers.StateGenotype(state);
-            CheckedGenotypes.Add(candidate);
+            var candidate = MetaAlgorithmTestHelpers.StateCandidate(state);
+            CheckedCandidates.Add(candidate);
             return ShouldStop(candidate);
         }
     }

@@ -10,7 +10,7 @@ public record StagnationTerminator<TCandidate>
 {
     public sealed class ExecutionState
     {
-        public ObjectiveVector? BestQualitySoFar { get; set; }
+        public ObjectiveVector? BestObjectiveVectorSoFar { get; set; }
         public int StagnationCounter { get; set; }
     }
 
@@ -25,14 +25,14 @@ public record StagnationTerminator<TCandidate>
 
     protected override bool IsTerminalState(PopulationState<TCandidate> algorithmState, ExecutionState executionState, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {
-        executionState.BestQualitySoFar ??= problem.Objective.Worst;
+        executionState.BestObjectiveVectorSoFar ??= problem.Objective.Worst;
 
         var comparer = problem.Objective.TotalOrderComparer;
 
-        var currentBestQuality = algorithmState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
-        if (comparer.Compare(currentBestQuality, executionState.BestQualitySoFar) < 0)
+        var currentBestObjectiveVector = algorithmState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
+        if (comparer.Compare(currentBestObjectiveVector, executionState.BestObjectiveVectorSoFar) < 0)
         {
-            executionState.BestQualitySoFar = currentBestQuality;
+            executionState.BestObjectiveVectorSoFar = currentBestObjectiveVector;
             executionState.StagnationCounter = 0;
         }
         else

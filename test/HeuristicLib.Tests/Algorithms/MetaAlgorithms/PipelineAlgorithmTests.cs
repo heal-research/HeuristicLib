@@ -26,7 +26,7 @@ public class PipelineAlgorithmTests
 
         var states = pipeline.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([1, 11, 111]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
         states.Select(MetaAlgorithmTestHelpers.StateObjective).ShouldBe([1.0, 11.0, 111.0]);
     }
 
@@ -46,7 +46,7 @@ public class PipelineAlgorithmTests
 
         var states = run.RunStreaming(RandomNumberGenerator.Create(42), cancellationToken: TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([1, 11, 111]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
         run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
     }
 

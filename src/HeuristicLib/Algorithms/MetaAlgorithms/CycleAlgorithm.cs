@@ -30,7 +30,7 @@ public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProb
     // ToDo: think if better place outside and keep CycleAlgorithm as infinite cycles?
     public int? MaximumCycles { get; init; }
 
-    // ToDo: maybe we need a new concept of ExecutionScope for this, if this comes up more often.
+    // ToDo: maybe execution-instance reuse needs a clearer lifecycle concept if this comes up more often.
     public bool NewExecutionInstancesPerCycle { get; init; } = true;
 
     public CycleAlgorithm(ImmutableArray<TAlgorithm> algorithms)

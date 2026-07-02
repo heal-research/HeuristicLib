@@ -319,8 +319,8 @@ public class PractitionerUsageSpecs
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
             .ToList();
-        var statesByEvaluatedGenotypes = algorithm
-            .WithMaxEvaluatedGenotypes(2)
+        var statesByEvaluatedCandidates = algorithm
+            .WithMaxEvaluatedCandidates(2)
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -328,8 +328,8 @@ public class PractitionerUsageSpecs
             .ToList();
 
         statesByEvaluatorCalls.Count.ShouldBe(2);
-        statesByEvaluatedGenotypes.Count.ShouldBe(1);
-        statesByEvaluatedGenotypes.Single().Population.EvaluatedCandidates.Length.ShouldBe(16);
+        statesByEvaluatedCandidates.Count.ShouldBe(1);
+        statesByEvaluatedCandidates.Single().Population.EvaluatedCandidates.Length.ShouldBe(16);
     }
 
     [Fact]
@@ -379,7 +379,7 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void GeneticAlgorithm_TypedOperatorBudgets_CanCountMutatorCallsOrMutatedGenotypes()
+    public void GeneticAlgorithm_TypedOperatorBudgets_CanCountMutatorCallsOrMutatedCandidates()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleGeneticAlgorithm(problem) with
@@ -397,10 +397,10 @@ public class PractitionerUsageSpecs
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
             .ToList();
-        var statesByMutatedGenotypes = algorithm
-            .WithMaxMutatedGenotypes(
+        var statesByMutatedCandidates = algorithm
+            .WithMaxMutatedCandidates(
                 algorithm.Mutator,
-                maximumGenotypes: 20)
+                maximumCandidates: 20)
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -409,8 +409,8 @@ public class PractitionerUsageSpecs
 
         statesByMutatorCalls.Count.ShouldBe(2);
         statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
-        statesByMutatedGenotypes.Count.ShouldBe(3);
-        statesByMutatedGenotypes.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+        statesByMutatedCandidates.Count.ShouldBe(3);
+        statesByMutatedCandidates.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -453,7 +453,7 @@ public class PractitionerUsageSpecs
                 algorithm.Mutator,
                 maximumCount: 20,
                 countedOperatorFactory: static (mutator, counter) =>
-                    mutator.CountMutatedGenotypes(counter))
+                    mutator.CountMutatedCandidates(counter))
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),

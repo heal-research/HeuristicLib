@@ -20,8 +20,6 @@ These items have meaningful progress behind them, but should still stay on the b
 - improve the main `README.md` as the repository and NuGet front door: add install commands, a compact representative code example, a package overview, links to usage guides, and a visible example of what HeuristicLib can do, such as the Python interactive demonstrator GIF
 - move to a more standard C# formatting baseline, including a more conventional editor configuration and CI enforcement that fails pull requests on formatting violations
 - actively pay down solution warning debt and define a staged warning policy: fix the existing compiler, analyzer, and test warnings intentionally instead of normalizing them, then ratchet toward warning-clean builds and stricter CI enforcement in steps that avoid drowning active work in noise
-- initial glossary integration: [glossary.md](glossary.md) now defines the canonical terminology and is linked from the docs TOC and `AGENTS.md`; remaining work is to keep it concise and use it as the guide for future API, docs, examples, and test naming cleanup
-
 Why these are only partial today:
 
 - the experiment and analysis specs cover the current API well, but there is not yet a separate desired-state API story

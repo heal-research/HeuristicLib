@@ -2,8 +2,8 @@ namespace HEAL.HeuristicLib.Optimization;
 
 public static class SingleObjective
 {
-    public static readonly ObjectiveDirections Minimize = new([ObjectiveDirection.Minimize], FitnessTotalOrderComparer.CreateSingleObjectiveComparer(ObjectiveDirection.Minimize));
-    public static readonly ObjectiveDirections Maximize = new([ObjectiveDirection.Maximize], FitnessTotalOrderComparer.CreateSingleObjectiveComparer(ObjectiveDirection.Maximize));
+    public static readonly ObjectiveDirections Minimize = new([ObjectiveDirection.Minimize], ObjectiveVectorTotalOrderComparer.CreateSingleObjectiveComparer(ObjectiveDirection.Minimize));
+    public static readonly ObjectiveDirections Maximize = new([ObjectiveDirection.Maximize], ObjectiveVectorTotalOrderComparer.CreateSingleObjectiveComparer(ObjectiveDirection.Maximize));
 
     public static ObjectiveDirections Create(ObjectiveDirection direction) => direction switch
     {

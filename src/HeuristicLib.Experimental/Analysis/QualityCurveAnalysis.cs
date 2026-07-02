@@ -7,6 +7,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
+// TODO: Revisit whether "quality curve" matches the glossary terminology or should become objective-vector based.
 public record QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : Analyzer<TCandidate, TSearchSpace, TProblem, TSearchState, QualityCurve<TCandidate>>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>

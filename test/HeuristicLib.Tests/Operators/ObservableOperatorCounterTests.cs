@@ -34,10 +34,10 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
-    public void CountCreatedGenotypes_IncrementsByReturnedGenotypeCount()
+    public void CountCreatedCandidates_IncrementsByReturnedCandidateCount()
     {
         var counter = new ObservationCounter();
-        var creator = new SequenceCreator().CountCreatedGenotypes(counter);
+        var creator = new SequenceCreator().CountCreatedCandidates(counter);
         var instance = creator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
@@ -77,10 +77,10 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
-    public void CountMutatedGenotypes_IncrementsByReturnedGenotypeCount()
+    public void CountMutatedCandidates_IncrementsByReturnedCandidateCount()
     {
         var counter = new ObservationCounter();
-        var mutator = new AddOneMutator().CountMutatedGenotypes(counter);
+        var mutator = new AddOneMutator().CountMutatedCandidates(counter);
         var instance = mutator.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
@@ -128,10 +128,10 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
-    public void CountCrossedGenotypes_IncrementsByReturnedGenotypeCount()
+    public void CountCrossedCandidates_IncrementsByReturnedCandidateCount()
     {
         var counter = new ObservationCounter();
-        var crossover = new SumParentsCrossover().CountCrossedGenotypes(counter);
+        var crossover = new SumParentsCrossover().CountCrossedCandidates(counter);
         var instance = crossover.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
@@ -176,26 +176,26 @@ public class ObservableOperatorCounterTests
     public void CountSelectorCalls_IncrementsOncePerSelectCall()
     {
         var counter = new ObservationCounter();
-        var selector = new FirstSolutionsSelector().CountSelectorCalls(counter);
+        var selector = new FirstCandidatesSelector().CountSelectorCalls(counter);
         var instance = selector.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
-        instance.Select(CreateSolutions([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Select(CreateSolutions([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        instance.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
 
     [Fact]
-    public void CountSelectedSolutions_IncrementsByReturnedSolutionCount()
+    public void CountSelectedCandidates_IncrementsByReturnedCandidateCount()
     {
         var counter = new ObservationCounter();
-        var selector = new FirstSolutionsSelector().CountSelectedSolutions(counter);
+        var selector = new FirstCandidatesSelector().CountSelectedCandidates(counter);
         var instance = selector.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
-        instance.Select(CreateSolutions([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Select(CreateSolutions([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        instance.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
     }
@@ -205,12 +205,12 @@ public class ObservableOperatorCounterTests
     {
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var selector = new FirstSolutionsSelector().MeasureSelectorDuration(duration, timeProvider);
+        var selector = new FirstCandidatesSelector().MeasureSelectorDuration(duration, timeProvider);
         var instance = selector.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
-        instance.Select(CreateSolutions([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        instance.Select(CreateSolutions([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        instance.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -219,21 +219,21 @@ public class ObservableOperatorCounterTests
     public void CountReplacerCalls_IncrementsOncePerReplaceCall()
     {
         var counter = new ObservationCounter();
-        var replacer = new FirstReplacementSolutionsReplacer().CountReplacerCalls(counter);
+        var replacer = new FirstReplacementCandidatesReplacer().CountReplacerCalls(counter);
         var instance = replacer.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
         instance.Replace(
-            CreateSolutions([1, 2, 3]),
-            CreateSolutions([10, 20]),
+            CreateEvaluatedCandidates([1, 2, 3]),
+            CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
             2,
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
         instance.Replace(
-            CreateSolutions([4]),
-            CreateSolutions([40]),
+            CreateEvaluatedCandidates([4]),
+            CreateEvaluatedCandidates([40]),
             problem.Objective,
             1,
             RandomNumberGenerator.Create(2),
@@ -244,24 +244,24 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
-    public void CountReplacementSolutions_IncrementsByReturnedSolutionCount()
+    public void CountReplacementCandidates_IncrementsByReturnedCandidateCount()
     {
         var counter = new ObservationCounter();
-        var replacer = new FirstReplacementSolutionsReplacer().CountReplacementSolutions(counter);
+        var replacer = new FirstReplacementCandidatesReplacer().CountReplacementCandidates(counter);
         var instance = replacer.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
         instance.Replace(
-            CreateSolutions([1, 2, 3]),
-            CreateSolutions([10, 20]),
+            CreateEvaluatedCandidates([1, 2, 3]),
+            CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
             2,
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
         instance.Replace(
-            CreateSolutions([4]),
-            CreateSolutions([40]),
+            CreateEvaluatedCandidates([4]),
+            CreateEvaluatedCandidates([40]),
             problem.Objective,
             1,
             RandomNumberGenerator.Create(2),
@@ -276,21 +276,21 @@ public class ObservableOperatorCounterTests
     {
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var replacer = new FirstReplacementSolutionsReplacer().MeasureReplacerDuration(duration, timeProvider);
+        var replacer = new FirstReplacementCandidatesReplacer().MeasureReplacerDuration(duration, timeProvider);
         var instance = replacer.CreateExecutionInstance(TestRun.Instance);
         var problem = CreateProblem();
 
         instance.Replace(
-            CreateSolutions([1, 2, 3]),
-            CreateSolutions([10, 20]),
+            CreateEvaluatedCandidates([1, 2, 3]),
+            CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
             2,
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
         instance.Replace(
-            CreateSolutions([4]),
-            CreateSolutions([40]),
+            CreateEvaluatedCandidates([4]),
+            CreateEvaluatedCandidates([40]),
             problem.Objective,
             1,
             RandomNumberGenerator.Create(2),
@@ -366,7 +366,7 @@ public class ObservableOperatorCounterTests
             objective: SingleObjective.Minimize);
     }
 
-    private static IReadOnlyList<EvaluatedCandidate<int>> CreateSolutions(IReadOnlyList<int> candidates)
+    private static IReadOnlyList<EvaluatedCandidate<int>> CreateEvaluatedCandidates(IReadOnlyList<int> candidates)
     {
         return candidates
             .Select(candidate => new EvaluatedCandidate<int>(candidate, new ObjectiveVector(candidate)))
@@ -412,7 +412,7 @@ public class ObservableOperatorCounterTests
         }
     }
 
-    private sealed record FirstSolutionsSelector
+    private sealed record FirstCandidatesSelector
       : StatelessSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Select(
@@ -427,7 +427,7 @@ public class ObservableOperatorCounterTests
         }
     }
 
-    private sealed record FirstReplacementSolutionsReplacer
+    private sealed record FirstReplacementCandidatesReplacer
       : StatelessReplacer<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Replace(

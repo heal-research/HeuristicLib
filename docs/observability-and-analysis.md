@@ -131,7 +131,7 @@ var observed = mutator.CountMutatedCandidates(counter);
 // later: counter.CurrentCount contains total mutated candidates
 ```
 
-The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedCandidates(...)`, `CountCrossedCandidates(...)`, `CountEvaluatedCandidates(...)`, `CountSelectedCandidates(...)`, and `CountReplacementCandidates(...)`.
+The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedCandidates(...)`, `CountCrossedCandidates(...)`, `CountEvaluatedCandidates(...)`, `CountMutatedCandidates(...)`, `CountSelectedCandidates(...)`, and `CountReplacementCandidates(...)`.
 
 The observed boundary is part of the budget. For example, these are different budgets:
 

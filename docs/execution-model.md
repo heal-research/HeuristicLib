@@ -6,7 +6,7 @@ This page explains how algorithm execution works in HeuristicLib.
 
 At the user level, the important idea is simple:
 
-- an algorithm configuration is a reusable configured object
+- an algorithm configuration is reusable
 - a run executes that configuration on a problem
 - execution produces a stream of search states
 
@@ -110,7 +110,7 @@ Budget names should say what they count.
 - `WithMaxEvaluatedCandidates(...)` is an external early-stopping wrapper over candidates processed inside observed evaluator batches. If one batch crosses the configured candidate count, the produced state for that batch is still yielded and future stream consumption stops afterward.
 - `WithMaxAlgorithmDuration(...)` is an external early-stopping wrapper over active state-production duration. It measures time spent pulling produced states from the wrapped algorithm and excludes caller idle time between pulls.
 - `WithMaxEvaluatorDuration(...)` is an external early-stopping wrapper over measured evaluator work duration. It installs a measured evaluator replacement for the run and stops future stream consumption after the configured cumulative evaluator duration has been observed.
-- Typed operator-budget helpers such as `WithMaxMutatorCalls(...)`, `WithMaxMutatedCandidates(...)`, `WithMaxSelectorDuration(...)`, and `WithMaxReplacementCandidates(...)` observe an explicitly supplied operator and install the matching counted or measured replacement for that run.
+- Typed operator-budget helpers such as `WithMaxMutatorCalls(...)`, `WithMaxMutatedCandidates(...)`, `WithMaxSelectedCandidates(...)`, `WithMaxReplacementCandidates(...)`, and `WithMaxSelectorDuration(...)` observe an explicitly supplied operator and install the matching counted or measured replacement for that run.
 - `WithMaxOperatorDuration(...)` is the general external operator-duration wrapper. It observes an explicitly supplied operator and a measured replacement factory, so users can apply duration budgets to custom wrappers or unusual operator boundaries.
 - `WithMaxCount(...)` is the general external operator-budget wrapper. It observes an explicitly supplied operator and a counted replacement factory, so users can count custom units or operator boundaries that do not fit a typed helper.
 - Evaluation-count budgets must identify the observed boundary and unit. Counting `Evaluate(...)` calls, evaluated candidates inside those calls, requests to a caching evaluator, and calls that reach the wrapped direct evaluator are different budgets.

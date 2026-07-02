@@ -35,7 +35,7 @@ public class CycleAlgorithmTests
 
         var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
-        states.Select(MetaAlgorithmTestHelpers.StateGenotype).ShouldBe([1, 11, 12, 22]);
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 12, 22]);
         states.Select(MetaAlgorithmTestHelpers.StateObjective).ShouldBe([1.0, 11.0, 12.0, 22.0]);
     }
 
@@ -93,12 +93,12 @@ public class CycleAlgorithmTests
         {
             executionState.YieldedStateCount++;
             var objectiveVector = new ObjectiveVector(executionState.YieldedStateCount);
-            var stampedSolutions = currentState.Population.EvaluatedCandidates
+            var stampedCandidates = currentState.Population.EvaluatedCandidates
                             .Select(solution => EvaluatedCandidate.From(solution.Candidate, objectiveVector));
 
             return currentState with
             {
-                Population = Population.From(stampedSolutions)
+                Population = Population.From(stampedCandidates)
             };
         }
 

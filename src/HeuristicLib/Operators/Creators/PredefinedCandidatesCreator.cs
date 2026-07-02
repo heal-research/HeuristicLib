@@ -6,19 +6,19 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
-public partial record PredefinedSolutionsCreator<TCandidate, TSearchSpace, TProblem>
-  : WrappingCreator<TCandidate, TSearchSpace, TProblem, PredefinedSolutionsCreator<TCandidate, TSearchSpace, TProblem>.ExecutionState>
+public partial record PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem>
+  : WrappingCreator<TCandidate, TSearchSpace, TProblem, PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem>.ExecutionState>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ICreator<TCandidate, TSearchSpace, TProblem> CreatorForRemainingSolutions => InnerCreator;
+    public ICreator<TCandidate, TSearchSpace, TProblem> CreatorForRemainingCandidates => InnerCreator;
 
-    [OrderedEquality] public ImmutableArray<TCandidate> PredefinedSolutions { get; init; }
+    [OrderedEquality] public ImmutableArray<TCandidate> PredefinedCandidates { get; init; }
 
-    public PredefinedSolutionsCreator(ImmutableArray<TCandidate> predefinedSolutions, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingSolutions)
-      : base(creatorForRemainingSolutions)
+    public PredefinedCandidatesCreator(ImmutableArray<TCandidate> predefinedCandidates, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates)
+      : base(creatorForRemainingCandidates)
     {
-        PredefinedSolutions = predefinedSolutions;
+        PredefinedCandidates = predefinedCandidates;
     }
 
     protected override ExecutionState CreateInitialState() => new();
@@ -27,15 +27,15 @@ public partial record PredefinedSolutionsCreator<TCandidate, TSearchSpace, TProb
     {
         var offspring = new TCandidate[count];
 
-        var countPredefined = Math.Min(PredefinedSolutions.Length - executionState.CurrentSolutionIndex, count);
+        var countPredefined = Math.Min(PredefinedCandidates.Length - executionState.CurrentCandidateIndex, count);
         if (countPredefined > 0)
         {
             for (var i = 0; i < countPredefined; i++)
             {
-                offspring[i] = PredefinedSolutions[executionState.CurrentSolutionIndex + i];
+                offspring[i] = PredefinedCandidates[executionState.CurrentCandidateIndex + i];
             }
 
-            executionState.CurrentSolutionIndex += countPredefined;
+            executionState.CurrentCandidateIndex += countPredefined;
         }
 
         var countRemaining = count - countPredefined;
@@ -56,6 +56,6 @@ public partial record PredefinedSolutionsCreator<TCandidate, TSearchSpace, TProb
 
     public sealed class ExecutionState
     {
-        public int CurrentSolutionIndex { get; set; } = 0;
+        public int CurrentCandidateIndex { get; set; } = 0;
     }
 }

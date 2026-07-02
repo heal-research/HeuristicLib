@@ -12,7 +12,7 @@ public class LexicographicComparer(ObjectiveDirection[] objectives, int[]? order
     {
         if ((x is not null && x.Count != objectives.Length) || (y is not null && y.Count != objectives.Length))
         {
-            throw new ArgumentException("Fitness must have the same length as the objective");
+            throw new ArgumentException("Objective vector must have the same length as the objective directions");
         }
 
         if (x is null && y is null)
