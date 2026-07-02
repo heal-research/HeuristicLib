@@ -5,31 +5,31 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public interface INeighborhood<TGenotype, in TSearchSpace, in TProblem, TMove>
-    : IOperator<INeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove>>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>;
+public interface INeighborhood<TCandidate, in TSearchSpace, in TProblem, TMove>
+    : IOperator<INeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
-public interface INeighborhoodInstance<TGenotype, in TSearchSpace, in TProblem, TMove>
+public interface INeighborhoodInstance<TCandidate, in TSearchSpace, in TProblem, TMove>
     : IOperatorInstance
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     IEnumerable<TMove> Moves(
-        TGenotype genotype,
+        TCandidate candidate,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
         TProblem problem);
 
     bool RandomMove(
-        TGenotype genotype,
+        TCandidate candidate,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
         TProblem problem,
         [MaybeNullWhen(false)] out TMove move);
 
-    TGenotype ApplyMove(
-        TGenotype genotype,
+    TCandidate ApplyMove(
+        TCandidate candidate,
         TMove move,
         TSearchSpace searchSpace,
         TProblem problem);

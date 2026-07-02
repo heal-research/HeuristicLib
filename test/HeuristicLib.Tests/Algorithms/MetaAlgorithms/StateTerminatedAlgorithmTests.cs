@@ -181,11 +181,11 @@ public class StateTerminatedAlgorithmTests
         };
     }
 
-    private static PopulationState<int> CreateState(int genotype)
+    private static PopulationState<int> CreateState(int candidate)
     {
         return new PopulationState<int>
         {
-            Population = Population.From([Solution.From(genotype, genotype)])
+            Population = Population.From([EvaluatedCandidate.From(candidate, candidate)])
         };
     }
 
@@ -199,9 +199,9 @@ public class StateTerminatedAlgorithmTests
           DummySearchSpace<int> searchSpace,
           IProblem<int, DummySearchSpace<int>> problem)
         {
-            var genotype = MetaAlgorithmTestHelpers.StateGenotype(state);
-            CheckedGenotypes.Add(genotype);
-            return ShouldStop(genotype);
+            var candidate = MetaAlgorithmTestHelpers.StateGenotype(state);
+            CheckedGenotypes.Add(candidate);
+            return ShouldStop(candidate);
         }
     }
 

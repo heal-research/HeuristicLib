@@ -101,10 +101,10 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
     IRandomNumberGenerator random)
   {
     var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-    var objectiveValues = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+    var objectiveVector = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
     return new SingleEvaluatedCandidateState<TCandidate> {
-      Population = Population.From([candidate], [objectiveValues])
+      Population = Population.From([candidate], [objectiveVector])
     };
   }
 }

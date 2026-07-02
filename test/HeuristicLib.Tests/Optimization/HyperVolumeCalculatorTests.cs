@@ -6,7 +6,7 @@ public class HyperVolumeCalculatorTests
 {
     private static ObjectiveVector Vec(params double[] values) => new(values);
 
-    private static Objective Obj(params ObjectiveDirection[] directions) => new(directions, new LexicographicComparer(directions));
+    private static ObjectiveDirections Obj(params ObjectiveDirection[] directions) => new(directions, new LexicographicComparer(directions));
 
     [Fact]
     public void Calculate_EmptyFront_ReturnsZero()

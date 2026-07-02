@@ -34,7 +34,7 @@ public class OperatorAuthoringSpecs
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Solution.Genotype.ShouldBe(RealVector.Repeat(0.0, problem.TestFunction.Dimension));
+        finalState.EvaluatedCandidate.Candidate.ShouldBe(RealVector.Repeat(0.0, problem.TestFunction.Dimension));
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class OperatorAuthoringSpecs
           RandomNumberGenerator.Create(456),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)

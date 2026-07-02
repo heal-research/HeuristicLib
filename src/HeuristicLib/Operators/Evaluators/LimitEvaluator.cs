@@ -31,8 +31,8 @@ public record LimitEvaluator<TG, TS, TP>
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> genotypes, ExecutionState executionState,
-      InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> candidates, ExecutionState executionState,
+        InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
         var remainingEvaluations = maxEvaluations - executionState.Counter.CurrentCount;
 
@@ -40,23 +40,23 @@ public record LimitEvaluator<TG, TS, TP>
 
         if (remainingEvaluations <= 0)
         {
-            return Enumerable.Repeat(alternative, genotypes.Count).ToArray();
+            return Enumerable.Repeat(alternative, candidates.Count).ToArray();
         }
 
-        if (strict && remainingEvaluations < genotypes.Count)
+        if (strict && remainingEvaluations < candidates.Count)
         {
-            var genotypesToEvaluate = genotypes.Take(remainingEvaluations).ToList();
-            var genotypesToSkip = genotypes.Skip(remainingEvaluations).ToList();
+            var candidatesToEvaluate = candidates.Take(remainingEvaluations).ToList();
+            var candidatesToSkip = candidates.Skip(remainingEvaluations).ToList();
 
-            var evaluated = innerEvaluate(genotypesToEvaluate, random, searchSpace, problem);
-            executionState.Counter.IncrementBy(genotypesToEvaluate.Count);
-            var skipped = Enumerable.Repeat(alternative, genotypesToSkip.Count);
+            var evaluated = innerEvaluate(candidatesToEvaluate, random, searchSpace, problem);
+            executionState.Counter.IncrementBy(candidatesToEvaluate.Count);
+            var skipped = Enumerable.Repeat(alternative, candidatesToSkip.Count);
 
             return evaluated.Concat(skipped).ToArray();
         }
 
-        var result = innerEvaluate(genotypes, random, searchSpace, problem);
-        executionState.Counter.IncrementBy(genotypes.Count);
+        var result = innerEvaluate(candidates, random, searchSpace, problem);
+        executionState.Counter.IncrementBy(candidates.Count);
         return result;
     }
 }

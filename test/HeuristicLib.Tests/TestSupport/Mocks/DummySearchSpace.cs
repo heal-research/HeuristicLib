@@ -6,5 +6,5 @@ public sealed class DummySearchSpace<T> : ISearchSpace<T>
 {
     public static readonly DummySearchSpace<T> Instance = new();
     private DummySearchSpace() { }
-    public bool Contains(T genotype) => true;
+    public bool Contains(T candidate) => true;
 }

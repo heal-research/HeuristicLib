@@ -77,7 +77,7 @@ public class CycleAlgorithmTests
     }
 
     private static double GetStateStamp(PopulationState<RealVector> state) =>
-      state.Population.Solutions[0].ObjectiveVector[0];
+      state.Population.EvaluatedCandidates[0].ObjectiveVector[0];
 
     private sealed record YieldedStateStampingInterceptor
       : Interceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
@@ -93,8 +93,8 @@ public class CycleAlgorithmTests
         {
             executionState.YieldedStateCount++;
             var objectiveVector = new ObjectiveVector(executionState.YieldedStateCount);
-            var stampedSolutions = currentState.Population.Solutions
-              .Select(solution => Solution.From(solution.Genotype, objectiveVector));
+            var stampedSolutions = currentState.Population.EvaluatedCandidates
+                            .Select(solution => EvaluatedCandidate.From(solution.Candidate, objectiveVector));
 
             return currentState with
             {

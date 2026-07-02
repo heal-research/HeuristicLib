@@ -2,18 +2,18 @@ using System.Text;
 
 namespace HEAL.HeuristicLib.GenealogyAnalysis;
 
-public class GenealogyGraph<TGenotype> where TGenotype : notnull
+public class GenealogyGraph<TCandidate> where TCandidate : notnull
 {
     private int nextId;
 
-    public class Node(int id, TGenotype value, int generation, int layer, int rank)
+    public class Node(int id, TCandidate value, int generation, int layer, int rank)
     {
         public readonly int Id = id;
         public readonly HashSet<Node> Children = [];
         public readonly HashSet<Node> Parents = [];
         public readonly int Generation = generation;
         public readonly int Layer = layer;
-        public readonly TGenotype Value = value;
+        public readonly TCandidate Value = value;
         public readonly int Rank = rank;
 
         public HashSet<Node> GetAllDescendants() => Children.SelectMany(x => x.GetAllDescendants()).Concat(Children).ToHashSet();
@@ -21,17 +21,17 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull
         public HashSet<Node> GetAllAncestors() => Parents.SelectMany(x => x.GetAllAncestors()).Concat(Children).ToHashSet();
     }
 
-    public Dictionary<TGenotype, Node> CurrentGeneration => Nodes[^1];
-    public readonly List<Dictionary<TGenotype, Node>> Nodes = [];
-    private readonly IEqualityComparer<TGenotype> equality;
+    public Dictionary<TCandidate, Node> CurrentGeneration => Nodes[^1];
+    public readonly List<Dictionary<TCandidate, Node>> Nodes = [];
+    private readonly IEqualityComparer<TCandidate> equality;
 
-    public GenealogyGraph(IEqualityComparer<TGenotype> equality)
+    public GenealogyGraph(IEqualityComparer<TCandidate> equality)
     {
-        Nodes.Add(new Dictionary<TGenotype, Node>(equality));
+        Nodes.Add(new Dictionary<TCandidate, Node>(equality));
         this.equality = equality;
     }
 
-    public void AddConnection(ICollection<TGenotype> parent, TGenotype child)
+    public void AddConnection(ICollection<TCandidate> parent, TCandidate child)
     {
         if (CurrentGeneration.TryGetValue(child, out var cNode) && parent.Any(x => equality.Equals(x, child)))
         {
@@ -53,9 +53,9 @@ public class GenealogyGraph<TGenotype> where TGenotype : notnull
         }
     }
 
-    public void SetAsNewGeneration(IEnumerable<TGenotype> survivors, bool saveSpace = false)
+    public void SetAsNewGeneration(IEnumerable<TCandidate> survivors, bool saveSpace = false)
     {
-        var newGen = new Dictionary<TGenotype, Node>(CurrentGeneration.Comparer);
+        var newGen = new Dictionary<TCandidate, Node>(CurrentGeneration.Comparer);
         var rank = 0;
         foreach (var survivor in survivors)
         {

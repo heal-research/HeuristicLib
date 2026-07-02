@@ -67,10 +67,10 @@ public class GenealogyGraphTests
         var ares = run.GetAnalyzerResult(analysis);
 
         ares.Count.ShouldBe(6);
-        res.Population.Solutions.Count().ShouldBe(8);
-        res.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        res.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
-        res.Population.Solutions.All(solution => double.IsFinite(solution.ObjectiveVector[0])).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.Count().ShouldBe(8);
+        res.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.All(solution => double.IsFinite(solution.ObjectiveVector[0])).ShouldBeTrue();
     }
 
     [Fact]
@@ -107,9 +107,9 @@ public class GenealogyGraphTests
         var gres = run.GetAnalyzerResult(genealogyAnalysis);
 
         qres.Count.ShouldBe(gens);
-        res.Population.Solutions.Length.ShouldBe(popsize);
-        res.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        res.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.Length.ShouldBe(popsize);
+        res.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
         var graphViz = gres.ToGraphViz();
         (graphViz.Length > 0).ShouldBeTrue();
         eres.CurrentState[^1].best.ObjectiveVector.ShouldBe(qres[^1].Best.ObjectiveVector);
@@ -129,10 +129,10 @@ public class GenealogyGraphTests
         var run = algorithm.WithMaxIterations(8).CreateRun(problem, genealogy);
         var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.GetAnalyzerResult(genealogy);
-        res.Population.Solutions.ShouldHaveSingleItem();
-        problem.SearchSpace.Contains(res.Population.Solutions.Single().Genotype).ShouldBeTrue();
-        res.Population.Solutions.Single().ObjectiveVector.Count.ShouldBe(1);
-        double.IsFinite(res.Population.Solutions.Single().ObjectiveVector[0]).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
+        problem.SearchSpace.Contains(res.Population.EvaluatedCandidates.Single().Candidate).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.Single().ObjectiveVector.Count.ShouldBe(1);
+        double.IsFinite(res.Population.EvaluatedCandidates.Single().ObjectiveVector[0]).ShouldBeTrue();
         var graphViz = gres.ToGraphViz();
         (graphViz.Length > 0).ShouldBeTrue();
     }
@@ -169,10 +169,10 @@ public class GenealogyGraphTests
         var qres = run.GetAnalyzerResult(qualities);
 
         qres.Count.ShouldBe(maximumIterations);
-        res.Population.Solutions.Length.ShouldBe(populationSize);
-        res.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        res.Population.Solutions.All(solution => solution.ObjectiveVector.Count == problem.Objective.Directions.Count()).ShouldBeTrue();
-        res.Population.Solutions.All(solution => solution.ObjectiveVector.All(double.IsFinite)).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.Length.ShouldBe(populationSize);
+        res.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == problem.Objective.Directions.Count()).ShouldBeTrue();
+        res.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.All(double.IsFinite)).ShouldBeTrue();
         var graphViz = gres.ToGraphViz();
         (graphViz.Length > 0).ShouldBeTrue();
     }

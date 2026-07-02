@@ -24,7 +24,7 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
 {
     public readonly NoProblem<T1, TS1> NoProblem1 = new(SearchSpace);
     public readonly NoProblem<T2, TS2> NoProblem2 = new(SearchSpace2);
-    public bool Contains(CompositeGenotype<T1, T2> genotype) => SearchSpace.Contains(genotype.Part1) && SearchSpace2.Contains(genotype.Part2);
+    public bool Contains(CompositeGenotype<T1, T2> candidate) => SearchSpace.Contains(candidate.Part1) && SearchSpace2.Contains(candidate.Part2);
 
     public Creator CombineCreators(ICreator<T1, TS1, IProblem<T1, TS1>> operator1, ICreator<T2, TS2, IProblem<T2, TS2>> operator2) => new(operator1, operator2);
     public Mutator CombineMutator(IMutator<T1, TS1, IProblem<T1, TS1>> operator1, IMutator<T2, TS2, IProblem<T2, TS2>> operator2) => new(operator1, operator2);

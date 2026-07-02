@@ -5,22 +5,22 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creators;
 
-public abstract record WrappingCreator<TGenotype, TSearchSpace, TProblem, TExecutionState>
-  : ICreator<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record WrappingCreator<TCandidate, TSearchSpace, TProblem, TExecutionState>
+  : ICreator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TExecutionState : class
 {
-    protected delegate IReadOnlyList<TGenotype> InnerCreate(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected delegate IReadOnlyList<TCandidate> InnerCreate(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected ICreator<TGenotype, TSearchSpace, TProblem> InnerCreator { get; }
+    protected ICreator<TCandidate, TSearchSpace, TProblem> InnerCreator { get; }
 
-    protected WrappingCreator(ICreator<TGenotype, TSearchSpace, TProblem> innerCreator)
+    protected WrappingCreator(ICreator<TCandidate, TSearchSpace, TProblem> innerCreator)
     {
         InnerCreator = innerCreator;
     }
 
-    public ICreatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         var innerCreator = instanceRegistry.Resolve(InnerCreator);
         return new Instance(this, CreateInitialState(), innerCreator.Create);
@@ -28,7 +28,7 @@ public abstract record WrappingCreator<TGenotype, TSearchSpace, TProblem, TExecu
 
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<TGenotype> Create(
+    protected abstract IReadOnlyList<TCandidate> Create(
       int count,
       TExecutionState executionState,
       InnerCreate innerCreate,
@@ -37,34 +37,34 @@ public abstract record WrappingCreator<TGenotype, TSearchSpace, TProblem, TExecu
       TProblem problem);
 
     private sealed class Instance(
-      WrappingCreator<TGenotype, TSearchSpace, TProblem, TExecutionState> wrappingCreator,
+      WrappingCreator<TCandidate, TSearchSpace, TProblem, TExecutionState> wrappingCreator,
       TExecutionState executionState,
       InnerCreate innerCreate)
-      : ICreatorInstance<TGenotype, TSearchSpace, TProblem>
+      : ICreatorInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             return wrappingCreator.Create(count, executionState, innerCreate, random, searchSpace, problem);
         }
     }
 }
 
-public abstract record WrappingCreator<TGenotype, TSearchSpace, TProblem>
-  : WrappingCreator<TGenotype, TSearchSpace, TProblem, NoState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record WrappingCreator<TCandidate, TSearchSpace, TProblem>
+  : WrappingCreator<TCandidate, TSearchSpace, TProblem, NoState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected WrappingCreator(ICreator<TGenotype, TSearchSpace, TProblem> innerCreator)
+    protected WrappingCreator(ICreator<TCandidate, TSearchSpace, TProblem> innerCreator)
       : base(innerCreator)
     {
     }
 
     protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-    protected sealed override IReadOnlyList<TGenotype> Create(int count, NoState executionState,
+    protected sealed override IReadOnlyList<TCandidate> Create(int count, NoState executionState,
       InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
       => Create(count, innerCreate, random, searchSpace, problem);
 
-    protected abstract IReadOnlyList<TGenotype> Create(int count, InnerCreate innerCreate,
+    protected abstract IReadOnlyList<TCandidate> Create(int count, InnerCreate innerCreate,
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

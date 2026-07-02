@@ -25,7 +25,8 @@ public abstract class StackedState<T> : IMutableState<StackedState<T>, T, Object
     {
         get
         {
-            if (hasBound) return field;
+            if (hasBound)
+                return field;
             hasBound = true;
             field = CalculateBound();
             return field;

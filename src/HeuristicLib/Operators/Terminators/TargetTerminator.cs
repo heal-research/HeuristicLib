@@ -5,8 +5,8 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record TargetTerminator<TGenotype>
-  : StatelessTerminator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, PopulationState<TGenotype>>
+public record TargetTerminator<TCandidate>
+  : StatelessTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>>
 {
     public ObjectiveVector Target { get; init; }
 
@@ -15,15 +15,15 @@ public record TargetTerminator<TGenotype>
         Target = target;
     }
 
-    public override bool IsTerminalState(PopulationState<TGenotype> state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+    public override bool IsTerminalState(PopulationState<TCandidate> state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
       => TargetTerminator.IsTerminalState(state, problem, Target);
 }
 
 public static class TargetTerminator
 {
-    public static bool IsTerminalState<TGenotype>(
-      PopulationState<TGenotype> state,
-      IProblem<TGenotype, ISearchSpace<TGenotype>> problem,
+    public static bool IsTerminalState<TCandidate>(
+      PopulationState<TCandidate> state,
+      IProblem<TCandidate, ISearchSpace<TCandidate>> problem,
       ObjectiveVector target)
     {
         return state.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));

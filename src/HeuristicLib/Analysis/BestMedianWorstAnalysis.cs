@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public record BestMedianWorstEntry<T>(ISolution<T> Best, ISolution<T> Median, ISolution<T> Worst);
+public record BestMedianWorstEntry<T>(EvaluatedCandidate<T> Best, EvaluatedCandidate<T> Median, EvaluatedCandidate<T> Worst);
 
 public record BestMedianWorstAnalysis<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> Algorithm, params IInterceptor<T, TS, TP, TR>[] Interceptor)
   : Analyzer<T, TS, TP, TR, List<BestMedianWorstEntry<T>>>(Algorithm)

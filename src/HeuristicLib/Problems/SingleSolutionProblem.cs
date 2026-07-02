@@ -10,9 +10,9 @@ public abstract class SingleSolutionProblem<TSolution, TSearchSpace> : Problem<T
 {
     public int DegreeOfParallelism { get; init; } = 1;
 
-    protected SingleSolutionProblem(Objective objective, TSearchSpace searchSpace) : base(objective, searchSpace) { }
+    protected SingleSolutionProblem(ObjectiveDirections objective, TSearchSpace searchSpace) : base(objective, searchSpace) { }
 
-    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> genotypes, IRandomNumberGenerator random) => BatchExecution.Parallel(genotypes, Evaluate, random, DegreeOfParallelism);
+    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> candidates, IRandomNumberGenerator random) => BatchExecution.Parallel(candidates, Evaluate, random, DegreeOfParallelism);
 
     public abstract ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random);
 }
@@ -20,14 +20,14 @@ public abstract class SingleSolutionProblem<TSolution, TSearchSpace> : Problem<T
 public abstract class Problem<TSolution, TSearchSpace> : IProblem<TSolution, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TSolution>
 {
-    protected Problem(Objective objective, TSearchSpace searchSpace)
+    protected Problem(ObjectiveDirections objective, TSearchSpace searchSpace)
     {
         Objective = objective;
         SearchSpace = searchSpace;
     }
 
-    public Objective Objective { get; }
-    public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> genotypes, IRandomNumberGenerator random);
+    public ObjectiveDirections Objective { get; }
+    public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> candidates, IRandomNumberGenerator random);
 
     public TSearchSpace SearchSpace { get; }
 }

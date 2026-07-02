@@ -54,12 +54,12 @@ public class PipelineAlgorithmTests
       : StatelessEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(
-          IReadOnlyList<int> genotypes,
+          IReadOnlyList<int> candidates,
           IRandomNumberGenerator random,
           DummySearchSpace<int> searchSpace,
           IProblem<int, DummySearchSpace<int>> problem)
         {
-            return problem.Evaluate(genotypes, random);
+            return problem.Evaluate(candidates, random);
         }
     }
 

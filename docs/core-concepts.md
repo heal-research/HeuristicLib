@@ -4,7 +4,7 @@ This section defines the vocabulary used throughout the library.
 
 The goal is a single dominant mental model:
 
-> An **algorithm** produces a stream of **search states** while operating on **candidates** from a **search space**, evaluated by a **problem** into **objective value(s)** interpreted by **objective direction(s)**.
+> An **algorithm** produces a stream of **search states** while operating on **candidates** from a **search space**, evaluated by a **problem** into an **objective vector** interpreted by **objective directions**.
 
 ## The contracts at a glance
 
@@ -12,9 +12,9 @@ The goal is a single dominant mental model:
 | -------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Candidate            | The algorithm-facing object being searched              | Generic type parameter `TCandidate`                                                                         |
 | Search space         | Validity predicate for candidates                       | `ISearchSpace<TCandidate>`                                                                                  |
-| Objective directions | Minimize/maximize direction per objective               | `ObjectiveDirection`                                                                                        |
-| Objective values     | The measured outcome of evaluation                      | `ObjectiveValues`                                                                                           |
-| Evaluated candidate  | Candidate + objective values                            | `EvaluatedCandidate<TCandidate>`                                                                            |
+| Objective directions | Minimize/maximize direction per objective               | `ObjectiveDirections`                                                                                       |
+| Objective vector     | The measured outcome of evaluation                      | `ObjectiveVector`                                                                                           |
+| Evaluated candidate  | Candidate + objective vector                            | `EvaluatedCandidate<TCandidate>`                                                                            |
 | Problem              | Owns search space, evaluation, and objective directions | `IProblem<TCandidate, TSearchSpace>`                                                                        |
 | Search state         | The public progress value produced by algorithms        | `ISearchState`                                                                                              |
 | Algorithm loop       | The step-based algorithm authoring model                | `IterativeAlgorithm<...>`                                                                                   |
@@ -49,7 +49,7 @@ The execution state is the hidden carrier for resolved execution instances and p
 
 - [Problem](problem.md)
 - [Search spaces](search-space.md)
-- [Objective values and evaluated candidates](objectives-and-solutions.md)
+- [Objective vectors and evaluated candidates](objectives-and-solutions.md)
 - [Operators](operators.md)
 - [Algorithm](algorithm.md)
 - [Search state](algorithm-state.md)

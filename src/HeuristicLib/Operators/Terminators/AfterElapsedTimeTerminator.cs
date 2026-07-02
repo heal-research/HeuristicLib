@@ -1,7 +1,7 @@
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record AfterElapsedTimeTerminator<TGenotype>
-  : Terminator<TGenotype, AfterElapsedTimeTerminator<TGenotype>.ExecutionState>
+public record AfterElapsedTimeTerminator<TCandidate>
+  : Terminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.ExecutionState>
 {
     public AfterElapsedTimeTerminator(TimeSpan maximumElapsedTime)
       : this(maximumElapsedTime, TimeProvider.System)

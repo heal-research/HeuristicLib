@@ -51,7 +51,7 @@
 
 //    for (var level = 0; level < pyramid.Count; level++) {
 //      var current = pyramid[level];
-//      var newFitness = LinkageCrossover.ImproveUsingTree(current.Tree, current.Solutions, solution, fitness, tracker, random);
+//      var newFitness = LinkageCrossover.ImproveUsingTree(current.Tree, current.EvaluatedCandidates, solution, fitness, tracker, random);
 //      // add it to the next level if its a strict fitness improvement
 //      if (!tracker.IsBetter(newFitness, fitness)) {
 //        continue;

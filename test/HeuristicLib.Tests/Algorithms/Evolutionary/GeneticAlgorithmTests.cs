@@ -231,8 +231,8 @@ public class GeneticAlgorithmTests
     // 
     //   private record MultiGenotypeSearchSpace(RealVectorSearchSpace RealVectorSearchSpace, PermutationSearchSpace PermutationSearchSpace) : ISearchSpace<MultiGenotype, MultiGenotypeSearchSpace>> {
     // 
-    //     public bool IsValidGenotype(MultiGenotype genotype) {
-    //       return RealVectorSearchSpace.IsValidGenotype(genotype.RealVector) && PermutationSearchSpace.IsValidGenotype(genotype.Permutation);
+    //     public bool IsValidGenotype(MultiGenotype candidate) {
+    //       return RealVectorSearchSpace.IsValidGenotype(candidate.RealVector) && PermutationSearchSpace.IsValidGenotype(candidate.Permutation);
     //     }
     //   }
     // 
@@ -252,8 +252,8 @@ public class GeneticAlgorithmTests
     //     }
     //   }
     //   private class MultiGenotypeMutator(IMutator<RealVector> realVectorMutator, IMutator<Permutation> permutationMutator) : IMutator<MultiGenotype> {
-    //     public MultiGenotype Mutate(MultiGenotype genotype) {
-    //       return new MultiGenotype(realVectorMutator.Mutate(genotype.RealVector), permutationMutator.Mutate(genotype.Permutation));
+    //     public MultiGenotype Mutate(MultiGenotype candidate) {
+    //       return new MultiGenotype(realVectorMutator.Mutate(candidate.RealVector), permutationMutator.Mutate(candidate.Permutation));
     //     }
     //   }
     // 

@@ -6,13 +6,13 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 [Equatable]
-public partial record AnyTerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
-  : MultiTerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
+public partial record AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : MultiTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public AnyTerminator(params ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>> terminators)
+    public AnyTerminator(params ImmutableArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
       : base(terminators)
     {
     }

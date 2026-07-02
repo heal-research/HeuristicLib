@@ -4,15 +4,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ICreator<out TGenotype, in TSearchSpace, in TProblem>
-  : IOperator<ICreatorInstance<TGenotype, TSearchSpace, TProblem>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
+public interface ICreator<out TCandidate, in TSearchSpace, in TProblem>
+  : IOperator<ICreatorInstance<TCandidate, TSearchSpace, TProblem>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
-public interface ICreatorInstance<out TGenotype, in TSearchSpace, in TProblem>
+public interface ICreatorInstance<out TCandidate, in TSearchSpace, in TProblem>
   : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    IReadOnlyList<TGenotype> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

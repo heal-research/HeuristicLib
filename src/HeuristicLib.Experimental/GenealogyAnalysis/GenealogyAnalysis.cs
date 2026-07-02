@@ -73,7 +73,7 @@ public record GenealogyAnalysis<T, TS, TP, TR> :
     public void AfterInterception(GenealogyGraph<T> graph, TR currentState, TP problem)
     {
         var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
-        graph.SetAsNewGeneration(ordered.Select(x => x.Genotype), saveSpace);
+        graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
     }
 
     public override GenealogyGraph<T> CreateInitialResult() => new(equality ?? EqualityComparer<T>.Default);

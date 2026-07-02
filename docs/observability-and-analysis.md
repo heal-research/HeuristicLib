@@ -219,7 +219,7 @@ Typical characteristics:
 Typical API shape:
 
 ```csharp
-var observedEvaluator = evaluator.ObserveWith((candidates, objectiveValues, searchSpace, problem) => {
+var observedEvaluator = evaluator.ObserveWith((candidates, objectiveVectors, searchSpace, problem) => {
   // local side effect
 });
 ```

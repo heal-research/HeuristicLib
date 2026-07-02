@@ -1,4 +1,4 @@
-﻿// ReSharper disable InconsistentNaming
+// ReSharper disable InconsistentNaming
 
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
@@ -148,18 +148,18 @@ public class LazySolution<T> : Solution
   private bool bounded;
   private double? quality;
   private double? lowerBound;
-  public readonly T genotype;
+  public readonly T candidate;
   private readonly IEvaluationContext<T> context;
 
-  public LazySolution(T genotype, IEvaluationContext<T> context)
+  public LazySolution(T candidate, IEvaluationContext<T> context)
   {
-    this.genotype = genotype;
+    this.candidate = candidate;
     this.context = context;
   }
 
   private LazySolution(LazySolution<T> other)
   {
-    genotype = other.genotype;
+    candidate = other.candidate;
     context = other.context;
     evaluated = other.evaluated;
     bounded = other.bounded;
@@ -170,7 +170,7 @@ public class LazySolution<T> : Solution
   public double? Quality()
   {
     if (evaluated) return quality;
-    quality = context.Evaluate(genotype, out var b, out var bound);
+    quality = context.Evaluate(candidate, out var b, out var bound);
     if (b) {
       lowerBound = bound;
       bounded = true;
@@ -183,7 +183,7 @@ public class LazySolution<T> : Solution
   public double? LowerBound()
   {
     if (bounded) return lowerBound;
-    lowerBound = context.LowerBound(genotype, out var e, out var q);
+    lowerBound = context.LowerBound(candidate, out var e, out var q);
     if (e) {
       evaluated = true;
       quality = q;
@@ -211,7 +211,7 @@ public record ProblemOperations<T, TS, TP>(
   where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS>, Problem
 {
   public override LazySolution<T> apply_move(MutationMove<T, TS, TP> move, LazySolution<T> solution)
-    => new(Mutator.Mutate([solution.genotype], rng.Fork(move.seed), SearchSpace, Problem)[0], this);
+    => new(Mutator.Mutate([solution.candidate], rng.Fork(move.seed), SearchSpace, Problem)[0], this);
 
   public override MutationNeighborhood<T, TS, TP> construction_neighbourhood(TP problem) => throw new NotSupportedException();
 

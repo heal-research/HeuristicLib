@@ -8,17 +8,17 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Analysis;
 
 public record AllPopulationsTracker<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> Algorithm, IInterceptor<T, TS, TP, TR> Interceptor)
-  : Analyzer<T, TS, TP, TR, List<ISolution<T>[]>>(Algorithm)
+  : Analyzer<T, TS, TP, TR, List<EvaluatedCandidate<T>[]>>(Algorithm)
   where TS : class, ISearchSpace<T>
   where TP : class, IProblem<T, TS>
   where TR : PopulationState<T>
 {
-    public override List<ISolution<T>[]> CreateInitialResult() => [];
+    public override List<EvaluatedCandidate<T>[]> CreateInitialResult() => [];
 
-    public override void RegisterObservations(ObservationPlan observations, List<ISolution<T>[]> result)
+    public override void RegisterObservations(ObservationPlan observations, List<EvaluatedCandidate<T>[]> result)
     {
         observations.Observe(Interceptor, (populationState, _, _, _, _) => AfterInterception(result, populationState));
     }
 
-    public void AfterInterception(List<ISolution<T>[]> state, PopulationState<T> populationState) => state.Add(populationState.Population.ToArray());
+    public void AfterInterception(List<EvaluatedCandidate<T>[]> state, PopulationState<T> populationState) => state.Add(populationState.Population.ToArray());
 }

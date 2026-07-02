@@ -6,16 +6,16 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Creators;
 
 [Equatable]
-public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>
-  : WrappingCreator<TGenotype, TSearchSpace, TProblem, PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public partial record PredefinedSolutionsCreator<TCandidate, TSearchSpace, TProblem>
+  : WrappingCreator<TCandidate, TSearchSpace, TProblem, PredefinedSolutionsCreator<TCandidate, TSearchSpace, TProblem>.ExecutionState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ICreator<TGenotype, TSearchSpace, TProblem> CreatorForRemainingSolutions => InnerCreator;
+    public ICreator<TCandidate, TSearchSpace, TProblem> CreatorForRemainingSolutions => InnerCreator;
 
-    [OrderedEquality] public ImmutableArray<TGenotype> PredefinedSolutions { get; init; }
+    [OrderedEquality] public ImmutableArray<TCandidate> PredefinedSolutions { get; init; }
 
-    public PredefinedSolutionsCreator(ImmutableArray<TGenotype> predefinedSolutions, ICreator<TGenotype, TSearchSpace, TProblem> creatorForRemainingSolutions)
+    public PredefinedSolutionsCreator(ImmutableArray<TCandidate> predefinedSolutions, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingSolutions)
       : base(creatorForRemainingSolutions)
     {
         PredefinedSolutions = predefinedSolutions;
@@ -23,9 +23,9 @@ public partial record PredefinedSolutionsCreator<TGenotype, TSearchSpace, TProbl
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override IReadOnlyList<TGenotype> Create(int count, ExecutionState executionState, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    protected override IReadOnlyList<TCandidate> Create(int count, ExecutionState executionState, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
-        var offspring = new TGenotype[count];
+        var offspring = new TCandidate[count];
 
         var countPredefined = Math.Min(PredefinedSolutions.Length - executionState.CurrentSolutionIndex, count);
         if (countPredefined > 0)

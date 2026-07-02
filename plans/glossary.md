@@ -138,8 +138,10 @@ Resolved naming decisions from the first glossary pass:
 - `Execution state` is private mutable state owned by an execution instance.
 - `Search state` is the public state value produced by an algorithm.
 - `Candidate` is the canonical algorithm-facing searched value.
-- `Evaluated candidate` is the canonical term for a candidate paired with objective values.
-- `Objective value` and `Objective values` are the canonical terms for evaluation output.
+- `Evaluated candidate` is the canonical term for a candidate paired with an objective vector.
+- `Objective value` is the canonical term for one scalar objective dimension.
+- `Objective vector` is the canonical term for the ordered vector of objective values produced by evaluating one candidate.
+- `Objective values` is an accepted prose alias for objective vector.
 - `Objective direction` and `Objective directions` are the canonical terms for minimize/maximize semantics.
 - `Run` is the canonical term for one logical algorithm execution.
 - `Meta-algorithm` is the canonical spelling.
@@ -165,9 +167,9 @@ The source/API rename work should be done after the glossary decisions, in focus
   - Avoid `Factory` unless source inspection proves the type really owns direct object creation semantics; the registry/resolver controls execution-instance identity and sharing.
 - Rename `ISolution<T>` / `Solution<T>` to `EvaluatedCandidate<TCandidate>`.
   - Prefer removing the interface unless the code proves a real abstraction need.
-  - Use properties named `Candidate` and `ObjectiveValues`.
-- Rename `ObjectiveVector` to `ObjectiveValues`.
-  - Use `ObjectiveValue` only where a single scalar objective value needs its own type or name.
+  - Use properties named `Candidate` and `ObjectiveVector`.
+- Keep/use `ObjectiveVector` for the ordered vector of objective values produced by evaluating one candidate.
+  - Use `ObjectiveValue` where a single scalar objective value needs its own type or name.
 - Use `ObjectiveDirection` for the single-objective direction enum/value and `ObjectiveDirections` for the aggregate direction model.
   - A static `Objective` helper class may still be useful for creation helpers such as minimize/maximize factories.
 - Keep `SingleSolution` as the family term for single-solution algorithm/state shapes.
@@ -181,7 +183,7 @@ The source/API rename work should be done after the glossary decisions, in focus
 
 1. Rename `IExecutable` and update direct references, comments, and constraints.
 2. Rename `Solution` / `ISolution` to `EvaluatedCandidate` and remove the interface if feasible.
-3. Rename `ObjectiveVector` to `ObjectiveValues`.
+3. Keep or align the objective-vector aggregate as `ObjectiveVector`, and introduce/use `ObjectiveValue` only for single scalar dimensions where needed.
 4. Rename the objective-direction aggregate to `ObjectiveDirections` while preserving or introducing static `Objective` helpers where useful.
 5. Rename population/state properties that expose evaluated candidates, for example `Population.Solutions` to `Population.EvaluatedCandidates`.
 6. Rename generic parameters from `TGenotype` to `TCandidate` across coherent API clusters.

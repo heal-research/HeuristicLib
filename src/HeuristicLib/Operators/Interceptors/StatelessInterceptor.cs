@@ -5,41 +5,41 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public abstract record StatelessInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>
-  : IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>,
-    IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
+public abstract record StatelessInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>,
+    IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    public IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract record StatelessInterceptor<TGenotype, TSearchSpace, TSearchState>
-  : IInterceptor<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState>,
-    IInterceptorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState>
+public abstract record StatelessInterceptor<TCandidate, TSearchSpace, TSearchState>
+  : IInterceptor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>,
+    IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public IInterceptorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    public IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace);
 
-    TSearchState IInterceptorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) =>
+    TSearchState IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
       Transform(currentState, previousState, searchSpace);
 }
 
-public abstract record StatelessInterceptor<TGenotype, TSearchState>
-  : IInterceptor<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState>,
-    IInterceptorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState>
+public abstract record StatelessInterceptor<TCandidate, TSearchState>
+  : IInterceptor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>,
+    IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
   where TSearchState : class, ISearchState
 {
-    public IInterceptorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    public IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState);
 
-    TSearchState IInterceptorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) =>
+    TSearchState IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
       Transform(currentState, previousState);
 }

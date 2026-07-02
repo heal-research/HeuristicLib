@@ -34,9 +34,9 @@ Status: `Canonical`
 
 A problem is the complete runnable optimization task that an algorithm operates on.
 
-A problem defines the search space, the evaluation semantics that produce objective value(s), the objective direction(s), and the concrete data or parameters needed for evaluation.
+A problem defines the search space, the evaluation semantics that produce an objective vector, the objective directions, and the concrete data or parameters needed for evaluation.
 
-See also: Candidate, Evaluation, Objective direction(s), Objective value(s), Problem instance, Search space.
+See also: Candidate, Evaluation, Objective direction, Objective directions, Objective value, Objective vector, Problem instance, Search space.
 
 ### Problem instance
 
@@ -60,7 +60,7 @@ Related terms:
 
 - `Genotype`: `Alias`. Use when an evolutionary-algorithm-flavored distinction between encoded representation and phenotype/domain expression is useful.
 - `Solution`: `Alias`. Use in user-facing or domain-facing prose when the candidate is discussed as a possible answer to the problem. Avoid solution when the distinction between unevaluated and evaluated candidates matters.
-- `Evaluated candidate`: a candidate paired with objective values.
+- `Evaluated candidate`: a candidate paired with an objective vector.
 
 See also: Evaluated candidate, Search space, Search state.
 
@@ -83,7 +83,7 @@ See also: Candidate, Problem, Search space.
 
 Status: `Canonical`
 
-An evaluated candidate is a candidate paired with objective values produced by evaluating it.
+An evaluated candidate is a candidate paired with the objective vector produced by evaluating it.
 
 Use evaluated candidate when the distinction between the searched object and its evaluation matters. An evaluated candidate is not necessarily final, optimal, or selected for future search steps.
 
@@ -107,42 +107,61 @@ See also: Candidate.
 
 Status: `Canonical`
 
-Evaluation is the act of obtaining objective value(s) for a candidate.
+Evaluation is the act of obtaining an objective vector for a candidate.
 
-Use evaluation for the problem-level meaning: applying the problem's evaluation semantics to a candidate to produce objective value(s).
+Use evaluation for the problem-level meaning: applying the problem's evaluation semantics to a candidate to produce an objective vector.
 
-See also: Candidate, Evaluated candidate, Objective value(s), Evaluator.
+See also: Candidate, Evaluated candidate, Objective vector, Evaluator.
 
-### Objective value(s)
+### Objective value
 
 Status: `Canonical`
 
 An objective value is a numeric value produced by evaluating a candidate for one objective.
 
-Use objective value for one value and objective values for one or more values.
+Use objective value for a single scalar dimension of an objective vector.
 
-Objective values do not decide what is better on their own. They must be interpreted together with objective directions or another explicit comparison rule.
+See also: Objective direction, Objective vector.
+
+### Objective vector
+
+Status: `Canonical`
+
+An objective vector is the ordered vector of objective values produced by evaluating one candidate.
+
+An objective vector may contain one objective value for single-objective problems or multiple objective values for multi-objective problems. Objective values is an accepted prose alias for objective vector when the vector shape is not important.
+
+Objective vectors do not decide what is better on their own. They must be interpreted together with objective directions or another explicit comparison rule.
 
 Related terms:
 
 - `Loss`: related term for an objective value that is normally minimized.
 - `Score`: related term for an objective value that is normally maximized.
-- `Fitness`: evolutionary-algorithm-flavored related term for objective value or objective values. Fitness usually implies higher is better, but its direction should still be explicit.
-- `Quality`: broad related term for objective value or objective values. Prefer objective value or objective values when precision matters.
+- `Fitness`: evolutionary-algorithm-flavored related term for objective value or objective vector. Fitness usually implies higher is better, but its direction should still be explicit.
+- `Quality`: broad related term for objective value or objective vector. Prefer objective value or objective vector when precision matters.
+- `Objective values`: `Alias`. Prose alias for objective vector.
 
-See also: Candidate, Evaluated candidate, Objective direction(s).
+See also: Candidate, Evaluated candidate, Objective direction, Objective directions, Objective value.
 
-### Objective direction(s)
+### Objective direction
 
 Status: `Canonical`
 
-An objective direction says whether lower or higher objective values are better for one objective.
+An objective direction says whether lower or higher objective values are better for one objective dimension.
 
-Use objective direction for one objective. Use objective directions for the directions of multiple objective values. Objective directions are aligned with objective values by position.
+Use objective direction for a single objective dimension.
 
-Objective directions do not, by themselves, define a full ordering of evaluated candidates with multiple objective values. Multi-objective cases may need an additional comparison rule.
+See also: Objective directions, Objective value.
 
-See also: Objective value(s).
+### Objective directions
+
+Status: `Canonical`
+
+Objective directions are the ordered objective directions aligned with an objective vector by position.
+
+Use objective directions for the problem-level direction model. Objective directions do not, by themselves, define a full ordering of evaluated candidates with multiple objective values. Multi-objective cases may need an additional comparison rule.
+
+See also: Objective direction, Objective vector.
 
 ## Algorithms and Operators
 
@@ -192,11 +211,11 @@ Status: `Canonical`
 
 An evaluator is the operator that turns candidates into evaluated candidates.
 
-The evaluator may return the input candidate as evaluated, or return a transformed candidate as evaluated. In either case, the objective value(s) must describe the candidate that is returned as evaluated.
+The evaluator may return the input candidate as evaluated, or return a transformed candidate as evaluated. In either case, the objective vector must describe the candidate that is returned as evaluated.
 
-Use evaluator for the operator role. Use evaluation for the act of obtaining objective value(s).
+Use evaluator for the operator role. Use evaluation for the act of obtaining an objective vector.
 
-See also: Candidate, Evaluated candidate, Evaluation, Objective value(s).
+See also: Candidate, Evaluated candidate, Evaluation, Objective vector.
 
 ### Termination
 

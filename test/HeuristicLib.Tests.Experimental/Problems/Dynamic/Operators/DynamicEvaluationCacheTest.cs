@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
 namespace HEAL.HeuristicLib.Tests.Problems.Dynamic.Operators;
 
-//genotypes must be class types
+//candidates must be class types
 file sealed class DummyGenotype(int val)
 {
     public readonly int Value = val;
@@ -18,7 +18,7 @@ file sealed class DummyGenotype(int val)
 
 file sealed class DummySearchSpace : ISearchSpace<DummyGenotype>
 {
-    public bool Contains(DummyGenotype genotype) => true;
+    public bool Contains(DummyGenotype candidate) => true;
 }
 
 file sealed class DummyDynamicProblem : DynamicProblem<DummyGenotype, DummySearchSpace>

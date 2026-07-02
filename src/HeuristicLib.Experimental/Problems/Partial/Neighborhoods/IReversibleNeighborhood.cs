@@ -3,21 +3,21 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public interface IReversibleNeighborhood<TGenotype, in TSearchSpace, in TProblem, TMove>
-    : INeighborhood<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public interface IReversibleNeighborhood<TCandidate, in TSearchSpace, in TProblem, TMove>
+    : INeighborhood<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    new IReversibleNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+    new IReversibleNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
-public interface IReversibleNeighborhoodInstance<TGenotype, in TSearchSpace, in TProblem, TMove>
-    : INeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public interface IReversibleNeighborhoodInstance<TCandidate, in TSearchSpace, in TProblem, TMove>
+    : INeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    TGenotype RevertMove(
-        TGenotype genotype,
+    TCandidate RevertMove(
+        TCandidate candidate,
         TMove move,
         TSearchSpace searchSpace,
         TProblem problem);

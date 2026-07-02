@@ -20,7 +20,7 @@ public static class EvaluatorCounterExtensions
         }
 
         public IEvaluator<TG, TS, TP> CountEvaluatedGenotypes(ObservationCounter counter)
-            => evaluator.ObserveWith((genotypes, _) => counter.IncrementBy(genotypes.Count));
+            => evaluator.ObserveWith((candidates, _) => counter.IncrementBy(candidates.Count));
 
         public IEvaluator<TG, TS, TP> CountEvaluatedGenotypes(out ObservationCounter counter)
         {

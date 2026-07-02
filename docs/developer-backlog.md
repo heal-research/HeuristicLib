@@ -33,7 +33,7 @@ Why these are only partial today:
 These are still real open items:
 
 - multi-objective short-path usage
-- rework the objective system around the glossary terms `objective value(s)` and `objective direction(s)`: keep the conceptual model open enough for single-objective and multi-objective cases, clarify when an algorithm/operator requires exactly one objective value or a stronger ordering/difference model, and avoid ambiguous public naming such as objective vector where it is unclear whether values or directions are meant
+- rework the objective system around the glossary terms `objective value`, `objective vector`, `objective direction`, and `objective directions`: keep the conceptual model open enough for single-objective and multi-objective cases, and clarify when an algorithm/operator requires exactly one objective value, a total ordering over objective vectors, or multi-objective comparison semantics
 - island-style population workflow
 - fully implement ALPS-style age-layered workflow; the current ALPS algorithm still behaves like a simple single-layer evolutionary loop with a regular generation budget
 - add an offspring-selection genetic algorithm implementation
@@ -41,7 +41,7 @@ These are still real open items:
 - symbolic-regression validation scenarios
 - dynamic-problem extension workflow
 - meta-optimization by running an inner algorithm inside `Problem.Evaluate(...)`
-- apply glossary terminology to public API and code names where the current names still encode legacy concepts; in particular, rename or replace `IExecutable` with a capability-based name for objects that can be resolved to execution instances
+- apply remaining glossary terminology to public API and code names where the current names still encode legacy concepts, while keeping namespace and folder cleanup in separate branches
 - clear separation between population topology and per-member side metadata as an executable example story
 - re-evaluate the state-based algorithm authoring model. The current design places algorithm step logic on configuration classes and passes resolved execution dependencies through `TExecutionState`. This is convenient for simple operators, but for algorithms such as genetic algorithms it may be less natural than a first-class execution-instance authoring model, because algorithm behavior wants to live near resolved execution dependencies. See the plan in [../plans/operator-authoring-base-classes.md](../plans/operator-authoring-base-classes.md).
 - decide whether algorithm results should remain plain final/search states or whether HeuristicLib should introduce a distinct completion-result object that can carry the final state plus lifecycle metadata such as completion, early stopping, cancellation, failure, or stop reason; this is a larger result-model design decision and should not be hidden inside the termination overhaul

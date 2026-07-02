@@ -241,8 +241,8 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
 
         # --- extract top solutions -----------------------------------------
         top_solutions = []
-        for sol in population.Solutions:
-            tree = sol.Genotype
+        for sol in population.EvaluatedCandidates:
+            tree = sol.Candidate
             r2 = float(sol.ObjectiveVector[0])
             expr = InteractiveSymbolicRegression.FormatTree(tree)
             latex = _expr_to_latex(expr)

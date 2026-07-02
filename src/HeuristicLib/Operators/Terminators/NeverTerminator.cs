@@ -1,7 +1,7 @@
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record NeverTerminator<TGenotype>
-  : StatelessTerminator<TGenotype>
+public record NeverTerminator<TCandidate>
+  : StatelessTerminator<TCandidate>
 {
     public override bool IsTerminalState() => NeverTerminator.IsTerminalState();
 }

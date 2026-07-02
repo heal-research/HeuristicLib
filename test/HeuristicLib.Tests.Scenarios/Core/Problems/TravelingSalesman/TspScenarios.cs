@@ -46,9 +46,9 @@ public class TspScenarios
                          .OrderBy(x => x.ObjectiveVector[0])
                          .First();
 
-        resGa.Population.Solutions.Length.ShouldBe(100);
-        resGa.Population.Solutions.All(solution => prob.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        resGa.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+        resGa.Population.EvaluatedCandidates.Length.ShouldBe(100);
+        resGa.Population.EvaluatedCandidates.All(solution => prob.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
+        resGa.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
         double.IsFinite(objGa.ObjectiveVector[0]).ShouldBeTrue();
         objGa.ObjectiveVector[0].ShouldBeGreaterThan(0.0);
     }

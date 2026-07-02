@@ -170,20 +170,20 @@ public class PractitionerUsageSpecs
         var evaluations = DirectEvaluator.Evaluate([parent], RandomNumberGenerator.Create(2034), problem);
         evaluations.Count.ShouldBe(1);
 
-        IReadOnlyList<ISolution<RealVector>> solutions =
+        IReadOnlyList<EvaluatedCandidate<RealVector>> solutions =
         [
-            new Solution<RealVector>(parent, new ObjectiveVector(2.0)),
-            new Solution<RealVector>(otherParent, new ObjectiveVector(1.0))
+            new EvaluatedCandidate<RealVector>(parent, new ObjectiveVector(2.0)),
+            new EvaluatedCandidate<RealVector>(otherParent, new ObjectiveVector(1.0))
         ];
 
         RandomSelector.Select(solutions, count: 2, RandomNumberGenerator.Create(2035)).Count.ShouldBe(2);
         ProportionalSelector.Select(solutions, problem.Objective, count: 2, RandomNumberGenerator.Create(2036), windowing: true).Count.ShouldBe(2);
         CommaSelectionReplacer.Replace(solutions, problem.Objective, count: 1).Single().ShouldBe(solutions[1]);
 
-        IReadOnlyList<ISolution<RealVector>> offspring =
+        IReadOnlyList<EvaluatedCandidate<RealVector>> offspring =
         [
-            new Solution<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
-            new Solution<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
+            new EvaluatedCandidate<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
+            new EvaluatedCandidate<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
         ];
         var paretoReplacement = ParetoCrowdingReplacer.Replace(solutions, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
         paretoReplacement.Select(solution => solution.ObjectiveVector[0]).Order().ToArray().ShouldBe([0.5, 1.0]);
@@ -218,8 +218,8 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.Solutions.Length.ShouldBe(24);
-        finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+        finalState.Population.EvaluatedCandidates.Length.ShouldBe(24);
+        finalState.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
     [Fact]
@@ -298,7 +298,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
         internalTerminator.CheckedStateCount.ShouldBe(2);
         internalTerminator.HasTerminated.ShouldBeFalse();
     }
@@ -329,7 +329,7 @@ public class PractitionerUsageSpecs
 
         statesByEvaluatorCalls.Count.ShouldBe(2);
         statesByEvaluatedGenotypes.Count.ShouldBe(1);
-        statesByEvaluatedGenotypes.Single().Population.Solutions.Length.ShouldBe(16);
+        statesByEvaluatedGenotypes.Single().Population.EvaluatedCandidates.Length.ShouldBe(16);
     }
 
     [Fact]
@@ -352,7 +352,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -375,7 +375,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -408,9 +408,9 @@ public class PractitionerUsageSpecs
             .ToList();
 
         statesByMutatorCalls.Count.ShouldBe(2);
-        statesByMutatorCalls.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
         statesByMutatedGenotypes.Count.ShouldBe(3);
-        statesByMutatedGenotypes.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        statesByMutatedGenotypes.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -435,7 +435,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -461,7 +461,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(3);
-        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
     }
 
     [Fact]
@@ -492,7 +492,7 @@ public class PractitionerUsageSpecs
             .ToList();
 
         states.Count.ShouldBe(2);
-        states.All(state => state.Population.Solutions.Length == 16).ShouldBeTrue();
+        states.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
         counter.CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
@@ -514,7 +514,7 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(321),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -536,7 +536,7 @@ public class PractitionerUsageSpecs
           ct: TestContext.Current.CancellationToken).ToList();
 
         states.Count.ShouldBe(1);
-        problem.SearchSpace.Contains(states.Single().Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(states.Single().EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -565,7 +565,7 @@ public class PractitionerUsageSpecs
 
         results.Count.ShouldBe(3);
         results.Select(result => result.Key).ShouldBe([0, 1, 2]);
-        results.All(result => problem.SearchSpace.Contains(result.Value.Solution.Genotype)).ShouldBeTrue();
+        results.All(result => problem.SearchSpace.Contains(result.Value.EvaluatedCandidate.Candidate)).ShouldBeTrue();
     }
 
     [Fact]
@@ -590,8 +590,8 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(555),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.Solutions.Length.ShouldBe(8);
-        finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+        finalState.Population.EvaluatedCandidates.Length.ShouldBe(8);
+        finalState.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)

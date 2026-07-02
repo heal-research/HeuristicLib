@@ -5,20 +5,20 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record NoSameMatesSelector<TGenotype, TSearchSpace, TProblem>(
-  ISelector<TGenotype, TSearchSpace, TProblem> InnerSelector,
+public record NoSameMatesSelector<TCandidate, TSearchSpace, TProblem>(
+  ISelector<TCandidate, TSearchSpace, TProblem> InnerSelector,
   int MaxAttempts)
-  : WrappingSelector<TGenotype, TSearchSpace, TProblem>(InnerSelector)
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  : WrappingSelector<TCandidate, TSearchSpace, TProblem>(InnerSelector)
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    protected override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         int selectedParents = 0;
         int poolCount = 0;
 
-        var selected = new ISolution<TGenotype>[count];
-        var parentsPool = new ISolution<TGenotype>[count];
+        var selected = new EvaluatedCandidate<TCandidate>[count];
+        var parentsPool = new EvaluatedCandidate<TCandidate>[count];
         // repeat until enough parents are selected or max attempts are reached
         for (int attempts = 1; attempts <= MaxAttempts && selectedParents < count; attempts++)
         {

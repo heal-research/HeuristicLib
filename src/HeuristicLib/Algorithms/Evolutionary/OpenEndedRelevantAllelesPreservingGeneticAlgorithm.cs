@@ -11,27 +11,27 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>, OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
+  : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>, OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>.ExecutionState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public new sealed class ExecutionState
-      : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>, ExecutionState>.ExecutionState
+      : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>, ExecutionState>.ExecutionState
     {
-        public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-        public required ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
-        public required IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-        public required ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+        public required ICreatorInstance<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+        public required ICrossoverInstance<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
+        public required IMutatorInstance<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+        public required ISelectorInstance<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
     }
 
     private double Strictness { get; } = 1.0;
 
     public required int PopulationSize { get; init; }
-    public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-    public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-    public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+    public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
+    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+    public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
     public int Elites { get; init; } = 1;
     public required int MaxEffort { get; init; }
     public int? MaximumGenerations
@@ -57,15 +57,15 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
 
     protected override bool HasCompleted(
       int yieldedStateCount,
-      PopulationState<TGenotype>? previousState,
+      PopulationState<TCandidate>? previousState,
       ExecutionState executionState,
       TProblem problem)
     {
         return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
     }
 
-    protected override PopulationState<TGenotype> ExecuteStep(
-      PopulationState<TGenotype>? previousState,
+    protected override PopulationState<TCandidate> ExecuteStep(
+      PopulationState<TCandidate>? previousState,
       ExecutionState executionState,
       TProblem problem,
       IRandomNumberGenerator random)
@@ -74,20 +74,20 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
         {
             var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
             var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-            return new PopulationState<TGenotype>
+            return new PopulationState<TCandidate>
             {
                 Population = Population.From(initialSolutions, initialFitnesses)
             };
         }
 
-        var oldPopulation = previousState.Population.Solutions;
+        var oldPopulation = previousState.Population.EvaluatedCandidates;
 
-        IReadOnlyList<ISolution<TGenotype>> newPop;
+        IReadOnlyList<EvaluatedCandidate<TCandidate>> newPop;
         if (oldPopulation.Length <= 0)
         {
             var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
             var initialFitnesses = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-            newPop = Population.From(initialSolutions, initialFitnesses).Solutions;
+            newPop = Population.From(initialSolutions, initialFitnesses).EvaluatedCandidates;
         }
         else
         {
@@ -98,7 +98,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
 
             newPop = Population
                      .From(population, fitnesses)
-                     .Solutions
+                     .EvaluatedCandidates
                      .Zip(selected.ToSolutionPairs())
                      .Where(f => f.Item1.ObjectiveVector.Dominates(Combine(f.Item2, problem.Objective, Strictness), problem.Objective))
                      .Select(f => f.Item1)
@@ -106,15 +106,15 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TGenotype, TSea
         }
 
         var targetPopsize = Elites + newPop.Count;
-        var newPopulation = ElitismReplacer<TGenotype>.Replace(oldPopulation, newPop, problem.Objective, targetPopsize, Elites);
+        var newPopulation = ElitismReplacer<TCandidate>.Replace(oldPopulation, newPop, problem.Objective, targetPopsize, Elites);
 
-        return new PopulationState<TGenotype>
+        return new PopulationState<TCandidate>
         {
             Population = Population.From(newPopulation)
         };
     }
 
-    private static ObjectiveVector Combine((ISolution<TGenotype>, ISolution<TGenotype>) parents, Objective problemObjective, double strictness = 1.0)
+    private static ObjectiveVector Combine((EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>) parents, ObjectiveDirections problemObjective, double strictness = 1.0)
     {
         var o1 = parents.Item1.ObjectiveVector;
         var o2 = parents.Item2.ObjectiveVector;

@@ -6,38 +6,38 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public abstract record SingleSolutionEvaluator<TGenotype, TSearchSpace, TProblem>
-  : StatelessEvaluator<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record SingleSolutionEvaluator<TCandidate, TSearchSpace, TProblem>
+  : StatelessEvaluator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public int MaxDegreeOfParallelism { get; init; } = -1;
 
-    public abstract ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    public abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-      BatchExecution.Parallel(genotypes, (g, r) => Evaluate(g, r, searchSpace, problem), random, MaxDegreeOfParallelism);
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+      BatchExecution.Parallel(candidates, (candidate, r) => Evaluate(candidate, r, searchSpace, problem), random, MaxDegreeOfParallelism);
 }
 
-public abstract record SingleSolutionEvaluator<TGenotype, TSearchSpace>
-  : StatelessEvaluator<TGenotype, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+public abstract record SingleSolutionEvaluator<TCandidate, TSearchSpace>
+  : StatelessEvaluator<TCandidate, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public int MaxDegreeOfParallelism { get; init; } = -1;
 
-    public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    public abstract ObjectiveVector Evaluate(TCandidate solution, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
-      BatchExecution.Parallel(genotypes, (g, r) => Evaluate(g, r, searchSpace), random, MaxDegreeOfParallelism);
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+      BatchExecution.Parallel(candidates, (candidate, r) => Evaluate(candidate, r, searchSpace), random, MaxDegreeOfParallelism);
 }
 
-public abstract record SingleSolutionEvaluator<TGenotype>
-  : StatelessEvaluator<TGenotype>
+public abstract record SingleSolutionEvaluator<TCandidate>
+  : StatelessEvaluator<TCandidate>
 {
     public int MaxDegreeOfParallelism { get; init; } = -1;
 
-    public abstract ObjectiveVector Evaluate(TGenotype solution, IRandomNumberGenerator random);
+    public abstract ObjectiveVector Evaluate(TCandidate solution, IRandomNumberGenerator random);
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random) =>
-      BatchExecution.Parallel(genotypes, (g, r) => Evaluate(g, r), random, MaxDegreeOfParallelism);
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+      BatchExecution.Parallel(candidates, (candidate, r) => Evaluate(candidate, r), random, MaxDegreeOfParallelism);
 }

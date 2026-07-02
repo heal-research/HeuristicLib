@@ -74,14 +74,14 @@ public class ObservableEvaluatorTests
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
     {
         return FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: static genotype => genotype,
+            evaluateFunc: static candidate => candidate,
             encoding: DummySearchSpace<int>.Instance,
             objective: CreateObjective());
     }
 
-    private static Objective CreateObjective()
+    private static ObjectiveDirections CreateObjective()
     {
-        return new Objective(
+        return new ObjectiveDirections(
             [ObjectiveDirection.Minimize],
             Comparer<ObjectiveVector>.Create(static (left, right) => left[0].CompareTo(right[0])));
     }

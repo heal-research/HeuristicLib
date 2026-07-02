@@ -26,7 +26,7 @@ public partial record ObservableReplacer<TG, TS, TP>
     {
     }
 
-    protected override IReadOnlyList<ISolution<TG>> Replace(IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, int count, InnerReplace innerReplace, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    protected override IReadOnlyList<EvaluatedCandidate<TG>> Replace(IReadOnlyList<EvaluatedCandidate<TG>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TG>> offspringPopulation, ObjectiveDirections objective, int count, InnerReplace innerReplace, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
         var result = innerReplace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
         foreach (var observer in Observers)
@@ -37,11 +37,11 @@ public partial record ObservableReplacer<TG, TS, TP>
     }
 }
 
-public interface IReplacerObserver<in TG, in TS, in TP>
+public interface IReplacerObserver<TG, in TS, in TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-    void AfterReplacement(IReadOnlyList<ISolution<TG>> newPopulation, IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, TS searchSpace, TP problem);
+    void AfterReplacement(IReadOnlyList<EvaluatedCandidate<TG>> newPopulation, IReadOnlyList<EvaluatedCandidate<TG>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TG>> offspringPopulation, ObjectiveDirections objective, TS searchSpace, TP problem);
 }
 
 public static class ObservableReplacerExtensions
@@ -54,18 +54,18 @@ public static class ObservableReplacerExtensions
           => new ObservableReplacer<TG, TS, TP>(replacer, observer);
         public IReplacer<TG, TS, TP> ObserveWith(params IEnumerable<IReplacerObserver<TG, TS, TP>> observers)
           => new ObservableReplacer<TG, TS, TP>(replacer, observers);
-        public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, TS, TP> afterReplacement)
+        public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TG>>, IReadOnlyList<EvaluatedCandidate<TG>>, IReadOnlyList<EvaluatedCandidate<TG>>, TS, TP> afterReplacement)
           => replacer.ObserveWith(new ActionReplacerObserver<TG, TS, TP>((newPopulation, previousPopulation, offspringPopulation, _, searchSpace, problem)
             => afterReplacement(newPopulation, previousPopulation, offspringPopulation, searchSpace, problem)));
-        public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterReplacement)
+        public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TG>>> afterReplacement)
           => replacer.ObserveWith(new ActionReplacerObserver<TG, TS, TP>((newPopulation, _, _, _, _, _) => afterReplacement(newPopulation)));
     }
 }
 
-public sealed class ActionReplacerObserver<TG, TS, TP>(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, TS, TP> afterReplacement) : IReplacerObserver<TG, TS, TP>
+public sealed class ActionReplacerObserver<TG, TS, TP>(Action<IReadOnlyList<EvaluatedCandidate<TG>>, IReadOnlyList<EvaluatedCandidate<TG>>, IReadOnlyList<EvaluatedCandidate<TG>>, ObjectiveDirections, TS, TP> afterReplacement) : IReplacerObserver<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-    public void AfterReplacement(IReadOnlyList<ISolution<TG>> newPopulation, IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, TS searchSpace, TP problem)
+    public void AfterReplacement(IReadOnlyList<EvaluatedCandidate<TG>> newPopulation, IReadOnlyList<EvaluatedCandidate<TG>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TG>> offspringPopulation, ObjectiveDirections objective, TS searchSpace, TP problem)
       => afterReplacement(newPopulation, previousPopulation, offspringPopulation, objective, searchSpace, problem);
 }

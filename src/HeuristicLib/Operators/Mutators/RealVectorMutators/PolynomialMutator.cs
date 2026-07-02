@@ -8,7 +8,6 @@ public record PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSe
 {
     private readonly bool atLeastOnce;
     private readonly double eta;
-    private static double GetVarProb(RealVectorSearchSpace searchSpace) => Math.Min(0.5, 1.0 / searchSpace.Length);
 
     public PolynomialMutator(double eta = 20, bool atLeastOnce = false)
     {

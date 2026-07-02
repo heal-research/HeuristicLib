@@ -361,15 +361,15 @@ public class ObservableOperatorCounterTests
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
     {
         return FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: static genotype => genotype,
+            evaluateFunc: static candidate => candidate,
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
     }
 
-    private static IReadOnlyList<ISolution<int>> CreateSolutions(IReadOnlyList<int> genotypes)
+    private static IReadOnlyList<EvaluatedCandidate<int>> CreateSolutions(IReadOnlyList<int> candidates)
     {
-        return genotypes
-            .Select(genotype => new Solution<int>(genotype, new ObjectiveVector(genotype)))
+        return candidates
+            .Select(candidate => new EvaluatedCandidate<int>(candidate, new ObjectiveVector(candidate)))
             .ToArray();
     }
 
@@ -415,9 +415,9 @@ public class ObservableOperatorCounterTests
     private sealed record FirstSolutionsSelector
       : StatelessSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<ISolution<int>> Select(
-            IReadOnlyList<ISolution<int>> population,
-            Objective objective,
+        public override IReadOnlyList<EvaluatedCandidate<int>> Select(
+            IReadOnlyList<EvaluatedCandidate<int>> population,
+            ObjectiveDirections objective,
             int count,
             IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,
@@ -430,10 +430,10 @@ public class ObservableOperatorCounterTests
     private sealed record FirstReplacementSolutionsReplacer
       : StatelessReplacer<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<ISolution<int>> Replace(
-            IReadOnlyList<ISolution<int>> previousPopulation,
-            IReadOnlyList<ISolution<int>> offspringPopulation,
-            Objective objective,
+        public override IReadOnlyList<EvaluatedCandidate<int>> Replace(
+            IReadOnlyList<EvaluatedCandidate<int>> previousPopulation,
+            IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation,
+            ObjectiveDirections objective,
             int count,
             IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,

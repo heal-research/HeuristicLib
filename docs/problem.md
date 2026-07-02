@@ -12,8 +12,8 @@ It is the boundary between “search” and “domain”:
 A problem provides three things:
 
 - a search space
-- objective direction(s) and any ordering needed by the problem
-- an evaluation function that maps a candidate to objective value(s)
+- objective directions and any ordering needed by the problem
+- an evaluation function that maps a candidate to an objective vector
 
 This makes problems self-contained: they own the search space, evaluation semantics, and objective directions.
 
@@ -56,5 +56,5 @@ var problem = FuncProblem.Create<Candidate, AnyCandidateSpace>(
 ## Related pages
 
 - [Search spaces](search-space.md)
-- [Objective values and evaluated candidates](objectives-and-solutions.md)
+- [Objective vectors and evaluated candidates](objectives-and-solutions.md)
 - [Operators](operators.md)

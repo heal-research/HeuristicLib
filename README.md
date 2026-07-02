@@ -23,7 +23,7 @@ Noticeable differences to HeuristicLab:
 - No operator graph
   - Write algorithms in plain C# code.
 - No serialization
-  - Only key datastructures (e.g., algorithm configurations or ISolutions) are serializable.
+  - Only key datastructures (e.g., algorithm configurations or evaluated candidates) are serializable.
 
 ## Development Setup
 

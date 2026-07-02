@@ -14,17 +14,17 @@ public sealed class TravelingSalesmanMoveProblem
     public TravelingSalesmanMoveProblem(ITravelingSalesmanProblemData data)
         : base(SingleObjective.Minimize, new PermutationSearchSpace(data.NumberOfCities)) => this.data = data;
 
-    public override ObjectiveVector Evaluate(Permutation genotype, IRandomNumberGenerator random)
-        => !IsTerminal(genotype, random) ? throw new ArgumentException("A complete tour is required for evaluation.", nameof(genotype)) : TourLength(genotype);
+    public override ObjectiveVector Evaluate(Permutation candidate, IRandomNumberGenerator random)
+        => !IsTerminal(candidate, random) ? throw new ArgumentException("A complete tour is required for evaluation.", nameof(candidate)) : TourLength(candidate);
 
-    public override bool IsTerminal(Permutation genotype, IRandomNumberGenerator random)
-        => genotype.Count == data.NumberOfCities;
+    public override bool IsTerminal(Permutation candidate, IRandomNumberGenerator random)
+        => candidate.Count == data.NumberOfCities;
 
-    public override ObjectiveVector Bound(Permutation genotype, IRandomNumberGenerator random)
-        => PathLength(genotype);
+    public override ObjectiveVector Bound(Permutation candidate, IRandomNumberGenerator random)
+        => PathLength(candidate);
 
-    public override ObjectiveVector EvaluatePartial(Permutation genotype, IRandomNumberGenerator random)
-        => IsTerminal(genotype, random) ? TourLength(genotype) : PathLength(genotype);
+    public override ObjectiveVector EvaluatePartial(Permutation candidate, IRandomNumberGenerator random)
+        => IsTerminal(candidate, random) ? TourLength(candidate) : PathLength(candidate);
 
     internal double TourLength(Permutation tour)
     {

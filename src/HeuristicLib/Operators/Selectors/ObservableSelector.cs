@@ -27,7 +27,7 @@ public partial record ObservableSelector<TG, TS, TP>
     }
 
 
-    protected override IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    protected override IReadOnlyList<EvaluatedCandidate<TG>> Select(IReadOnlyList<EvaluatedCandidate<TG>> population, ObjectiveDirections objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TS searchSpace, TP problem)
     {
         var result = innerSelect(population, objective, count, random, searchSpace, problem);
         foreach (var observer in Observers)
@@ -38,11 +38,11 @@ public partial record ObservableSelector<TG, TS, TP>
     }
 }
 
-public interface ISelectorObserver<in TG, in TS, in TP>
+public interface ISelectorObserver<TG, in TS, in TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-    void AfterSelection(IReadOnlyList<ISolution<TG>> selected, IReadOnlyList<ISolution<TG>> population, Objective objective, int count, TS searchSpace, TP problem);
+    void AfterSelection(IReadOnlyList<EvaluatedCandidate<TG>> selected, IReadOnlyList<EvaluatedCandidate<TG>> population, ObjectiveDirections objective, int count, TS searchSpace, TP problem);
 }
 
 public static class ObservableSelectorExtensions
@@ -55,17 +55,17 @@ public static class ObservableSelectorExtensions
           => new ObservableSelector<TG, TS, TP>(selector, observer);
         public ISelector<TG, TS, TP> ObserveWith(params IEnumerable<ISelectorObserver<TG, TS, TP>> observers)
           => new ObservableSelector<TG, TS, TP>(selector, observers);
-        public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection)
+        public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TG>>, IReadOnlyList<EvaluatedCandidate<TG>>, ObjectiveDirections, int, TS, TP> afterSelection)
           => selector.ObserveWith(new ActionSelectorObserver<TG, TS, TP>(afterSelection));
-        public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterSelection)
+        public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TG>>> afterSelection)
           => selector.ObserveWith(new ActionSelectorObserver<TG, TS, TP>((selected, _, _, _, _, _) => afterSelection(selected)));
     }
 }
 
-public sealed class ActionSelectorObserver<TG, TS, TP>(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection) : ISelectorObserver<TG, TS, TP>
+public sealed class ActionSelectorObserver<TG, TS, TP>(Action<IReadOnlyList<EvaluatedCandidate<TG>>, IReadOnlyList<EvaluatedCandidate<TG>>, ObjectiveDirections, int, TS, TP> afterSelection) : ISelectorObserver<TG, TS, TP>
   where TS : class, ISearchSpace<TG>
   where TP : class, IProblem<TG, TS>
 {
-    public void AfterSelection(IReadOnlyList<ISolution<TG>> selected, IReadOnlyList<ISolution<TG>> population, Objective objective, int count, TS searchSpace, TP problem)
+    public void AfterSelection(IReadOnlyList<EvaluatedCandidate<TG>> selected, IReadOnlyList<EvaluatedCandidate<TG>> population, ObjectiveDirections objective, int count, TS searchSpace, TP problem)
       => afterSelection(selected, population, objective, count, searchSpace, problem);
 }

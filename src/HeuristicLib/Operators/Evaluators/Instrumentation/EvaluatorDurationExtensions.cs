@@ -50,7 +50,7 @@ public static class EvaluatorDurationExtensions
         private TimeProvider TimeProvider { get; }
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(
-            IReadOnlyList<TG> genotypes,
+            IReadOnlyList<TG> candidates,
             InnerEvaluate innerEvaluate,
             IRandomNumberGenerator random,
             TS searchSpace,
@@ -59,7 +59,7 @@ public static class EvaluatorDurationExtensions
             var startTimestamp = TimeProvider.GetTimestamp();
             try
             {
-                return innerEvaluate(genotypes, random, searchSpace, problem);
+                return innerEvaluate(candidates, random, searchSpace, problem);
             }
             finally
             {

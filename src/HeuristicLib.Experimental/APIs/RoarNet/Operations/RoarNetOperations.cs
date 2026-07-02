@@ -71,7 +71,7 @@ public interface IRoarNetNeighborhood<TG> : Neighbourhood
 
 public interface IRoarNetSolution<out TG> : Solution
 {
-    TG Genotype { get; }
+    TG Candidate { get; }
     double? LowerBound { get; }
     double? ObjectiveValue { get; }
     IRoarNetSolution<TG> Copy();
@@ -86,8 +86,8 @@ public interface IRoarNetProblem<TG> : Problem
     IRoarNetSolution<TG> EmptySolution();
     IRoarNetSolution<TG> RandomSolution();
     IRoarNetSolution<TG>? HeuristicSolution();
-    double? LowerBound(TG genotype);
-    double? Objective(TG genotype);
+    double? LowerBound(TG candidate);
+    double? Objective(TG candidate);
 }
 
 public interface IRoarNetProblem<TG, out TS, out TP> : IRoarNetProblem<TG>
@@ -147,20 +147,20 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     public IRoarNetSolution<TG> EmptySolution() => new RoarNetSolution<TG>(ec.Create(1, rng, SearchSpace, Problem)[0], this);
     public IRoarNetSolution<TG> RandomSolution() => new RoarNetSolution<TG>(rc.Create(1, rng, SearchSpace, Problem)[0], this);
     public IRoarNetSolution<TG> HeuristicSolution() => new RoarNetSolution<TG>(hc.Create(1, rng, SearchSpace, Problem)[0], this);
-    public double? LowerBound(TG genotype) => boundsInstance.Evaluate([genotype], rng, SearchSpace, Problem)[0][0];
+    public double? LowerBound(TG candidate) => boundsInstance.Evaluate([candidate], rng, SearchSpace, Problem)[0][0];
 
-    public double? Objective(TG genotype) => evaluatorInstance.Evaluate([genotype], rng, SearchSpace, Problem)[0][0];
+    public double? Objective(TG candidate) => evaluatorInstance.Evaluate([candidate], rng, SearchSpace, Problem)[0][0];
 
     public RoarNetOperations<TG> GetOperations() => RoarNetOperations<TG>.Instance;
 }
 
-public readonly struct RoarNetSolution<TG>(TG genotype, IRoarNetProblem<TG> problem) : IRoarNetSolution<TG>
+public readonly struct RoarNetSolution<TG>(TG candidate, IRoarNetProblem<TG> problem) : IRoarNetSolution<TG>
 {
-    public TG Genotype { get; } = genotype;
+    public TG Candidate { get; } = candidate;
     private IRoarNetProblem<TG> Problem { get; } = problem;
-    public double? LowerBound => Problem.LowerBound(Genotype);
-    public double? ObjectiveValue => Problem.Objective(Genotype);
-    public IRoarNetSolution<TG> Copy() => new RoarNetSolution<TG>(Genotype, Problem);
+    public double? LowerBound => Problem.LowerBound(Candidate);
+    public double? ObjectiveValue => Problem.Objective(Candidate);
+    public IRoarNetSolution<TG> Copy() => new RoarNetSolution<TG>(Candidate, Problem);
 }
 
 public readonly struct RoarNetMove<TG, TS, TP, TM>(TM move, RoarNetNeighborhood<TG, TS, TP, TM> neighborhood) : IRoarNetMove<TG>
@@ -191,42 +191,42 @@ public readonly struct RoarNetNeighborhood<TG, TS, TP, TM>(
 
     public IRoarNetSolution<TG> ApplyMove(TM move, IRoarNetSolution<TG> solution)
     {
-        return new RoarNetSolution<TG>(ni.ApplyMove(solution.Genotype, move, problem.SearchSpace, problem.Problem), problem);
+        return new RoarNetSolution<TG>(ni.ApplyMove(solution.Candidate, move, problem.SearchSpace, problem.Problem), problem);
     }
 
     public IEnumerable<IRoarNetMove<TG>> Moves(IRoarNetSolution<TG> solution)
     {
-        return ni.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
+        return ni.Moves(solution.Candidate, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
     }
 
     public IRoarNetMove<TG>? RandomMove(IRoarNetSolution<TG> solution)
     {
-        return ni.RandomMove(solution.Genotype, rng, problem.SearchSpace, problem.Problem, out var m) ? new RoarNetMove<TG, TS, TP, TM>(m, this) : null;
+        return ni.RandomMove(solution.Candidate, rng, problem.SearchSpace, problem.Problem, out var m) ? new RoarNetMove<TG, TS, TP, TM>(m, this) : null;
     }
 
     public IEnumerable<IRoarNetMove<TG>> RandomMoveWithOutReplacement(IRoarNetSolution<TG> solution)
     {
-        return ni.Moves(solution.Genotype, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
+        return ni.Moves(solution.Candidate, rng, problem.SearchSpace, problem.Problem).Select(MakeMove);
     }
 
     public double? LowerBoundIncrement(TM move, IRoarNetSolution<TG> solution)
     {
         if (ni is IIncrementalBoundNeighborhoodInstance<TG, TS, TP, TM> bin)
-            return bin.BoundIncrement(solution.Genotype, move, rng, problem.SearchSpace, problem.Problem)?[0];
+            return bin.BoundIncrement(solution.Candidate, move, rng, problem.SearchSpace, problem.Problem)?[0];
         throw new NotSupportedException();
     }
 
     public double? ObjectiveValueIncrement(TM move, IRoarNetSolution<TG> solution)
     {
         if (ni is IIncrementalObjectiveNeighborhoodInstance<TG, TS, TP, TM> bin)
-            return bin.EvaluateIncrement(solution.Genotype, move, rng, problem.SearchSpace, problem.Problem)?[0];
+            return bin.EvaluateIncrement(solution.Candidate, move, rng, problem.SearchSpace, problem.Problem)?[0];
         throw new NotSupportedException();
     }
 
     public IRoarNetSolution<TG> Revert(TM move, IRoarNetSolution<TG> solution)
     {
         if (ni is IReversibleNeighborhoodInstance<TG, TS, TP, TM> bin)
-            return new RoarNetSolution<TG>(bin.RevertMove(solution.Genotype, move, problem.SearchSpace, problem.Problem), problem);
+            return new RoarNetSolution<TG>(bin.RevertMove(solution.Candidate, move, problem.SearchSpace, problem.Problem), problem);
         throw new NotSupportedException();
     }
 }
@@ -311,7 +311,7 @@ public sealed record RoarNetSearchSpace : ISearchSpace<Solution>
 {
     public static RoarNetSearchSpace Instance { get; } = new();
     private RoarNetSearchSpace() { }
-    public bool Contains(Solution genotype) => true;
+    public bool Contains(Solution candidate) => true;
 }
 
 public sealed class RoarNetProblem(Operations operations, Problem roarNetProblemInstance) : SingleSolutionProblem<Solution, RoarNetSearchSpace>(SingleObjective.Minimize, RoarNetSearchSpace.Instance)
@@ -350,26 +350,26 @@ public abstract record RoarNetNeighborhood(RoarNetProblem problem) : FullFeature
 
     protected abstract Neighbourhood GetNeighborhood();
 
-    protected override IEnumerable<Move> Moves(Solution genotype, State executionState, IRandomNumberGenerator random, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
-        => problem.Operations.moves(executionState.Neighbourhood, genotype);
+    protected override IEnumerable<Move> Moves(Solution candidate, State executionState, IRandomNumberGenerator random, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
+        => problem.Operations.moves(executionState.Neighbourhood, candidate);
 
-    protected override bool RandomMove(Solution genotype, State executionState, IRandomNumberGenerator random, RoarNetSearchSpace searchSpace, RoarNetProblem problem, [MaybeNullWhen(false)] out Move move)
+    protected override bool RandomMove(Solution candidate, State executionState, IRandomNumberGenerator random, RoarNetSearchSpace searchSpace, RoarNetProblem problem, [MaybeNullWhen(false)] out Move move)
     {
-        move = problem.Operations.random_move(executionState.Neighbourhood, genotype);
+        move = problem.Operations.random_move(executionState.Neighbourhood, candidate);
         return move != null;
     }
 
-    protected override Solution ApplyMove(Solution genotype, Move move, State executionState, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
-        => problem.Operations.apply_move(move, genotype);
+    protected override Solution ApplyMove(Solution candidate, Move move, State executionState, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
+        => problem.Operations.apply_move(move, candidate);
 
-    protected override Solution RevertMove(Solution genotype, Move move, State executionState, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
-        => problem.Operations.revert_move(move, genotype);
+    protected override Solution RevertMove(Solution candidate, Move move, State executionState, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
+        => problem.Operations.revert_move(move, candidate);
 
-    protected override ObjectiveVector? EvaluateIncrement(Solution genotype, Move move, State executionState, IRandomNumberGenerator random, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
-        => problem.Operations.objective_value_increment(move, genotype);
+    protected override ObjectiveVector? EvaluateIncrement(Solution candidate, Move move, State executionState, IRandomNumberGenerator random, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
+        => problem.Operations.objective_value_increment(move, candidate);
 
-    protected override ObjectiveVector? BoundIncrement(Solution genotype, Move move, State executionState, IRandomNumberGenerator random, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
-        => problem.Operations.lower_bound_increment(move, genotype);
+    protected override ObjectiveVector? BoundIncrement(Solution candidate, Move move, State executionState, IRandomNumberGenerator random, RoarNetSearchSpace searchSpace, RoarNetProblem problem)
+        => problem.Operations.lower_bound_increment(move, candidate);
 }
 
 public record RoarNetLocalNeighborhood(RoarNetProblem problem) : RoarNetNeighborhood(problem)

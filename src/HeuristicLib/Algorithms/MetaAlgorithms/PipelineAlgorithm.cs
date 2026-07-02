@@ -13,15 +13,15 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 // ToDo: Add support for Transformation between different (or the same typed) states.
 
 [Equatable]
-public partial record PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public partial record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+  : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>.ExecutionState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     public new sealed class ExecutionState
-      : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, ExecutionState>.ExecutionState
+      : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ExecutionState>.ExecutionState
     {
     }
 
@@ -40,9 +40,9 @@ public partial record PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TPr
         };
     }
 
-    protected override PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState)
+    protected override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState)
     {
-        return new PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>(
+        return new PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
           run,
           executionState.Evaluator,
           Algorithms
@@ -50,16 +50,16 @@ public partial record PipelineAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TPr
     }
 }
 
-public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>
-  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+  : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     protected readonly IReadOnlyList<TAlgorithm> Algorithms;
 
-    public PipelineAlgorithmInstance(Run run, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms)
+    public PipelineAlgorithmInstance(Run run, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms)
       : base(run, evaluator)
     {
         Algorithms = algorithms;
@@ -68,7 +68,7 @@ public class PipelineAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TPro
     public PipelineAlgorithmInstance(
       Run run,
       IReadOnlyList<TAlgorithm> algorithms,
-      IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
+      IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
       : base(run, evaluator)
     {
         Algorithms = algorithms;

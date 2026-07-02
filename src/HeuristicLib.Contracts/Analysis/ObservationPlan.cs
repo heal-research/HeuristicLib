@@ -10,7 +10,7 @@ public sealed class ObservationPlan
     public void Observe<TOperator, TExecutionInstance, TObserver>(
       TOperator @operator,
       TObserver observer,
-      Func<TOperator, IReadOnlyList<TObserver>, IExecutable<TExecutionInstance>> createObservable)
+            Func<TOperator, IReadOnlyList<TObserver>, IExecutionInstanceResolvable<TExecutionInstance>> createObservable)
       where TOperator : class, IOperator<TExecutionInstance>
       where TExecutionInstance : class, IOperatorInstance
       where TObserver : class
@@ -48,7 +48,7 @@ public sealed class ObservationPlan
     private sealed class ObservationEntry<TOperator, TExecutionInstance, TObserver>(
       TOperator @operator,
       TObserver observer,
-      Func<TOperator, IReadOnlyList<TObserver>, IExecutable<TExecutionInstance>> createObservable) : ObservationEntry
+            Func<TOperator, IReadOnlyList<TObserver>, IExecutionInstanceResolvable<TExecutionInstance>> createObservable) : ObservationEntry
       where TOperator : class, IOperator<TExecutionInstance>
       where TExecutionInstance : class, IOperatorInstance
       where TObserver : class

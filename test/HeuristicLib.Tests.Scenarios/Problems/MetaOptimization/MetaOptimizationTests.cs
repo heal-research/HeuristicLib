@@ -68,8 +68,8 @@ public class MetaOptimizationTests
           .WithMaxIterations(5)
           .RunToCompletion(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
-        metaProblem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
-        finalState.Solution.ObjectiveVector.Count.ShouldBe(1);
-        double.IsFinite(finalState.Solution.ObjectiveVector[0]).ShouldBeTrue();
+        metaProblem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
+        finalState.EvaluatedCandidate.ObjectiveVector.Count.ShouldBe(1);
+        double.IsFinite(finalState.EvaluatedCandidate.ObjectiveVector[0]).ShouldBeTrue();
     }
 }

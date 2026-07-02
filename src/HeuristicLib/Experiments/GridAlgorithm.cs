@@ -10,27 +10,27 @@ namespace HEAL.HeuristicLib.Experiments;
 
 // ToDo: Think if we need a better name for this: "PortfolioAlgorithm" or something like this, since this algorithm is not an algorithm that is actually doing something on a grid.
 [Equatable]
-public partial record GridAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-  : Experiment<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public partial record GridAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
+  : Experiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     [OrderedEquality] public required Grid<TAlgorithm> ParameterGrid { get; init; }
 
-    public override GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override GridAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
-        return new GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>(ParameterGrid);
+        return new GridAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>(ParameterGrid);
     }
 }
 
-public class GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-  : ExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public class GridAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
+  : ExperimentInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     protected readonly Grid<TAlgorithm> ParameterGrid;
 
@@ -53,19 +53,19 @@ public class GridAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchSta
 
 public static class GridAlgorithmExtensions
 {
-    extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>(IExperiment<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm> algorithm)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> algorithm)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
       where TSearchState : class, ISearchState
-      where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+      where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
     }
 
-    // extension<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>(IMetaAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm> executor)
-    //   where TSearchSpace : class, ISearchSpace<TGenotype>
-    //   where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    // extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(IMetaAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> executor)
+    //   where TSearchSpace : class, ISearchSpace<TCandidate>
+    //   where TProblem : class, IProblem<TCandidate, TSearchSpace>
     //   where TSearchState : class, ISearchState
-    //   where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+    //   where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     // {
     //   public IReadOnlyList<(TAlgorithm, IAsyncEnumerable<TSearchState>)> ExecuteStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
     //   {

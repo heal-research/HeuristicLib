@@ -1,6 +1,6 @@
 namespace HEAL.HeuristicLib.Optimization;
 
-public sealed class Objective
+public sealed class ObjectiveDirections
 {
     public ObjectiveDirection[] Directions { get; }
     //public int Dimensions => Directions.Length;
@@ -8,7 +8,7 @@ public sealed class Objective
     public IComparer<ObjectiveVector> TotalOrderComparer { get; }
     public ObjectiveVector Worst { get; }
 
-    public Objective(ObjectiveDirection[] directions, IComparer<ObjectiveVector> totalOrderComparer)
+    public ObjectiveDirections(ObjectiveDirection[] directions, IComparer<ObjectiveVector> totalOrderComparer)
     {
         if (directions.Length == 0)
         {
@@ -49,11 +49,11 @@ public static class ObjectiveExtensions
 {
     extension(IEnumerable<ObjectiveVector> values)
     {
-        public ObjectiveVector Best(Objective o) => values.Min(o.TotalOrderComparer);
+        public ObjectiveVector Best(ObjectiveDirections o) => values.Min(o.TotalOrderComparer);
 
-        public ObjectiveVector Worst(Objective o) => values.Max(o.TotalOrderComparer);
+        public ObjectiveVector Worst(ObjectiveDirections o) => values.Max(o.TotalOrderComparer);
 
-        public ObjectiveVector Median(Objective o) => values.Median(o.TotalOrderComparer);
+        public ObjectiveVector Median(ObjectiveDirections o) => values.Median(o.TotalOrderComparer);
     }
 
     extension<T>(IEnumerable<T> source)

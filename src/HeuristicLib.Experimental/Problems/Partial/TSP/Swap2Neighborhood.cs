@@ -14,32 +14,32 @@ public sealed record Swap2Neighborhood
     public readonly record struct Move(int IndexA, int IndexB);
 
     public override IEnumerable<Move> Moves(
-        Permutation genotype,
+        Permutation candidate,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
     {
-        for (var i = 0; i < genotype.Count - 1; i++)
+        for (var i = 0; i < candidate.Count - 1; i++)
         {
-            for (var j = i + 1; j < genotype.Count; j++)
+            for (var j = i + 1; j < candidate.Count; j++)
                 yield return new Move(i, j);
         }
     }
 
     public override bool RandomMove(
-        Permutation genotype,
+        Permutation candidate,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem, out Move move)
     {
-        if (genotype.Count < 2)
+        if (candidate.Count < 2)
         {
             move = default;
             return false;
         }
 
-        var i = random.NextInt(genotype.Count);
-        var j = random.NextInt(genotype.Count - 1);
+        var i = random.NextInt(candidate.Count);
+        var j = random.NextInt(candidate.Count - 1);
 
         if (j >= i)
             j++;
@@ -49,32 +49,32 @@ public sealed record Swap2Neighborhood
     }
 
     public override Permutation ApplyMove(
-        Permutation genotype,
+        Permutation candidate,
         Move move,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
     {
-        var values = genotype.ToArray();
+        var values = candidate.ToArray();
         (values[move.IndexA], values[move.IndexB]) = (values[move.IndexB], values[move.IndexA]);
         return new Permutation(values);
     }
 
     public override Permutation RevertMove(
-        Permutation genotype,
+        Permutation candidate,
         Move move,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
-        => ApplyMove(genotype, move, searchSpace, problem);
+        => ApplyMove(candidate, move, searchSpace, problem);
 
     ObjectiveVector IIncrementalObjectiveNeighborhoodInstance<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, Move>.EvaluateIncrement(
-        Permutation genotype,
+        Permutation candidate,
         Move move,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
     {
-        var before = problem.TourLength(genotype);
-        var after = problem.TourLength(ApplyMove(genotype, move, searchSpace, problem));
+        var before = problem.TourLength(candidate);
+        var after = problem.TourLength(ApplyMove(candidate, move, searchSpace, problem));
         return after - before;
     }
 

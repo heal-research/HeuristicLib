@@ -36,7 +36,7 @@ public class OperatorBudgetAlgorithmTests
             ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class OperatorBudgetAlgorithmTests
             ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class OperatorBudgetAlgorithmTests
             ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class OperatorBudgetAlgorithmTests
             ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public class OperatorBudgetAlgorithmTests
             .ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class OperatorBudgetAlgorithmTests
             .ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]

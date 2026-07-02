@@ -18,7 +18,7 @@
 //    where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS>, Problem
 //{
 //    public override LazySolution<T> apply_move(MutationMove move, LazySolution<T> solution)
-//        => new(CompositeSearchSpace<,,,>.Mutator.Mutate([solution.Genotype], rng.Fork(move.forkKey), SearchSpace, Problem)[0], this);
+//        => new(CompositeSearchSpace<,,,>.Mutator.Mutate([solution.Candidate], rng.Fork(move.forkKey), SearchSpace, Problem)[0], this);
 
 //    public override LazySolution<T> copy_solution(LazySolution<T> solution) => solution.Copy();
 

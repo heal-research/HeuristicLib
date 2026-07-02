@@ -5,20 +5,20 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record GenderSpecificSelector<TGenotype, TSearchSpace, TProblem>
-  : MultiSelector<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
+  : MultiSelector<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public GenderSpecificSelector(ImmutableArray<ISelector<TGenotype, TSearchSpace, TProblem>> innerSelectors) : base(innerSelectors) { }
+    public GenderSpecificSelector(ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> innerSelectors) : base(innerSelectors) { }
 
-    protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IReadOnlyList<InnerSelect> innerSelectors, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    protected override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IReadOnlyList<InnerSelect> innerSelectors, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         ArgumentOutOfRangeException.ThrowIfNotEqual(count % innerSelectors.Count, 0);
         var n = count / innerSelectors.Count;
         var r = innerSelectors.Select(select => select(population, objective, n, random, searchSpace, problem)).ToArray();
 
-        var res = new ISolution<TGenotype>[count];
+        var res = new EvaluatedCandidate<TCandidate>[count];
         var c = 0;
         for (int j = 0; j < n; j++)
         {

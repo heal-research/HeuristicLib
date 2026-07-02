@@ -22,7 +22,7 @@ namespace HEAL.HeuristicLib.PythonInterop;
 /// <summary>
 /// This is a toy problem that uses a "normal" symbolic regression problem and adds more objectives provided by a generic function
 /// </summary>
-public class PythonInterOptEquationScoring(Objective objective, SymbolicExpressionTreeSearchSpace searchSpace, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval)
+public class PythonInterOptEquationScoring(ObjectiveDirections objective, SymbolicExpressionTreeSearchSpace searchSpace, Func<SymbolicExpressionTree, ObjectiveVector, double[]> myEval)
   : SingleSolutionProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>(objective, searchSpace)
 {
     public required SymbolicRegressionProblem InnerProblem { get; init; }
@@ -68,7 +68,7 @@ public class PythonInterOptEquationScoring(Objective objective, SymbolicExpressi
       ObjectiveDirection.Maximize, // Limits & Trends
       ObjectiveDirection.Maximize, // Symmetry
     };
-        var objective = new Objective(directions, new LexicographicComparer(directions));
+        var objective = new ObjectiveDirections(directions, new LexicographicComparer(directions));
 
         return new PythonInterOptEquationScoring(
             objective,

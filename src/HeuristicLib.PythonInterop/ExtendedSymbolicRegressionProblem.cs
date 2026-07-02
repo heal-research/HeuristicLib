@@ -23,11 +23,11 @@ namespace HEAL.HeuristicLib.PythonInterop;
 public record EquationScoringEvaluator(Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> PythonCallback)
   : StatelessEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem> //This evaluator only works with your custom Problem
 {
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<SymbolicExpressionTree> genotypes, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem)
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<SymbolicExpressionTree> candidates, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem)
     {
         //you could also call evaluate directly but DirectEvaluator does things in parallel for us, and I am lazy
-        var normalObjectives = new DirectEvaluator<SymbolicExpressionTree>().Evaluate(genotypes, random, searchSpace, problem);
-        var betterObjectives = PythonCallback(genotypes.ToArray(), normalObjectives.ToArray()); //passing Arrays is not strictly needed but might be better for interopt
+        var normalObjectives = new DirectEvaluator<SymbolicExpressionTree>().Evaluate(candidates, random, searchSpace, problem);
+        var betterObjectives = PythonCallback(candidates.ToArray(), normalObjectives.ToArray()); //passing Arrays is not strictly needed but might be better for interopt
         return betterObjectives.Select(x => (ObjectiveVector)x).ToArray(); //make sure that Length of new Objectives matches what the problem promised
     }
 }
@@ -35,7 +35,7 @@ public record EquationScoringEvaluator(Func<SymbolicExpressionTree[], ObjectiveV
 /// <summary>
 /// This is a toy problem that uses a "normal" symbolic regression problem and adds more objectives provided by a generic function
 /// </summary>
-public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpressionTreeSearchSpace searchSpace, Func<SymbolicExpressionTree, ObjectiveVector, double[]> individualPythonCallback)
+public class ExtendedSymbolicRegressionProblem(ObjectiveDirections objective, SymbolicExpressionTreeSearchSpace searchSpace, Func<SymbolicExpressionTree, ObjectiveVector, double[]> individualPythonCallback)
   : SingleSolutionProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>(objective, searchSpace)
 {
     public required SymbolicRegressionProblem InnerProblem { get; init; }
@@ -97,7 +97,7 @@ public class ExtendedSymbolicRegressionProblem(Objective objective, SymbolicExpr
       ObjectiveDirection.Maximize, // Limits & Trends
       ObjectiveDirection.Maximize  // Symmetry
     };
-        var objective = new Objective(directions, new LexicographicComparer(directions));
+        var objective = new ObjectiveDirections(directions, new LexicographicComparer(directions));
 
         if (individualPythonCallback == null)
         {

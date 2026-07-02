@@ -227,7 +227,7 @@ public class PythonGenealogyAnalysis
         Analyzer<List<BestMedianWorstEntry<T>>> Qualities,
         Analyzer<RankState<T>>? RankAnalysis,
         Analyzer<QualityCurve<T>> QualityCurve,
-        Analyzer<List<ISolution<T>[]>>? AllPopulations,
+        Analyzer<List<EvaluatedCandidate<T>[]>>? AllPopulations,
         Analyzer<object>? CallbackAnalyzer)
         : IAnalyzerSet<T>
         where T : notnull
@@ -246,7 +246,7 @@ public class PythonGenealogyAnalysis
                 rankLines = rankResult.Ranks.Select(x => x.ToList()).ToArray();
             }
 
-            IReadOnlyList<ISolution<T>[]> apRes = [];
+            IReadOnlyList<EvaluatedCandidate<T>[]> apRes = [];
             if (AllPopulations is not null && run.TryGetAnalyzerResult(AllPopulations, out var populations) && populations is not null)
             {
                 apRes = populations;

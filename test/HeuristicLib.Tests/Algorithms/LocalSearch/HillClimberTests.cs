@@ -57,7 +57,7 @@ public class HillClimberTests
         };
     }
 
-    private static int StateGenotype(SingleSolutionState<int> state) => state.Solution.Genotype;
+    private static int StateGenotype(SingleSolutionState<int> state) => state.EvaluatedCandidate.Candidate;
 
     private sealed record ConstantCreator(int Value)
       : ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>,

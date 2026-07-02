@@ -3,18 +3,18 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record RandomSelector<TGenotype>
-  : StatelessSelector<TGenotype>
+public record RandomSelector<TCandidate>
+  : StatelessSelector<TCandidate>
 {
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
       => RandomSelector.Select(population, count, random);
 }
 
 public static class RandomSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(IReadOnlyList<ISolution<TGenotype>> population, int count, IRandomNumberGenerator random)
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
     {
-        var selected = new ISolution<TGenotype>[count];
+        var selected = new EvaluatedCandidate<TCandidate>[count];
         var randoms = random.NextInts(selected.Length, population.Count);
         for (var i = 0; i < selected.Length; i++)
         {

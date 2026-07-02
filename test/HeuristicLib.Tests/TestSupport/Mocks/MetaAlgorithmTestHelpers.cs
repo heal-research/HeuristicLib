@@ -14,7 +14,7 @@ public static class MetaAlgorithmTestHelpers
           objective: SingleObjective.Minimize);
     }
 
-    public static int StateGenotype(PopulationState<int> state) => state.Population.Solutions.Single().Genotype;
+    public static int StateGenotype(PopulationState<int> state) => state.Population.EvaluatedCandidates.Single().Candidate;
 
-    public static double StateObjective(PopulationState<int> state) => state.Population.Solutions.Single().ObjectiveVector[0];
+    public static double StateObjective(PopulationState<int> state) => state.Population.EvaluatedCandidates.Single().ObjectiveVector[0];
 }
