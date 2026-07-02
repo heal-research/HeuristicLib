@@ -4,7 +4,7 @@ HeuristicLib is a **library-first** framework for implementing and composing heu
 
 The project’s organizing idea is simple:
 
-> An **algorithm** produces a stream of **search states** while operating on **genotypes** from a **search space**, evaluated by a **problem** under an **objective**.
+> An **algorithm** produces a stream of **search states** while operating on **candidates** from a **search space**, evaluated by a **problem** into **objective value(s)** interpreted by **objective direction(s)**.
 
 This documentation focuses on the mental model and the stable contracts that shape day-to-day usage. The generated **API** reference is the place for exhaustive type-by-type details.
 
@@ -13,7 +13,7 @@ This documentation focuses on the mental model and the stable contracts that sha
 - **Composable algorithms** built out of small operator roles (creator, evaluator, selector, crossover, mutator, replacer, terminator).
 - **Explicit randomness** via `IRandomNumberGenerator` for reproducibility and deterministic testing (see [Randomness (RNG) design](randomness.md)).
 - **Two execution styles**: run to completion, or stream produced search states.
-- **Strong typing**: genotype, search space, and problem fit together through generics.
+- **Strong typing**: candidate, search space, and problem fit together through generics.
 
 ## A quick end-to-end example
 
@@ -51,10 +51,10 @@ var generation = 0;
 
 await foreach (var state in ga.RunStreamingAsync(problem, rng))
 {
-   var best = state.Population.Solutions
-      .MinBy(s => s.ObjectiveVector, problem.Objective.TotalOrderComparer)!;
+   var best = state.Population.EvaluatedCandidates
+      .MinBy(s => s.ObjectiveValues, problem.ObjectiveDirections.TotalOrderComparer)!;
 
-   Console.WriteLine($"Generation {generation++,4}: best = {best.ObjectiveVector}");
+   Console.WriteLine($"Generation {generation++,4}: best = {best.ObjectiveValues}");
 }
 ```
 

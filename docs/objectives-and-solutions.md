@@ -1,48 +1,48 @@
-# Objectives & solutions
+# Objective values and evaluated candidates
 
 This page explains how HeuristicLib represents optimization goals and evaluated candidates.
 
-## Objective
+## Objective directions and ordering
 
-An `Objective` defines:
+An objective-direction model defines:
 
-- `ObjectiveDirection[] Directions` (minimize/maximize per dimension)
-- `IComparer<ObjectiveVector> TotalOrderComparer` (how to sort objective vectors)
-- `ObjectiveVector Worst` (an extreme “worst possible” vector based on directions)
+- `ObjectiveDirection[] Directions` (minimize/maximize per objective value)
+- `IComparer<ObjectiveValues> TotalOrderComparer` (how to sort objective values)
+- `ObjectiveValues Worst` (an extreme “worst possible” value set based on directions)
 
-The `TotalOrderComparer` is important because it makes “best” unambiguous in algorithms that need sorting.
+The `TotalOrderComparer` is important because it makes "best" unambiguous in algorithms that need sorting.
 
 For single-objective problems, the repository provides `SingleObjective` helpers:
 
 - `SingleObjective.Minimize`
 - `SingleObjective.Maximize`
 
-## ObjectiveVector
+## Objective values
 
-`ObjectiveVector` is what problem evaluation returns.
+`ObjectiveValues` is the value object returned by problem evaluation.
 
 It is a small value object that behaves like a read-only list of doubles and includes multi-objective helpers:
 
-- `CompareTo(other, objective)` returning a `DominanceRelation`
+- `CompareTo(other, objectiveDirections)` returning a `DominanceRelation`
 - `Dominates(other, objective)` and related convenience methods
 
 For convenience:
 
-- a `double` implicitly converts to a single-objective `ObjectiveVector`.
+- a `double` implicitly converts to single-objective `ObjectiveValues`.
 
-## Solution
+## Evaluated candidate
 
-`ISolution<TGenotype>` combines:
+`EvaluatedCandidate<TCandidate>` combines:
 
-- `TGenotype Genotype`
-- `ObjectiveVector ObjectiveVector`
+- `TCandidate Candidate`
+- `ObjectiveValues ObjectiveValues`
 
 This separation is intentional:
 
-- Genotype = representation (what you search over)
-- Objective vector = evaluation (what you optimize)
+- Candidate = representation (what you search over)
+- Objective values = evaluation outcome (what you optimize)
 
-In this repository, `Solution<TGenotype>` is a simple record implementing `ISolution<TGenotype>`.
+In this repository, `EvaluatedCandidate<TCandidate>` is a simple value object.
 
 ## Related pages
 

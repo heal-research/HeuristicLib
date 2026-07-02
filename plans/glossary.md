@@ -4,6 +4,12 @@ This plan defines the intended scope and working approach for a future Heuristic
 
 The durable glossary should eventually live at `docs/glossary.md`, be linked from the documentation table of contents, and be referenced from `AGENTS.md` so AI agents are told up front to use the repository's canonical terminology. This plan exists first so we can agree on what the glossary is supposed to achieve before writing the glossary itself.
 
+## Current Status
+
+The initial glossary now lives at `docs/glossary.md`, is linked from the documentation table of contents, and is referenced from `AGENTS.md`.
+
+The remaining follow-up is to align source and API names with the glossary in focused rename clusters. That work should preserve behavior, avoid unrelated design changes, and keep namespace/folder layout unchanged unless a separate namespace-layout branch is explicitly created.
+
 ## Purpose
 
 The glossary should define common terms that need a clear and consistent meaning across HeuristicLib.
@@ -125,7 +131,20 @@ The glossary should also be checked against public type names in `src`, but code
 
 When a term exposes an unclear concept boundary or a weak name, record it as an open naming question before changing docs or APIs.
 
-Likely early naming questions include:
+Resolved naming decisions from the first glossary pass:
+
+- `Configuration` is the canonical term for reusable algorithm/operator objects. `Definition` is legacy when it refers to this concept.
+- `Execution instance` is the canonical term for concrete per-run/per-resolution objects created from configurations.
+- `Execution state` is private mutable state owned by an execution instance.
+- `Search state` is the public state value produced by an algorithm.
+- `Candidate` is the canonical algorithm-facing searched value.
+- `Evaluated candidate` is the canonical term for a candidate paired with objective values.
+- `Objective value` and `Objective values` are the canonical terms for evaluation output.
+- `Objective direction` and `Objective directions` are the canonical terms for minimize/maximize semantics.
+- `Run` is the canonical term for one logical algorithm execution.
+- `Meta-algorithm` is the canonical spelling.
+
+Historical naming questions from the first pass included:
 
 - whether `definition` should remain the preferred term or be replaced by `configuration`
 - whether `execution instance` should remain the preferred term or be replaced by `runtime` or another term
@@ -134,6 +153,46 @@ Likely early naming questions include:
 - how to describe `Problem`, `Objective`, `Evaluator`, and `Solution` boundaries without circular definitions
 
 These questions may be resolved inside the glossary when the answer is mainly terminological. If they imply API or architecture changes, they should move into a separate plan or design note.
+
+## Structural Source/API Rename Follow-up
+
+The source/API rename work should be done after the glossary decisions, in focused compile-driven clusters. It should not re-open the glossary terms unless source inspection reveals a real contradiction.
+
+### Fixed Decisions
+
+- Rename `IExecutable` to `IExecutionInstanceResolvable`.
+  - The name is intentionally capability-based: configurations are not themselves executable, but can be resolved to execution instances.
+  - Avoid `Factory` unless source inspection proves the type really owns direct object creation semantics; the registry/resolver controls execution-instance identity and sharing.
+- Rename `ISolution<T>` / `Solution<T>` to `EvaluatedCandidate<TCandidate>`.
+  - Prefer removing the interface unless the code proves a real abstraction need.
+  - Use properties named `Candidate` and `ObjectiveValues`.
+- Rename `ObjectiveVector` to `ObjectiveValues`.
+  - Use `ObjectiveValue` only where a single scalar objective value needs its own type or name.
+- Use `ObjectiveDirection` for the single-objective direction enum/value and `ObjectiveDirections` for the aggregate direction model.
+  - A static `Objective` helper class may still be useful for creation helpers such as minimize/maximize factories.
+- Keep `SingleSolution` as the family term for single-solution algorithm/state shapes.
+  - A single-solution state may contain one `EvaluatedCandidate<TCandidate>`.
+  - Do not use `Solution` as the value name for candidate plus objective values.
+- Rename broad generic parameters from `TGenotype` to `TCandidate` only after the evaluated-candidate and objective-value names are stable.
+- Do not rename namespaces or folders such as `HEAL.HeuristicLib.Genotypes.*` in this branch.
+  - Namespace/source-layout cleanup belongs in a separate branch.
+
+### Recommended Rename Order
+
+1. Rename `IExecutable` and update direct references, comments, and constraints.
+2. Rename `Solution` / `ISolution` to `EvaluatedCandidate` and remove the interface if feasible.
+3. Rename `ObjectiveVector` to `ObjectiveValues`.
+4. Rename the objective-direction aggregate to `ObjectiveDirections` while preserving or introducing static `Objective` helpers where useful.
+5. Rename population/state properties that expose evaluated candidates, for example `Population.Solutions` to `Population.EvaluatedCandidates`.
+6. Rename generic parameters from `TGenotype` to `TCandidate` across coherent API clusters.
+7. Run targeted builds/tests after each cluster and report unrelated existing build failures separately.
+
+### Out of Scope for This Rename Pass
+
+- Namespace and folder layout changes.
+- A broad redesign of the objective comparison system beyond the agreed names.
+- Re-litigating glossary terms without a concrete source contradiction.
+- Mechanical replacement of every occurrence of `genotype` where it is an EA-specific alias or part of an existing namespace/type name that is intentionally left for another branch.
 
 ## Candidate Term Inventory
 

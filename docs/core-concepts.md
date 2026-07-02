@@ -4,37 +4,37 @@ This section defines the vocabulary used throughout the library.
 
 The goal is a single dominant mental model:
 
-> An **algorithm** produces a stream of **search states** while operating on **genotypes** from a **search space**, evaluated by a **problem** under an **objective**.
+> An **algorithm** produces a stream of **search states** while operating on **candidates** from a **search space**, evaluated by a **problem** into **objective value(s)** interpreted by **objective direction(s)**.
 
 ## The contracts at a glance
 
-| Concept          | What it is                                       | Where it lives                                                                                              |
-| ---------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Genotype         | Your candidate representation                    | Generic type parameter `TGenotype` (usually a class/record)                                                 |
-| Search space     | Validity predicate for genotypes                 | `ISearchSpace<TGenotype>`                                                                                   |
-| Objective        | Defines direction(s) and ordering                | `Objective`, `ObjectiveDirection`                                                                           |
-| Objective vector | The measured outcome of evaluation               | `ObjectiveVector`                                                                                           |
-| Solution         | Genotype + objective vector                      | `ISolution<TGenotype>`                                                                                      |
-| Problem          | Owns objective + search space + evaluation       | `IProblem<TGenotype, TSearchSpace>`                                                                         |
-| Search state     | The public progress value produced by algorithms | `ISearchState`                                                                                              |
-| Algorithm loop   | The step-based algorithm authoring model         | `IterativeAlgorithm<...>`                                                                                   |
-| Execution state  | Hidden per-run mutable execution state           | `TExecutionState` on `IterativeAlgorithm<...>`                                                              |
-| Operators        | Pluggable building blocks used by algorithms     | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor` |
+| Concept              | What it is                                              | Where it lives                                                                                              |
+| -------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Candidate            | The algorithm-facing object being searched              | Generic type parameter `TCandidate`                                                                         |
+| Search space         | Validity predicate for candidates                       | `ISearchSpace<TCandidate>`                                                                                  |
+| Objective directions | Minimize/maximize direction per objective               | `ObjectiveDirection`                                                                                        |
+| Objective values     | The measured outcome of evaluation                      | `ObjectiveValues`                                                                                           |
+| Evaluated candidate  | Candidate + objective values                            | `EvaluatedCandidate<TCandidate>`                                                                            |
+| Problem              | Owns search space, evaluation, and objective directions | `IProblem<TCandidate, TSearchSpace>`                                                                        |
+| Search state         | The public progress value produced by algorithms        | `ISearchState`                                                                                              |
+| Algorithm loop       | The step-based algorithm authoring model                | `IterativeAlgorithm<...>`                                                                                   |
+| Execution state      | Hidden per-run mutable execution state                  | `TExecutionState` on `IterativeAlgorithm<...>`                                                              |
+| Operators            | Pluggable building blocks used by algorithms            | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor` |
 
 ## How the types fit together
 
 Most public abstractions follow a consistent generic pattern:
 
-- `TGenotype` is the candidate representation.
-- `TSearchSpace : ISearchSpace<TGenotype>` describes which genotypes are valid.
-- `TProblem : IProblem<TGenotype, TSearchSpace>` evaluates genotypes and defines the objective.
+- `TCandidate` is the candidate representation.
+- `TSearchSpace : ISearchSpace<TCandidate>` describes which candidate values are valid.
+- `TProblem : IProblem<TCandidate, TSearchSpace>` evaluates candidates and defines objective directions.
 - `TSearchState : ISearchState` is the public streamed state produced by the algorithm.
 
 This is deliberate: once you’ve understood one family of types, the rest of the library reads predictably.
 
 ## A simple mental picture
 
-At runtime, the loop looks like this:
+During execution, the loop looks like this:
 
 1. `CreateInitialExecutionState(resolver)` resolves dependencies and prepares per-run mutable state.
 2. `ExecuteStep(previousState, executionState, problem, random)` produces the next public state.
@@ -49,7 +49,7 @@ The execution state is the hidden carrier for resolved execution instances and p
 
 - [Problem](problem.md)
 - [Search spaces](search-space.md)
-- [Objectives & solutions](objectives-and-solutions.md)
+- [Objective values and evaluated candidates](objectives-and-solutions.md)
 - [Operators](operators.md)
 - [Algorithm](algorithm.md)
 - [Search state](algorithm-state.md)

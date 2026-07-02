@@ -2,13 +2,13 @@
 
 This folder contains the repository's executable test suites.
 
-Use the project split to keep the fast unit-test loop separate from broader runtime scenarios.
+Use the project split to keep the fast unit-test loop separate from broader execution scenarios.
 
 ## Where New Tests Go
 
 - `HeuristicLib.Tests`: fast unit tests for core types, operators, algorithms, and invariants owned by the core assembly.
 - `HeuristicLib.Tests.Experimental`: fast unit tests for experimental types and invariants owned by the experimental assembly.
-- `HeuristicLib.Tests.Scenarios`: broader workflow tests, runtime composition tests, data-backed checks, and other scenarios that may span the main, experimental, and integration libraries.
+- `HeuristicLib.Tests.Scenarios`: broader workflow tests, execution composition tests, data-backed checks, and other scenarios that may span the main, experimental, and integration libraries.
 - `HeuristicLib.Tests.ApiUsageSpecs`: executable usage-shape specs that document intended public API usage.
 
 Choose `HeuristicLib.Tests.ApiUsageSpecs` when the main value of the test is that it communicates intended public API usage clearly, compiles cleanly, and runs in normal test flow.
@@ -40,7 +40,7 @@ Choose `HeuristicLib.Tests.Scenarios` when the test is mainly about a composed w
 Typical scenario characteristics:
 
 - exercises multiple subsystems together
-- uses realistic datasets, runtime composition, or external integration points
+- uses realistic datasets, execution composition, or external integration points
 - validates longer-running or more story-shaped execution flows
 - may be slower and broader than unit tests, so it should not be treated as the inner TDD test cycle
 

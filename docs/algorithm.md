@@ -4,7 +4,7 @@ An algorithm drives the optimization process by producing a stream of search sta
 
 For normal authoring, HeuristicLib now has one main iterative base:
 
-- derive from `IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>`
+- derive from `IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>`
 - implement the step logic on the algorithm type itself
 - resolve operator dependencies once in `CreateInitialExecutionState(IExecutionInstanceResolver resolver)`
 - store the resolved execution instances and any mutable per-run data in `TExecutionState`
@@ -54,5 +54,5 @@ If a very advanced algorithm needs full manual control, it can still implement `
 
 - [Search state](algorithm-state.md)
 - [Execution model](execution-model.md)
-- [Definition vs execution instances](execution-instances.md)
+- [Configuration vs execution instances](execution-instances.md)
 - [Operators](operators.md)

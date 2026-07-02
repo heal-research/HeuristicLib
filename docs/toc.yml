@@ -20,7 +20,7 @@
       href: problem.md
     - name: Search spaces
       href: search-space.md
-    - name: Objectives & solutions
+    - name: Objective values and evaluated candidates
       href: objectives-and-solutions.md
     - name: Operators
       href: operators.md

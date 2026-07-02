@@ -144,7 +144,7 @@ Objective directions do not, by themselves, define a full ordering of evaluated 
 
 See also: Objective value(s).
 
-## Algorithms And Operators
+## Algorithms and Operators
 
 ### Algorithm
 
@@ -340,7 +340,7 @@ Drawing random values from an RNG changes its state, so draw order matters. Fork
 
 See also: Experiment, Run.
 
-## Analysis And Experiments
+## Analysis and Experiments
 
 ### Analyzer
 
