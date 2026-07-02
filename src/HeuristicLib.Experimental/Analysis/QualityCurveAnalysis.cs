@@ -7,20 +7,20 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, QualityCurve<T>>
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
-  where TR : class, ISearchState
+public record QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : Analyzer<TCandidate, TSearchSpace, TProblem, TSearchState, QualityCurve<TCandidate>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : class, ISearchState
 
 {
-    private IEvaluator<T, TS, TP>[] Evaluators { get; }
+    private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
 
-    public QualityCurveAnalysis(IAlgorithm<T, TS, TP, TR> Algorithm, params IEvaluator<T, TS, TP>[] Evaluators) : base(Algorithm)
+    public QualityCurveAnalysis(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm, params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators) : base(Algorithm)
     {
         this.Evaluators = Evaluators;
     }
 
-    public void AfterEvaluation(QualityCurve<T> state, IReadOnlyList<T> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<T, ISearchSpace<T>> problem)
+    public void AfterEvaluation(QualityCurve<TCandidate> state, IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {
         for (var i = 0; i < candidates.Count; i++)
         {
@@ -42,13 +42,13 @@ public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, Qual
                 }
             }
 
-            state.Add(new EvaluatedCandidate<T>(candidate, objectiveVector));
+            state.Add(new EvaluatedCandidate<TCandidate>(candidate, objectiveVector));
         }
     }
 
-    public override QualityCurve<T> CreateInitialResult() => new();
+    public override QualityCurve<TCandidate> CreateInitialResult() => new();
 
-    public override void RegisterObservations(ObservationPlan observations, QualityCurve<T> curve)
+    public override void RegisterObservations(ObservationPlan observations, QualityCurve<TCandidate> curve)
     {
         foreach (var evaluator in Evaluators)
         {

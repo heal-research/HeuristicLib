@@ -22,9 +22,9 @@ public sealed partial class Grid<T> : IEnumerable<T>
         Parameters = parameters;
     }
 
-    public Grid<T> VaryBy<TP>(IReadOnlyList<TP> values, Func<T, TP, T> configurator)
+    public Grid<T> VaryBy<TProblem>(IReadOnlyList<TProblem> values, Func<T, TProblem, T> configurator)
     {
-        return new Grid<T>(Prototype, Parameters.Add(new GridParameter<T, TP>(values, configurator)));
+        return new Grid<T>(Prototype, Parameters.Add(new GridParameter<T, TProblem>(values, configurator)));
     }
 
     public IReadOnlyList<T> GetConfigurations()

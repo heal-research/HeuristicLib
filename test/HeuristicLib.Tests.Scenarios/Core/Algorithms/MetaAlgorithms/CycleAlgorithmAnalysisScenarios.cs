@@ -76,15 +76,15 @@ public class CycleAlgorithmAnalysisScenarios
       EvaluationTraceAnalysis.ExecutionState EvaluationTrace2,
       InterceptionTraceAnalysis.ExecutionState InterceptionTrace);
 
-    private sealed class DummySearchSpace<T> : ISearchSpace<T>
+    private sealed class DummySearchSpace<TCandidate> : ISearchSpace<TCandidate>
     {
-        public static readonly DummySearchSpace<T> Instance = new();
+        public static readonly DummySearchSpace<TCandidate> Instance = new();
 
         private DummySearchSpace()
         {
         }
 
-        public bool Contains(T candidate) => true;
+        public bool Contains(TCandidate candidate) => true;
     }
 
     private sealed record IncrementingEvaluator

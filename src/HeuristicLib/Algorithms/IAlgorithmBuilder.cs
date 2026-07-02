@@ -7,19 +7,19 @@ namespace HEAL.HeuristicLib.Algorithms;
 public interface IAlgorithmBuilder;
 
 #pragma warning disable S2326
-public interface IAlgorithmBuilder<TG, TS, TP, TR>
+public interface IAlgorithmBuilder<TCandidate, TSearchSpace, TProblem, TSearchState>
 #pragma warning restore S2326
   : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, ISearchState;
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : class, ISearchState;
 
-public interface IAlgorithmBuilder<TG, TS, TP, TR, out TA>
-  : IAlgorithmBuilder<TG, TS, TP, TR>
-  where TA : IAlgorithm<TG, TS, TP, TR>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, ISearchState
+public interface IAlgorithmBuilder<TCandidate, TSearchSpace, TProblem, TSearchState, out TAlgorithm>
+  : IAlgorithmBuilder<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : class, ISearchState
 {
-    TA Build();
+    TAlgorithm Build();
 }

@@ -7,15 +7,15 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public static class InterceptorCounterExtensions
 {
-    extension<TG, TS, TP, TR>(IInterceptor<TG, TS, TP, TR> interceptor)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
-        where TR : class, ISearchState
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
-        public IInterceptor<TG, TS, TP, TR> CountInterceptorCalls(ObservationCounter counter)
+        public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> CountInterceptorCalls(ObservationCounter counter)
             => interceptor.ObserveWith(_ => counter.IncrementBy(1));
 
-        public IInterceptor<TG, TS, TP, TR> CountInterceptorCalls(out ObservationCounter counter)
+        public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> CountInterceptorCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return interceptor.CountInterceptorCalls(counter);

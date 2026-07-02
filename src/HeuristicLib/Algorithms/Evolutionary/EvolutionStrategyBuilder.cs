@@ -5,24 +5,24 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record EvolutionStrategyBuilder<TG, TS, TP>
-  : AlgorithmBuilder<TG, TS, TP, EvolutionStrategyState<TG>, EvolutionStrategy<TG, TS, TP>>,
-    IBuilderWithCreator<TG, TS, TP>,
-    IBuilderWithMutator<TG, TS, TP>,
-    IBuilderWithSelector<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public record EvolutionStrategyBuilder<TCandidate, TSearchSpace, TProblem>
+  : AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, EvolutionStrategyState<TCandidate>, EvolutionStrategy<TCandidate, TSearchSpace, TProblem>>,
+    IBuilderWithCreator<TCandidate, TSearchSpace, TProblem>,
+    IBuilderWithMutator<TCandidate, TSearchSpace, TProblem>,
+    IBuilderWithSelector<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public int PopulationSize { get; set; } = 100;
     public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
-    public required IMutator<TG, TS, TP> Mutator { get; set; }
+    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; set; }
     public required double InitialMutationStrength { get; set; }
-    public ICrossover<TG, TS, TP>? Crossover { get; set; }
-    public ISelector<TG, TS, TP> Selector { get; set; } = new RandomSelector<TG>();
+    public ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; set; }
+    public ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; set; } = new RandomSelector<TCandidate>();
     public int NumberOfChildren { get; set; } = 100;
-    public required ICreator<TG, TS, TP> Creator { get; set; }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; set; }
 
-    public override EvolutionStrategy<TG, TS, TP> Build() => new()
+    public override EvolutionStrategy<TCandidate, TSearchSpace, TProblem> Build() => new()
     {
         PopulationSize = PopulationSize,
         Strategy = Strategy,

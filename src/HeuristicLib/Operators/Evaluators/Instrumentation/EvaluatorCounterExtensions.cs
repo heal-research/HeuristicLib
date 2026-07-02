@@ -6,23 +6,23 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public static class EvaluatorCounterExtensions
 {
-    extension<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IEvaluator<TG, TS, TP> CountEvaluatorCalls(ObservationCounter counter)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatorCalls(ObservationCounter counter)
             => evaluator.ObserveWith((_, _) => counter.IncrementBy(1));
 
-        public IEvaluator<TG, TS, TP> CountEvaluatorCalls(out ObservationCounter counter)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatorCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return evaluator.CountEvaluatorCalls(counter);
         }
 
-        public IEvaluator<TG, TS, TP> CountEvaluatedGenotypes(ObservationCounter counter)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatedGenotypes(ObservationCounter counter)
             => evaluator.ObserveWith((candidates, _) => counter.IncrementBy(candidates.Count));
 
-        public IEvaluator<TG, TS, TP> CountEvaluatedGenotypes(out ObservationCounter counter)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> CountEvaluatedGenotypes(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return evaluator.CountEvaluatedGenotypes(counter);

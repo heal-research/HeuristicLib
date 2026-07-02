@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
-public record IdentityInterceptor<TG, TSearchState> : StatelessInterceptor<TG, TSearchState>
+public record IdentityInterceptor<TCandidate, TSearchState> : StatelessInterceptor<TCandidate, TSearchState>
   where TSearchState : class, ISearchState
 {
     public override TSearchState Transform(TSearchState currentState, TSearchState? previousState) => IdentityInterceptor.Transform(currentState, previousState);

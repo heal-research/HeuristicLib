@@ -8,36 +8,36 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 public static class CrossoverDurationExtensions
 {
-    extension<TG, TS, TP>(ICrossover<TG, TS, TP> crossover)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ICrossover<TG, TS, TP> MeasureCrossoverDuration(ObservationDuration duration)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(ObservationDuration duration)
             => crossover.MeasureCrossoverDuration(duration, TimeProvider.System);
 
-        public ICrossover<TG, TS, TP> MeasureCrossoverDuration(ObservationDuration duration, TimeProvider timeProvider)
-            => new DurationMeasuringCrossover<TG, TS, TP>(crossover, duration, timeProvider);
+        public ICrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(ObservationDuration duration, TimeProvider timeProvider)
+            => new DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem>(crossover, duration, timeProvider);
 
-        public ICrossover<TG, TS, TP> MeasureCrossoverDuration(out ObservationDuration duration)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return crossover.MeasureCrossoverDuration(duration);
         }
 
-        public ICrossover<TG, TS, TP> MeasureCrossoverDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return crossover.MeasureCrossoverDuration(duration, timeProvider);
         }
     }
 
-    private sealed record DurationMeasuringCrossover<TG, TS, TP>
-        : WrappingCrossover<TG, TS, TP>
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    private sealed record DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem>
+        : WrappingCrossover<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public DurationMeasuringCrossover(
-            ICrossover<TG, TS, TP> crossover,
+            ICrossover<TCandidate, TSearchSpace, TProblem> crossover,
             ObservationDuration duration,
             TimeProvider timeProvider)
             : base(crossover)
@@ -49,12 +49,12 @@ public static class CrossoverDurationExtensions
         private ObservationDuration Duration { get; }
         private TimeProvider TimeProvider { get; }
 
-        protected override IReadOnlyList<TG> Cross(
-            IReadOnlyList<IParents<TG>> parents,
+        protected override IReadOnlyList<TCandidate> Cross(
+            IReadOnlyList<IParents<TCandidate>> parents,
             InnerCross innerCross,
             IRandomNumberGenerator random,
-            TS searchSpace,
-            TP problem)
+            TSearchSpace searchSpace,
+            TProblem problem)
         {
             var startTimestamp = TimeProvider.GetTimestamp();
             try

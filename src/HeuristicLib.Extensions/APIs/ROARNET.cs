@@ -134,30 +134,30 @@ public abstract record BaseOperations<TSolution, TMove, TNeighbourhood, TProblem
   #endregion
 }
 
-public record MutationMove<T, TS, TP>(int seed) : Move
-  where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS>, Problem
+public record MutationMove<TCandidate, TSearchSpace, TProblem>(int seed) : Move
+  where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>, Problem
 { }
 
-public record MutationNeighborhood<T, TS, TP> : Neighbourhood
-  where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS>
+public record MutationNeighborhood<TCandidate, TSearchSpace, TProblem> : Neighbourhood
+  where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>
 { }
 
-public class LazySolution<T> : Solution
+public class LazySolution<TCandidate> : Solution
 {
   private bool evaluated;
   private bool bounded;
   private double? quality;
   private double? lowerBound;
-  public readonly T candidate;
-  private readonly IEvaluationContext<T> context;
+  public readonly TCandidate candidate;
+  private readonly IEvaluationContext<TCandidate> context;
 
-  public LazySolution(T candidate, IEvaluationContext<T> context)
+  public LazySolution(TCandidate candidate, IEvaluationContext<TCandidate> context)
   {
     this.candidate = candidate;
     this.context = context;
   }
 
-  private LazySolution(LazySolution<T> other)
+  private LazySolution(LazySolution<TCandidate> other)
   {
     candidate = other.candidate;
     context = other.context;
@@ -192,65 +192,65 @@ public class LazySolution<T> : Solution
     return lowerBound;
   }
 
-  public LazySolution<T> Copy() => new(this);
+  public LazySolution<TCandidate> Copy() => new(this);
 }
 
-public interface IEvaluationContext<in T>
+public interface IEvaluationContext<in TCandidate>
 {
-  public double? Evaluate(T input, out bool bounded, out double? bound);
-  public double? LowerBound(T input, out bool evaluated, out double? quality);
+  public double? Evaluate(TCandidate input, out bool bounded, out double? bound);
+  public double? LowerBound(TCandidate input, out bool evaluated, out double? quality);
 }
 
-public record ProblemOperations<T, TS, TP>(
-  StatelessCreator<T, TS, TP> Creator,
-  StatelessMutator<T, TS, TP> Mutator,
-  TS SearchSpace,
-  TP Problem,
+public record ProblemOperations<TCandidate, TSearchSpace, TProblem>(
+  StatelessCreator<TCandidate, TSearchSpace, TProblem> Creator,
+  StatelessMutator<TCandidate, TSearchSpace, TProblem> Mutator,
+  TSearchSpace SearchSpace,
+  TProblem Problem,
   IRandomNumberGenerator rng)
-  : BaseOperations<LazySolution<T>, MutationMove<T, TS, TP>, MutationNeighborhood<T, TS, TP>, TP>, IEvaluationContext<T>
-  where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS>, Problem
+  : BaseOperations<LazySolution<TCandidate>, MutationMove<TCandidate, TSearchSpace, TProblem>, MutationNeighborhood<TCandidate, TSearchSpace, TProblem>, TProblem>, IEvaluationContext<TCandidate>
+  where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>, Problem
 {
-  public override LazySolution<T> apply_move(MutationMove<T, TS, TP> move, LazySolution<T> solution)
+  public override LazySolution<TCandidate> apply_move(MutationMove<TCandidate, TSearchSpace, TProblem> move, LazySolution<TCandidate> solution)
     => new(Mutator.Mutate([solution.candidate], rng.Fork(move.seed), SearchSpace, Problem)[0], this);
 
-  public override MutationNeighborhood<T, TS, TP> construction_neighbourhood(TP problem) => throw new NotSupportedException();
+  public override MutationNeighborhood<TCandidate, TSearchSpace, TProblem> construction_neighbourhood(TProblem problem) => throw new NotSupportedException();
 
-  public override LazySolution<T> copy_solution(LazySolution<T> solution) => solution.Copy();
+  public override LazySolution<TCandidate> copy_solution(LazySolution<TCandidate> solution) => solution.Copy();
 
-  public override MutationNeighborhood<T, TS, TP> destruction_neighbourhood(TP problem) => throw new NotSupportedException();
+  public override MutationNeighborhood<TCandidate, TSearchSpace, TProblem> destruction_neighbourhood(TProblem problem) => throw new NotSupportedException();
 
-  public override LazySolution<T> empty_solution(TP problem) => throw new NotSupportedException();
+  public override LazySolution<TCandidate> empty_solution(TProblem problem) => throw new NotSupportedException();
 
-  public override LazySolution<T>? heuristic_solution(TP problem) => new(Creator.Create(1, rng, SearchSpace, Problem)[0], this);
+  public override LazySolution<TCandidate>? heuristic_solution(TProblem problem) => new(Creator.Create(1, rng, SearchSpace, Problem)[0], this);
 
-  public override MutationNeighborhood<T, TS, TP> local_neighbourhood(TP problem) => new();
+  public override MutationNeighborhood<TCandidate, TSearchSpace, TProblem> local_neighbourhood(TProblem problem) => new();
 
-  public override double? lower_bound(LazySolution<T> solution) => solution.LowerBound();
+  public override double? lower_bound(LazySolution<TCandidate> solution) => solution.LowerBound();
 
-  public override double? lower_bound_increment(MutationMove<T, TS, TP> move, LazySolution<T> solution) => apply_move(move, solution).LowerBound() - solution.LowerBound();
+  public override double? lower_bound_increment(MutationMove<TCandidate, TSearchSpace, TProblem> move, LazySolution<TCandidate> solution) => apply_move(move, solution).LowerBound() - solution.LowerBound();
 
 #pragma warning disable S2190
-  public override IEnumerable<MutationMove<T, TS, TP>> moves(MutationNeighborhood<T, TS, TP> neighbourhood, LazySolution<T> solution)
+  public override IEnumerable<MutationMove<TCandidate, TSearchSpace, TProblem>> moves(MutationNeighborhood<TCandidate, TSearchSpace, TProblem> neighbourhood, LazySolution<TCandidate> solution)
 #pragma warning restore S2190
   {
     while (true) {
-      yield return new MutationMove<T, TS, TP>(rng.NextInt());
+      yield return new MutationMove<TCandidate, TSearchSpace, TProblem>(rng.NextInt());
     }
   }
 
-  public override double? objective_value(LazySolution<T> solution) => solution.LowerBound();
+  public override double? objective_value(LazySolution<TCandidate> solution) => solution.LowerBound();
 
-  public override double? objective_value_increment(MutationMove<T, TS, TP> move, LazySolution<T> solution) => apply_move(move, solution).Quality() - solution.Quality();
+  public override double? objective_value_increment(MutationMove<TCandidate, TSearchSpace, TProblem> move, LazySolution<TCandidate> solution) => apply_move(move, solution).Quality() - solution.Quality();
 
-  public override MutationMove<T, TS, TP>? random_move(MutationNeighborhood<T, TS, TP> neighbourhood, LazySolution<T> solution) => new(rng.NextInt());
+  public override MutationMove<TCandidate, TSearchSpace, TProblem>? random_move(MutationNeighborhood<TCandidate, TSearchSpace, TProblem> neighbourhood, LazySolution<TCandidate> solution) => new(rng.NextInt());
 
-  public override IEnumerable<MutationMove<T, TS, TP>> random_moves_without_replacement(MutationNeighborhood<T, TS, TP> neighbourhood, LazySolution<T> solution) => throw new NotSupportedException();
+  public override IEnumerable<MutationMove<TCandidate, TSearchSpace, TProblem>> random_moves_without_replacement(MutationNeighborhood<TCandidate, TSearchSpace, TProblem> neighbourhood, LazySolution<TCandidate> solution) => throw new NotSupportedException();
 
-  public override LazySolution<T> random_solution(TP problem) => new(Creator.Create(1, rng, SearchSpace, Problem)[0], this);
+  public override LazySolution<TCandidate> random_solution(TProblem problem) => new(Creator.Create(1, rng, SearchSpace, Problem)[0], this);
 
-  public override LazySolution<T> revert_move(MutationMove<T, TS, TP> move, LazySolution<T> solution) => throw new NotSupportedException();
+  public override LazySolution<TCandidate> revert_move(MutationMove<TCandidate, TSearchSpace, TProblem> move, LazySolution<TCandidate> solution) => throw new NotSupportedException();
 
-  public double? Evaluate(T input, out bool bounded, out double? bound)
+  public double? Evaluate(TCandidate input, out bool bounded, out double? bound)
   {
     if (!Problem.SearchSpace.Contains(input)) throw new NotImplementedException();
     bound = Problem.Evaluate([input], rng)[0][0];
@@ -258,5 +258,5 @@ public record ProblemOperations<T, TS, TP>(
     return bound;
   }
 
-  public double? LowerBound(T input, out bool evaluated, out double? quality) => Evaluate(input, out evaluated, out quality);
+  public double? LowerBound(TCandidate input, out bool evaluated, out double? quality) => Evaluate(input, out evaluated, out quality);
 }

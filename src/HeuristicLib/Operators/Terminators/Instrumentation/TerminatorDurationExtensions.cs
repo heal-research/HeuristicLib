@@ -7,38 +7,38 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public static class TerminatorDurationExtensions
 {
-    extension<TG, TS, TP, TR>(ITerminator<TG, TS, TP, TR> terminator)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
-        where TR : class, ISearchState
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
-        public ITerminator<TG, TS, TP, TR> MeasureTerminatorDuration(ObservationDuration duration)
+        public ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> MeasureTerminatorDuration(ObservationDuration duration)
             => terminator.MeasureTerminatorDuration(duration, TimeProvider.System);
 
-        public ITerminator<TG, TS, TP, TR> MeasureTerminatorDuration(ObservationDuration duration, TimeProvider timeProvider)
-            => new DurationMeasuringTerminator<TG, TS, TP, TR>(terminator, duration, timeProvider);
+        public ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> MeasureTerminatorDuration(ObservationDuration duration, TimeProvider timeProvider)
+            => new DurationMeasuringTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator, duration, timeProvider);
 
-        public ITerminator<TG, TS, TP, TR> MeasureTerminatorDuration(out ObservationDuration duration)
+        public ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> MeasureTerminatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return terminator.MeasureTerminatorDuration(duration);
         }
 
-        public ITerminator<TG, TS, TP, TR> MeasureTerminatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> MeasureTerminatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return terminator.MeasureTerminatorDuration(duration, timeProvider);
         }
     }
 
-    private sealed record DurationMeasuringTerminator<TG, TS, TP, TR>
-        : WrappingTerminator<TG, TS, TP, TR>
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
-        where TR : class, ISearchState
+    private sealed record DurationMeasuringTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+        : WrappingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
         public DurationMeasuringTerminator(
-            ITerminator<TG, TS, TP, TR> terminator,
+            ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator,
             ObservationDuration duration,
             TimeProvider timeProvider)
             : base(terminator)
@@ -51,10 +51,10 @@ public static class TerminatorDurationExtensions
         private TimeProvider TimeProvider { get; }
 
         protected override bool IsTerminalState(
-            TR searchState,
+            TSearchState searchState,
             InnerIsTerminalState innerIsTerminalState,
-            TS searchSpace,
-            TP problem)
+            TSearchSpace searchSpace,
+            TProblem problem)
         {
             var startTimestamp = TimeProvider.GetTimestamp();
             try

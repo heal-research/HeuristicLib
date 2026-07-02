@@ -30,7 +30,7 @@ Concretely:
 
 ## Example: `ObservableMutator`
 
-`ObservableMutator<TG, TS, TP>` is a wrapper around an `IMutator<TG, TS, TP>`.
+`ObservableMutator<TCandidate, TSearchSpace, TProblem>` is a wrapper around an `IMutator<TCandidate, TSearchSpace, TProblem>`.
 
 ### How it works (execution flow)
 
@@ -66,13 +66,13 @@ sequenceDiagram
 For mutators, the observer hook is:
 
 ```csharp
-public interface IMutatorObserver<in TG, in TS, in TP>
+public interface IMutatorObserver<in TCandidate, in TSearchSpace, in TProblem>
 {
   void AfterMutate(
-    IReadOnlyList<TG> offspring,
-    IReadOnlyList<TG> parent,
-    TS searchSpace,
-    TP problem
+    IReadOnlyList<TCandidate> offspring,
+    IReadOnlyList<TCandidate> parent,
+    TSearchSpace searchSpace,
+    TProblem problem
   );
 }
 ```
@@ -91,7 +91,7 @@ For mutators:
 Example:
 
 ```csharp
-IMutator<TG, TS, TP> mutator = /* ... */;
+IMutator<TCandidate, TSearchSpace, TProblem> mutator = /* ... */;
 
 var observed = mutator.ObserveWith(offspring => {
   // read-only analysis
@@ -110,7 +110,7 @@ HeuristicLib often models this as writing to an **external sink**. A minimal exa
 If you already have a sink (for example, a counter owned by an experiment runner), pass it in:
 
 ```csharp
-IMutator<TG, TS, TP> mutator = /* ... */;
+IMutator<TCandidate, TSearchSpace, TProblem> mutator = /* ... */;
 var counter = new ObservationCounter();
 
 var observed = mutator.CountMutatorCalls(counter);
@@ -123,7 +123,7 @@ For `ObservableMutator`, `CountMutatorCalls(...)` increments once per mutation c
 Use `CountMutatedCandidates(...)` when the budget should count the mutated candidates returned by those batched mutation calls instead:
 
 ```csharp
-IMutator<TG, TS, TP> mutator = /* ... */;
+IMutator<TCandidate, TSearchSpace, TProblem> mutator = /* ... */;
 var counter = new ObservationCounter();
 
 var observed = mutator.CountMutatedCandidates(counter);
@@ -146,7 +146,7 @@ Advanced users can pass the same `ObservationCounter` to several observed operat
 For quick usage, many wrappers offer an overload that creates the sink and returns it:
 
 ```csharp
-IMutator<TG, TS, TP> mutator = /* ... */;
+IMutator<TCandidate, TSearchSpace, TProblem> mutator = /* ... */;
 
 var observed = mutator.CountMutatorCalls(out var counter);
 
@@ -163,7 +163,7 @@ This pattern keeps call sites tidy while still giving you access to the collecte
 For evaluators, `MeasureEvaluatorDuration(...)` measures around the inner `Evaluate(...)` call:
 
 ```csharp
-IEvaluator<TG, TS, TP> evaluator = /* ... */;
+IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator = /* ... */;
 var duration = new ObservationDuration();
 
 var measured = evaluator.MeasureEvaluatorDuration(duration);

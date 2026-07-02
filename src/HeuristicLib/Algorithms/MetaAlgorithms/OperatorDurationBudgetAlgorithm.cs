@@ -10,15 +10,15 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-public record OperatorDurationBudgetAlgorithm<TG, TS, TP, TSearchState, TOperator, TObservedInstance>
-    : IAlgorithm<TG, TS, TP, TSearchState>
-    where TS : class, ISearchSpace<TG>
-    where TP : class, IProblem<TG, TS>
+public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
+    : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
     where TOperator : IOperator<TObservedInstance>
     where TObservedInstance : class, IOperatorInstance
 {
-    public required IAlgorithm<TG, TS, TP, TSearchState> Algorithm { get; init; }
+    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
     public required TOperator ObservedOperator { get; init; }
     public required Func<TOperator, ObservationDuration, TimeProvider, IOperator<TObservedInstance>> MeasuredOperatorFactory { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
@@ -31,34 +31,34 @@ public record OperatorDurationBudgetAlgorithm<TG, TS, TP, TSearchState, TOperato
             : throw new ArgumentOutOfRangeException(nameof(MaximumDuration), "MaximumDuration must be positive.");
     }
 
-    public IEvaluator<TG, TS, TP> Evaluator => Algorithm.Evaluator;
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator => Algorithm.Evaluator;
 
-    public IAlgorithmInstance<TG, TS, TP, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         var duration = new ObservationDuration();
         var measuredOperator = MeasuredOperatorFactory(ObservedOperator, duration, TimeProvider);
         var childRegistry = instanceRegistry.CreateChildRegistry();
         childRegistry.PreRegister(ObservedOperator, measuredOperator);
 
-        return new OperatorDurationBudgetAlgorithmInstance<TG, TS, TP, TSearchState>(
+        return new OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(
             childRegistry.Resolve(Algorithm),
             duration,
             MaximumDuration);
     }
 }
 
-public sealed class OperatorDurationBudgetAlgorithmInstance<TG, TS, TP, TSearchState>
-    : IAlgorithmInstance<TG, TS, TP, TSearchState>
-    where TS : class, ISearchSpace<TG>
-    where TP : class, IProblem<TG, TS>
+public sealed class OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm;
+    private readonly IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
     private readonly ObservationDuration duration;
     private readonly TimeSpan maximumDuration;
 
     public OperatorDurationBudgetAlgorithmInstance(
-        IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm,
+        IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm,
         ObservationDuration duration,
         TimeSpan maximumDuration)
     {
@@ -68,7 +68,7 @@ public sealed class OperatorDurationBudgetAlgorithmInstance<TG, TS, TP, TSearchS
     }
 
     public async IAsyncEnumerable<TSearchState> RunStreamingAsync(
-        TP problem,
+        TProblem problem,
         IRandomNumberGenerator random,
         TSearchState? initialState = null,
         [EnumeratorCancellation] CancellationToken ct = default)

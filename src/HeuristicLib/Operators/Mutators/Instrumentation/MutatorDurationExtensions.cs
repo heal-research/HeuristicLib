@@ -7,36 +7,36 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 public static class MutatorDurationExtensions
 {
-    extension<TG, TS, TP>(IMutator<TG, TS, TP> mutator)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IMutator<TG, TS, TP> MeasureMutatorDuration(ObservationDuration duration)
+        public IMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(ObservationDuration duration)
             => mutator.MeasureMutatorDuration(duration, TimeProvider.System);
 
-        public IMutator<TG, TS, TP> MeasureMutatorDuration(ObservationDuration duration, TimeProvider timeProvider)
-            => new DurationMeasuringMutator<TG, TS, TP>(mutator, duration, timeProvider);
+        public IMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(ObservationDuration duration, TimeProvider timeProvider)
+            => new DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>(mutator, duration, timeProvider);
 
-        public IMutator<TG, TS, TP> MeasureMutatorDuration(out ObservationDuration duration)
+        public IMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return mutator.MeasureMutatorDuration(duration);
         }
 
-        public IMutator<TG, TS, TP> MeasureMutatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public IMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return mutator.MeasureMutatorDuration(duration, timeProvider);
         }
     }
 
-    private sealed record DurationMeasuringMutator<TG, TS, TP>
-        : WrappingMutator<TG, TS, TP>
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    private sealed record DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>
+        : WrappingMutator<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public DurationMeasuringMutator(
-            IMutator<TG, TS, TP> mutator,
+            IMutator<TCandidate, TSearchSpace, TProblem> mutator,
             ObservationDuration duration,
             TimeProvider timeProvider)
             : base(mutator)
@@ -48,12 +48,12 @@ public static class MutatorDurationExtensions
         private ObservationDuration Duration { get; }
         private TimeProvider TimeProvider { get; }
 
-        protected override IReadOnlyList<TG> Mutate(
-            IReadOnlyList<TG> parents,
+        protected override IReadOnlyList<TCandidate> Mutate(
+            IReadOnlyList<TCandidate> parents,
             InnerMutate innerMutate,
             IRandomNumberGenerator random,
-            TS searchSpace,
-            TP problem)
+            TSearchSpace searchSpace,
+            TProblem problem)
         {
             var startTimestamp = TimeProvider.GetTimestamp();
             try

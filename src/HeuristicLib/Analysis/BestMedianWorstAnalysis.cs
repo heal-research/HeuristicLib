@@ -7,17 +7,17 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public record BestMedianWorstEntry<T>(EvaluatedCandidate<T> Best, EvaluatedCandidate<T> Median, EvaluatedCandidate<T> Worst);
+public record BestMedianWorstEntry<TCandidate>(EvaluatedCandidate<TCandidate> Best, EvaluatedCandidate<TCandidate> Median, EvaluatedCandidate<TCandidate> Worst);
 
-public record BestMedianWorstAnalysis<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> Algorithm, params IInterceptor<T, TS, TP, TR>[] Interceptor)
-  : Analyzer<T, TS, TP, TR, List<BestMedianWorstEntry<T>>>(Algorithm)
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
-  where TR : PopulationState<T>
+public record BestMedianWorstAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm, params IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[] Interceptor)
+  : Analyzer<TCandidate, TSearchSpace, TProblem, TSearchState, List<BestMedianWorstEntry<TCandidate>>>(Algorithm)
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : PopulationState<TCandidate>
 {
-    public override List<BestMedianWorstEntry<T>> CreateInitialResult() => [];
+    public override List<BestMedianWorstEntry<TCandidate>> CreateInitialResult() => [];
 
-    public override void RegisterObservations(ObservationPlan observations, List<BestMedianWorstEntry<T>> result)
+    public override void RegisterObservations(ObservationPlan observations, List<BestMedianWorstEntry<TCandidate>> result)
     {
         foreach (var interceptor in Interceptor)
         {
@@ -25,7 +25,7 @@ public record BestMedianWorstAnalysis<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> A
         }
     }
 
-    private static void AfterInterception(List<BestMedianWorstEntry<T>> bestSolutions, TR currentState, TP problem)
+    private static void AfterInterception(List<BestMedianWorstEntry<TCandidate>> bestSolutions, TSearchState currentState, TProblem problem)
     {
         var comp = problem.Objective.TotalOrderComparer is NoTotalOrderComparer ? new LexicographicComparer(problem.Objective.Directions) : problem.Objective.TotalOrderComparer;
         var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
@@ -35,6 +35,6 @@ public record BestMedianWorstAnalysis<T, TS, TP, TR>(IAlgorithm<T, TS, TP, TR> A
             return;
         }
 
-        bestSolutions.Add(new BestMedianWorstEntry<T>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
+        bestSolutions.Add(new BestMedianWorstEntry<TCandidate>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
     }
 }

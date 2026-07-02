@@ -5,9 +5,9 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public abstract record Analyzer<T, TS, TP, TSearchState, TResult>(IAlgorithm<T, TS, TP, TSearchState> Algorithm) : Analyzer<TResult>
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
+public abstract record Analyzer<TCandidate, TSearchSpace, TProblem, TSearchState, TResult>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm) : Analyzer<TResult>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
   where TResult : class;
 

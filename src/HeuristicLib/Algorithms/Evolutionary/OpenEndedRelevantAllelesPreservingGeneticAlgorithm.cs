@@ -133,27 +133,27 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
 }
 
 // ReSharper disable once IdentifierTypo
-public record OerapgaBuildBuilder<TG, TS, TP>
-  : AlgorithmBuilder<TG, TS, TP, PopulationState<TG>, OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TG, TS, TP>>,
-    IBuilderWithCreator<TG, TS, TP>,
-    IBuilderWithSelector<TG, TS, TP>,
-    IBuilderWithCrossover<TG, TS, TP>,
-    IBuilderWithMutator<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public record OerapgaBuildBuilder<TCandidate, TSearchSpace, TProblem>
+  : AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>, OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>>,
+    IBuilderWithCreator<TCandidate, TSearchSpace, TProblem>,
+    IBuilderWithSelector<TCandidate, TSearchSpace, TProblem>,
+    IBuilderWithCrossover<TCandidate, TSearchSpace, TProblem>,
+    IBuilderWithMutator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public double MutationRate { get; set; } = 0.05;
     public int Elites { get; set; } = 1;
     public required int MaxEffort { get; set; }
-    public required ICreator<TG, TS, TP> Creator { get; set; }
-    public required ICrossover<TG, TS, TP> Crossover { get; set; }
-    public required IMutator<TG, TS, TP> Mutator { get; set; }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; set; }
+    public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; set; }
+    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; set; }
     public int PopulationSize { get; set; } = 100;
-    public ISelector<TG, TS, TP> Selector { get; set; } = new TournamentSelector<TG>(2);
+    public ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; set; } = new TournamentSelector<TCandidate>(2);
 
-    public override OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TG, TS, TP> Build()
+    public override OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Build()
     {
-        return new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TG, TS, TP>()
+        return new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>()
         {
             PopulationSize = PopulationSize,
             Creator = Creator,

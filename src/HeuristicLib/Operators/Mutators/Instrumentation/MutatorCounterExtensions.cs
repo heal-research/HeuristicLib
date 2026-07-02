@@ -6,23 +6,23 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 public static class MutatorCounterExtensions
 {
-    extension<TG, TS, TP>(IMutator<TG, TS, TP> mutator)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IMutator<TG, TS, TP> CountMutatorCalls(ObservationCounter counter)
+        public IMutator<TCandidate, TSearchSpace, TProblem> CountMutatorCalls(ObservationCounter counter)
             => mutator.ObserveWith(_ => counter.IncrementBy(1));
 
-        public IMutator<TG, TS, TP> CountMutatorCalls(out ObservationCounter counter)
+        public IMutator<TCandidate, TSearchSpace, TProblem> CountMutatorCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return mutator.CountMutatorCalls(counter);
         }
 
-        public IMutator<TG, TS, TP> CountMutatedGenotypes(ObservationCounter counter)
+        public IMutator<TCandidate, TSearchSpace, TProblem> CountMutatedGenotypes(ObservationCounter counter)
             => mutator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
 
-        public IMutator<TG, TS, TP> CountMutatedGenotypes(out ObservationCounter counter)
+        public IMutator<TCandidate, TSearchSpace, TProblem> CountMutatedGenotypes(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return mutator.CountMutatedGenotypes(counter);

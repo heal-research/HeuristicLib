@@ -19,26 +19,26 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.PythonInterop;
 
 #region Parameters
-public class ExperimentParameters<T, TE> where TE : class, ISearchSpace<T>
+public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public string AlgorithmName = "ga";
-    public ICreator<T, TE, IProblem<T, TE>>? Creator;
-    public ICrossover<T, TE, IProblem<T, TE>>? Crossover;
+    public ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Creator;
+    public ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Crossover;
     public int Elites = 1;
     public int Iterations = 30;
     public double MutationRate = 0.05;
-    public IMutator<T, TE, IProblem<T, TE>>? Mutator;
+    public IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Mutator;
     public int NoChildren = -1;
     public int PopulationSize = 10;
     public int Seed;
-    public ISelector<T, TE, IProblem<T, TE>>? Selector;
+    public ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Selector;
     public EvolutionStrategyType Strategy = EvolutionStrategyType.Plus;
     public bool TrackGenealogy;
     public bool TrackPopulations;
     public bool WithCrossover;
     public ExperimentParameters() { }
 
-    public ExperimentParameters(ExperimentParameters<T, TE> parameters)
+    public ExperimentParameters(ExperimentParameters<TCandidate, TSearchSpace> parameters)
     {
         Seed = parameters.Seed;
         Elites = parameters.Elites;

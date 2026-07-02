@@ -8,21 +8,21 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.GenealogyAnalysis;
 
-public record GenealogyAnalysis<T, TS, TP, TR> :
-  Analyzer<T, TS, TP, TR, GenealogyGraph<T>>
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
-  where TR : PopulationState<T>
-  where T : notnull
+public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> :
+  Analyzer<TCandidate, TSearchSpace, TProblem, TSearchState, GenealogyGraph<TCandidate>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : PopulationState<TCandidate>
+  where TCandidate : notnull
 {
-    private readonly IEqualityComparer<T>? equality;
+    private readonly IEqualityComparer<TCandidate>? equality;
     private readonly bool saveSpace;
 
-    public GenealogyAnalysis(IAlgorithm<T, TS, TP, TR> Algorithm,
-                             ICrossover<T, TS, TP>? crossover = null,
-                             IMutator<T, TS, TP>? mutator = null,
-                             IInterceptor<T, TS, TP, TR>? interceptor = null,
-                             IEqualityComparer<T>? equality = null,
+    public GenealogyAnalysis(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm,
+                             ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
+                             IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
+                             IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = null,
+                             IEqualityComparer<TCandidate>? equality = null,
                              bool saveSpace = false) : base(Algorithm)
     {
         this.equality = equality;
@@ -32,11 +32,11 @@ public record GenealogyAnalysis<T, TS, TP, TR> :
         Interceptor = interceptor;
     }
 
-    private ICrossover<T, TS, TP>? Crossover { get; }
-    private IMutator<T, TS, TP>? Mutator { get; }
-    private IInterceptor<T, TS, TP, TR>? Interceptor { get; }
+    private ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; }
+    private IMutator<TCandidate, TSearchSpace, TProblem>? Mutator { get; }
+    private IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
 
-    public override void RegisterObservations(ObservationPlan observations, GenealogyGraph<T> graph)
+    public override void RegisterObservations(ObservationPlan observations, GenealogyGraph<TCandidate> graph)
     {
         if (Crossover is not null)
         {
@@ -54,7 +54,7 @@ public record GenealogyAnalysis<T, TS, TP, TR> :
         }
     }
 
-    public void AfterCross(GenealogyGraph<T> graph, IReadOnlyList<T> offspring, IReadOnlyList<IParents<T>> parents)
+    public void AfterCross(GenealogyGraph<TCandidate> graph, IReadOnlyList<TCandidate> offspring, IReadOnlyList<IParents<TCandidate>> parents)
     {
         foreach (var (parents1, child) in parents.Zip(offspring))
         {
@@ -62,7 +62,7 @@ public record GenealogyAnalysis<T, TS, TP, TR> :
         }
     }
 
-    public void AfterMutate(GenealogyGraph<T> graph, IReadOnlyList<T> offspring, IReadOnlyList<T> parent)
+    public void AfterMutate(GenealogyGraph<TCandidate> graph, IReadOnlyList<TCandidate> offspring, IReadOnlyList<TCandidate> parent)
     {
         foreach (var (parents1, child) in parent.Zip(offspring))
         {
@@ -70,11 +70,11 @@ public record GenealogyAnalysis<T, TS, TP, TR> :
         }
     }
 
-    public void AfterInterception(GenealogyGraph<T> graph, TR currentState, TP problem)
+    public void AfterInterception(GenealogyGraph<TCandidate> graph, TSearchState currentState, TProblem problem)
     {
         var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
         graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
     }
 
-    public override GenealogyGraph<T> CreateInitialResult() => new(equality ?? EqualityComparer<T>.Default);
+    public override GenealogyGraph<TCandidate> CreateInitialResult() => new(equality ?? EqualityComparer<TCandidate>.Default);
 }

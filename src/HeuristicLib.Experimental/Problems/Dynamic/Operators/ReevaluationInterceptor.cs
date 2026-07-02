@@ -6,22 +6,22 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
 
-public record ReevaluationInterceptor<T, TE, TP, TR>
-  : IInterceptor<T, TE, TP, TR>
-  where TR : PopulationState<T>
-  where TE : class, ISearchSpace<T>
-  where TP : DynamicProblem<T, TE>
+public record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchState : PopulationState<TCandidate>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : DynamicProblem<TCandidate, TSearchSpace>
 {
-    private readonly IEvaluator<T, TE, TP> evaluator;
-    private readonly TP subscribedProblem;
+    private readonly IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator;
+    private readonly TProblem subscribedProblem;
 
-    public ReevaluationInterceptor(IEvaluator<T, TE, TP> evaluator, TP problem)
+    public ReevaluationInterceptor(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, TProblem problem)
     {
         this.evaluator = evaluator;
         subscribedProblem = problem;
     }
 
-    public IInterceptorInstance<T, TE, TP, TR> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         var evaluatorInstance = instanceRegistry.Resolve(evaluator);
         var instance = new Instance(evaluatorInstance);
@@ -32,15 +32,15 @@ public record ReevaluationInterceptor<T, TE, TP, TR>
         return instance;
     }
 
-    private sealed class Instance(IEvaluatorInstance<T, TE, TP> evaluator)
-      : IInterceptorInstance<T, TE, TP, TR>
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
+      : IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         private int requireReevaluation;
 
         public void RequestReevaluation() => Interlocked.Increment(ref requireReevaluation);
         public bool ConsumeReevaluationRequest() => Interlocked.Exchange(ref requireReevaluation, 0) != 0;
 
-        public TR Transform(TR currentState, TR? previousState, TE searchSpace, TP problem)
+        public TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem)
         {
             var result = currentState;
 

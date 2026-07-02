@@ -13,9 +13,9 @@
 
 //namespace HEAL.HeuristicLib.Algorithms;
 
-//public record ParameterlessPopulationPyramid<TP>
-//  : IterativeAlgorithm<BoolVector, BoolVectorSearchSpace, TP, ParameterlessPopulationPyramidResultState, ParameterlessPopulationPyramid<TP>.State>
-//  where TP : class, IProblem<BoolVector, BoolVectorSearchSpace>
+//public record ParameterlessPopulationPyramid<TProblem>
+//  : IterativeAlgorithm<BoolVector, BoolVectorSearchSpace, TProblem, ParameterlessPopulationPyramidResultState, ParameterlessPopulationPyramid<TProblem>.State>
+//  where TProblem : class, IProblem<BoolVector, BoolVectorSearchSpace>
 //{
 
 //  public class State : ExecutionState
@@ -42,7 +42,7 @@
 //    Evaluator = resolver.Resolve(Evaluator)
 //  };
 
-//  protected override ParameterlessPopulationPyramidResultState ExecuteStep(ParameterlessPopulationPyramidResultState? previousState, State executionState, TP problem, IRandomNumberGenerator random)
+//  protected override ParameterlessPopulationPyramidResultState ExecuteStep(ParameterlessPopulationPyramidResultState? previousState, State executionState, TProblem problem, IRandomNumberGenerator random)
 //  {
 //    var solution = new BoolVector(random.NextBools(tracker.Length));
 //    var fitness = tracker.Evaluate(solution, random);

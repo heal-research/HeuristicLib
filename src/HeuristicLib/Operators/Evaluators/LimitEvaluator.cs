@@ -6,10 +6,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public record LimitEvaluator<TG, TS, TP>
-  : WrappingEvaluator<TG, TS, TP, LimitEvaluator<TG, TS, TP>.ExecutionState>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
+  : WrappingEvaluator<TCandidate, TSearchSpace, TProblem, LimitEvaluator<TCandidate, TSearchSpace, TProblem>.ExecutionState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public sealed class ExecutionState
     {
@@ -21,7 +21,7 @@ public record LimitEvaluator<TG, TS, TP>
     private readonly bool strict;
 
     // ToDo: document that strict means in-batch checking
-    public LimitEvaluator(IEvaluator<TG, TS, TP> evaluator, int maxEvaluations, ObjectiveVector? alternativeValue, bool strict = false)
+    public LimitEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, int maxEvaluations, ObjectiveVector? alternativeValue, bool strict = false)
       : base(evaluator)
     {
         this.maxEvaluations = maxEvaluations;
@@ -31,8 +31,8 @@ public record LimitEvaluator<TG, TS, TP>
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TG> candidates, ExecutionState executionState,
-        InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, ExecutionState executionState,
+        InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         var remainingEvaluations = maxEvaluations - executionState.Counter.CurrentCount;
 
@@ -63,11 +63,11 @@ public record LimitEvaluator<TG, TS, TP>
 
 public static class LimitEvaluatorExtensions
 {
-    extension<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator) where TS : class, ISearchSpace<TG> where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator) where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public LimitEvaluator<TG, TS, TP> LimitEvaluations(int maxEvaluations, ObjectiveVector? alternativeValue = null, bool strict = false)
+        public LimitEvaluator<TCandidate, TSearchSpace, TProblem> LimitEvaluations(int maxEvaluations, ObjectiveVector? alternativeValue = null, bool strict = false)
         {
-            return new LimitEvaluator<TG, TS, TP>(evaluator, maxEvaluations, alternativeValue, strict);
+            return new LimitEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, maxEvaluations, alternativeValue, strict);
         }
     }
 }

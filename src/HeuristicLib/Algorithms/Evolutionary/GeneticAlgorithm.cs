@@ -129,18 +129,18 @@ public record GeneticAlgorithm<TCandidate> : GeneticAlgorithm<TCandidate, ISearc
 
 public static class GeneticAlgorithm
 {
-    public static GeneticAlgorithm<TG, TS, TP> Create<TG, TS, TP>(
-      ICreator<TG, TS, TP> creator, ICrossover<TG, TS, TP> crossover, IMutator<TG, TS, TP> mutator,
+    public static GeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
+      ICreator<TCandidate, TSearchSpace, TProblem> creator, ICrossover<TCandidate, TSearchSpace, TProblem> crossover, IMutator<TCandidate, TSearchSpace, TProblem> mutator,
       double mutationRate,
-      ISelector<TG, TS, TP> selector, int populationSize,
-      IEvaluator<TG, TS, TP> evaluator,
+      ISelector<TCandidate, TSearchSpace, TProblem> selector, int populationSize,
+      IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
       int elites = 1,
-      IInterceptor<TG, TS, TP, PopulationState<TG>>? interceptor = null
+      IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor = null
     )
-      where TS : class, ISearchSpace<TG>
-      where TP : class, IProblem<TG, TS>
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new GeneticAlgorithm<TG, TS, TP>
+        return new GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
         {
             Creator = creator,
             Crossover = crossover,

@@ -2,9 +2,9 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
-public sealed class DummySearchSpace<T> : ISearchSpace<T>
+public sealed class DummySearchSpace<TCandidate> : ISearchSpace<TCandidate>
 {
-    public static readonly DummySearchSpace<T> Instance = new();
+    public static readonly DummySearchSpace<TCandidate> Instance = new();
     private DummySearchSpace() { }
-    public bool Contains(T candidate) => true;
+    public bool Contains(TCandidate candidate) => true;
 }
