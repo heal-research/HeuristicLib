@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Random.Distributions;
+
 namespace HEAL.HeuristicLib.Random;
 
 public static class RandomExtensions
@@ -30,14 +32,12 @@ public static class RandomExtensions
 
         public double NextDouble(double low, double high)
         {
-            var width = ValidateAndGetWidth(low, high);
-            return NextDoubleUnchecked(random, low, width);
+            return UniformDoubleDistribution.Sample(random, low, high);
         }
 
         public double NextNormal(double mu = 0, double sigma = 1)
         {
-            ValidateSigma(sigma);
-            return NextNormalUnchecked(random, mu, sigma);
+            return NormalDoubleDistribution.Sample(random, mu, sigma);
         }
 
         public double[] NextNormals(int length, double mu = 0, double sigma = 1)

@@ -98,10 +98,11 @@ public class SymbolicRegressionRedesignSpecs
           data,
           inputVariables: ["x0", "x1"],
           metric: Metrics.RMSE,
-          searchSpace: SymbolicExpressionSearchSpace.Unrestricted(
-            maxLength: 40,
-            maxDepth: 12,
-            allowedVariables: ["x0", "x1"]));
+          searchSpace: new SymbolicExpressionSearchSpace(
+             maximumLength: 40,
+             maximumDepth: 12,
+             allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+             allowedVariables: ["x0", "x1"]));
 
         problem.Metric.ShouldBe(Metrics.RMSE);
         problem.Objective.Directions.ShouldBe([ObjectiveDirection.Minimize]);
@@ -121,12 +122,13 @@ public class SymbolicRegressionRedesignSpecs
           data,
           inputVariables: ["x0", "x1"],
           metric: Metrics.RMSE,
-          searchSpace: SymbolicExpressionSearchSpace.Unrestricted(
-            maxLength: 40,
-            maxDepth: 12,
-            allowedVariables: ["x0", "x1"]));
+          searchSpace: new SymbolicExpressionSearchSpace(
+             maximumLength: 40,
+             maximumDepth: 12,
+             allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+             allowedVariables: ["x0", "x1"]));
 
-        var algorithm = new GeneticAlgorithm<SymbolicExpression, UnrestrictedSymbolicExpressionSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<SymbolicExpression, SymbolicExpressionSearchSpace, SymbolicRegressionProblem>
         {
             PopulationSize = 24,
             Creator = new UnrestrictedSymbolicExpressionCreator(),
@@ -162,10 +164,11 @@ public class SymbolicRegressionRedesignSpecs
           CreateLinearDataset(),
           inputVariables: ["x0"],
           metric: Metrics.RMSE,
-          searchSpace: SymbolicExpressionSearchSpace.Unrestricted(
-            maxLength: 40,
-            maxDepth: 12,
-            allowedVariables: ["x0"]));
+          searchSpace: new SymbolicExpressionSearchSpace(
+             maximumLength: 40,
+             maximumDepth: 12,
+             allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+             allowedVariables: ["x0"]));
 
         var rawExpression = ExpressionDraft
           .Add(ExpressionDraft.Parameter(1.0), ExpressionDraft.Variable("x0"))
@@ -200,12 +203,13 @@ public class SymbolicRegressionRedesignSpecs
           data,
           inputVariables: ["x0", "x1"],
           metric: Metrics.RMSE,
-          searchSpace: SymbolicExpressionSearchSpace.Unrestricted(
-            maxLength: 40,
-            maxDepth: 12,
-            allowedVariables: ["x0", "x1"]));
+          searchSpace: new SymbolicExpressionSearchSpace(
+             maximumLength: 40,
+             maximumDepth: 12,
+             allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+             allowedVariables: ["x0", "x1"]));
 
-        var algorithm = new GeneticAlgorithm<SymbolicExpression, UnrestrictedSymbolicExpressionSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<SymbolicExpression, SymbolicExpressionSearchSpace, SymbolicRegressionProblem>
         {
             PopulationSize = 24,
             Creator = new UnrestrictedSymbolicExpressionCreator(),

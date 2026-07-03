@@ -46,11 +46,11 @@ Resolve these before or during Stage 0:
 | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SymbolicExpression`                        | Immutable genotype: RPN instructions plus side tables for numeric literals and variable references.                                                                                                                              |
 | `ExpressionInstruction`                     | Opcode, arity, subtree length, and optional payload index.                                                                                                                                                                       |
-| `SymbolicExpressionOpCode`                  | Stable `ushort` enum for built-in operations with explicit integer values.                                                                                                                                                       |
+| `SymbolicExpressionOpCode`                  | Stable `ushort` enum for built-in expression symbols with explicit integer values.                                                                                                                                               |
+| `SymbolicExpressionOpCodes`                 | Central fast metadata companion for built-in opcodes: support checks, arity, payload kind, terminal checks, and predefined opcode groups.                                                                                          |
 | `ExpressionDraft`                           | Human-friendly authoring layer; not a genotype.                                                                                                                                                                                  |
 | `SymbolicSubExpression`                     | Allocation-light subtree view over an immutable expression, exposed through tree-style navigation from `SymbolicExpression.Root`.                                                                                                |
-| `SymbolicExpressionSearchSpace`             | Base scalar expression search-space contract for one expression-valued component, with discoverable factories such as `SymbolicExpressionSearchSpace.Unrestricted(...)`.                                                         |
-| `UnrestrictedSymbolicExpressionSearchSpace` | Fast scalar validity policy: length, depth, allowed opcodes, and allowed variables; all scalar subtrees are composition-compatible.                                                                                              |
+| `SymbolicExpressionSearchSpace`             | First scalar expression search space: length, depth, allowed operations, allowed variables, and numeric literal availability; all scalar subtrees are composition-compatible.                                                   |
 | `GrammarSymbolicExpressionSearchSpace`      | Grammar-constrained scalar validity policy with typed operation signatures and grammar-preserving operators.                                                                                                                     |
 | `SymbolicExpressionInterpreter`             | Executes opcodes over series/batch buffers and maps variable indexes to dataset columns from the supplied dataset/input-variable order.                                                                                          |
 | `SymbolicRegressionProblem`                 | Composition root for data, search space, interpreter, objectives, bounds policy, and problem context needed by typed operators.                                                                                                  |
@@ -60,6 +60,8 @@ Resolve these before or during Stage 0:
 Boundary rules:
 
 - The genotype owns structure only.
+- The current `SymbolicExpression` system is the closed, built-in-opcode implementation optimized for speed. Built-in symbols are deliberately fixed in HeuristicLib code so catalog lookup, interpretation, validation, and operator logic can use compile-time-known opcodes and fast switches in hot paths.
+- A more flexible custom-symbol system may be added later if real use cases require it. That system should be designed as a separate layer or sibling implementation and must not slow down the built-in fast path.
 - The interpreter owns translation from compiled variable-reference names to dataset series; Stage 1 does not add a separate public data-view or translation type.
 - Search spaces and their matching operators generate, mutate, cross, repair, and validate candidates; they do not evaluate them.
 - A symbolic regression problem instance has exactly one expression search-space instance. Unrestricted versus grammar-constrained behavior is selected when the problem is constructed, not switched dynamically during a run.
@@ -100,6 +102,7 @@ Implement:
 - Series/batch interpretation against a supplied `Dataset` and input-variable order.
 - Numeric-literal side-table entries include value plus fixed/optimizable role. The `NumericLiteral` opcode stays singular and references side-table entries by `PayloadIndex`.
 - Draft/builder APIs expose fixed and optimizable literal authoring, tentatively `Fixed(value)` and `Parameter(value)`.
+- Revisit the draft API after the first operators clarify authoring pressure. Consider fluent expression composition, operator overloads and static imports so common expressions can be authored without a static factory style.
 - Move old mutable symbolic-expression-tree APIs under a `HEAL.HeuristicLib.Legacy...` namespace. Legacy types and methods get `[Obsolete]` markers. If a legacy member name would clash with new API names, add a `Legacy` prefix or suffix to the legacy member.
 
 Stage 1 opcodes:
@@ -177,12 +180,12 @@ Stage 2 tests: problem API specs, evaluation composition, metric fixtures, no in
 
 Add the fast default scalar search space and operator family:
 
-- `UnrestrictedSymbolicExpressionSearchSpace` with size, depth, allowed-opcode, and allowed-variable validity.
-- expose the common unrestricted factory as `SymbolicExpressionSearchSpace.Unrestricted(...)`; the concrete unrestricted type may still be returned for operator typing and validation.
+- `SymbolicExpressionSearchSpace` with size, depth, allowed operations, allowed variables, and optional numeric literals. It is the first unrestricted search-space shape without an unrestricted subtype or factory.
 - creator, mutator, crossover, and optional repair for unrestricted scalar `SymbolicExpression` candidates.
 - static operator methods that mirror instance entry points, following `docs/design-goals.md`.
 - direct core overloads that take primitive limits and opcode/variable sets when the search space is only a container for those values.
 - RPN-aware internal helpers for subtree metadata, slice selection, splicing, length/depth checks, and parent-independent candidate construction.
+- shared sampling profiles for sampling choices that do not constrain the search space, such as numeric-literal distributions and later variable or operation weights.
 
 Operator implementation order:
 
@@ -206,6 +209,8 @@ Rules:
 - Operators must not require or call a generic restriction provider.
 - Operators never mutate parents.
 - Operators preserve search-space validity or fail with documented bounded retry behavior.
+- Numeric-literal generation belongs to the sampling profile and uses the general random-distribution abstractions, not search-space validity rules.
+- Operators have a simple default constructor path. When no symbolic-expression sampling profile is supplied, they use the shared default profile.
 - Shared genotype operations may be reused by grammar-aware operators, but unrestricted operators remain a separate fast path.
 - Restricted operators are not implicitly reused in unrestricted contexts. A grammar-preserving operator may produce candidates that are also valid in an unrestricted search space, but it still requires grammar context and therefore belongs to the grammar operator family.
 - Operator-family presets may be added later so switching from unrestricted to grammar search spaces can replace creator, mutator, crossover, and repair families together without manual one-by-one rewiring.

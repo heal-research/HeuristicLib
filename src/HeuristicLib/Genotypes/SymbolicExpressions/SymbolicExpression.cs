@@ -171,10 +171,11 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
         for (var i = 0; i < replacement.instructions.Length; i++)
         {
             var instruction = replacement.instructions[i];
-            var payloadIndex = instruction.OpCode switch
+            var payloadKind = SymbolicExpressionOpCodes.GetPayloadKind(instruction.OpCode);
+            var payloadIndex = payloadKind switch
             {
-                SymbolicExpressionOpCode.NumericLiteral => instruction.PayloadIndex + numericLiteralOffset,
-                SymbolicExpressionOpCode.Variable => instruction.PayloadIndex + variableReferenceOffset,
+                SymbolicExpressionPayloadKind.NumericLiteral => instruction.PayloadIndex + numericLiteralOffset,
+                SymbolicExpressionPayloadKind.VariableReference => instruction.PayloadIndex + variableReferenceOffset,
                 _ => instruction.PayloadIndex
             };
 
@@ -351,35 +352,28 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
         if (instruction.OpCode == SymbolicExpressionOpCode.Invalid)
             throw new ArgumentException("Invalid opcode is not allowed.");
 
-        var expectedArity = GetArity(instruction.OpCode);
-        if (instruction.Arity != expectedArity)
-            throw new ArgumentException($"Opcode {instruction.OpCode} requires arity {expectedArity}.");
+        if (!SymbolicExpressionOpCodes.MatchesArity(instruction.OpCode, instruction.Arity))
+            throw new ArgumentException($"Unsupported symbol opcode {instruction.OpCode} with arity {instruction.Arity}.");
 
         if (instruction.SubtreeLength <= 0)
             throw new ArgumentException("SubtreeLength must be positive.");
 
-        switch (instruction.OpCode)
+        switch (SymbolicExpressionOpCodes.GetPayloadKind(instruction.OpCode))
         {
-            case SymbolicExpressionOpCode.Variable:
+            case SymbolicExpressionPayloadKind.VariableReference:
                 ValidatePayloadIndex(instruction.PayloadIndex, variableReferences.Length, "variable reference");
                 break;
-            case SymbolicExpressionOpCode.NumericLiteral:
+            case SymbolicExpressionPayloadKind.NumericLiteral:
                 ValidatePayloadIndex(instruction.PayloadIndex, numericLiterals.Length, "numeric literal");
                 break;
-            default:
+            case SymbolicExpressionPayloadKind.None:
                 if (instruction.PayloadIndex != -1)
                     throw new ArgumentException($"Opcode {instruction.OpCode} must not have a payload index.");
                 break;
         }
     }
 
-    private static int GetArity(SymbolicExpressionOpCode opCode) => opCode switch
-    {
-        SymbolicExpressionOpCode.Variable or SymbolicExpressionOpCode.NumericLiteral => 0,
-        SymbolicExpressionOpCode.Log or SymbolicExpressionOpCode.Sqrt => 1,
-        SymbolicExpressionOpCode.Add or SymbolicExpressionOpCode.Subtract or SymbolicExpressionOpCode.Multiply or SymbolicExpressionOpCode.Divide => 2,
-        _ => throw new ArgumentException($"Unsupported opcode {opCode}.")
-    };
+    private static int GetArity(SymbolicExpressionOpCode opCode) => SymbolicExpressionOpCodes.GetArity(opCode);
 
     private static void ValidatePayloadIndex(int payloadIndex, int payloadCount, string payloadName)
     {
@@ -403,9 +397,9 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
         for (var i = 0; i < sourceInstructions.Length; i++)
         {
             var instruction = sourceInstructions[i];
-            switch (instruction.OpCode)
+            switch (SymbolicExpressionOpCodes.GetPayloadKind(instruction.OpCode))
             {
-                case SymbolicExpressionOpCode.NumericLiteral:
+                case SymbolicExpressionPayloadKind.NumericLiteral:
                     var numericLiteral = sourceNumericLiterals[instruction.PayloadIndex];
                     var numericLiteralIndex = numericLiterals.IndexOf(numericLiteral);
                     if (numericLiteralIndex < 0)
@@ -416,7 +410,7 @@ public sealed class SymbolicExpression : IEquatable<SymbolicExpression>
 
                     compactedInstructions[i] = instruction with { PayloadIndex = numericLiteralIndex };
                     break;
-                case SymbolicExpressionOpCode.Variable:
+                case SymbolicExpressionPayloadKind.VariableReference:
                     var variableName = sourceVariableReferences[instruction.PayloadIndex].Name;
                     if (!variableIndexByName.TryGetValue(variableName, out var variableIndex))
                     {

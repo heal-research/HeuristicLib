@@ -20,7 +20,7 @@ This matrix tracks Stage 1 reference behavior while the mutable tree API is phas
 | --- | --- |
 | API specs | Initial executable specs live in `test/HeuristicLib.Tests.ApiUsageSpecs/Regression/SymbolicRegressionRedesignSpecs.cs`; future implementation should replace commented sketches with real API calls as each stage lands, then promote behavior-heavy checks into regular unit tests in the owning project. |
 | Problem metric API | Settled direction: problem convenience factories stay metric-agnostic, for example `CreateDefault(..., loss: Metrics.RMSE)`; metric names such as RMSE should be object shortcuts, not factory method names. |
-| Search-space factory API | Settled direction: common scalar search spaces are discovered through `SymbolicExpressionSearchSpace`, for example `SymbolicExpressionSearchSpace.Unrestricted(...)`; concrete types may still exist underneath for operator typing and validation. |
+| Search-space API | Current first draft: `SymbolicExpressionSearchSpace` represents the unrestricted search space directly. No unrestricted factory or subtype is part of the first API. |
 | Legacy boundary | Settled in the redesign plan: move mutable tree APIs under `HEAL.HeuristicLib.Legacy...`, mark legacy types/members obsolete, and add `Legacy` prefixes/suffixes only for clashes. |
 | Interpreter binding | Settled: `ExpressionDraft.Variable(name)` interns names into the compiled expression variable table; variable instructions store payload indexes into that table, and the interpreter resolves the referenced names once against the supplied dataset. |
 | Reference behavior scope | Seeded by the matrix above; add rows before extending Stage 1 behavior coverage. |
