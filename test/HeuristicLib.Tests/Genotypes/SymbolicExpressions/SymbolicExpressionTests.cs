@@ -167,6 +167,91 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
+    public void Children_EnumeratesDirectChildrenFromLeftToRight()
+    {
+        var expression = CreateLinearExpression();
+
+        var children = expression.Root.TraverseChildren().ToArray();
+
+        children.Select(child => child.OpCode).ShouldBe([
+          SymbolicExpressionOpCode.Variable,
+          SymbolicExpressionOpCode.Multiply
+        ]);
+        children[0].TryGetVariableReference(out var leftVariable).ShouldBeTrue();
+        leftVariable.Name.ShouldBe("x0");
+        children[1].TraverseChildren().Select(child => child.OpCode).ShouldBe([
+          SymbolicExpressionOpCode.NumericLiteral,
+          SymbolicExpressionOpCode.Variable
+        ]);
+    }
+
+    [Fact]
+    public void TraversePostOrder_EnumeratesEditableExpressionLocations()
+    {
+        var expression = CreateLinearExpression();
+
+        var nodes = expression.TraversePostOrder().ToArray();
+
+        nodes.Select(node => node.OpCode).ShouldBe([
+          SymbolicExpressionOpCode.Variable,
+          SymbolicExpressionOpCode.NumericLiteral,
+          SymbolicExpressionOpCode.Variable,
+          SymbolicExpressionOpCode.Multiply,
+          SymbolicExpressionOpCode.Add
+        ]);
+        nodes.Select(node => node.SubtreeLength).ShouldBe([1, 1, 1, 3, 5]);
+        expression.WithOpCode(nodes[^1].Location, SymbolicExpressionOpCode.Subtract)
+          .ToInfixString()
+          .ShouldBe("(x0 - (2 * x1))");
+    }
+
+    [Fact]
+    public void TraversePreOrder_EnumeratesRootBeforeChildren()
+    {
+        var expression = CreateLinearExpression();
+
+        expression.TraversePreOrder().Select(node => node.OpCode).ShouldBe([
+          SymbolicExpressionOpCode.Add,
+          SymbolicExpressionOpCode.Variable,
+          SymbolicExpressionOpCode.Multiply,
+          SymbolicExpressionOpCode.NumericLiteral,
+          SymbolicExpressionOpCode.Variable
+        ]);
+    }
+
+    [Fact]
+    public void TraverseBreadthFirst_EnumeratesLevelByLevel()
+    {
+        var expression = CreateLinearExpression();
+
+        expression.TraverseBreadthFirst().Select(node => node.OpCode).ShouldBe([
+          SymbolicExpressionOpCode.Add,
+          SymbolicExpressionOpCode.Variable,
+          SymbolicExpressionOpCode.Multiply,
+          SymbolicExpressionOpCode.NumericLiteral,
+          SymbolicExpressionOpCode.Variable
+        ]);
+    }
+
+    [Fact]
+    public void SubExpressionTraversal_EnumeratesOnlySelectedSubtree()
+    {
+        var expression = CreateLinearExpression();
+        var rightBranch = expression.Root.Child(1);
+
+        rightBranch.TraversePostOrder().Select(node => node.OpCode).ShouldBe([
+          SymbolicExpressionOpCode.NumericLiteral,
+          SymbolicExpressionOpCode.Variable,
+          SymbolicExpressionOpCode.Multiply
+        ]);
+        rightBranch.TraversePreOrder().Select(node => node.OpCode).ShouldBe([
+          SymbolicExpressionOpCode.Multiply,
+          SymbolicExpressionOpCode.NumericLiteral,
+          SymbolicExpressionOpCode.Variable
+        ]);
+    }
+
+    [Fact]
     public void Child_RejectsIndexOutsideArity()
     {
         var expression = CreateLinearExpression();
@@ -217,8 +302,8 @@ public sealed class SymbolicExpressionTests
         instructions[0] = ExpressionInstruction.Variable(1);
         variables[0] = new VariableReference("changed", 0);
 
-        expression.Instructions[0].PayloadIndex.ShouldBe(0);
-        expression.VariableReferences[0].Name.ShouldBe("x0");
+        expression.Root.TryGetVariableReference(out var variable).ShouldBeTrue();
+        variable.Name.ShouldBe("x0");
     }
 
     [Fact]
@@ -446,6 +531,108 @@ public sealed class SymbolicExpressionTests
         Should.Throw<ArgumentException>(() => expression.Evaluate(data));
     }
 
+    [Fact]
+    public void WithOpCode_ReplacesSameArityOperationAndKeepsOriginalExpression()
+    {
+        var expression = ExpressionDraft
+          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Variable("x1"))
+          .Compile();
+
+        var location = expression.TraversePostOrder().Single(node => node.OpCode == SymbolicExpressionOpCode.Add).Location;
+
+        var edited = expression.WithOpCode(location, SymbolicExpressionOpCode.Subtract);
+
+        expression.ToInfixString().ShouldBe("(x0 + x1)");
+        edited.ToInfixString().ShouldBe("(x0 - x1)");
+        edited.Evaluate(["x0", "x1"], [5.0, 2.0]).ShouldBe(3.0);
+    }
+
+    [Fact]
+    public void WithOpCode_RejectsArityChangingOperation()
+    {
+        var expression = ExpressionDraft
+          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Variable("x1"))
+          .Compile();
+
+        var location = expression.TraversePostOrder().Single(node => node.OpCode == SymbolicExpressionOpCode.Add).Location;
+
+        Should.Throw<ArgumentException>(() => expression.WithOpCode(location, SymbolicExpressionOpCode.Sqrt));
+    }
+
+    [Fact]
+    public void WithNumericLiteral_ReplacesSingleLiteralOccurrence()
+    {
+        var expression = SymbolicExpression.Create(
+          [
+              ExpressionInstruction.NumericLiteral(0),
+              ExpressionInstruction.NumericLiteral(0),
+              ExpressionInstruction.Binary(SymbolicExpressionOpCode.Add, 1, 1)
+          ],
+          [new NumericLiteral(1.0, NumericLiteralKind.Fixed)],
+          []);
+        var secondLiteral = expression.TraversePostOrder()
+          .Where(node => node.OpCode == SymbolicExpressionOpCode.NumericLiteral)
+          .Skip(1)
+          .Single()
+          .Location;
+
+        var edited = expression.WithNumericLiteral(secondLiteral, new NumericLiteral(4.0, NumericLiteralKind.Fixed));
+
+        expression.ToInfixString().ShouldBe("(1 + 1)");
+        edited.ToInfixString().ShouldBe("(1 + 4)");
+        GetNumericLiterals(edited).ShouldBe([
+          new NumericLiteral(1.0, NumericLiteralKind.Fixed),
+          new NumericLiteral(4.0, NumericLiteralKind.Fixed)
+        ]);
+    }
+
+    [Fact]
+    public void WithNumericLiteral_WithValueCreatesOptimizableLiteral()
+    {
+        var expression = ExpressionDraft.Fixed(1.0).Compile();
+
+        var edited = expression.WithNumericLiteral(expression.RootLocation, 2.0);
+
+        edited.Root.TryGetNumericLiteral(out var literal).ShouldBeTrue();
+        literal.ShouldBe(new NumericLiteral(2.0, NumericLiteralKind.Optimizable));
+    }
+
+    [Fact]
+    public void WithVariable_ReplacesSingleVariableOccurrenceAndCompactsVariableReferences()
+    {
+        var expression = ExpressionDraft
+          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Variable("x0"))
+          .Compile();
+        var secondVariable = expression.TraversePostOrder()
+          .Where(node => node.OpCode == SymbolicExpressionOpCode.Variable)
+          .Skip(1)
+          .Single()
+          .Location;
+
+        var edited = expression.WithVariable(secondVariable, "x1");
+
+        expression.ToInfixString().ShouldBe("(x0 + x0)");
+        edited.ToInfixString().ShouldBe("(x0 + x1)");
+        GetVariableNames(edited).ShouldBe(["x0", "x1"]);
+    }
+
+    [Fact]
+    public void ReplaceSubExpression_ReplacesSubtreeAndCompactsPayloadTables()
+    {
+        var expression = CreateLinearExpression();
+        var replacement = ExpressionDraft.Variable("x2").Compile();
+
+        var multiply = expression.TraversePostOrder().Single(node => node.OpCode == SymbolicExpressionOpCode.Multiply).Location;
+
+        var edited = expression.ReplaceSubExpression(multiply, replacement);
+
+        expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
+        edited.ToInfixString().ShouldBe("(x0 + x2)");
+        GetVariableNames(edited).ShouldBe(["x0", "x2"]);
+        GetNumericLiterals(edited).ShouldBeEmpty();
+        edited.Evaluate(["x0", "x2"], [3.0, 4.0]).ShouldBe(7.0);
+    }
+
     private static SymbolicExpression CreateLinearExpression()
     {
         return ExpressionDraft
@@ -460,5 +647,29 @@ public sealed class SymbolicExpressionTests
     private static void ChildAtRoot(SymbolicExpression expression, int index)
     {
         expression.Root.Child(index);
+    }
+
+    private static string[] GetVariableNames(SymbolicExpression expression)
+    {
+        var names = new List<string>();
+        foreach (var node in expression.TraversePostOrder().Where(node => node.OpCode == SymbolicExpressionOpCode.Variable))
+        {
+            expression.GetSubExpression(node.Location).TryGetVariableReference(out var variable).ShouldBeTrue();
+            names.Add(variable.Name);
+        }
+
+        return [.. names];
+    }
+
+    private static NumericLiteral[] GetNumericLiterals(SymbolicExpression expression)
+    {
+        var literals = new List<NumericLiteral>();
+        foreach (var node in expression.TraversePostOrder().Where(node => node.OpCode == SymbolicExpressionOpCode.NumericLiteral))
+        {
+            expression.GetSubExpression(node.Location).TryGetNumericLiteral(out var literal).ShouldBeTrue();
+            literals.Add(literal);
+        }
+
+        return [.. literals];
     }
 }

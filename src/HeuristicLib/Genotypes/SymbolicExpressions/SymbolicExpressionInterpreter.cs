@@ -6,17 +6,17 @@ public static class SymbolicExpressionInterpreter
 {
     public static double Interpret(SymbolicExpression expression, ReadOnlySpan<double> variableValues)
     {
-        if (variableValues.Length != expression.VariableReferences.Count)
+        if (variableValues.Length != expression.VariableReferenceCount)
         {
             throw new ArgumentException(
-                $"Expected {expression.VariableReferences.Count} variable values but received {variableValues.Length}.",
+                $"Expected {expression.VariableReferenceCount} variable values but received {variableValues.Length}.",
                 nameof(variableValues));
         }
 
-        var series = new KeyValuePair<string, Series<double>>[expression.VariableReferences.Count];
+        var series = new KeyValuePair<string, Series<double>>[expression.VariableReferenceCount];
         for (var i = 0; i < series.Length; i++)
         {
-            var variable = expression.VariableReferences[i];
+            var variable = expression.GetVariableReference(i);
             series[i] = KeyValuePair.Create(
                 variable.Name,
                 Series<double>.FromOwnedArray([variableValues[variable.Index]], variable.Name));
@@ -86,19 +86,19 @@ public static class SymbolicExpressionInterpreter
     }
 
     public static int GetWorkspaceLength(SymbolicExpression expression, DataFrame data) =>
-        expression.Instructions.Count * data.RowCount;
+        expression.InstructionCount * data.RowCount;
 
     private static void Execute(SymbolicExpression expression, DataFrame data, ref EvaluationStack stack)
     {
-        foreach (var instruction in expression.Instructions)
+        foreach (var instruction in expression.InstructionsInPostOrder)
         {
             switch (instruction.OpCode)
             {
                 case SymbolicExpressionOpCode.Variable:
-                    data.GetDoubleSeries(expression.VariableReferences[instruction.PayloadIndex].Name).Values.CopyTo(stack.Push());
+                    data.GetDoubleSeries(expression.GetVariableReference(instruction.PayloadIndex).Name).Values.CopyTo(stack.Push());
                     break;
                 case SymbolicExpressionOpCode.NumericLiteral:
-                    stack.Push().Fill(expression.NumericLiterals[instruction.PayloadIndex].Value);
+                    stack.Push().Fill(expression.GetNumericLiteral(instruction.PayloadIndex).Value);
                     break;
                 case SymbolicExpressionOpCode.Add:
                     Add(ref stack);

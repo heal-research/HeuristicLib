@@ -23,11 +23,12 @@ public class SymbolicRegressionRedesignSpecs
               ExpressionDraft.Variable("x1")))
           .Compile();
 
-        expression.VariableReferences.Select(variable => variable.Name).ShouldBe(["x0", "x1"]);
-        expression.Instructions.Where(instruction => instruction.OpCode == SymbolicExpressionOpCode.Variable)
-          .Select(instruction => instruction.PayloadIndex)
-          .ShouldBe([0, 1]);
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
+        var root = expression.Root;
+        root.Child(0).TryGetVariableReference(out var leftVariable).ShouldBeTrue();
+        root.Child(1).Child(1).TryGetVariableReference(out var rightVariable).ShouldBeTrue();
+        leftVariable.Name.ShouldBe("x0");
+        rightVariable.Name.ShouldBe("x1");
         var data = DataFrame.FromMatrix(
           ["x0", "x1"],
           new double[,]
@@ -181,7 +182,8 @@ public class SymbolicRegressionRedesignSpecs
           problem).Single();
 
         solution.Genotype.ShouldNotBeSameAs(rawExpression);
-        rawExpression.NumericLiterals.Single().Value.ShouldBe(1.0);
+        rawExpression.Root.Child(0).TryGetNumericLiteral(out var rawParameter).ShouldBeTrue();
+        rawParameter.Value.ShouldBe(1.0);
         evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
 

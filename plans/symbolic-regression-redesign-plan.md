@@ -184,15 +184,33 @@ Add the fast default scalar search space and operator family:
 - direct core overloads that take primitive limits and opcode/variable sets when the search space is only a container for those values.
 - RPN-aware internal helpers for subtree metadata, slice selection, splicing, length/depth checks, and parent-independent candidate construction.
 
+Operator implementation order:
+
+- First add low-level genotype operations on `SymbolicExpression` and `SymbolicSubExpression`. These operations are not search-space-aware and provide efficient immutable editing primitives for later operators.
+- Then add fast unrestricted operators as the main HLib symbolic-regression GP path. These operators preserve unrestricted search-space validity by construction where practical.
+- Later add restricted operators as a sibling operator family, starting with grammar-preserving operators. Restricted and unrestricted operators share low-level genotype operations but are not implicitly interchangeable.
+
+Low-level genotype operations:
+
+- support instruction edits when arity and payload rules stay compatible
+- support numeric-literal payload edits
+- support variable-reference payload edits
+- support sub-expression replacement and splicing
+- return new validated `SymbolicExpression` instances and never mutate existing candidates
+- use copy-on-write-style array handling: opcode-only edits copy instructions only, numeric edits copy numeric-literal data only, variable edits copy variable-reference data only, and subtree edits copy affected instruction ranges while reusing unchanged side tables where possible
+
 Rules:
 
 - All scalar-producing subtrees are mutually composable in this search space.
 - Operators must not require or call a grammar.
+- Operators must not require or call a generic restriction provider.
 - Operators never mutate parents.
 - Operators preserve search-space validity or fail with documented bounded retry behavior.
-- Shared RPN helper code may be reused by grammar-aware operators, but unrestricted operators remain a separate fast path.
+- Shared genotype operations may be reused by grammar-aware operators, but unrestricted operators remain a separate fast path.
+- Restricted operators are not implicitly reused in unrestricted contexts. A grammar-preserving operator may produce candidates that are also valid in an unrestricted search space, but it still requires grammar context and therefore belongs to the grammar operator family.
+- Operator-family presets may be added later so switching from unrestricted to grammar search spaces can replace creator, mutator, crossover, and repair families together without manual one-by-one rewiring.
 
-Stage 3 tests: unrestricted search-space containment, creator validity, mutation validity, crossover validity, parent immutability, bounded failure behavior, and one GA usage spec using unrestricted operators.
+Stage 3 tests: genotype editing immutability and side-table reuse behavior, unrestricted search-space containment, creator validity, mutation validity, crossover validity, parent immutability, bounded failure behavior, and one GA usage spec using unrestricted operators.
 
 ## Stage 3.1: Constant Optimization During Evaluation
 
@@ -234,11 +252,14 @@ Add the smallest typed grammar model needed for valid scalar symbolic regression
 
 Rules:
 
+- Grammar-constrained operators should ask for viable options at a site instead of blindly sampling edit points and relying on rejection.
+- Grammar logic drives option selection in the first restricted implementation. Do not add a public generic restriction-provider abstraction before the grammar implementation proves the shape.
+- `Contains` is a final validation check for grammar operators, not the primary construction strategy.
 - Grammar-constrained operators may enumerate viable sites, cache grammar-derived metadata, use repair, or use bounded retry.
 - The grammar-aware path may pay grammar costs; the unrestricted path must not.
-- Grammar operators should reuse low-level immutable RPN construction and splicing helpers where practical, but not share the unrestricted selection logic when grammar validity changes the set of legal edits.
+- Grammar operators should reuse low-level immutable genotype operations where practical, but not share the unrestricted selection logic when grammar validity changes the set of legal edits.
 
-Stage 4 tests: typed grammar validity, grammar-preserving operators, scalar output enforcement, grammar-specific bounded failure behavior, and one usage spec showing a restricted grammar such as `log(variable)` only.
+Stage 4 tests: typed grammar validity, grammar operator option selection, grammar-preserving operators, scalar output enforcement, grammar-specific bounded failure behavior, and one usage spec showing a restricted grammar such as `log(variable)` only.
 
 ## Stage 5: Extensions And Composability
 
