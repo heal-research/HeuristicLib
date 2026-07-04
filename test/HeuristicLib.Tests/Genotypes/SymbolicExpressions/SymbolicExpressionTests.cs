@@ -486,6 +486,73 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
+    public void Evaluate_VariableExpressionDoesNotRequireWorkspace()
+    {
+        var expression = ExpressionDraft.Variable("x0").Compile();
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
+        ]);
+        var destination = new[] { double.NaN, double.NaN };
+
+        SymbolicExpressionInterpreter.GetWorkspaceLength(expression, data).ShouldBe(0);
+        expression.Evaluate(data, destination, []);
+
+        destination.ShouldBe([1.0, 2.0]);
+    }
+
+    [Fact]
+    public void Evaluate_NumericLiteralExpressionDoesNotRequireWorkspace()
+    {
+        var expression = ExpressionDraft.Fixed(4.0).Compile();
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("unused", new[] { 1.0, 2.0, 3.0 })
+        ]);
+        var destination = new[] { double.NaN, double.NaN, double.NaN };
+
+        SymbolicExpressionInterpreter.GetWorkspaceLength(expression, data).ShouldBe(0);
+        expression.Evaluate(data, destination, []);
+
+        destination.ShouldBe([4.0, 4.0, 4.0]);
+    }
+
+    [Fact]
+    public void Evaluate_AppliesScalarVectorOperationsInBothOperandOrders()
+    {
+        var scalarMinusVariable = ExpressionDraft
+          .Subtract(ExpressionDraft.Fixed(10.0), ExpressionDraft.Variable("x0"))
+          .Compile();
+        var scalarDivideVariable = ExpressionDraft
+          .Divide(ExpressionDraft.Fixed(12.0), ExpressionDraft.Variable("x0"))
+          .Compile();
+        var variableMinusScalar = ExpressionDraft
+          .Subtract(ExpressionDraft.Variable("x0"), ExpressionDraft.Fixed(1.0))
+          .Compile();
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x0", new[] { 1.0, 2.0, 3.0 })
+        ]);
+
+        scalarMinusVariable.Evaluate(data).ShouldBe([9.0, 8.0, 7.0]);
+        scalarDivideVariable.Evaluate(data).ShouldBe([12.0, 6.0, 4.0]);
+        variableMinusScalar.Evaluate(data).ShouldBe([0.0, 1.0, 2.0]);
+    }
+
+    [Fact]
+    public void Evaluate_KeepsScalarOnlySubExpressionOutOfWorkspace()
+    {
+        var expression = ExpressionDraft
+          .Multiply(
+            ExpressionDraft.Add(ExpressionDraft.Fixed(2.0), ExpressionDraft.Fixed(3.0)),
+            ExpressionDraft.Variable("x0"))
+          .Compile();
+        var data = DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x0", new[] { 1.0, 2.0, 3.0 })
+        ]);
+
+        SymbolicExpressionInterpreter.GetWorkspaceLength(expression, data).ShouldBe(3);
+        expression.Evaluate(data).ShouldBe([5.0, 10.0, 15.0]);
+    }
+
+    [Fact]
     public void Evaluate_UsesBatchesBeyondDefaultBatchSize()
     {
         var expression = CreateLinearExpression();
@@ -497,14 +564,14 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
-    public void GetWorkspaceLength_UsesEvaluationStackDepthAndCapsAtDefaultBatchSize()
+    public void GetWorkspaceLength_UsesLazyScratchSlotsAndCapsAtDefaultBatchSize()
     {
         var expression = CreateLinearExpression();
         var data = CreateLinearData(4097);
 
         var workspaceLength = SymbolicExpressionInterpreter.GetWorkspaceLength(expression, data);
 
-        workspaceLength.ShouldBe(3 * 4096);
+        workspaceLength.ShouldBe(2 * 4096);
     }
 
     [Fact]
@@ -539,7 +606,9 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_RejectsTooSmallWorkspace()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = ExpressionDraft
+          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Fixed(2.0))
+          .Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", Enumerable.Range(0, 4097).Select(row => (double)row).ToArray())
         ]);
