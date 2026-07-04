@@ -7,6 +7,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
 using Xunit;
+using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Regression;
 
@@ -15,13 +16,7 @@ public class SymbolicRegressionRedesignSpecs
     [Fact]
     public void ExpressionDraft_AuthoringShape_BuildsX0PlusTwoTimesX1()
     {
-        var expression = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
 
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
         var root = expression.Root;
@@ -45,13 +40,8 @@ public class SymbolicRegressionRedesignSpecs
     public void Interpreter_AuthoringShape_EvaluatesCompiledExpressionAgainstRegressionData()
     {
         var data = CreateLinearRegressionData();
-        var expression = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var draft = Variable("x0") + Fixed(2.0) * Variable("x1");
+        var expression = draft.Compile();
 
         var predictions = expression.Evaluate(data.TrainingInputs);
 
@@ -64,13 +54,7 @@ public class SymbolicRegressionRedesignSpecs
     [Fact]
     public void SymbolicExpression_AuthoringShape_NavigatesSubExpressionsAsTree()
     {
-        var expression = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
 
         var root = expression.Root;
         var left = root.Child(0);
@@ -170,9 +154,7 @@ public class SymbolicRegressionRedesignSpecs
              allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
              allowedVariables: ["x0"]));
 
-        var rawExpression = ExpressionDraft
-          .Add(ExpressionDraft.Parameter(1.0), ExpressionDraft.Variable("x0"))
-          .Compile();
+        var rawExpression = (Parameter(1.0) + Variable("x0")).Compile();
 
         var evaluator = SymbolicExpressionEvaluator.OptimizeNumericParameters(
           maxIterations: 25,

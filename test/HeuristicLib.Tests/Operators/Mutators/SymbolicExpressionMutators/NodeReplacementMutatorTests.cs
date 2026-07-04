@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Operators.SymbolicExpressions;
 using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
+using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Mutators.SymbolicExpressionMutators;
 
@@ -12,13 +13,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_ReplacesOperationWithSameArityOperationFromSearchSpace()
     {
-        var parent = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var parent = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
         var searchSpace = CreateSearchSpace(["x0", "x1"]);
 
         var mutant = NodeReplacementMutation.Mutate(
@@ -35,7 +30,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_ReplacesVariableWithAllowedVariable()
     {
-        var parent = ExpressionDraft.Variable("x0").Compile();
+        var parent = Variable("x0").Compile();
         var searchSpace = CreateSearchSpace(["x0", "x1"]);
 
         var mutant = NodeReplacementMutation.Mutate(
@@ -50,9 +45,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_UsesInstanceEntryPointWithSearchSpace()
     {
-        var parent = ExpressionDraft
-          .Sqrt(ExpressionDraft.Variable("x0"))
-          .Compile();
+        var parent = Sqrt(Variable("x0")).Compile();
         var searchSpace = CreateSearchSpace(["x0"]);
 
         var mutant = new NodeReplacementMutator()
@@ -65,9 +58,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_OnlyUsesOperationsAllowedBySearchSpace()
     {
-        var parent = ExpressionDraft
-          .Multiply(ExpressionDraft.Fixed(1.0), ExpressionDraft.Fixed(2.0))
-          .Compile();
+        var parent = (Fixed(1.0) * Fixed(2.0)).Compile();
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 10,
             maximumDepth: 5,
@@ -90,7 +81,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_AllowsNullMutation()
     {
-        var parent = ExpressionDraft.Variable("x0").Compile();
+        var parent = Variable("x0").Compile();
         var searchSpace = CreateSearchSpace(["x0", "x1"]);
 
         var mutant = NodeReplacementMutation.Mutate(
@@ -105,7 +96,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_ReplacesNumericLiteralWithAllowedVariable()
     {
-        var parent = ExpressionDraft.Fixed(100.0).Compile();
+        var parent = Fixed(100.0).Compile();
         var searchSpace = CreateSearchSpace(["x0"]);
 
         var mutant = NodeReplacementMutation.Mutate(
@@ -120,7 +111,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_ReplacesVariableWithNumericLiteral()
     {
-        var parent = ExpressionDraft.Variable("x0").Compile();
+        var parent = Variable("x0").Compile();
         var searchSpace = CreateSearchSpace(["x0"]);
         var samplingProfile = new SymbolicExpressionSamplingProfile
         {
@@ -140,7 +131,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_UsesVariableTerminalWhenOnlyVariablesAreAvailable()
     {
-        var parent = ExpressionDraft.Variable("x0").Compile();
+        var parent = Variable("x0").Compile();
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,
@@ -160,7 +151,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_UsesNumericLiteralTerminalWhenOnlyNumericLiteralsAreAvailable()
     {
-        var parent = ExpressionDraft.Fixed(1.0).Compile();
+        var parent = Fixed(1.0).Compile();
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
+using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.SearchSpaces.SymbolicExpressions;
 
@@ -120,7 +121,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
             maximumDepth: 1,
             allowedOperations: [],
             allowedVariables: []);
-        var expression = ExpressionDraft.Fixed(100.0).Compile();
+        var expression = Fixed(100.0).Compile();
 
         searchSpace.Contains(expression).ShouldBeTrue();
     }
@@ -134,7 +135,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
             allowedOperations: [],
             allowedVariables: ["x0"],
             allowNumericLiterals: false);
-        var expression = ExpressionDraft.Fixed(100.0).Compile();
+        var expression = Fixed(100.0).Compile();
 
         searchSpace.Contains(expression).ShouldBeFalse();
     }
@@ -177,13 +178,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
 
     private static SymbolicExpression CreateLinearExpression()
     {
-        return ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        return (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
     }
 
 }

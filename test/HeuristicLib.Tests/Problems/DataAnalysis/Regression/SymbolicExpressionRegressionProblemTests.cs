@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
+using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Problems.DataAnalysis.Regression;
 
@@ -159,13 +160,7 @@ public sealed class SymbolicExpressionRegressionProblemTests
     }
 
     private static SymbolicExpression CreateLinearExpression() =>
-        ExpressionDraft
-            .Add(
-                ExpressionDraft.Variable("x0"),
-                ExpressionDraft.Multiply(
-                    ExpressionDraft.Fixed(2.0),
-                    ExpressionDraft.Variable("x1")))
-            .Compile();
+        (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
 
     private static RegressionData CreateLinearRegressionData() =>
         RegressionData.Training(

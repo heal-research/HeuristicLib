@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions;
 
@@ -136,9 +137,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Child_PreservesLeftToRightOrder()
     {
-        var expression = ExpressionDraft
-          .Subtract(ExpressionDraft.Variable("left"), ExpressionDraft.Variable("right"))
-          .Compile();
+        var expression = (Variable("left") - Variable("right")).Compile();
 
         var root = expression.Root;
 
@@ -154,7 +153,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Child_NavigatesUnarySubExpression()
     {
-        var expression = ExpressionDraft.Sqrt(ExpressionDraft.Variable("x0")).Compile();
+        var expression = Sqrt(Variable("x0")).Compile();
 
         var root = expression.Root;
         var child = root.Child(0);
@@ -262,7 +261,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Child_RejectsChildAccessOnLeaf()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = Variable("x0").Compile();
 
         Should.Throw<ArgumentOutOfRangeException>(() => ChildAtRoot(expression, 0));
     }
@@ -324,13 +323,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_UsesVariableTableOrder()
     {
-        var expression = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
 
         expression.Evaluate([3.0, 5.0]).ShouldBe(13.0);
     }
@@ -338,13 +331,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_UsesVariableNames()
     {
-        var expression = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
 
         expression.Evaluate(["x1", "x0"], [5.0, 3.0]).ShouldBe(13.0);
     }
@@ -352,13 +339,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_AppliesUnaryAndBinaryOperations()
     {
-        var expression = ExpressionDraft
-          .Sqrt(
-            ExpressionDraft.Log(
-              ExpressionDraft.Divide(
-                ExpressionDraft.Variable("x0"),
-                ExpressionDraft.Fixed(Math.E))))
-          .Compile();
+        var expression = Sqrt(Log(Variable("x0") / Fixed(Math.E))).Compile();
 
         expression.Evaluate(["x0"], [Math.E * Math.E]).ShouldBe(1.0, tolerance: 1e-12);
     }
@@ -366,7 +347,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_RejectsWrongVariableValueCount()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = Variable("x0").Compile();
 
         Should.Throw<ArgumentException>(() => expression.Evaluate([]));
     }
@@ -374,7 +355,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_RejectsMissingNamedVariable()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = Variable("x0").Compile();
 
         Should.Throw<ArgumentException>(() => expression.Evaluate(["x1"], [1.0]));
     }
@@ -382,7 +363,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_RejectsDuplicateNamedVariable()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = Variable("x0").Compile();
 
         Should.Throw<ArgumentException>(() => expression.Evaluate(["x0", "x0"], [1.0, 2.0]));
     }
@@ -390,13 +371,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_UsesVariableTableColumnOrder()
     {
-        var expression = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
         var data = DataFrame.FromMatrix(
           ["x0", "x1"],
           new double[,]
@@ -412,13 +387,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Interpreter_UsesDataFrameColumns()
     {
-        var expression = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
         var data = new DataFrame([
           KeyValuePair.Create("x0", Series<double>.Create([1.0, 2.0, 3.0])),
           KeyValuePair.Create("x1", Series<double>.Create([3.0, 4.0, 5.0]))
@@ -431,13 +400,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_UsesVariableNamesOnceForAllRows()
     {
-        var expression = ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
         var data = DataFrame.FromMatrix(
           ["x1", "x0", "unused"],
           new double[,]
@@ -453,7 +416,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_WritesIntoDestination()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = Variable("x0").Compile();
         var data = DataFrame.FromMatrix(
           ["x0"],
           new double[,]
@@ -471,9 +434,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_UsesCallerProvidedWorkspace()
     {
-        var expression = ExpressionDraft
-          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Fixed(2.0))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0)).Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
         ]);
@@ -488,7 +449,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_VariableExpressionDoesNotRequireWorkspace()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = Variable("x0").Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
         ]);
@@ -503,7 +464,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_NumericLiteralExpressionDoesNotRequireWorkspace()
     {
-        var expression = ExpressionDraft.Fixed(4.0).Compile();
+        var expression = Fixed(4.0).Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("unused", new[] { 1.0, 2.0, 3.0 })
         ]);
@@ -518,15 +479,9 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_AppliesScalarVectorOperationsInBothOperandOrders()
     {
-        var scalarMinusVariable = ExpressionDraft
-          .Subtract(ExpressionDraft.Fixed(10.0), ExpressionDraft.Variable("x0"))
-          .Compile();
-        var scalarDivideVariable = ExpressionDraft
-          .Divide(ExpressionDraft.Fixed(12.0), ExpressionDraft.Variable("x0"))
-          .Compile();
-        var variableMinusScalar = ExpressionDraft
-          .Subtract(ExpressionDraft.Variable("x0"), ExpressionDraft.Fixed(1.0))
-          .Compile();
+        var scalarMinusVariable = (Fixed(10.0) - Variable("x0")).Compile();
+        var scalarDivideVariable = (Fixed(12.0) / Variable("x0")).Compile();
+        var variableMinusScalar = (Variable("x0") - Fixed(1.0)).Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", new[] { 1.0, 2.0, 3.0 })
         ]);
@@ -539,11 +494,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_KeepsScalarOnlySubExpressionOutOfWorkspace()
     {
-        var expression = ExpressionDraft
-          .Multiply(
-            ExpressionDraft.Add(ExpressionDraft.Fixed(2.0), ExpressionDraft.Fixed(3.0)),
-            ExpressionDraft.Variable("x0"))
-          .Compile();
+        var expression = ((Fixed(2.0) + Fixed(3.0)) * Variable("x0")).Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", new[] { 1.0, 2.0, 3.0 })
         ]);
@@ -593,9 +544,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_ReturnsEmptyResultForEmptyDataFrame()
     {
-        var expression = ExpressionDraft
-          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Fixed(2.0))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0)).Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", Array.Empty<double>())
         ]);
@@ -606,9 +555,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_RejectsTooSmallWorkspace()
     {
-        var expression = ExpressionDraft
-          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Fixed(2.0))
-          .Compile();
+        var expression = (Variable("x0") + Fixed(2.0)).Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", Enumerable.Range(0, 4097).Select(row => (double)row).ToArray())
         ]);
@@ -620,7 +567,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_RejectsTooSmallDestination()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = Variable("x0").Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
         ]);
@@ -631,7 +578,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_RejectsMissingNamedColumn()
     {
-        var expression = ExpressionDraft.Variable("x0").Compile();
+        var expression = Variable("x0").Compile();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x1", new[] { 1.0 })
         ]);
@@ -642,9 +589,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void WithOpCode_ReplacesSameArityOperationAndKeepsOriginalExpression()
     {
-        var expression = ExpressionDraft
-          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Variable("x1"))
-          .Compile();
+        var expression = (Variable("x0") + Variable("x1")).Compile();
 
         var location = expression.TraversePostOrder().Single(node => node.OpCode == SymbolicExpressionOpCode.Add).Location;
 
@@ -658,9 +603,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void WithOpCode_RejectsArityChangingOperation()
     {
-        var expression = ExpressionDraft
-          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Variable("x1"))
-          .Compile();
+        var expression = (Variable("x0") + Variable("x1")).Compile();
 
         var location = expression.TraversePostOrder().Single(node => node.OpCode == SymbolicExpressionOpCode.Add).Location;
 
@@ -697,7 +640,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void WithNumericLiteral_WithValueCreatesOptimizableLiteral()
     {
-        var expression = ExpressionDraft.Fixed(1.0).Compile();
+        var expression = Fixed(1.0).Compile();
 
         var edited = expression.WithNumericLiteral(expression.RootLocation, 2.0);
 
@@ -708,9 +651,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void WithVariable_ReplacesSingleVariableOccurrenceAndCompactsVariableReferences()
     {
-        var expression = ExpressionDraft
-          .Add(ExpressionDraft.Variable("x0"), ExpressionDraft.Variable("x0"))
-          .Compile();
+        var expression = (Variable("x0") + Variable("x0")).Compile();
         var secondVariable = expression.TraversePostOrder()
           .Where(node => node.OpCode == SymbolicExpressionOpCode.Variable)
           .Skip(1)
@@ -728,7 +669,7 @@ public sealed class SymbolicExpressionTests
     public void ReplaceSubExpression_ReplacesSubtreeAndCompactsPayloadTables()
     {
         var expression = CreateLinearExpression();
-        var replacement = ExpressionDraft.Variable("x2").Compile();
+        var replacement = Variable("x2").Compile();
 
         var multiply = expression.TraversePostOrder().Single(node => node.OpCode == SymbolicExpressionOpCode.Multiply).Location;
 
@@ -743,13 +684,7 @@ public sealed class SymbolicExpressionTests
 
     private static SymbolicExpression CreateLinearExpression()
     {
-        return ExpressionDraft
-          .Add(
-            ExpressionDraft.Variable("x0"),
-            ExpressionDraft.Multiply(
-              ExpressionDraft.Fixed(2.0),
-              ExpressionDraft.Variable("x1")))
-          .Compile();
+        return (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
     }
 
     private static DataFrame CreateLinearData(int rowCount)

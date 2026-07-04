@@ -2,36 +2,6 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public abstract record ExpressionDraft
 {
-    public static ExpressionDraft Variable(string name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-            throw new ArgumentException("Variable name must not be empty.", nameof(name));
-
-        return new VariableDraft(name);
-    }
-
-    public static ExpressionDraft Fixed(double value) => new NumericLiteralDraft(value, NumericLiteralKind.Fixed);
-
-    public static ExpressionDraft Parameter(double value) => new NumericLiteralDraft(value, NumericLiteralKind.Optimizable);
-
-    public static ExpressionDraft Add(ExpressionDraft left, ExpressionDraft right) =>
-      new BinaryDraft(SymbolicExpressionOpCode.Add, left, right);
-
-    public static ExpressionDraft Subtract(ExpressionDraft left, ExpressionDraft right) =>
-      new BinaryDraft(SymbolicExpressionOpCode.Subtract, left, right);
-
-    public static ExpressionDraft Multiply(ExpressionDraft left, ExpressionDraft right) =>
-      new BinaryDraft(SymbolicExpressionOpCode.Multiply, left, right);
-
-    public static ExpressionDraft Divide(ExpressionDraft left, ExpressionDraft right) =>
-      new BinaryDraft(SymbolicExpressionOpCode.Divide, left, right);
-
-    public static ExpressionDraft Log(ExpressionDraft child) =>
-      new UnaryDraft(SymbolicExpressionOpCode.Log, child);
-
-    public static ExpressionDraft Sqrt(ExpressionDraft child) =>
-      new UnaryDraft(SymbolicExpressionOpCode.Sqrt, child);
-
     public SymbolicExpression Compile()
     {
         var instructions = new List<ExpressionInstruction>();
@@ -41,18 +11,10 @@ public abstract record ExpressionDraft
 
         Emit(this, instructions, numericLiterals, variableReferences, variableIndexByName);
 
-        return SymbolicExpression.FromOwnedArrays(
-          instructions.ToArray(),
-          numericLiterals.ToArray(),
-          variableReferences.ToArray());
+        return SymbolicExpression.FromOwnedArrays(instructions.ToArray(), numericLiterals.ToArray(), variableReferences.ToArray());
     }
 
-    private static int Emit(
-      ExpressionDraft draft,
-      List<ExpressionInstruction> instructions,
-      List<NumericLiteral> numericLiterals,
-      List<VariableReference> variableReferences,
-      Dictionary<string, int> variableIndexByName)
+    private static int Emit(ExpressionDraft draft, List<ExpressionInstruction> instructions, List<NumericLiteral> numericLiterals, List<VariableReference> variableReferences, Dictionary<string, int> variableIndexByName)
     {
         switch (draft)
         {
@@ -85,11 +47,43 @@ public abstract record ExpressionDraft
         }
     }
 
-    private sealed record VariableDraft(string Name) : ExpressionDraft;
+    internal sealed record VariableDraft(string Name) : ExpressionDraft;
 
-    private sealed record NumericLiteralDraft(double Value, NumericLiteralKind Kind) : ExpressionDraft;
+    internal sealed record NumericLiteralDraft(double Value, NumericLiteralKind Kind) : ExpressionDraft;
 
-    private sealed record UnaryDraft(SymbolicExpressionOpCode OpCode, ExpressionDraft Child) : ExpressionDraft;
+    internal sealed record UnaryDraft(SymbolicExpressionOpCode OpCode, ExpressionDraft Child) : ExpressionDraft;
 
-    private sealed record BinaryDraft(SymbolicExpressionOpCode OpCode, ExpressionDraft Left, ExpressionDraft Right) : ExpressionDraft;
+    internal sealed record BinaryDraft(SymbolicExpressionOpCode OpCode, ExpressionDraft Left, ExpressionDraft Right) : ExpressionDraft;
+
+    public static ExpressionDraft Variable(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Variable name must not be empty.", nameof(name));
+
+        return new VariableDraft(name);
+    }
+
+    public static ExpressionDraft Fixed(double value) => new NumericLiteralDraft(value, NumericLiteralKind.Fixed);
+
+    public static ExpressionDraft Parameter(double value) => new NumericLiteralDraft(value, NumericLiteralKind.Optimizable);
+
+    public static ExpressionDraft Add(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(SymbolicExpressionOpCode.Add, left, right);
+
+    public static ExpressionDraft Subtract(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(SymbolicExpressionOpCode.Subtract, left, right);
+
+    public static ExpressionDraft Multiply(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(SymbolicExpressionOpCode.Multiply, left, right);
+
+    public static ExpressionDraft Divide(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(SymbolicExpressionOpCode.Divide, left, right);
+
+    public static ExpressionDraft Log(ExpressionDraft child) => new UnaryDraft(SymbolicExpressionOpCode.Log, child);
+
+    public static ExpressionDraft Sqrt(ExpressionDraft child) => new UnaryDraft(SymbolicExpressionOpCode.Sqrt, child);
+
+    public static ExpressionDraft operator +(ExpressionDraft left, ExpressionDraft right) => Add(left, right);
+
+    public static ExpressionDraft operator -(ExpressionDraft left, ExpressionDraft right) => Subtract(left, right);
+
+    public static ExpressionDraft operator *(ExpressionDraft left, ExpressionDraft right) => Multiply(left, right);
+
+    public static ExpressionDraft operator /(ExpressionDraft left, ExpressionDraft right) => Divide(left, right);
 }

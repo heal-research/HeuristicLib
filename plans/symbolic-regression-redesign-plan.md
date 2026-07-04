@@ -48,7 +48,7 @@ Resolve these before or during Stage 0:
 | `ExpressionInstruction`                     | Opcode, arity, subtree length, and optional payload index.                                                                                                                                                                       |
 | `SymbolicExpressionOpCode`                  | Stable `ushort` enum for built-in expression symbols with explicit integer values.                                                                                                                                               |
 | `SymbolicExpressionOpCodes`                 | Central fast metadata companion for built-in opcodes: support checks, arity, payload kind, terminal checks, and predefined opcode groups.                                                                                          |
-| `ExpressionDraft`                           | Human-friendly authoring layer; not a genotype.                                                                                                                                                                                  |
+| `ExpressionDraft`                           | Human-friendly construction-only authoring layer and static construction vocabulary; not a genotype.                                                                                                                             |
 | `SymbolicSubExpression`                     | Allocation-light subtree view over an immutable expression, exposed through tree-style navigation from `SymbolicExpression.Root`.                                                                                                |
 | `SymbolicExpressionSearchSpace`             | First scalar expression search space: length, depth, allowed operations, allowed variables, and numeric literal availability; all scalar subtrees are composition-compatible.                                                   |
 | `GrammarSymbolicExpressionSearchSpace`      | Grammar-constrained scalar validity policy with typed operation signatures and grammar-preserving operators.                                                                                                                     |
@@ -101,8 +101,8 @@ Implement:
 - `ExpressionDraft.Compile()`, `ExpressionSlice`, and formatting from compiled variable names.
 - Series/batch interpretation against a supplied `Dataset` and input-variable order.
 - Numeric-literal side-table entries include value plus fixed/optimizable role. The `NumericLiteral` opcode stays singular and references side-table entries by `PayloadIndex`.
-- Draft/builder APIs expose fixed and optimizable literal authoring, tentatively `Fixed(value)` and `Parameter(value)`.
-- Revisit the draft API after the first operators clarify authoring pressure. Consider fluent expression composition, operator overloads and static imports so common expressions can be authored without a static factory style.
+- Draft authoring APIs expose fixed and optimizable literal authoring through `Fixed(value)` and `Parameter(value)`.
+- Revisit the draft API after the first operators clarify authoring pressure. Consider additional fluent expression composition and static-import helpers so common expressions can be authored without a static factory style.
 - Move old mutable symbolic-expression-tree APIs under a `HEAL.HeuristicLib.Legacy...` namespace. Legacy types and methods get `[Obsolete]` markers. If a legacy member name would clash with new API names, add a `Legacy` prefix or suffix to the legacy member.
 
 Stage 1 opcodes:
