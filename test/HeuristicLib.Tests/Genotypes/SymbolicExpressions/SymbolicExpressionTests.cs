@@ -486,6 +486,44 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
+    public void Evaluate_UsesBatchesBeyondDefaultBatchSize()
+    {
+        var expression = CreateLinearExpression();
+        var data = CreateLinearData(8193);
+
+        var result = expression.Evaluate(data);
+
+        result.ShouldBe(Enumerable.Range(0, 8193).Select(row => 2.0 * row).ToArray());
+    }
+
+    [Fact]
+    public void GetWorkspaceLength_UsesEvaluationStackDepthAndCapsAtDefaultBatchSize()
+    {
+        var expression = CreateLinearExpression();
+        var data = CreateLinearData(4097);
+
+        var workspaceLength = SymbolicExpressionInterpreter.GetWorkspaceLength(expression, data);
+
+        workspaceLength.ShouldBe(3 * 4096);
+    }
+
+    [Fact]
+    public void Evaluate_WritesOnlyActualRowsInFinalPartialBatch()
+    {
+        var expression = CreateLinearExpression();
+        var data = CreateLinearData(4097);
+        var destination = Enumerable.Repeat(-1.0, 4098).ToArray();
+        var workspace = new double[SymbolicExpressionInterpreter.GetWorkspaceLength(expression, data)];
+
+        expression.Evaluate(data, destination, workspace);
+
+        destination[0].ShouldBe(0.0);
+        destination[4095].ShouldBe(8190.0);
+        destination[4096].ShouldBe(8192.0);
+        destination[4097].ShouldBe(-1.0);
+    }
+
+    [Fact]
     public void Evaluate_ReturnsEmptyResultForEmptyDataFrame()
     {
         var expression = ExpressionDraft
@@ -503,10 +541,11 @@ public sealed class SymbolicExpressionTests
     {
         var expression = ExpressionDraft.Variable("x0").Compile();
         var data = DataFrame.FromOwnedColumns([
-          KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
+          KeyValuePair.Create("x0", Enumerable.Range(0, 4097).Select(row => (double)row).ToArray())
         ]);
+        var workspaceLength = SymbolicExpressionInterpreter.GetWorkspaceLength(expression, data);
 
-        Should.Throw<ArgumentException>(() => expression.Evaluate(data, new double[2], new double[1]));
+        Should.Throw<ArgumentException>(() => expression.Evaluate(data, new double[4097], new double[workspaceLength - 1]));
     }
 
     [Fact]
@@ -642,6 +681,14 @@ public sealed class SymbolicExpressionTests
               ExpressionDraft.Fixed(2.0),
               ExpressionDraft.Variable("x1")))
           .Compile();
+    }
+
+    private static DataFrame CreateLinearData(int rowCount)
+    {
+        return DataFrame.FromOwnedColumns([
+          KeyValuePair.Create("x0", Enumerable.Range(0, rowCount).Select(row => (double)row).ToArray()),
+          KeyValuePair.Create("x1", Enumerable.Range(0, rowCount).Select(row => row * 0.5).ToArray())
+        ]);
     }
 
     private static void ChildAtRoot(SymbolicExpression expression, int index)

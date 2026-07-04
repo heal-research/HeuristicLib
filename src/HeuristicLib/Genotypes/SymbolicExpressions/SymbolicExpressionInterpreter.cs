@@ -4,6 +4,8 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public static class SymbolicExpressionInterpreter
 {
+    private const int DefaultBatchSize = 4096;
+
     public static double Interpret(SymbolicExpression expression, ReadOnlySpan<double> variableValues)
     {
         if (variableValues.Length != expression.VariableReferenceCount)
@@ -80,22 +82,47 @@ public static class SymbolicExpressionInterpreter
                 nameof(workspace));
         }
 
-        var stack = new EvaluationStack(workspace, data.RowCount);
-        Execute(expression, data, ref stack);
-        stack.Peek().CopyTo(destination);
+        if (data.RowCount == 0)
+            return;
+
+        for (var batchStart = 0; batchStart < data.RowCount; batchStart += DefaultBatchSize)
+        {
+            var batchSize = Math.Min(DefaultBatchSize, data.RowCount - batchStart);
+            var stack = new EvaluationStack(workspace, batchSize);
+            Execute(expression, data, batchStart, batchSize, ref stack);
+            stack.Peek().CopyTo(destination.Slice(batchStart, batchSize));
+        }
     }
 
     public static int GetWorkspaceLength(SymbolicExpression expression, DataFrame data) =>
-        expression.InstructionCount * data.RowCount;
+        GetEvaluationStackDepth(expression) * Math.Min(data.RowCount, DefaultBatchSize);
 
-    private static void Execute(SymbolicExpression expression, DataFrame data, ref EvaluationStack stack)
+    private static int GetEvaluationStackDepth(SymbolicExpression expression)
+    {
+        var depth = 0;
+        var maxDepth = 0;
+
+        foreach (var instruction in expression.InstructionsInPostOrder)
+        {
+            depth -= instruction.Arity;
+            depth++;
+            maxDepth = Math.Max(maxDepth, depth);
+        }
+
+        return maxDepth;
+    }
+
+    private static void Execute(SymbolicExpression expression, DataFrame data, int batchStart, int batchSize, ref EvaluationStack stack)
     {
         foreach (var instruction in expression.InstructionsInPostOrder)
         {
             switch (instruction.OpCode)
             {
                 case SymbolicExpressionOpCode.Variable:
-                    data.GetDoubleSeries(expression.GetVariableReference(instruction.PayloadIndex).Name).Values.CopyTo(stack.Push());
+                    data.GetDoubleSeries(expression.GetVariableReference(instruction.PayloadIndex).Name)
+                        .Values
+                        .Slice(batchStart, batchSize)
+                        .CopyTo(stack.Push());
                     break;
                 case SymbolicExpressionOpCode.NumericLiteral:
                     stack.Push().Fill(expression.GetNumericLiteral(instruction.PayloadIndex).Value);
