@@ -2,46 +2,34 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public abstract record ExpressionDraft
 {
-    public SymbolicExpression Compile()
+    public SymbolicExpression Build()
     {
-        var instructions = new List<ExpressionInstruction>();
-        var numericLiterals = new List<NumericLiteral>();
-        var variableReferences = new List<VariableReference>();
-        var variableIndexByName = new Dictionary<string, int>(StringComparer.Ordinal);
+        var symbols = new List<Symbol>();
 
-        Emit(this, instructions, numericLiterals, variableReferences, variableIndexByName);
+        Emit(this, symbols);
 
-        return SymbolicExpression.FromOwnedArrays(instructions.ToArray(), numericLiterals.ToArray(), variableReferences.ToArray());
+        return SymbolicExpression.Create(symbols);
     }
 
-    private static int Emit(ExpressionDraft draft, List<ExpressionInstruction> instructions, List<NumericLiteral> numericLiterals, List<VariableReference> variableReferences, Dictionary<string, int> variableIndexByName)
+    private static void Emit(ExpressionDraft draft, List<Symbol> symbols)
     {
         switch (draft)
         {
             case VariableDraft variable:
-                if (!variableIndexByName.TryGetValue(variable.Name, out var variableIndex))
-                {
-                    variableIndex = variableReferences.Count;
-                    variableIndexByName.Add(variable.Name, variableIndex);
-                    variableReferences.Add(new VariableReference(variable.Name, variableIndex));
-                }
-
-                instructions.Add(ExpressionInstruction.Variable(variableIndex));
-                return 1;
+                symbols.Add(new VariableSymbol(variable.Name));
+                return;
             case NumericLiteralDraft literal:
-                var literalIndex = numericLiterals.Count;
-                numericLiterals.Add(new NumericLiteral(literal.Value, literal.Kind));
-                instructions.Add(ExpressionInstruction.NumericLiteral(literalIndex));
-                return 1;
+                symbols.Add(new NumericLiteralSymbol(new NumericLiteral(literal.Value, literal.Kind)));
+                return;
             case UnaryDraft unary:
-                var childLength = Emit(unary.Child, instructions, numericLiterals, variableReferences, variableIndexByName);
-                instructions.Add(ExpressionInstruction.Unary(unary.OpCode, childLength));
-                return childLength + 1;
+                Emit(unary.Child, symbols);
+                symbols.Add(unary.Symbol);
+                return;
             case BinaryDraft binary:
-                var leftLength = Emit(binary.Left, instructions, numericLiterals, variableReferences, variableIndexByName);
-                var rightLength = Emit(binary.Right, instructions, numericLiterals, variableReferences, variableIndexByName);
-                instructions.Add(ExpressionInstruction.Binary(binary.OpCode, leftLength, rightLength));
-                return leftLength + rightLength + 1;
+                Emit(binary.Left, symbols);
+                Emit(binary.Right, symbols);
+                symbols.Add(binary.Symbol);
+                return;
             default:
                 throw new InvalidOperationException($"Unsupported expression draft node {draft.GetType()}.");
         }
@@ -51,9 +39,9 @@ public abstract record ExpressionDraft
 
     internal sealed record NumericLiteralDraft(double Value, NumericLiteralKind Kind) : ExpressionDraft;
 
-    internal sealed record UnaryDraft(SymbolicExpressionOpCode OpCode, ExpressionDraft Child) : ExpressionDraft;
+    internal sealed record UnaryDraft(Symbol Symbol, ExpressionDraft Child) : ExpressionDraft;
 
-    internal sealed record BinaryDraft(SymbolicExpressionOpCode OpCode, ExpressionDraft Left, ExpressionDraft Right) : ExpressionDraft;
+    internal sealed record BinaryDraft(Symbol Symbol, ExpressionDraft Left, ExpressionDraft Right) : ExpressionDraft;
 
     public static ExpressionDraft Variable(string name)
     {
@@ -67,17 +55,23 @@ public abstract record ExpressionDraft
 
     public static ExpressionDraft Parameter(double value) => new NumericLiteralDraft(value, NumericLiteralKind.Optimizable);
 
-    public static ExpressionDraft Add(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(SymbolicExpressionOpCode.Add, left, right);
+    public static ExpressionDraft Add(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(new AddSymbol(), left, right);
 
-    public static ExpressionDraft Subtract(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(SymbolicExpressionOpCode.Subtract, left, right);
+    public static ExpressionDraft Subtract(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(new SubtractSymbol(), left, right);
 
-    public static ExpressionDraft Multiply(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(SymbolicExpressionOpCode.Multiply, left, right);
+    public static ExpressionDraft Multiply(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(new MultiplySymbol(), left, right);
 
-    public static ExpressionDraft Divide(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(SymbolicExpressionOpCode.Divide, left, right);
+    public static ExpressionDraft Divide(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(new DivideSymbol(), left, right);
 
-    public static ExpressionDraft Log(ExpressionDraft child) => new UnaryDraft(SymbolicExpressionOpCode.Log, child);
+    public static ExpressionDraft Negate(ExpressionDraft child) => new UnaryDraft(new NegateSymbol(), child);
 
-    public static ExpressionDraft Sqrt(ExpressionDraft child) => new UnaryDraft(SymbolicExpressionOpCode.Sqrt, child);
+    public static ExpressionDraft Exp(ExpressionDraft child) => new UnaryDraft(new ExpSymbol(), child);
+
+    public static ExpressionDraft Log(ExpressionDraft child) => new UnaryDraft(new LogSymbol(), child);
+
+    public static ExpressionDraft Sqrt(ExpressionDraft child) => new UnaryDraft(new SqrtSymbol(), child);
+
+    public static ExpressionDraft Sigmoid(ExpressionDraft child) => new UnaryDraft(new SigmoidSymbol(), child);
 
     public static ExpressionDraft operator +(ExpressionDraft left, ExpressionDraft right) => Add(left, right);
 

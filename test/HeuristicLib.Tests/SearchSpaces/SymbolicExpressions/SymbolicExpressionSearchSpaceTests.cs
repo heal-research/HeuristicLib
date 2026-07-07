@@ -12,40 +12,39 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 10,
             maximumDepth: 5,
-            allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+            allowedSymbols: Symbols.BasicArithmetic,
             allowedVariables: ["x0", "x1"]);
 
         searchSpace.AllowsVariables.ShouldBeTrue();
         searchSpace.AllowsNumericLiterals.ShouldBeTrue();
-        searchSpace.AllowedTerminalSymbols.ShouldBe([
-            SymbolicExpressionOpCode.Variable,
-            SymbolicExpressionOpCode.NumericLiteral
+        searchSpace.AllowedTerminalSymbols.Select(symbol => symbol.GetType()).ShouldBe([
+            typeof(VariableSymbol),
+            typeof(NumericLiteralSymbol)
         ]);
         searchSpace.GetOperations(1).ShouldBe([
-            SymbolicExpressionOpCode.Log,
-            SymbolicExpressionOpCode.Sqrt
+            new LogSymbol(),
+            new SqrtSymbol()
         ]);
         searchSpace.GetOperations(2).ShouldBe([
-            SymbolicExpressionOpCode.Add,
-            SymbolicExpressionOpCode.Subtract,
-            SymbolicExpressionOpCode.Multiply,
-            SymbolicExpressionOpCode.Divide
+            new AddSymbol(),
+            new SubtractSymbol(),
+            new MultiplySymbol(),
+            new DivideSymbol()
         ]);
     }
 
     [Fact]
-    public void ContainsOperation_UsesCanonicalOperationArity()
+    public void ContainsOperation_UsesAllowedOperationSymbols()
     {
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 10,
             maximumDepth: 5,
-            allowedOperations: [SymbolicExpressionOpCode.Log],
+            allowedSymbols: [new LogSymbol()],
             allowedVariables: ["x0"]);
 
-        searchSpace.ContainsOperation(SymbolicExpressionOpCode.Log, arity: 1).ShouldBeTrue();
-        searchSpace.ContainsOperation(SymbolicExpressionOpCode.Log, arity: 2).ShouldBeFalse();
-        searchSpace.ContainsOperation(SymbolicExpressionOpCode.Sqrt, arity: 1).ShouldBeFalse();
-        searchSpace.ContainsOperation(SymbolicExpressionOpCode.Variable, arity: 0).ShouldBeFalse();
+        searchSpace.ContainsOperation(new LogSymbol()).ShouldBeTrue();
+        searchSpace.ContainsOperation(new SqrtSymbol()).ShouldBeFalse();
+        searchSpace.ContainsOperation(new VariableSymbol("x0")).ShouldBeFalse();
     }
 
     [Fact]
@@ -54,7 +53,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 5,
             maximumDepth: 3,
-            allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+            allowedSymbols: Symbols.BasicArithmetic,
             allowedVariables: ["x0", "x1"]);
         var expression = CreateLinearExpression();
 
@@ -67,7 +66,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 4,
             maximumDepth: 3,
-            allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+            allowedSymbols: Symbols.BasicArithmetic,
             allowedVariables: ["x0", "x1"]);
         var expression = CreateLinearExpression();
 
@@ -80,7 +79,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 5,
             maximumDepth: 2,
-            allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+            allowedSymbols: Symbols.BasicArithmetic,
             allowedVariables: ["x0", "x1"]);
         var expression = CreateLinearExpression();
 
@@ -93,7 +92,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 5,
             maximumDepth: 3,
-            allowedOperations: [SymbolicExpressionOpCode.Multiply],
+            allowedSymbols: [new MultiplySymbol()],
             allowedVariables: ["x0", "x1"]);
         var expression = CreateLinearExpression();
 
@@ -106,7 +105,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 5,
             maximumDepth: 3,
-            allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+            allowedSymbols: Symbols.BasicArithmetic,
             allowedVariables: ["x0"]);
         var expression = CreateLinearExpression();
 
@@ -119,9 +118,9 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,
-            allowedOperations: [],
+            allowedSymbols: [],
             allowedVariables: []);
-        var expression = Fixed(100.0).Compile();
+        var expression = Fixed(100.0).Build();
 
         searchSpace.Contains(expression).ShouldBeTrue();
     }
@@ -132,10 +131,10 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,
-            allowedOperations: [],
+            allowedSymbols: [],
             allowedVariables: ["x0"],
             allowNumericLiterals: false);
-        var expression = Fixed(100.0).Compile();
+        var expression = Fixed(100.0).Build();
 
         searchSpace.Contains(expression).ShouldBeFalse();
     }
@@ -146,7 +145,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,
-            allowedOperations: [],
+            allowedSymbols: [],
             allowedVariables: []);
 
         searchSpace.AllowsVariables.ShouldBeFalse();
@@ -159,7 +158,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,
-            allowedOperations: [],
+            allowedSymbols: [],
             allowedVariables: ["x0"]);
 
         searchSpace.AllowsVariables.ShouldBeTrue();
@@ -171,14 +170,14 @@ public sealed class SymbolicExpressionSearchSpaceTests
         Should.Throw<ArgumentException>(() => new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,
-            allowedOperations: [SymbolicExpressionOpCode.Add],
+            allowedSymbols: [new AddSymbol()],
             allowedVariables: [],
             allowNumericLiterals: false));
     }
 
     private static SymbolicExpression CreateLinearExpression()
     {
-        return (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
+        return (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
     }
 
 }

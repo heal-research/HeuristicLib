@@ -16,7 +16,7 @@ public class SymbolicRegressionRedesignSpecs
     [Fact]
     public void ExpressionDraft_AuthoringShape_BuildsX0PlusTwoTimesX1()
     {
-        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
 
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
         var root = expression.Root;
@@ -41,7 +41,7 @@ public class SymbolicRegressionRedesignSpecs
     {
         var data = CreateLinearRegressionData();
         var draft = Variable("x0") + Fixed(2.0) * Variable("x1");
-        var expression = draft.Compile();
+        var expression = draft.Build();
 
         var predictions = expression.Evaluate(data.TrainingInputs);
 
@@ -54,7 +54,7 @@ public class SymbolicRegressionRedesignSpecs
     [Fact]
     public void SymbolicExpression_AuthoringShape_NavigatesSubExpressionsAsTree()
     {
-        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
+        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
 
         var root = expression.Root;
         var left = root.Child(0);
@@ -62,10 +62,10 @@ public class SymbolicRegressionRedesignSpecs
         var rightLeft = right.Child(0);
         var rightRight = right.Child(1);
 
-        root.OpCode.ShouldBe(SymbolicExpressionOpCode.Add);
+        root.Symbol.ShouldBe(new AddSymbol());
         left.TryGetVariableReference(out var leftVariable).ShouldBeTrue();
         leftVariable.Name.ShouldBe("x0");
-        right.OpCode.ShouldBe(SymbolicExpressionOpCode.Multiply);
+        right.Symbol.ShouldBe(new MultiplySymbol());
         rightLeft.TryGetNumericLiteral(out var literal).ShouldBeTrue();
         rightRight.TryGetVariableReference(out var rightVariable).ShouldBeTrue();
         literal.ShouldBe(new NumericLiteral(2.0, NumericLiteralKind.Fixed));
@@ -85,7 +85,7 @@ public class SymbolicRegressionRedesignSpecs
           searchSpace: new SymbolicExpressionSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
-             allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+             allowedSymbols: Symbols.BasicArithmetic,
              allowedVariables: ["x0", "x1"]));
 
         problem.Metric.ShouldBe(Metrics.RMSE);
@@ -109,7 +109,7 @@ public class SymbolicRegressionRedesignSpecs
           searchSpace: new SymbolicExpressionSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
-             allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+             allowedSymbols: Symbols.BasicArithmetic,
              allowedVariables: ["x0", "x1"]));
 
         var algorithm = new GeneticAlgorithm<SymbolicExpression, SymbolicExpressionSearchSpace, SymbolicRegressionProblem>
@@ -151,10 +151,10 @@ public class SymbolicRegressionRedesignSpecs
           searchSpace: new SymbolicExpressionSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
-             allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+             allowedSymbols: Symbols.BasicArithmetic,
              allowedVariables: ["x0"]));
 
-        var rawExpression = (Parameter(1.0) + Variable("x0")).Compile();
+        var rawExpression = (Parameter(1.0) + Variable("x0")).Build();
 
         var evaluator = SymbolicExpressionEvaluator.OptimizeNumericParameters(
           maxIterations: 25,
@@ -188,7 +188,7 @@ public class SymbolicRegressionRedesignSpecs
           searchSpace: new SymbolicExpressionSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
-             allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+             allowedSymbols: Symbols.BasicArithmetic,
              allowedVariables: ["x0", "x1"]));
 
         var algorithm = new GeneticAlgorithm<SymbolicExpression, SymbolicExpressionSearchSpace, SymbolicRegressionProblem>

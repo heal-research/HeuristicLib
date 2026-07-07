@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Numerics.Tensors;
 
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
@@ -6,91 +7,80 @@ public static class SymbolicExpressionInterpreter
 {
     private const int DefaultBatchSize = 4096;
 
-    public static double Interpret(SymbolicExpression expression, ReadOnlySpan<double> variableValues)
+    public static double[] Interpret(CompiledSymbolicExpression expression, DataFrame data)
     {
-        if (variableValues.Length != expression.VariableReferenceCount)
-        {
-            throw new ArgumentException($"Expected {expression.VariableReferenceCount} variable values but received {variableValues.Length}.", nameof(variableValues));
-        }
-
-        var series = new KeyValuePair<string, Series<double>>[expression.VariableReferenceCount];
-        for (var i = 0; i < series.Length; i++)
-        {
-            var variable = expression.GetVariableReference(i);
-            series[i] = KeyValuePair.Create(variable.Name, Series<double>.FromOwnedArray([variableValues[variable.Index]], variable.Name));
-        }
-
-        Span<double> result = stackalloc double[1];
-        Interpret(expression, new DataFrame(series), result);
-        return result[0];
-    }
-
-    public static double Interpret(SymbolicExpression expression, IReadOnlyList<string> variableNames, IReadOnlyList<double> variableValues)
-    {
-        if (variableNames.Count != variableValues.Count)
-            throw new ArgumentException("Variable names and values must have the same count.", nameof(variableValues));
-
-        var row = new DataFrame(variableNames.Select((name, index) => KeyValuePair.Create(name, Series<double>.FromOwnedArray([variableValues[index]], name))));
-
-        Span<double> result = stackalloc double[1];
-        Interpret(expression, row, result);
-        return result[0];
-    }
-
-    public static double Interpret(SymbolicExpression expression, IReadOnlyDictionary<string, double> variableValues)
-    {
-        var row = new DataFrame(variableValues.Select(pair => KeyValuePair.Create(pair.Key, Series<double>.FromOwnedArray([pair.Value], pair.Key))));
-
-        Span<double> result = stackalloc double[1];
-        Interpret(expression, row, result);
-        return result[0];
-    }
-
-    public static double[] Interpret(SymbolicExpression expression, DataFrame data)
-    {
-        var result = new double[data.RowCount];
-        Interpret(expression, data, result);
+        var resolvedVariables = ResolveVariables(expression, data);
+        var rowCount = data.RowCount;
+        var result = new double[rowCount];
+        Interpret(expression, resolvedVariables, rowCount, result);
         return result;
     }
 
-    public static void Interpret(SymbolicExpression expression, DataFrame data, Span<double> destination)
+    public static void Interpret(CompiledSymbolicExpression expression, DataFrame data, Span<double> destination)
     {
-        Interpret(expression, data, destination, new double[GetWorkspaceLength(expression, data)]);
+        Interpret(expression, ResolveVariables(expression, data), data.RowCount, destination);
     }
 
-    public static void Interpret(SymbolicExpression expression, DataFrame data, Span<double> destination, Span<double> workspace)
+    public static void Interpret(CompiledSymbolicExpression expression, DataFrame data, Span<double> destination, Span<double> workspace)
     {
-        if (destination.Length < data.RowCount)
+        Interpret(expression, ResolveVariables(expression, data), data.RowCount, destination, workspace);
+    }
+
+    public static int GetWorkspaceLength(CompiledSymbolicExpression expression, DataFrame data) =>
+        GetWorkspaceLength(expression, data.RowCount);
+
+    private static void Interpret(CompiledSymbolicExpression expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination)
+    {
+        var workspaceLength = GetWorkspaceLength(expression, rowCount);
+        if (workspaceLength == 0)
         {
-            throw new ArgumentException($"Destination must contain at least {data.RowCount} values but contains {destination.Length}.", nameof(destination));
+            Interpret(expression, variables, rowCount, destination, []);
+            return;
         }
 
-        var workspaceLength = GetWorkspaceLength(expression, data);
+        var workspace = ArrayPool<double>.Shared.Rent(workspaceLength);
+        try
+        {
+            Interpret(expression, variables, rowCount, destination, workspace.AsSpan(0, workspaceLength));
+        }
+        finally
+        {
+            ArrayPool<double>.Shared.Return(workspace);
+        }
+    }
+
+    private static void Interpret(CompiledSymbolicExpression expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination, Span<double> workspace)
+    {
+        if (destination.Length < rowCount)
+        {
+            throw new ArgumentException($"Destination must contain at least {rowCount} values but contains {destination.Length}.", nameof(destination));
+        }
+
+        var workspaceLength = GetWorkspaceLength(expression, rowCount);
         if (workspace.Length < workspaceLength)
         {
             throw new ArgumentException($"Workspace must contain at least {workspaceLength} values but contains {workspace.Length}.", nameof(workspace));
         }
 
-        var variables = ResolveVariables(expression, data);
-        if (data.RowCount == 0)
+        if (rowCount == 0)
             return;
 
         Span<StackEntry> entries = expression.InstructionCount <= 256
             ? stackalloc StackEntry[expression.InstructionCount]
             : new StackEntry[expression.InstructionCount];
-        for (var batchStart = 0; batchStart < data.RowCount; batchStart += DefaultBatchSize)
+        for (var batchStart = 0; batchStart < rowCount; batchStart += DefaultBatchSize)
         {
-            var batchSize = Math.Min(DefaultBatchSize, data.RowCount - batchStart);
+            var batchSize = Math.Min(DefaultBatchSize, rowCount - batchStart);
             var stack = new EvaluationStack(workspace, entries, variables, batchStart, batchSize);
             Execute(expression, ref stack);
             stack.MaterializeResult(destination.Slice(batchStart, batchSize));
         }
     }
 
-    public static int GetWorkspaceLength(SymbolicExpression expression, DataFrame data) =>
-        GetWorkspaceSlotCount(expression) * Math.Min(data.RowCount, DefaultBatchSize);
+    private static int GetWorkspaceLength(CompiledSymbolicExpression expression, int rowCount) =>
+        GetWorkspaceSlotCount(expression) * Math.Min(rowCount, DefaultBatchSize);
 
-    private static int GetWorkspaceSlotCount(SymbolicExpression expression)
+    private static int GetWorkspaceSlotCount(CompiledSymbolicExpression expression)
     {
         Span<bool> vectorStack = expression.InstructionCount <= 256
             ? stackalloc bool[expression.InstructionCount]
@@ -110,6 +100,8 @@ public static class SymbolicExpressionInterpreter
                     break;
                 case SymbolicExpressionOpCode.Log:
                 case SymbolicExpressionOpCode.Sqrt:
+                case SymbolicExpressionOpCode.Negate:
+                case SymbolicExpressionOpCode.Exp:
                     var unaryOperandIsVector = vectorStack[--count];
                     if (unaryOperandIsVector)
                         maxWorkspaceSlots = Math.Max(maxWorkspaceSlots, count + 1);
@@ -131,19 +123,19 @@ public static class SymbolicExpressionInterpreter
         return maxWorkspaceSlots;
     }
 
-    private static Series<double>[] ResolveVariables(SymbolicExpression expression, DataFrame data)
+    private static ReadOnlyMemory<double>[] ResolveVariables(CompiledSymbolicExpression expression, DataFrame data)
     {
-        var variables = new Series<double>[expression.VariableReferenceCount];
+        var variables = new ReadOnlyMemory<double>[expression.VariableReferenceCount];
         for (var i = 0; i < variables.Length; i++)
         {
             var variable = expression.GetVariableReference(i);
-            variables[variable.Index] = data.GetDoubleSeries(variable.Name);
+            variables[variable.Index] = data.GetDoubleSeries(variable.Name).Values;
         }
 
         return variables;
     }
 
-    private static void Execute(SymbolicExpression expression, ref EvaluationStack stack)
+    private static void Execute(CompiledSymbolicExpression expression, ref EvaluationStack stack)
     {
         foreach (var instruction in expression.InstructionsInPostOrder)
         {
@@ -167,6 +159,12 @@ public static class SymbolicExpressionInterpreter
                 case SymbolicExpressionOpCode.Divide:
                     Divide(ref stack);
                     break;
+                case SymbolicExpressionOpCode.Negate:
+                    Negate(ref stack);
+                    break;
+                case SymbolicExpressionOpCode.Exp:
+                    Exp(ref stack);
+                    break;
                 case SymbolicExpressionOpCode.Log:
                     Log(ref stack);
                     break;
@@ -181,8 +179,6 @@ public static class SymbolicExpressionInterpreter
 
     private static void Add(ref EvaluationStack stack)
     {
-        // TODO: Consider fusing a deferred multiply operand with TensorPrimitives.MultiplyAdd.
-        // This requires representing multiplication as a lazy stack entry until Add consumes it.
         var right = stack.Pop();
         var left = stack.Pop();
 
@@ -273,6 +269,36 @@ public static class SymbolicExpressionInterpreter
         stack.PushWorkspace(slotIndex);
     }
 
+    private static void Negate(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(-value.Scalar);
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        var result = stack.WorkspaceSlot(slotIndex);
+        TensorPrimitives.Negate(stack.Vector(value), result);
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void Exp(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Exp(value.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        var result = stack.WorkspaceSlot(slotIndex);
+        TensorPrimitives.Exp(stack.Vector(value), result);
+        stack.PushWorkspace(slotIndex);
+    }
+
     private static void Log(ref EvaluationStack stack)
     {
         var value = stack.Pop();
@@ -306,13 +332,13 @@ public static class SymbolicExpressionInterpreter
     private ref struct EvaluationStack
     {
         private readonly Span<double> workspace;
-        private readonly ReadOnlySpan<Series<double>> variables;
+        private readonly ReadOnlySpan<ReadOnlyMemory<double>> variables;
         private readonly int batchStart;
         private readonly int batchSize;
         private readonly Span<StackEntry> entries;
         private int count;
 
-        public EvaluationStack(Span<double> workspace, Span<StackEntry> entries, ReadOnlySpan<Series<double>> variables, int batchStart, int batchSize)
+        public EvaluationStack(Span<double> workspace, Span<StackEntry> entries, ReadOnlySpan<ReadOnlyMemory<double>> variables, int batchStart, int batchSize)
         {
             this.workspace = workspace;
             this.entries = entries;
@@ -349,7 +375,7 @@ public static class SymbolicExpressionInterpreter
         {
             return entry.Kind switch
             {
-                StackEntryKind.Variable => variables[entry.Id].Values.Slice(batchStart, batchSize),
+                StackEntryKind.Variable => variables[entry.Id].Span.Slice(batchStart, batchSize),
                 StackEntryKind.Workspace => WorkspaceSlot(entry.Id),
                 _ => throw new InvalidOperationException("Scalar stack entries do not have vector values.")
             };

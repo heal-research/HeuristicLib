@@ -4,11 +4,11 @@ namespace HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 
 public sealed record SymbolicExpressionSearchSpace : SearchSpace<SymbolicExpression>
 {
-    private readonly Dictionary<int, SymbolicExpressionOpCode[]> operationsByArity;
-    private readonly HashSet<SymbolicExpressionOpCode> symbolSet;
+    private readonly Dictionary<int, Symbol[]> operationsByArity;
+    private readonly HashSet<Symbol> operationSet;
     private readonly HashSet<string> variableSet;
 
-    public SymbolicExpressionSearchSpace(int maximumLength, int maximumDepth, IEnumerable<SymbolicExpressionOpCode> allowedOperations, IEnumerable<string> allowedVariables, bool allowNumericLiterals = true)
+    public SymbolicExpressionSearchSpace(int maximumLength, int maximumDepth, IEnumerable<Symbol> allowedSymbols, IEnumerable<string> allowedVariables, bool allowNumericLiterals = true)
     {
         if (maximumLength <= 0)
             throw new ArgumentOutOfRangeException(nameof(maximumLength));
@@ -19,44 +19,40 @@ public sealed record SymbolicExpressionSearchSpace : SearchSpace<SymbolicExpress
         MaximumLength = maximumLength;
         MaximumDepth = maximumDepth;
         AllowedVariables = allowedVariables.Select(ValidateVariableName).Distinct(StringComparer.Ordinal).ToArray();
-        AllowedSymbols = BuildAllowedSymbols(allowedOperations, AllowedVariables, allowNumericLiterals);
-        AllowedTerminalSymbols = AllowedSymbols.Where(symbol => SymbolicExpressionOpCodes.GetMetadata(symbol).IsTerminal).ToArray();
+        AllowedSymbols = BuildAllowedSymbols(allowedSymbols, AllowedVariables, allowNumericLiterals);
+        AllowedTerminalSymbols = AllowedSymbols.Where(symbol => symbol.Arity == 0).ToArray();
 
-        symbolSet = AllowedSymbols.ToHashSet();
+        operationSet = AllowedSymbols.Where(symbol => symbol.Arity > 0).ToHashSet();
         variableSet = AllowedVariables.ToHashSet(StringComparer.Ordinal);
-        AllowsVariables = symbolSet.Contains(SymbolicExpressionOpCode.Variable);
-        AllowsNumericLiterals = symbolSet.Contains(SymbolicExpressionOpCode.NumericLiteral);
+        AllowsVariables = AllowedTerminalSymbols.Any(symbol => symbol is VariableSymbol);
+        AllowsNumericLiterals = AllowedTerminalSymbols.Any(symbol => symbol is NumericLiteralSymbol);
 
         ValidateTerminalConfiguration(AllowedTerminalSymbols);
 
         operationsByArity = AllowedSymbols
-            .Select(symbol => new AllowedSymbol(symbol, SymbolicExpressionOpCodes.GetMetadata(symbol)))
-            .Where(symbol => !symbol.Metadata.IsTerminal)
-            .GroupBy(symbol => symbol.Metadata.Arity, symbol => symbol.OpCode)
+            .Where(symbol => symbol.Arity > 0)
+            .GroupBy(symbol => symbol.Arity)
             .ToDictionary(group => group.Key, group => group.ToArray());
     }
 
     public int MaximumLength { get; }
     public int MaximumDepth { get; }
-    public IReadOnlyList<SymbolicExpressionOpCode> AllowedSymbols { get; }
-    public IReadOnlyList<SymbolicExpressionOpCode> AllowedTerminalSymbols { get; }
+    public IReadOnlyList<Symbol> AllowedSymbols { get; }
+    public IReadOnlyList<Symbol> AllowedTerminalSymbols { get; }
     public IReadOnlyList<string> AllowedVariables { get; }
     public bool AllowsVariables { get; }
     public bool AllowsNumericLiterals { get; }
 
-    public IReadOnlyList<SymbolicExpressionOpCode> GetOperations(int arity)
+    public IReadOnlyList<Symbol> GetOperations(int arity)
     {
         return operationsByArity.TryGetValue(arity, out var operations)
             ? operations
             : [];
     }
 
-    public bool ContainsOperation(SymbolicExpressionOpCode opCode, int arity)
+    public bool ContainsOperation(Symbol symbol)
     {
-        return SymbolicExpressionOpCodes.TryGetMetadata(opCode, out var metadata)
-               && metadata.Arity == arity
-               && !metadata.IsTerminal
-               && symbolSet.Contains(opCode);
+        return symbol.Arity > 0 && operationSet.Contains(symbol);
     }
 
     public bool ContainsVariable(string variableName)
@@ -69,30 +65,26 @@ public sealed record SymbolicExpressionSearchSpace : SearchSpace<SymbolicExpress
         if (genotype.Length > MaximumLength || genotype.Depth > MaximumDepth)
             return false;
 
-        for (var i = 0; i < genotype.InstructionCount; i++)
+        for (var i = 0; i < genotype.SymbolCount; i++)
         {
-            var instruction = genotype.GetInstruction(i);
-            if (!ContainsInstruction(genotype, instruction))
+            if (!ContainsSymbol(genotype.GetSymbol(i)))
                 return false;
         }
 
         return true;
     }
 
-    private bool ContainsInstruction(SymbolicExpression genotype, ExpressionInstruction instruction)
+    private bool ContainsSymbol(Symbol symbol)
     {
-        if (!SymbolicExpressionOpCodes.TryGetMetadata(instruction.OpCode, out var metadata) || metadata.Arity != instruction.Arity || !symbolSet.Contains(instruction.OpCode))
-            return false;
-
-        return metadata.PayloadKind switch
+        return symbol switch
         {
-            SymbolicExpressionPayloadKind.VariableReference => ContainsVariable(genotype.GetVariableReference(instruction.PayloadIndex).Name),
-            SymbolicExpressionPayloadKind.NumericLiteral => true,
-            _ => true
+            VariableSymbol variable => AllowsVariables && ContainsVariable(variable.VariableName),
+            NumericLiteralSymbol => AllowsNumericLiterals,
+            _ => operationSet.Contains(symbol)
         };
     }
 
-    private static void ValidateTerminalConfiguration(IReadOnlyList<SymbolicExpressionOpCode> allowedTerminalSymbols)
+    private static void ValidateTerminalConfiguration(IReadOnlyList<Symbol> allowedTerminalSymbols)
     {
         if (allowedTerminalSymbols.Count == 0)
             throw new ArgumentException("At least one terminal symbol must be allowed.", nameof(allowedTerminalSymbols));
@@ -106,34 +98,24 @@ public sealed record SymbolicExpressionSearchSpace : SearchSpace<SymbolicExpress
         return variableName;
     }
 
-    private static SymbolicExpressionOpCode ValidateSymbol(SymbolicExpressionOpCode symbol)
+    private static Symbol[] BuildAllowedSymbols(IEnumerable<Symbol> allowedSymbols, IReadOnlyList<string> allowedVariables, bool allowNumericLiterals)
     {
-        return SymbolicExpressionOpCodes.IsSupported(symbol)
-            ? symbol
-            : throw new ArgumentException($"Unsupported symbolic expression symbol {symbol}.");
-    }
-
-    private static SymbolicExpressionOpCode ValidateOperation(SymbolicExpressionOpCode symbol)
-    {
-        symbol = ValidateSymbol(symbol);
-        if (SymbolicExpressionOpCodes.IsTerminal(symbol))
-            throw new ArgumentException($"Terminal symbol {symbol} must not be supplied as an allowed operation.");
-
-        return symbol;
-    }
-
-    private static SymbolicExpressionOpCode[] BuildAllowedSymbols(IEnumerable<SymbolicExpressionOpCode> allowedOperations, IReadOnlyList<string> allowedVariables, bool allowNumericLiterals)
-    {
-        var symbols = new List<SymbolicExpressionOpCode>();
+        var symbols = new List<Symbol>();
         if (allowedVariables.Count > 0)
-            symbols.Add(SymbolicExpressionOpCode.Variable);
+            symbols.Add(new VariableSymbol(allowedVariables[0]));
 
         if (allowNumericLiterals)
-            symbols.Add(SymbolicExpressionOpCode.NumericLiteral);
+            symbols.Add(new NumericLiteralSymbol(new NumericLiteral(0.0, NumericLiteralKind.Optimizable)));
 
-        symbols.AddRange(allowedOperations.Select(ValidateOperation));
+        symbols.AddRange(allowedSymbols.Select(ValidateOperation));
         return symbols.Distinct().ToArray();
     }
 
-    private readonly record struct AllowedSymbol(SymbolicExpressionOpCode OpCode, SymbolicExpressionOpCodeMetadata Metadata);
+    private static Symbol ValidateOperation(Symbol symbol)
+    {
+        if (symbol.Arity == 0)
+            throw new ArgumentException($"Terminal symbol {symbol.Name} must not be supplied as an allowed operation.", nameof(symbol));
+
+        return symbol;
+    }
 }

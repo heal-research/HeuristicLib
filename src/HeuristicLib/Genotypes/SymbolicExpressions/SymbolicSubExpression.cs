@@ -4,26 +4,25 @@ public readonly struct SymbolicSubExpression
 {
     private readonly SymbolicExpression expression;
     private readonly int startIndex;
-    private readonly int rootInstructionIndex;
+    private readonly int rootSymbolIndex;
 
     internal SymbolicSubExpression(
         SymbolicExpression expression,
         int startIndex,
         int length,
-        int rootInstructionIndex)
+        int rootSymbolIndex)
     {
         this.expression = expression;
         this.startIndex = startIndex;
         Length = length;
-        this.rootInstructionIndex = rootInstructionIndex;
+        this.rootSymbolIndex = rootSymbolIndex;
     }
 
     public int Length { get; }
-    public ExpressionInstruction Instruction => expression.GetInstruction(rootInstructionIndex);
-    public SymbolicExpressionOpCode OpCode => Instruction.OpCode;
-    public int Arity => Instruction.Arity;
-    public int SubtreeLength => Instruction.SubtreeLength;
-    public SymbolicExpressionLocation Location => new(rootInstructionIndex);
+    public Symbol Symbol => expression.GetSymbol(rootSymbolIndex);
+    public int Arity => Symbol.Arity;
+    public int SubtreeLength => Length;
+    public SymbolicExpressionLocation Location => new(rootSymbolIndex);
 
     public IEnumerable<SymbolicSubExpression> TraverseChildren() => EnumerateChildren();
     public IEnumerable<SymbolicSubExpression> TraversePreOrder() => EnumeratePreOrder();
@@ -32,43 +31,33 @@ public readonly struct SymbolicSubExpression
 
     public SymbolicSubExpression Child(int index)
     {
-        if ((uint)index >= (uint)Arity)
-        {
-            throw new ArgumentOutOfRangeException(nameof(index));
-        }
-
-        var childRootIndex = rootInstructionIndex - 1;
-        for (var i = Arity - 1; i > index; i--)
-        {
-            childRootIndex -= expression.GetInstruction(childRootIndex).SubtreeLength;
-        }
-
-        var childRoot = expression.GetInstruction(childRootIndex);
-        var childStartIndex = childRootIndex - childRoot.SubtreeLength + 1;
-        return new SymbolicSubExpression(expression, childStartIndex, childRoot.SubtreeLength, childRootIndex);
+        var childRootIndex = expression.GetChildRootIndex(rootSymbolIndex, index);
+        var childLength = expression.GetSubtreeLength(childRootIndex);
+        var childStartIndex = childRootIndex - childLength + 1;
+        return new SymbolicSubExpression(expression, childStartIndex, childLength, childRootIndex);
     }
 
     public bool TryGetNumericLiteral(out NumericLiteral numericLiteral)
     {
-        if (Instruction.OpCode != SymbolicExpressionOpCode.NumericLiteral)
+        if (Symbol is not NumericLiteralSymbol literal)
         {
             numericLiteral = default;
             return false;
         }
 
-        numericLiteral = expression.GetNumericLiteral(Instruction.PayloadIndex);
+        numericLiteral = literal.Literal;
         return true;
     }
 
     public bool TryGetVariableReference(out VariableReference variableReference)
     {
-        if (Instruction.OpCode != SymbolicExpressionOpCode.Variable)
+        if (Symbol is not VariableSymbol variable)
         {
             variableReference = default;
             return false;
         }
 
-        variableReference = expression.GetVariableReference(Instruction.PayloadIndex);
+        variableReference = new VariableReference(variable.VariableName, 0);
         return true;
     }
 
@@ -91,7 +80,7 @@ public readonly struct SymbolicSubExpression
     private IEnumerable<SymbolicSubExpression> EnumeratePreOrder()
     {
         var stack = new Stack<int>();
-        stack.Push(rootInstructionIndex);
+        stack.Push(rootSymbolIndex);
 
         while (stack.Count > 0)
         {
@@ -104,93 +93,49 @@ public readonly struct SymbolicSubExpression
     private IEnumerable<SymbolicSubExpression> EnumerateBreadthFirstOrder()
     {
         var queue = new Queue<int>();
-        queue.Enqueue(rootInstructionIndex);
+        queue.Enqueue(rootSymbolIndex);
 
         while (queue.Count > 0)
         {
             var nodeIndex = queue.Dequeue();
             yield return CreateSubExpression(nodeIndex);
-
             EnqueueChildrenLeftToRight(queue, nodeIndex);
         }
     }
 
     private void PushChildrenRightToLeft(Stack<int> stack, int nodeIndex)
     {
-        var arity = expression.GetInstruction(nodeIndex).Arity;
-        var rightRootIndex = nodeIndex - 1;
-        switch (arity)
-        {
-            case 0:
-                return;
-            case 1:
-                stack.Push(rightRootIndex);
-                return;
-            case 2:
-                stack.Push(rightRootIndex);
-                stack.Push(rightRootIndex - expression.GetInstruction(rightRootIndex).SubtreeLength);
-                return;
-            default:
-                PushChildrenRightToLeftFallback(stack, arity, rightRootIndex);
-                return;
-        }
-    }
-
-    private void EnqueueChildrenLeftToRight(Queue<int> queue, int nodeIndex)
-    {
-        var arity = expression.GetInstruction(nodeIndex).Arity;
-        var rightRootIndex = nodeIndex - 1;
-        switch (arity)
-        {
-            case 0:
-                return;
-            case 1:
-                queue.Enqueue(rightRootIndex);
-                return;
-            case 2:
-                queue.Enqueue(rightRootIndex - expression.GetInstruction(rightRootIndex).SubtreeLength);
-                queue.Enqueue(rightRootIndex);
-                return;
-            default:
-                EnqueueChildrenLeftToRightFallback(queue, arity, rightRootIndex);
-                return;
-        }
-    }
-
-    private void PushChildrenRightToLeftFallback(Stack<int> stack, int arity, int rightRootIndex)
-    {
-        var childRootIndices = GetChildRootIndices(arity, rightRootIndex);
+        var childRootIndices = GetChildRootIndices(nodeIndex);
         for (var i = childRootIndices.Length - 1; i >= 0; i--)
         {
             stack.Push(childRootIndices[i]);
         }
     }
 
-    private void EnqueueChildrenLeftToRightFallback(Queue<int> queue, int arity, int rightRootIndex)
+    private void EnqueueChildrenLeftToRight(Queue<int> queue, int nodeIndex)
     {
-        foreach (var childRootIndex in GetChildRootIndices(arity, rightRootIndex))
+        foreach (var childRootIndex in GetChildRootIndices(nodeIndex))
         {
             queue.Enqueue(childRootIndex);
         }
     }
 
-    private int[] GetChildRootIndices(int arity, int rightRootIndex)
+    private int[] GetChildRootIndices(int nodeIndex)
     {
+        var arity = expression.GetSymbol(nodeIndex).Arity;
         var childRootIndices = new int[arity];
-        var childRootIndex = rightRootIndex;
-        for (var i = arity - 1; i >= 0; i--)
+        for (var i = 0; i < arity; i++)
         {
-            childRootIndices[i] = childRootIndex;
-            childRootIndex -= expression.GetInstruction(childRootIndex).SubtreeLength;
+            childRootIndices[i] = expression.GetChildRootIndex(nodeIndex, i);
         }
 
         return childRootIndices;
     }
 
-    private SymbolicSubExpression CreateSubExpression(int instructionIndex)
+    private SymbolicSubExpression CreateSubExpression(int symbolIndex)
     {
-        var instruction = expression.GetInstruction(instructionIndex);
-        var start = instructionIndex - instruction.SubtreeLength + 1;
-        return new SymbolicSubExpression(expression, start, instruction.SubtreeLength, instructionIndex);
+        var length = expression.GetSubtreeLength(symbolIndex);
+        var start = symbolIndex - length + 1;
+        return new SymbolicSubExpression(expression, start, length, symbolIndex);
     }
 }

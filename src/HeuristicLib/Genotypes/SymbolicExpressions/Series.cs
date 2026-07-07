@@ -14,7 +14,7 @@ public sealed class Series<T> : IEquatable<Series<T>>
 
     public string? Name { get; }
     public int Count => values.Length;
-    public ReadOnlySpan<T> Values => values;
+    public ReadOnlyMemory<T> Values => values;
 
     public static Series<T> Create(IEnumerable<T> values, string? name = null) =>
         new(values.ToArray(), takeOwnership: true, name);

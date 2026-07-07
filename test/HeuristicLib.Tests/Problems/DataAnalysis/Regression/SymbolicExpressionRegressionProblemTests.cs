@@ -160,7 +160,7 @@ public sealed class SymbolicExpressionRegressionProblemTests
     }
 
     private static SymbolicExpression CreateLinearExpression() =>
-        (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
+        (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
 
     private static RegressionData CreateLinearRegressionData() =>
         RegressionData.Training(

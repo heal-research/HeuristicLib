@@ -30,20 +30,20 @@ public sealed class SymbolicExpressionRegressionProblem
     public ObjectiveVector Evaluate(SymbolicExpression expression)
     {
         var predictions = Predict(expression);
-        return new ObjectiveVector(Metric.Evaluate(predictions, Data.TrainingTarget.Values));
+        return new ObjectiveVector(Metric.Evaluate(predictions, Data.TrainingTarget.Values.Span));
     }
 
     public ObjectiveVector EvaluateValidation(SymbolicExpression expression)
     {
         var predictions = PredictValidation(expression);
         var target = Data.ValidationTarget ?? throw new InvalidOperationException("Validation data is not available.");
-        return new ObjectiveVector(Metric.Evaluate(predictions, target.Values));
+        return new ObjectiveVector(Metric.Evaluate(predictions, target.Values.Span));
     }
 
     public ObjectiveVector EvaluateTest(SymbolicExpression expression)
     {
         var predictions = PredictTest(expression);
         var target = Data.TestTarget ?? throw new InvalidOperationException("Test data is not available.");
-        return new ObjectiveVector(Metric.Evaluate(predictions, target.Values));
+        return new ObjectiveVector(Metric.Evaluate(predictions, target.Values.Span));
     }
 }

@@ -35,21 +35,21 @@ public static class NodeReplacementMutation
 
     public static SymbolicExpression Mutate(SymbolicExpression parent, IRandomNumberGenerator random, SymbolicExpressionSearchSpace searchSpace, SymbolicExpressionSamplingProfile samplingProfile)
     {
-        var instructionIndex = random.NextInt(parent.InstructionCount);
-        var instruction = parent.GetInstruction(instructionIndex);
-        var location = new SymbolicExpressionLocation(instructionIndex);
-        return instruction.Arity == 0
+        var symbolIndex = random.NextInt(parent.SymbolCount);
+        var symbol = parent.GetSymbol(symbolIndex);
+        var location = new SymbolicExpressionLocation(symbolIndex);
+        return symbol.Arity == 0
             ? ReplaceTerminal(parent, location, random, searchSpace, samplingProfile)
-            : ReplaceNonTerminal(parent, location, instruction, random, searchSpace);
+            : ReplaceNonTerminal(parent, location, symbol, random, searchSpace);
     }
 
     private static SymbolicExpression ReplaceTerminal(SymbolicExpression parent, SymbolicExpressionLocation location, IRandomNumberGenerator random, SymbolicExpressionSearchSpace searchSpace, SymbolicExpressionSamplingProfile samplingProfile)
     {
         var symbol = searchSpace.AllowedTerminalSymbols[random.NextInt(searchSpace.AllowedTerminalSymbols.Count)];
-        return SymbolicExpressionOpCodes.GetPayloadKind(symbol) switch
+        return symbol switch
         {
-            SymbolicExpressionPayloadKind.VariableReference => ReplaceWithVariable(parent, location, random, searchSpace),
-            SymbolicExpressionPayloadKind.NumericLiteral => ReplaceWithNumericLiteral(parent, location, random, samplingProfile),
+            VariableSymbol => ReplaceWithVariable(parent, location, random, searchSpace),
+            NumericLiteralSymbol => ReplaceWithNumericLiteral(parent, location, random, samplingProfile),
             _ => throw new InvalidOperationException($"Unsupported terminal symbol {symbol}.")
         };
     }
@@ -65,14 +65,14 @@ public static class NodeReplacementMutation
         return parent.WithNumericLiteral(location, new NumericLiteral(samplingProfile.NumericLiteralInitializationDistribution.Sample(random), NumericLiteralKind.Optimizable));
     }
 
-    private static SymbolicExpression ReplaceNonTerminal(SymbolicExpression parent, SymbolicExpressionLocation location, ExpressionInstruction instruction, IRandomNumberGenerator random, SymbolicExpressionSearchSpace searchSpace)
+    private static SymbolicExpression ReplaceNonTerminal(SymbolicExpression parent, SymbolicExpressionLocation location, Symbol symbol, IRandomNumberGenerator random, SymbolicExpressionSearchSpace searchSpace)
     {
-        return parent.WithOpCode(location, SelectOperationReplacement(instruction, random, searchSpace));
+        return parent.WithSymbol(location, SelectOperationReplacement(symbol, random, searchSpace));
     }
 
-    private static SymbolicExpressionOpCode SelectOperationReplacement(ExpressionInstruction instruction, IRandomNumberGenerator random, SymbolicExpressionSearchSpace searchSpace)
+    private static Symbol SelectOperationReplacement(Symbol symbol, IRandomNumberGenerator random, SymbolicExpressionSearchSpace searchSpace)
     {
-        var operations = searchSpace.GetOperations(instruction.Arity);
+        var operations = searchSpace.GetOperations(symbol.Arity);
         return operations[random.NextInt(operations.Count)];
     }
 

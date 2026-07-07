@@ -22,12 +22,10 @@ public sealed class SymbolicExpressionOpCodesTests
     }
 
     [Fact]
-    public void Terminals_ReturnsTerminalSymbols()
+    public void IsTerminal_RecognizesPayloadTerminals()
     {
-        SymbolicExpressionOpCodes.Terminals.ShouldBe([
-            SymbolicExpressionOpCode.Variable,
-            SymbolicExpressionOpCode.NumericLiteral
-        ]);
-        SymbolicExpressionOpCodes.Terminals.ShouldAllBe(opCode => SymbolicExpressionOpCodes.IsTerminal(opCode));
+        SymbolicExpressionOpCodes.IsTerminal(SymbolicExpressionOpCode.Variable).ShouldBeTrue();
+        SymbolicExpressionOpCodes.IsTerminal(SymbolicExpressionOpCode.NumericLiteral).ShouldBeTrue();
+        SymbolicExpressionOpCodes.IsTerminal(SymbolicExpressionOpCode.Add).ShouldBeFalse();
     }
 }

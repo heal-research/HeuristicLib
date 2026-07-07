@@ -9,6 +9,8 @@ public enum SymbolicExpressionOpCode : ushort
     Subtract = 11,
     Multiply = 12,
     Divide = 13,
+    Negate = 14,
+    Exp = 15,
     Log = 20,
     Sqrt = 21
 }

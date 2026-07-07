@@ -14,34 +14,6 @@ internal readonly record struct SymbolicExpressionOpCodeMetadata(int Arity, Symb
 
 public static class SymbolicExpressionOpCodes
 {
-    public static IReadOnlyList<SymbolicExpressionOpCode> All { get; } =
-    [
-        SymbolicExpressionOpCode.Variable,
-        SymbolicExpressionOpCode.NumericLiteral,
-        SymbolicExpressionOpCode.Add,
-        SymbolicExpressionOpCode.Subtract,
-        SymbolicExpressionOpCode.Multiply,
-        SymbolicExpressionOpCode.Divide,
-        SymbolicExpressionOpCode.Log,
-        SymbolicExpressionOpCode.Sqrt
-    ];
-
-    public static IReadOnlyList<SymbolicExpressionOpCode> Terminals { get; } =
-    [
-        SymbolicExpressionOpCode.Variable,
-        SymbolicExpressionOpCode.NumericLiteral
-    ];
-
-    public static IReadOnlyList<SymbolicExpressionOpCode> BasicArithmetic { get; } =
-    [
-        SymbolicExpressionOpCode.Add,
-        SymbolicExpressionOpCode.Subtract,
-        SymbolicExpressionOpCode.Multiply,
-        SymbolicExpressionOpCode.Divide,
-        SymbolicExpressionOpCode.Log,
-        SymbolicExpressionOpCode.Sqrt
-    ];
-
     public static bool IsSupported(SymbolicExpressionOpCode opCode)
     {
         return TryGetMetadata(opCode, out _);
@@ -107,6 +79,8 @@ public static class SymbolicExpressionOpCodes
             SymbolicExpressionOpCode.Subtract => new SymbolicExpressionOpCodeMetadata(2, SymbolicExpressionPayloadKind.None),
             SymbolicExpressionOpCode.Multiply => new SymbolicExpressionOpCodeMetadata(2, SymbolicExpressionPayloadKind.None),
             SymbolicExpressionOpCode.Divide => new SymbolicExpressionOpCodeMetadata(2, SymbolicExpressionPayloadKind.None),
+            SymbolicExpressionOpCode.Negate => new SymbolicExpressionOpCodeMetadata(1, SymbolicExpressionPayloadKind.None),
+            SymbolicExpressionOpCode.Exp => new SymbolicExpressionOpCodeMetadata(1, SymbolicExpressionPayloadKind.None),
             SymbolicExpressionOpCode.Log => new SymbolicExpressionOpCodeMetadata(1, SymbolicExpressionPayloadKind.None),
             SymbolicExpressionOpCode.Sqrt => new SymbolicExpressionOpCodeMetadata(1, SymbolicExpressionPayloadKind.None),
             _ => default
@@ -118,6 +92,8 @@ public static class SymbolicExpressionOpCodes
                          or SymbolicExpressionOpCode.Subtract
                          or SymbolicExpressionOpCode.Multiply
                          or SymbolicExpressionOpCode.Divide
+                         or SymbolicExpressionOpCode.Negate
+                         or SymbolicExpressionOpCode.Exp
                          or SymbolicExpressionOpCode.Log
                          or SymbolicExpressionOpCode.Sqrt;
     }

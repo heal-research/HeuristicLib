@@ -13,7 +13,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_ReplacesOperationWithSameArityOperationFromSearchSpace()
     {
-        var parent = (Variable("x0") + Fixed(2.0) * Variable("x1")).Compile();
+        var parent = (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
         var searchSpace = CreateSearchSpace(["x0", "x1"]);
 
         var mutant = NodeReplacementMutation.Mutate(
@@ -23,14 +23,14 @@ public sealed class NodeReplacementMutatorTests
 
         parent.ToInfixString().ShouldBe("(x0 + (2 * x1))");
         mutant.ToInfixString().ShouldBe("(x0 - (2 * x1))");
-        mutant.Evaluate(["x0", "x1"], [1.0, 3.0]).ShouldBe(-5.0);
+        mutant.EvaluateSingleRow(("x0", 1.0), ("x1", 3.0)).ShouldBe(-5.0);
         searchSpace.Contains(mutant).ShouldBeTrue();
     }
 
     [Fact]
     public void Mutate_ReplacesVariableWithAllowedVariable()
     {
-        var parent = Variable("x0").Compile();
+        var parent = Variable("x0").Build();
         var searchSpace = CreateSearchSpace(["x0", "x1"]);
 
         var mutant = NodeReplacementMutation.Mutate(
@@ -45,27 +45,27 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_UsesInstanceEntryPointWithSearchSpace()
     {
-        var parent = Sqrt(Variable("x0")).Compile();
+        var parent = Sqrt(Variable("x0")).Build();
         var searchSpace = CreateSearchSpace(["x0"]);
 
         var mutant = new NodeReplacementMutator()
           .Mutate(parent, new SequenceRandomNumberGenerator(0.9, 0.0), searchSpace);
 
         mutant.ToInfixString().ShouldBe("log(x0)");
-        mutant.Evaluate(["x0"], [Math.E]).ShouldBe(1.0, tolerance: 1e-12);
+        mutant.EvaluateSingleRow(("x0", Math.E)).ShouldBe(1.0, tolerance: 1e-12);
     }
 
     [Fact]
     public void Mutate_OnlyUsesOperationsAllowedBySearchSpace()
     {
-        var parent = (Fixed(1.0) * Fixed(2.0)).Compile();
+        var parent = (Fixed(1.0) * Fixed(2.0)).Build();
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 10,
             maximumDepth: 5,
-            allowedOperations:
+            allowedSymbols:
             [
-                SymbolicExpressionOpCode.Add,
-                SymbolicExpressionOpCode.Multiply
+                new AddSymbol(),
+                new MultiplySymbol()
             ],
             allowedVariables: []);
 
@@ -81,7 +81,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_AllowsNullMutation()
     {
-        var parent = Variable("x0").Compile();
+        var parent = Variable("x0").Build();
         var searchSpace = CreateSearchSpace(["x0", "x1"]);
 
         var mutant = NodeReplacementMutation.Mutate(
@@ -96,7 +96,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_ReplacesNumericLiteralWithAllowedVariable()
     {
-        var parent = Fixed(100.0).Compile();
+        var parent = Fixed(100.0).Build();
         var searchSpace = CreateSearchSpace(["x0"]);
 
         var mutant = NodeReplacementMutation.Mutate(
@@ -111,7 +111,7 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_ReplacesVariableWithNumericLiteral()
     {
-        var parent = Variable("x0").Compile();
+        var parent = Variable("x0").Build();
         var searchSpace = CreateSearchSpace(["x0"]);
         var samplingProfile = new SymbolicExpressionSamplingProfile
         {
@@ -131,11 +131,11 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_UsesVariableTerminalWhenOnlyVariablesAreAvailable()
     {
-        var parent = Variable("x0").Compile();
+        var parent = Variable("x0").Build();
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,
-            allowedOperations: [],
+            allowedSymbols: [],
             allowedVariables: ["x0", "x1"],
             allowNumericLiterals: false);
 
@@ -151,11 +151,11 @@ public sealed class NodeReplacementMutatorTests
     [Fact]
     public void Mutate_UsesNumericLiteralTerminalWhenOnlyNumericLiteralsAreAvailable()
     {
-        var parent = Fixed(1.0).Compile();
+        var parent = Fixed(1.0).Build();
         var searchSpace = new SymbolicExpressionSearchSpace(
             maximumLength: 1,
             maximumDepth: 1,
-            allowedOperations: [],
+            allowedSymbols: [],
             allowedVariables: []);
         var samplingProfile = new SymbolicExpressionSamplingProfile
         {
@@ -177,7 +177,7 @@ public sealed class NodeReplacementMutatorTests
         return new SymbolicExpressionSearchSpace(
             maximumLength: 20,
             maximumDepth: 10,
-            allowedOperations: SymbolicExpressionOpCodes.BasicArithmetic,
+            allowedSymbols: Symbols.BasicArithmetic,
             allowedVariables: variables);
     }
 }
