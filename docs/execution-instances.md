@@ -36,6 +36,18 @@ Important properties:
 
 That means ordinary authoring code can resolve the execution instances it needs without depending on the full registry API.
 
+## Registry replacements
+
+Advanced execution plumbing can register explicit registry entries before resolving a configuration.
+
+`RegisterInstance(...)` stores an already created execution instance for a configuration identity. This is useful when infrastructure code already owns the instance that should be reused by later resolution.
+
+`RegisterReplacement(...)` stores a replacement configuration for a configuration identity. When the original configuration is resolved, the registry creates the execution instance from the replacement configuration and stores it under the original identity.
+
+Replacement configurations may resolve the original configuration while they are being created. This supports wrapper scenarios such as observable operators, counted operators and measured operators. The registry detects that the original is already being replaced and creates the original execution instance directly for the wrapper.
+
+Most users should not call these methods directly. They are intended for meta-algorithms, observation installation and other advanced execution infrastructure.
+
 ## Eager local resolution
 
 The current intended model is eager, local resolution:

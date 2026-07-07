@@ -70,7 +70,7 @@ public sealed class ObservationPlan
 
         public override void Install(ExecutionInstanceRegistry registry)
         {
-            registry.PreRegister(Operator, createObservable(Operator, observers));
+            registry.RegisterReplacement(Operator, createObservable(Operator, observers));
         }
     }
 }

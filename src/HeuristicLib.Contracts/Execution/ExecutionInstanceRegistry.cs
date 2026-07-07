@@ -54,18 +54,16 @@ public class ExecutionInstanceRegistry : IExecutionInstanceResolver
     }
 
     public TExecutionInstance Resolve<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable)
-      where TExecutionInstance : class, IExecutionInstance
+        where TExecutionInstance : class, IExecutionInstance
     {
-        IExecutionInstanceResolvable<IExecutionInstance> untypedResolvable = resolvable;
-
-        if (registry.TryGetValue(untypedResolvable, out var localInstance))
+        if (registry.TryGetValue(resolvable, out var localInstance))
         {
             return (TExecutionInstance)localInstance;
         }
 
-        if (TryGetReplacementResolvable(untypedResolvable, out var replacementResolvable))
+        if (TryGetReplacementResolvable(resolvable, out var replacementResolvable))
         {
-            if (!resolvablesBeingCreated.Add(untypedResolvable))
+            if (!resolvablesBeingCreated.Add(resolvable))
             {
                 return resolvable.CreateExecutionInstance(this);
             }
@@ -73,42 +71,45 @@ public class ExecutionInstanceRegistry : IExecutionInstanceResolver
             try
             {
                 var createdInstance = replacementResolvable.CreateExecutionInstance(this);
-                registry.Add(untypedResolvable, createdInstance);
+                StoreInstance(resolvable, createdInstance);
                 return (TExecutionInstance)createdInstance;
             }
             finally
             {
-                resolvablesBeingCreated.Remove(untypedResolvable);
+                resolvablesBeingCreated.Remove(resolvable);
             }
         }
 
-        if (parentRegistry is not null && parentRegistry.TryResolve(untypedResolvable, out var parentInstance))
+        if (parentRegistry is not null && parentRegistry.TryResolve(resolvable, out var parentInstance))
         {
             return (TExecutionInstance)parentInstance;
         }
 
         var instance = resolvable.CreateExecutionInstance(this);
-        registry.Add(untypedResolvable, instance);
+        StoreInstance(resolvable, instance);
         return instance;
     }
 
-    public void PreRegister<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, TExecutionInstance instance)
-      where TExecutionInstance : class, IExecutionInstance
+    public void RegisterInstance<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, TExecutionInstance instance)
+        where TExecutionInstance : class, IExecutionInstance
     {
-        IExecutionInstanceResolvable<IExecutionInstance> untypedResolvable = resolvable;
-        if (!registry.TryAdd(untypedResolvable, instance))
+        StoreInstance(resolvable, instance);
+    }
+
+    private void StoreInstance(IExecutionInstanceResolvable<IExecutionInstance> resolvable, IExecutionInstance instance)
+    {
+        if (!registry.TryAdd(resolvable, instance))
         {
-            throw new InvalidOperationException("Object has already been registered");
+            throw new InvalidOperationException("Execution instance has already been registered for this resolvable.");
         }
     }
 
-    public void PreRegister<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, IExecutionInstanceResolvable<TExecutionInstance> replacementResolvable)
-      where TExecutionInstance : class, IExecutionInstance
+    public void RegisterReplacement<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, IExecutionInstanceResolvable<TExecutionInstance> replacementResolvable)
+        where TExecutionInstance : class, IExecutionInstance
     {
-        IExecutionInstanceResolvable<IExecutionInstance> untypedResolvable = resolvable;
-        if (!replacementResolvables.TryAdd(untypedResolvable, replacementResolvable))
+        if (!replacementResolvables.TryAdd(resolvable, replacementResolvable))
         {
-            throw new InvalidOperationException("Replacement resolvable has already been registered");
+            throw new InvalidOperationException("Replacement has already been registered for this resolvable.");
         }
     }
 }

@@ -38,7 +38,7 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem
         var duration = new ObservationDuration();
         var measuredOperator = MeasuredOperatorFactory(ObservedOperator, duration, TimeProvider);
         var childRegistry = instanceRegistry.CreateChildRegistry();
-        childRegistry.PreRegister(ObservedOperator, measuredOperator);
+        childRegistry.RegisterReplacement(ObservedOperator, measuredOperator);
 
         return new OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(
             childRegistry.Resolve(Algorithm),

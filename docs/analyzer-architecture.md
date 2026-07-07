@@ -188,7 +188,7 @@ Those entries:
 
 - identify the original operator they belong to
 - merge multiple analyzer subscriptions for the same operator
-- pre-register one observable replacement into an `ExecutionInstanceRegistry`
+- register one observable replacement into an `ExecutionInstanceRegistry`
 
 This keeps analyzer registration declarative while avoiding deep wrapper chains when several analyzers observe the same operator.
 

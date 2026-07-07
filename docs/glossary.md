@@ -205,17 +205,97 @@ Use operator for the reusable configuration unless the text explicitly says oper
 
 See also: Algorithm, Configuration, Evaluator, Execution instance.
 
-### Evaluator
+### Operator roles
 
 Status: `Canonical`
 
-An evaluator is the operator that turns candidates into evaluated candidates.
+Operator roles are the named categories of work that operators perform inside algorithms and other operators.
+
+Use operator role names when discussing the responsibility of an operator. Use concrete operator type names only when discussing a specific implementation.
+
+See also: Creator, Crossover, Evaluator, Interceptor, Mutator, Operator, Replacer, Selector, Terminator.
+
+#### Creator
+
+Status: `Canonical`
+
+A creator is the operator role that creates initial candidates.
+
+Creators are responsible for producing candidates that are valid for the provided search space.
+
+See also: Candidate, Operator, Search space.
+
+#### Evaluator
+
+Status: `Canonical`
+
+An evaluator is the operator role that turns candidates into evaluated candidates.
 
 The evaluator may return the input candidate as evaluated, or return a transformed candidate as evaluated. In either case, the objective vector must describe the candidate that is returned as evaluated.
 
 Use evaluator for the operator role. Use evaluation for the act of obtaining an objective vector.
 
-See also: Candidate, Evaluated candidate, Evaluation, Objective vector.
+See also: Candidate, Evaluated candidate, Evaluation, Objective vector, Operator.
+
+#### Selector
+
+Status: `Canonical`
+
+A selector is the operator role that selects evaluated candidates, usually as parents for later variation.
+
+Selection decides which evaluated candidates participate in the next operation. It does not create offspring by itself and does not decide the next population unless the algorithm explicitly uses it that way.
+
+See also: Crossover, Evaluated candidate, Mutator, Operator, Replacer.
+
+#### Crossover
+
+Status: `Canonical`
+
+A crossover is the operator role that combines parent candidates into offspring candidates.
+
+Use crossover for variation that depends on two or more parents. Use mutator for variation that perturbs existing candidates without combining multiple parents.
+
+See also: Candidate, Mutator, Operator, Selector.
+
+#### Mutator
+
+Status: `Canonical`
+
+A mutator is the operator role that perturbs candidates to create variation.
+
+Use mutator for changes derived from existing candidates. Use creator when candidates are generated without depending on parent candidates.
+
+See also: Candidate, Creator, Crossover, Operator.
+
+#### Replacer
+
+Status: `Canonical`
+
+A replacer is the operator role that chooses the evaluated candidates that form the next population or survivor set.
+
+Do not use replacer as a synonym for selector. A selector usually chooses parents or inputs for another operation, while a replacer chooses survivors after previous candidates and offspring are available.
+
+See also: Evaluated candidate, Operator, Selector.
+
+#### Terminator
+
+Status: `Canonical`
+
+A terminator is the operator role that decides whether execution should stop after observing a produced search state.
+
+The owner of the terminator determines whether this means algorithm owned termination or external early stopping.
+
+See also: Operator, Search state, Termination.
+
+#### Interceptor
+
+Status: `Canonical`
+
+An interceptor is the operator role that transforms a produced search state before it is yielded or observed by state based stopping logic.
+
+Use interceptor for state post processing. Do not use it for read only analysis. Use observation or analyzers for that.
+
+See also: Analyzer, Observation, Operator, Search state.
 
 ### Termination
 
@@ -369,11 +449,31 @@ An analyzer is a reusable, run-scoped analysis configuration.
 
 An analyzer declares which observations it needs and exposes analysis results through the run. It records or derives information about execution; it should not control optimization behavior.
 
-Related terms:
+See also: Analyzer result, Observation, Observation plan, Run.
 
-- `Analyzer result`: the run-owned result exposed by an analyzer.
+### Analyzer result
 
-See also: Observation, Run.
+Status: `Canonical`
+
+An analyzer result is the run scoped object that stores the data produced by an analyzer during a run.
+
+Analyzer results may contain counters, curves, traces, genealogy graphs or summaries. Users retrieve analyzer results from the run with the analyzer configuration that produced them.
+
+Do not store analyzer result data on reusable analyzer configurations, observable operator wrappers or execution registries.
+
+See also: Analyzer, Observation, Observation plan, Run.
+
+### Observation plan
+
+Status: `Canonical`
+
+An observation plan is the run scoped registration plan that records which analyzer callbacks should be installed at which observable operator boundaries.
+
+Analyzer run states add their observation requirements to the observation plan. The run then uses the plan to install the required observable replacements into execution instance registries.
+
+Do not use observation plan to mean the collected analysis data. The plan describes what to observe. Analyzer results store what was observed.
+
+See also: Analyzer, Analyzer result, Observation, Run.
 
 ### Observation
 

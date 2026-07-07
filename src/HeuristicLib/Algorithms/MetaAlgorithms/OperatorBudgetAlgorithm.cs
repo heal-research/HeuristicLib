@@ -37,7 +37,7 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
         var counter = new ObservationCounter();
         var countedOperator = CountedOperatorFactory(ObservedOperator, counter);
         var childRegistry = instanceRegistry.CreateChildRegistry();
-        childRegistry.PreRegister(ObservedOperator, countedOperator);
+        childRegistry.RegisterReplacement(ObservedOperator, countedOperator);
 
         return new OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(
             childRegistry.Resolve(Algorithm),
