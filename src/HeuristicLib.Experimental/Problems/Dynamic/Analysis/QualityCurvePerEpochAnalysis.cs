@@ -3,13 +3,13 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.Analysis;
 
-public class QualityCurvePerEpochAnalysis<TGenotype>(IDynamicProblem<TGenotype, ISearchSpace<TGenotype>> problem) :
-  DynamicAnalysis<TGenotype>(problem)
+public class QualityCurvePerEpochAnalysis<TCandidate>(IDynamicProblem<TCandidate, ISearchSpace<TCandidate>> problem) :
+  DynamicAnalysis<TCandidate>(problem)
 {
-    private readonly List<(TGenotype solution, ObjectiveVector objectiveVector, EvaluationTiming timing)> bestPerEpoch = [];
-    public IReadOnlyList<(TGenotype solution, ObjectiveVector objectiveVector, EvaluationTiming timing)> BestPerEpoch => bestPerEpoch;
+    private readonly List<(TCandidate solution, ObjectiveVector objectiveVector, EvaluationTiming timing)> bestPerEpoch = [];
+    public IReadOnlyList<(TCandidate solution, ObjectiveVector objectiveVector, EvaluationTiming timing)> BestPerEpoch => bestPerEpoch;
 
-    protected override void Problem_OnEvaluation(object? sender, IReadOnlyList<(TGenotype, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog)
+    protected override void Problem_OnEvaluation(object? sender, IReadOnlyList<(TCandidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog)
     {
         foreach (var e in evaluationLog.Where(x => x.timing.Valid))
         {

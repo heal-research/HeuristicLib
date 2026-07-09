@@ -8,36 +8,36 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public static class SelectorDurationExtensions
 {
-    extension<TG, TS, TP>(ISelector<TG, TS, TP> selector)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ISelector<TG, TS, TP> MeasureSelectorDuration(ObservationDuration duration)
+        public ISelector<TCandidate, TSearchSpace, TProblem> MeasureSelectorDuration(ObservationDuration duration)
             => selector.MeasureSelectorDuration(duration, TimeProvider.System);
 
-        public ISelector<TG, TS, TP> MeasureSelectorDuration(ObservationDuration duration, TimeProvider timeProvider)
-            => new DurationMeasuringSelector<TG, TS, TP>(selector, duration, timeProvider);
+        public ISelector<TCandidate, TSearchSpace, TProblem> MeasureSelectorDuration(ObservationDuration duration, TimeProvider timeProvider)
+            => new DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem>(selector, duration, timeProvider);
 
-        public ISelector<TG, TS, TP> MeasureSelectorDuration(out ObservationDuration duration)
+        public ISelector<TCandidate, TSearchSpace, TProblem> MeasureSelectorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return selector.MeasureSelectorDuration(duration);
         }
 
-        public ISelector<TG, TS, TP> MeasureSelectorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public ISelector<TCandidate, TSearchSpace, TProblem> MeasureSelectorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return selector.MeasureSelectorDuration(duration, timeProvider);
         }
     }
 
-    private sealed record DurationMeasuringSelector<TG, TS, TP>
-        : WrappingSelector<TG, TS, TP>
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    private sealed record DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem>
+        : WrappingSelector<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public DurationMeasuringSelector(
-            ISelector<TG, TS, TP> selector,
+            ISelector<TCandidate, TSearchSpace, TProblem> selector,
             ObservationDuration duration,
             TimeProvider timeProvider)
             : base(selector)
@@ -49,14 +49,14 @@ public static class SelectorDurationExtensions
         private ObservationDuration Duration { get; }
         private TimeProvider TimeProvider { get; }
 
-        protected override IReadOnlyList<ISolution<TG>> Select(
-            IReadOnlyList<ISolution<TG>> population,
-            Objective objective,
+        protected override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(
+            IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+            ObjectiveDirections objective,
             int count,
             InnerSelect innerSelect,
             IRandomNumberGenerator random,
-            TS searchSpace,
-            TP problem)
+            TSearchSpace searchSpace,
+            TProblem problem)
         {
             var startTimestamp = TimeProvider.GetTimestamp();
             try

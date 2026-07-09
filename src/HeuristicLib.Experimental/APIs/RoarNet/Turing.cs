@@ -6,8 +6,10 @@ public record TuringSolution(int State, int Head, List<int> Tape, int Steps) : S
 {
     public TuringSolution Apply(TuringMove move)
     {
-        if (Head == Tape.Count) Tape.Add(move.Symbol);
-        else Tape[Head] = move.Symbol;
+        if (Head == Tape.Count)
+            Tape.Add(move.Symbol);
+        else
+            Tape[Head] = move.Symbol;
         return new TuringSolution(move.State, Head + (move.Right ? 1 : -1), Tape, Steps + 1);
     }
 }
@@ -27,7 +29,8 @@ public record TuringProblem(TuringMove[,] Transitions) : Operations, Problem, Ne
     public IEnumerable<Move> moves(Neighbourhood neighbourhood, Solution solution)
     {
         var m = random_move((TuringProblem)neighbourhood, solution);
-        if (m != null) yield return m;
+        if (m != null)
+            yield return m;
     }
 
     public double? objective_value(Solution solution) => -((TuringSolution)solution).Steps;

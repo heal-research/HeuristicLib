@@ -5,10 +5,10 @@ namespace HEAL.HeuristicLib.Problems.Partial;
 
 public static class NeighborhoodExecutionInstanceExtensions
 {
-    public static INeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateStandaloneExecutionInstance<TGenotype, TSearchSpace, TProblem, TMove>(
-        this INeighborhood<TGenotype, TSearchSpace, TProblem, TMove> neighborhood)
-        where TSearchSpace : class, ISearchSpace<TGenotype>
-        where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    public static INeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateStandaloneExecutionInstance<TCandidate, TSearchSpace, TProblem, TMove>(
+        this INeighborhood<TCandidate, TSearchSpace, TProblem, TMove> neighborhood)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
         => neighborhood.CreateExecutionInstance(new ExecutionInstanceRegistry(StandaloneNeighborhoodRun.Instance));
 
     private sealed class StandaloneNeighborhoodRun : Run

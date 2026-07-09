@@ -5,11 +5,11 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IIterativeAlgorithm<TGenotype, in TSearchSpace, in TProblem, TSearchState>
-  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public interface IIterativeAlgorithm<TCandidate, in TSearchSpace, in TProblem, TSearchState>
+  : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
 {
-    IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
+    IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; }
 }

@@ -3,25 +3,25 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record LinearRankSelector<TGenotype>
-  : StatelessSelector<TGenotype>
+public record LinearRankSelector<TCandidate>
+  : StatelessSelector<TCandidate>
 {
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
       => LinearRankSelector.Select(population, objective, count, random);
 }
 
 public static class LinearRankSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> population,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective,
       int count,
       IRandomNumberGenerator random)
     {
         var list = population.OrderByDescending(x => x.ObjectiveVector, objective.TotalOrderComparer).ToList();
 
         int lotSum = list.Count * (list.Count + 1) / 2;
-        var selected = new ISolution<TGenotype>[count];
+        var selected = new EvaluatedCandidate<TCandidate>[count];
         for (int i = 0; i < count; i++)
         {
             int selectedLot = random.NextInt(lotSum);

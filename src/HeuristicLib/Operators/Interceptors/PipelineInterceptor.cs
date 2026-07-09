@@ -6,13 +6,13 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 [Equatable]
-public partial record PipelineInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>
-  : MultiInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>
+public partial record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public PipelineInterceptor(ImmutableArray<IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>> interceptors)
+    public PipelineInterceptor(ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
       : base(interceptors)
     {
     }

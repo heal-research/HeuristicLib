@@ -7,26 +7,26 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
 [Equatable]
-public partial record ObservableReplacer<TG, TS, TP>
-  : WrappingReplacer<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public partial record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
+  : WrappingReplacer<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     [OrderedEquality]
-    public ImmutableArray<IReplacerObserver<TG, TS, TP>> Observers { get; }
+    public ImmutableArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableReplacer(IReplacer<TG, TS, TP> replacer, ImmutableArray<IReplacerObserver<TG, TS, TP>> observers)
+    public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, ImmutableArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
       : base(replacer)
     {
         Observers = observers;
     }
 
-    public ObservableReplacer(IReplacer<TG, TS, TP> replacer, params IEnumerable<IReplacerObserver<TG, TS, TP>> observers)
+    public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, params IEnumerable<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
       : this(replacer, [.. observers])
     {
     }
 
-    protected override IReadOnlyList<ISolution<TG>> Replace(IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, int count, InnerReplace innerReplace, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    protected override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, InnerReplace innerReplace, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         var result = innerReplace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
         foreach (var observer in Observers)
@@ -37,35 +37,35 @@ public partial record ObservableReplacer<TG, TS, TP>
     }
 }
 
-public interface IReplacerObserver<in TG, in TS, in TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IReplacerObserver<TCandidate, in TSearchSpace, in TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    void AfterReplacement(IReadOnlyList<ISolution<TG>> newPopulation, IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, TS searchSpace, TP problem);
+    void AfterReplacement(IReadOnlyList<EvaluatedCandidate<TCandidate>> newPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, TSearchSpace searchSpace, TProblem problem);
 }
 
 public static class ObservableReplacerExtensions
 {
-    extension<TG, TS, TP>(IReplacer<TG, TS, TP> replacer)
-      where TS : class, ISearchSpace<TG>
-      where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IReplacer<TCandidate, TSearchSpace, TProblem> replacer)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReplacer<TG, TS, TP> ObserveWith(IReplacerObserver<TG, TS, TP> observer)
-          => new ObservableReplacer<TG, TS, TP>(replacer, observer);
-        public IReplacer<TG, TS, TP> ObserveWith(params IEnumerable<IReplacerObserver<TG, TS, TP>> observers)
-          => new ObservableReplacer<TG, TS, TP>(replacer, observers);
-        public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, TS, TP> afterReplacement)
-          => replacer.ObserveWith(new ActionReplacerObserver<TG, TS, TP>((newPopulation, previousPopulation, offspringPopulation, _, searchSpace, problem)
+        public IReplacer<TCandidate, TSearchSpace, TProblem> ObserveWith(IReplacerObserver<TCandidate, TSearchSpace, TProblem> observer)
+          => new ObservableReplacer<TCandidate, TSearchSpace, TProblem>(replacer, observer);
+        public IReplacer<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+          => new ObservableReplacer<TCandidate, TSearchSpace, TProblem>(replacer, observers);
+        public IReplacer<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, TSearchSpace, TProblem> afterReplacement)
+          => replacer.ObserveWith(new ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>((newPopulation, previousPopulation, offspringPopulation, _, searchSpace, problem)
             => afterReplacement(newPopulation, previousPopulation, offspringPopulation, searchSpace, problem)));
-        public IReplacer<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterReplacement)
-          => replacer.ObserveWith(new ActionReplacerObserver<TG, TS, TP>((newPopulation, _, _, _, _, _) => afterReplacement(newPopulation)));
+        public IReplacer<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>> afterReplacement)
+          => replacer.ObserveWith(new ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>((newPopulation, _, _, _, _, _) => afterReplacement(newPopulation)));
     }
 }
 
-public sealed class ActionReplacerObserver<TG, TS, TP>(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, TS, TP> afterReplacement) : IReplacerObserver<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public sealed class ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>(Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, TSearchSpace, TProblem> afterReplacement) : IReplacerObserver<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void AfterReplacement(IReadOnlyList<ISolution<TG>> newPopulation, IReadOnlyList<ISolution<TG>> previousPopulation, IReadOnlyList<ISolution<TG>> offspringPopulation, Objective objective, TS searchSpace, TP problem)
+    public void AfterReplacement(IReadOnlyList<EvaluatedCandidate<TCandidate>> newPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, TSearchSpace searchSpace, TProblem problem)
       => afterReplacement(newPopulation, previousPopulation, offspringPopulation, objective, searchSpace, problem);
 }

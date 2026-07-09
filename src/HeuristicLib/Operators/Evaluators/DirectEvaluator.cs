@@ -5,22 +5,22 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public record DirectEvaluator<TGenotype>
-  : StatelessEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+public record DirectEvaluator<TCandidate>
+  : StatelessEvaluator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-      => DirectEvaluator.Evaluate(genotypes, random, problem);
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+      => DirectEvaluator.Evaluate(candidates, random, problem);
 }
 
 public static class DirectEvaluator
 {
-    public static IReadOnlyList<ObjectiveVector> Evaluate<TGenotype>(
-      IReadOnlyList<TGenotype> genotypes,
+    public static IReadOnlyList<ObjectiveVector> Evaluate<TCandidate>(
+      IReadOnlyList<TCandidate> candidates,
       IRandomNumberGenerator random,
-      IProblem<TGenotype, ISearchSpace<TGenotype>> problem) => problem.Evaluate(genotypes, random);
+      IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => problem.Evaluate(candidates, random);
 }
 
 public static class DirectEvaluatorExtensions
 {
-    public static DirectEvaluator<TGenotype> CreateEvaluator<TGenotype>(this IProblem<TGenotype, ISearchSpace<TGenotype>> algorithm) => new();
+    public static DirectEvaluator<TCandidate> CreateEvaluator<TCandidate>(this IProblem<TCandidate, ISearchSpace<TCandidate>> algorithm) => new();
 }

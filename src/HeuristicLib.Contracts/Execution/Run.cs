@@ -102,17 +102,17 @@ public abstract class Run
       => new($"Analyzer {analyzer} created run state {state.GetType()} which does not implement {typeof(IAnalyzerRunState<TResult>)}.");
 }
 
-public class Run<TGenotype, TSearchSpace, TProblem, TSearchState> : Run
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TSearchState : class, ISearchState
+public class Run<TCandidate, TSearchSpace, TProblem, TSearchState> : Run
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
 {
-    public IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState> Algorithm { get; }
+    public IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; }
 
     public TProblem Problem { get; }
 
-    public Run(IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState> algorithm, TProblem problem, IReadOnlyList<IAnalyzer>? analyzers = null)
-      : base(analyzers)
+    public Run(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TProblem problem, IReadOnlyList<IAnalyzer>? analyzers = null)
+        : base(analyzers)
     {
         Algorithm = algorithm;
         Problem = problem;

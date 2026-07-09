@@ -1,7 +1,7 @@
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record CancellationTokenTerminator<TGenotype>(CancellationToken CancellationToken)
-  : StatelessTerminator<TGenotype>
+public record CancellationTokenTerminator<TCandidate>(CancellationToken CancellationToken)
+  : StatelessTerminator<TCandidate>
 {
     public override bool IsTerminalState()
     {

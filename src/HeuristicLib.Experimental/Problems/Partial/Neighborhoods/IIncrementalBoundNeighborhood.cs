@@ -5,21 +5,21 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public interface IIncrementalBoundNeighborhood<TGenotype, in TSearchSpace, in TProblem, TMove>
-    : INeighborhood<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public interface IIncrementalBoundNeighborhood<TCandidate, in TSearchSpace, in TProblem, TMove>
+    : INeighborhood<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    new IIncrementalBoundNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+    new IIncrementalBoundNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
-public interface IIncrementalBoundNeighborhoodInstance<TGenotype, in TSearchSpace, in TProblem, TMove>
-    : INeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public interface IIncrementalBoundNeighborhoodInstance<TCandidate, in TSearchSpace, in TProblem, TMove>
+    : INeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     ObjectiveVector? BoundIncrement(
-        TGenotype genotype,
+        TCandidate candidate,
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,

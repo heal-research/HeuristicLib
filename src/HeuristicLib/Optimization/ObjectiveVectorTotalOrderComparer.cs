@@ -1,6 +1,6 @@
 namespace HEAL.HeuristicLib.Optimization;
 
-public static class FitnessTotalOrderComparer
+public static class ObjectiveVectorTotalOrderComparer
 {
     public static SingleObjectiveComparer CreateSingleObjectiveComparer(ObjectiveDirection objectiveDirection) => new(objectiveDirection);
 

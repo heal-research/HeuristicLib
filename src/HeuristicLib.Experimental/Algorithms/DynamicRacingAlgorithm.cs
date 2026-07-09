@@ -26,23 +26,23 @@ public class EmptyMetaOptProblem : MetaOptimizationProblem
     }
 
     public MetaOptimizationSearchSpace SearchSpace { get; }
-    public Objective Objective => throw new NotImplementedException();
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<MetaOptimizationGenotype> genotypes, IRandomNumberGenerator random) => throw new NotImplementedException();
+    public ObjectiveDirections Objective => throw new NotImplementedException();
+    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<MetaOptimizationGenotype> candidates, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
-public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgorithm<TG, TS, TP, TA, DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs>.State>
-  where TS : class, ISearchSpace<TG>
-  where TP : DynamicProblem<TG, TS>
-  where TA : PopulationState<TG>
-  where TAlg : IterativeAlgorithm<TG, TS, TP, TA, TEs>
-  where TEs : IterativeAlgorithm<TG, TS, TP, TA, TEs>.ExecutionState
+public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TExecutionState> : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TExecutionState>.State>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+  where TSearchState : PopulationState<TCandidate>
+  where TAlgorithm : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>
+  where TExecutionState : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
 
 {
     public DynamicRacingAlgorithm(MetaOptimizationSearchSpace metaSpace,
                                   ICreator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> creator,
                                   IMutator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> mutator,
-                                  Func<TA[], TA> stateMerger,
-                                  Func<MetaOptimizationGenotype, TAlg> algBuilder)
+                                  Func<TSearchState[], TSearchState> stateMerger,
+                                  Func<MetaOptimizationGenotype, TAlgorithm> algBuilder)
     {
         MetaSpace = metaSpace;
         Creator = creator;
@@ -52,15 +52,15 @@ public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgor
         EmptyMetaOptProblem = new EmptyMetaOptProblem(MetaSpace);
     }
 
-    public Func<TA[], TA> StateMerger { get; } //TODO this could almost be a replacer or an interface
+    public Func<TSearchState[], TSearchState> StateMerger { get; } //TODO this could almost be a replacer or an interface
     public ICreator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> Creator { get; }
     public IMutator<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> Mutator { get; }
     private MetaOptimizationSearchSpace MetaSpace { get; }
     private EmptyMetaOptProblem EmptyMetaOptProblem { get; }
-    public Func<MetaOptimizationGenotype, TAlg> AlgBuilder { get; }
+    public Func<MetaOptimizationGenotype, TAlgorithm> AlgBuilder { get; }
     public required int NoRacers { get; init; } = 2;
 
-    public class State(DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> racer) : ExecutionState
+    public class State(DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TExecutionState> racer) : ExecutionState
     {
         public MetaOptimizationGenotype? Incumbent { get; set; }
         public required ICreatorInstance<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem> Creator { get; init; }
@@ -69,25 +69,25 @@ public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgor
 
     private sealed class Entry : IDisposable
     {
-        private IEnumerator<TA> running;
-        private readonly IAlgorithm<TG, TS, TP, TA> algorithm;
-        public readonly MetaOptimizationGenotype Genotype;
-        public TA? LastState { get; private set; }
+        private IEnumerator<TSearchState> running;
+        private readonly IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+        public readonly MetaOptimizationGenotype Candidate;
+        public TSearchState? LastState { get; private set; }
         private readonly ObservationCounter counter;
 
         public int UsedCount => counter.CurrentCount;
 
-        public Entry(DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> racer, MetaOptimizationGenotype genotype, TP problem,
-                     IRandomNumberGenerator random, TA? initialState, CancellationToken ct)
+        public Entry(DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TExecutionState> racer, MetaOptimizationGenotype candidate, TProblem problem,
+                     IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
-            Genotype = genotype;
-            var alg = racer.AlgBuilder(genotype);
-            algorithm = alg with { Evaluator = alg.Evaluator.CountEvaluatedGenotypes(out counter) };
+            Candidate = candidate;
+            var alg = racer.AlgBuilder(candidate);
+            algorithm = alg with { Evaluator = alg.Evaluator.CountEvaluatedCandidates(out counter) };
             running = algorithm.RunStreaming(problem, random, initialState, ct).GetEnumerator();
             LastState = initialState;
         }
 
-        public TA MakeMove(TP problem, IRandomNumberGenerator random, CancellationToken ct)
+        public TSearchState MakeMove(TProblem problem, IRandomNumberGenerator random, CancellationToken ct)
         {
             var e = running.MoveNext();
 
@@ -97,7 +97,7 @@ public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgor
                 running = algorithm.RunStreaming(problem, random, LastState, ct).GetEnumerator();
 
                 if (!running.MoveNext())
-                    throw new InvalidOperationException("Algorithm is not executable or restartable");
+                    throw new InvalidOperationException("Algorithm cannot start or resume execution");
             }
 
             LastState = running.Current;
@@ -115,7 +115,7 @@ public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgor
         Mutator = resolver.Resolve(Mutator)
     };
 
-    protected override TA ExecuteStep(TA? previousState, State executionState, TP problem, IRandomNumberGenerator random)
+    protected override TSearchState ExecuteStep(TSearchState? previousState, State executionState, TProblem problem, IRandomNumberGenerator random)
     {
         var entries = new List<Entry>(NoRacers);
         executionState.Incumbent ??= executionState.Creator.Create(1, random, MetaSpace, EmptyMetaOptProblem)[0];
@@ -143,7 +143,7 @@ public record DynamicRacingAlgorithm<TG, TS, TP, TA, TAlg, TEs> : IterativeAlgor
         //set winner
         var best = entries.Select((x, i) => (x.LastState!.Population.Select(solution => solution.ObjectiveVector).Best(problem.Objective), i));
         var winner = best.OrderBy(x => x.Item1, problem.Objective.TotalOrderComparer).First().i;
-        executionState.Incumbent = entries[winner].Genotype;
+        executionState.Incumbent = entries[winner].Candidate;
 
         //merge and return
         return StateMerger(entries.Select(x => x.LastState!).ToArray());

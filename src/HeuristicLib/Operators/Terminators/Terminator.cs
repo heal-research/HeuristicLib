@@ -5,10 +5,10 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public abstract record Terminator<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>
-  : ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record Terminator<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>
+  : ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TExecutionState : class
   where TSearchState : class, ISearchState
 {
@@ -16,11 +16,11 @@ public abstract record Terminator<TGenotype, TSearchSpace, TProblem, TSearchStat
 
     protected abstract bool IsTerminalState(TSearchState searchState, TExecutionState executionState, TSearchSpace searchSpace, TProblem problem);
 
-    public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new TerminatorInstance(this, CreateInitialState());
 
-    private sealed class TerminatorInstance(Terminator<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState> terminator, TExecutionState executionState)
-      : ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
+    private sealed class TerminatorInstance(Terminator<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState> terminator, TExecutionState executionState)
+      : ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
         {
@@ -29,31 +29,31 @@ public abstract record Terminator<TGenotype, TSearchSpace, TProblem, TSearchStat
     }
 }
 
-public abstract record Terminator<TGenotype, TSearchSpace, TExecutionState, TSearchState>
-  : ITerminator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState>
+public abstract record Terminator<TCandidate, TSearchSpace, TExecutionState, TSearchState>
+  : ITerminator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
   where TExecutionState : class
 {
     protected abstract TExecutionState CreateInitialState();
 
     protected abstract bool IsTerminalState(TSearchState state, TExecutionState executionState, TSearchSpace searchSpace);
 
-    public ITerminatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new TerminatorInstance(this, CreateInitialState());
 
-    private sealed class TerminatorInstance(Terminator<TGenotype, TSearchSpace, TExecutionState, TSearchState> terminator, TExecutionState executionState)
-      : ITerminatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState>
+    private sealed class TerminatorInstance(Terminator<TCandidate, TSearchSpace, TExecutionState, TSearchState> terminator, TExecutionState executionState)
+      : ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
     {
-        public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem)
+        public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem)
         {
             return terminator.IsTerminalState(state, executionState, searchSpace);
         }
     }
 }
 
-public abstract record Terminator<TGenotype, TSearchState, TExecutionState>
-  : ITerminator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState>
+public abstract record Terminator<TCandidate, TSearchState, TExecutionState>
+  : ITerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
   where TSearchState : class, ISearchState
   where TExecutionState : class
 {
@@ -61,34 +61,34 @@ public abstract record Terminator<TGenotype, TSearchState, TExecutionState>
 
     protected abstract bool IsTerminalState(TSearchState state, TExecutionState executionState);
 
-    public ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new TerminatorInstance(this, CreateInitialState());
 
-    private sealed class TerminatorInstance(Terminator<TGenotype, TSearchState, TExecutionState> terminator, TExecutionState executionState)
-      : ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState>
+    private sealed class TerminatorInstance(Terminator<TCandidate, TSearchState, TExecutionState> terminator, TExecutionState executionState)
+      : ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     {
-        public bool IsTerminalState(TSearchState state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+        public bool IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
         {
             return terminator.IsTerminalState(state, executionState);
         }
     }
 }
 
-public abstract record Terminator<TGenotype, TExecutionState>
-  : ITerminator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, ISearchState>
+public abstract record Terminator<TCandidate, TExecutionState>
+  : ITerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
   where TExecutionState : class
 {
     protected abstract TExecutionState CreateInitialState();
 
     protected abstract bool IsTerminalState(TExecutionState executionState);
 
-    public ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, ISearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new TerminatorInstance(this, CreateInitialState());
 
-    private sealed class TerminatorInstance(Terminator<TGenotype, TExecutionState> terminator, TExecutionState executionState)
-      : ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, ISearchState>
+    private sealed class TerminatorInstance(Terminator<TCandidate, TExecutionState> terminator, TExecutionState executionState)
+      : ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
     {
-        public bool IsTerminalState(ISearchState state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+        public bool IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
         {
             return terminator.IsTerminalState(executionState);
         }

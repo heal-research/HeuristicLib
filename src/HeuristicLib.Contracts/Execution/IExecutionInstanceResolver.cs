@@ -2,9 +2,9 @@ namespace HEAL.HeuristicLib.Execution;
 
 public interface IExecutionInstanceResolver
 {
-    TExecutionInstance Resolve<TExecutionInstance>(IExecutable<TExecutionInstance> executable)
+    TExecutionInstance Resolve<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable)
       where TExecutionInstance : class, IExecutionInstance;
 
-    TExecutionInstance? ResolveOptional<TExecutionInstance>(IExecutable<TExecutionInstance>? executable)
-      where TExecutionInstance : class, IExecutionInstance => executable == null ? null : Resolve(executable);
+    TExecutionInstance? ResolveOptional<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance>? resolvable)
+      where TExecutionInstance : class, IExecutionInstance => resolvable == null ? null : Resolve(resolvable);
 }

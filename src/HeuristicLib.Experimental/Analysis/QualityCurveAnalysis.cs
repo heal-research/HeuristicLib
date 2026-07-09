@@ -7,25 +7,26 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, QualityCurve<T>>
-  where TS : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TS>
-  where TR : class, ISearchState
+// TODO: Revisit whether "quality curve" matches the glossary terminology or should become objective-vector based.
+public record QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : Analyzer<TCandidate, TSearchSpace, TProblem, TSearchState, QualityCurve<TCandidate>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : class, ISearchState
 
 {
-    private IEvaluator<T, TS, TP>[] Evaluators { get; }
+    private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
 
-    public QualityCurveAnalysis(IAlgorithm<T, TS, TP, TR> Algorithm, params IEvaluator<T, TS, TP>[] Evaluators) : base(Algorithm)
+    public QualityCurveAnalysis(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm, params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators) : base(Algorithm)
     {
         this.Evaluators = Evaluators;
     }
 
-    public void AfterEvaluation(QualityCurve<T> state, IReadOnlyList<T> genotypes, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<T, ISearchSpace<T>> problem)
+    public void AfterEvaluation(QualityCurve<TCandidate> state, IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {
-        for (var i = 0; i < genotypes.Count; i++)
+        for (var i = 0; i < candidates.Count; i++)
         {
-            var genotype = genotypes[i];
-            var q = objectiveVectors[i];
+            var candidate = candidates[i];
+            var objectiveVector = objectiveVectors[i];
             state.EvalCount++;
 
             if (state.Best is not null)
@@ -36,38 +37,38 @@ public record QualityCurveAnalysis<T, TS, TP, TR> : Analyzer<T, TS, TP, TR, Qual
                     comp = new LexicographicComparer(problem.Objective.Directions);
                 }
 
-                if (comp.Compare(q, state.Best.ObjectiveVector) >= 0)
+                if (comp.Compare(objectiveVector, state.Best.ObjectiveVector) >= 0)
                 {
                     continue;
                 }
             }
 
-            state.Add(new Solution<T>(genotype, q));
+            state.Add(new EvaluatedCandidate<TCandidate>(candidate, objectiveVector));
         }
     }
 
-    public override QualityCurve<T> CreateInitialResult() => new();
+    public override QualityCurve<TCandidate> CreateInitialResult() => new();
 
-    public override void RegisterObservations(ObservationPlan observations, QualityCurve<T> curve)
+    public override void RegisterObservations(ObservationPlan observations, QualityCurve<TCandidate> curve)
     {
         foreach (var evaluator in Evaluators)
         {
-            observations.Observe(evaluator, (genotypes, objectiveVectors, _, problem) => AfterEvaluation(curve, genotypes, objectiveVectors, problem));
+            observations.Observe(evaluator, (candidates, objectiveVectors, _, problem) => AfterEvaluation(curve, candidates, objectiveVectors, problem));
         }
     }
 }
 
-public sealed class QualityCurve<TGenotype>
+public sealed class QualityCurve<TCandidate>
 {
-    private readonly List<(ISolution<TGenotype> best, int evalCount)> currentState = [];
-    public IReadOnlyList<(ISolution<TGenotype> best, int evalCount)> CurrentState => currentState;
+    private readonly List<(EvaluatedCandidate<TCandidate> best, int evalCount)> currentState = [];
+    public IReadOnlyList<(EvaluatedCandidate<TCandidate> best, int evalCount)> CurrentState => currentState;
 
-    public void Add(ISolution<TGenotype> solution)
+    public void Add(EvaluatedCandidate<TCandidate> solution)
     {
         Best = solution;
         currentState.Add((solution, EvalCount));
     }
 
     public int EvalCount { get; set; }
-    public ISolution<TGenotype>? Best { get; private set; }
+    public EvaluatedCandidate<TCandidate>? Best { get; private set; }
 }

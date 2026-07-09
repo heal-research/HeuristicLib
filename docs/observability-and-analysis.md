@@ -4,8 +4,8 @@ HeuristicLib supports _observing_ algorithms and operators without changing what
 
 The core pattern is:
 
-- Wrap an existing definition with an `Observable*` wrapper.
-- At runtime, the wrapper delegates to the underlying instance.
+- Wrap an existing configuration with an `Observable*` wrapper.
+- During execution, the wrapper delegates to the underlying execution instance.
 - After the operation completes, it calls one or more **observers**.
 
 Observers are intended for **analysis and diagnostics** (metrics, logging, traces, counters), not for influencing the optimization logic.
@@ -30,11 +30,11 @@ Concretely:
 
 ## Example: `ObservableMutator`
 
-`ObservableMutator<TG, TS, TP>` is a wrapper around an `IMutator<TG, TS, TP>`.
+`ObservableMutator<TCandidate, TSearchSpace, TProblem>` is a wrapper around an `IMutator<TCandidate, TSearchSpace, TProblem>`.
 
-### How it works (runtime flow)
+### How it works (execution flow)
 
-At instancing time, it resolves the underlying mutator instance from the registry:
+When the observable wrapper creates its execution instance, it resolves the underlying mutator execution instance from the registry:
 
 - `CreateExecutionInstance(...)` resolves the inner mutator from `ExecutionInstanceRegistry`.
 - The returned observable instance delegates to that inner instance.
@@ -47,9 +47,9 @@ At execution time:
 
 ```mermaid
 sequenceDiagram
-  participant Algo as AlgorithmInstance
-  participant OM as ObservableMutatorInstance
-  participant M as Inner MutatorInstance
+  participant Algo as Algorithm execution instance
+  participant OM as Observable mutator execution instance
+  participant M as Inner mutator execution instance
   participant Obs as IMutatorObserver
 
   Algo->>OM: Mutate(parent, rng, searchSpace, problem)
@@ -66,13 +66,13 @@ sequenceDiagram
 For mutators, the observer hook is:
 
 ```csharp
-public interface IMutatorObserver<in TG, in TS, in TP>
+public interface IMutatorObserver<in TCandidate, in TSearchSpace, in TProblem>
 {
   void AfterMutate(
-    IReadOnlyList<TG> offspring,
-    IReadOnlyList<TG> parent,
-    TS searchSpace,
-    TP problem
+    IReadOnlyList<TCandidate> offspring,
+    IReadOnlyList<TCandidate> parent,
+    TSearchSpace searchSpace,
+    TProblem problem
   );
 }
 ```
@@ -91,7 +91,7 @@ For mutators:
 Example:
 
 ```csharp
-IMutator<TG, TS, TP> mutator = /* ... */;
+IMutator<TCandidate, TSearchSpace, TProblem> mutator = /* ... */;
 
 var observed = mutator.ObserveWith(offspring => {
   // read-only analysis
@@ -110,7 +110,7 @@ HeuristicLib often models this as writing to an **external sink**. A minimal exa
 If you already have a sink (for example, a counter owned by an experiment runner), pass it in:
 
 ```csharp
-IMutator<TG, TS, TP> mutator = /* ... */;
+IMutator<TCandidate, TSearchSpace, TProblem> mutator = /* ... */;
 var counter = new ObservationCounter();
 
 var observed = mutator.CountMutatorCalls(counter);
@@ -120,24 +120,24 @@ var observed = mutator.CountMutatorCalls(counter);
 
 For `ObservableMutator`, `CountMutatorCalls(...)` increments once per mutation call.
 
-Use `CountMutatedGenotypes(...)` when the budget should count the mutated genotypes returned by those batched mutation calls instead:
+Use `CountMutatedCandidates(...)` when the budget should count the mutated candidates returned by those batched mutation calls instead:
 
 ```csharp
-IMutator<TG, TS, TP> mutator = /* ... */;
+IMutator<TCandidate, TSearchSpace, TProblem> mutator = /* ... */;
 var counter = new ObservationCounter();
 
-var observed = mutator.CountMutatedGenotypes(counter);
+var observed = mutator.CountMutatedCandidates(counter);
 
-// later: counter.CurrentCount contains total mutated genotypes
+// later: counter.CurrentCount contains total mutated candidates
 ```
 
-The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedGenotypes(...)`, `CountCrossedGenotypes(...)`, `CountEvaluatedGenotypes(...)`, `CountSelectedSolutions(...)`, and `CountReplacementSolutions(...)`.
+The same naming pattern is used for other batched operators where an item count is meaningful, for example `CountCreatedCandidates(...)`, `CountCrossedCandidates(...)`, `CountEvaluatedCandidates(...)`, `CountMutatedCandidates(...)`, `CountSelectedCandidates(...)`, and `CountReplacementCandidates(...)`.
 
 The observed boundary is part of the budget. For example, these are different budgets:
 
 - calls made to a caching evaluator, including cache hits
 - calls that pass through the cache and reach the wrapped direct evaluator
-- genotypes processed inside evaluator batches
+- candidates processed inside evaluator batches
 
 Advanced users can pass the same `ObservationCounter` to several observed operators when one shared budget should aggregate work across those boundaries.
 
@@ -146,7 +146,7 @@ Advanced users can pass the same `ObservationCounter` to several observed operat
 For quick usage, many wrappers offer an overload that creates the sink and returns it:
 
 ```csharp
-IMutator<TG, TS, TP> mutator = /* ... */;
+IMutator<TCandidate, TSearchSpace, TProblem> mutator = /* ... */;
 
 var observed = mutator.CountMutatorCalls(out var counter);
 
@@ -163,7 +163,7 @@ This pattern keeps call sites tidy while still giving you access to the collecte
 For evaluators, `MeasureEvaluatorDuration(...)` measures around the inner `Evaluate(...)` call:
 
 ```csharp
-IEvaluator<TG, TS, TP> evaluator = /* ... */;
+IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator = /* ... */;
 var duration = new ObservationDuration();
 
 var measured = evaluator.MeasureEvaluatorDuration(duration);
@@ -183,7 +183,7 @@ Budget helpers such as `WithMaxEvaluatorCalls(...)`, `WithMaxMutatorDuration(...
 
 Observable wrappers are the callback mechanism; analyzers are the run-scoped architecture built on top of that mechanism.
 
-In the current system:
+In this system:
 
 - analyzer states call `RegisterObservations(ObservationPlan)`
 - the observation plan stores merged observation entries
@@ -206,11 +206,11 @@ They are not competitors. The analyzer system is built **on top of** observable 
 
 ### Observable operators
 
-Use observable operators when you want a **local callback hook** on one concrete algorithm or operator definition.
+Use observable operators when you want a **local callback hook** on one concrete algorithm or operator configuration.
 
 Typical characteristics:
 
-- scope is tied to the wrapped definition and the execution instances created for it
+- scope is tied to the wrapped configuration and the execution instances created for it
 - you usually provide a callback, observer object, logger, or external sink
 - the result typically lives **outside** the run
   - for example in an `ObservationCounter`, a logger, a list you own, or a custom observer instance
@@ -219,7 +219,7 @@ Typical characteristics:
 Typical API shape:
 
 ```csharp
-var observedEvaluator = evaluator.ObserveWith((genotypes, qualities, searchSpace, problem) => {
+var observedEvaluator = evaluator.ObserveWith((candidates, objectiveVectors, searchSpace, problem) => {
   // local side effect
 });
 ```
@@ -246,7 +246,7 @@ Typical characteristics:
 Typical API shape:
 
 ```csharp
-var analyzer = new QualityCurveAnalysis<TGenotype, TSearchSpace, TProblem>(evaluator);
+var analyzer = new QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem>(evaluator);
 var run = algorithm.CreateRun(problem, analyzer);
 var finalState = run.RunToCompletion(random);
 var result = run.GetAnalyzerResult(analyzer);
@@ -279,7 +279,7 @@ Use **analyzers** when you want a **run-owned analysis object**.
 
 ### Which one should library users prefer?
 
-- Prefer **analyzers** for reusable runtime analysis features that should conceptually belong to a run.
+- Prefer **analyzers** for reusable run-scoped analysis features that should conceptually belong to a run.
 - Prefer **observable operators** for quick instrumentation, ad-hoc diagnostics, and cases where an external system already owns the result sink.
 - If you are implementing a reusable analysis feature inside HeuristicLib, the preferred direction is usually:
   - use observable operators as the hook mechanism
@@ -289,7 +289,7 @@ Use **analyzers** when you want a **run-owned analysis object**.
 
 Observable wrappers follow a consistent pattern:
 
-- Wrap a definition.
+- Wrap a configuration.
 - Resolve underlying dependencies via `ExecutionInstanceRegistry`.
 - Delegate to the underlying instance.
 - Notify observers _after_ the operation.
@@ -300,5 +300,5 @@ Examples include observable wrappers for mutators, crossovers, evaluators, termi
 
 - [Operators](operators.md)
 - [Execution model](execution-model.md)
-- [Definition vs execution instances](execution-instances.md)
+- [Configuration vs execution instances](execution-instances.md)
 - [Analyzer architecture](analyzer-architecture.md)

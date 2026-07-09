@@ -18,7 +18,7 @@ public class CombinedTestFunction : IMultiObjectiveTestFunction
     public int Dimension { get; }
     public double Min { get; }
     public double Max { get; }
-    public Objective Objective { get; }
+    public ObjectiveDirections Objective { get; }
 
     public RealVector Evaluate(RealVector solution) => new(Functions.Select(x => x.Evaluate(solution)));
 }

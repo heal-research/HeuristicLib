@@ -1,14 +1,14 @@
-﻿using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public interface IPartialSolutionProblem<TGenotype, out TSearchSpace, in TChoice> : IProblem<TGenotype, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+public interface IPartialSolutionProblem<TCandidate, out TSearchSpace, in TChoice> : IProblem<TCandidate, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-  bool IsTerminal(TGenotype genotype, IRandomNumberGenerator random);
-  ObjectiveVector Bound(TGenotype genotype, IRandomNumberGenerator random);
-  ObjectiveVector? EvaluatePartial(TGenotype genotypes, IRandomNumberGenerator random);
-  TGenotype ApplyChoice(TGenotype genotype, TChoice choice);
+  bool IsTerminal(TCandidate candidate, IRandomNumberGenerator random);
+  ObjectiveVector Bound(TCandidate candidate, IRandomNumberGenerator random);
+  ObjectiveVector? EvaluatePartial(TCandidate candidate, IRandomNumberGenerator random);
+  TCandidate ApplyChoice(TCandidate candidate, TChoice choice);
 }

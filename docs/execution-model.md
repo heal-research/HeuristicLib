@@ -6,8 +6,8 @@ This page explains how algorithm execution works in HeuristicLib.
 
 At the user level, the important idea is simple:
 
-- an algorithm definition is a reusable configured object
-- a run executes that definition on a problem
+- an algorithm configuration is reusable
+- a run executes that configuration on a problem
 - execution produces a stream of search states
 
 The core streaming shape is:
@@ -93,7 +93,7 @@ Algorithm execution continues only while both the algorithm has not internally c
 
 Continuation is only meaningful for an execution instance that was early-stopped and whose API explicitly preserves that execution instance. A completed execution instance is exhausted. Calling a `Run...` method again should not be assumed to continue a previous execution instance unless the API says so directly.
 
-For many simple runs, the observable state sequence can be the same either way. This is similar to LINQ: a source that naturally contains `n` items and a longer source consumed through `Take(n)` may produce the same items to the caller. The distinction matters when ownership and composition matter: whether the algorithm definition carries its own budget, whether the same configured algorithm can be reused without that limit, whether a wrapper is only adapting stream consumption, and whether future completion metadata should describe the inner algorithm as completed or merely externally stopped.
+For many simple runs, the observable state sequence can be the same either way. This is similar to LINQ: a source that naturally contains `n` items and a longer source consumed through `Take(n)` may produce the same items to the caller. The distinction matters when ownership and composition matter: whether the algorithm configuration carries its own budget, whether the same configured algorithm can be reused without that limit, whether a wrapper is only adapting stream consumption, and whether future completion metadata should describe the inner algorithm as completed or merely externally stopped.
 
 HeuristicLib aims for deterministic execution when the algorithm configuration, problem, initial state, and random seed are the same. That expectation only holds while the configuration does not depend on outside mutable state. Terminators or operators that observe external state, such as a live `CancellationToken` or a future wall-clock budget, can make otherwise identical executions produce different streams. For example, reusing a `CancellationTokenTerminator(...)` after its token has already been canceled will stop the next execution immediately after its first produced state.
 
@@ -107,13 +107,13 @@ Budget names should say what they count.
 - `MaximumCycles` counts completed cycles owned by a cycle algorithm.
 - `WithMaxIterations(...)` is an external early-stopping wrapper. It counts yielded stream states from the wrapped algorithm or composition, regardless of whether those states are generations, local-search moves, pipeline outputs, or cycle outputs.
 - `WithMaxEvaluatorCalls(...)` is an external early-stopping wrapper over observed `Evaluate(...)` calls. It installs a counted evaluator replacement for the run and stops future stream consumption after the configured call count has been observed; it does not make the wrapped algorithm internally complete.
-- `WithMaxEvaluatedGenotypes(...)` is an external early-stopping wrapper over genotypes processed inside observed evaluator batches. If one batch crosses the configured genotype count, the produced state for that batch is still yielded and future stream consumption stops afterward.
+- `WithMaxEvaluatedCandidates(...)` is an external early-stopping wrapper over candidates processed inside observed evaluator batches. If one batch crosses the configured candidate count, the produced state for that batch is still yielded and future stream consumption stops afterward.
 - `WithMaxAlgorithmDuration(...)` is an external early-stopping wrapper over active state-production duration. It measures time spent pulling produced states from the wrapped algorithm and excludes caller idle time between pulls.
 - `WithMaxEvaluatorDuration(...)` is an external early-stopping wrapper over measured evaluator work duration. It installs a measured evaluator replacement for the run and stops future stream consumption after the configured cumulative evaluator duration has been observed.
-- Typed operator-budget helpers such as `WithMaxMutatorCalls(...)`, `WithMaxMutatedGenotypes(...)`, `WithMaxSelectorDuration(...)`, and `WithMaxReplacementSolutions(...)` observe an explicitly supplied operator and install the matching counted or measured replacement for that run.
+- Typed operator-budget helpers such as `WithMaxMutatorCalls(...)`, `WithMaxMutatedCandidates(...)`, `WithMaxSelectedCandidates(...)`, `WithMaxReplacementCandidates(...)`, and `WithMaxSelectorDuration(...)` observe an explicitly supplied operator and install the matching counted or measured replacement for that run.
 - `WithMaxOperatorDuration(...)` is the general external operator-duration wrapper. It observes an explicitly supplied operator and a measured replacement factory, so users can apply duration budgets to custom wrappers or unusual operator boundaries.
 - `WithMaxCount(...)` is the general external operator-budget wrapper. It observes an explicitly supplied operator and a counted replacement factory, so users can count custom units or operator boundaries that do not fit a typed helper.
-- Evaluation-count budgets must identify the observed boundary and unit. Counting `Evaluate(...)` calls, evaluated genotypes inside those calls, requests to a caching evaluator, and calls that reach the wrapped direct evaluator are different budgets.
+- Evaluation-count budgets must identify the observed boundary and unit. Counting `Evaluate(...)` calls, evaluated candidates inside those calls, requests to a caching evaluator, and calls that reach the wrapped direct evaluator are different budgets.
 - Terminator call and duration instrumentation exists for consistency because terminators are operators too. Treat `WithMaxTerminatorCalls(...)` and `WithMaxTerminatorDuration(...)` as advanced or niche tools for observing expensive or shared terminator checks, not as the normal way to cap a run.
 
 Time budgets must identify whether they mean elapsed wall-clock time for a broader execution or measured duration of active work at an observed boundary.
@@ -126,16 +126,16 @@ Avoid treating "iteration" as a universal synonym for generation, step, cycle, e
 
 A run owns:
 
-- the algorithm definition
+- the algorithm configuration
 - the problem
 - the root execution-instance registry
 - analyzer state for that run
 
-Analyzers are attached to the run, not to the algorithm definition.
+Analyzers are attached to the run, not to the algorithm configuration.
 
 ## Internal infrastructure
 
-Internally, definitions are resolved into execution instances through `ExecutionInstanceRegistry`.
+Internally, configurations are resolved into execution instances through `ExecutionInstanceRegistry`.
 
 `ExecutionInstanceRegistry` also implements `IExecutionInstanceResolver`, which is the narrow surface passed into high-level authoring APIs.
 
@@ -148,14 +148,14 @@ This still matters for:
 But it is now intentionally an execution concern.
 Normal algorithm authoring should work through execution state and resolved execution instances, not through a separate executor object.
 
-## Meta algorithms
+## Meta-algorithms
 
-Meta algorithms such as `PipelineAlgorithm`, `CycleAlgorithm`, and `StateTerminatedAlgorithm` still work closer to the low-level execution model because they orchestrate other algorithms directly.
+Meta-algorithms such as `PipelineAlgorithm`, `CycleAlgorithm`, and `StateTerminatedAlgorithm` still work closer to the low-level execution model because they orchestrate other algorithms directly.
 
 That is a separate concern from the simplified authoring path for ordinary iterative algorithms.
 
 ## Related pages
 
 - [Algorithm](algorithm.md)
-- [Definition vs execution instances](execution-instances.md)
+- [Configuration vs execution instances](execution-instances.md)
 - [Observability & analysis](observability-and-analysis.md)

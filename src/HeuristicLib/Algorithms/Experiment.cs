@@ -8,19 +8,19 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms;
 
 // ToDo: think about how to offer better parallel execution.
-public abstract record Experiment<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>
-  : IExperiment<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record Experiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>
+  : IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
 {
-    public abstract IExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
+    public abstract IExperimentInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);
 }
 
-public abstract class ExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>
-  : IExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract class ExperimentInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>
+  : IExperimentInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
 {
     public abstract IReadOnlyList<KeyValuePair<TAlgorithmKey, IAsyncEnumerable<TSearchState>>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
@@ -28,22 +28,22 @@ public abstract class ExperimentInstance<TGenotype, TSearchSpace, TProblem, TSea
 
 public static class MultiStreamAlgorithmExtensions
 {
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>(IExperiment<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> algorithm)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> algorithm)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
       where TSearchState : class, ISearchState
     {
         // public Run CreateRuns(TProblem problem)
         // {
-        //   return new Run<TGenotype, TSearchSpace, TProblem, TSearchState>(algorithm, problem);
+        //   return new Run<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem);
         //   
-        //   return algorithmInstance.RunStreamingAsync(problem, null!, null).Select(kvp => new Run<TGenotype, TSearchSpace, TProblem, TSearchState>(kvp.Key, problem)).ToList();
+        //   return algorithmInstance.RunStreamingAsync(problem, null!, null).Select(kvp => new Run<TCandidate, TSearchSpace, TProblem, TSearchState>(kvp.Key, problem)).ToList();
         // }
 
 
         public IReadOnlyList<KeyValuePair<TAlgorithmKey, IAsyncEnumerable<TSearchState>>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            //var run = new Run<TGenotype, TSearchSpace, TProblem, TSearchState>(algorithm, problem);
+            //var run = new Run<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem);
             // ToDo: think about to avoid two run types
             Run run = null!;
             var algorithmInstance = algorithm.CreateExecutionInstance(run);
@@ -85,9 +85,9 @@ public static class MultiStreamAlgorithmExtensions
         }
     }
 
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>(IExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> algorithmInstance)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey>(IExperimentInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithmKey> algorithmInstance)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
       where TSearchState : class, ISearchState
     {
         public async Task<IReadOnlyList<KeyValuePair<TAlgorithmKey, TSearchState>>> RunToCompletionAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)

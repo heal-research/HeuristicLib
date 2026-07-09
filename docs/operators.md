@@ -8,11 +8,11 @@ The design intent is that many algorithm variants can be expressed by **swapping
 
 The core roles used across algorithms in this repository are:
 
-- **Creator** (`ICreator`): creates initial genotypes.
-- **Evaluator** (`IEvaluator`): evaluates genotypes to objective vectors.
-- **Selector** (`ISelector`): selects solutions (usually parents) from a population.
-- **Crossover** (`ICrossover`): combines parent genotypes into offspring genotypes.
-- **Mutator** (`IMutator`): perturbs genotypes to create variation.
+- **Creator** (`ICreator`): creates initial candidates.
+- **Evaluator** (`IEvaluator`): turns candidates into evaluated candidates.
+- **Selector** (`ISelector`): selects evaluated candidates, usually as parents.
+- **Crossover** (`ICrossover`): combines parent candidates into offspring candidates.
+- **Mutator** (`IMutator`): perturbs candidates to create variation.
 - **Replacer** (`IReplacer`): decides how to form the next population.
 - **Terminator** (`ITerminator`): observes produced search states and decides whether the owning lifecycle should stop.
 - **Interceptor** (`IInterceptor`): transforms the produced search state.
@@ -32,8 +32,8 @@ This consistency reduces cognitive load: once you’ve implemented one operator,
 > [!IMPORTANT]
 > Search-space dependent operators are responsible for adhering to the provided search space.
 >
-> - Operators assume their input genotypes are already within the given search space. Passing out-of-space inputs is considered a usage error and may throw.
-> - Operators guarantee that any genotypes they return are within the given search space.
+> - Operators assume their input candidates are already within the given search space. Passing out-of-space inputs is considered a usage error and may throw.
+> - Operators guarantee that any candidates they return are within the given search space.
 
 ## Choosing a base class
 
@@ -45,7 +45,7 @@ Use this checklist:
    - creation -> `ICreator`
    - evaluation -> `IEvaluator`
    - selection -> `ISelector`
-   - variation of existing genotypes -> `IMutator` / `ICrossover`
+   - variation of existing candidates -> `IMutator` / `ICrossover`
    - survivor selection -> `IReplacer`
    - stopping rule -> `ITerminator`
    - state post-processing -> `IInterceptor`
@@ -59,8 +59,8 @@ Use this checklist:
 
 4. **If the operator needs mutable per-run memory, use the unprefixed role base**
    - Examples: `Creator`, `Mutator`, `Evaluator`, `Selector`, `Crossover`, `Replacer`, `Terminator`, `Interceptor`
-   - Put configuration on the definition object.
-   - Put mutable runtime data into `TExecutionState`.
+   - Put configuration on the configuration object.
+   - Put mutable execution data into `TExecutionState`.
 
 5. **If the operator wraps exactly one inner operator of the same role, use `Wrapping*<..., TExecutionState>`**
    - Examples: `WrappingEvaluator`, `WrappingMutator`, `WrappingSelector`, ...
@@ -74,7 +74,7 @@ Use this checklist:
 
 7. **If none of the convenience bases fit, implement the operator contract directly**
    - This is the fallback when you need full control over instancing or execution behavior.
-   - If you do that, you also need to handle the definition/execution-instance split correctly. See [Definition vs execution instances](execution-instances.md).
+   - If you do that, you also need to handle the configuration/execution-instance split correctly. See [Configuration vs execution instances](execution-instances.md).
 
 ## Short version
 
@@ -108,7 +108,7 @@ HeuristicLib includes a few small composition patterns that keep calling code cl
 - `ChooseOne*` helpers choose among several operators using weights
 - `Pipeline*` helpers apply several operators in sequence
 
-Operator observation helpers also follow explicit budget-unit names. For example, `CountMutatorCalls(...)` counts calls to the observed mutator boundary, while `CountMutatedGenotypes(...)` counts genotypes returned by those batched mutator calls. See [Observability & analysis](observability-and-analysis.md) for the counter and observation model.
+Operator observation helpers also follow explicit budget-unit names. For example, `CountMutatorCalls(...)` counts calls to the observed mutator boundary, while `CountMutatedCandidates(...)` counts candidates returned by those batched mutator calls. See [Observability & analysis](observability-and-analysis.md) for the counter and observation model.
 
 ## Next
 

@@ -51,18 +51,18 @@ public record VisualizationCallbackEvaluator(
 {
 
     public override IReadOnlyList<ObjectiveVector> Evaluate(
-      IReadOnlyList<SymbolicExpressionTree> genotypes,
+      IReadOnlyList<SymbolicExpressionTree> candidates,
       IRandomNumberGenerator random,
       SymbolicExpressionTreeSearchSpace searchSpace,
       SymbolicRegressionProblem problem)
     {
 
         var objectives = new DirectEvaluator<SymbolicExpressionTree>()
-          .Evaluate(genotypes, random, searchSpace, problem);
+          .Evaluate(candidates, random, searchSpace, problem);
 
         // Call Python callback for visualization side-effects.
         // Callback returns the objectives to use (allows pass-through).
-        var result = PopulationCallback(genotypes.ToArray(), objectives.ToArray());
+        var result = PopulationCallback(candidates.ToArray(), objectives.ToArray());
         return result.Select(x => (ObjectiveVector)x).ToArray();
     }
 }

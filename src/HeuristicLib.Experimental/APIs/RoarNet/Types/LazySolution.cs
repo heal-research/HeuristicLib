@@ -6,18 +6,18 @@ public class LazySolution<T> : Solution
     private bool bounded;
     private double? quality;
     private double? lowerBound;
-    public readonly T Genotype;
+    public readonly T Candidate;
     private readonly IEvaluationContext<T> context;
 
-    public LazySolution(T genotype, IEvaluationContext<T> context)
+    public LazySolution(T candidate, IEvaluationContext<T> context)
     {
-        this.Genotype = genotype;
+        this.Candidate = candidate;
         this.context = context;
     }
 
     private LazySolution(LazySolution<T> other)
     {
-        Genotype = other.Genotype;
+        Candidate = other.Candidate;
         context = other.context;
         evaluated = other.evaluated;
         bounded = other.bounded;
@@ -29,7 +29,7 @@ public class LazySolution<T> : Solution
     {
         if (evaluated)
             return quality;
-        quality = context.Evaluate(Genotype, out var b, out var bound);
+        quality = context.Evaluate(Candidate, out var b, out var bound);
         if (b)
         {
             lowerBound = bound;
@@ -44,7 +44,7 @@ public class LazySolution<T> : Solution
     {
         if (bounded)
             return lowerBound;
-        lowerBound = context.LowerBound(Genotype, out var e, out var q);
+        lowerBound = context.LowerBound(Candidate, out var e, out var q);
         if (!e)
             return lowerBound;
 

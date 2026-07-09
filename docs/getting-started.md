@@ -2,7 +2,7 @@
 
 This page is the shortest path from having a problem to running an algorithm and understanding the default extension story.
 
-The most important current ideas are:
+The most important ideas are:
 
 1. configure problems and operators as plain objects
 2. run algorithms streaming-first
@@ -39,7 +39,7 @@ var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, Travel
 };
 
 await foreach (var state in algorithm.RunStreamingAsync(problem, rng)) {
-  Console.WriteLine(state.Population.Solutions.Count);
+  Console.WriteLine(state.Population.EvaluatedCandidates.Count);
 }
 ```
 
@@ -62,28 +62,28 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-public sealed record MyAlgorithm<TGenotype, TSearchSpace, TProblem>
+public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
   : IterativeAlgorithm<
-      TGenotype,
+      TCandidate,
       TSearchSpace,
       TProblem,
-      SingleSolutionState<TGenotype>,
-      MyAlgorithm<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+      SingleEvaluatedCandidateState<TCandidate>,
+      MyAlgorithm<TCandidate, TSearchSpace, TProblem>.ExecutionState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
   public new sealed class ExecutionState
     : IterativeAlgorithm<
-        TGenotype,
+        TCandidate,
         TSearchSpace,
         TProblem,
-        SingleSolutionState<TGenotype>,
+        SingleEvaluatedCandidateState<TCandidate>,
         ExecutionState>.ExecutionState
   {
-    public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
+    public required ICreatorInstance<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
   }
 
-  public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
+  public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
 
   protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
   {
@@ -94,23 +94,23 @@ public sealed record MyAlgorithm<TGenotype, TSearchSpace, TProblem>
     };
   }
 
-  protected override SingleSolutionState<TGenotype> ExecuteStep(
-    SingleSolutionState<TGenotype>? previousState,
+  protected override SingleEvaluatedCandidateState<TCandidate> ExecuteStep(
+    SingleEvaluatedCandidateState<TCandidate>? previousState,
     ExecutionState executionState,
     TProblem problem,
     IRandomNumberGenerator random)
   {
     var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-    var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+    var objectiveVector = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-    return new SingleSolutionState<TGenotype> {
-      Population = Population.From([candidate], [objective])
+    return new SingleEvaluatedCandidateState<TCandidate> {
+      Population = Population.From([candidate], [objectiveVector])
     };
   }
 }
 ```
 
-Here the public search state is the current solution. If your algorithm needs other public progress data, add it explicitly to your concrete search-state type.
+Here the public search state is the current evaluated candidate. If your algorithm needs other public progress data, add it explicitly to your concrete search-state type.
 
 When the algorithm depends on operators, resolve them in `CreateInitialExecutionState(...)` and store the resulting execution instances and other per-run mutable data in the nested `ExecutionState`.
 
@@ -120,7 +120,7 @@ You do not need to start with:
 
 - manual execution-instance classes
 - full registry control
-- meta algorithms
+- meta-algorithms
 
 Those are real parts of the system, but they are not the intended first extension path anymore.
 

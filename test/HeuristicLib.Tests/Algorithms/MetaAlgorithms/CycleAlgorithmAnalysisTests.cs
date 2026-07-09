@@ -90,9 +90,9 @@ public class CycleAlgorithmAnalysisTests
     {
         var rootRegistryField = typeof(Run).GetField("rootRegistry", BindingFlags.Instance | BindingFlags.NonPublic)!;
         var rootRegistry = ((Lazy<ExecutionInstanceRegistry>)rootRegistryField.GetValue(run)!).Value;
-        var replacementExecutablesField = typeof(ExecutionInstanceRegistry).GetField("replacementExecutables", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var replacementExecutables = (IDictionary)replacementExecutablesField.GetValue(rootRegistry)!;
-        return replacementExecutables.Count;
+        var replacementResolvablesField = typeof(ExecutionInstanceRegistry).GetField("replacementResolvables", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var replacementResolvables = (IDictionary)replacementResolvablesField.GetValue(rootRegistry)!;
+        return replacementResolvables.Count;
     }
 
     private sealed class AnalyzerTestRun(params IAnalyzer[] analyzers) : Run(analyzers);
@@ -108,13 +108,13 @@ public class CycleAlgorithmAnalysisTests
         protected override ExecutionState CreateInitialState() => new();
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(
-          IReadOnlyList<int> genotypes,
+          IReadOnlyList<int> candidates,
           ExecutionState executionState,
           IRandomNumberGenerator random,
           DummySearchSpace<int> searchSpace,
           IProblem<int, DummySearchSpace<int>> problem)
         {
-            return genotypes.Select(_ => new ObjectiveVector(++executionState.Value)).ToArray();
+            return candidates.Select(_ => new ObjectiveVector(++executionState.Value)).ToArray();
         }
     }
 
@@ -126,16 +126,16 @@ public class CycleAlgorithmAnalysisTests
             public required IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; init; }
         }
 
-        public int Genotype { get; }
+        public int Candidate { get; }
 
         public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; }
 
         public SingleStepAlgorithm(
-          int genotype,
+          int candidate,
           IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator,
           IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
         {
-            Genotype = genotype;
+            Candidate = candidate;
             Interceptor = interceptor;
             Evaluator = evaluator;
         }
@@ -148,17 +148,17 @@ public class CycleAlgorithmAnalysisTests
           };
 
         protected override IAlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(Run run, ExecutionState executionState)
-          => new Instance(run, executionState.Evaluator, executionState.Interceptor, Genotype);
+          => new Instance(run, executionState.Evaluator, executionState.Interceptor, Candidate);
 
         private sealed class Instance(
           Run run,
           IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator,
           IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor,
-          int genotype)
+          int candidate)
           : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(run, evaluator)
         {
             private readonly IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor = interceptor;
-            private readonly int genotype = genotype;
+            private readonly int candidate = candidate;
 
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
               IProblem<int, DummySearchSpace<int>> problem,
@@ -169,10 +169,10 @@ public class CycleAlgorithmAnalysisTests
             {
                 ct.ThrowIfCancellationRequested();
 
-                var objectiveVector = Evaluator.Evaluate([genotype], random, problem.SearchSpace, problem).Single();
+                var objectiveVector = Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
                 var currentState = new PopulationState<int>
                 {
-                    Population = Population.From([Solution.From(genotype, objectiveVector)])
+                    Population = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)])
                 };
 
                 yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
@@ -188,7 +188,7 @@ public class CycleAlgorithmAnalysisTests
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.AddObjectiveValues(objectiveVectors));
+            observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.RecordObjectiveValues(objectiveVectors));
         }
 
         public sealed class ExecutionState
@@ -197,7 +197,7 @@ public class CycleAlgorithmAnalysisTests
 
             public IReadOnlyList<double> ObjectiveValues => objectiveValues;
 
-            public void AddObjectiveValues(IReadOnlyList<ObjectiveVector> objectiveVectors)
+            public void RecordObjectiveValues(IReadOnlyList<ObjectiveVector> objectiveVectors)
             {
                 objectiveValues.AddRange(objectiveVectors.Select(x => x[0]));
             }

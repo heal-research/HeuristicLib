@@ -5,23 +5,23 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
-public record HillClimberBuilder<TG, TS, TP>
-  : AlgorithmBuilder<TG, TS, TP, SingleSolutionState<TG>, HillClimber<TG, TS, TP>>,
-    IBuilderWithCreator<TG, TS, TP>,
-    IBuilderWithMutator<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public record HillClimberBuilder<TCandidate, TSearchSpace, TProblem>
+  : AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>, HillClimber<TCandidate, TSearchSpace, TProblem>>,
+    IBuilderWithCreator<TCandidate, TSearchSpace, TProblem>,
+    IBuilderWithMutator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public int MaxNeighbors { get; set; } = 100;
     public int BatchSize { get; set; } = 100;
     public LocalSearchDirection Direction { get; set; } = LocalSearchDirection.FirstImprovement;
 
-    public required IMutator<TG, TS, TP> Mutator { get; set; }
-    public required ICreator<TG, TS, TP> Creator { get; set; }
+    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; set; }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; set; }
 
-    public override HillClimber<TG, TS, TP> Build()
+    public override HillClimber<TCandidate, TSearchSpace, TProblem> Build()
     {
-        return new HillClimber<TG, TS, TP>
+        return new HillClimber<TCandidate, TSearchSpace, TProblem>
         {
             Interceptor = Interceptor,
             Creator = Creator,

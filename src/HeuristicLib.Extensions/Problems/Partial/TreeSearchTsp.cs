@@ -1,4 +1,4 @@
-﻿using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
@@ -10,24 +10,24 @@ public class TreeSearchTsp(TravelingSalesmanProblem innerProblem) :
   SingleSolutionProblem<Permutation, PermutationSearchSpace>(innerProblem.Objective, innerProblem.SearchSpace),
   IPartialSolutionProblem<Permutation, PermutationSearchSpace, int>
 {
-  public bool IsTerminal(Permutation genotype, IRandomNumberGenerator random) => genotype.Count == innerProblem.ProblemData.NumberOfCities;
+  public bool IsTerminal(Permutation candidate, IRandomNumberGenerator random) => candidate.Count == innerProblem.ProblemData.NumberOfCities;
 
-  public ObjectiveVector Bound(Permutation genotype, IRandomNumberGenerator random)
+  public ObjectiveVector Bound(Permutation candidate, IRandomNumberGenerator random)
   {
     var pd = innerProblem.ProblemData;
     var totalDistance = 0.0;
-    for (var i = 0; i < genotype.Count - 1; i++) {
-      totalDistance += pd.GetDistance(genotype[i], genotype[i + 1]);
+    for (var i = 0; i < candidate.Count - 1; i++) {
+      totalDistance += pd.GetDistance(candidate[i], candidate[i + 1]);
     }
 
     //TODO this is only valid for metric spaces
-    totalDistance += pd.GetDistance(genotype[^1], genotype[0]); // Return to the starting city 
+    totalDistance += pd.GetDistance(candidate[^1], candidate[0]); // Return to the starting city 
 
     return totalDistance;
   }
 
-  public ObjectiveVector? EvaluatePartial(Permutation genotypes, IRandomNumberGenerator random) => !IsTerminal(genotypes, random) ? null : innerProblem.Evaluate(genotypes, random);
-  public override ObjectiveVector Evaluate(Permutation genotypes, IRandomNumberGenerator random) => innerProblem.Evaluate(genotypes, random);
+  public ObjectiveVector? EvaluatePartial(Permutation candidates, IRandomNumberGenerator random) => !IsTerminal(candidates, random) ? null : innerProblem.Evaluate(candidates, random);
+  public override ObjectiveVector Evaluate(Permutation candidates, IRandomNumberGenerator random) => innerProblem.Evaluate(candidates, random);
 
-  public Permutation ApplyChoice(Permutation genotype, int choice) => new(genotype.Append(choice));
+  public Permutation ApplyChoice(Permutation candidate, int choice) => new(candidate.Append(choice));
 }

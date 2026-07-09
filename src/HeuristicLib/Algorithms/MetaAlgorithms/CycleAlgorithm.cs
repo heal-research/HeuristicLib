@@ -12,15 +12,15 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 // ToDo: maybe we need another base class for MetaAlgorithms like this?
 // ToDo: think if we want the CycleAlgorithm to terminate internally by checking each result of the inner algorihtms
 [Equatable]
-public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+  : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>.ExecutionState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     public new sealed class ExecutionState
-      : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, ExecutionState>.ExecutionState
+      : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, ExecutionState>.ExecutionState
     {
     }
 
@@ -30,7 +30,7 @@ public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProbl
     // ToDo: think if better place outside and keep CycleAlgorithm as infinite cycles?
     public int? MaximumCycles { get; init; }
 
-    // ToDo: maybe we need a new concept of ExecutionScope for this, if this comes up more often.
+    // ToDo: maybe execution-instance reuse needs a clearer lifecycle concept if this comes up more often.
     public bool NewExecutionInstancesPerCycle { get; init; } = true;
 
     public CycleAlgorithm(ImmutableArray<TAlgorithm> algorithms)
@@ -46,9 +46,9 @@ public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProbl
         };
     }
 
-    protected override CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState)
+    protected override CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState)
     {
-        return new CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>(
+        return new CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
           run,
           executionState.Evaluator,
           Algorithms.ToList(),
@@ -58,12 +58,12 @@ public partial record CycleAlgorithm<TAlgorithm, TGenotype, TSearchSpace, TProbl
     }
 }
 
-public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProblem, TSearchState>
-  : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+  : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TAlgorithm : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     protected readonly IReadOnlyList<TAlgorithm> Algorithms;
     protected readonly int? MaximumCycles;
@@ -71,7 +71,7 @@ public class CycleAlgorithmInstance<TAlgorithm, TGenotype, TSearchSpace, TProble
 
     private readonly Dictionary<TAlgorithm, ExecutionInstanceRegistry> algorithmInstanceRegistries;
 
-    public CycleAlgorithmInstance(Run run, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
+    public CycleAlgorithmInstance(Run run, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
       : base(run, evaluator)
     {
         Algorithms = algorithms;

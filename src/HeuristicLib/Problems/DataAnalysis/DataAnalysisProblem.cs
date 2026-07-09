@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public abstract class DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>(TProblemData problemData, Objective objective, TSearchSpace encoding)
+public abstract class DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>(TProblemData problemData, ObjectiveDirections objective, TSearchSpace encoding)
   : SingleSolutionProblem<TISolution, TSearchSpace>(objective, encoding)
   where TProblemData : DataAnalysisProblemData
   where TSearchSpace : class, ISearchSpace<TISolution>

@@ -6,26 +6,26 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 
 public static class CreatorCounterExtensions
 {
-    extension<TG, TS, TP>(ICreator<TG, TS, TP> creator)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ICreator<TG, TS, TP> CountCreatorCalls(ObservationCounter counter)
+        public ICreator<TCandidate, TSearchSpace, TProblem> CountCreatorCalls(ObservationCounter counter)
             => creator.ObserveWith(_ => counter.IncrementBy(1));
 
-        public ICreator<TG, TS, TP> CountCreatorCalls(out ObservationCounter counter)
+        public ICreator<TCandidate, TSearchSpace, TProblem> CountCreatorCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return creator.CountCreatorCalls(counter);
         }
 
-        public ICreator<TG, TS, TP> CountCreatedGenotypes(ObservationCounter counter)
+        public ICreator<TCandidate, TSearchSpace, TProblem> CountCreatedCandidates(ObservationCounter counter)
             => creator.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
 
-        public ICreator<TG, TS, TP> CountCreatedGenotypes(out ObservationCounter counter)
+        public ICreator<TCandidate, TSearchSpace, TProblem> CountCreatedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return creator.CountCreatedGenotypes(counter);
+            return creator.CountCreatedCandidates(counter);
         }
     }
 }

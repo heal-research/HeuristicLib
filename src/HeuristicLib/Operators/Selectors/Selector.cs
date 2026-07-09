@@ -6,69 +6,69 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public abstract record Selector<TGenotype, TSearchSpace, TProblem, TExecutionState>
-  : ISelector<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record Selector<TCandidate, TSearchSpace, TProblem, TExecutionState>
+  : ISelector<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TExecutionState : class
 {
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-      Objective objective, int count, TExecutionState executionState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective, int count, TExecutionState executionState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public ISelectorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new SelectorInstance(this, CreateInitialState());
 
-    private sealed class SelectorInstance(Selector<TGenotype, TSearchSpace, TProblem, TExecutionState> selector, TExecutionState executionState)
-      : ISelectorInstance<TGenotype, TSearchSpace, TProblem>
+    private sealed class SelectorInstance(Selector<TCandidate, TSearchSpace, TProblem, TExecutionState> selector, TExecutionState executionState)
+      : ISelectorInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             return selector.Select(population, objective, count, executionState, random, searchSpace, problem);
         }
     }
 }
 
-public abstract record Selector<TGenotype, TSearchSpace, TExecutionState>
-  : ISelector<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+public abstract record Selector<TCandidate, TSearchSpace, TExecutionState>
+  : ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
   where TExecutionState : class
 {
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-      Objective objective, int count, TExecutionState executionState, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective, int count, TExecutionState executionState, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public ISelectorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ISelectorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new SelectorInstance(this, CreateInitialState());
 
-    private sealed class SelectorInstance(Selector<TGenotype, TSearchSpace, TExecutionState> selector, TExecutionState executionState)
-      : ISelectorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+    private sealed class SelectorInstance(Selector<TCandidate, TSearchSpace, TExecutionState> selector, TExecutionState executionState)
+      : ISelectorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     {
-        public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem)
+        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem)
         {
             return selector.Select(population, objective, count, executionState, random, searchSpace);
         }
     }
 }
 
-public abstract record Selector<TGenotype, TExecutionState>
-  : ISelector<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+public abstract record Selector<TCandidate, TExecutionState>
+  : ISelector<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
   where TExecutionState : class
 {
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-      Objective objective, int count, TExecutionState executionState, IRandomNumberGenerator random);
+    protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective, int count, TExecutionState executionState, IRandomNumberGenerator random);
 
-    public ISelectorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ISelectorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new SelectorInstance(this, CreateInitialState());
 
-    private sealed class SelectorInstance(Selector<TGenotype, TExecutionState> selector, TExecutionState executionState)
-      : ISelectorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+    private sealed class SelectorInstance(Selector<TCandidate, TExecutionState> selector, TExecutionState executionState)
+      : ISelectorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
     {
-        public IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
         {
             return selector.Select(population, objective, count, executionState, random);
         }

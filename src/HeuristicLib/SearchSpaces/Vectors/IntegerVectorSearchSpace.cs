@@ -22,9 +22,9 @@ public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
     public IntegerVector Minimum { get; }
     public IntegerVector Maximum { get; }
 
-    public override bool Contains(IntegerVector genotype) => genotype.Count == Length
-                                                             && (genotype >= Minimum).All()
-                                                             && (genotype <= Maximum).All();
+    public override bool Contains(IntegerVector candidate) => candidate.Count == Length
+                                                             && (candidate >= Minimum).All()
+                                                             && (candidate <= Maximum).All();
 
     public static implicit operator RealVectorSearchSpace(IntegerVectorSearchSpace integerVectorSpace) =>
       new(integerVectorSpace.Length, integerVectorSpace.Minimum, integerVectorSpace.Maximum);

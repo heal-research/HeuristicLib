@@ -6,23 +6,23 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 // ToDo: If we assume that a selector cannot select the whole requested number of solutions, the EliteSelector could simply be a PipelineSelector with a BestSelector and then another selector for the remaining.
-public record EliteSelector<TGenotype, TSearchSpace, TProblem>
-  : WrappingSelector<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record EliteSelector<TCandidate, TSearchSpace, TProblem>
+  : WrappingSelector<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     private readonly int elites;
 
-    public ISelector<TGenotype, TSearchSpace, TProblem> SelectorForRemaining => InnerSelector;
+    public ISelector<TCandidate, TSearchSpace, TProblem> SelectorForRemaining => InnerSelector;
 
-    public EliteSelector(ISelector<TGenotype, TSearchSpace, TProblem> selectorForRemaining, int elites = 1)
+    public EliteSelector(ISelector<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites = 1)
       : base(selectorForRemaining)
     {
         this.elites = elites;
     }
 
-    protected override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population,
-                                                                  Objective objective, int count, InnerSelect innerSelect,
+    protected override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+                                                                  ObjectiveDirections objective, int count, InnerSelect innerSelect,
                                                                   IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         var selectedElites = BestSelector.Select(population, objective, elites);
@@ -35,5 +35,5 @@ public record EliteSelector<TGenotype, TSearchSpace, TProblem>
 
 // public static class EliteSelector
 // {
-//   public static EliteSelector<TGenotype, TSearchSpace, TProblem> WithElites<TGenotype, TSearchSpace, TProblem>(this ISelector<TGenotype, TSearchSpace, TProblem> selector, int elites = 1) where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace> => new(selector, elites);
+//   public static EliteSelector<TCandidate, TSearchSpace, TProblem> WithElites<TCandidate, TSearchSpace, TProblem>(this ISelector<TCandidate, TSearchSpace, TProblem> selector, int elites = 1) where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selector, elites);
 // }

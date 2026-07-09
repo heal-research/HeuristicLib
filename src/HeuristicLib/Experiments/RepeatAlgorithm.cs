@@ -7,28 +7,28 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-public record RepeatAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-  : Experiment<TGenotype, TSearchSpace, TProblem, TSearchState, int>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record RepeatAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
+  : Experiment<TCandidate, TSearchSpace, TProblem, TSearchState, int>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     public required TAlgorithm Algorithm { get; init; }
     public int Repetitions { get; init; } = 5;
 
-    public override RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override RepeatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
-        return new RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>(Algorithm, Repetitions);
+        return new RepeatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>(Algorithm, Repetitions);
     }
 }
 
-public class RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-  : ExperimentInstance<TGenotype, TSearchSpace, TProblem, TSearchState, int>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public class RepeatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
+  : ExperimentInstance<TCandidate, TSearchSpace, TProblem, TSearchState, int>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+  where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     protected readonly TAlgorithm Algorithm;
     protected readonly int Repetitions;
@@ -53,11 +53,11 @@ public class RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearc
 
 public static class RepeatExecutionExtensions
 {
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>(RepeatAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm> algorithm)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>(RepeatAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> algorithm)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
       where TSearchState : class, ISearchState
-      where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+      where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public IAsyncEnumerable<KeyValuePair<(int Repetition, int Iteration), TSearchState>> RunInterleavedStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
         {
@@ -70,11 +70,11 @@ public static class RepeatExecutionExtensions
         }
     }
 
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>(RepeatedAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm> algorithmInstance)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>(RepeatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> algorithmInstance)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
       where TSearchState : class, ISearchState
-      where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+      where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public IAsyncEnumerable<KeyValuePair<(int Repetition, int Iteration), TSearchState>> RunInterleavedStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
         {
@@ -89,15 +89,15 @@ public static class RepeatExecutionExtensions
         }
     }
 
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>(TAlgorithm algorithm)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>(TAlgorithm algorithm)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
       where TSearchState : class, ISearchState
-      where TAlgorithm : class, IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
+      where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
-        public RepeatAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm> Repeat(int repetitions)
+        public RepeatAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> Repeat(int repetitions)
         {
-            return new RepeatAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TAlgorithm>
+            return new RepeatAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
             {
                 Algorithm = algorithm,
                 Repetitions = repetitions

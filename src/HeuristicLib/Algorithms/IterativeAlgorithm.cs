@@ -9,21 +9,21 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>,
-    IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>
+  : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>,
+    IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TExecutionState : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
+  where TExecutionState : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
 {
     public new class ExecutionState
-      : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
+      : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
     {
-        public IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
+        public IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
     }
 
-    public IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
+    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
 
     protected abstract TSearchState ExecuteStep(
       TSearchState? previousState,
@@ -55,18 +55,18 @@ public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSe
       TExecutionState executionState,
       TProblem problem) => false;
 
-    protected sealed override IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState)
+    protected sealed override IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState)
     {
         return new Instance(this, run, executionState);
     }
 
     private sealed class Instance(
-      IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState> algorithm,
+      IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState> algorithm,
       Run run,
       TExecutionState executionState)
-      : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>(run, executionState.Evaluator)
+      : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(run, executionState.Evaluator)
     {
-        private readonly IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>? interceptor = executionState.Interceptor;
+        private readonly IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = executionState.Interceptor;
 
         private bool TryExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)
         {

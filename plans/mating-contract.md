@@ -28,7 +28,7 @@ Chosen direction: use a dedicated mating-arrangement concept long-term. The arra
 
 ## Implementation Direction
 
-- Define the mating arrangement as the boundary that converts selected/evaluated solutions into ordered parent groups for crossover.
+- Define the mating arrangement as the boundary that converts selected/evaluated candidates into ordered parent groups for crossover.
 - Keep `IParents<T>` or an equivalent explicit pair type at the crossover boundary unless a later design proves n-ary/global crossover should become first-class.
 - State the standard binary crossover convention: ordinary mating arrangements produce ordered neighboring pairs, and `Parent1`/`Parent2` may have semantic meaning for role-sensitive crossovers.
 - Provide default arrangement behavior equivalent to today’s flow: select `2 * offspringCount` parents with the configured selector, then pair entries `0/1`, `2/3`, etc.
@@ -58,7 +58,7 @@ More flexible research workflows with plus/comma replacement or custom replaceme
 
 - Add API/spec tests documenting that parent order is meaningful and preserved through arrangement into crossover pairs.
 - Add tests for gender-specific/role-specific arrangement: first selector fills `Parent1`, second selector fills `Parent2`.
-- Add tests for best-parent-first arrangement using objective comparison before converting to genotype-only parents.
+- Add tests for best-parent-first arrangement using objective comparison before converting to candidate-only parents.
 - Add GA tests showing `PopulationSize = 100` and `Elites = 1` produces/evaluates 99 offspring and requests 198 selected parents.
 - Add guard tests for invalid counts, especially odd parent counts or impossible elite/population combinations.
 

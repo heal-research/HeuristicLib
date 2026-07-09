@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public record RandomCrossover<TGenotype>
-  : SingleSolutionCrossover<TGenotype>
+public record RandomCrossover<TCandidate>
+  : SingleSolutionCrossover<TCandidate>
 {
     public double Bias { get; }
 
@@ -16,7 +16,7 @@ public record RandomCrossover<TGenotype>
         Bias = bias;
     }
 
-    public override TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random)
+    public override TCandidate Cross(IParents<TCandidate> parents, IRandomNumberGenerator random)
     {
         return random.NextDouble() < Bias ? parents.Parent1 : parents.Parent2;
     }

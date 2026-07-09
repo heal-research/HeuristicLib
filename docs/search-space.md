@@ -1,6 +1,6 @@
 # Search spaces
 
-A **search space** defines which genotypes are valid candidates.
+A **search space** defines which candidate values are valid.
 
 It is intentionally minimal and declarative:
 
@@ -12,20 +12,20 @@ Generation and variation are handled by operators (`ICreator`, `ICrossover`, `IM
 > [!IMPORTANT]
 > Search-space dependent operators are responsible for enforcing the search space.
 >
-> - Operators generally assume they receive genotypes that already satisfy `searchSpace.Contains(genotype)` and may throw if that contract is violated.
-> - Operators that produce genotypes (creators, mutators, crossovers, repair operators) must guarantee that their outputs also satisfy the provided search space.
+> - Operators generally assume they receive candidate values that already satisfy `searchSpace.Contains(candidate)` and may throw if that contract is violated.
+> - Operators that produce candidates (creators, mutators, crossovers, repair operators) must guarantee that their outputs also satisfy the provided search space.
 
 ## Contract
 
-`ISearchSpace<TGenotype>` is a single method:
+`ISearchSpace<TCandidate>` is a single method:
 
-- `bool Contains(TGenotype genotype)`
+- `bool Contains(TCandidate candidate)`
 
 There is also a non-generic marker interface `ISearchSpace`.
 
 ## Search spaces in this repository
 
-The repository includes ready-to-use search spaces for common genotype families:
+The repository includes ready-to-use search spaces for common candidate encodings:
 
 - `RealVectorSearchSpace` (length + per-dimension min/max)
 - `PermutationSearchSpace` (length)

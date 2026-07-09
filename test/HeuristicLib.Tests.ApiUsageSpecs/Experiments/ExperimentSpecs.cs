@@ -37,7 +37,7 @@ public class ExperimentSpecs
 
         results.Count.ShouldBe(3);
         results.Select(result => result.Key).ShouldBe([0, 1, 2]);
-        results.All(result => problem.SearchSpace.Contains(result.Value.Solution.Genotype)).ShouldBeTrue();
+        results.All(result => problem.SearchSpace.Contains(result.Value.EvaluatedCandidate.Candidate)).ShouldBeTrue();
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class ExperimentSpecs
 
         stream.Count.ShouldBeLessThanOrEqualTo(6);
         stream.Select(entry => entry.Key.Repetition).Distinct().Order().ShouldBe([0, 1, 2]);
-        stream.All(entry => problem.SearchSpace.Contains(entry.Value.Solution.Genotype)).ShouldBeTrue();
+        stream.All(entry => problem.SearchSpace.Contains(entry.Value.EvaluatedCandidate.Candidate)).ShouldBeTrue();
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)

@@ -8,30 +8,30 @@
 
 //namespace HEAL.HeuristicLib.APIs.RoarNet;
 
-//public abstract record ProblemOperations<T, TS, TP, TM>(
-//    StatelessCreator<T, TS, TP> Creator,
-//    INeighborhood<T,TS,TP, TM> LocalNeighborhood,
-//    TS SearchSpace,
-//    TP Problem,
+//public abstract record ProblemOperations<TCandidate, TSearchSpace, TProblem, TM>(
+//    StatelessCreator<TCandidate, TSearchSpace, TProblem> Creator,
+//    INeighborhood<TCandidate,TSearchSpace,TProblem, TM> LocalNeighborhood,
+//    TSearchSpace SearchSpace,
+//    TProblem Problem,
 //    IRandomNumberGenerator rng)
-//    : BaseOperations<LazySolution<T>, MutationMove, MutationNeighborhood, TP>, IEvaluationContext<T>
-//    where TS : class, ISearchSpace<T> where TP : class, IProblem<T, TS>, Problem
+//    : BaseOperations<LazySolution<TCandidate>, MutationMove, MutationNeighborhood, TProblem>, IEvaluationContext<TCandidate>
+//    where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>, Problem
 //{
-//    public override LazySolution<T> apply_move(MutationMove move, LazySolution<T> solution)
-//        => new(CompositeSearchSpace<,,,>.Mutator.Mutate([solution.Genotype], rng.Fork(move.forkKey), SearchSpace, Problem)[0], this);
+//    public override LazySolution<TCandidate> apply_move(MutationMove move, LazySolution<TCandidate> solution)
+//        => new(CompositeSearchSpace<,,,>.Mutator.Mutate([solution.Candidate], rng.Fork(move.forkKey), SearchSpace, Problem)[0], this);
 
-//    public override LazySolution<T> copy_solution(LazySolution<T> solution) => solution.Copy();
+//    public override LazySolution<TCandidate> copy_solution(LazySolution<TCandidate> solution) => solution.Copy();
 
-//    public override LazySolution<T> heuristic_solution(TP problem) => new(Creator.Create(1, rng, SearchSpace, Problem)[0], this);
+//    public override LazySolution<TCandidate> heuristic_solution(TProblem problem) => new(Creator.Create(1, rng, SearchSpace, Problem)[0], this);
 
-//    public override MutationNeighborhood local_neighbourhood(TP problem) => new();
+//    public override MutationNeighborhood local_neighbourhood(TProblem problem) => new();
 
-//    public override double? lower_bound(LazySolution<T> solution) => solution.LowerBound();
+//    public override double? lower_bound(LazySolution<TCandidate> solution) => solution.LowerBound();
 
-//    public override double? lower_bound_increment(MutationMove move, LazySolution<T> solution) => apply_move(move, solution).LowerBound() - solution.LowerBound();
+//    public override double? lower_bound_increment(MutationMove move, LazySolution<TCandidate> solution) => apply_move(move, solution).LowerBound() - solution.LowerBound();
 
 //#pragma warning disable S2190
-//    public override IEnumerable<MutationMove> moves(MutationNeighborhood neighbourhood, LazySolution<T> solution)
+//    public override IEnumerable<MutationMove> moves(MutationNeighborhood neighbourhood, LazySolution<TCandidate> solution)
 //#pragma warning restore S2190
 //    {
 //        while (true)
@@ -40,15 +40,15 @@
 //        }
 //    }
 
-//    public override double? objective_value(LazySolution<T> solution) => solution.Quality();
+//    public override double? objective_value(LazySolution<TCandidate> solution) => solution.Quality();
 
-//    public override double? objective_value_increment(MutationMove move, LazySolution<T> solution) => apply_move(move, solution).Quality() - solution.Quality();
+//    public override double? objective_value_increment(MutationMove move, LazySolution<TCandidate> solution) => apply_move(move, solution).Quality() - solution.Quality();
 
-//    public override MutationMove random_move(MutationNeighborhood neighbourhood, LazySolution<T> solution) => new(rng.NextInt());
+//    public override MutationMove random_move(MutationNeighborhood neighbourhood, LazySolution<TCandidate> solution) => new(rng.NextInt());
 
-//    public override LazySolution<T> random_solution(TP problem) => new(Creator.Create(1, rng, SearchSpace, Problem)[0], this);
+//    public override LazySolution<TCandidate> random_solution(TProblem problem) => new(Creator.Create(1, rng, SearchSpace, Problem)[0], this);
 
-//    public double? Evaluate(T input, out bool bounded, out double? bound)
+//    public double? Evaluate(TCandidate input, out bool bounded, out double? bound)
 //    {
 //        if (!Problem.SearchSpace.Contains(input))
 //            throw new NotImplementedException();
@@ -57,7 +57,7 @@
 //        return bound;
 //    }
 
-//    public double? LowerBound(T input, out bool evaluated, out double? quality) => Evaluate(input, out evaluated, out quality);
+//    public double? LowerBound(TCandidate input, out bool evaluated, out double? quality) => Evaluate(input, out evaluated, out quality);
 
 //    /// <summary>
 //    /// this generator slows down as larger samples are drawn
@@ -67,7 +67,7 @@
 //    /// <param name="solution"></param>
 //    /// <returns></returns>
 //#pragma warning disable S2190
-//    public override IEnumerable<MutationMove> random_moves_without_replacement(MutationNeighborhood neighbourhood, LazySolution<T> solution)
+//    public override IEnumerable<MutationMove> random_moves_without_replacement(MutationNeighborhood neighbourhood, LazySolution<TCandidate> solution)
 //    {
 //        var set = new HashSet<int>();
 //        while (true)
@@ -80,5 +80,5 @@
 //    }
 //#pragma warning restore S2190
 
-//    public override LazySolution<T> revert_move(MutationMove move, LazySolution<T> solution) => throw new NotSupportedException();
+//    public override LazySolution<TCandidate> revert_move(MutationMove move, LazySolution<TCandidate> solution) => throw new NotSupportedException();
 //}

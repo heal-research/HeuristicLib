@@ -6,7 +6,7 @@ public class SingleObjectiveComparer(ObjectiveDirection objectiveDirection) : IC
     {
         if ((x is not null && !x.IsSingleObjective) || (y is not null && !y.IsSingleObjective))
         {
-            throw new ArgumentException("Fitness must be single-objective");
+            throw new ArgumentException("Objective vector must be single-objective");
         }
 
         if (x is null && y is null)

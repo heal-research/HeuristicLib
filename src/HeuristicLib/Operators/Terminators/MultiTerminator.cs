@@ -7,22 +7,22 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 [Equatable]
-public abstract partial record MultiTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, TExecutionState>
-  : ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
+public abstract partial record MultiTerminator<TCandidate, TSearchState, TSearchSpace, TProblem, TExecutionState>
+  : ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality] protected ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>> InnerTerminators { get; }
+    [OrderedEquality] protected ImmutableArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerTerminators { get; }
 
     protected delegate bool InnerIsTerminalState(TSearchState searchState, TSearchSpace searchSpace, TProblem problem);
 
-    protected MultiTerminator(ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>> innerTerminators)
+    protected MultiTerminator(ImmutableArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators)
     {
         InnerTerminators = innerTerminators;
     }
 
-    public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new Instance(this, InnerTerminators.Select(instanceRegistry.Resolve).Select(x => (InnerIsTerminalState)x.IsTerminalState).ToArray(), CreateInitialState());
 
     protected abstract TExecutionState CreateInitialState();
@@ -31,10 +31,10 @@ public abstract partial record MultiTerminator<TGenotype, TSearchState, TSearchS
       IReadOnlyList<InnerIsTerminalState> innerTerminators,
       TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Instance(MultiTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, TExecutionState> multiTerminator,
+    private sealed class Instance(MultiTerminator<TCandidate, TSearchState, TSearchSpace, TProblem, TExecutionState> multiTerminator,
       IReadOnlyList<InnerIsTerminalState> innerTerminators,
       TExecutionState executionState)
-      : ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
+      : ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
         {
@@ -43,13 +43,13 @@ public abstract partial record MultiTerminator<TGenotype, TSearchState, TSearchS
     }
 }
 
-public abstract record MultiTerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
-  : MultiTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, NoState>
+public abstract record MultiTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : MultiTerminator<TCandidate, TSearchState, TSearchSpace, TProblem, NoState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected MultiTerminator(ImmutableArray<ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>> innerTerminators)
+    protected MultiTerminator(ImmutableArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators)
       : base(innerTerminators)
     {
     }

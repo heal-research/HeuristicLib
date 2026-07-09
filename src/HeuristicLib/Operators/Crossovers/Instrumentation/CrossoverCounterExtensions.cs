@@ -6,26 +6,26 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 public static class CrossoverCounterExtensions
 {
-    extension<TG, TS, TP>(ICrossover<TG, TS, TP> crossover)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ICrossover<TG, TS, TP> CountCrossoverCalls(ObservationCounter counter)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> CountCrossoverCalls(ObservationCounter counter)
             => crossover.ObserveWith(_ => counter.IncrementBy(1));
 
-        public ICrossover<TG, TS, TP> CountCrossoverCalls(out ObservationCounter counter)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> CountCrossoverCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return crossover.CountCrossoverCalls(counter);
         }
 
-        public ICrossover<TG, TS, TP> CountCrossedGenotypes(ObservationCounter counter)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> CountCrossedCandidates(ObservationCounter counter)
             => crossover.ObserveWith(offspring => counter.IncrementBy(offspring.Count));
 
-        public ICrossover<TG, TS, TP> CountCrossedGenotypes(out ObservationCounter counter)
+        public ICrossover<TCandidate, TSearchSpace, TProblem> CountCrossedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return crossover.CountCrossedGenotypes(counter);
+            return crossover.CountCrossedCandidates(counter);
         }
     }
 }

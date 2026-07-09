@@ -5,22 +5,22 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public abstract record WrappingTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, TExecutionState>
-  : ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
+public abstract record WrappingTerminator<TCandidate, TSearchState, TSearchSpace, TProblem, TExecutionState>
+  : ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     protected delegate bool InnerIsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 
-    protected ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState> InnerTerminator { get; }
+    protected ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> InnerTerminator { get; }
 
-    protected WrappingTerminator(ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState> innerTerminator)
+    protected WrappingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator)
     {
         InnerTerminator = innerTerminator;
     }
 
-    public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new Instance(this, instanceRegistry.Resolve(InnerTerminator).IsTerminalState, CreateInitialState());
 
     protected abstract TExecutionState CreateInitialState();
@@ -29,9 +29,9 @@ public abstract record WrappingTerminator<TGenotype, TSearchState, TSearchSpace,
       InnerIsTerminalState innerIsTerminalState,
       TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Instance(WrappingTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, TExecutionState> wrappingTerminator,
+    private sealed class Instance(WrappingTerminator<TCandidate, TSearchState, TSearchSpace, TProblem, TExecutionState> wrappingTerminator,
       InnerIsTerminalState innerIsTerminalState, TExecutionState executionState)
-      : ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
+      : ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem)
         {
@@ -40,13 +40,13 @@ public abstract record WrappingTerminator<TGenotype, TSearchState, TSearchSpace,
     }
 }
 
-public abstract record WrappingTerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
-  : WrappingTerminator<TGenotype, TSearchState, TSearchSpace, TProblem, NoState>
+public abstract record WrappingTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : WrappingTerminator<TCandidate, TSearchState, TSearchSpace, TProblem, NoState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected WrappingTerminator(ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState> innerTerminator)
+    protected WrappingTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator)
       : base(innerTerminator)
     {
     }

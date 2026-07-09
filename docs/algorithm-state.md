@@ -18,11 +18,11 @@ At the abstraction level, a search state is just a marker for the public streame
 That base type does **not** imply any particular payload. In practice, concrete search states usually hold things like:
 
 - a current population
-- a current solution
+- a current evaluated candidate
 - a best-so-far summary
 - any other public progress snapshot the algorithm wants to expose
 
-Built-in examples include `PopulationState<TGenotype>` and `SingleSolutionState<TGenotype>`.
+Built-in examples include `PopulationState<TCandidate>` and `SingleEvaluatedCandidateState<TCandidate>`.
 
 Iteration counts are not part of the search-state contract. In nested, wrapped, or cycled executions there is no single globally meaningful notion of “the current iteration”, so that kind of counting remains an execution concern rather than public search state.
 

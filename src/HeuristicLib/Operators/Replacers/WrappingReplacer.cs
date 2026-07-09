@@ -6,62 +6,62 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public abstract record WrappingReplacer<TGenotype, TSearchSpace, TProblem, TExecutionState>
-  : IReplacer<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record WrappingReplacer<TCandidate, TSearchSpace, TProblem, TExecutionState>
+  : IReplacer<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TExecutionState : class
 {
-    protected delegate IReadOnlyList<ISolution<TGenotype>> InnerReplace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected delegate IReadOnlyList<EvaluatedCandidate<TCandidate>> InnerReplace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected IReplacer<TGenotype, TSearchSpace, TProblem> InnerReplacer { get; }
+    protected IReplacer<TCandidate, TSearchSpace, TProblem> InnerReplacer { get; }
 
-    protected WrappingReplacer(IReplacer<TGenotype, TSearchSpace, TProblem> innerReplacer)
+    protected WrappingReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> innerReplacer)
     {
         InnerReplacer = innerReplacer;
     }
 
-    public IReplacerInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new Instance(this, instanceRegistry.Resolve(InnerReplacer).Replace, CreateInitialState());
 
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, TExecutionState executionState,
+    protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TExecutionState executionState,
       InnerReplace innerReplace, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Instance(WrappingReplacer<TGenotype, TSearchSpace, TProblem, TExecutionState> wrappingReplacer,
+    private sealed class Instance(WrappingReplacer<TCandidate, TSearchSpace, TProblem, TExecutionState> wrappingReplacer,
       InnerReplace innerReplace, TExecutionState executionState)
-      : IReplacerInstance<TGenotype, TSearchSpace, TProblem>
+      : IReplacerInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation, IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             return wrappingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, executionState, innerReplace, random, searchSpace, problem);
         }
     }
 }
 
-public abstract record WrappingReplacer<TGenotype, TSearchSpace, TProblem>
-  : WrappingReplacer<TGenotype, TSearchSpace, TProblem, NoState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record WrappingReplacer<TCandidate, TSearchSpace, TProblem>
+  : WrappingReplacer<TCandidate, TSearchSpace, TProblem, NoState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected WrappingReplacer(IReplacer<TGenotype, TSearchSpace, TProblem> innerReplacer)
+    protected WrappingReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> innerReplacer)
       : base(innerReplacer)
     {
     }
 
     protected sealed override NoState CreateInitialState() => NoState.Instance;
 
-    protected sealed override IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count, NoState executionState,
+    protected sealed override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, NoState executionState,
       InnerReplace innerReplace, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem)
       => Replace(previousPopulation, offspringPopulation, objective, count, innerReplace, random, searchSpace, problem);
 
-    protected abstract IReadOnlyList<ISolution<TGenotype>> Replace(IReadOnlyList<ISolution<TGenotype>> previousPopulation,
-      IReadOnlyList<ISolution<TGenotype>> offspringPopulation, Objective objective, int count,
+    protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count,
       InnerReplace innerReplace, IRandomNumberGenerator random,
       TSearchSpace searchSpace, TProblem problem);
 }

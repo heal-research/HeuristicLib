@@ -31,7 +31,7 @@ public class AlgorithmAuthoringSpecs
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Solution.Genotype.ShouldBe(new RealVector(1.0, 0.0, 0.0));
+        finalState.EvaluatedCandidate.Candidate.ShouldBe(new RealVector(1.0, 0.0, 0.0));
     }
 
     [Fact]
@@ -53,8 +53,8 @@ public class AlgorithmAuthoringSpecs
           RandomNumberGenerator.Create(456),
           ct: TestContext.Current.CancellationToken);
 
-        firstRunState.Solution.Genotype.ShouldBe(new RealVector(1.0, 2.0, 1.0));
-        secondRunState.Solution.Genotype.ShouldBe(new RealVector(1.0, 2.0, 1.0));
+        firstRunState.EvaluatedCandidate.Candidate.ShouldBe(new RealVector(1.0, 2.0, 1.0));
+        secondRunState.EvaluatedCandidate.Candidate.ShouldBe(new RealVector(1.0, 2.0, 1.0));
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class AlgorithmAuthoringSpecs
           RandomNumberGenerator.Create(789),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Solution.Genotype.ShouldBe(new RealVector(1.0, 2.0, 2.0));
+        finalState.EvaluatedCandidate.Candidate.ShouldBe(new RealVector(1.0, 2.0, 2.0));
     }
 
     [Fact]
@@ -216,11 +216,11 @@ public class AlgorithmAuthoringSpecs
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {
-            var current = currentState.Solution.Genotype;
+            var current = currentState.EvaluatedCandidate.Candidate;
             RealVector transformed = [current[0], current[1], current[2] + 1.0];
             return new SingleSolutionState<RealVector>
             {
-                Population = Population.From([transformed], [currentState.Solution.ObjectiveVector])
+                Population = Population.From([transformed], [currentState.EvaluatedCandidate.ObjectiveVector])
             };
         }
     }
@@ -261,10 +261,10 @@ public class AlgorithmAuthoringSpecs
 
         private sealed class Instance(InstancingEvaluator owner) : IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> genotypes, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {
                 owner.EvaluateCalls++;
-                return Enumerable.Range(0, genotypes.Count)
+                return Enumerable.Range(0, candidates.Count)
                                  .Select(_ => new ObjectiveVector(0.0))
                                  .ToArray();
             }

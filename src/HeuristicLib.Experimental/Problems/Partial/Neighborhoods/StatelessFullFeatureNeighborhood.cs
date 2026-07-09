@@ -5,47 +5,47 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public abstract record StatelessFullFeatureNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>
-    : StatelessNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>,
-      IReversibleNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>,
-      IReversibleNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove>,
-      IIncrementalObjectiveNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>,
-      IIncrementalObjectiveNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove>,
-      IIncrementalBoundNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>,
-      IIncrementalBoundNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record StatelessFullFeatureNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>
+    : StatelessNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>,
+      IReversibleNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>,
+      IReversibleNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove>,
+      IIncrementalObjectiveNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>,
+      IIncrementalObjectiveNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove>,
+      IIncrementalBoundNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>,
+      IIncrementalBoundNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override INeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override INeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         => this;
 
-    IReversibleNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove> IReversibleNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>.CreateExecutionInstance(
+    IReversibleNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove> IReversibleNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>.CreateExecutionInstance(
         ExecutionInstanceRegistry instanceRegistry)
         => this;
 
-    IIncrementalObjectiveNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove> IIncrementalObjectiveNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>.CreateExecutionInstance(
+    IIncrementalObjectiveNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove> IIncrementalObjectiveNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>.CreateExecutionInstance(
         ExecutionInstanceRegistry instanceRegistry)
         => this;
 
-    IIncrementalBoundNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove> IIncrementalBoundNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>.CreateExecutionInstance(
+    IIncrementalBoundNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove> IIncrementalBoundNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>.CreateExecutionInstance(
         ExecutionInstanceRegistry instanceRegistry)
         => this;
 
-    public abstract TGenotype RevertMove(
-        TGenotype genotype,
+    public abstract TCandidate RevertMove(
+        TCandidate candidate,
         TMove move,
         TSearchSpace searchSpace,
         TProblem problem);
 
     public abstract ObjectiveVector? EvaluateIncrement(
-        TGenotype genotype,
+        TCandidate candidate,
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,
         TProblem problem);
 
     public abstract ObjectiveVector? BoundIncrement(
-        TGenotype genotype,
+        TCandidate candidate,
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,

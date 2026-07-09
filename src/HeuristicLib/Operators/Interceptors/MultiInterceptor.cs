@@ -7,22 +7,22 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 [Equatable]
-public abstract partial record MultiInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>
-  : IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>
+public abstract partial record MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>
+  : IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality] protected ImmutableArray<IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>> InnerInterceptors { get; }
+    [OrderedEquality] protected ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerInterceptors { get; }
 
     protected delegate TSearchState InnerTransform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem);
 
-    protected MultiInterceptor(ImmutableArray<IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>> innerInterceptors)
+    protected MultiInterceptor(ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> innerInterceptors)
     {
         InnerInterceptors = innerInterceptors;
     }
 
-    public IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new Instance(this, InnerInterceptors.Select(instanceRegistry.Resolve).Select(x => (InnerTransform)x.Transform).ToArray(), CreateInitialState());
 
     protected abstract TExecutionState CreateInitialState();
@@ -31,9 +31,9 @@ public abstract partial record MultiInterceptor<TGenotype, TSearchSpace, TProble
       IReadOnlyList<InnerTransform> innerInterceptors,
       TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Instance(MultiInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState> multiInterceptor,
+    private sealed class Instance(MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState> multiInterceptor,
       IReadOnlyList<InnerTransform> innerInterceptors, TExecutionState executionState)
-      : IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
+      : IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem)
         {
@@ -42,13 +42,13 @@ public abstract partial record MultiInterceptor<TGenotype, TSearchSpace, TProble
     }
 }
 
-public abstract record MultiInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>
-  : MultiInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState, NoState>
+public abstract record MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, NoState>
   where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected MultiInterceptor(ImmutableArray<IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>> innerInterceptors)
+    protected MultiInterceptor(ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> innerInterceptors)
       : base(innerInterceptors)
     {
     }

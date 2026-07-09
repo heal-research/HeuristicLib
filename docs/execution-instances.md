@@ -1,6 +1,6 @@
-# Definition vs execution instances
+# Configuration vs execution instances
 
-This page documents an internal runtime concept.
+This page documents an advanced execution concept.
 
 For most users and most extension authors, the preferred model is:
 
@@ -13,28 +13,40 @@ You usually do **not** need to work with execution instances directly.
 
 HeuristicLib keeps a separation between:
 
-- reusable configured definitions
-- run-bound execution objects
+- reusable configurations
+- run-bound execution instances
 
 That separation is still useful internally for:
 
 - run-local mutable state
-- sharing the same execution object when the same definition object is reused in one run
-- giving meta algorithms control over whether execution state resets or persists
+- sharing the same execution instance when the same configuration object is reused in one run
+- giving meta-algorithms control over whether execution state resets or persists
 
 ## `ExecutionInstanceRegistry`
 
-`ExecutionInstanceRegistry` builds an execution graph from the configured definition graph.
+`ExecutionInstanceRegistry` builds an execution graph from the configuration graph.
 
 Important properties:
 
-- resolution is by definition object reference
-- the same definition object resolves to the same execution instance within one registry
+- resolution is by configuration object reference
+- the same configuration object resolves to the same execution instance within one registry
 - different runs can use different registries and therefore different execution graphs
 
 `ExecutionInstanceRegistry` also implements `IExecutionInstanceResolver`, the narrow API that high-level authoring bases receive.
 
 That means ordinary authoring code can resolve the execution instances it needs without depending on the full registry API.
+
+## Registry replacements
+
+Advanced execution plumbing can register explicit registry entries before resolving a configuration.
+
+`RegisterInstance(...)` stores an already created execution instance for a configuration identity. This is useful when infrastructure code already owns the instance that should be reused by later resolution.
+
+`RegisterReplacement(...)` stores a replacement configuration for a configuration identity. When the original configuration is resolved, the registry creates the execution instance from the replacement configuration and stores it under the original identity.
+
+Replacement configurations may resolve the original configuration while they are being created. This supports wrapper scenarios such as observable operators, counted operators and measured operators. The registry detects that the original is already being replaced and creates the original execution instance directly for the wrapper.
+
+Most users should not call these methods directly. They are intended for meta-algorithms, observation installation and other advanced execution infrastructure.
 
 ## Eager local resolution
 
@@ -49,7 +61,7 @@ This gives one-time resolution cost per execution instance and avoids per-call d
 
 You usually only need to think about execution instances when you work on:
 
-- meta algorithms
+- meta-algorithms
 - advanced analyzer/observation plumbing
 - very low-level custom algorithms or operators that intentionally bypass the higher-level authoring bases
 

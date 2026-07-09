@@ -16,34 +16,34 @@ public enum EvolutionStrategyType
     Plus
 }
 
-public record EvolutionStrategyState<TGenotype> : PopulationState<TGenotype>
+public record EvolutionStrategyState<TCandidate> : PopulationState<TCandidate>
 {
     public required double MutationStrength { get; init; }
 }
 
-public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>, EvolutionStrategy<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
+  : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, EvolutionStrategyState<TCandidate>, EvolutionStrategy<TCandidate, TSearchSpace, TProblem>.ExecutionState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public new sealed class ExecutionState
-      : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, EvolutionStrategyState<TGenotype>, ExecutionState>.ExecutionState
+      : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, EvolutionStrategyState<TCandidate>, ExecutionState>.ExecutionState
     {
-        public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-        public required IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-        public required ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
-        public ICrossoverInstance<TGenotype, TSearchSpace, TProblem>? Crossover { get; init; }
-        public IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem>? VariableStrengthMutator { get; init; }
+        public required ICreatorInstance<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+        public required IMutatorInstance<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+        public required ISelectorInstance<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
+        public ICrossoverInstance<TCandidate, TSearchSpace, TProblem>? Crossover { get; init; }
+        public IVariableStrengthMutator<TCandidate, TSearchSpace, TProblem>? VariableStrengthMutator { get; init; }
     }
 
     public required int PopulationSize { get; init; }
     public required int NumberOfChildren { get; init; }
     public required EvolutionStrategyType Strategy { get; init; }
-    public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-    public required ICrossover<TGenotype, TSearchSpace, TProblem>? Crossover { get; init; }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+    public required ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; init; }
     public double InitialMutationStrength { get; init; } = 1.0;
-    public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+    public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
     public int? MaximumGenerations
     {
         get;
@@ -62,21 +62,21 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
             Mutator = resolver.Resolve(Mutator),
             Selector = resolver.Resolve(Selector),
             Crossover = Crossover is not null ? resolver.Resolve(Crossover) : null,
-            VariableStrengthMutator = Mutator as IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem>
+            VariableStrengthMutator = Mutator as IVariableStrengthMutator<TCandidate, TSearchSpace, TProblem>
         };
     }
 
     protected override bool HasCompleted(
       int yieldedStateCount,
-      EvolutionStrategyState<TGenotype>? previousState,
+      EvolutionStrategyState<TCandidate>? previousState,
       ExecutionState executionState,
       TProblem problem)
     {
         return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
     }
 
-    protected override EvolutionStrategyState<TGenotype> ExecuteStep(
-      EvolutionStrategyState<TGenotype>? previousState,
+    protected override EvolutionStrategyState<TCandidate> ExecuteStep(
+      EvolutionStrategyState<TCandidate>? previousState,
       ExecutionState executionState,
       TProblem problem,
       IRandomNumberGenerator random)
@@ -85,32 +85,32 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
         {
             var initialPopulation = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
             var objectives = executionState.Evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
-            return new EvolutionStrategyState<TGenotype>
+            return new EvolutionStrategyState<TCandidate>
             {
                 Population = Population.From(initialPopulation, objectives),
                 MutationStrength = InitialMutationStrength
             };
         }
 
-        IReadOnlyList<TGenotype> parents;
+        IReadOnlyList<TCandidate> parents;
         IReadOnlyList<ObjectiveVector> parentQualities;
 
         if (executionState.Crossover is null)
         {
             var parentSolutions = executionState.Selector.Select(
-              previousState.Population.Solutions,
+              previousState.Population.EvaluatedCandidates,
               problem.Objective,
               NumberOfChildren,
               random,
               problem.SearchSpace,
               problem);
-            parents = parentSolutions.Select(x => x.Genotype).ToArray();
+            parents = parentSolutions.Select(x => x.Candidate).ToArray();
             parentQualities = parentSolutions.Select(x => x.ObjectiveVector).ToArray();
         }
         else
         {
             var parentSolutions = executionState.Selector.Select(
-              previousState.Population.Solutions,
+              previousState.Population.EvaluatedCandidates,
               problem.Objective,
               NumberOfChildren * 2,
               random,
@@ -141,12 +141,12 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
         var population = Population.From(children, fitnesses);
         var newPopulation = Strategy switch
         {
-            EvolutionStrategyType.Comma => ElitismReplacer<TGenotype>.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, NumberOfChildren, 0),
-            EvolutionStrategyType.Plus => PlusSelectionReplacer<TGenotype>.Replace(previousState.Population.Solutions, population.Solutions, problem.Objective, NumberOfChildren),
+            EvolutionStrategyType.Comma => ElitismReplacer<TCandidate>.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, NumberOfChildren, 0),
+            EvolutionStrategyType.Plus => PlusSelectionReplacer<TCandidate>.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, NumberOfChildren),
             _ => throw new InvalidOperationException($"Unknown strategy {Strategy}")
         };
 
-        return new EvolutionStrategyState<TGenotype>
+        return new EvolutionStrategyState<TCandidate>
         {
             Population = Population.From(newPopulation),
             MutationStrength = newMutationStrength
@@ -156,15 +156,15 @@ public record EvolutionStrategy<TGenotype, TSearchSpace, TProblem>
 
 public static class EvolutionStrategy
 {
-    public static EvolutionStrategyBuilder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
-      ICreator<TGenotype, TSearchSpace, TProblem> creator,
-      IMutator<TGenotype, TSearchSpace, TProblem> mutator)
-      where TSearchSpace : class, ISearchSpace<TGenotype> where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    public static EvolutionStrategyBuilder<TCandidate, TSearchSpace, TProblem> GetBuilder<TCandidate, TSearchSpace, TProblem>(
+      ICreator<TCandidate, TSearchSpace, TProblem> creator,
+      IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         return new()
         {
             Mutator = mutator,
-            InitialMutationStrength = (mutator as IVariableStrengthMutator<TGenotype, TSearchSpace, TProblem>)?.MutationStrength ?? 0,
+            InitialMutationStrength = (mutator as IVariableStrengthMutator<TCandidate, TSearchSpace, TProblem>)?.MutationStrength ?? 0,
             Creator = creator
         };
     }

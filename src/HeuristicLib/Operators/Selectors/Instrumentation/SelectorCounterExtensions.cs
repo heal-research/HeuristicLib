@@ -6,26 +6,26 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 
 public static class SelectorCounterExtensions
 {
-    extension<TG, TS, TP>(ISelector<TG, TS, TP> selector)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ISelector<TG, TS, TP> CountSelectorCalls(ObservationCounter counter)
+        public ISelector<TCandidate, TSearchSpace, TProblem> CountSelectorCalls(ObservationCounter counter)
             => selector.ObserveWith(_ => counter.IncrementBy(1));
 
-        public ISelector<TG, TS, TP> CountSelectorCalls(out ObservationCounter counter)
+        public ISelector<TCandidate, TSearchSpace, TProblem> CountSelectorCalls(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
             return selector.CountSelectorCalls(counter);
         }
 
-        public ISelector<TG, TS, TP> CountSelectedSolutions(ObservationCounter counter)
+        public ISelector<TCandidate, TSearchSpace, TProblem> CountSelectedCandidates(ObservationCounter counter)
             => selector.ObserveWith(selected => counter.IncrementBy(selected.Count));
 
-        public ISelector<TG, TS, TP> CountSelectedSolutions(out ObservationCounter counter)
+        public ISelector<TCandidate, TSearchSpace, TProblem> CountSelectedCandidates(out ObservationCounter counter)
         {
             counter = new ObservationCounter();
-            return selector.CountSelectedSolutions(counter);
+            return selector.CountSelectedCandidates(counter);
         }
     }
 }

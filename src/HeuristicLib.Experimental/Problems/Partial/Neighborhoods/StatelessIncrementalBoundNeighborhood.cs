@@ -5,18 +5,18 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public abstract record StatelessIncrementalBoundNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>
-    : StatelessNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>,
-      IIncrementalBoundNeighborhood<TGenotype, TSearchSpace, TProblem, TMove>,
-      IIncrementalBoundNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record StatelessIncrementalBoundNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>
+    : StatelessNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>,
+      IIncrementalBoundNeighborhood<TCandidate, TSearchSpace, TProblem, TMove>,
+      IIncrementalBoundNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override IIncrementalBoundNeighborhoodInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public override IIncrementalBoundNeighborhoodInstance<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
         => this;
 
     public abstract ObjectiveVector? BoundIncrement(
-        TGenotype genotype,
+        TCandidate candidate,
         TMove move,
         IRandomNumberGenerator random,
         TSearchSpace searchSpace,

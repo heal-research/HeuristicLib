@@ -1,7 +1,7 @@
 # Operator Authoring Base Classes
 
 ## Motivation
-In our current architecture, there is friction in balancing the Definition/Configuration of an operator with its Execution/State.
+In our current architecture, there is friction in balancing the configuration of an operator with its execution instance and execution state.
 
 1. **The "Two-Entity Model"** (Operator config + Execution Instance) perfectly models nested instances and composition but requires too much boilerplate for simple, flat operators.
 2. **The "Three-Entity Model"** (Operator config + Operator execution logic + State POCO) simplifies leaf nodes, but pollutes the `State` object for composite operators, forcing developers to awkwardly query `state.ActualChildInstance` continuously during the execution loop.
@@ -15,7 +15,7 @@ This plan records the current target direction, not an already implemented archi
 Alternatives considered:
 
 1. **Keep only the current state-based authoring model.** This is compact for simple operators, but it becomes awkward for composite algorithms because child execution instances have to be threaded through state objects.
-2. **Move everything back to explicit execution instances.** This is structurally clean for composite workflows, but it adds ceremony for simple leaf operators that do not need nested runtime objects.
+2. **Move everything back to explicit execution instances.** This is structurally clean for composite workflows, but it adds ceremony for simple leaf operators that do not need nested execution instances.
 3. **Support distinct authoring paths.** This keeps simple operators simple while preserving the stronger two-entity model for algorithms and composite operators.
 
 The chosen direction is option 3. The main tradeoff is a larger public authoring surface, so the base classes, XML docs, examples, and analyzer rules need to make the boundaries obvious.
@@ -23,7 +23,7 @@ The chosen direction is option 3. The main tradeoff is a larger public authoring
 ## The 3 Authoring Paths
 
 ### 1. `StatelessOperator<x>` (The Pure Function)
-- **Concept:** The operator acts as both the definition and the execution entity. It holds zero runtime state.
+- **Concept:** The operator acts as both the configuration and the execution entity. It holds zero execution state.
 - **Use Case:** Simple mathematical transformations, random number generations, or pure mapping functions.
 - **DX:** Write a single class with configuration properties and a single pure `Execute(...)` method.
 
@@ -35,14 +35,14 @@ The chosen direction is option 3. The main tradeoff is a larger public authoring
 ### 3. `CompositeOperator<x>` (The Structural Operator)
 - **Concept:** Embraces the classic Two-Entity Model. The Operator class is exclusively a configuration node and factory. The logic, state, and child execution instances exist entirely inside an accompanied `ExecutionInstance` class.
 - **Use Case:** Any operator, algorithm, or workflow that requires executing child operators (e.g., a cross-over operator using a sub-selector, or a high-level algorithm block).
-- **DX:** Write two classes (Definition and Instance). The definition instantiates the execution instance, allowing natural object graphs (via private fields) without awkward state POCO pollution.
+- **DX:** Write two classes (Configuration and Execution Instance). The configuration instantiates the execution instance, allowing natural object graphs (via private fields) without awkward state POCO pollution.
 
 ## Algorithm Authoring
 While the above describes the three authoring paths available for Operators, **Algorithms** have a more constrained nature. By definition, an Algorithm in an optimization library acts as a coordinator (e.g., a Genetic Algorithm needs to evaluate, select, crossover, and mutate). Because an Algorithm always relies on a graph of sub-operators, it is inherently composite.
 
 Therefore, Algorithms will exclusively follow the **Composite Authoring Path**.
 - We will *not* offer "Stateless" or "Stateful Leaf" authoring paths for Algorithms.
-- Architecturally, algorithm authoring is not a new or special mechanism; it is the exact same Two-Entity mechanism (Configuration class + Execution Instance class) used by `CompositeOperator`. The `Algorithm` definition acts as the factory, and the `AlgorithmInstance` holds the runtime loop (`MoveNext`), tracking child execution instances safely as private fields.
+- Architecturally, algorithm authoring is not a new or special mechanism; it is the exact same Two-Entity mechanism (Configuration class + Execution Instance class) used by `CompositeOperator`. The `Algorithm` configuration acts as the factory, and the `AlgorithmInstance` holds the execution loop (`MoveNext`), tracking child execution instances safely as private fields.
 
 ## Enforcement & Guardrails
 Because the boundaries could be blurred by users trying to inject child execution instances into the `TState` of a `StatefulLeafOperator`, we will strictly enforce these rules:

@@ -6,69 +6,69 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public abstract record Crossover<TGenotype, TSearchSpace, TProblem, TExecutionState>
-  : ICrossover<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record Crossover<TCandidate, TSearchSpace, TProblem, TExecutionState>
+  : ICrossover<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TExecutionState : class
 {
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, TExecutionState executionState,
+    protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, TExecutionState executionState,
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public ICrossoverInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new CrossoverInstance(this, CreateInitialState());
 
-    private sealed class CrossoverInstance(Crossover<TGenotype, TSearchSpace, TProblem, TExecutionState> crossover, TExecutionState executionState)
-      : ICrossoverInstance<TGenotype, TSearchSpace, TProblem>
+    private sealed class CrossoverInstance(Crossover<TCandidate, TSearchSpace, TProblem, TExecutionState> crossover, TExecutionState executionState)
+      : ICrossoverInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             return crossover.Cross(parents, executionState, random, searchSpace, problem);
         }
     }
 }
 
-public abstract record Crossover<TGenotype, TSearchSpace, TExecutionState>
-  : ICrossover<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+public abstract record Crossover<TCandidate, TSearchSpace, TExecutionState>
+  : ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
   where TExecutionState : class
 {
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, TExecutionState executionState,
+    protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, TExecutionState executionState,
       IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public ICrossoverInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ICrossoverInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new CrossoverInstance(this, CreateInitialState());
 
-    private sealed class CrossoverInstance(Crossover<TGenotype, TSearchSpace, TExecutionState> crossover, TExecutionState executionState)
-      : ICrossoverInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
+    private sealed class CrossoverInstance(Crossover<TCandidate, TSearchSpace, TExecutionState> crossover, TExecutionState executionState)
+      : ICrossoverInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     {
-        public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem)
+        public IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem)
         {
             return crossover.Cross(parents, executionState, random, searchSpace);
         }
     }
 }
 
-public abstract record Crossover<TGenotype, TExecutionState>
-  : ICrossover<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+public abstract record Crossover<TCandidate, TExecutionState>
+  : ICrossover<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
   where TExecutionState : class
 {
     protected abstract TExecutionState CreateInitialState();
 
-    protected abstract IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, TExecutionState executionState,
+    protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, TExecutionState executionState,
       IRandomNumberGenerator random);
 
-    public ICrossoverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+    public ICrossoverInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
       new CrossoverInstance(this, CreateInitialState());
 
-    private sealed class CrossoverInstance(Crossover<TGenotype, TExecutionState> crossover, TExecutionState executionState)
-      : ICrossoverInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+    private sealed class CrossoverInstance(Crossover<TCandidate, TExecutionState> crossover, TExecutionState executionState)
+      : ICrossoverInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
     {
-        public IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+        public IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
         {
             return crossover.Cross(parents, executionState, random);
         }

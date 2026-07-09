@@ -7,27 +7,27 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 [Equatable]
-public partial record ObservableSelector<TG, TS, TP>
-  : WrappingSelector<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public partial record ObservableSelector<TCandidate, TSearchSpace, TProblem>
+  : WrappingSelector<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     [OrderedEquality]
-    public ImmutableArray<ISelectorObserver<TG, TS, TP>> Observers { get; }
+    public ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableSelector(ISelector<TG, TS, TP> selector, ImmutableArray<ISelectorObserver<TG, TS, TP>> observers)
+    public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> selector, ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
       : base(selector)
     {
         Observers = observers;
     }
 
-    public ObservableSelector(ISelector<TG, TS, TP> selector, params IEnumerable<ISelectorObserver<TG, TS, TP>> observers)
+    public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> selector, params IEnumerable<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
       : this(selector, [.. observers])
     {
     }
 
 
-    protected override IReadOnlyList<ISolution<TG>> Select(IReadOnlyList<ISolution<TG>> population, Objective objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    protected override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, InnerSelect innerSelect, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
         var result = innerSelect(population, objective, count, random, searchSpace, problem);
         foreach (var observer in Observers)
@@ -38,34 +38,34 @@ public partial record ObservableSelector<TG, TS, TP>
     }
 }
 
-public interface ISelectorObserver<in TG, in TS, in TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface ISelectorObserver<TCandidate, in TSearchSpace, in TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    void AfterSelection(IReadOnlyList<ISolution<TG>> selected, IReadOnlyList<ISolution<TG>> population, Objective objective, int count, TS searchSpace, TP problem);
+    void AfterSelection(IReadOnlyList<EvaluatedCandidate<TCandidate>> selected, IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TSearchSpace searchSpace, TProblem problem);
 }
 
 public static class ObservableSelectorExtensions
 {
-    extension<TG, TS, TP>(ISelector<TG, TS, TP> selector)
-      where TS : class, ISearchSpace<TG>
-      where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ISelector<TG, TS, TP> ObserveWith(ISelectorObserver<TG, TS, TP> observer)
-          => new ObservableSelector<TG, TS, TP>(selector, observer);
-        public ISelector<TG, TS, TP> ObserveWith(params IEnumerable<ISelectorObserver<TG, TS, TP>> observers)
-          => new ObservableSelector<TG, TS, TP>(selector, observers);
-        public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection)
-          => selector.ObserveWith(new ActionSelectorObserver<TG, TS, TP>(afterSelection));
-        public ISelector<TG, TS, TP> ObserveWith(Action<IReadOnlyList<ISolution<TG>>> afterSelection)
-          => selector.ObserveWith(new ActionSelectorObserver<TG, TS, TP>((selected, _, _, _, _, _) => afterSelection(selected)));
+        public ISelector<TCandidate, TSearchSpace, TProblem> ObserveWith(ISelectorObserver<TCandidate, TSearchSpace, TProblem> observer)
+          => new ObservableSelector<TCandidate, TSearchSpace, TProblem>(selector, observer);
+        public ISelector<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+          => new ObservableSelector<TCandidate, TSearchSpace, TProblem>(selector, observers);
+        public ISelector<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, int, TSearchSpace, TProblem> afterSelection)
+          => selector.ObserveWith(new ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>(afterSelection));
+        public ISelector<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>> afterSelection)
+          => selector.ObserveWith(new ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>((selected, _, _, _, _, _) => afterSelection(selected)));
     }
 }
 
-public sealed class ActionSelectorObserver<TG, TS, TP>(Action<IReadOnlyList<ISolution<TG>>, IReadOnlyList<ISolution<TG>>, Objective, int, TS, TP> afterSelection) : ISelectorObserver<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public sealed class ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>(Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, int, TSearchSpace, TProblem> afterSelection) : ISelectorObserver<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void AfterSelection(IReadOnlyList<ISolution<TG>> selected, IReadOnlyList<ISolution<TG>> population, Objective objective, int count, TS searchSpace, TP problem)
+    public void AfterSelection(IReadOnlyList<EvaluatedCandidate<TCandidate>> selected, IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TSearchSpace searchSpace, TProblem problem)
       => afterSelection(selected, population, objective, count, searchSpace, problem);
 }

@@ -9,42 +9,42 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>
-  : IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>
+  : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
-  where TExecutionState : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
+  where TExecutionState : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
 {
     public class ExecutionState
     {
-        public required IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; }
+        public required IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; }
     }
 
     // NOTE: Evaluator remains part of the base algorithm contract for now.
-    public IEvaluator<TGenotype, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TGenotype>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
 
     protected abstract TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
 
-    protected abstract IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState);
+    protected abstract IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState);
 
-    public IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         return CreateAlgorithmInstance(instanceRegistry.Run, CreateInitialExecutionState(instanceRegistry));
     }
 }
 
-public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
-  : IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
   where TSearchState : class, ISearchState
 {
-    protected readonly IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> Evaluator;
+    protected readonly IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> Evaluator;
 
     public Run Run { get; }
 
-    protected AlgorithmInstance(Run run, IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> evaluator)
+    protected AlgorithmInstance(Run run, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
     {
         Run = run;
         Evaluator = evaluator;
@@ -59,14 +59,14 @@ public abstract class AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSear
 
 public static class AlgorithmExtensions
 {
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState> algorithm)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
       where TSearchState : class, ISearchState
     {
-        public Run<TGenotype, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, params IReadOnlyList<IAnalyzer> analyzers)
+        public Run<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, params IReadOnlyList<IAnalyzer> analyzers)
         {
-            return new Run<TGenotype, TSearchSpace, TProblem, TSearchState>(algorithm, problem, analyzers);
+            return new Run<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem, analyzers);
         }
 
         public IAsyncEnumerable<TSearchState> RunStreamingAsync(
@@ -114,9 +114,9 @@ public static class AlgorithmExtensions
         }
     }
 
-    extension<TGenotype, TSearchSpace, TProblem, TSearchState>(IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> algorithmInstance)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmInstance)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
       where TSearchState : class, ISearchState
     {
         public async Task<TSearchState> RunToCompletionAsync(

@@ -4,16 +4,16 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ITerminator<TGenotype, in TSearchSpace, in TProblem, in TSearchState>
-  : IOperator<ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : IProblem<TGenotype, TSearchSpace>
+public interface ITerminator<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
+  : IOperator<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : IProblem<TCandidate, TSearchSpace>
   where TSearchState : ISearchState;
 
-public interface ITerminatorInstance<TGenotype, in TSearchSpace, in TProblem, in TSearchState>
+public interface ITerminatorInstance<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
   : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : IProblem<TCandidate, TSearchSpace>
   where TSearchState : ISearchState
 {
     bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);

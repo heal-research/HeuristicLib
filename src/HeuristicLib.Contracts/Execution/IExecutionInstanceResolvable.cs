@@ -1,8 +1,8 @@
 namespace HEAL.HeuristicLib.Execution;
 
-public interface IExecutable;
+public interface IExecutionInstanceResolvable;
 
-public interface IExecutable<out TExecutionInstance> : IExecutable
+public interface IExecutionInstanceResolvable<out TExecutionInstance> : IExecutionInstanceResolvable
   where TExecutionInstance : IExecutionInstance
 {
     TExecutionInstance CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry);

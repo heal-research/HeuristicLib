@@ -8,36 +8,36 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public static class EvaluatorDurationExtensions
 {
-    extension<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator)
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IEvaluator<TG, TS, TP> MeasureEvaluatorDuration(ObservationDuration duration)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> MeasureEvaluatorDuration(ObservationDuration duration)
             => evaluator.MeasureEvaluatorDuration(duration, TimeProvider.System);
 
-        public IEvaluator<TG, TS, TP> MeasureEvaluatorDuration(ObservationDuration duration, TimeProvider timeProvider)
-            => new DurationMeasuringEvaluator<TG, TS, TP>(evaluator, duration, timeProvider);
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> MeasureEvaluatorDuration(ObservationDuration duration, TimeProvider timeProvider)
+            => new DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, duration, timeProvider);
 
-        public IEvaluator<TG, TS, TP> MeasureEvaluatorDuration(out ObservationDuration duration)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> MeasureEvaluatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
             return evaluator.MeasureEvaluatorDuration(duration);
         }
 
-        public IEvaluator<TG, TS, TP> MeasureEvaluatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
+        public IEvaluator<TCandidate, TSearchSpace, TProblem> MeasureEvaluatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
             return evaluator.MeasureEvaluatorDuration(duration, timeProvider);
         }
     }
 
-    private sealed record DurationMeasuringEvaluator<TG, TS, TP>
-        : WrappingEvaluator<TG, TS, TP>
-        where TS : class, ISearchSpace<TG>
-        where TP : class, IProblem<TG, TS>
+    private sealed record DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProblem>
+        : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public DurationMeasuringEvaluator(
-            IEvaluator<TG, TS, TP> evaluator,
+            IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
             ObservationDuration duration,
             TimeProvider timeProvider)
             : base(evaluator)
@@ -50,16 +50,16 @@ public static class EvaluatorDurationExtensions
         private TimeProvider TimeProvider { get; }
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(
-            IReadOnlyList<TG> genotypes,
+            IReadOnlyList<TCandidate> candidates,
             InnerEvaluate innerEvaluate,
             IRandomNumberGenerator random,
-            TS searchSpace,
-            TP problem)
+            TSearchSpace searchSpace,
+            TProblem problem)
         {
             var startTimestamp = TimeProvider.GetTimestamp();
             try
             {
-                return innerEvaluate(genotypes, random, searchSpace, problem);
+                return innerEvaluate(candidates, random, searchSpace, problem);
             }
             finally
             {

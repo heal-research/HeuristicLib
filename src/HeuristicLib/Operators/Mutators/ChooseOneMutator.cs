@@ -6,12 +6,12 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
-public partial record ChooseOneMutator<TGenotype, TSearchSpace, TProblem>
-  : MultiMutator<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
+  : MultiMutator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [IgnoreEquality] public ImmutableArray<IMutator<TGenotype, TSearchSpace, TProblem>> Mutators => InnerMutators;
+    [IgnoreEquality] public ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> Mutators => InnerMutators;
 
     [OrderedEquality]
     public ImmutableArray<double> Weights { get; }
@@ -19,7 +19,7 @@ public partial record ChooseOneMutator<TGenotype, TSearchSpace, TProblem>
     [IgnoreEquality]
     private readonly WeightedBatchDispatch dispatcher;
 
-    public ChooseOneMutator(ImmutableArray<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
+    public ChooseOneMutator(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
       : base(mutators)
     {
         if (mutators.Length == 0)
@@ -37,7 +37,7 @@ public partial record ChooseOneMutator<TGenotype, TSearchSpace, TProblem>
         Weights = dispatcher.Weights;
     }
 
-    protected override IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents,
+    protected override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents,
       IReadOnlyList<InnerMutate> innerMutators,
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
     {
@@ -47,28 +47,28 @@ public partial record ChooseOneMutator<TGenotype, TSearchSpace, TProblem>
 
 public static class ChooseOneMutator
 {
-    public static ChooseOneMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(params IEnumerable<IMutator<TGenotype, TSearchSpace, TProblem>> mutators)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         var r = mutators.ToImmutableArray();
         var weights = r.Select(_ => 1.0 / r.Length).ToImmutableArray();
-        return new ChooseOneMutator<TGenotype, TSearchSpace, TProblem>(r, weights);
+        return new ChooseOneMutator<TCandidate, TSearchSpace, TProblem>(r, weights);
     }
-    public static ChooseOneMutator<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(ImmutableArray<IMutator<TGenotype, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new ChooseOneMutator<TGenotype, TSearchSpace, TProblem>(mutators, weights);
+        return new ChooseOneMutator<TCandidate, TSearchSpace, TProblem>(mutators, weights);
     }
 
-    extension<TGenotype, TSearchSpace, TProblem>(IMutator<TGenotype, TSearchSpace, TProblem> mutator)
-     where TSearchSpace : class, ISearchSpace<TGenotype>
-     where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+     where TSearchSpace : class, ISearchSpace<TCandidate>
+     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ChooseOneMutator<TGenotype, TSearchSpace, TProblem> WithRate(double mutationRate)
+        public ChooseOneMutator<TCandidate, TSearchSpace, TProblem> WithRate(double mutationRate)
         {
-            return Create([mutator, NoChangeMutator<TGenotype>.Instance], [mutationRate, 1 - mutationRate]);
+            return Create([mutator, NoChangeMutator<TCandidate>.Instance], [mutationRate, 1 - mutationRate]);
         }
     }
 }

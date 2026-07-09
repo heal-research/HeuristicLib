@@ -11,12 +11,12 @@ public sealed record AppendCityNeighborhood
     public readonly record struct Move(int City);
 
     public override IEnumerable<Move> Moves(
-        Permutation genotype,
+        Permutation candidate,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
     {
-        var used = genotype.ToHashSet();
+        var used = candidate.ToHashSet();
 
         for (var city = 0; city < searchSpace.Length; city++)
             if (!used.Contains(city))
@@ -24,12 +24,12 @@ public sealed record AppendCityNeighborhood
     }
 
     public override bool RandomMove(
-        Permutation genotype,
+        Permutation candidate,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem, out Move move)
     {
-        var moves = Moves(genotype, random, searchSpace, problem).ToArray();
+        var moves = Moves(candidate, random, searchSpace, problem).ToArray();
         if (moves.Length == 0)
         {
             move = default;
@@ -41,19 +41,19 @@ public sealed record AppendCityNeighborhood
     }
 
     public override Permutation ApplyMove(
-        Permutation genotype,
+        Permutation candidate,
         Move move,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
-        => new(genotype.Append(move.City).ToArray());
+        => new(candidate.Append(move.City).ToArray());
 
     public override ObjectiveVector BoundIncrement(
-        Permutation genotype,
+        Permutation candidate,
         Move move,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
         TravelingSalesmanMoveProblem problem)
     {
-        return genotype.Count == 0 ? 0.0 : problem.Distance(genotype[^1], move.City);
+        return candidate.Count == 0 ? 0.0 : problem.Distance(candidate[^1], move.City);
     }
 }

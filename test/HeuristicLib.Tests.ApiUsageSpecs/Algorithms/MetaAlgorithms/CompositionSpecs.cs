@@ -39,7 +39,7 @@ public class CompositionSpecs
           RandomNumberGenerator.Create(111),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class CompositionSpecs
           RandomNumberGenerator.Create(222),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)

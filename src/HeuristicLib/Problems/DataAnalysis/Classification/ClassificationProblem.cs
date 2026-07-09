@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
 
 public class ClassificationProblem<TProblemData, TSolution, TSearchSpace>(TProblemData problemData, ICollection<IClassificationEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace)
-  : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), searchSpace)
+  : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>(problemData, new ObjectiveDirections(objective.Select(x => x.Direction).ToArray(), a), searchSpace)
   where TProblemData : ClassificationProblemData
   where TSearchSpace : class, ISearchSpace<TSolution>
   where TSolution : IRegressionModel

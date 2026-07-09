@@ -27,8 +27,8 @@ public class GeneticAlgorithmSolvingTests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);
 
-        result.Population.Solutions.Length.ShouldBe(5);
-        result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+        result.Population.EvaluatedCandidates.Length.ShouldBe(5);
+        result.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
     [Fact]
@@ -43,9 +43,9 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(5);
-        results.All(result => result.Population.Solutions.Length == 5).ShouldBeTrue();
-        results.SelectMany(result => result.Population.Solutions)
-               .All(solution => problem.SearchSpace.Contains(solution.Genotype))
+        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
+        results.SelectMany(result => result.Population.EvaluatedCandidates)
+               .All(solution => problem.SearchSpace.Contains(solution.Candidate))
                .ShouldBeTrue();
     }
 
@@ -64,8 +64,8 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
-        results.Single().Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(3);
-        results.All(result => result.Population.Solutions.Length == 5).ShouldBeTrue();
+        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class GeneticAlgorithmSolvingTests
           TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(2);
-        results.All(result => result.Population.Solutions.Length == 5).ShouldBeTrue();
+        results.All(result => result.Population.EvaluatedCandidates.Length == 5).ShouldBeTrue();
     }
 
     [Fact]
@@ -226,9 +226,9 @@ public class GeneticAlgorithmSolvingTests
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).Last();
 
-        result.Population.Genotypes.ShouldBe(streamingResult.Population.Genotypes);
-        result.Population.Solutions.Select(solution => solution.ObjectiveVector)
-              .ShouldBe(streamingResult.Population.Solutions.Select(solution => solution.ObjectiveVector));
+        result.Population.Candidates.ShouldBe(streamingResult.Population.Candidates);
+        result.Population.EvaluatedCandidates.Select(solution => solution.ObjectiveVector)
+              .ShouldBe(streamingResult.Population.EvaluatedCandidates.Select(solution => solution.ObjectiveVector));
     }
 
     private static TestFunctionProblem CreateProblem()

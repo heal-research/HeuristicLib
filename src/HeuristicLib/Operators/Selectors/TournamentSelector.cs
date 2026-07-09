@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record TournamentSelector<TGenotype>
-  : StatelessSelector<TGenotype>
+public record TournamentSelector<TCandidate>
+  : StatelessSelector<TCandidate>
 {
     public int TournamentSize { get; init; }
 
@@ -13,15 +13,15 @@ public record TournamentSelector<TGenotype>
         TournamentSize = tournamentSize;
     }
 
-    public override IReadOnlyList<ISolution<TGenotype>> Select(IReadOnlyList<ISolution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
       => TournamentSelector.Select(population, objective, count, random, TournamentSize);
 }
 
 public static class TournamentSelector
 {
-    public static IReadOnlyList<ISolution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<ISolution<TGenotype>> population,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective,
       int count,
       IRandomNumberGenerator random,
       int tournamentSize)
