@@ -32,11 +32,11 @@ When a legacy or avoid-listed term appears in repository text, prefer changing i
 
 Status: `Canonical`
 
-A problem is the complete runnable optimization task that an algorithm operates on.
+A problem defines the optimization task that an algorithm operates on.
 
-A problem defines the search space, the evaluation semantics that produce an objective vector, the objective directions, and the concrete data or parameters needed for evaluation.
+A problem defines the search space, the evaluation semantics that produce an objective vector, the objective directions and the concrete data or parameters needed for evaluation.
 
-See also: Candidate, Evaluation, Objective direction, Objective directions, Objective value, Objective vector, Problem instance, Search space.
+See also: Candidate, Evaluation, Objective, Objective direction, Objective directions, Objective value, Objective vector, Problem instance, Search space.
 
 ### Problem instance
 
@@ -52,7 +52,7 @@ See also: Problem.
 
 Status: `Canonical`
 
-A candidate is the algorithm-facing object being searched, created, transformed, evaluated, selected, or replaced.
+A candidate is the algorithm facing object that algorithms search for and operators create, transform, evaluate, select or replace.
 
 Candidates are the values that algorithms and operators manipulate directly. Use candidate when precision matters around unevaluated or intermediate values. Candidate does not imply that the value is good, final, feasible in the broader domain sense, or already evaluated.
 
@@ -113,6 +113,16 @@ Use evaluation for the problem-level meaning: applying the problem's evaluation 
 
 See also: Candidate, Evaluated candidate, Objective vector, Evaluator.
 
+### Objective
+
+Status: `Canonical`
+
+Objective is the loose term for the direction model that says what better means.
+
+When text refers to the objective of a problem without saying objective value or objective vector, it usually means whether the objective is minimized or maximized.
+
+See also: Objective direction, Objective directions, Objective value, Objective vector.
+
 ### Objective value
 
 Status: `Canonical`
@@ -121,7 +131,7 @@ An objective value is a numeric value produced by evaluating a candidate for one
 
 Use objective value for a single scalar dimension of an objective vector.
 
-See also: Objective direction, Objective vector.
+See also: Objective, Objective direction, Objective vector.
 
 ### Objective vector
 
@@ -131,7 +141,7 @@ An objective vector is the ordered vector of objective values produced by evalua
 
 An objective vector may contain one objective value for single-objective problems or multiple objective values for multi-objective problems. Objective values is an accepted prose alias for objective vector when the vector shape is not important.
 
-Objective vectors do not decide what is better on their own. They must be interpreted together with objective directions or another explicit comparison rule.
+Comparing two objective vectors does not by itself determine which one is better. The comparison must use objective directions or another explicit comparison rule.
 
 Related terms:
 
@@ -141,7 +151,7 @@ Related terms:
 - `Quality`: broad related term for objective value or objective vector. Prefer objective value or objective vector when precision matters.
 - `Objective values`: `Alias`. Prose alias for objective vector.
 
-See also: Candidate, Evaluated candidate, Objective direction, Objective directions, Objective value.
+See also: Candidate, Evaluated candidate, Objective, Objective direction, Objective directions, Objective value.
 
 ### Objective direction
 
@@ -169,9 +179,9 @@ See also: Objective direction, Objective vector.
 
 Status: `Canonical`
 
-An algorithm defines the search process for a problem.
+An algorithm defines a reusable search process.
 
-In a run, an algorithm advances search state until the run stops. This may depend on previous search state, private execution state, the problem, randomness, and child operators. One-shot algorithms are still algorithms; they produce a search process with a single state.
+In a run, an algorithm advances search state until the run stops. This may depend on previous search state, private execution state, the problem, randomness and child operators. One-shot algorithms are still algorithms. They produce a search process with a single state.
 
 Use algorithm for the reusable configuration unless the text explicitly says algorithm execution instance.
 
@@ -219,7 +229,7 @@ See also: Creator, Crossover, Evaluator, Interceptor, Mutator, Operator, Replace
 
 Status: `Canonical`
 
-A creator is the operator role that creates initial candidates.
+A creator is the operator role that creates candidates.
 
 Creators are responsible for producing candidates that are valid for the provided search space.
 
@@ -496,7 +506,7 @@ Status: `Provisional`
 
 An experiment is an execution setup that coordinates multiple independent runs.
 
-An experiment is not an algorithm: it does not produce one continuous stream of search states and does not pass search state from one run to the next. A repeated experiment executes the same algorithm configuration multiple times. A comparative experiment executes different algorithm configurations, parameter settings, problems, or problem instances.
+An experiment is not an algorithm. It does not produce one continuous stream of search states and does not pass search states from one run to the next. A repeated experiment executes the same algorithm configuration multiple times. A comparative experiment executes different algorithm configurations, parameter settings, problems or problem instances.
 
 Seed policy is an important part of an experiment because it defines how random seeds are assigned to independent runs, especially when stochastic algorithms are repeated or executed in parallel.
 
