@@ -1,84 +1,67 @@
-//using HEAL.HeuristicLib.Operators;
-//using HEAL.HeuristicLib.Optimization;
-//using HEAL.HeuristicLib.Problems.Partial;
-//using HEAL.HeuristicLib.Random;
-//using HEAL.HeuristicLib.SearchSpaces;
-//using TreesearchLib;
+using HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems.Partial;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
+using TreesearchLib;
 
-//namespace HEAL.HeuristicLib.APIs.TreeSearchLib;
+namespace HEAL.HeuristicLib.APIs.TreeSearchLib;
 
-//public class StackedTreeSearchState<T, TS, TP, TM> : TreeSearchState<TM>,
-//                                                     IMutableState<StackedTreeSearchState<T, TS, TP, TM>, TM, ObjectiveVectorQuality>
-//    where TP : class, IPartialSolutionProblem<T, TS>
-//    where TS : class, ISearchSpace<T>
-//{
-//    private readonly Stack<TM> decisions;
-//    private bool hasGenotype;
-//    private T? genotype;
-//    private readonly TP problem;
-//    private readonly INeighborhoodInstance<T, TS, TP, TM> neighborhood;
-//    private readonly IDecisionResolver<T, TM> resolver;
+public class StackedTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchState<T, TS, TP, TM>, IMutableState<StackedTreeSearchState<T, TS, TP, TM>, TM, ObjectiveVectorQuality>
+    where TP : class, IPartialSolutionProblem<T, TS>
+    where TS : class, ISearchSpace<T>
+{
+    // backing field for Quality (cannot add setter to the override)
+    private ObjectiveVector? quality;
 
-//    public StackedTreeSearchState(TP problem, INeighborhoodInstance<T, TS, TP, TM> neighborhood, IDecisionResolver<T, TM> resolver)
-//    {
-//        this.problem = problem;
-//        this.neighborhood = neighborhood;
-//        this.resolver = resolver;
-//        decisions = [];
-//    }
+    public StackedTreeSearchState(T genotype, TreeSearchContext context) : base(context)
+    {
+        Genotype = genotype;
+        Bound = BoundsEvaluator.Evaluate(genotype, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
+        var t = IsTerminal = Problem.IsTerminal(genotype, RandomHelpers.NoRandom);
+        if (!t)
+            return;
 
-//    protected StackedTreeSearchState(StackedTreeSearchState<T, TS, TP, TM> other)
-//    {
-//        genotype = other.genotype;
-//        problem = other.problem;
-//        neighborhood = other.neighborhood;
-//        hasGenotype = other.hasGenotype;
-//        decisions = new Stack<TM>(other.decisions.Reverse());
-//        resolver = other.resolver;
-//    }
+        quality = Problem.Evaluate([genotype], RandomHelpers.NoRandom)[0];
+    }
 
-//    public override TreeSearchState<TM> Copy() => new StackedTreeSearchState<T, TS, TP, TM>(this);
+    public StackedTreeSearchState(StackedTreeSearchState<T, TS, TP, TM> parent, TM move) : base(parent.Context)
+    {
+        var g = Genotype = Applier.Apply(parent.Genotype, move, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
+        Bound = BoundsEvaluator.Evaluate(parent.Bound, parent.Genotype, move, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
+        var t = IsTerminal = Problem.IsTerminal(g, RandomHelpers.NoRandom);
+        if (!t)
+            return;
 
-//    private T Genotype()
-//    {
-//        if (hasGenotype)
-//            return genotype!;
-//        genotype = resolver.Resolve(decisions.Reverse());
-//        hasGenotype = true;
-//        return genotype;
-//    }
+        if (parent.Quality != null)
+            quality = Evaluator.Evaluate(parent.Quality, parent.Genotype, move, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
+        else
+            quality = Problem.Evaluate([g], RandomHelpers.NoRandom)[0];
+    }
 
-//    public override ObjectiveVector? Quality() => problem.EvaluatePartial(Genotype(), RandomHelpers.NoRandom);
+    protected StackedTreeSearchState(StackedTreeSearchState<T, TS, TP, TM> other) : base(other)
+    {
+        Genotype = other.Genotype;
+        Bound = other.Bound;
+        IsTerminal = other.IsTerminal;
+        quality = other.quality;
+    }
 
-//    public override ObjectiveVector Bound() => problem.Objective.Best; // no state-specific bound available
+    protected override ObjectiveVector? Quality => quality;
+    protected override ObjectiveVector Bound { get; private set; }
+    protected override bool IsTerminal { get; private set; }
+    protected override T Genotype { get; private set; }
 
-//    public override bool IsTerminal() => problem.IsTerminal(Genotype(), RandomHelpers.NoRandom);
+    protected override StackedTreeSearchState<T, TS, TP, TM> Copy() => new(this);
 
-//    public override IEnumerable<TM> Branches() => neighborhood.Moves(Genotype(), RandomHelpers.NoRandom, problem.SearchSpace, problem);
+    protected override IEnumerable<TM> Branches() => Creator.Moves(Genotype, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
 
-//    public override TreeSearchState<TM> Branch(TM move)
-//    {
-//        var copy = new StackedTreeSearchState<T, TS, TP, TM>(this);
-//        ((IMutableState<StackedTreeSearchState<T, TS, TP, TM>, TM, ObjectiveVectorQuality>)copy).Apply(move);
-//        return copy;
-//    }
+    protected override StackedTreeSearchState<T, TS, TP, TM> Branch(TM move) => new(this, move);
 
-//    public override Objective Objective() => problem.Objective;
-//    IEnumerable<TM> IMutableState<StackedTreeSearchState<T, TS, TP, TM>, TM, ObjectiveVectorQuality>.GetChoices() => Branches();
+    protected override Objective Objective => Problem.Objective;
+    public IEnumerable<TM> GetChoices() => Branches();
 
-//    void IMutableState<StackedTreeSearchState<T, TS, TP, TM>, TM, ObjectiveVectorQuality>.Apply(TM choice)
-//    {
-//        decisions.Push(choice);
-//        hasGenotype = false;
-//        genotype = default;
-//    }
+    public void Apply(TM choice) => throw new NotImplementedException();
 
-//    void IMutableState<StackedTreeSearchState<T, TS, TP, TM>, TM, ObjectiveVectorQuality>.UndoLast()
-//    {
-//        decisions.Pop();
-//        hasGenotype = false;
-//        genotype = default;
-//    }
-//}
-
-
+    public void UndoLast() => throw new NotImplementedException();
+}

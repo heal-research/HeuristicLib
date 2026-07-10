@@ -5,25 +5,25 @@ using TreesearchLib;
 
 public abstract class TreeSearchState<TMove> : IState<TreeSearchState<TMove>, ObjectiveVectorQuality>
 {
-    public abstract ObjectiveVector? Quality();
-    public abstract ObjectiveVector Bound();
-    public abstract bool IsTerminal();
-    public abstract TreeSearchState<TMove> Copy();
-    public abstract IEnumerable<TMove> Branches();
-    public abstract TreeSearchState<TMove> Branch(TMove move);
-    public abstract Objective Objective();
+    protected abstract ObjectiveVector? Quality { get; }
+    protected abstract ObjectiveVector Bound { get; }
+    protected abstract bool IsTerminal { get; }
+    protected abstract TreeSearchState<TMove> Copy();
+    protected abstract IEnumerable<TMove> Branches();
+    protected abstract TreeSearchState<TMove> Branch(TMove move);
+    protected abstract Objective Objective { get; }
 
     #region explicit treesearchlib implementation
     IEnumerable<TreeSearchState<TMove>> IState<TreeSearchState<TMove>, ObjectiveVectorQuality>.GetBranches() => Branches().Select(Branch);
     object ICloneable.Clone() => Copy();
-    bool IQualifiable<ObjectiveVectorQuality>.IsTerminal => IsTerminal();
-    ObjectiveVectorQuality IQualifiable<ObjectiveVectorQuality>.Bound => new(Bound(), Objective());
+    bool IQualifiable<ObjectiveVectorQuality>.IsTerminal => IsTerminal;
+    ObjectiveVectorQuality IQualifiable<ObjectiveVectorQuality>.Bound => new(Bound, Objective);
     ObjectiveVectorQuality? IQualifiable<ObjectiveVectorQuality>.Quality
     {
         get
         {
-            var q = Quality();
-            return q is null ? null : new ObjectiveVectorQuality(q, Objective());
+            var q = Quality;
+            return q is null ? null : new ObjectiveVectorQuality(q, Objective);
         }
     }
     #endregion

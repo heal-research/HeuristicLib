@@ -6,33 +6,38 @@ using Operators.MoveEvaluators;
 using Problems.Partial;
 using SearchSpaces;
 
-public readonly record struct TreeSearchContext<T, TS, TP, TM>(
-    TP Problem,
-    IMoveCreatorInstance<T, TS, TP, TM> Creator,
-    IMoveApplierInstance<T, TS, TP, TM> Applier,
-    IMoveEvaluatorInstance<T, TS, TP, TM> Evaluator)
-    where TP : class, IPartialSolutionProblem<T, TS>
-    where TS : class, ISearchSpace<T>;
+
 
 public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchState<TM>
     where TP : class, IPartialSolutionProblem<T, TS>
     where TS : class, ISearchSpace<T>
 {
-    protected GenotypeAwareTreeSearchState(T genotype, TreeSearchContext<T, TS, TP, TM> context)
+    public record TreeSearchContext(
+        TP Problem,
+        IMoveCreatorInstance<T, TS, TP, TM> Creator,
+        IMoveApplierInstance<T, TS, TP, TM> Applier,
+        IMoveEvaluatorInstance<T, TS, TP, TM> Evaluator,
+        IMoveEvaluatorInstance<T, TS, TP, TM> BoundEvaluator);
+
+
+    protected GenotypeAwareTreeSearchState(TreeSearchContext context)
     {
-        Genotype = genotype;
         Context = context;
     }
 
-    public T Genotype { get; }
+    protected GenotypeAwareTreeSearchState(GenotypeAwareTreeSearchState<T, TS, TP, TM> other) : this(other.Context){}
+    
 
-    protected TreeSearchContext<T, TS, TP, TM> Context { get; }
+    protected abstract T Genotype { get; }
 
-    public TP Problem => Context.Problem;
-    public IMoveCreatorInstance<T, TS, TP, TM> Creator => Context.Creator;
-    public IMoveApplierInstance<T, TS, TP, TM> Applier => Context.Applier;
-    public IMoveEvaluatorInstance<T, TS, TP, TM> Evaluator => Context.Evaluator;
+    protected TreeSearchContext Context { get; }
 
-    public abstract override GenotypeAwareTreeSearchState<T, TS, TP, TM> Copy();
-    public abstract override GenotypeAwareTreeSearchState<T, TS, TP, TM> Branch(TM move);
+    protected TP Problem => Context.Problem;
+    protected IMoveCreatorInstance<T, TS, TP, TM> Creator => Context.Creator;
+    protected IMoveApplierInstance<T, TS, TP, TM> Applier => Context.Applier;
+    protected IMoveEvaluatorInstance<T, TS, TP, TM> Evaluator => Context.Evaluator;
+    protected IMoveEvaluatorInstance<T, TS, TP, TM> BoundsEvaluator => Context.BoundEvaluator;
+
+    protected abstract override GenotypeAwareTreeSearchState<T, TS, TP, TM> Copy();
+    protected abstract override GenotypeAwareTreeSearchState<T, TS, TP, TM> Branch(TM move);
 }
