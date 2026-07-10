@@ -45,7 +45,7 @@ public class CycleAlgorithmAnalysisScenarios
         var algorithm1 = new SingleStepAlgorithm(1, evaluator, interceptor);
         var algorithm2 = new SingleStepAlgorithm(2, evaluator, interceptor);
         var cycleAlgorithm = new CycleAlgorithm<SingleStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-          [algorithm1, algorithm2])
+            [algorithm1, algorithm2])
         {
             MaximumCycles = 3,
             NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle,
@@ -56,39 +56,38 @@ public class CycleAlgorithmAnalysisScenarios
         var evaluationTrace2 = new EvaluationTraceAnalysis(evaluator);
         var interceptionTrace = new InterceptionTraceAnalysis(interceptor);
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-          evaluateFunc: x => x,
-          encoding: DummySearchSpace<int>.Instance,
-          objective: SingleObjective.Minimize);
+            evaluateFunc: x => x,
+            encoding: DummySearchSpace<int>.Instance,
+            objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.CreateRun(problem, evaluationTrace1, evaluationTrace2, interceptionTrace);
-        var finalState = run.RunToCompletion(RandomNumberGenerator.Create(0));
+        var run = cycleAlgorithm.Run(problem, evaluationTrace1, evaluationTrace2, interceptionTrace);
+        var finalState = run.Complete(RandomNumberGenerator.Create(0));
 
         return new CycleRunResult(
-          finalState,
-          run.GetAnalyzerResult(evaluationTrace1),
-          run.GetAnalyzerResult(evaluationTrace2),
-          run.GetAnalyzerResult(interceptionTrace));
+            finalState,
+            run.GetAnalyzerResult(evaluationTrace1),
+            run.GetAnalyzerResult(evaluationTrace2),
+            run.GetAnalyzerResult(interceptionTrace));
     }
 
     private sealed record CycleRunResult(
-      PopulationState<int> FinalState,
-      EvaluationTraceAnalysis.ExecutionState EvaluationTrace1,
-      EvaluationTraceAnalysis.ExecutionState EvaluationTrace2,
-      InterceptionTraceAnalysis.ExecutionState InterceptionTrace);
+        PopulationState<int> FinalState,
+        EvaluationTraceAnalysis.ExecutionState EvaluationTrace1,
+        EvaluationTraceAnalysis.ExecutionState EvaluationTrace2,
+        InterceptionTraceAnalysis.ExecutionState InterceptionTrace);
 
     private sealed class DummySearchSpace<TCandidate> : ISearchSpace<TCandidate>
     {
         public static readonly DummySearchSpace<TCandidate> Instance = new();
 
         private DummySearchSpace()
-        {
-        }
+        { }
 
         public bool Contains(TCandidate candidate) => true;
     }
 
     private sealed record IncrementingEvaluator
-      : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, IncrementingEvaluator.ExecutionState>
+        : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, IncrementingEvaluator.ExecutionState>
     {
         public sealed class ExecutionState
         {
@@ -111,7 +110,7 @@ public class CycleAlgorithmAnalysisScenarios
     private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, SingleStepAlgorithm.ExecutionState>
     {
         public new sealed class ExecutionState
-          : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ExecutionState>.ExecutionState
+            : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ExecutionState>.ExecutionState
         {
             public required IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; init; }
         }
@@ -131,11 +130,11 @@ public class CycleAlgorithmAnalysisScenarios
         }
 
         protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
-          => new()
-          {
-              Evaluator = resolver.Resolve(Evaluator),
-              Interceptor = resolver.Resolve(Interceptor)
-          };
+            => new()
+            {
+                Evaluator = resolver.Resolve(Evaluator),
+                Interceptor = resolver.Resolve(Interceptor)
+            };
 
         protected override IAlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(Run run, ExecutionState executionState)
           => new Instance(run, executionState.Evaluator, executionState.Interceptor, Candidate);
@@ -151,11 +150,10 @@ public class CycleAlgorithmAnalysisScenarios
             private readonly int candidate = candidate;
 
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-              IProblem<int, DummySearchSpace<int>> problem,
-              IRandomNumberGenerator random,
-              PopulationState<int>? initialState = null,
-              [EnumeratorCancellation]
-        CancellationToken ct = default)
+                IProblem<int, DummySearchSpace<int>> problem,
+                IRandomNumberGenerator random,
+                PopulationState<int>? initialState = null,
+                [EnumeratorCancellation] CancellationToken ct = default)
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -172,7 +170,7 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed record EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
-      : Analyzer<EvaluationTraceAnalysis.ExecutionState>
+        : Analyzer<EvaluationTraceAnalysis.ExecutionState>
     {
         public override ExecutionState CreateInitialResult() => new();
 
@@ -195,7 +193,7 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed record InterceptionTraceAnalysis(IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor)
-      : Analyzer<InterceptionTraceAnalysis.ExecutionState>
+        : Analyzer<InterceptionTraceAnalysis.ExecutionState>
     {
         public override ExecutionState CreateInitialResult() => new();
 

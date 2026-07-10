@@ -1,12 +1,12 @@
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
-using HEAL.HeuristicLib.Problems.MetaOptimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;

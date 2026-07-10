@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -11,7 +12,7 @@ namespace HEAL.HeuristicLib.Problems.MetaOptimization;
 public static class MetaOptimizationProblemExamples
 {
     public record HyperParameterSearchSpace(RealVectorSearchSpace SearchSpace, IntegerVectorSearchSpace SearchSpace2) :
-      CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(SearchSpace, SearchSpace2);
+        CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(SearchSpace, SearchSpace2);
 
     public class MetaOptimizationSearchSpaceBuilder
     {
@@ -21,8 +22,8 @@ public static class MetaOptimizationProblemExamples
         public readonly List<double> RealMaximum = [];
 
         public HyperParameterSearchSpace Build() => new HyperParameterSearchSpace(
-          new RealVectorSearchSpace(RealMinimum.Count, new RealVector(RealMinimum), new RealVector(RealMaximum)),
-          new IntegerVectorSearchSpace(IntegerMinimum.Count, new IntegerVector(IntegerMinimum), new IntegerVector(IntegerMaximum)));
+            new RealVectorSearchSpace(RealMinimum.Count, new RealVector(RealMinimum), new RealVector(RealMaximum)),
+            new IntegerVectorSearchSpace(IntegerMinimum.Count, new IntegerVector(IntegerMinimum), new IntegerVector(IntegerMaximum)));
 
         public Func<CompositeGenotype<RealVector, IntegerVector>, TCandidate> AddChoiceParameter<TCandidate>(IReadOnlyList<TCandidate> values)
         {
@@ -109,17 +110,18 @@ public static class MetaOptimizationProblemExamples
       where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TCandidate : class
     {
         IntegerVector integerMins = [0, 0, 0, 0, 0, 0, 0, populationSize.min, numberOfChildren.min];
-        IntegerVector integerMaxs = [
-          creators.Length - 1,
-      crossovers.Length - 1,
-      evaluators.Length - 1,
-      interceptors.Length - 1,
-      mutators.Length - 1,
-      strategies.Length - 1,
-      replacers.Length - 1,
-      selectors.Length - 1,
-      populationSize.max,
-      numberOfChildren.max
+        IntegerVector integerMaxs =
+        [
+            creators.Length - 1,
+            crossovers.Length - 1,
+            evaluators.Length - 1,
+            interceptors.Length - 1,
+            mutators.Length - 1,
+            strategies.Length - 1,
+            replacers.Length - 1,
+            selectors.Length - 1,
+            populationSize.max,
+            numberOfChildren.max
         ];
         var integerVectorSearchSpace = new IntegerVectorSearchSpace(integerMins.Count, integerMins, integerMaxs);
         var realVectorSearchSpace = new RealVectorSearchSpace(1, mutationRate.min, mutationRate.max);

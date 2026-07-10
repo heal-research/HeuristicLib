@@ -25,15 +25,13 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
-        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-          baseAlgorithm,
-          interceptor);
+        var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.Run(problem, analysis);
 
-        var finalState = await run.RunToCompletionAsync(
-          RandomNumberGenerator.Create(777),
-          cancellationToken: TestContext.Current.CancellationToken);
+        var finalState = await run.CompleteAsync(
+            RandomNumberGenerator.Create(777),
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var analysisResult = run.GetAnalyzerResult(analysis);
 
@@ -47,16 +45,14 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
-        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-          baseAlgorithm,
-          interceptor);
+        var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.Run(problem, analysis);
 
-        await using var enumerator = run.RunStreamingAsync(
-            RandomNumberGenerator.Create(888),
-            cancellationToken: TestContext.Current.CancellationToken)
-          .GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        await using var enumerator = run.StreamAsync(
+                                            RandomNumberGenerator.Create(888),
+                                            cancellationToken: TestContext.Current.CancellationToken)
+                                        .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         (await enumerator.MoveNextAsync()).ShouldBeTrue();
         run.GetAnalyzerResult(analysis).Count.ShouldBe(1);
@@ -78,16 +74,15 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
-        var analysis = new BestMedianWorstPerEvaluationAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-          baseAlgorithm,
-          [baseAlgorithm.Evaluator],
-          [interceptor]);
+        var analysis = Analyzer.BestMedianWorstPerEvaluation(
+            [baseAlgorithm.Evaluator],
+            [interceptor]);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.Run(problem, analysis);
 
-        await run.RunToCompletionAsync(
-          RandomNumberGenerator.Create(321),
-          cancellationToken: TestContext.Current.CancellationToken);
+        await run.CompleteAsync(
+            RandomNumberGenerator.Create(321),
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var analysisResult = run.GetAnalyzerResult(analysis);
 
@@ -101,14 +96,12 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
-        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-          baseAlgorithm,
-          interceptor);
+        var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
-        var finalState = await run.RunToCompletionAsync(
-          RandomNumberGenerator.Create(333),
-          cancellationToken: TestContext.Current.CancellationToken);
+        var run = baseAlgorithm.Run(problem, analysis);
+        var finalState = await run.CompleteAsync(
+            RandomNumberGenerator.Create(333),
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var result = run.GetAnalyzerResult(analysis);
 
@@ -122,9 +115,9 @@ public class AnalysisSpecs
     }
 
     private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
-      TestFunctionProblem problem,
-      IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
-      int maximumGenerations)
+        TestFunctionProblem problem,
+        IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
+        int maximumGenerations)
     {
         return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {

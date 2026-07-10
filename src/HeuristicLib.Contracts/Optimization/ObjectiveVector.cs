@@ -109,4 +109,9 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
     public bool IsIncomparableTo(ObjectiveVector other, ObjectiveDirections objective) => CompareTo(other, objective) == DominanceRelation.Incomparable;
 
     public override string ToString() => $"[{string.Join(", ", values.Select(v => v.ToString(CultureInfo.InvariantCulture)))}]";
+
+    public ObjectiveVector Add(ObjectiveVector apply)
+    {
+        return this.Zip(apply, (a, b) => a + b).ToArray();
+    }
 }

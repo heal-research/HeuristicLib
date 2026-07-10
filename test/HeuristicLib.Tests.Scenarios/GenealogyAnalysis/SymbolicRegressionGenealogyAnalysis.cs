@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.GenealogyAnalysis;
+using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
@@ -29,11 +29,11 @@ public class GenealogyGraphTests
     private static ChooseOneMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
     {
         var symRegAllMutator = ChooseOneMutator.Create(
-          new ChangeNodeTypeManipulation(),
-          new FullTreeShaker(),
-          new OnePointShaker(),
-          new RemoveBranchManipulation(),
-          new ReplaceBranchManipulation()
+            new ChangeNodeTypeManipulation(),
+            new FullTreeShaker(),
+            new OnePointShaker(),
+            new RemoveBranchManipulation(),
+            new ReplaceBranchManipulation()
         );
 
         return symRegAllMutator;
@@ -60,10 +60,10 @@ public class GenealogyGraphTests
             MaximumGenerations = 6
         };
 
-        var analysis = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(ga, ga.Interceptor!);
+        var analysis = Analyzer.BestMedianWorst(ga.Interceptor!);
 
-        var run = ga.CreateRun(problem, analysis);
-        var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
+        var run = ga.Run(problem, analysis);
+        var res = run.Complete(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
         var ares = run.GetAnalyzerResult(analysis);
 
         ares.Count.ShouldBe(6);
@@ -95,12 +95,12 @@ public class GenealogyGraphTests
             MaximumGenerations = gens
         };
 
-        var evalQualities = new QualityCurveAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Evaluator);
-        var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Interceptor!);
-        var genealogyAnalysis = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
+        var evalQualities = ExperimentalAnalyzers.QualityCurve(algorithm.Evaluator);
+        var qualities = Analyzer.BestMedianWorst(algorithm.Interceptor!);
+        var genealogyAnalysis = ExperimentalAnalyzers.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
 
-        var run = algorithm.CreateRun(problem, evalQualities, qualities, genealogyAnalysis);
-        var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
+        var run = algorithm.Run(problem, evalQualities, qualities, genealogyAnalysis);
+        var res = run.Complete(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
 
         var qres = run.GetAnalyzerResult(qualities);
         var eres = run.GetAnalyzerResult(evalQualities);
@@ -125,9 +125,9 @@ public class GenealogyGraphTests
         var interceptor = algorithm.Interceptor ?? new IdentityInterceptor<SymbolicExpressionTree, SingleSolutionState<SymbolicExpressionTree>>();
         algorithm = algorithm with { Interceptor = interceptor };
         var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, SingleSolutionState<SymbolicExpressionTree>>(
-          algorithm, mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
-        var run = algorithm.WithMaxIterations(8).CreateRun(problem, genealogy);
-        var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
+            mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
+        var run = algorithm.WithMaxIterations(8).Run(problem, genealogy);
+        var res = run.Complete(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.GetAnalyzerResult(genealogy);
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
         problem.SearchSpace.Contains(res.Population.EvaluatedCandidates.Single().Candidate).ShouldBeTrue();
@@ -146,9 +146,9 @@ public class GenealogyGraphTests
         const int maximumIterations = 4;
         const double mutationRate = 0.05;
         var nsga2 = NSGA2.GetBuilder(
-          new ProbabilisticTreeCreator(),
-          new SubtreeCrossover(),
-          symRegAllMutator);
+            new ProbabilisticTreeCreator(),
+            new SubtreeCrossover(),
+            symRegAllMutator);
         nsga2.PopulationSize = populationSize;
         nsga2.MutationRate = mutationRate;
 
@@ -160,11 +160,11 @@ public class GenealogyGraphTests
             MaximumGenerations = maximumIterations
         };
 
-        var genealogy = new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
-        var qualities = new BestMedianWorstAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>, PopulationState<SymbolicExpressionTree>>(algorithm, algorithm.Interceptor!);
+        var genealogy = ExperimentalAnalyzers.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
+        var qualities = Analyzer.BestMedianWorst(algorithm.Interceptor!);
 
-        var run = algorithm.CreateRun(problem, genealogy, qualities);
-        var res = run.RunToCompletion(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
+        var run = algorithm.Run(problem, genealogy, qualities);
+        var res = run.Complete(RandomNumberGenerator.Create(AlgorithmRandomSeed), cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.GetAnalyzerResult(genealogy);
         var qres = run.GetAnalyzerResult(qualities);
 
@@ -186,47 +186,39 @@ public class GenealogyGraphTests
         var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
 
         IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
-          ? [
-            new MaxAbsoluteErrorEvaluator(),
-        new MeanAbsoluteErrorEvaluator(),
-        new MeanLogErrorEvaluator(),
-        new MeanRelativeErrorEvaluator(),
-        new MeanSquaredErrorCalculator(),
-        new NormalizedMeanSquaredErrorEvaluator(),
-        new NumberOfVariablesEvaluator(),
-        new PearsonR2Evaluator(),
-        new RootMeanSquaredErrorEvaluator(),
-        new TreeComplexityEvaluator(),
-        new TreeLengthEvaluator()
-          ]
-          : [new RootMeanSquaredErrorEvaluator()];
+            ?
+            [
+                new MaxAbsoluteErrorEvaluator(),
+                new MeanAbsoluteErrorEvaluator(),
+                new MeanLogErrorEvaluator(),
+                new MeanRelativeErrorEvaluator(),
+                new MeanSquaredErrorCalculator(),
+                new NormalizedMeanSquaredErrorEvaluator(),
+                new NumberOfVariablesEvaluator(),
+                new PearsonR2Evaluator(),
+                new RootMeanSquaredErrorEvaluator(),
+                new TreeComplexityEvaluator(),
+                new TreeLengthEvaluator()
+            ]
+            : [new RootMeanSquaredErrorEvaluator()];
         var problem = new SymbolicRegressionProblem(problemData, objectives)
         {
             LowerPredictionBound = 0,
             UpperPredictionBound = 100,
-            SearchSpace = {
-        TreeDepth = treeLength,
-        TreeLength = treeLength
-      },
+            SearchSpace =
+            {
+                TreeDepth = treeLength,
+                TreeLength = treeLength
+            },
             ParameterOptimizationIterations = constOptIteration
         };
 
         var linearScalingRoot = problem.SearchSpace.Grammar.AddLinearScaling();
 
-        var symbols = new Symbol[] {
-      new Addition(),
-      new Subtraction(),
-      new Multiplication(),
-      new Division(),
-      new Number(),
-      new SquareRoot(),
-      new Logarithm(),
-      new Exponential(),
-      new Variable { VariableNames = problemData.InputVariables }
-    };
+        var symbols = new Symbol[] { new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Exponential(), new Variable { VariableNames = problemData.InputVariables } };
 
         problem.SearchSpace.Grammar.AddFullyConnectedSymbols(
-          linearScalingRoot, symbols);
+            linearScalingRoot, symbols);
         return problem;
     }
 }

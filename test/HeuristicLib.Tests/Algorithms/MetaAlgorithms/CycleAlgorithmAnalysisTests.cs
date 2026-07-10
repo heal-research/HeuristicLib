@@ -27,15 +27,15 @@ public class CycleAlgorithmAnalysisTests
         var analysis1 = new EvaluationTraceAnalysis(evaluator);
         var analysis2 = new EvaluationTraceAnalysis(evaluator);
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-          evaluateFunc: x => x,
-          encoding: DummySearchSpace<int>.Instance,
-          objective: SingleObjective.Minimize);
+            evaluateFunc: x => x,
+            encoding: DummySearchSpace<int>.Instance,
+            objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, analysis1, analysis2);
+        var run = algorithm.Run(problem, analysis1, analysis2);
 
         GetReplacementCount(run).ShouldBe(1);
 
-        run.RunToCompletion(RandomNumberGenerator.Create(0), cancellationToken: TestContext.Current.CancellationToken);
+        run.Complete(RandomNumberGenerator.Create(0), cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetAnalyzerResult(analysis1).ObjectiveValues.ShouldBe([1.0]);
         run.GetAnalyzerResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
@@ -98,7 +98,7 @@ public class CycleAlgorithmAnalysisTests
     private sealed class AnalyzerTestRun(params IAnalyzer[] analyzers) : Run(analyzers);
 
     private sealed record IncrementingEvaluator
-      : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, IncrementingEvaluator.ExecutionState>
+        : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, IncrementingEvaluator.ExecutionState>
     {
         public sealed class ExecutionState
         {
@@ -121,7 +121,7 @@ public class CycleAlgorithmAnalysisTests
     private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, SingleStepAlgorithm.ExecutionState>
     {
         public new sealed class ExecutionState
-          : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ExecutionState>.ExecutionState
+            : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ExecutionState>.ExecutionState
         {
             public required IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; init; }
         }
@@ -141,11 +141,11 @@ public class CycleAlgorithmAnalysisTests
         }
 
         protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
-          => new()
-          {
-              Evaluator = resolver.Resolve(Evaluator),
-              Interceptor = resolver.Resolve(Interceptor)
-          };
+            => new()
+            {
+                Evaluator = resolver.Resolve(Evaluator),
+                Interceptor = resolver.Resolve(Interceptor)
+            };
 
         protected override IAlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(Run run, ExecutionState executionState)
           => new Instance(run, executionState.Evaluator, executionState.Interceptor, Candidate);
@@ -161,11 +161,10 @@ public class CycleAlgorithmAnalysisTests
             private readonly int candidate = candidate;
 
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-              IProblem<int, DummySearchSpace<int>> problem,
-              IRandomNumberGenerator random,
-              PopulationState<int>? initialState = null,
-              [EnumeratorCancellation]
-        CancellationToken ct = default)
+                IProblem<int, DummySearchSpace<int>> problem,
+                IRandomNumberGenerator random,
+                PopulationState<int>? initialState = null,
+                [EnumeratorCancellation] CancellationToken ct = default)
             {
                 ct.ThrowIfCancellationRequested();
 
@@ -182,7 +181,7 @@ public class CycleAlgorithmAnalysisTests
     }
 
     private sealed record EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
-      : Analyzer<EvaluationTraceAnalysis.ExecutionState>
+        : Analyzer<EvaluationTraceAnalysis.ExecutionState>
     {
         public override ExecutionState CreateInitialResult() => new();
 
@@ -217,16 +216,13 @@ public class CycleAlgorithmAnalysisTests
             public Result Result { get; } = new();
 
             public void RegisterObservations(ObservationPlan observations)
-            {
-            }
+            { }
         }
 
         private sealed class WrongRunState : IAnalyzerRunState
         {
             public void RegisterObservations(ObservationPlan observations)
-            {
-            }
+            { }
         }
     }
 }
-

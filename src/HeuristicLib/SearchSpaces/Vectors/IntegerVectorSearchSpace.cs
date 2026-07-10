@@ -27,5 +27,8 @@ public record IntegerVectorSearchSpace : SearchSpace<IntegerVector>
                                                              && (candidate <= Maximum).All();
 
     public static implicit operator RealVectorSearchSpace(IntegerVectorSearchSpace integerVectorSpace) =>
-      new(integerVectorSpace.Length, integerVectorSpace.Minimum, integerVectorSpace.Maximum);
+        new(integerVectorSpace.Length, integerVectorSpace.Minimum, integerVectorSpace.Maximum);
+
+    public int GetMinimum(int dim) => Minimum.Count == 1 ? Minimum[0] : Minimum[dim];
+    public int GetMaximum(int dim) => Maximum.Count == 1 ? Maximum[0] : Maximum[dim];
 }

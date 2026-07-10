@@ -33,9 +33,7 @@ public record BestMedianWorstPerEvaluationAnalysis<TCandidate, TSearchSpace, TPr
         }
 
         foreach (var interceptor in Interceptors)
-        {
             observations.Observe(interceptor, ((populationState, _, _, _, problem) => result.AfterInterception(populationState, problem.Objective)));
-        }
     }
 }
 

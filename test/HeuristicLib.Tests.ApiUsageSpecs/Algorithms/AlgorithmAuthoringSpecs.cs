@@ -21,15 +21,12 @@ public class AlgorithmAuthoringSpecs
     public async Task StatefulIterativeAlgorithm_AuthoringExample_UsesResolvedExecutionState()
     {
         var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
-        var algorithm = new SingleCreateAlgorithm
-        {
-            Creator = new CountingCreator()
-        }.WithMaxIterations(1);
+        var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() }.WithMaxIterations(1);
 
         var finalState = await algorithm.RunToCompletionAsync(
-          problem,
-          RandomNumberGenerator.Create(42),
-          ct: TestContext.Current.CancellationToken);
+            problem,
+            RandomNumberGenerator.Create(42),
+            ct: TestContext.Current.CancellationToken);
 
         finalState.EvaluatedCandidate.Candidate.ShouldBe(new RealVector(1.0, 0.0, 0.0));
     }
@@ -38,20 +35,17 @@ public class AlgorithmAuthoringSpecs
     public async Task StatefulIterativeAlgorithm_AuthoringExample_HidesPublicExecutionStateClass()
     {
         var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
-        var algorithm = new DoubleCreateAlgorithm
-        {
-            Creator = new CountingCreator()
-        }.WithMaxIterations(1);
+        var algorithm = new DoubleCreateAlgorithm { Creator = new CountingCreator() }.WithMaxIterations(1);
 
         var firstRunState = await algorithm.RunToCompletionAsync(
-          problem,
-          RandomNumberGenerator.Create(123),
-          ct: TestContext.Current.CancellationToken);
+            problem,
+            RandomNumberGenerator.Create(123),
+            ct: TestContext.Current.CancellationToken);
 
         var secondRunState = await algorithm.RunToCompletionAsync(
-          problem,
-          RandomNumberGenerator.Create(456),
-          ct: TestContext.Current.CancellationToken);
+            problem,
+            RandomNumberGenerator.Create(456),
+            ct: TestContext.Current.CancellationToken);
 
         firstRunState.EvaluatedCandidate.Candidate.ShouldBe(new RealVector(1.0, 2.0, 1.0));
         secondRunState.EvaluatedCandidate.Candidate.ShouldBe(new RealVector(1.0, 2.0, 1.0));
@@ -68,9 +62,9 @@ public class AlgorithmAuthoringSpecs
         }.WithMaxIterations(1);
 
         var finalState = await algorithm.RunToCompletionAsync(
-          problem,
-          RandomNumberGenerator.Create(789),
-          ct: TestContext.Current.CancellationToken);
+            problem,
+            RandomNumberGenerator.Create(789),
+            ct: TestContext.Current.CancellationToken);
 
         finalState.EvaluatedCandidate.Candidate.ShouldBe(new RealVector(1.0, 2.0, 2.0));
     }
@@ -87,7 +81,7 @@ public class AlgorithmAuthoringSpecs
             Evaluator = evaluator
         };
 
-        var run = algorithm.CreateRun(problem);
+        var run = algorithm.Run(problem);
         var registry = run.CreateNewRegistry();
 
         _ = registry.Resolve(algorithm);
@@ -99,10 +93,10 @@ public class AlgorithmAuthoringSpecs
     }
 
     private sealed record SingleCreateAlgorithm
-      : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, SingleCreateAlgorithm.ExecutionState>
+        : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, SingleCreateAlgorithm.ExecutionState>
     {
         public new sealed class ExecutionState
-          : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, ExecutionState>.ExecutionState
+            : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, ExecutionState>.ExecutionState
         {
             public required ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
         }
@@ -120,26 +114,23 @@ public class AlgorithmAuthoringSpecs
         }
 
         protected override SingleSolutionState<RealVector> ExecuteStep(
-          SingleSolutionState<RealVector>? previousState,
-          ExecutionState executionState,
-          TestFunctionProblem problem,
-          IRandomNumberGenerator random)
+            SingleSolutionState<RealVector>? previousState,
+            ExecutionState executionState,
+            TestFunctionProblem problem,
+            IRandomNumberGenerator random)
         {
             var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
             var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-            return new SingleSolutionState<RealVector>
-            {
-                Population = Population.From([candidate], [objective])
-            };
+            return new SingleSolutionState<RealVector> { Population = Population.From([candidate], [objective]) };
         }
     }
 
     private sealed record DoubleCreateAlgorithm
-      : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, DoubleCreateAlgorithm.ExecutionState>
+        : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, DoubleCreateAlgorithm.ExecutionState>
     {
         public new sealed class ExecutionState
-          : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, ExecutionState>.ExecutionState
+            : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, ExecutionState>.ExecutionState
         {
             public int Steps { get; set; }
             public required ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
@@ -158,10 +149,10 @@ public class AlgorithmAuthoringSpecs
         }
 
         protected override SingleSolutionState<RealVector> ExecuteStep(
-          SingleSolutionState<RealVector>? previousState,
-          ExecutionState executionState,
-          TestFunctionProblem problem,
-          IRandomNumberGenerator random)
+            SingleSolutionState<RealVector>? previousState,
+            ExecutionState executionState,
+            TestFunctionProblem problem,
+            IRandomNumberGenerator random)
         {
             executionState.Steps++;
 
@@ -170,15 +161,12 @@ public class AlgorithmAuthoringSpecs
             RealVector candidate = [first[0], second[0], executionState.Steps];
             var objective = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-            return new SingleSolutionState<RealVector>
-            {
-                Population = Population.From([candidate], [objective])
-            };
+            return new SingleSolutionState<RealVector> { Population = Population.From([candidate], [objective]) };
         }
     }
 
     private sealed record CountingCreator
-      : Creator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingCreator.ExecutionState>
+        : Creator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingCreator.ExecutionState>
     {
         public sealed class ExecutionState
         {
@@ -191,11 +179,11 @@ public class AlgorithmAuthoringSpecs
         }
 
         protected override IReadOnlyList<RealVector> Create(
-          int count,
-          ExecutionState executionState,
-          IRandomNumberGenerator random,
-          RealVectorSearchSpace searchSpace,
-          TestFunctionProblem problem)
+            int count,
+            ExecutionState executionState,
+            IRandomNumberGenerator random,
+            RealVectorSearchSpace searchSpace,
+            TestFunctionProblem problem)
         {
             return Enumerable.Range(0, count)
                              .Select(_ =>
@@ -208,13 +196,13 @@ public class AlgorithmAuthoringSpecs
     }
 
     private sealed record ThirdCoordinateIncrementingInterceptor
-      : StatelessInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
+        : StatelessInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
         public override SingleSolutionState<RealVector> Transform(
-          SingleSolutionState<RealVector> currentState,
-          SingleSolutionState<RealVector>? previousState,
-          RealVectorSearchSpace searchSpace,
-          TestFunctionProblem problem)
+            SingleSolutionState<RealVector> currentState,
+            SingleSolutionState<RealVector>? previousState,
+            RealVectorSearchSpace searchSpace,
+            TestFunctionProblem problem)
         {
             var current = currentState.EvaluatedCandidate.Candidate;
             RealVector transformed = [current[0], current[1], current[2] + 1.0];

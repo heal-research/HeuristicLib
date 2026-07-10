@@ -1,14 +1,15 @@
-using HEAL.HeuristicLib.Genotypes.Vectors;
-using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
+//using HEAL.HeuristicLib.Genotypes.Vectors;
+//using HEAL.HeuristicLib.Operators;
+//using HEAL.HeuristicLib.Optimization;
+//using HEAL.HeuristicLib.Random;
+//using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-namespace HEAL.HeuristicLib.Problems.Partial.TSP;
+//namespace HEAL.HeuristicLib.Problems.Partial.TSP;
 
-public sealed record AppendCityNeighborhood
-    : StatelessIncrementalBoundNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, AppendCityNeighborhood.Move>
-{
-    public readonly record struct Move(int City);
+//public sealed record AppendCityNeighborhood
+//    : StatelessIncrementalBoundNeighborhood<Permutation, PermutationSearchSpace, TravelingSalesmanMoveProblem, AppendCityNeighborhood.Move>
+//{
+//    public readonly record struct Move(int City);
 
     public override IEnumerable<Move> Moves(
         Permutation candidate,
@@ -17,43 +18,52 @@ public sealed record AppendCityNeighborhood
         TravelingSalesmanMoveProblem problem)
     {
         var used = candidate.ToHashSet();
+//    public override IEnumerable<Move> Moves(
+//        Permutation genotype,
+//        IRandomNumberGenerator random,
+//        PermutationSearchSpace searchSpace,
+//        TravelingSalesmanMoveProblem problem)
+//    {
+//        var used = genotype.ToHashSet();
 
-        for (var city = 0; city < searchSpace.Length; city++)
-            if (!used.Contains(city))
-                yield return new Move(city);
-    }
+//        for (var city = 0; city < searchSpace.Length; city++)
+//            if (!used.Contains(city))
+//                yield return new Move(city);
+//    }
 
-    public override bool RandomMove(
-        Permutation candidate,
-        IRandomNumberGenerator random,
-        PermutationSearchSpace searchSpace,
-        TravelingSalesmanMoveProblem problem, out Move move)
-    {
-        var moves = Moves(candidate, random, searchSpace, problem).ToArray();
-        if (moves.Length == 0)
-        {
-            move = default;
-            return false;
-        }
+//    public override bool RandomMove(
+//        Permutation genotype,
+//        IRandomNumberGenerator random,
+//        PermutationSearchSpace searchSpace,
+//        TravelingSalesmanMoveProblem problem, out Move move)
+//    {
+//        var moves = Moves(genotype, random, searchSpace, problem).ToArray();
+//        if (moves.Length == 0)
+//        {
+//            move = default;
+//            return false;
+//        }
 
-        move = moves[random.NextInt(moves.Length)];
-        return true;
-    }
+//        move = moves[random.NextInt(moves.Length)];
+//        return true;
+//    }
 
-    public override Permutation ApplyMove(
-        Permutation candidate,
-        Move move,
-        PermutationSearchSpace searchSpace,
-        TravelingSalesmanMoveProblem problem)
-        => new(candidate.Append(move.City).ToArray());
+//    public override Permutation ApplyMove(
+//        Permutation genotype,
+//        Move move,
+//        PermutationSearchSpace searchSpace,
+//        TravelingSalesmanMoveProblem problem)
+//        => new(genotype.Append(move.City).ToArray());
 
-    public override ObjectiveVector BoundIncrement(
-        Permutation candidate,
-        Move move,
-        IRandomNumberGenerator random,
-        PermutationSearchSpace searchSpace,
-        TravelingSalesmanMoveProblem problem)
-    {
-        return candidate.Count == 0 ? 0.0 : problem.Distance(candidate[^1], move.City);
-    }
-}
+//    public override ObjectiveVector BoundIncrement(
+//        Permutation genotype,
+//        Move move,
+//        IRandomNumberGenerator random,
+//        PermutationSearchSpace searchSpace,
+//        TravelingSalesmanMoveProblem problem)
+//    {
+//        return genotype.Count == 0 ? 0.0 : problem.Distance(genotype[^1], move.City);
+//    }
+//}
+
+

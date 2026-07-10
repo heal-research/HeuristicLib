@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -7,16 +6,14 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-// TODO: Revisit whether "quality curve" matches the glossary terminology or should become objective-vector based.
-public record QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> : Analyzer<TCandidate, TSearchSpace, TProblem, TSearchState, QualityCurve<TCandidate>>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TSearchState : class, ISearchState
+public record QualityCurveAnalysis<T, TS, TP> : Analyzer<QualityCurve<T>>
+    where TS : class, ISearchSpace<T>
+    where TP : class, IProblem<T, TS>
 
 {
     private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
 
-    public QualityCurveAnalysis(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm, params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators) : base(Algorithm)
+    public QualityCurveAnalysis(params IEvaluator<T, TS, TP>[] Evaluators)
     {
         this.Evaluators = Evaluators;
     }

@@ -7,6 +7,7 @@ public sealed class ObjectiveDirections
 
     public IComparer<ObjectiveVector> TotalOrderComparer { get; }
     public ObjectiveVector Worst { get; }
+    public ObjectiveVector Best { get; }
 
     public ObjectiveDirections(ObjectiveDirection[] directions, IComparer<ObjectiveVector> totalOrderComparer)
     {
@@ -18,6 +19,7 @@ public sealed class ObjectiveDirections
         Directions = directions;
         TotalOrderComparer = totalOrderComparer;
         Worst = new ObjectiveVector(directions.Select(d => d == ObjectiveDirection.Minimize ? double.PositiveInfinity : double.NegativeInfinity));
+        Best = new ObjectiveVector(directions.Select(d => d == ObjectiveDirection.Maximize ? double.PositiveInfinity : double.NegativeInfinity));
     }
 
     //public bool IsSingleObjective => Directions.Length == 1;
