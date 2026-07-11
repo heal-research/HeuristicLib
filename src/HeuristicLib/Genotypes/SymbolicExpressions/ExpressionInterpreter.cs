@@ -3,11 +3,11 @@ using System.Numerics.Tensors;
 
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public static class SymbolicExpressionInterpreter
+public static class ExpressionInterpreter
 {
     private const int DefaultBatchSize = 4096;
 
-    public static double[] Interpret(CompiledSymbolicExpression expression, DataFrame data)
+    public static double[] Interpret(CompiledExpressionTree expression, DataFrame data)
     {
         var resolvedVariables = ResolveVariables(expression, data);
         var rowCount = data.RowCount;
@@ -16,20 +16,20 @@ public static class SymbolicExpressionInterpreter
         return result;
     }
 
-    public static void Interpret(CompiledSymbolicExpression expression, DataFrame data, Span<double> destination)
+    public static void Interpret(CompiledExpressionTree expression, DataFrame data, Span<double> destination)
     {
         Interpret(expression, ResolveVariables(expression, data), data.RowCount, destination);
     }
 
-    public static void Interpret(CompiledSymbolicExpression expression, DataFrame data, Span<double> destination, Span<double> workspace)
+    public static void Interpret(CompiledExpressionTree expression, DataFrame data, Span<double> destination, Span<double> workspace)
     {
         Interpret(expression, ResolveVariables(expression, data), data.RowCount, destination, workspace);
     }
 
-    public static int GetWorkspaceLength(CompiledSymbolicExpression expression, DataFrame data) =>
+    public static int GetWorkspaceLength(CompiledExpressionTree expression, DataFrame data) =>
         GetWorkspaceLength(expression, data.RowCount);
 
-    private static void Interpret(CompiledSymbolicExpression expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination)
+    private static void Interpret(CompiledExpressionTree expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination)
     {
         var workspaceLength = GetWorkspaceLength(expression, rowCount);
         if (workspaceLength == 0)
@@ -49,7 +49,7 @@ public static class SymbolicExpressionInterpreter
         }
     }
 
-    private static void Interpret(CompiledSymbolicExpression expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination, Span<double> workspace)
+    private static void Interpret(CompiledExpressionTree expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination, Span<double> workspace)
     {
         if (destination.Length < rowCount)
         {
@@ -77,10 +77,10 @@ public static class SymbolicExpressionInterpreter
         }
     }
 
-    private static int GetWorkspaceLength(CompiledSymbolicExpression expression, int rowCount) =>
+    private static int GetWorkspaceLength(CompiledExpressionTree expression, int rowCount) =>
         GetWorkspaceSlotCount(expression) * Math.Min(rowCount, DefaultBatchSize);
 
-    private static int GetWorkspaceSlotCount(CompiledSymbolicExpression expression)
+    private static int GetWorkspaceSlotCount(CompiledExpressionTree expression)
     {
         Span<bool> vectorStack = expression.InstructionCount <= 256
             ? stackalloc bool[expression.InstructionCount]
@@ -92,16 +92,16 @@ public static class SymbolicExpressionInterpreter
         {
             switch (instruction.OpCode)
             {
-                case SymbolicExpressionOpCode.Variable:
+                case OpCode.Variable:
                     vectorStack[count++] = true;
                     break;
-                case SymbolicExpressionOpCode.NumericLiteral:
+                case OpCode.Constant:
                     vectorStack[count++] = false;
                     break;
-                case SymbolicExpressionOpCode.Log:
-                case SymbolicExpressionOpCode.Sqrt:
-                case SymbolicExpressionOpCode.Negate:
-                case SymbolicExpressionOpCode.Exp:
+                case OpCode.Log:
+                case OpCode.Sqrt:
+                case OpCode.Negate:
+                case OpCode.Exp:
                     var unaryOperandIsVector = vectorStack[--count];
                     if (unaryOperandIsVector)
                         maxWorkspaceSlots = Math.Max(maxWorkspaceSlots, count + 1);
@@ -123,7 +123,7 @@ public static class SymbolicExpressionInterpreter
         return maxWorkspaceSlots;
     }
 
-    private static ReadOnlyMemory<double>[] ResolveVariables(CompiledSymbolicExpression expression, DataFrame data)
+    private static ReadOnlyMemory<double>[] ResolveVariables(CompiledExpressionTree expression, DataFrame data)
     {
         var variables = new ReadOnlyMemory<double>[expression.VariableReferenceCount];
         for (var i = 0; i < variables.Length; i++)
@@ -135,40 +135,40 @@ public static class SymbolicExpressionInterpreter
         return variables;
     }
 
-    private static void Execute(CompiledSymbolicExpression expression, ref EvaluationStack stack)
+    private static void Execute(CompiledExpressionTree expression, ref EvaluationStack stack)
     {
         foreach (var instruction in expression.InstructionsInPostOrder)
         {
             switch (instruction.OpCode)
             {
-                case SymbolicExpressionOpCode.Variable:
+                case OpCode.Variable:
                     stack.PushVariable(instruction.PayloadIndex);
                     break;
-                case SymbolicExpressionOpCode.NumericLiteral:
-                    stack.PushScalar(expression.GetNumericLiteral(instruction.PayloadIndex).Value);
+                case OpCode.Constant:
+                    stack.PushScalar(expression.GetConstant(instruction.PayloadIndex));
                     break;
-                case SymbolicExpressionOpCode.Add:
+                case OpCode.Add:
                     Add(ref stack);
                     break;
-                case SymbolicExpressionOpCode.Subtract:
+                case OpCode.Subtract:
                     Subtract(ref stack);
                     break;
-                case SymbolicExpressionOpCode.Multiply:
+                case OpCode.Multiply:
                     Multiply(ref stack);
                     break;
-                case SymbolicExpressionOpCode.Divide:
+                case OpCode.Divide:
                     Divide(ref stack);
                     break;
-                case SymbolicExpressionOpCode.Negate:
+                case OpCode.Negate:
                     Negate(ref stack);
                     break;
-                case SymbolicExpressionOpCode.Exp:
+                case OpCode.Exp:
                     Exp(ref stack);
                     break;
-                case SymbolicExpressionOpCode.Log:
+                case OpCode.Log:
                     Log(ref stack);
                     break;
-                case SymbolicExpressionOpCode.Sqrt:
+                case OpCode.Sqrt:
                     Sqrt(ref stack);
                     break;
                 default:

@@ -6,8 +6,7 @@ public sealed record NormalDoubleDistribution(double Mean, double StandardDeviat
 
     public static double Sample(IRandomNumberGenerator random, double mean, double standardDeviation)
     {
-        if (standardDeviation < 0)
-            throw new ArgumentOutOfRangeException(nameof(standardDeviation));
+        ArgumentOutOfRangeException.ThrowIfNegative(standardDeviation);
 
         double u;
         double s;

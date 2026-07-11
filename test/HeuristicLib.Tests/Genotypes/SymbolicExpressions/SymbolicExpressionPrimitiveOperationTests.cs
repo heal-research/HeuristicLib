@@ -24,7 +24,7 @@ public sealed class SymbolicExpressionPrimitiveOperationTests
     [Fact]
     public void Evaluate_NumberProducesConstantSeries()
     {
-        var expression = Fixed(2.5).Build();
+        var expression = FixedConstant(2.5).Build();
         var data = DataFrame.FromOwnedColumns([
           KeyValuePair.Create("x0", new[] { 1.0, 2.0, 3.0 })
         ]);
@@ -152,7 +152,7 @@ public sealed class SymbolicExpressionPrimitiveOperationTests
     public void ToInfixString_FormatsPrimitiveOperations()
     {
         Variable("x0").Build().ToInfixString().ShouldBe("x0");
-        Fixed(2.5).Build().ToInfixString().ShouldBe("2.5");
+        FixedConstant(2.5).Build().ToInfixString().ShouldBe("2.5");
         Add(Variable("x0"), Variable("x1")).Build().ToInfixString().ShouldBe("(x0 + x1)");
         Subtract(Variable("x0"), Variable("x1")).Build().ToInfixString().ShouldBe("(x0 - x1)");
         Multiply(Variable("x0"), Variable("x1")).Build().ToInfixString().ShouldBe("(x0 * x1)");

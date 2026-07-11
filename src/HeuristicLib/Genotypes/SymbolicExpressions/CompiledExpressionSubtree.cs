@@ -1,16 +1,12 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public readonly struct CompiledSymbolicSubExpression
+public readonly struct CompiledExpressionSubtree
 {
-    private readonly CompiledSymbolicExpression expression;
+    private readonly CompiledExpressionTree expression;
     private readonly int startIndex;
     private readonly int rootInstructionIndex;
 
-    internal CompiledSymbolicSubExpression(
-        CompiledSymbolicExpression expression,
-        int startIndex,
-        int length,
-        int rootInstructionIndex)
+    internal CompiledExpressionSubtree(CompiledExpressionTree expression, int startIndex, int length, int rootInstructionIndex)
     {
         this.expression = expression;
         this.startIndex = startIndex;
@@ -18,19 +14,19 @@ public readonly struct CompiledSymbolicSubExpression
         this.rootInstructionIndex = rootInstructionIndex;
     }
 
-    public int Length { get; }
-    public ExpressionInstruction Instruction => expression.GetInstruction(rootInstructionIndex);
-    public SymbolicExpressionOpCode OpCode => Instruction.OpCode;
+    public Instruction Instruction => expression.GetInstruction(rootInstructionIndex);
+    public OpCode OpCode => Instruction.OpCode;
     public int Arity => Instruction.Arity;
+    public int Length { get; }
     public int SubtreeLength => Instruction.SubtreeLength;
-    public SymbolicExpressionLocation Location => new(rootInstructionIndex);
+    public ExpressionLocation Location => new(rootInstructionIndex);
 
-    public IEnumerable<CompiledSymbolicSubExpression> TraverseChildren() => EnumerateChildren();
-    public IEnumerable<CompiledSymbolicSubExpression> TraversePreOrder() => EnumeratePreOrder();
-    public IEnumerable<CompiledSymbolicSubExpression> TraversePostOrder() => EnumeratePostOrder();
-    public IEnumerable<CompiledSymbolicSubExpression> TraverseBreadthFirst() => EnumerateBreadthFirstOrder();
+    public IEnumerable<CompiledExpressionSubtree> TraverseChildren() => EnumerateChildren();
+    public IEnumerable<CompiledExpressionSubtree> TraversePreOrder() => EnumeratePreOrder();
+    public IEnumerable<CompiledExpressionSubtree> TraversePostOrder() => EnumeratePostOrder();
+    public IEnumerable<CompiledExpressionSubtree> TraverseBreadthFirst() => EnumerateBreadthFirstOrder();
 
-    public CompiledSymbolicSubExpression Child(int index)
+    public CompiledExpressionSubtree Child(int index)
     {
         if ((uint)index >= (uint)Arity)
         {
@@ -45,24 +41,24 @@ public readonly struct CompiledSymbolicSubExpression
 
         var childRoot = expression.GetInstruction(childRootIndex);
         var childStartIndex = childRootIndex - childRoot.SubtreeLength + 1;
-        return new CompiledSymbolicSubExpression(expression, childStartIndex, childRoot.SubtreeLength, childRootIndex);
+        return new CompiledExpressionSubtree(expression, childStartIndex, childRoot.SubtreeLength, childRootIndex);
     }
 
-    public bool TryGetNumericLiteral(out NumericLiteral numericLiteral)
+    public bool TryGetConstantValue(out double value)
     {
-        if (Instruction.OpCode != SymbolicExpressionOpCode.NumericLiteral)
+        if (Instruction.OpCode != OpCode.Constant)
         {
-            numericLiteral = default;
+            value = default;
             return false;
         }
 
-        numericLiteral = expression.GetNumericLiteral(Instruction.PayloadIndex);
+        value = expression.GetConstant(Instruction.PayloadIndex);
         return true;
     }
 
     public bool TryGetVariableReference(out VariableReference variableReference)
     {
-        if (Instruction.OpCode != SymbolicExpressionOpCode.Variable)
+        if (Instruction.OpCode != OpCode.Variable)
         {
             variableReference = default;
             return false;
@@ -72,7 +68,7 @@ public readonly struct CompiledSymbolicSubExpression
         return true;
     }
 
-    private IEnumerable<CompiledSymbolicSubExpression> EnumerateChildren()
+    private IEnumerable<CompiledExpressionSubtree> EnumerateChildren()
     {
         for (var i = 0; i < Arity; i++)
         {
@@ -80,15 +76,15 @@ public readonly struct CompiledSymbolicSubExpression
         }
     }
 
-    private IEnumerable<CompiledSymbolicSubExpression> EnumeratePostOrder()
+    private IEnumerable<CompiledExpressionSubtree> EnumeratePostOrder()
     {
         for (var i = startIndex; i < startIndex + Length; i++)
         {
-            yield return CreateSubExpression(i);
+            yield return CreateSubtree(i);
         }
     }
 
-    private IEnumerable<CompiledSymbolicSubExpression> EnumeratePreOrder()
+    private IEnumerable<CompiledExpressionSubtree> EnumeratePreOrder()
     {
         var stack = new Stack<int>();
         stack.Push(rootInstructionIndex);
@@ -96,12 +92,12 @@ public readonly struct CompiledSymbolicSubExpression
         while (stack.Count > 0)
         {
             var nodeIndex = stack.Pop();
-            yield return CreateSubExpression(nodeIndex);
+            yield return CreateSubtree(nodeIndex);
             PushChildrenRightToLeft(stack, nodeIndex);
         }
     }
 
-    private IEnumerable<CompiledSymbolicSubExpression> EnumerateBreadthFirstOrder()
+    private IEnumerable<CompiledExpressionSubtree> EnumerateBreadthFirstOrder()
     {
         var queue = new Queue<int>();
         queue.Enqueue(rootInstructionIndex);
@@ -109,7 +105,7 @@ public readonly struct CompiledSymbolicSubExpression
         while (queue.Count > 0)
         {
             var nodeIndex = queue.Dequeue();
-            yield return CreateSubExpression(nodeIndex);
+            yield return CreateSubtree(nodeIndex);
 
             EnqueueChildrenLeftToRight(queue, nodeIndex);
         }
@@ -187,10 +183,10 @@ public readonly struct CompiledSymbolicSubExpression
         return childRootIndices;
     }
 
-    private CompiledSymbolicSubExpression CreateSubExpression(int instructionIndex)
+    private CompiledExpressionSubtree CreateSubtree(int instructionIndex)
     {
         var instruction = expression.GetInstruction(instructionIndex);
         var start = instructionIndex - instruction.SubtreeLength + 1;
-        return new CompiledSymbolicSubExpression(expression, start, instruction.SubtreeLength, instructionIndex);
+        return new CompiledExpressionSubtree(expression, start, instruction.SubtreeLength, instructionIndex);
     }
 }

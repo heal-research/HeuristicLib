@@ -16,7 +16,7 @@ public class SymbolicRegressionRedesignSpecs
     [Fact]
     public void ExpressionDraft_AuthoringShape_BuildsX0PlusTwoTimesX1()
     {
-        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
+        var expression = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
 
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
         var root = expression.Root;
@@ -40,7 +40,7 @@ public class SymbolicRegressionRedesignSpecs
     public void Interpreter_AuthoringShape_EvaluatesCompiledExpressionAgainstRegressionData()
     {
         var data = CreateLinearRegressionData();
-        var draft = Variable("x0") + Fixed(2.0) * Variable("x1");
+        var draft = Variable("x0") + FixedConstant(2.0) * Variable("x1");
         var expression = draft.Build();
 
         var predictions = expression.Evaluate(data.TrainingInputs);
@@ -54,7 +54,7 @@ public class SymbolicRegressionRedesignSpecs
     [Fact]
     public void SymbolicExpression_AuthoringShape_NavigatesSubExpressionsAsTree()
     {
-        var expression = (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
+        var expression = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
 
         var root = expression.Root;
         var left = root.Child(0);
@@ -62,13 +62,13 @@ public class SymbolicRegressionRedesignSpecs
         var rightLeft = right.Child(0);
         var rightRight = right.Child(1);
 
-        root.Symbol.ShouldBe(new AddSymbol());
+        root.Symbol.ShouldBe(new AdditionSymbol());
         left.TryGetVariableReference(out var leftVariable).ShouldBeTrue();
         leftVariable.Name.ShouldBe("x0");
-        right.Symbol.ShouldBe(new MultiplySymbol());
-        rightLeft.TryGetNumericLiteral(out var literal).ShouldBeTrue();
+        right.Symbol.ShouldBe(new MultiplicationSymbol());
+        rightLeft.TryGetConstantValue(out var literal).ShouldBeTrue();
         rightRight.TryGetVariableReference(out var rightVariable).ShouldBeTrue();
-        literal.ShouldBe(new NumericLiteral(2.0, NumericLiteralKind.Fixed));
+        literal.ShouldBe(2.0);
         rightVariable.Name.ShouldBe("x1");
     }
 
@@ -82,7 +82,7 @@ public class SymbolicRegressionRedesignSpecs
           data,
           inputVariables: ["x0", "x1"],
           metric: Metrics.RMSE,
-          searchSpace: new SymbolicExpressionSearchSpace(
+          searchSpace: new ExpressionTreeSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
              allowedSymbols: Symbols.BasicArithmetic,
@@ -106,20 +106,20 @@ public class SymbolicRegressionRedesignSpecs
           data,
           inputVariables: ["x0", "x1"],
           metric: Metrics.RMSE,
-          searchSpace: new SymbolicExpressionSearchSpace(
+          searchSpace: new ExpressionTreeSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
              allowedSymbols: Symbols.BasicArithmetic,
              allowedVariables: ["x0", "x1"]));
 
-        var algorithm = new GeneticAlgorithm<SymbolicExpression, SymbolicExpressionSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
         {
             PopulationSize = 24,
             Creator = new UnrestrictedSymbolicExpressionCreator(),
             Crossover = new UnrestrictedSymbolicExpressionCrossover(),
             Mutator = new UnrestrictedSymbolicExpressionMutator(),
             MutationRate = 0.2,
-            Selector = new TournamentSelector<SymbolicExpression>(tournamentSize: 2),
+            Selector = new TournamentSelector<ExpressionTree>(tournamentSize: 2),
             Elites = 1
         }.WithMaxIterations(8);
 
@@ -148,13 +148,13 @@ public class SymbolicRegressionRedesignSpecs
           CreateLinearDataset(),
           inputVariables: ["x0"],
           metric: Metrics.RMSE,
-          searchSpace: new SymbolicExpressionSearchSpace(
+          searchSpace: new ExpressionTreeSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
              allowedSymbols: Symbols.BasicArithmetic,
              allowedVariables: ["x0"]));
 
-        var rawExpression = (Parameter(1.0) + Variable("x0")).Build();
+        var rawExpression = (Constant(1.0) + Variable("x0")).Build();
 
         var evaluator = SymbolicExpressionEvaluator.OptimizeNumericParameters(
           maxIterations: 25,
@@ -167,7 +167,7 @@ public class SymbolicRegressionRedesignSpecs
           problem).Single();
 
         solution.Genotype.ShouldNotBeSameAs(rawExpression);
-        rawExpression.Root.Child(0).TryGetNumericLiteral(out var rawParameter).ShouldBeTrue();
+        rawExpression.Root.Child(0).TryGetConstantValue(out var rawParameter).ShouldBeTrue();
         rawParameter.Value.ShouldBe(1.0);
         evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
@@ -185,13 +185,13 @@ public class SymbolicRegressionRedesignSpecs
           data,
           inputVariables: ["x0", "x1"],
           metric: Metrics.RMSE,
-          searchSpace: new SymbolicExpressionSearchSpace(
+          searchSpace: new ExpressionTreeSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
              allowedSymbols: Symbols.BasicArithmetic,
              allowedVariables: ["x0", "x1"]));
 
-        var algorithm = new GeneticAlgorithm<SymbolicExpression, SymbolicExpressionSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
         {
             PopulationSize = 24,
             Creator = new UnrestrictedSymbolicExpressionCreator(),
@@ -201,7 +201,7 @@ public class SymbolicRegressionRedesignSpecs
             Evaluator = SymbolicExpressionEvaluator.OptimizeNumericParameters(
               maxIterations: 25,
               tolerance: 1e-8),
-            Selector = new TournamentSelector<SymbolicExpression>(tournamentSize: 2),
+            Selector = new TournamentSelector<ExpressionTree>(tournamentSize: 2),
             Elites = 1
         }.WithMaxIterations(8);
 

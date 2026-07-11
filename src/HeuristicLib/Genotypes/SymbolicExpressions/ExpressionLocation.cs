@@ -1,8 +1,8 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public readonly record struct SymbolicExpressionLocation
+public readonly record struct ExpressionLocation
 {
-    internal SymbolicExpressionLocation(int instructionIndex)
+    internal ExpressionLocation(int instructionIndex)
     {
         InstructionIndex = instructionIndex;
     }

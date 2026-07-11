@@ -1,55 +1,57 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpression>
+public sealed class CompiledExpressionTree : IEquatable<CompiledExpressionTree>
 {
-    private readonly ExpressionInstruction[] instructions;
-    private readonly NumericLiteral[] numericLiterals;
+    private readonly Instruction[] instructions;
+    private readonly double[] constants;
     private readonly VariableReference[] variableReferences;
     private readonly int hashCode;
 
-    private CompiledSymbolicExpression(ExpressionInstruction[] instructions, NumericLiteral[] numericLiterals, VariableReference[] variableReferences, bool takeOwnership)
+    private CompiledExpressionTree(Instruction[] instructions, double[] constants, VariableReference[] variableReferences, bool takeOwnership)
     {
         this.instructions = takeOwnership ? instructions : instructions.ToArray();
-        this.numericLiterals = takeOwnership ? numericLiterals : numericLiterals.ToArray();
+        this.constants = takeOwnership ? constants : constants.ToArray();
         this.variableReferences = takeOwnership ? variableReferences : variableReferences.ToArray();
 
-        Depth = ValidateAndCalculateDepth(this.instructions, this.numericLiterals, this.variableReferences);
+        Depth = ValidateAndCalculateDepth(this.instructions, this.constants, this.variableReferences);
         hashCode = CalculateHashCode();
     }
 
     internal int InstructionCount => instructions.Length;
-    internal int NumericLiteralCount => numericLiterals.Length;
+    internal int ConstantCount => constants.Length;
     internal int VariableReferenceCount => variableReferences.Length;
+
     public int Length => instructions.Length;
-    public int Complexity => Length;
     public int Depth { get; }
-    public CompiledSymbolicSubExpression Root => CreateSubExpression(instructions.Length - 1);
-    public SymbolicExpressionLocation RootLocation => new(instructions.Length - 1);
-    public IEnumerable<CompiledSymbolicSubExpression> TraversePreOrder() => Root.TraversePreOrder();
-    public IEnumerable<CompiledSymbolicSubExpression> TraversePostOrder() => Root.TraversePostOrder();
-    public IEnumerable<CompiledSymbolicSubExpression> TraverseBreadthFirst() => Root.TraverseBreadthFirst();
 
-    internal static CompiledSymbolicExpression Create(IEnumerable<ExpressionInstruction> instructions, IEnumerable<NumericLiteral> numericLiterals, IEnumerable<VariableReference> variableReferences)
+    public CompiledExpressionSubtree Root => CreateSubtree(instructions.Length - 1);
+    public ExpressionLocation RootLocation => new(instructions.Length - 1);
+
+    public IEnumerable<CompiledExpressionSubtree> TraversePreOrder() => Root.TraversePreOrder();
+    public IEnumerable<CompiledExpressionSubtree> TraversePostOrder() => Root.TraversePostOrder();
+    public IEnumerable<CompiledExpressionSubtree> TraverseBreadthFirst() => Root.TraverseBreadthFirst();
+
+    internal static CompiledExpressionTree Create(IEnumerable<Instruction> instructions, IEnumerable<double> constants, IEnumerable<VariableReference> variableReferences)
     {
-        return new CompiledSymbolicExpression(instructions.ToArray(), numericLiterals.ToArray(), variableReferences.ToArray(), takeOwnership: true);
+        return new CompiledExpressionTree(instructions.ToArray(), constants.ToArray(), variableReferences.ToArray(), takeOwnership: true);
     }
 
-    internal static CompiledSymbolicExpression FromOwnedArrays(ExpressionInstruction[] instructions, NumericLiteral[] numericLiterals, VariableReference[] variableReferences)
+    internal static CompiledExpressionTree FromOwnedArrays(Instruction[] instructions, double[] constants, VariableReference[] variableReferences)
     {
-        return new CompiledSymbolicExpression(instructions, numericLiterals, variableReferences, takeOwnership: true);
+        return new CompiledExpressionTree(instructions, constants, variableReferences, takeOwnership: true);
     }
 
-    public CompiledSymbolicSubExpression GetSubExpression(SymbolicExpressionLocation location)
+    public CompiledExpressionSubtree GetSubtree(ExpressionLocation location)
     {
-        return CreateSubExpression(location.InstructionIndex);
+        return CreateSubtree(location.InstructionIndex);
     }
 
-    public CompiledSymbolicExpression WithOpCode(SymbolicExpressionLocation location, SymbolicExpressionOpCode opCode)
+    public CompiledExpressionTree WithOpCode(ExpressionLocation location, OpCode opCode)
     {
         return WithOpCode(location.InstructionIndex, opCode);
     }
 
-    internal CompiledSymbolicExpression WithOpCode(int instructionIndex, SymbolicExpressionOpCode opCode)
+    internal CompiledExpressionTree WithOpCode(int instructionIndex, OpCode opCode)
     {
         ValidateInstructionIndex(instructionIndex);
         var instruction = instructions[instructionIndex];
@@ -60,40 +62,35 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         if (arity != instruction.Arity)
             throw new ArgumentException($"Opcode {opCode} has arity {arity} but the selected instruction has arity {instruction.Arity}.", nameof(opCode));
 
-        if (opCode is SymbolicExpressionOpCode.Variable or SymbolicExpressionOpCode.NumericLiteral)
+        if (opCode is OpCode.Variable or OpCode.Constant)
             throw new ArgumentException("Opcode edits cannot change an operation into a payload instruction.", nameof(opCode));
 
         var newInstructions = instructions.ToArray();
-        newInstructions[instructionIndex] = new ExpressionInstruction(opCode, instruction.Arity, instruction.SubtreeLength);
-        return FromOwnedArrays(newInstructions, numericLiterals, variableReferences);
+        newInstructions[instructionIndex] = new Instruction(opCode, instruction.Arity, instruction.SubtreeLength);
+        return FromOwnedArrays(newInstructions, constants, variableReferences);
     }
 
-    public CompiledSymbolicExpression WithNumericLiteral(SymbolicExpressionLocation location, NumericLiteral literal)
+    public CompiledExpressionTree WithConstant(ExpressionLocation location, double value)
     {
-        return WithNumericLiteralInstruction(location.InstructionIndex, literal);
+        return WithConstantInstruction(location.InstructionIndex, value);
     }
 
-    public CompiledSymbolicExpression WithNumericLiteral(SymbolicExpressionLocation location, double value)
+    internal CompiledExpressionTree WithConstantEntry(int constantIndex, double value)
     {
-        return WithNumericLiteral(location, new NumericLiteral(value, NumericLiteralKind.Optimizable));
+        if ((uint)constantIndex >= (uint)constants.Length)
+            throw new ArgumentOutOfRangeException(nameof(constantIndex));
+
+        var newConstants = constants.ToArray();
+        newConstants[constantIndex] = value;
+        return FromOwnedArrays(instructions, newConstants, variableReferences);
     }
 
-    internal CompiledSymbolicExpression WithNumericLiteralEntry(int literalIndex, NumericLiteral literal)
-    {
-        if ((uint)literalIndex >= (uint)numericLiterals.Length)
-            throw new ArgumentOutOfRangeException(nameof(literalIndex));
-
-        var newNumericLiterals = numericLiterals.ToArray();
-        newNumericLiterals[literalIndex] = literal;
-        return FromOwnedArrays(instructions, newNumericLiterals, variableReferences);
-    }
-
-    public CompiledSymbolicExpression WithVariable(SymbolicExpressionLocation location, string variableName)
+    public CompiledExpressionTree WithVariable(ExpressionLocation location, string variableName)
     {
         return WithVariableInstruction(location.InstructionIndex, variableName);
     }
 
-    internal CompiledSymbolicExpression WithVariableReferenceEntry(int variableIndex, VariableReference reference)
+    internal CompiledExpressionTree WithVariableReferenceEntry(int variableIndex, VariableReference reference)
     {
         if ((uint)variableIndex >= (uint)variableReferences.Length)
             throw new ArgumentOutOfRangeException(nameof(variableIndex));
@@ -103,15 +100,15 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
 
         var newVariableReferences = variableReferences.ToArray();
         newVariableReferences[variableIndex] = reference;
-        return FromOwnedArrays(instructions, numericLiterals, newVariableReferences);
+        return FromOwnedArrays(instructions, constants, newVariableReferences);
     }
 
-    internal CompiledSymbolicExpression WithVariableInstruction(SymbolicExpressionLocation location, string variableName)
+    internal CompiledExpressionTree WithVariableInstruction(ExpressionLocation location, string variableName)
     {
         return WithVariableInstruction(location.InstructionIndex, variableName);
     }
 
-    internal CompiledSymbolicExpression WithVariableInstruction(int instructionIndex, string variableName)
+    internal CompiledExpressionTree WithVariableInstruction(int instructionIndex, string variableName)
     {
         ValidateInstructionIndex(instructionIndex);
         if (string.IsNullOrWhiteSpace(variableName))
@@ -125,36 +122,36 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         combinedVariables[^1] = new VariableReference(variableName, combinedVariables.Length - 1);
 
         var newInstructions = instructions.ToArray();
-        newInstructions[instructionIndex] = ExpressionInstruction.Variable(combinedVariables.Length - 1);
-        return CreateWithCompactedPayloadTables(newInstructions, numericLiterals, combinedVariables);
+        newInstructions[instructionIndex] = Instruction.Variable(combinedVariables.Length - 1);
+        return CreateWithCompactedPayloadTables(newInstructions, constants, combinedVariables);
     }
 
-    internal CompiledSymbolicExpression WithNumericLiteralInstruction(SymbolicExpressionLocation location, NumericLiteral literal)
+    internal CompiledExpressionTree WithConstantInstruction(ExpressionLocation location, double value)
     {
-        return WithNumericLiteralInstruction(location.InstructionIndex, literal);
+        return WithConstantInstruction(location.InstructionIndex, value);
     }
 
-    internal CompiledSymbolicExpression WithNumericLiteralInstruction(int instructionIndex, NumericLiteral literal)
+    internal CompiledExpressionTree WithConstantInstruction(int instructionIndex, double value)
     {
         ValidateInstructionIndex(instructionIndex);
         if (instructions[instructionIndex].Arity != 0)
-            throw new ArgumentException("Only leaf instructions can be changed to numeric literal instructions.", nameof(instructionIndex));
+            throw new ArgumentException("Only leaf instructions can be changed to constant instructions.", nameof(instructionIndex));
 
-        var combinedNumericLiterals = new NumericLiteral[numericLiterals.Length + 1];
-        numericLiterals.AsSpan().CopyTo(combinedNumericLiterals);
-        combinedNumericLiterals[^1] = literal;
+        var combinedConstants = new double[constants.Length + 1];
+        constants.AsSpan().CopyTo(combinedConstants);
+        combinedConstants[^1] = value;
 
         var newInstructions = instructions.ToArray();
-        newInstructions[instructionIndex] = ExpressionInstruction.NumericLiteral(combinedNumericLiterals.Length - 1);
-        return CreateWithCompactedPayloadTables(newInstructions, combinedNumericLiterals, variableReferences);
+        newInstructions[instructionIndex] = Instruction.Constant(combinedConstants.Length - 1);
+        return CreateWithCompactedPayloadTables(newInstructions, combinedConstants, variableReferences);
     }
 
-    public CompiledSymbolicExpression ReplaceSubExpression(SymbolicExpressionLocation location, CompiledSymbolicExpression replacement)
+    public CompiledExpressionTree ReplaceSubtree(ExpressionLocation location, CompiledExpressionTree replacement)
     {
-        return ReplaceSubExpression(location.InstructionIndex, replacement);
+        return ReplaceSubtree(location.InstructionIndex, replacement);
     }
 
-    internal CompiledSymbolicExpression ReplaceSubExpression(int rootInstructionIndex, CompiledSymbolicExpression replacement)
+    internal CompiledExpressionTree ReplaceSubtree(int rootInstructionIndex, CompiledExpressionTree replacement)
     {
         ArgumentNullException.ThrowIfNull(replacement);
         ValidateInstructionIndex(rootInstructionIndex);
@@ -162,20 +159,20 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         var replacedRoot = instructions[rootInstructionIndex];
         var replacedStart = rootInstructionIndex - replacedRoot.SubtreeLength + 1;
         var newLength = instructions.Length - replacedRoot.SubtreeLength + replacement.instructions.Length;
-        var splicedInstructions = new ExpressionInstruction[newLength];
+        var splicedInstructions = new Instruction[newLength];
 
         instructions.AsSpan(0, replacedStart).CopyTo(splicedInstructions);
 
-        var numericLiteralOffset = numericLiterals.Length;
+        var constantOffset = constants.Length;
         var variableReferenceOffset = variableReferences.Length;
         for (var i = 0; i < replacement.instructions.Length; i++)
         {
             var instruction = replacement.instructions[i];
-            var payloadKind = SymbolicExpressionOpCodes.GetPayloadKind(instruction.OpCode);
+            var payloadKind = OpCodes.GetPayloadKind(instruction.OpCode);
             var payloadIndex = payloadKind switch
             {
-                SymbolicExpressionPayloadKind.NumericLiteral => instruction.PayloadIndex + numericLiteralOffset,
-                SymbolicExpressionPayloadKind.VariableReference => instruction.PayloadIndex + variableReferenceOffset,
+                PayloadKind.Constant => instruction.PayloadIndex + constantOffset,
+                PayloadKind.VariableReference => instruction.PayloadIndex + variableReferenceOffset,
                 _ => instruction.PayloadIndex
             };
 
@@ -185,9 +182,9 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         var suffixStart = rootInstructionIndex + 1;
         instructions.AsSpan(suffixStart).CopyTo(splicedInstructions.AsSpan(replacedStart + replacement.instructions.Length));
 
-        var combinedNumericLiterals = new NumericLiteral[numericLiterals.Length + replacement.numericLiterals.Length];
-        numericLiterals.AsSpan().CopyTo(combinedNumericLiterals);
-        replacement.numericLiterals.AsSpan().CopyTo(combinedNumericLiterals.AsSpan(numericLiterals.Length));
+        var combinedConstants = new double[constants.Length + replacement.constants.Length];
+        constants.AsSpan().CopyTo(combinedConstants);
+        replacement.constants.AsSpan().CopyTo(combinedConstants.AsSpan(constants.Length));
 
         var combinedVariableReferences = new VariableReference[variableReferences.Length + replacement.variableReferences.Length];
         variableReferences.AsSpan().CopyTo(combinedVariableReferences);
@@ -198,10 +195,10 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         }
 
         RecalculateSubtreeLengths(splicedInstructions);
-        return CreateWithCompactedPayloadTables(splicedInstructions, combinedNumericLiterals, combinedVariableReferences);
+        return CreateWithCompactedPayloadTables(splicedInstructions, combinedConstants, combinedVariableReferences);
     }
 
-    internal CompiledSymbolicSubExpression CreateSubExpression(int rootInstructionIndex)
+    internal CompiledExpressionSubtree CreateSubtree(int rootInstructionIndex)
     {
         if ((uint)rootInstructionIndex >= (uint)instructions.Length)
         {
@@ -210,16 +207,16 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
 
         var root = instructions[rootInstructionIndex];
         var start = rootInstructionIndex - root.SubtreeLength + 1;
-        return new CompiledSymbolicSubExpression(this, start, root.SubtreeLength, rootInstructionIndex);
+        return new CompiledExpressionSubtree(this, start, root.SubtreeLength, rootInstructionIndex);
     }
 
-    internal ExpressionInstruction GetInstruction(int instructionIndex) => instructions[instructionIndex];
+    internal Instruction GetInstruction(int instructionIndex) => instructions[instructionIndex];
 
-    internal NumericLiteral GetNumericLiteral(int literalIndex) => numericLiterals[literalIndex];
+    internal double GetConstant(int constantIndex) => constants[constantIndex];
 
     internal VariableReference GetVariableReference(int variableIndex) => variableReferences[variableIndex];
 
-    internal ReadOnlySpan<ExpressionInstruction> InstructionsInPostOrder => instructions;
+    internal ReadOnlySpan<Instruction> InstructionsInPostOrder => instructions;
 
     public string ToInfixString()
     {
@@ -228,34 +225,34 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         {
             switch (instruction.OpCode)
             {
-                case SymbolicExpressionOpCode.Variable:
+                case OpCode.Variable:
                     stack.Push(variableReferences[instruction.PayloadIndex].Name);
                     break;
-                case SymbolicExpressionOpCode.NumericLiteral:
-                    stack.Push(numericLiterals[instruction.PayloadIndex].Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture));
+                case OpCode.Constant:
+                    stack.Push(constants[instruction.PayloadIndex].ToString("G", System.Globalization.CultureInfo.InvariantCulture));
                     break;
-                case SymbolicExpressionOpCode.Add:
+                case OpCode.Add:
                     PushBinary(stack, "+");
                     break;
-                case SymbolicExpressionOpCode.Subtract:
+                case OpCode.Subtract:
                     PushBinary(stack, "-");
                     break;
-                case SymbolicExpressionOpCode.Multiply:
+                case OpCode.Multiply:
                     PushBinary(stack, "*");
                     break;
-                case SymbolicExpressionOpCode.Divide:
+                case OpCode.Divide:
                     PushBinary(stack, "/");
                     break;
-                case SymbolicExpressionOpCode.Negate:
+                case OpCode.Negate:
                     PushUnary(stack, "negate");
                     break;
-                case SymbolicExpressionOpCode.Exp:
+                case OpCode.Exp:
                     PushUnary(stack, "exp");
                     break;
-                case SymbolicExpressionOpCode.Log:
+                case OpCode.Log:
                     PushUnary(stack, "log");
                     break;
-                case SymbolicExpressionOpCode.Sqrt:
+                case OpCode.Sqrt:
                     PushUnary(stack, "sqrt");
                     break;
                 default:
@@ -268,23 +265,23 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
 
     public override string ToString() => ToInfixString();
 
-    public bool Equals(CompiledSymbolicExpression? other)
+    public bool Equals(CompiledExpressionTree? other)
     {
-        return other is not null
-               && (ReferenceEquals(this, other)
-                   || hashCode == other.hashCode
-                   && instructions.SequenceEqual(other.instructions)
-                   && numericLiterals.SequenceEqual(other.numericLiterals)
-                   && variableReferences.SequenceEqual(other.variableReferences));
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        return hashCode == other.hashCode
+               && instructions.SequenceEqual(other.instructions)
+               && constants.SequenceEqual(other.constants)
+               && variableReferences.SequenceEqual(other.variableReferences);
     }
 
-    public override bool Equals(object? obj) => obj is CompiledSymbolicExpression other && Equals(other);
+    public override bool Equals(object? obj) => obj is CompiledExpressionTree other && Equals(other);
 
     public override int GetHashCode() => hashCode;
 
-    public static bool operator ==(CompiledSymbolicExpression? left, CompiledSymbolicExpression? right) => Equals(left, right);
+    public static bool operator ==(CompiledExpressionTree? left, CompiledExpressionTree? right) => Equals(left, right);
 
-    public static bool operator !=(CompiledSymbolicExpression? left, CompiledSymbolicExpression? right) => !Equals(left, right);
+    public static bool operator !=(CompiledExpressionTree? left, CompiledExpressionTree? right) => !Equals(left, right);
 
     private static void PushBinary(Stack<string> stack, string op)
     {
@@ -299,7 +296,7 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         stack.Push($"{functionName}({child})");
     }
 
-    private static int ValidateAndCalculateDepth(ExpressionInstruction[] instructions, NumericLiteral[] numericLiterals, VariableReference[] variableReferences)
+    private static int ValidateAndCalculateDepth(Instruction[] instructions, double[] constants, VariableReference[] variableReferences)
     {
         if (instructions.Length == 0)
             throw new ArgumentException("Expression must contain at least one instruction.", nameof(instructions));
@@ -310,7 +307,7 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         for (var i = 0; i < instructions.Length; i++)
         {
             var instruction = instructions[i];
-            ValidateInstructionShape(instruction, numericLiterals, variableReferences);
+            ValidateInstructionShape(instruction, constants, variableReferences);
 
             if (stack.Count < instruction.Arity)
                 throw new ArgumentException($"Instruction {i} requires {instruction.Arity} operands but only {stack.Count} are available.", nameof(instructions));
@@ -353,33 +350,33 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
         }
     }
 
-    private static void ValidateInstructionShape(ExpressionInstruction instruction, NumericLiteral[] numericLiterals, VariableReference[] variableReferences)
+    private static void ValidateInstructionShape(Instruction instruction, double[] constants, VariableReference[] variableReferences)
     {
-        if (instruction.OpCode == SymbolicExpressionOpCode.Invalid)
+        if (instruction.OpCode == OpCode.Invalid)
             throw new ArgumentException("Invalid opcode is not allowed.");
 
-        if (!SymbolicExpressionOpCodes.MatchesArity(instruction.OpCode, instruction.Arity))
+        if (!OpCodes.MatchesArity(instruction.OpCode, instruction.Arity))
             throw new ArgumentException($"Unsupported symbol opcode {instruction.OpCode} with arity {instruction.Arity}.");
 
         if (instruction.SubtreeLength <= 0)
             throw new ArgumentException("SubtreeLength must be positive.");
 
-        switch (SymbolicExpressionOpCodes.GetPayloadKind(instruction.OpCode))
+        switch (OpCodes.GetPayloadKind(instruction.OpCode))
         {
-            case SymbolicExpressionPayloadKind.VariableReference:
+            case PayloadKind.VariableReference:
                 ValidatePayloadIndex(instruction.PayloadIndex, variableReferences.Length, "variable reference");
                 break;
-            case SymbolicExpressionPayloadKind.NumericLiteral:
-                ValidatePayloadIndex(instruction.PayloadIndex, numericLiterals.Length, "numeric literal");
+            case PayloadKind.Constant:
+                ValidatePayloadIndex(instruction.PayloadIndex, constants.Length, "constant");
                 break;
-            case SymbolicExpressionPayloadKind.None:
+            case PayloadKind.None:
                 if (instruction.PayloadIndex != -1)
                     throw new ArgumentException($"Opcode {instruction.OpCode} must not have a payload index.");
                 break;
         }
     }
 
-    private static int GetArity(SymbolicExpressionOpCode opCode) => SymbolicExpressionOpCodes.GetArity(opCode);
+    private static int GetArity(OpCode opCode) => OpCodes.GetArity(opCode);
 
     private static void ValidatePayloadIndex(int payloadIndex, int payloadCount, string payloadName)
     {
@@ -393,30 +390,30 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
             throw new ArgumentOutOfRangeException(nameof(instructionIndex));
     }
 
-    private static CompiledSymbolicExpression CreateWithCompactedPayloadTables(ExpressionInstruction[] sourceInstructions, NumericLiteral[] sourceNumericLiterals, VariableReference[] sourceVariableReferences)
+    private static CompiledExpressionTree CreateWithCompactedPayloadTables(Instruction[] sourceInstructions, double[] sourceConstants, VariableReference[] sourceVariableReferences)
     {
-        var numericLiterals = new List<NumericLiteral>();
+        var constants = new List<double>();
         var variableReferences = new List<VariableReference>();
         var variableIndexByName = new Dictionary<string, int>(StringComparer.Ordinal);
-        var compactedInstructions = new ExpressionInstruction[sourceInstructions.Length];
+        var compactedInstructions = new Instruction[sourceInstructions.Length];
 
         for (var i = 0; i < sourceInstructions.Length; i++)
         {
             var instruction = sourceInstructions[i];
-            switch (SymbolicExpressionOpCodes.GetPayloadKind(instruction.OpCode))
+            switch (OpCodes.GetPayloadKind(instruction.OpCode))
             {
-                case SymbolicExpressionPayloadKind.NumericLiteral:
-                    var numericLiteral = sourceNumericLiterals[instruction.PayloadIndex];
-                    var numericLiteralIndex = numericLiterals.IndexOf(numericLiteral);
-                    if (numericLiteralIndex < 0)
+                case PayloadKind.Constant:
+                    var constant = sourceConstants[instruction.PayloadIndex];
+                    var constantIndex = constants.IndexOf(constant);
+                    if (constantIndex < 0)
                     {
-                        numericLiteralIndex = numericLiterals.Count;
-                        numericLiterals.Add(numericLiteral);
+                        constantIndex = constants.Count;
+                        constants.Add(constant);
                     }
 
-                    compactedInstructions[i] = instruction with { PayloadIndex = numericLiteralIndex };
+                    compactedInstructions[i] = instruction with { PayloadIndex = constantIndex };
                     break;
-                case SymbolicExpressionPayloadKind.VariableReference:
+                case PayloadKind.VariableReference:
                     var variableName = sourceVariableReferences[instruction.PayloadIndex].Name;
                     if (!variableIndexByName.TryGetValue(variableName, out var variableIndex))
                     {
@@ -433,10 +430,10 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
             }
         }
 
-        return FromOwnedArrays(compactedInstructions, numericLiterals.ToArray(), variableReferences.ToArray());
+        return FromOwnedArrays(compactedInstructions, constants.ToArray(), variableReferences.ToArray());
     }
 
-    private static void RecalculateSubtreeLengths(ExpressionInstruction[] targetInstructions)
+    private static void RecalculateSubtreeLengths(Instruction[] targetInstructions)
     {
         var stack = new Stack<int>();
         for (var i = 0; i < targetInstructions.Length; i++)
@@ -452,7 +449,7 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
                 subtreeLength += stack.Pop();
             }
 
-            targetInstructions[i] = new ExpressionInstruction(instruction.OpCode, arity, subtreeLength, instruction.PayloadIndex);
+            targetInstructions[i] = instruction with { Arity = arity, SubtreeLength = subtreeLength };
             stack.Push(subtreeLength);
         }
 
@@ -468,9 +465,9 @@ public sealed class CompiledSymbolicExpression : IEquatable<CompiledSymbolicExpr
             hash.Add(instruction);
         }
 
-        foreach (var numericLiteral in numericLiterals)
+        foreach (var constant in constants)
         {
-            hash.Add(numericLiteral);
+            hash.Add(constant);
         }
 
         foreach (var variableReference in variableReferences)

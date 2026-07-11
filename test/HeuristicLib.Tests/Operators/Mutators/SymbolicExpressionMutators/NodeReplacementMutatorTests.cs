@@ -1,8 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
-using HEAL.HeuristicLib.Operators.SymbolicExpressions;
-using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
+using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
@@ -11,15 +10,24 @@ namespace HEAL.HeuristicLib.Tests.Operators.Mutators.SymbolicExpressionMutators;
 public sealed class NodeReplacementMutatorTests
 {
     [Fact]
-    public void Mutate_ReplacesOperationWithSameArityOperationFromSearchSpace()
+    public void Mutate_ReplacesWithCompatibleSymbolAndUsesItsInitializer()
     {
-        var parent = (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
-        var searchSpace = CreateSearchSpace(["x0", "x1"]);
+        var constant = new EvolvableConstantSymbol(new UniformDoubleDistribution(10, 14), new ResampleInitialNumericPerturbation());
+        var searchSpace = new ExpressionTreeSearchSpace(1, 1, [constant]);
 
-        var mutant = NodeReplacementMutation.Mutate(
-          parent,
-          new SequenceRandomNumberGenerator(0.9, 0.3),
-          searchSpace);
+        var result = NodeReplacementMutation.Mutate(Variable("x0").Build(), new SequenceRandomNumberGenerator(0.0, 0.0, 0.75), searchSpace);
+
+        result.ToInfixString().ShouldBe("13");
+        result.Root.Node.Symbol.ShouldBe(constant);
+        searchSpace.Contains(result).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Mutate_ReplacesOperationWithAnAllowedSymbolOfTheSameArity()
+    {
+        var parent = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
+        var searchSpace = new ExpressionTreeSearchSpace(20, 10, Symbols.BasicArithmetic, ["x0", "x1"], [new FixedConstantSymbol(2.0)]);
+        var mutant = NodeReplacementMutation.Mutate(parent, new SequenceRandomNumberGenerator(0.9, 0.3), searchSpace);
 
         parent.ToInfixString().ShouldBe("(x0 + (2 * x1))");
         mutant.ToInfixString().ShouldBe("(x0 - (2 * x1))");
@@ -28,156 +36,105 @@ public sealed class NodeReplacementMutatorTests
     }
 
     [Fact]
-    public void Mutate_ReplacesVariableWithAllowedVariable()
+    public void Mutate_ReplacesVariableWithAnAllowedVariable()
     {
-        var parent = Variable("x0").Build();
         var searchSpace = CreateSearchSpace(["x0", "x1"]);
-
-        var mutant = NodeReplacementMutation.Mutate(
-          parent,
-          new SequenceRandomNumberGenerator(0.0, 0.0, 0.9),
-          searchSpace);
+        var mutant = NodeReplacementMutation.Mutate(Variable("x0").Build(), new SequenceRandomNumberGenerator(0.0, 0.0, 0.9), searchSpace);
 
         mutant.ToInfixString().ShouldBe("x1");
         searchSpace.Contains(mutant).ShouldBeTrue();
     }
 
     [Fact]
-    public void Mutate_UsesInstanceEntryPointWithSearchSpace()
+    public void Mutate_UsesTheInstanceEntryPoint()
     {
-        var parent = Sqrt(Variable("x0")).Build();
-        var searchSpace = CreateSearchSpace(["x0"]);
+        var searchSpace = new ExpressionTreeSearchSpace(2, 2, [Symbols.Logarithm, Symbols.SquareRoot, new VariableSymbol(["x0"])]);
 
-        var mutant = new NodeReplacementMutator()
-          .Mutate(parent, new SequenceRandomNumberGenerator(0.9, 0.0), searchSpace);
+        var mutant = new NodeReplacementMutator().Mutate(Sqrt(Variable("x0")).Build(), new SequenceRandomNumberGenerator(0.9, 0.0), searchSpace);
 
         mutant.ToInfixString().ShouldBe("log(x0)");
         mutant.EvaluateSingleRow(("x0", Math.E)).ShouldBe(1.0, tolerance: 1e-12);
-    }
-
-    [Fact]
-    public void Mutate_OnlyUsesOperationsAllowedBySearchSpace()
-    {
-        var parent = (Fixed(1.0) * Fixed(2.0)).Build();
-        var searchSpace = new SymbolicExpressionSearchSpace(
-            maximumLength: 10,
-            maximumDepth: 5,
-            allowedSymbols:
-            [
-                new AddSymbol(),
-                new MultiplySymbol()
-            ],
-            allowedVariables: []);
-
-        var mutant = NodeReplacementMutation.Mutate(
-          parent,
-          new SequenceRandomNumberGenerator(0.9, 0.0),
-          searchSpace);
-
-        mutant.ToInfixString().ShouldBe("(1 + 2)");
         searchSpace.Contains(mutant).ShouldBeTrue();
     }
 
     [Fact]
-    public void Mutate_AllowsNullMutation()
+    public void Mutate_OnlySelectsSymbolsAllowedByTheSearchSpace()
+    {
+        var searchSpace = new ExpressionTreeSearchSpace(3, 2, [Symbols.Addition, Symbols.Multiplication, new FixedConstantSymbol(1.0)]);
+        var mutant = NodeReplacementMutation.Mutate((FixedConstant(1.0) * FixedConstant(1.0)).Build(), new SequenceRandomNumberGenerator(0.9, 0.0), searchSpace);
+
+        mutant.ToInfixString().ShouldBe("(1 + 1)");
+        searchSpace.Contains(mutant).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Mutate_AllowsNoChangeWhenTheSameVariableIsSampled()
     {
         var parent = Variable("x0").Build();
         var searchSpace = CreateSearchSpace(["x0", "x1"]);
-
-        var mutant = NodeReplacementMutation.Mutate(
-          parent,
-          new SequenceRandomNumberGenerator(0.0, 0.0, 0.0),
-          searchSpace);
+        var mutant = NodeReplacementMutation.Mutate(parent, new SequenceRandomNumberGenerator(0.0, 0.0, 0.0), searchSpace);
 
         mutant.ToInfixString().ShouldBe("x0");
         searchSpace.Contains(mutant).ShouldBeTrue();
     }
 
     [Fact]
-    public void Mutate_ReplacesNumericLiteralWithAllowedVariable()
+    public void Mutate_ReplacesFixedConstantsWithAllowedVariables()
     {
-        var parent = Fixed(100.0).Build();
-        var searchSpace = CreateSearchSpace(["x0"]);
+        var variableOnly = new ExpressionTreeSearchSpace(1, 1, [new VariableSymbol(["x0"])]);
 
-        var mutant = NodeReplacementMutation.Mutate(
-          parent,
-          new SequenceRandomNumberGenerator(0.0, 0.0, 0.0),
-          searchSpace);
+        var variable = NodeReplacementMutation.Mutate(FixedConstant(100.0).Build(), new SequenceRandomNumberGenerator(0.0, 0.0), variableOnly);
 
-        mutant.ToInfixString().ShouldBe("x0");
-        searchSpace.Contains(mutant).ShouldBeTrue();
+        variable.ToInfixString().ShouldBe("x0");
+        variableOnly.Contains(variable).ShouldBeTrue();
     }
 
     [Fact]
-    public void Mutate_ReplacesVariableWithNumericLiteral()
+    public void Mutate_ReplacesVariablesWithEvolvableConstants()
     {
-        var parent = Variable("x0").Build();
-        var searchSpace = CreateSearchSpace(["x0"]);
-        var samplingProfile = new SymbolicExpressionSamplingProfile
-        {
-            NumericLiteralInitializationDistribution = new UniformDoubleDistribution(10.0, 14.0)
-        };
+        var constant = new EvolvableConstantSymbol(new UniformDoubleDistribution(10.0, 14.0), new ResampleInitialNumericPerturbation());
+        var constants = new ExpressionTreeSearchSpace(1, 1, [constant]);
 
-        var mutant = NodeReplacementMutation.Mutate(
-          parent,
-          new SequenceRandomNumberGenerator(0.0, 0.9, 0.75),
-          searchSpace,
-          samplingProfile);
+        var numeric = NodeReplacementMutation.Mutate(Variable("x0").Build(), new SequenceRandomNumberGenerator(0.0, 0.75), constants);
 
-        mutant.ToInfixString().ShouldBe("13");
-        searchSpace.Contains(mutant).ShouldBeTrue();
+        numeric.ToInfixString().ShouldBe("13");
+        constants.Contains(numeric).ShouldBeTrue();
     }
 
     [Fact]
-    public void Mutate_UsesVariableTerminalWhenOnlyVariablesAreAvailable()
+    public void Mutate_UsesVariableTerminalsWhenOnlyVariablesAreAvailable()
     {
-        var parent = Variable("x0").Build();
-        var searchSpace = new SymbolicExpressionSearchSpace(
-            maximumLength: 1,
-            maximumDepth: 1,
-            allowedSymbols: [],
-            allowedVariables: ["x0", "x1"],
-            allowNumericLiterals: false);
+        var variables = new ExpressionTreeSearchSpace(1, 1, [new VariableSymbol(["x0", "x1"])]);
 
-        var mutant = NodeReplacementMutation.Mutate(
-          parent,
-          new SequenceRandomNumberGenerator(0.0, 0.0, 0.9),
-          searchSpace);
+        var result = NodeReplacementMutation.Mutate(Variable("x0").Build(), new SequenceRandomNumberGenerator(0.0, 0.9), variables);
 
-        mutant.ToInfixString().ShouldBe("x1");
-        searchSpace.Contains(mutant).ShouldBeTrue();
+        result.ToInfixString().ShouldBe("x1");
+        variables.Contains(result).ShouldBeTrue();
     }
 
     [Fact]
-    public void Mutate_UsesNumericLiteralTerminalWhenOnlyNumericLiteralsAreAvailable()
+    public void Mutate_UsesEvolvableConstantTerminalsWhenOnlyTheyAreAvailable()
     {
-        var parent = Fixed(1.0).Build();
-        var searchSpace = new SymbolicExpressionSearchSpace(
-            maximumLength: 1,
-            maximumDepth: 1,
-            allowedSymbols: [],
-            allowedVariables: []);
-        var samplingProfile = new SymbolicExpressionSamplingProfile
-        {
-            NumericLiteralInitializationDistribution = new UniformDoubleDistribution(10.0, 14.0)
-        };
+        var constant = new EvolvableConstantSymbol(new UniformDoubleDistribution(10.0, 14.0), new ResampleInitialNumericPerturbation());
+        var constants = new ExpressionTreeSearchSpace(1, 1, [constant]);
 
-        var mutant = NodeReplacementMutation.Mutate(
-          parent,
-          new SequenceRandomNumberGenerator(0.0, 0.0, 0.5),
-          searchSpace,
-          samplingProfile);
+        var result = NodeReplacementMutation.Mutate(FixedConstant(1.0).Build(), new SequenceRandomNumberGenerator(0.0, 0.5), constants);
 
-        mutant.ToInfixString().ShouldBe("12");
-        searchSpace.Contains(mutant).ShouldBeTrue();
+        result.ToInfixString().ShouldBe("12");
+        constants.Contains(result).ShouldBeTrue();
     }
 
-    private static SymbolicExpressionSearchSpace CreateSearchSpace(IReadOnlyList<string> variables)
+    [Fact]
+    public void Mutate_PreservesOperationArity()
     {
-        return new SymbolicExpressionSearchSpace(
-            maximumLength: 20,
-            maximumDepth: 10,
-            allowedSymbols: Symbols.BasicArithmetic,
-            allowedVariables: variables);
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5, [new AdditionSymbol(), new SubtractionSymbol(), new VariableSymbol(["x0"])]);
+
+        var result = NodeReplacementMutation.Mutate((Variable("x0") + Variable("x0")).Build(), new SequenceRandomNumberGenerator(0.9, 0.9), searchSpace);
+
+        result.Root.Symbol.ShouldBe(new SubtractionSymbol());
+        searchSpace.Contains(result).ShouldBeTrue();
     }
+
+    private static ExpressionTreeSearchSpace CreateSearchSpace(IReadOnlyList<string> variables) =>
+        new(20, 10, Symbols.BasicArithmetic, variables);
 }

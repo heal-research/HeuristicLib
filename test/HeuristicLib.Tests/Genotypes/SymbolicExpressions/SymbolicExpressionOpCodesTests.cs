@@ -7,25 +7,25 @@ public sealed class SymbolicExpressionOpCodesTests
     [Fact]
     public void IsSupported_RecognizesBuiltInOpcodes()
     {
-        SymbolicExpressionOpCodes.IsSupported(SymbolicExpressionOpCode.Log).ShouldBeTrue();
-        SymbolicExpressionOpCodes.IsSupported(SymbolicExpressionOpCode.Invalid).ShouldBeFalse();
+        OpCodes.IsSupported(OpCode.Log).ShouldBeTrue();
+        OpCodes.IsSupported(OpCode.Invalid).ShouldBeFalse();
     }
 
     [Fact]
     public void MetadataAccessors_ReturnCanonicalArityAndPayloadKind()
     {
-        SymbolicExpressionOpCodes.GetArity(SymbolicExpressionOpCode.Log).ShouldBe(1);
-        SymbolicExpressionOpCodes.GetArity(SymbolicExpressionOpCode.Add).ShouldBe(2);
-        SymbolicExpressionOpCodes.GetPayloadKind(SymbolicExpressionOpCode.Variable).ShouldBe(SymbolicExpressionPayloadKind.VariableReference);
-        SymbolicExpressionOpCodes.GetPayloadKind(SymbolicExpressionOpCode.NumericLiteral).ShouldBe(SymbolicExpressionPayloadKind.NumericLiteral);
-        SymbolicExpressionOpCodes.GetPayloadKind(SymbolicExpressionOpCode.Multiply).ShouldBe(SymbolicExpressionPayloadKind.None);
+        OpCodes.GetArity(OpCode.Log).ShouldBe(1);
+        OpCodes.GetArity(OpCode.Add).ShouldBe(2);
+        OpCodes.GetPayloadKind(OpCode.Variable).ShouldBe(PayloadKind.VariableReference);
+        OpCodes.GetPayloadKind(OpCode.Constant).ShouldBe(PayloadKind.Constant);
+        OpCodes.GetPayloadKind(OpCode.Multiply).ShouldBe(PayloadKind.None);
     }
 
     [Fact]
     public void IsTerminal_RecognizesPayloadTerminals()
     {
-        SymbolicExpressionOpCodes.IsTerminal(SymbolicExpressionOpCode.Variable).ShouldBeTrue();
-        SymbolicExpressionOpCodes.IsTerminal(SymbolicExpressionOpCode.NumericLiteral).ShouldBeTrue();
-        SymbolicExpressionOpCodes.IsTerminal(SymbolicExpressionOpCode.Add).ShouldBeFalse();
+        OpCodes.IsTerminal(OpCode.Variable).ShouldBeTrue();
+        OpCodes.IsTerminal(OpCode.Constant).ShouldBeTrue();
+        OpCodes.IsTerminal(OpCode.Add).ShouldBeFalse();
     }
 }

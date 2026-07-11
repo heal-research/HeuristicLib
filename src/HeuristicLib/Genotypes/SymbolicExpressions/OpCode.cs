@@ -1,10 +1,10 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public enum SymbolicExpressionOpCode : ushort
+public enum OpCode : ushort
 {
     Invalid = 0,
     Variable = 1,
-    NumericLiteral = 2,
+    Constant = 2,
     Add = 10,
     Subtract = 11,
     Multiply = 12,

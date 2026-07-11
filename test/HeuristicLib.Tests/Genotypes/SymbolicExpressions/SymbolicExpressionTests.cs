@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Random.Distributions;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions;
@@ -6,25 +7,24 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions;
 public sealed class SymbolicExpressionTests
 {
     [Fact]
-    public void Create_RejectsEmptySymbolProgram()
+    public void Create_RejectsMalformedPostOrderTokens()
     {
-        Should.Throw<ArgumentException>(() => SymbolicExpression.Create([]));
+        Should.Throw<ArgumentException>(() => ExpressionTree.Create([new ExpressionNode(new AdditionSymbol())]));
     }
 
     [Fact]
-    public void Create_RejectsStackUnderflow()
+    public void Create_RejectsEmptyNodeSequence()
     {
-        Should.Throw<ArgumentException>(() => SymbolicExpression.Create([new AddSymbol()]));
+        Should.Throw<ArgumentException>(() => ExpressionTree.Create([]));
     }
 
     [Fact]
     public void Create_RejectsMultipleRootExpressions()
     {
-        Should.Throw<ArgumentException>(() =>
-          SymbolicExpression.Create([
-            new VariableSymbol("x0"),
-            new VariableSymbol("x1")
-          ]));
+        var x0 = Variable("x0").Build().Root.Node;
+        var x1 = Variable("x1").Build().Root.Node;
+
+        Should.Throw<ArgumentException>(() => ExpressionTree.Create([x0, x1]));
     }
 
     [Fact]
@@ -38,189 +38,234 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
-    public void Root_ReturnsSubExpressionOverWholeExpression()
+    public void Navigation_UsesTokenArityAndSubtreeMetadata()
+    {
+        var expression = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
+
+        expression.Length.ShouldBe(5);
+        expression.Depth.ShouldBe(3);
+        expression.Root.Symbol.ShouldBe(new AdditionSymbol());
+        expression.Root.Child(1).Symbol.ShouldBe(new MultiplicationSymbol());
+        expression.TraversePreOrder().Select(node => node.Symbol).ShouldBe([
+            new AdditionSymbol(), new VariableSymbol(["x0"]), new MultiplicationSymbol(), new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
+        ]);
+    }
+
+    [Fact]
+    public void RootAndChildren_ExposeTheLogicalTree()
     {
         var root = CreateLinearExpression().Root;
 
         root.Length.ShouldBe(5);
-        root.Symbol.ShouldBe(new AddSymbol());
+        root.Arity.ShouldBe(2);
+        root.Child(0).TryGetVariableReference(out var left).ShouldBeTrue();
+        root.Child(1).Symbol.ShouldBe(Symbols.Multiplication);
+        root.Child(1).Child(0).TryGetConstantValue(out var literal).ShouldBeTrue();
+        root.Child(1).Child(1).TryGetVariableReference(out var right).ShouldBeTrue();
+        left.Name.ShouldBe("x0");
+        literal.ShouldBe(2.0);
+        right.Name.ShouldBe("x1");
+    }
+
+    [Fact]
+    public void Root_ReturnsTheWholeExpressionAsASubtree()
+    {
+        var root = CreateLinearExpression().Root;
+
+        root.Length.ShouldBe(5);
+        root.Symbol.ShouldBe(Symbols.Addition);
         root.Arity.ShouldBe(2);
     }
 
     [Fact]
-    public void Child_NavigatesToSubExpression()
-    {
-        var root = CreateLinearExpression().Root;
-
-        var left = root.Child(0);
-        var right = root.Child(1);
-
-        left.Symbol.ShouldBe(new VariableSymbol("x0"));
-        left.TryGetVariableReference(out var leftVariable).ShouldBeTrue();
-        leftVariable.Name.ShouldBe("x0");
-        right.Symbol.ShouldBe(new MultiplySymbol());
-        right.Length.ShouldBe(3);
-        right.Child(0).TryGetNumericLiteral(out var literal).ShouldBeTrue();
-        right.Child(1).TryGetVariableReference(out var rightVariable).ShouldBeTrue();
-        literal.ShouldBe(new NumericLiteral(2.0, NumericLiteralKind.Fixed));
-        rightVariable.Name.ShouldBe("x1");
-    }
-
-    [Fact]
-    public void Child_PreservesLeftToRightOrder()
-    {
-        var root = (Variable("left") - Variable("right")).Build().Root;
-
-        root.Symbol.ShouldBe(new SubtractSymbol());
-        root.Child(0).TryGetVariableReference(out var leftVariable).ShouldBeTrue();
-        root.Child(1).TryGetVariableReference(out var rightVariable).ShouldBeTrue();
-        leftVariable.Name.ShouldBe("left");
-        rightVariable.Name.ShouldBe("right");
-    }
-
-    [Fact]
-    public void Child_NavigatesUnarySubExpression()
+    public void Child_NavigatesUnarySubtrees()
     {
         var root = Sqrt(Variable("x0")).Build().Root;
 
-        root.Symbol.ShouldBe(new SqrtSymbol());
+        root.Symbol.ShouldBe(Symbols.SquareRoot);
         root.Arity.ShouldBe(1);
-        root.Child(0).Symbol.ShouldBe(new VariableSymbol("x0"));
+        root.Child(0).TryGetVariableReference(out var variable).ShouldBeTrue();
+        variable.Name.ShouldBe("x0");
     }
 
     [Fact]
-    public void TraversePostOrder_EnumeratesEditableExpressionLocations()
+    public void Child_PreservesLeftToRightOrderAndRejectsInvalidIndexes()
     {
-        var expression = CreateLinearExpression();
-        var nodes = expression.TraversePostOrder().ToArray();
+        var root = (Variable("left") - Variable("right")).Build().Root;
 
-        nodes.Select(node => node.Symbol).ShouldBe([
-          new VariableSymbol("x0"),
-          new NumericLiteralSymbol(new NumericLiteral(2.0, NumericLiteralKind.Fixed)),
-          new VariableSymbol("x1"),
-          new MultiplySymbol(),
-          new AddSymbol()
-        ]);
-        nodes.Select(node => node.SubtreeLength).ShouldBe([1, 1, 1, 3, 5]);
-        expression.WithSymbol(nodes[^1].Location, new SubtractSymbol()).ToInfixString().ShouldBe("(x0 - (2 * x1))");
-    }
-
-    [Fact]
-    public void TraversePreOrder_EnumeratesRootBeforeChildren()
-    {
-        CreateLinearExpression().TraversePreOrder().Select(node => node.Symbol).ShouldBe([
-          new AddSymbol(),
-          new VariableSymbol("x0"),
-          new MultiplySymbol(),
-          new NumericLiteralSymbol(new NumericLiteral(2.0, NumericLiteralKind.Fixed)),
-          new VariableSymbol("x1")
-        ]);
-    }
-
-    [Fact]
-    public void TraverseBreadthFirst_EnumeratesLevelByLevel()
-    {
-        CreateLinearExpression().TraverseBreadthFirst().Select(node => node.Symbol).ShouldBe([
-          new AddSymbol(),
-          new VariableSymbol("x0"),
-          new MultiplySymbol(),
-          new NumericLiteralSymbol(new NumericLiteral(2.0, NumericLiteralKind.Fixed)),
-          new VariableSymbol("x1")
-        ]);
-    }
-
-    [Fact]
-    public void SubExpressionTraversal_EnumeratesOnlySelectedSubtree()
-    {
-        var rightBranch = CreateLinearExpression().Root.Child(1);
-
-        rightBranch.TraversePostOrder().Select(node => node.Symbol).ShouldBe([
-          new NumericLiteralSymbol(new NumericLiteral(2.0, NumericLiteralKind.Fixed)),
-          new VariableSymbol("x1"),
-          new MultiplySymbol()
-        ]);
-        rightBranch.TraversePreOrder().Select(node => node.Symbol).ShouldBe([
-          new MultiplySymbol(),
-          new NumericLiteralSymbol(new NumericLiteral(2.0, NumericLiteralKind.Fixed)),
-          new VariableSymbol("x1")
-        ]);
-    }
-
-    [Fact]
-    public void Child_RejectsIndexOutsideArity()
-    {
-        Should.Throw<ArgumentOutOfRangeException>(() => CreateLinearExpression().Root.Child(2));
+        root.Child(0).TryGetVariableReference(out var left).ShouldBeTrue();
+        root.Child(1).TryGetVariableReference(out var right).ShouldBeTrue();
+        left.Name.ShouldBe("left");
+        right.Name.ShouldBe("right");
+        Should.Throw<ArgumentOutOfRangeException>(() => root.Child(2));
         Should.Throw<ArgumentOutOfRangeException>(() => Variable("x0").Build().Root.Child(0));
     }
 
     [Fact]
-    public void TryGetHelpers_ReturnFalseForWrongTerminalKind()
+    public void Traversals_UseTheExpectedOrdersAndSubtreeLengths()
+    {
+        var expression = CreateLinearExpression();
+
+        expression.TraversePostOrder().Select(node => node.Symbol).ShouldBe([
+            new VariableSymbol(["x0"]), new FixedConstantSymbol(2.0), new VariableSymbol(["x1"]), Symbols.Multiplication, Symbols.Addition
+        ]);
+        expression.TraversePostOrder().Select(node => node.SubtreeLength).ShouldBe([1, 1, 1, 3, 5]);
+        expression.TraversePreOrder().Select(node => node.Symbol).ShouldBe([
+            Symbols.Addition, new VariableSymbol(["x0"]), Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
+        ]);
+        expression.TraverseBreadthFirst().Select(node => node.Symbol).ShouldBe([
+            Symbols.Addition, new VariableSymbol(["x0"]), Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
+        ]);
+        expression.Root.Child(1).TraversePreOrder().Select(node => node.Symbol).ShouldBe([
+            Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
+        ]);
+    }
+
+    [Fact]
+    public void TraversePostOrder_ProvidesLocationsForImmutableEdits()
+    {
+        var expression = CreateLinearExpression();
+        var location = expression.TraversePostOrder().Last().Location;
+
+        expression.WithNode(location, new ExpressionNode(Symbols.Subtraction)).ToInfixString().ShouldBe("(x0 - (2 * x1))");
+    }
+
+    [Fact]
+    public void TraversePreOrder_VisitsTheRootBeforeItsChildren()
+    {
+        CreateLinearExpression().TraversePreOrder().Select(node => node.Symbol).ShouldBe([
+            Symbols.Addition, new VariableSymbol(["x0"]), Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
+        ]);
+    }
+
+    [Fact]
+    public void TraverseBreadthFirst_VisitsTheTreeLevelByLevel()
+    {
+        CreateLinearExpression().TraverseBreadthFirst().Select(node => node.Symbol).ShouldBe([
+            Symbols.Addition, new VariableSymbol(["x0"]), Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
+        ]);
+    }
+
+    [Fact]
+    public void SubtreeTraversal_StaysWithinTheSelectedBranch()
+    {
+        var branch = CreateLinearExpression().Root.Child(1);
+
+        branch.TraversePostOrder().Select(node => node.Symbol).ShouldBe([new FixedConstantSymbol(2.0), new VariableSymbol(["x1"]), Symbols.Multiplication]);
+        branch.TraversePreOrder().Select(node => node.Symbol).ShouldBe([Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])]);
+    }
+
+    [Fact]
+    public void TryGetHelpers_ReturnFalseForTheWrongTerminalKind()
     {
         var root = CreateLinearExpression().Root;
 
-        root.TryGetNumericLiteral(out _).ShouldBeFalse();
+        root.TryGetConstantValue(out _).ShouldBeFalse();
         root.Child(1).Child(0).TryGetVariableReference(out _).ShouldBeFalse();
     }
 
     [Fact]
-    public void Equals_IncludesNumericLiteralKind()
+    public void Equality_IncludesSymbolConfiguration()
     {
-        var fixedExpression = Fixed(1.0).Build();
-        var optimizableExpression = Parameter(1.0).Build();
+        var narrow = new EvolvableConstantSymbol(new UniformDoubleDistribution(-1, 1), new ResampleInitialNumericPerturbation());
+        var broad = new EvolvableConstantSymbol(new UniformDoubleDistribution(-10, 10), new ResampleInitialNumericPerturbation());
 
-        fixedExpression.ShouldNotBe(optimizableExpression);
+        Constant(0.5, narrow).Build().ShouldNotBe(Constant(0.5, broad).Build());
+        Constant(0.5, narrow).Build().ShouldBe(Constant(0.5, new EvolvableConstantSymbol(new UniformDoubleDistribution(-1, 1), new ResampleInitialNumericPerturbation())).Build());
+        FixedConstant(1.0).Build().ShouldNotBe(Constant(1.0).Build());
     }
 
     [Fact]
-    public void Evaluate_UsesVariableNames()
+    public void WithNode_RequiresMatchingArity()
+    {
+        var expression = (Variable("x0") + Variable("x1")).Build();
+
+        Should.Throw<ArgumentException>(() => expression.WithNode(expression.RootLocation, new ExpressionNode(new SquareRootSymbol())));
+    }
+
+    [Fact]
+    public void WithNode_ReplacesSameAritySymbolWithoutMutatingTheOriginal()
+    {
+        var expression = (Variable("x0") + Variable("x1")).Build();
+
+        var edited = expression.WithNode(expression.RootLocation, new ExpressionNode(Symbols.Subtraction));
+
+        expression.ToInfixString().ShouldBe("(x0 + x1)");
+        edited.ToInfixString().ShouldBe("(x0 - x1)");
+        edited.EvaluateSingleRow(("x0", 5.0), ("x1", 2.0)).ShouldBe(3.0);
+    }
+
+    [Fact]
+    public void WithVariableAndWithConstant_ReplaceOnlyTheSelectedNode()
+    {
+        var variables = new VariableSymbol(["x0", "x1"]);
+        var expression = (Variable("x0", variables) + Variable("x0", variables)).Build();
+        var secondVariable = expression.TraversePostOrder().Last().Child(1).Location;
+        var editedVariable = expression.WithVariable(secondVariable, variables, "x1");
+        var literalExpression = (FixedConstant(1.0) + FixedConstant(1.0)).Build();
+        var secondLiteral = literalExpression.Root.Child(1).Location;
+        var editedLiteral = literalExpression.WithConstant(secondLiteral, new FixedConstantSymbol(4.0), 4.0);
+
+        expression.ToInfixString().ShouldBe("(x0 + x0)");
+        editedVariable.ToInfixString().ShouldBe("(x0 + x1)");
+        literalExpression.ToInfixString().ShouldBe("(1 + 1)");
+        editedLiteral.ToInfixString().ShouldBe("(1 + 4)");
+    }
+
+    [Fact]
+    public void ReplaceSubtree_ReplacesOnlyTheSelectedBranch()
+    {
+        var expression = CreateLinearExpression();
+        var edited = expression.ReplaceSubtree(expression.Root.Child(1).Location, Variable("x2").Build());
+
+        expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
+        edited.ToInfixString().ShouldBe("(x0 + x2)");
+        edited.EvaluateSingleRow(("x0", 3.0), ("x2", 4.0)).ShouldBe(7.0);
+    }
+
+    [Fact]
+    public void Evaluate_UsesVariableNamesAndAppliesOperations()
     {
         CreateLinearExpression().EvaluateSingleRow(("x1", 5.0), ("x0", 3.0)).ShouldBe(13.0);
+        Sqrt(Log(Variable("x0") / FixedConstant(Math.E))).Build().EvaluateSingleRow(("x0", Math.E * Math.E)).ShouldBe(1.0, tolerance: 1e-12);
     }
 
     [Fact]
-    public void Evaluate_AppliesUnaryAndBinaryOperations()
-    {
-        Sqrt(Log(Variable("x0") / Fixed(Math.E))).Build().EvaluateSingleRow(("x0", Math.E * Math.E)).ShouldBe(1.0, tolerance: 1e-12);
-    }
-
-    [Fact]
-    public void Evaluate_RejectsInvalidVariableBindings()
+    public void Evaluate_RejectsMissingAndDuplicateVariableBindings()
     {
         var expression = Variable("x0").Build();
-        var emptyData = DataFrame.FromOwnedColumns([]);
-        var wrongData = DataFrame.FromOwnedColumns([KeyValuePair.Create("x1", new[] { 1.0 })]);
 
-        Should.Throw<ArgumentException>(() => expression.Evaluate(emptyData));
-        Should.Throw<ArgumentException>(() => expression.Evaluate(wrongData));
+        Should.Throw<ArgumentException>(() => expression.Evaluate(DataFrame.FromOwnedColumns([])));
+        Should.Throw<ArgumentException>(() => expression.Evaluate(DataFrame.FromOwnedColumns([KeyValuePair.Create("x1", new[] { 1.0 })])));
         Should.Throw<ArgumentException>(() => expression.EvaluateSingleRow(("x1", 1.0)));
         Should.Throw<ArgumentException>(() => expression.EvaluateSingleRow(("x0", 1.0), ("x0", 2.0)));
     }
 
     [Fact]
-    public void Evaluate_UsesVariableTableColumnOrder()
+    public void Evaluate_UsesColumnOrderAndCallerProvidedBuffers()
     {
-        var data = DataFrame.FromMatrix(
-          ["x0", "x1"],
-          new double[,]
-          {
-              { 1.0, 3.0 },
-              { 2.0, 4.0 },
-              { 3.0, 5.0 }
-          });
+        var data = DataFrame.FromMatrix(["x0", "x1"], new double[,] { { 1.0, 3.0 }, { 2.0, 4.0 }, { 3.0, 5.0 } });
+        var destination = new[] { double.NaN, double.NaN, double.NaN, 42.0 };
+        var compiled = CreateLinearExpression().Compile();
+        var workspace = new double[ExpressionInterpreter.GetWorkspaceLength(compiled, data)];
+
+        CreateLinearExpression().Evaluate(data, destination, workspace);
+
+        destination.ShouldBe([7.0, 10.0, 13.0, 42.0]);
+    }
+
+    [Fact]
+    public void Evaluate_UsesTheDataFrameColumnOrder()
+    {
+        var data = DataFrame.FromMatrix(["x0", "x1"], new double[,] { { 1.0, 3.0 }, { 2.0, 4.0 }, { 3.0, 5.0 } });
 
         CreateLinearExpression().Evaluate(data).ShouldBe([7.0, 10.0, 13.0]);
     }
 
     [Fact]
-    public void Evaluate_WritesIntoDestination()
+    public void Evaluate_WritesOnlyTheExpressionRowsIntoTheDestination()
     {
-        var data = DataFrame.FromMatrix(
-          ["x0"],
-          new double[,]
-          {
-              { 1.0 },
-              { 2.0 }
-          });
+        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
         var destination = new[] { double.NaN, double.NaN, 42.0 };
 
         Variable("x0").Build().Evaluate(data, destination);
@@ -231,12 +276,10 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_UsesCallerProvidedWorkspace()
     {
-        var expression = (Variable("x0") + Fixed(2.0)).Build();
-        var data = DataFrame.FromOwnedColumns([
-          KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
-        ]);
+        var expression = (Variable("x0") + FixedConstant(2.0)).Build();
+        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
         var destination = new[] { double.NaN, double.NaN };
-        var workspace = new double[SymbolicExpressionInterpreter.GetWorkspaceLength(expression.Compile(), data)];
+        var workspace = new double[ExpressionInterpreter.GetWorkspaceLength(expression.Compile(), data)];
 
         expression.Evaluate(data, destination, workspace);
 
@@ -244,45 +287,66 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
+    public void Evaluate_TerminalsRequireNoWorkspaceAndRejectInvalidBuffers()
+    {
+        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
+        var terminal = Variable("x0").Build();
+        var expression = Variable("x0") + FixedConstant(2.0);
+        var compiled = expression.Build().Compile();
+
+        ExpressionInterpreter.GetWorkspaceLength(terminal.Compile(), data).ShouldBe(0);
+        terminal.Evaluate(data, new double[2], []);
+        Should.Throw<ArgumentException>(() => terminal.Evaluate(data, new double[1]));
+        Should.Throw<ArgumentException>(() => expression.Build().Evaluate(data, new double[2], new double[ExpressionInterpreter.GetWorkspaceLength(compiled, data) - 1]));
+    }
+
+    [Fact]
     public void Evaluate_TerminalExpressionsDoNotRequireWorkspace()
     {
-        var data = DataFrame.FromOwnedColumns([
-          KeyValuePair.Create("x0", new[] { 1.0, 2.0 })
-        ]);
-        var destination = new[] { double.NaN, double.NaN };
+        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
+        var destination = new double[2];
 
-        SymbolicExpressionInterpreter.GetWorkspaceLength(Variable("x0").Build().Compile(), data).ShouldBe(0);
         Variable("x0").Build().Evaluate(data, destination, []);
+
         destination.ShouldBe([1.0, 2.0]);
+    }
+
+    [Fact]
+    public void Evaluate_RejectsDestinationAndWorkspaceBuffersThatAreTooSmall()
+    {
+        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", Enumerable.Range(0, 4097).Select(value => (double)value).ToArray())]);
+        var expression = (Variable("x0") + FixedConstant(2.0)).Build();
+        var workspaceLength = ExpressionInterpreter.GetWorkspaceLength(expression.Compile(), data);
+
+        Should.Throw<ArgumentException>(() => expression.Evaluate(data, new double[4096]));
+        Should.Throw<ArgumentException>(() => expression.Evaluate(data, new double[4097], new double[workspaceLength - 1]));
     }
 
     [Fact]
     public void Evaluate_AppliesScalarVectorOperationsInBothOperandOrders()
     {
-        var data = DataFrame.FromOwnedColumns([
-          KeyValuePair.Create("x0", new[] { 1.0, 2.0, 3.0 })
-        ]);
+        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0, 3.0 })]);
 
-        (Fixed(10.0) - Variable("x0")).Build().Evaluate(data).ShouldBe([9.0, 8.0, 7.0]);
-        (Fixed(12.0) / Variable("x0")).Build().Evaluate(data).ShouldBe([12.0, 6.0, 4.0]);
-        (Variable("x0") - Fixed(1.0)).Build().Evaluate(data).ShouldBe([0.0, 1.0, 2.0]);
+        (FixedConstant(10.0) - Variable("x0")).Build().Evaluate(data).ShouldBe([9.0, 8.0, 7.0]);
+        (FixedConstant(12.0) / Variable("x0")).Build().Evaluate(data).ShouldBe([12.0, 6.0, 4.0]);
+        (Variable("x0") - FixedConstant(1.0)).Build().Evaluate(data).ShouldBe([0.0, 1.0, 2.0]);
     }
 
     [Fact]
-    public void Evaluate_UsesBatchesBeyondDefaultBatchSize()
+    public void Evaluate_ProcessesBatchesBeyondTheDefaultBatchSize()
     {
         CreateLinearExpression().Evaluate(CreateLinearData(8193)).ShouldBe(Enumerable.Range(0, 8193).Select(row => 2.0 * row).ToArray());
     }
 
     [Fact]
-    public void Evaluate_WritesOnlyActualRowsInFinalPartialBatch()
+    public void Evaluate_ProcessesTheFinalPartialBatchWithoutOverwritingTheBufferTail()
     {
-        var expression = CreateLinearExpression();
         var data = CreateLinearData(4097);
         var destination = Enumerable.Repeat(-1.0, 4098).ToArray();
-        var workspace = new double[SymbolicExpressionInterpreter.GetWorkspaceLength(expression.Compile(), data)];
+        var compiled = CreateLinearExpression().Compile();
+        var workspace = new double[ExpressionInterpreter.GetWorkspaceLength(compiled, data)];
 
-        expression.Evaluate(data, destination, workspace);
+        CreateLinearExpression().Evaluate(data, destination, workspace);
 
         destination[0].ShouldBe(0.0);
         destination[4095].ShouldBe(8190.0);
@@ -290,123 +354,11 @@ public sealed class SymbolicExpressionTests
         destination[4097].ShouldBe(-1.0);
     }
 
-    [Fact]
-    public void Evaluate_RejectsInvalidFrameBuffers()
-    {
-        var expression = (Variable("x0") + Fixed(2.0)).Build();
-        var data = DataFrame.FromOwnedColumns([
-          KeyValuePair.Create("x0", Enumerable.Range(0, 4097).Select(row => (double)row).ToArray())
-        ]);
-        var workspaceLength = SymbolicExpressionInterpreter.GetWorkspaceLength(expression.Compile(), data);
+    private static ExpressionTree CreateLinearExpression() =>
+        (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
 
-        Should.Throw<ArgumentException>(() => expression.Evaluate(data, new double[4097], new double[workspaceLength - 1]));
-        Should.Throw<ArgumentException>(() => Variable("x0").Build().Evaluate(data, new double[1]));
-        Should.Throw<ArgumentException>(() => Variable("missing").Build().Evaluate(data));
-    }
-
-    [Fact]
-    public void WithSymbol_ReplacesSameArityOperationAndKeepsOriginalExpression()
-    {
-        var expression = (Variable("x0") + Variable("x1")).Build();
-        var location = expression.TraversePostOrder().Single(node => node.Symbol is AddSymbol).Location;
-
-        var edited = expression.WithSymbol(location, new SubtractSymbol());
-
-        expression.ToInfixString().ShouldBe("(x0 + x1)");
-        edited.ToInfixString().ShouldBe("(x0 - x1)");
-        edited.EvaluateSingleRow(("x0", 5.0), ("x1", 2.0)).ShouldBe(3.0);
-    }
-
-    [Fact]
-    public void WithSymbol_RejectsArityChangingReplacement()
-    {
-        var expression = (Variable("x0") + Variable("x1")).Build();
-        var location = expression.TraversePostOrder().Single(node => node.Symbol is AddSymbol).Location;
-
-        Should.Throw<ArgumentException>(() => expression.WithSymbol(location, new SqrtSymbol()));
-    }
-
-    [Fact]
-    public void WithNumericLiteral_ReplacesSingleLiteralOccurrence()
-    {
-        var expression = (Fixed(1.0) + Fixed(1.0)).Build();
-        var secondLiteral = expression.TraversePostOrder()
-          .Where(node => node.Symbol is NumericLiteralSymbol)
-          .Skip(1)
-          .Single()
-          .Location;
-
-        var edited = expression.WithNumericLiteral(secondLiteral, new NumericLiteral(4.0, NumericLiteralKind.Fixed));
-
-        expression.ToInfixString().ShouldBe("(1 + 1)");
-        edited.ToInfixString().ShouldBe("(1 + 4)");
-        GetNumericLiterals(edited).ShouldBe([
-          new NumericLiteral(1.0, NumericLiteralKind.Fixed),
-          new NumericLiteral(4.0, NumericLiteralKind.Fixed)
-        ]);
-    }
-
-    [Fact]
-    public void WithVariable_ReplacesSingleVariableOccurrence()
-    {
-        var expression = (Variable("x0") + Variable("x0")).Build();
-        var secondVariable = expression.TraversePostOrder()
-          .Where(node => node.Symbol is VariableSymbol)
-          .Skip(1)
-          .Single()
-          .Location;
-
-        var edited = expression.WithVariable(secondVariable, "x1");
-
-        expression.ToInfixString().ShouldBe("(x0 + x0)");
-        edited.ToInfixString().ShouldBe("(x0 + x1)");
-        GetVariableNames(edited).ShouldBe(["x0", "x1"]);
-    }
-
-    [Fact]
-    public void ReplaceSubExpression_ReplacesSubtree()
-    {
-        var expression = CreateLinearExpression();
-        var replacement = Variable("x2").Build();
-        var multiply = expression.TraversePostOrder().Single(node => node.Symbol is MultiplySymbol).Location;
-
-        var edited = expression.ReplaceSubExpression(multiply, replacement);
-
-        expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
-        edited.ToInfixString().ShouldBe("(x0 + x2)");
-        GetVariableNames(edited).ShouldBe(["x0", "x2"]);
-        GetNumericLiterals(edited).ShouldBeEmpty();
-        edited.EvaluateSingleRow(("x0", 3.0), ("x2", 4.0)).ShouldBe(7.0);
-    }
-
-    private static SymbolicExpression CreateLinearExpression()
-    {
-        return (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
-    }
-
-    private static DataFrame CreateLinearData(int rowCount)
-    {
-        return DataFrame.FromOwnedColumns([
-          KeyValuePair.Create("x0", Enumerable.Range(0, rowCount).Select(row => (double)row).ToArray()),
-          KeyValuePair.Create("x1", Enumerable.Range(0, rowCount).Select(row => row * 0.5).ToArray())
-        ]);
-    }
-
-    private static string[] GetVariableNames(SymbolicExpression expression)
-    {
-        return expression.TraversePostOrder()
-          .Select(node => node.Symbol)
-          .OfType<VariableSymbol>()
-          .Select(symbol => symbol.VariableName)
-          .ToArray();
-    }
-
-    private static NumericLiteral[] GetNumericLiterals(SymbolicExpression expression)
-    {
-        return expression.TraversePostOrder()
-          .Select(node => node.Symbol)
-          .OfType<NumericLiteralSymbol>()
-          .Select(symbol => symbol.Literal)
-          .ToArray();
-    }
+    private static DataFrame CreateLinearData(int rowCount) => DataFrame.FromOwnedColumns([
+        KeyValuePair.Create("x0", Enumerable.Range(0, rowCount).Select(row => (double)row).ToArray()),
+        KeyValuePair.Create("x1", Enumerable.Range(0, rowCount).Select(row => row * 0.5).ToArray())
+    ]);
 }

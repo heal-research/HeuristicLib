@@ -159,8 +159,8 @@ public sealed class SymbolicExpressionRegressionProblemTests
         Should.Throw<InvalidOperationException>(() => problem.EvaluateValidation(expression));
     }
 
-    private static SymbolicExpression CreateLinearExpression() =>
-        (Variable("x0") + Fixed(2.0) * Variable("x1")).Build();
+    private static ExpressionTree CreateLinearExpression() =>
+        (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
 
     private static RegressionData CreateLinearRegressionData() =>
         RegressionData.Training(

@@ -18,29 +18,29 @@ public sealed class SymbolicExpressionRegressionProblem
     public IRegressionMetric Metric { get; }
     public Objective Objective { get; }
 
-    public double[] Predict(SymbolicExpression expression) =>
+    public double[] Predict(ExpressionTree expression) =>
         expression.Evaluate(Data.TrainingInputs);
 
-    public double[] PredictValidation(SymbolicExpression expression) =>
+    public double[] PredictValidation(ExpressionTree expression) =>
         expression.Evaluate(Data.ValidationInputs ?? throw new InvalidOperationException("Validation data is not available."));
 
-    public double[] PredictTest(SymbolicExpression expression) =>
+    public double[] PredictTest(ExpressionTree expression) =>
         expression.Evaluate(Data.TestInputs ?? throw new InvalidOperationException("Test data is not available."));
 
-    public ObjectiveVector Evaluate(SymbolicExpression expression)
+    public ObjectiveVector Evaluate(ExpressionTree expression)
     {
         var predictions = Predict(expression);
         return new ObjectiveVector(Metric.Evaluate(predictions, Data.TrainingTarget.Values.Span));
     }
 
-    public ObjectiveVector EvaluateValidation(SymbolicExpression expression)
+    public ObjectiveVector EvaluateValidation(ExpressionTree expression)
     {
         var predictions = PredictValidation(expression);
         var target = Data.ValidationTarget ?? throw new InvalidOperationException("Validation data is not available.");
         return new ObjectiveVector(Metric.Evaluate(predictions, target.Values.Span));
     }
 
-    public ObjectiveVector EvaluateTest(SymbolicExpression expression)
+    public ObjectiveVector EvaluateTest(ExpressionTree expression)
     {
         var predictions = PredictTest(expression);
         var target = Data.TestTarget ?? throw new InvalidOperationException("Test data is not available.");

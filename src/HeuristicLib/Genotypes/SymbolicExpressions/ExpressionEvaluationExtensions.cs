@@ -1,17 +1,17 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public static class SymbolicExpressionEvaluationExtensions
+public static class ExpressionEvaluationExtensions
 {
-    extension(SymbolicExpression expression)
+    extension(ExpressionTree expression)
     {
         public double[] Evaluate(DataFrame data) =>
-            SymbolicExpressionInterpreter.Interpret(expression.Compile(), data);
+            ExpressionInterpreter.Interpret(expression.Compile(), data);
 
         public void Evaluate(DataFrame data, Span<double> destination) =>
-            SymbolicExpressionInterpreter.Interpret(expression.Compile(), data, destination);
+            ExpressionInterpreter.Interpret(expression.Compile(), data, destination);
 
         public void Evaluate(DataFrame data, Span<double> destination, Span<double> workspace) =>
-            SymbolicExpressionInterpreter.Interpret(expression.Compile(), data, destination, workspace);
+            ExpressionInterpreter.Interpret(expression.Compile(), data, destination, workspace);
 
         public double EvaluateSingleRow(IReadOnlyDictionary<string, double> variableValues) =>
             expression.Evaluate(CreateSingleRowDataFrame(variableValues))[0];
