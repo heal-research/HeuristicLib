@@ -4,7 +4,7 @@
 
 Use `Symbol` for the reusable admissibility and behavior symbol, and `ExpressionNode` for a concrete occurrence in an `ExpressionTree`.
 
-The plan targets the final symbolic-expression redesign, where `ExpressionTree` is the operator-native genotype and `CompiledExpressionTree` is the execution-native compact representation.
+The plan targets the final symbolic-expression redesign, where `ExpressionTree` is the operator-native genotype and `CompiledExpression` is the execution-native compact representation.
 
 Explicitly model both numeric terminal families:
 
@@ -13,12 +13,14 @@ Explicitly model both numeric terminal families:
 
 ## Key Changes
 
-- `Symbol` defines admissibility, arity, display metadata, creation, containment, and local mutation policy.
-- `ExpressionNode` is the concrete genotype occurrence, including an immutable direct reference to its `Symbol` and optional local payload. `ExpressionNode` is deliberately distinct from compiled `Instruction`.
+- `Symbol` defines semantic identity, arity, display metadata, compilation behavior, payload initialization policy, and local perturbation policy.
+- `ExpressionNode` is the concrete immutable hierarchical genotype node. It owns its `Symbol`, optional local payload, child references, and cached subtree metadata. It is deliberately distinct from compiled `Instruction`.
+- `Symbol.CreateNode(...)` is the regular construction path. It copies/materializes the supplied children and invokes the selected variable or evolvable-constant symbol's initialization policy when local payload must be sampled.
+- `ExpressionNode.FromOwnedChildren(...)` is the explicit no-copy construction path for performance-sensitive code that already owns a fresh child array. The caller transfers that array to the immutable node and must never mutate it afterward.
 - Every node retains its symbol, including no-payload operation nodes. Symbol equality is semantic value equality, not reference identity: two otherwise equal-looking nodes are unequal when their symbols differ in behavior-affecting configuration, but separately constructed equal symbols produce equal nodes.
 - Keep evolvable-constant local mutation tied to the originating symbol. A numeric-value mutator delegates to the symbol that owns the value's perturbation semantics.
 - Fixed constants are not evolvable constants with zero-width distributions. They are fixed terminal symbols whose local mutation is a no-op or unsupported, while replacement mutation may still replace them through normal terminal replacement rules.
-- `ExpressionTreeSearchSpace` internally owns symbols and exposes operator queries for creation, replacement, containment, and local mutation.
+- `ExpressionTreeSearchSpace` internally owns symbols and exposes compatible-symbol selection and queries for creation, replacement, containment, and local mutation.
 - `ExpressionTreeSearchSpace` is an operational search-space configuration: it combines hard admissibility with default proposal guidance. `Contains` checks only structural admissibility; it deliberately ignores evolvable-constant initialization and local-perturbation policies, while each node retains its originating symbol for future local perturbation.
 - Retain duplicate symbols in their supplied order. They are separate selection entries; callers express their relative selection probability through the aligned search-space weights. During expression-draft resolution, duplicate matches remain ambiguous so accidental duplication is visible to the caller.
 - Retire `SymbolicExpressionSamplingProfile`. Its current sole responsibility, constant initialization, belongs to evolvable constant symbols. Do not retain an empty profile merely for hypothetical future cross-cutting settings.
@@ -81,7 +83,7 @@ Local perturbation is a common symbol capability, not a separate interface imple
 
 ## Local Perturbation Target Selection
 
-The mutator, not the symbol, selects which perturbable nodes are targeted. It first takes a snapshot of locations whose symbols report `SupportsLocalPerturbation` and whose nodes satisfy `CanPerturb`; a node selected from that snapshot is perturbed at most once in one mutator call.
+The mutator, not the symbol, selects which perturbable nodes are targeted. It first takes a snapshot of tree-bound `ExpressionPoint` values whose symbols report `SupportsLocalPerturbation` and whose nodes satisfy `CanPerturb`; a node selected from that snapshot is perturbed at most once in one mutator call.
 
 - `One`: select one eligible node.
 - `All`: select every eligible node.
@@ -99,10 +101,10 @@ The mutator, not the symbol, selects which perturbable nodes are targeted. It fi
 ## Creation And Structural Mutation
 
 - Tree-creation strategy owns terminal versus nonterminal selection. Full creation chooses nonterminals until the final permitted level, then chooses terminals; grow creation samples from all structurally viable symbols and can therefore produce short or unbalanced expressions.
-- Symbol selection within a structurally viable candidate set uses the configured selection guidance. The search space exposes direct candidate queries for terminals and for operations by arity so operators do not use bounded retry loops.
+- Symbol selection within a structurally viable candidate set uses the configured selection guidance. The search space exposes direct candidate queries by arity; arity zero naturally selects terminals, so operators do not use bounded retry loops.
 - Point/node replacement is arity-preserving: a terminal is replaced by a terminal, and a nonterminal is replaced by a nonterminal with the same arity. A replacement may select the same symbol and therefore be a valid no-op.
 - Terminal/nonterminal changes are structural operations, not node replacement: use subtree replacement, insertion, or shrink-style mutation when that behavior is needed.
-- Subtree replacement creates new nodes through the selected replacement symbols, so newly created evolvable constants and variables carry the replacement symbol as their origin.
+- Node replacement initializes a fresh node through the selected symbol's creation behavior, so newly selected evolvable constants and variables carry the replacement symbol as their origin. Internal edit paths may use `ExpressionNode.FromOwnedChildren(...)` when they already own or safely share an immutable child array. Subtree replacement reuses the supplied immutable donor subtree.
 
 ## Macro Accounting
 
@@ -112,12 +114,17 @@ The mutator, not the symbol, selects which perturbable nodes are targeted. It fi
 ## Storage And API Direction
 
 - `ExpressionTree` should be optimized for generic operators: fast navigation, subtree metadata, immutable edits, and easy access to instances.
-- `CompiledExpressionTree` should be optimized for evaluation: compact opcode stream plus payload side tables.
-- Default to a flat `readonly record struct ExpressionNode` stored contiguously in the genotype. It holds an immutable direct symbol reference and a non-boxing payload representation for symbols with local node state.
+- `CompiledExpression` should be optimized for evaluation: compact opcode stream plus payload side tables. It is a public immutable advanced API so users may explicitly precompile, optimize, retain, and repeatedly execute an expression, while high-level interpretation hides this step for ordinary callers.
+- `CompiledExpression` is a read-only derived artifact. It exposes no instruction-location or generic editing API; future efficient parameter updates require a dedicated parameterization design rather than mutation of compiled instructions.
+- Store `ExpressionTree` as a persistent hierarchy rooted directly in `ExpressionNode`. Each node owns immutable child references and cached metadata such as subtree length, depth, and hash. Immutable edits copy only the affected ancestor path and structurally share unchanged nodes.
+- `ExpressionTree` and `ExpressionNode` are the two main genotype types. An `ExpressionNode` recursively represents the subtree rooted at that node; there is no separate `ExpressionSubtree` or internal structural-node wrapper.
+- `ExpressionPoint` is an auxiliary tree-bound occurrence object for mutation, crossover, and path-copying edits. It retains the source tree, selected node, and complete parent/child path, so equal or structurally shared nodes at different positions remain distinct edit targets.
+- Genotype node indexes, where an operator needs an integer selection index, follow natural root-first preorder and are resolved through cached subtree lengths. They are unrelated to the postorder instruction indexes used inside `CompiledExpression`.
+- `ExpressionNode` holds a non-boxing payload representation for symbols with local node state and never owns compiled instructions.
 - Operations and fixed constants have no local node payload. Variable nodes carry the selected variable reference, and evolvable constant nodes carry the sampled numeric value.
-- Implement the first complete system with the `readonly record struct` default, then benchmark it against a comparable record-class alternative using realistic creation, compilation, mutation, crossover, and traversal workloads. Revise the representation only when the completed-system benchmark demonstrates a material advantage.
+- The completed representation benchmarks supersede the earlier flat-record-struct default. Hierarchical storage was decisively faster for immutable GP edits and population evolution while remaining competitive for compilation and direct evaluation. See [symbolic-regression-benchmark-implications.md](symbolic-regression-benchmark-implications.md).
 - Do not prematurely force genotype storage to mirror compiled payload-index storage. The exact non-boxing payload union remains an implementation decision after the benchmark and must not use `object` boxing for numeric values.
-- No-payload nodes such as `Add` may use singleton/flyweight values per immutable symbol, but this is an optimization detail.
+- No-state symbols such as `AdditionSymbol` may use singleton/flyweight values. Immutable genotype nodes may be structurally shared across related trees or multiple occurrences; `ExpressionPoint`, rather than node reference identity, identifies a concrete occurrence.
 - Search-space construction exposes the documented common and weighted overloads. Exact parameter names and any convenience factory names are finalized through Stage 0 API usage specs before implementation hardens them.
 - Required user ergonomics: common users must be able to configure arithmetic operations, allowed variables, `Constant(...)`, and `FixedConstant(...)` without understanding the full symbol/node model. Defaults must make evolvable constants usable without explicit distribution or perturbation configuration.
 - Candidate public API directions to evaluate later: builder/factory methods, constructor overloads, or explicit symbols with convenience helpers.
@@ -183,7 +190,7 @@ The mutator, not the symbol, selects which perturbable nodes are targeted. It fi
 
 ## Assumptions
 
-- The settled structural vocabulary is `Symbol`, `ExpressionNode`, `ExpressionSubtree`, `ExpressionTree`, `Instruction`, `OpCode`, and `CompiledExpressionTree`.
+- The settled structural vocabulary is `Symbol`, `ExpressionNode`, `ExpressionTree`, `ExpressionPoint`, `Instruction`, `OpCode`, `CompiledExpression`, and `CompiledSubExpression`.
 - Default genotype equality includes semantic symbol equality where it affects future operator behavior; it does not depend on symbol object identity.
 - Initial distributions and numeric perturbations are not hard numeric domains. Value bounds and numeric-optimizer domains remain out of scope for this slice.
 - Numeric node payloads are not required to be finite. Do not add finite-value validation at the genotype boundary.

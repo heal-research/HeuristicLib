@@ -8,9 +8,9 @@ public abstract record Symbol(string Name, int Arity)
 {
     public virtual bool SupportsLocalPerturbation => false;
 
-    public virtual ExpressionNode CreateNode(IRandomNumberGenerator random)
+    public ExpressionNode CreateNode(IRandomNumberGenerator random, params IEnumerable<ExpressionNode> children)
     {
-        return new ExpressionNode(this);
+        return ExpressionNode.FromOwnedChildren(this, random, children.ToArray());
     }
 
     public virtual bool CanPerturb(ExpressionNode node)
@@ -74,11 +74,6 @@ public abstract record ConstantSymbol(string Name) : Symbol(Name, 0);
 public sealed record FixedConstantSymbol(double Value, string? DisplayName = null)
     : ConstantSymbol(DisplayName ?? Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture))
 {
-    public override ExpressionNode CreateNode(IRandomNumberGenerator random)
-    {
-        return new ExpressionNode(this, Value);
-    }
-
     protected override void Emit(ExpressionNode node, IExpressionEmitter emitter)
     {
         emitter.EmitConstant(node.NumericValue);
@@ -95,10 +90,7 @@ public sealed record EvolvableConstantSymbol(IDistribution<double> InitialDistri
 
     public override bool SupportsLocalPerturbation => true;
 
-    public override ExpressionNode CreateNode(IRandomNumberGenerator random)
-    {
-        return new ExpressionNode(this, InitialDistribution.Sample(random));
-    }
+    internal double SampleInitialValue(IRandomNumberGenerator random) => InitialDistribution.Sample(random);
 
     public override bool CanPerturb(ExpressionNode node)
     {
@@ -119,7 +111,7 @@ public sealed record EvolvableConstantSymbol(IDistribution<double> InitialDistri
             return false;
         }
 
-        perturbed = new ExpressionNode(this, value);
+        perturbed = ExpressionNode.FromOwnedChildren(this, value, node.Children);
         return true;
     }
 
@@ -150,10 +142,10 @@ public sealed partial record VariableSymbol : Symbol
 
     public override bool SupportsLocalPerturbation => true;
 
-    public override ExpressionNode CreateNode(IRandomNumberGenerator random)
+    internal string Sample(IRandomNumberGenerator random)
     {
         var index = WeightSelection.SelectIndex(random, Variables.Length, SelectionWeights);
-        return new ExpressionNode(this, Variables[index]);
+        return Variables[index];
     }
 
     public override bool CanPerturb(ExpressionNode node)
@@ -169,7 +161,7 @@ public sealed partial record VariableSymbol : Symbol
             return false;
         }
 
-        perturbed = CreateNode(random);
+        perturbed = ExpressionNode.FromOwnedChildren(this, Sample(random), node.Children);
         return true;
     }
 

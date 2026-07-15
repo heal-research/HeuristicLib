@@ -1,12 +1,12 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
-public readonly struct CompiledExpressionSubtree
+public readonly struct CompiledSubExpression
 {
-    private readonly CompiledExpressionTree expression;
+    private readonly CompiledExpression expression;
     private readonly int startIndex;
     private readonly int rootInstructionIndex;
 
-    internal CompiledExpressionSubtree(CompiledExpressionTree expression, int startIndex, int length, int rootInstructionIndex)
+    internal CompiledSubExpression(CompiledExpression expression, int startIndex, int length, int rootInstructionIndex)
     {
         this.expression = expression;
         this.startIndex = startIndex;
@@ -19,14 +19,13 @@ public readonly struct CompiledExpressionSubtree
     public int Arity => Instruction.Arity;
     public int Length { get; }
     public int SubtreeLength => Instruction.SubtreeLength;
-    public ExpressionLocation Location => new(rootInstructionIndex);
 
-    public IEnumerable<CompiledExpressionSubtree> TraverseChildren() => EnumerateChildren();
-    public IEnumerable<CompiledExpressionSubtree> TraversePreOrder() => EnumeratePreOrder();
-    public IEnumerable<CompiledExpressionSubtree> TraversePostOrder() => EnumeratePostOrder();
-    public IEnumerable<CompiledExpressionSubtree> TraverseBreadthFirst() => EnumerateBreadthFirstOrder();
+    public IEnumerable<CompiledSubExpression> TraverseChildren() => EnumerateChildren();
+    public IEnumerable<CompiledSubExpression> TraversePreOrder() => EnumeratePreOrder();
+    public IEnumerable<CompiledSubExpression> TraversePostOrder() => EnumeratePostOrder();
+    public IEnumerable<CompiledSubExpression> TraverseBreadthFirst() => EnumerateBreadthFirstOrder();
 
-    public CompiledExpressionSubtree Child(int index)
+    public CompiledSubExpression Child(int index)
     {
         if ((uint)index >= (uint)Arity)
         {
@@ -41,7 +40,7 @@ public readonly struct CompiledExpressionSubtree
 
         var childRoot = expression.GetInstruction(childRootIndex);
         var childStartIndex = childRootIndex - childRoot.SubtreeLength + 1;
-        return new CompiledExpressionSubtree(expression, childStartIndex, childRoot.SubtreeLength, childRootIndex);
+        return new CompiledSubExpression(expression, childStartIndex, childRoot.SubtreeLength, childRootIndex);
     }
 
     public bool TryGetConstantValue(out double value)
@@ -68,7 +67,7 @@ public readonly struct CompiledExpressionSubtree
         return true;
     }
 
-    private IEnumerable<CompiledExpressionSubtree> EnumerateChildren()
+    private IEnumerable<CompiledSubExpression> EnumerateChildren()
     {
         for (var i = 0; i < Arity; i++)
         {
@@ -76,15 +75,15 @@ public readonly struct CompiledExpressionSubtree
         }
     }
 
-    private IEnumerable<CompiledExpressionSubtree> EnumeratePostOrder()
+    private IEnumerable<CompiledSubExpression> EnumeratePostOrder()
     {
         for (var i = startIndex; i < startIndex + Length; i++)
         {
-            yield return CreateSubtree(i);
+            yield return CreateSubExpression(i);
         }
     }
 
-    private IEnumerable<CompiledExpressionSubtree> EnumeratePreOrder()
+    private IEnumerable<CompiledSubExpression> EnumeratePreOrder()
     {
         var stack = new Stack<int>();
         stack.Push(rootInstructionIndex);
@@ -92,12 +91,12 @@ public readonly struct CompiledExpressionSubtree
         while (stack.Count > 0)
         {
             var nodeIndex = stack.Pop();
-            yield return CreateSubtree(nodeIndex);
+            yield return CreateSubExpression(nodeIndex);
             PushChildrenRightToLeft(stack, nodeIndex);
         }
     }
 
-    private IEnumerable<CompiledExpressionSubtree> EnumerateBreadthFirstOrder()
+    private IEnumerable<CompiledSubExpression> EnumerateBreadthFirstOrder()
     {
         var queue = new Queue<int>();
         queue.Enqueue(rootInstructionIndex);
@@ -105,7 +104,7 @@ public readonly struct CompiledExpressionSubtree
         while (queue.Count > 0)
         {
             var nodeIndex = queue.Dequeue();
-            yield return CreateSubtree(nodeIndex);
+            yield return CreateSubExpression(nodeIndex);
 
             EnqueueChildrenLeftToRight(queue, nodeIndex);
         }
@@ -183,10 +182,10 @@ public readonly struct CompiledExpressionSubtree
         return childRootIndices;
     }
 
-    private CompiledExpressionSubtree CreateSubtree(int instructionIndex)
+    private CompiledSubExpression CreateSubExpression(int instructionIndex)
     {
         var instruction = expression.GetInstruction(instructionIndex);
         var start = instructionIndex - instruction.SubtreeLength + 1;
-        return new CompiledExpressionSubtree(expression, start, instruction.SubtreeLength, instructionIndex);
+        return new CompiledSubExpression(expression, start, instruction.SubtreeLength, instructionIndex);
     }
 }

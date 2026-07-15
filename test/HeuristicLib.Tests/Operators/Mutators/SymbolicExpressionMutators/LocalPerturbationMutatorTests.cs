@@ -17,13 +17,13 @@ public sealed class LocalPerturbationMutatorTests
 
         var result = LocalPerturbationMutation.Mutate(parent, new SequenceRandomNumberGenerator(0.0, 0.75), new OneLocalPerturbationTarget());
 
-        result.Root.Node.Symbol.ShouldBe(narrow);
-        result.Root.Node.NumericValue.ShouldBe(0.5);
-        result.Root.Node.ShouldNotBe(new ExpressionNode(broad, 0.5));
+        result.Root.Symbol.ShouldBe(narrow);
+        result.Root.NumericValue.ShouldBe(0.5);
+        result.Root.ShouldNotBe(new ExpressionNode(broad, 0.5));
     }
 
     [Fact]
-    public void Mutate_AllowsVariableNoOpsAndTargetsEveryEligibleTokenOnce()
+    public void Mutate_AllowsVariableNoOpsAndTargetsEveryEligibleNodeOnce()
     {
         var variables = new VariableSymbol(["x0"]);
         var expression = (Variable("x0", variables) + Variable("x0", variables)).Build();
@@ -31,5 +31,78 @@ public sealed class LocalPerturbationMutatorTests
         var result = LocalPerturbationMutation.Mutate(expression, new SequenceRandomNumberGenerator(0.0, 0.0), new AllLocalPerturbationTargets());
 
         result.ShouldBe(expression);
+    }
+
+    [Fact]
+    public void Mutate_AllRebuildsAffectedPathsAndSharesUnaffectedBranches()
+    {
+        var constant = new EvolvableConstantSymbol(
+            new UniformDoubleDistribution(-1.0, 1.0),
+            new AdditiveNumericPerturbation(new UniformDoubleDistribution(1.0, 1.0)));
+        var parent = (Variable("x0") + Constant(1.0, constant) * Constant(2.0, constant)).Build();
+
+        var result = LocalPerturbationMutation.Mutate(
+            parent,
+            new SequenceRandomNumberGenerator(0.0, 0.0),
+            LocalPerturbationTargets.All);
+
+        result.ToInfixString().ShouldBe("(x0 + (2 * 3))");
+        result.Length.ShouldBe(parent.Length);
+        result.Depth.ShouldBe(parent.Depth);
+        result.Root.Child(0).ShouldBeSameAs(parent.Root.Child(0));
+        parent.ToInfixString().ShouldBe("(x0 + (1 * 2))");
+    }
+
+    [Fact]
+    public void Mutate_EachWithZeroProbabilityReturnsTheOriginalTree()
+    {
+        var constant = new EvolvableConstantSymbol(
+            new UniformDoubleDistribution(-1.0, 1.0),
+            new AdditiveNumericPerturbation(new UniformDoubleDistribution(1.0, 1.0)));
+        var parent = (Constant(1.0, constant) + Constant(2.0, constant)).Build();
+
+        var result = LocalPerturbationMutation.Mutate(
+            parent,
+            new SequenceRandomNumberGenerator(0.0, 0.0),
+            LocalPerturbationTargets.Each(0.0));
+
+        result.ShouldBeSameAs(parent);
+    }
+
+    [Fact]
+    public void Mutate_ReturnsTheOriginalTreeWhenNoNodeSupportsLocalPerturbation()
+    {
+        var parent = FixedConstant(1.0).Build();
+
+        var result = LocalPerturbationMutation.Mutate(
+            parent,
+            new SequenceRandomNumberGenerator(),
+            LocalPerturbationTargets.One);
+
+        result.ShouldBeSameAs(parent);
+    }
+
+    [Fact]
+    public void Mutate_EachWithOneProbabilityPerturbsEveryEligibleNode()
+    {
+        var constant = new EvolvableConstantSymbol(
+            new UniformDoubleDistribution(-1.0, 1.0),
+            new AdditiveNumericPerturbation(new UniformDoubleDistribution(1.0, 1.0)));
+        var parent = (Constant(1.0, constant) + Constant(2.0, constant)).Build();
+
+        var result = LocalPerturbationMutation.Mutate(
+            parent,
+            new SequenceRandomNumberGenerator(0.0, 0.0, 0.0, 0.0),
+            LocalPerturbationTargets.Each(1.0));
+
+        result.ToInfixString().ShouldBe("(2 + 3)");
+    }
+
+    [Fact]
+    public void Each_RejectsInvalidProbabilitiesDuringConfiguration()
+    {
+        Should.Throw<ArgumentOutOfRangeException>(() => LocalPerturbationTargets.Each(-0.1));
+        Should.Throw<ArgumentOutOfRangeException>(() => LocalPerturbationTargets.Each(1.1));
+        Should.Throw<ArgumentOutOfRangeException>(() => LocalPerturbationTargets.Each(double.NaN));
     }
 }

@@ -1,6 +1,6 @@
+using Generator.Equals;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Random;
-using Generator.Equals;
 
 namespace HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 
@@ -114,9 +114,17 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
         if (genotype.Length > MaximumLength || genotype.Depth > MaximumDepth)
             return false;
 
-        for (var i = 0; i < genotype.NodeCount; i++)
+        return ContainsNodeAndDescendants(genotype.Root);
+    }
+
+    private bool ContainsNodeAndDescendants(ExpressionNode node)
+    {
+        if (!ContainsNode(node))
+            return false;
+
+        foreach (var child in node.TraverseChildren())
         {
-            if (!ContainsNode(genotype.GetNode(i)))
+            if (!ContainsNodeAndDescendants(child))
                 return false;
         }
 

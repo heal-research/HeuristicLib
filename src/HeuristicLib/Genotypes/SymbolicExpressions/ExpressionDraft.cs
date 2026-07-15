@@ -46,47 +46,40 @@ public abstract record ExpressionDraft
 
     private ExpressionTree BuildCore(ExpressionTreeSearchSpace? searchSpace)
     {
-        var nodes = new List<ExpressionNode>();
-        Emit(this, nodes, searchSpace);
-        return ExpressionTree.Create(nodes);
+        return new ExpressionTree(BuildNode(this, searchSpace));
     }
 
-    private static void Emit(ExpressionDraft draft, List<ExpressionNode> nodes, ExpressionTreeSearchSpace? searchSpace)
+    private static ExpressionNode BuildNode(ExpressionDraft draft, ExpressionTreeSearchSpace? searchSpace)
     {
         switch (draft)
         {
             case VariableDraft variable:
                 var localVariableSymbol = variable.Symbol ?? new VariableSymbol([variable.Name]);
-                nodes.Add(new ExpressionNode(Resolve(localVariableSymbol, searchSpace,
+                return new ExpressionNode(Resolve(localVariableSymbol, searchSpace,
                     candidate => variable.Symbol is not null ? candidate == variable.Symbol : candidate.Variables.Contains(variable.Name, StringComparer.Ordinal),
-                    $"variable '{variable.Name}'"), variable.Name));
-                return;
+                    $"variable '{variable.Name}'"), variable.Name);
             case FixedConstantDraft constant:
                 var fixedSymbol = Resolve(constant.Symbol, searchSpace, candidate => candidate == constant.Symbol, "fixed constant");
-                nodes.Add(new ExpressionNode(fixedSymbol, constant.Value));
-                return;
+                return new ExpressionNode(fixedSymbol, constant.Value);
             case EvolvableConstantDraft constant:
                 var localEvolvableSymbol = constant.Symbol ?? new EvolvableConstantSymbol();
                 var evolvableSymbol = Resolve(localEvolvableSymbol, searchSpace,
                     candidate => constant.Symbol is null || candidate == constant.Symbol,
                     "evolvable constant");
-                nodes.Add(new ExpressionNode(evolvableSymbol, constant.Value));
-                return;
+                return new ExpressionNode(evolvableSymbol, constant.Value);
             case UnaryDraft unary:
-                Emit(unary.Child, nodes, searchSpace);
-                nodes.Add(new ExpressionNode(Resolve(unary.Symbol, searchSpace, candidate => candidate == unary.Symbol, unary.Symbol.Name)));
-                return;
+                return ExpressionNode.FromOwnedChildren(
+                    Resolve(unary.Symbol, searchSpace, candidate => candidate == unary.Symbol, unary.Symbol.Name),
+                    [BuildNode(unary.Child, searchSpace)]);
             case BinaryDraft binary:
-                Emit(binary.Left, nodes, searchSpace);
-                Emit(binary.Right, nodes, searchSpace);
-                nodes.Add(new ExpressionNode(Resolve(binary.Symbol, searchSpace, candidate => candidate == binary.Symbol, binary.Symbol.Name)));
-                return;
+                return ExpressionNode.FromOwnedChildren(
+                    Resolve(binary.Symbol, searchSpace, candidate => candidate == binary.Symbol, binary.Symbol.Name),
+                    [BuildNode(binary.Left, searchSpace), BuildNode(binary.Right, searchSpace)]);
             case OperationDraft operation:
-                foreach (var child in operation.Children)
-                    Emit(child, nodes, searchSpace);
-
-                nodes.Add(new ExpressionNode(Resolve(operation.Symbol, searchSpace, candidate => candidate == operation.Symbol, operation.Symbol.Name)));
-                return;
+                var children = operation.Children.Select(child => BuildNode(child, searchSpace)).ToArray();
+                return ExpressionNode.FromOwnedChildren(
+                    Resolve(operation.Symbol, searchSpace, candidate => candidate == operation.Symbol, operation.Symbol.Name),
+                    children);
             default:
                 throw new InvalidOperationException($"Unsupported expression draft node {draft.GetType()}.");
         }
@@ -118,6 +111,8 @@ public abstract record ExpressionDraft
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Variable name must not be empty.", nameof(name));
+        if (variableSymbol is not null && !variableSymbol.Variables.Contains(name, StringComparer.Ordinal))
+            throw new ArgumentException($"Variable symbol does not allow variable '{name}'.", nameof(variableSymbol));
 
         return new VariableDraft(name, variableSymbol);
     }

@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
-using HEAL.HeuristicLib.Random.Distributions;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.SearchSpaces.SymbolicExpressions;
@@ -127,7 +127,37 @@ public sealed class SymbolicExpressionSearchSpaceTests
             (new FixedConstantSymbol(2.0), 3.0)
         ]);
 
-        searchSpace.SelectSymbol(0, new SequenceRandomNumberGenerator(0.9)).CreateNode(new SequenceRandomNumberGenerator(0.9)).NumericValue.ShouldBe(2.0);
+        var symbol = searchSpace.SelectSymbol(0, new SequenceRandomNumberGenerator(0.9));
+        symbol.CreateNode(new SequenceRandomNumberGenerator(0.9)).NumericValue.ShouldBe(2.0);
+    }
+
+    [Fact]
+    public void Equality_UsesOnlyCanonicalConfigurationValues()
+    {
+        var first = new ExpressionTreeSearchSpace(10, 5, Symbols.BasicArithmetic, ["x0", "x1"]);
+        var second = new ExpressionTreeSearchSpace(10, 5, Symbols.BasicArithmetic, ["x0", "x1"]);
+
+        first.ShouldBe(second);
+        first.GetHashCode().ShouldBe(second.GetHashCode());
+    }
+
+    [Fact]
+    public void Equality_IncludesSymbolSelectionWeights()
+    {
+        Symbol[] symbols = [Symbols.Addition, new VariableSymbol(["x0"])];
+        var first = new ExpressionTreeSearchSpace(10, 5, symbols, [1.0, 2.0]);
+        var second = new ExpressionTreeSearchSpace(10, 5, symbols, [1.0, 3.0]);
+
+        first.ShouldNotBe(second);
+    }
+
+    [Fact]
+    public void Constructor_RetainsDuplicateSymbolEntries()
+    {
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5, [Symbols.Addition, Symbols.Addition, new VariableSymbol(["x0"])]);
+
+        searchSpace.Symbols.ShouldBe([Symbols.Addition, Symbols.Addition, new VariableSymbol(["x0"])]);
+        searchSpace.GetSymbols(2).ShouldBe([Symbols.Addition, Symbols.Addition]);
     }
 
     private static ExpressionTree CreateLinearExpression() =>

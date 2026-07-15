@@ -34,13 +34,13 @@ public class ChooseOneOperatorTests
     }
 
     [Fact]
-    public void ChooseOneCrossover_CreateWithParams_ShouldAssignUniformWeights()
+    public void ChooseOneCrossover_CreateWithParams_ShouldUseUniformFastPath()
     {
         var crossover = ChooseOneCrossover.Create(
           new FirstParentCrossover(100),
           new SecondParentCrossover(200));
 
-        crossover.Weights.ShouldBe([0.5, 0.5]);
+        crossover.Weights.ShouldBeEmpty();
     }
 
     [Fact]
@@ -196,6 +196,3 @@ public class ChooseOneOperatorTests
         }
     }
 }
-
-
-

@@ -2,288 +2,206 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public sealed class ExpressionTree : IEquatable<ExpressionTree>
 {
-    private readonly ExpressionNode[] nodes;
-    private readonly int[] subtreeLengths;
-    private readonly int hashCode;
-
-    private ExpressionTree(ExpressionNode[] nodes, int[] subtreeLengths, bool takeOwnership)
+    public ExpressionTree(ExpressionNode root)
     {
-        this.nodes = takeOwnership ? nodes : nodes.ToArray();
-        this.subtreeLengths = takeOwnership ? subtreeLengths : subtreeLengths.ToArray();
-
-        Depth = ValidateAndCalculateDepth(this.nodes, this.subtreeLengths);
-        hashCode = CalculateHashCode();
+        Root = root;
     }
 
-    internal int NodeCount => nodes.Length;
-    public int Length => nodes.Length;
+    public ExpressionNode Root { get; }
+    public ExpressionPoint RootPoint => new(this, Root, parent: null, childIndex: -1);
+    public int Length => Root.Length;
     public int Complexity => Length;
-    public int Depth { get; }
-    public ExpressionSubtree Root => CreateSubtree(nodes.Length - 1);
-    public ExpressionLocation RootLocation => new(nodes.Length - 1);
-    public IEnumerable<ExpressionSubtree> TraversePreOrder() => Root.TraversePreOrder();
-    public IEnumerable<ExpressionSubtree> TraversePostOrder() => Root.TraversePostOrder();
-    public IEnumerable<ExpressionSubtree> TraverseBreadthFirst() => Root.TraverseBreadthFirst();
+    public int Depth => Root.Depth;
 
-    public static ExpressionTree Create(IEnumerable<ExpressionNode> nodes)
-    {
-        var tokenArray = nodes.ToArray();
-        var subtreeLengths = CalculateSubtreeLengths(tokenArray);
-        return new ExpressionTree(tokenArray, subtreeLengths, takeOwnership: true);
-    }
+    public IEnumerable<ExpressionNode> TraversePreOrder() => Root.TraversePreOrder();
+    public IEnumerable<ExpressionNode> TraversePostOrder() => Root.TraversePostOrder();
+    public IEnumerable<ExpressionNode> TraverseBreadthFirst() => Root.TraverseBreadthFirst();
 
-    internal static ExpressionTree FromOwnedArrays(ExpressionNode[] nodes, int[] subtreeLengths)
-    {
-        return new ExpressionTree(nodes, subtreeLengths, takeOwnership: true);
-    }
-
-    public CompiledExpressionTree Compile(bool optimize = true)
+    public CompiledExpression Compile(bool optimize = true)
     {
         return ExpressionCompiler.Compile(this, optimize);
     }
 
-    public ExpressionSubtree GetSubtree(ExpressionLocation location)
+    public ExpressionTree Replace(ExpressionPoint point, ExpressionNode replacement)
     {
-        return CreateSubtree(location.InstructionIndex);
-    }
+        if (!ReferenceEquals(point.Tree, this))
+            throw new ArgumentException("The expression point belongs to a different tree.", nameof(point));
+        if (point.Node.Equals(replacement))
+            return this;
 
-    public ExpressionTree WithNode(ExpressionLocation location, ExpressionNode node)
-    {
-        return WithNode(location.InstructionIndex, node);
-    }
-
-    internal ExpressionTree WithNode(int index, ExpressionNode node)
-    {
-        ValidateIndex(index);
-        if (node.Arity != nodes[index].Arity)
-            throw new ArgumentException($"Replacement node arity {node.Arity} must match selected node arity {nodes[index].Arity}.", nameof(node));
-
-        var newTokens = nodes.ToArray();
-        newTokens[index] = node;
-        return FromOwnedArrays(newTokens, subtreeLengths);
-    }
-
-    public ExpressionTree WithVariable(ExpressionLocation location, VariableSymbol symbol, string variableName)
-    {
-        return WithNode(location, new ExpressionNode(symbol, variableName));
-    }
-
-    public ExpressionTree WithConstant(ExpressionLocation location, ConstantSymbol symbol, double value)
-    {
-        return WithNode(location, new ExpressionNode(symbol, value));
-    }
-
-    public ExpressionTree ReplaceSubtree(ExpressionLocation location, ExpressionTree replacement)
-    {
-        ArgumentNullException.ThrowIfNull(replacement);
-        return ReplaceSubtree(location.InstructionIndex, replacement);
-    }
-
-    internal ExpressionTree ReplaceSubtree(int rootIndex, ExpressionTree replacement)
-    {
-        ValidateIndex(rootIndex);
-
-        var replacedLength = subtreeLengths[rootIndex];
-        var replacedStart = rootIndex - replacedLength + 1;
-        var newLength = nodes.Length - replacedLength + replacement.nodes.Length;
-        var splicedTokens = new ExpressionNode[newLength];
-
-        nodes.AsSpan(0, replacedStart).CopyTo(splicedTokens);
-        replacement.nodes.AsSpan().CopyTo(splicedTokens.AsSpan(replacedStart));
-        nodes.AsSpan(rootIndex + 1).CopyTo(splicedTokens.AsSpan(replacedStart + replacement.nodes.Length));
-
-        return Create(splicedTokens);
-    }
-
-    internal ExpressionSubtree CreateSubtree(int rootIndex)
-    {
-        ValidateIndex(rootIndex);
-
-        var length = subtreeLengths[rootIndex];
-        var start = rootIndex - length + 1;
-        return new ExpressionSubtree(this, start, length, rootIndex);
-    }
-
-    internal ExpressionNode GetNode(int index) => nodes[index];
-
-    internal int GetSubtreeLength(int index) => subtreeLengths[index];
-
-    internal int GetChildRootIndex(int rootIndex, int childIndex)
-    {
-        var arity = nodes[rootIndex].Arity;
-        if ((uint)childIndex >= (uint)arity)
-            throw new ArgumentOutOfRangeException(nameof(childIndex));
-
-        var childRootIndex = rootIndex - 1;
-        for (var i = arity - 1; i > childIndex; i--)
+        var current = point;
+        var updated = replacement;
+        while (current.Parent is not null)
         {
-            childRootIndex -= subtreeLengths[childRootIndex];
+            updated = current.Parent.Node.WithChild(current.ChildIndexValue, updated);
+            current = current.Parent;
         }
 
-        return childRootIndex;
+        return new ExpressionTree(updated);
     }
 
-    public string ToInfixString()
+    public ExpressionTree ReplaceMany(IEnumerable<(ExpressionPoint Point, ExpressionNode Replacement)> replacements)
     {
-        var stack = new Stack<string>();
-        foreach (var node in nodes)
+        var effectiveReplacements = new List<(ExpressionPoint Point, ExpressionNode Replacement)>();
+        foreach (var replacement in replacements)
         {
-            switch (node.Symbol)
-            {
-                case VariableSymbol:
-                    stack.Push(node.VariableName!);
-                    break;
-                case ConstantSymbol:
-                    stack.Push(node.NumericValue.ToString("G", System.Globalization.CultureInfo.InvariantCulture));
-                    break;
-                case BuiltInOperationSymbol operation when operation.Arity == 1:
-                    PushUnary(stack, operation.Name);
-                    break;
-                case BuiltInOperationSymbol operation when operation.Arity == 2:
-                    PushBinary(stack, operation.Name);
-                    break;
-                default:
-                    PushFunctionCall(stack, node);
-                    break;
-            }
+            if (!ReferenceEquals(replacement.Point.Tree, this))
+                throw new ArgumentException("An expression point belongs to a different tree.", nameof(replacements));
+            if (!replacement.Point.Node.Equals(replacement.Replacement))
+                effectiveReplacements.Add(replacement);
         }
 
-        return stack.Single();
+        if (effectiveReplacements.Count == 0)
+            return this;
+        if (effectiveReplacements.Count == 1)
+            return Replace(effectiveReplacements[0].Point, effectiveReplacements[0].Replacement);
+
+        var patch = new PatchNode();
+        foreach (var replacement in effectiveReplacements)
+            AddPatch(patch, replacement.Point, replacement.Replacement, nameof(replacements));
+
+        return new ExpressionTree(ApplyPatch(Root, patch));
     }
+
+    public ExpressionTree ReplaceSubtree(ExpressionPoint point, ExpressionTree replacement)
+    {
+        return Replace(point, replacement.Root);
+    }
+
+    public ExpressionTree WithVariable(ExpressionPoint point, VariableSymbol symbol, string variableName)
+    {
+        return Replace(point, new ExpressionNode(symbol, variableName));
+    }
+
+    public ExpressionTree WithConstant(ExpressionPoint point, ConstantSymbol symbol, double value)
+    {
+        return Replace(point, new ExpressionNode(symbol, value));
+    }
+
+    internal ExpressionPoint GetPoint(int index)
+    {
+        if ((uint)index >= (uint)Length)
+            throw new ArgumentOutOfRangeException(nameof(index));
+
+        return FindPoint(RootPoint, index);
+    }
+
+    public string ToInfixString() => FormatNode(Root);
 
     public override string ToString() => ToInfixString();
 
     public bool Equals(ExpressionTree? other)
     {
-        if (other is null) return false;
-        if (ReferenceEquals(this, other)) return true;
-        return hashCode == other.hashCode
-               && nodes.SequenceEqual(other.nodes)
-               && subtreeLengths.SequenceEqual(other.subtreeLengths);
+        if (other is null)
+            return false;
+
+        return ReferenceEquals(this, other)
+               || ReferenceEquals(Root, other.Root)
+               || Root.Equals(other.Root);
     }
 
     public override bool Equals(object? obj) => obj is ExpressionTree other && Equals(other);
 
-    public override int GetHashCode() => hashCode;
+    public override int GetHashCode() => Root.GetHashCode();
 
     public static bool operator ==(ExpressionTree? left, ExpressionTree? right) => Equals(left, right);
 
     public static bool operator !=(ExpressionTree? left, ExpressionTree? right) => !Equals(left, right);
 
-    private static void PushBinary(Stack<string> stack, string op)
+    private static ExpressionPoint FindPoint(ExpressionPoint point, int index)
     {
-        var right = stack.Pop();
-        var left = stack.Pop();
-        stack.Push($"({left} {op} {right})");
-    }
+        if (index == 0)
+            return point;
 
-    private static void PushUnary(Stack<string> stack, string functionName)
-    {
-        var child = stack.Pop();
-        stack.Push($"{functionName}({child})");
-    }
-
-    private static void PushFunctionCall(Stack<string> stack, ExpressionNode node)
-    {
-        var arguments = new string[node.Arity];
-        for (var i = node.Arity - 1; i >= 0; i--)
+        index--;
+        for (var i = 0; i < point.Node.Arity; i++)
         {
-            arguments[i] = stack.Pop();
+            var child = point.Node.Child(i);
+            if (index < child.Length)
+                return FindPoint(point.Child(i), index);
+
+            index -= child.Length;
         }
 
-        stack.Push($"{node.Name}({string.Join(", ", arguments)})");
+        throw new InvalidOperationException("The expression node metadata is inconsistent with its children.");
     }
 
-    private static int[] CalculateSubtreeLengths(ExpressionNode[] nodes)
+    private static void AddPatch(PatchNode root, ExpressionPoint point, ExpressionNode replacement, string parameterName)
     {
-        if (nodes.Length == 0)
-            throw new ArgumentException("Expression must contain at least one node.", nameof(nodes));
+        Span<int> childIndices = point.Depth <= 64
+            ? stackalloc int[point.Depth]
+            : new int[point.Depth];
 
-        var lengths = new int[nodes.Length];
-        var stack = new Stack<int>();
-        for (var i = 0; i < nodes.Length; i++)
+        var current = point;
+        for (var i = point.Depth - 1; i >= 0; i--)
         {
-            var node = nodes[i];
-            if (stack.Count < node.Arity)
-                throw new ArgumentException($"Node {i} requires {node.Arity} operands but only {stack.Count} are available.", nameof(nodes));
+            childIndices[i] = current.ChildIndexValue;
+            current = current.Parent!;
+        }
 
-            var length = 1;
-            for (var j = 0; j < node.Arity; j++)
+        var patch = root;
+        foreach (var childIndex in childIndices)
+        {
+            if (patch.Replacement is not null)
+                throw new ArgumentException("Replacements must not overlap.", parameterName);
+
+            patch.Children ??= new Dictionary<int, PatchNode>();
+            if (!patch.Children.TryGetValue(childIndex, out var childPatch))
             {
-                length += stack.Pop();
+                childPatch = new PatchNode();
+                patch.Children.Add(childIndex, childPatch);
             }
 
-            lengths[i] = length;
-            stack.Push(length);
+            patch = childPatch;
         }
 
-        if (stack.Count != 1)
-            throw new ArgumentException("Expression nodes must contain exactly one root expression.", nameof(nodes));
+        if (patch.Replacement is not null)
+            throw new ArgumentException("An expression point must not be replaced more than once.", parameterName);
+        if (patch.Children is not null)
+            throw new ArgumentException("Replacements must not overlap.", parameterName);
 
-        return lengths;
+        patch.Replacement = replacement;
     }
 
-    private static int ValidateAndCalculateDepth(ExpressionNode[] nodes, int[] subtreeLengths)
+    private static ExpressionNode ApplyPatch(ExpressionNode original, PatchNode patch)
     {
-        if (nodes.Length == 0)
-            throw new ArgumentException("Expression must contain at least one node.", nameof(nodes));
+        if (patch.Replacement is not null)
+            return patch.Replacement;
+        if (patch.Children is null)
+            return original;
 
-        if (nodes.Length != subtreeLengths.Length)
-            throw new ArgumentException("Subtree length table must have the same length as the node table.", nameof(subtreeLengths));
-
-        var stack = new Stack<SubtreeState>();
-        for (var i = 0; i < nodes.Length; i++)
+        ExpressionNode[]? updatedChildren = null;
+        foreach (var (childIndex, childPatch) in patch.Children)
         {
-            var node = nodes[i];
-            if (stack.Count < node.Arity)
-                throw new ArgumentException($"Node {i} requires {node.Arity} operands but only {stack.Count} are available.", nameof(nodes));
+            var child = original.Child(childIndex);
+            var updatedChild = ApplyPatch(child, childPatch);
+            if (child.Equals(updatedChild))
+                continue;
 
-            var subtreeLength = 1;
-            var depth = 1;
-            for (var j = 0; j < node.Arity; j++)
-            {
-                var child = stack.Pop();
-                subtreeLength += child.Length;
-                depth = Math.Max(depth, child.Depth + 1);
-            }
-
-            if (subtreeLengths[i] != subtreeLength)
-            {
-                throw new ArgumentException(
-                  $"Node {i} declares subtree length {subtreeLengths[i]} but calculated length is {subtreeLength}.",
-                  nameof(subtreeLengths));
-            }
-
-            stack.Push(new SubtreeState(subtreeLength, depth));
+            updatedChildren ??= original.Children.ToArray();
+            updatedChildren[childIndex] = updatedChild;
         }
 
-        if (stack.Count != 1)
-            throw new ArgumentException("Expression nodes must contain exactly one root expression.", nameof(nodes));
-
-        return stack.Pop().Depth;
+        return updatedChildren is null
+            ? original
+            : original.WithOwnedChildren(updatedChildren);
     }
 
-    private void ValidateIndex(int index)
+    private static string FormatNode(ExpressionNode node)
     {
-        if ((uint)index >= (uint)nodes.Length)
-            throw new ArgumentOutOfRangeException(nameof(index));
+        return node.Symbol switch
+        {
+            VariableSymbol => node.VariableName!,
+            ConstantSymbol => node.NumericValue.ToString("G", System.Globalization.CultureInfo.InvariantCulture),
+            BuiltInOperationSymbol operation when operation.Arity == 1 => $"{operation.Name}({FormatNode(node.Child(0))})",
+            BuiltInOperationSymbol operation when operation.Arity == 2 => $"({FormatNode(node.Child(0))} {operation.Name} {FormatNode(node.Child(1))})",
+            _ => $"{node.Name}({string.Join(", ", node.TraverseChildren().Select(FormatNode))})"
+        };
     }
 
-    private int CalculateHashCode()
+    private sealed class PatchNode
     {
-        var hash = new HashCode();
-        foreach (var node in nodes)
-        {
-            hash.Add(node);
-        }
-
-        foreach (var subtreeLength in subtreeLengths)
-        {
-            hash.Add(subtreeLength);
-        }
-
-        return hash.ToHashCode();
+        internal ExpressionNode? Replacement { get; set; }
+        internal Dictionary<int, PatchNode>? Children { get; set; }
     }
-
-    private readonly record struct SubtreeState(int Length, int Depth);
 }

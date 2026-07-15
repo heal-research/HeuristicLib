@@ -31,6 +31,9 @@ public static class WeightSelection
 
     public static int SelectIndex(IRandomNumberGenerator random, int count, ImmutableArray<double> normalizedWeights)
     {
+        if (count == 1)
+            return 0;
+
         if (normalizedWeights.IsEmpty)
             return random.NextInt(count);
 

@@ -5,43 +5,29 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public static class ExpressionInterpreter
 {
-    private const int DefaultBatchSize = 4096;
+    private const int BatchSize = 4096;
 
-    public static double[] Interpret(CompiledExpressionTree expression, DataFrame data)
+    public static double[] Interpret(CompiledExpression expression, DataFrame data)
     {
-        var resolvedVariables = ResolveVariables(expression, data);
-        var rowCount = data.RowCount;
-        var result = new double[rowCount];
-        Interpret(expression, resolvedVariables, rowCount, result);
+        var result = new double[data.RowCount];
+        Interpret(expression, data, result);
         return result;
     }
 
-    public static void Interpret(CompiledExpressionTree expression, DataFrame data, Span<double> destination)
+    public static void Interpret(CompiledExpression expression, DataFrame data, Span<double> destination)
     {
-        Interpret(expression, ResolveVariables(expression, data), data.RowCount, destination);
-    }
-
-    public static void Interpret(CompiledExpressionTree expression, DataFrame data, Span<double> destination, Span<double> workspace)
-    {
-        Interpret(expression, ResolveVariables(expression, data), data.RowCount, destination, workspace);
-    }
-
-    public static int GetWorkspaceLength(CompiledExpressionTree expression, DataFrame data) =>
-        GetWorkspaceLength(expression, data.RowCount);
-
-    private static void Interpret(CompiledExpressionTree expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination)
-    {
-        var workspaceLength = GetWorkspaceLength(expression, rowCount);
+        var variables = ResolveVariables(expression, data);
+        var workspaceLength = GetWorkspaceLength(expression, data.RowCount);
         if (workspaceLength == 0)
         {
-            Interpret(expression, variables, rowCount, destination, []);
+            Interpret(expression, variables, data.RowCount, destination, []);
             return;
         }
 
         var workspace = ArrayPool<double>.Shared.Rent(workspaceLength);
         try
         {
-            Interpret(expression, variables, rowCount, destination, workspace.AsSpan(0, workspaceLength));
+            Interpret(expression, variables, data.RowCount, destination, workspace.AsSpan(0, workspaceLength));
         }
         finally
         {
@@ -49,81 +35,96 @@ public static class ExpressionInterpreter
         }
     }
 
-    private static void Interpret(CompiledExpressionTree expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination, Span<double> workspace)
+    public static void Interpret(CompiledExpression expression, DataFrame data, Span<double> destination, Span<double> workspace)
+    {
+        Interpret(expression, ResolveVariables(expression, data), data.RowCount, destination, workspace);
+    }
+
+    public static int GetWorkspaceLength(CompiledExpression expression, DataFrame data) => GetWorkspaceLength(expression, data.RowCount);
+
+    private static void Interpret(CompiledExpression expression, ReadOnlyMemory<double>[] variables, int rowCount, Span<double> destination, Span<double> workspace)
     {
         if (destination.Length < rowCount)
-        {
             throw new ArgumentException($"Destination must contain at least {rowCount} values but contains {destination.Length}.", nameof(destination));
-        }
 
         var workspaceLength = GetWorkspaceLength(expression, rowCount);
         if (workspace.Length < workspaceLength)
-        {
             throw new ArgumentException($"Workspace must contain at least {workspaceLength} values but contains {workspace.Length}.", nameof(workspace));
-        }
 
         if (rowCount == 0)
             return;
 
-        Span<StackEntry> entries = expression.InstructionCount <= 256
-            ? stackalloc StackEntry[expression.InstructionCount]
-            : new StackEntry[expression.InstructionCount];
-        for (var batchStart = 0; batchStart < rowCount; batchStart += DefaultBatchSize)
+        Span<EvaluationStackEntry> entries = expression.InstructionCount <= 256
+            ? stackalloc EvaluationStackEntry[expression.InstructionCount]
+            : new EvaluationStackEntry[expression.InstructionCount];
+
+        for (var batchStart = 0; batchStart < rowCount; batchStart += BatchSize)
         {
-            var batchSize = Math.Min(DefaultBatchSize, rowCount - batchStart);
+            var batchSize = Math.Min(BatchSize, rowCount - batchStart);
             var stack = new EvaluationStack(workspace, entries, variables, batchStart, batchSize);
-            Execute(expression, ref stack);
+            foreach (var instruction in expression.InstructionsInPostOrder)
+            {
+                switch (instruction.OpCode)
+                {
+                    case OpCode.Variable:
+                        stack.PushVariable(instruction.PayloadIndex);
+                        break;
+                    case OpCode.Constant:
+                        stack.PushScalar(expression.GetConstant(instruction.PayloadIndex));
+                        break;
+                    case OpCode.Add:
+                        ApplyAdd(ref stack);
+                        break;
+                    case OpCode.Subtract:
+                        ApplySubtract(ref stack);
+                        break;
+                    case OpCode.Multiply:
+                        ApplyMultiply(ref stack);
+                        break;
+                    case OpCode.Divide:
+                        ApplyDivide(ref stack);
+                        break;
+                    case OpCode.Negate:
+                        ApplyNegate(ref stack);
+                        break;
+                    case OpCode.Exp:
+                        ApplyExp(ref stack);
+                        break;
+                    case OpCode.Log:
+                        ApplyLog(ref stack);
+                        break;
+                    case OpCode.Sqrt:
+                        ApplySqrt(ref stack);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Unsupported opcode {instruction.OpCode}.");
+                }
+            }
+
             stack.MaterializeResult(destination.Slice(batchStart, batchSize));
         }
     }
 
-    private static int GetWorkspaceLength(CompiledExpressionTree expression, int rowCount) =>
-        GetWorkspaceSlotCount(expression) * Math.Min(rowCount, DefaultBatchSize);
-
-    private static int GetWorkspaceSlotCount(CompiledExpressionTree expression)
+    private static int GetWorkspaceLength(CompiledExpression expression, int rowCount)
     {
         Span<bool> vectorStack = expression.InstructionCount <= 256
             ? stackalloc bool[expression.InstructionCount]
             : new bool[expression.InstructionCount];
-        var count = 0;
-        var maxWorkspaceSlots = 0;
-
+        var counter = new WorkspaceCounter(vectorStack);
         foreach (var instruction in expression.InstructionsInPostOrder)
         {
-            switch (instruction.OpCode)
-            {
-                case OpCode.Variable:
-                    vectorStack[count++] = true;
-                    break;
-                case OpCode.Constant:
-                    vectorStack[count++] = false;
-                    break;
-                case OpCode.Log:
-                case OpCode.Sqrt:
-                case OpCode.Negate:
-                case OpCode.Exp:
-                    var unaryOperandIsVector = vectorStack[--count];
-                    if (unaryOperandIsVector)
-                        maxWorkspaceSlots = Math.Max(maxWorkspaceSlots, count + 1);
-
-                    vectorStack[count++] = unaryOperandIsVector;
-                    break;
-                default:
-                    var rightOperandIsVector = vectorStack[--count];
-                    var leftOperandIsVector = vectorStack[--count];
-                    var resultIsVector = leftOperandIsVector || rightOperandIsVector;
-                    if (resultIsVector)
-                        maxWorkspaceSlots = Math.Max(maxWorkspaceSlots, count + 1);
-
-                    vectorStack[count++] = resultIsVector;
-                    break;
-            }
+            if (instruction.OpCode == OpCode.Variable)
+                counter.PushVariable();
+            else if (instruction.OpCode == OpCode.Constant)
+                counter.PushConstant();
+            else
+                counter.ApplyOperator(instruction.OpCode);
         }
 
-        return maxWorkspaceSlots;
+        return counter.MaximumSlots * Math.Min(rowCount, BatchSize);
     }
 
-    private static ReadOnlyMemory<double>[] ResolveVariables(CompiledExpressionTree expression, DataFrame data)
+    private static ReadOnlyMemory<double>[] ResolveVariables(CompiledExpression expression, DataFrame data)
     {
         var variables = new ReadOnlyMemory<double>[expression.VariableReferenceCount];
         for (var i = 0; i < variables.Length; i++)
@@ -135,53 +136,10 @@ public static class ExpressionInterpreter
         return variables;
     }
 
-    private static void Execute(CompiledExpressionTree expression, ref EvaluationStack stack)
-    {
-        foreach (var instruction in expression.InstructionsInPostOrder)
-        {
-            switch (instruction.OpCode)
-            {
-                case OpCode.Variable:
-                    stack.PushVariable(instruction.PayloadIndex);
-                    break;
-                case OpCode.Constant:
-                    stack.PushScalar(expression.GetConstant(instruction.PayloadIndex));
-                    break;
-                case OpCode.Add:
-                    Add(ref stack);
-                    break;
-                case OpCode.Subtract:
-                    Subtract(ref stack);
-                    break;
-                case OpCode.Multiply:
-                    Multiply(ref stack);
-                    break;
-                case OpCode.Divide:
-                    Divide(ref stack);
-                    break;
-                case OpCode.Negate:
-                    Negate(ref stack);
-                    break;
-                case OpCode.Exp:
-                    Exp(ref stack);
-                    break;
-                case OpCode.Log:
-                    Log(ref stack);
-                    break;
-                case OpCode.Sqrt:
-                    Sqrt(ref stack);
-                    break;
-                default:
-                    throw new InvalidOperationException($"Unsupported opcode {instruction.OpCode}.");
-            }
-        }
-    }
-
-    private static void Add(ref EvaluationStack stack)
+    private static void ApplyAdd(ref EvaluationStack stack)
     {
         var right = stack.Pop();
         var left = stack.Pop();
-
         if (left.Kind == StackEntryKind.Scalar && right.Kind == StackEntryKind.Scalar)
         {
             stack.PushScalar(left.Scalar + right.Scalar);
@@ -200,11 +158,10 @@ public static class ExpressionInterpreter
         stack.PushWorkspace(slotIndex);
     }
 
-    private static void Subtract(ref EvaluationStack stack)
+    private static void ApplySubtract(ref EvaluationStack stack)
     {
         var right = stack.Pop();
         var left = stack.Pop();
-
         if (left.Kind == StackEntryKind.Scalar && right.Kind == StackEntryKind.Scalar)
         {
             stack.PushScalar(left.Scalar - right.Scalar);
@@ -223,11 +180,10 @@ public static class ExpressionInterpreter
         stack.PushWorkspace(slotIndex);
     }
 
-    private static void Multiply(ref EvaluationStack stack)
+    private static void ApplyMultiply(ref EvaluationStack stack)
     {
         var right = stack.Pop();
         var left = stack.Pop();
-
         if (left.Kind == StackEntryKind.Scalar && right.Kind == StackEntryKind.Scalar)
         {
             stack.PushScalar(left.Scalar * right.Scalar);
@@ -246,11 +202,10 @@ public static class ExpressionInterpreter
         stack.PushWorkspace(slotIndex);
     }
 
-    private static void Divide(ref EvaluationStack stack)
+    private static void ApplyDivide(ref EvaluationStack stack)
     {
         var right = stack.Pop();
         var left = stack.Pop();
-
         if (left.Kind == StackEntryKind.Scalar && right.Kind == StackEntryKind.Scalar)
         {
             stack.PushScalar(left.Scalar / right.Scalar);
@@ -269,7 +224,7 @@ public static class ExpressionInterpreter
         stack.PushWorkspace(slotIndex);
     }
 
-    private static void Negate(ref EvaluationStack stack)
+    private static void ApplyNegate(ref EvaluationStack stack)
     {
         var value = stack.Pop();
         if (value.Kind == StackEntryKind.Scalar)
@@ -279,12 +234,11 @@ public static class ExpressionInterpreter
         }
 
         var slotIndex = stack.Count;
-        var result = stack.WorkspaceSlot(slotIndex);
-        TensorPrimitives.Negate(stack.Vector(value), result);
+        TensorPrimitives.Negate(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
         stack.PushWorkspace(slotIndex);
     }
 
-    private static void Exp(ref EvaluationStack stack)
+    private static void ApplyExp(ref EvaluationStack stack)
     {
         var value = stack.Pop();
         if (value.Kind == StackEntryKind.Scalar)
@@ -294,12 +248,11 @@ public static class ExpressionInterpreter
         }
 
         var slotIndex = stack.Count;
-        var result = stack.WorkspaceSlot(slotIndex);
-        TensorPrimitives.Exp(stack.Vector(value), result);
+        TensorPrimitives.Exp(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
         stack.PushWorkspace(slotIndex);
     }
 
-    private static void Log(ref EvaluationStack stack)
+    private static void ApplyLog(ref EvaluationStack stack)
     {
         var value = stack.Pop();
         if (value.Kind == StackEntryKind.Scalar)
@@ -309,12 +262,11 @@ public static class ExpressionInterpreter
         }
 
         var slotIndex = stack.Count;
-        var result = stack.WorkspaceSlot(slotIndex);
-        TensorPrimitives.Log(stack.Vector(value), result);
+        TensorPrimitives.Log(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
         stack.PushWorkspace(slotIndex);
     }
 
-    private static void Sqrt(ref EvaluationStack stack)
+    private static void ApplySqrt(ref EvaluationStack stack)
     {
         var value = stack.Pop();
         if (value.Kind == StackEntryKind.Scalar)
@@ -324,9 +276,36 @@ public static class ExpressionInterpreter
         }
 
         var slotIndex = stack.Count;
-        var result = stack.WorkspaceSlot(slotIndex);
-        TensorPrimitives.Sqrt(stack.Vector(value), result);
+        TensorPrimitives.Sqrt(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
         stack.PushWorkspace(slotIndex);
+    }
+
+    private ref struct WorkspaceCounter
+    {
+        private readonly Span<bool> vectorStack;
+        private int count;
+
+        internal WorkspaceCounter(Span<bool> vectorStack)
+        {
+            this.vectorStack = vectorStack;
+        }
+
+        internal int MaximumSlots { get; private set; }
+        internal void PushVariable() => vectorStack[count++] = true;
+        internal void PushConstant() => vectorStack[count++] = false;
+
+        internal void ApplyOperator(OpCode opCode)
+        {
+            var arity = OpCodes.GetArity(opCode);
+            var resultIsVector = false;
+            for (var i = 0; i < arity; i++)
+                resultIsVector |= vectorStack[--count];
+
+            if (resultIsVector)
+                MaximumSlots = Math.Max(MaximumSlots, count + 1);
+
+            vectorStack[count++] = resultIsVector;
+        }
     }
 
     private ref struct EvaluationStack
@@ -335,43 +314,26 @@ public static class ExpressionInterpreter
         private readonly ReadOnlySpan<ReadOnlyMemory<double>> variables;
         private readonly int batchStart;
         private readonly int batchSize;
-        private readonly Span<StackEntry> entries;
+        private readonly Span<EvaluationStackEntry> entries;
         private int count;
 
-        public EvaluationStack(Span<double> workspace, Span<StackEntry> entries, ReadOnlySpan<ReadOnlyMemory<double>> variables, int batchStart, int batchSize)
+        internal EvaluationStack(Span<double> workspace, Span<EvaluationStackEntry> entries, ReadOnlySpan<ReadOnlyMemory<double>> variables, int batchStart, int batchSize)
         {
             this.workspace = workspace;
             this.entries = entries;
             this.variables = variables;
             this.batchStart = batchStart;
             this.batchSize = batchSize;
-            count = 0;
         }
 
-        public int Count => count;
+        internal int Count => count;
+        internal void PushVariable(int variableIndex) => entries[count++] = new EvaluationStackEntry(StackEntryKind.Variable, variableIndex);
+        internal void PushScalar(double value) => entries[count++] = new EvaluationStackEntry(value);
+        internal void PushWorkspace(int slotIndex) => entries[count++] = new EvaluationStackEntry(StackEntryKind.Workspace, slotIndex);
+        internal EvaluationStackEntry Pop() => entries[--count];
+        internal Span<double> WorkspaceSlot(int index) => workspace.Slice(index * batchSize, batchSize);
 
-        public void PushVariable(int variableIndex)
-        {
-            entries[count++] = new StackEntry(StackEntryKind.Variable, variableIndex);
-        }
-
-        public void PushScalar(double value)
-        {
-            entries[count++] = new StackEntry(value);
-        }
-
-        public void PushWorkspace(int slotIndex)
-        {
-            entries[count++] = new StackEntry(StackEntryKind.Workspace, slotIndex);
-        }
-
-        public StackEntry Pop() => entries[--count];
-
-        public StackEntry Peek() => entries[count - 1];
-
-        public Span<double> WorkspaceSlot(int index) => workspace.Slice(index * batchSize, batchSize);
-
-        public ReadOnlySpan<double> Vector(StackEntry entry)
+        internal ReadOnlySpan<double> Vector(EvaluationStackEntry entry)
         {
             return entry.Kind switch
             {
@@ -381,9 +343,9 @@ public static class ExpressionInterpreter
             };
         }
 
-        public void MaterializeResult(Span<double> destination)
+        internal void MaterializeResult(Span<double> destination)
         {
-            var entry = Peek();
+            var entry = entries[count - 1];
             if (entry.Kind == StackEntryKind.Scalar)
                 destination.Fill(entry.Scalar);
             else
@@ -391,25 +353,25 @@ public static class ExpressionInterpreter
         }
     }
 
-    private readonly struct StackEntry
+    private readonly struct EvaluationStackEntry
     {
-        public StackEntry(StackEntryKind kind, int id)
+        internal EvaluationStackEntry(StackEntryKind kind, int id)
         {
             Kind = kind;
             Id = id;
             Scalar = 0.0;
         }
 
-        public StackEntry(double scalar)
+        internal EvaluationStackEntry(double scalar)
         {
             Kind = StackEntryKind.Scalar;
             Id = 0;
             Scalar = scalar;
         }
 
-        public StackEntryKind Kind { get; }
-        public int Id { get; }
-        public double Scalar { get; }
+        internal StackEntryKind Kind { get; }
+        internal int Id { get; }
+        internal double Scalar { get; }
     }
 
     private enum StackEntryKind

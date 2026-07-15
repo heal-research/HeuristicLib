@@ -15,10 +15,9 @@ public static class NodeReplacementMutation
 {
     public static ExpressionTree Mutate(ExpressionTree parent, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {
-        var nodeIndex = random.NextInt(parent.NodeCount);
-        var node = parent.GetNode(nodeIndex);
-        var replacementSymbol = searchSpace.SelectSymbol(node.Arity, random);
-        var replacement = replacementSymbol.CreateNode(random);
-        return parent.WithNode(new ExpressionLocation(nodeIndex), replacement);
+        var point = parent.GetPoint(random.NextInt(parent.Length));
+        var replacementSymbol = searchSpace.SelectSymbol(point.Node.Arity, random);
+        var replacement = ExpressionNode.FromOwnedChildren(replacementSymbol, random, point.Node.Children);
+        return point.ReplaceWith(replacement);
     }
 }

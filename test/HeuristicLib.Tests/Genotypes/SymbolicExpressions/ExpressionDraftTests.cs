@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
-using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.Random.Distributions;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions;
@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions;
 public sealed class ExpressionDraftTests
 {
     [Fact]
-    public void Build_CreatesTokensWithLocalSymbols()
+    public void Build_CreatesNodesWithLocalSymbols()
     {
         var expression = (Variable("x0") + FixedConstant(2.0) * Constant(3.0)).Build();
 
@@ -32,8 +32,8 @@ public sealed class ExpressionDraftTests
         var expression = (Variable("x0", variable) + Constant(12.0, constant)).Build(searchSpace);
 
         expression.Root.Symbol.ShouldBe(new AdditionSymbol());
-        expression.Root.Child(0).Node.Symbol.ShouldBe(variable);
-        expression.Root.Child(1).Node.Symbol.ShouldBe(constant);
+        expression.Root.Child(0).Symbol.ShouldBe(variable);
+        expression.Root.Child(1).Symbol.ShouldBe(constant);
     }
 
     [Fact]
@@ -45,15 +45,23 @@ public sealed class ExpressionDraftTests
     }
 
     [Fact]
+    public void Variable_RejectsANameNotAllowedByItsExplicitSymbol()
+    {
+        var symbol = new VariableSymbol(["x0"]);
+
+        Should.Throw<ArgumentException>(() => Variable("x1", symbol));
+    }
+
+    [Fact]
     public void Build_PreservesRepeatedVariableOccurrences()
     {
         var expression = (Variable("x0") + Variable("x0")).Build();
 
         expression.TraversePostOrder()
-            .Where(node => node.Node.TryGetVariableName(out _))
+            .Where(node => node.TryGetVariableName(out _))
             .Select(node =>
             {
-                node.Node.TryGetVariableName(out var name);
+                node.TryGetVariableName(out var name);
                 return name;
             })
             .ShouldBe(["x0", "x0"]);
@@ -64,8 +72,8 @@ public sealed class ExpressionDraftTests
     {
         var expression = (FixedConstant(1.0) + Constant(2.0)).Build();
 
-        expression.Root.Child(0).Node.Symbol.ShouldBe(new FixedConstantSymbol(1.0));
-        expression.Root.Child(1).Node.Symbol.ShouldBe(new EvolvableConstantSymbol());
+        expression.Root.Child(0).Symbol.ShouldBe(new FixedConstantSymbol(1.0));
+        expression.Root.Child(1).Symbol.ShouldBe(new EvolvableConstantSymbol());
     }
 
     [Fact]

@@ -6,35 +6,42 @@ namespace HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 
 public abstract record LocalPerturbationTargetSelection
 {
-    internal abstract IReadOnlyList<ExpressionLocation> Select(
-        IReadOnlyList<ExpressionLocation> eligibleLocations,
+    internal abstract IReadOnlyList<ExpressionPoint> Select(
+        IReadOnlyList<ExpressionPoint> eligiblePoints,
         IRandomNumberGenerator random);
 }
 
 public sealed record OneLocalPerturbationTarget : LocalPerturbationTargetSelection
 {
-    internal override IReadOnlyList<ExpressionLocation> Select(IReadOnlyList<ExpressionLocation> eligibleLocations, IRandomNumberGenerator random)
+    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random)
     {
-        return [eligibleLocations[random.NextInt(eligibleLocations.Count)]];
+        return [eligiblePoints[random.NextInt(eligiblePoints.Count)]];
     }
 }
 
 public sealed record AllLocalPerturbationTargets : LocalPerturbationTargetSelection
 {
-    internal override IReadOnlyList<ExpressionLocation> Select(IReadOnlyList<ExpressionLocation> eligibleLocations, IRandomNumberGenerator random)
+    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random)
     {
-        return eligibleLocations;
+        return eligiblePoints;
     }
 }
 
-public sealed record EachLocalPerturbationTarget(double Probability) : LocalPerturbationTargetSelection
+public sealed record EachLocalPerturbationTarget : LocalPerturbationTargetSelection
 {
-    internal override IReadOnlyList<ExpressionLocation> Select(IReadOnlyList<ExpressionLocation> eligibleLocations, IRandomNumberGenerator random)
+    public EachLocalPerturbationTarget(double probability)
     {
-        if (Probability is < 0.0 or > 1.0)
-            throw new ArgumentOutOfRangeException(nameof(Probability));
+        if (double.IsNaN(probability) || probability is < 0.0 or > 1.0)
+            throw new ArgumentOutOfRangeException(nameof(probability));
 
-        return eligibleLocations.Where(_ => random.NextDouble() < Probability).ToArray();
+        Probability = probability;
+    }
+
+    public double Probability { get; }
+
+    internal override IReadOnlyList<ExpressionPoint> Select(IReadOnlyList<ExpressionPoint> eligiblePoints, IRandomNumberGenerator random)
+    {
+        return eligiblePoints.Where(_ => random.NextDouble() < Probability).ToArray();
     }
 }
 
@@ -68,20 +75,21 @@ public static class LocalPerturbationMutation
 {
     public static ExpressionTree Mutate(ExpressionTree parent, IRandomNumberGenerator random, LocalPerturbationTargetSelection targetSelection)
     {
-        var eligibleLocations = parent.FindLocallyPerturbableLocations().ToArray();
-        if (eligibleLocations.Length == 0)
+        var eligiblePoints = parent.FindLocallyPerturbablePoints().ToArray();
+        if (eligiblePoints.Length == 0)
             return parent;
 
-        var selectedLocations = targetSelection.Select(eligibleLocations, random);
-        var result = parent;
-        foreach (var location in selectedLocations)
+        var selectedPoints = targetSelection.Select(eligiblePoints, random);
+        if (selectedPoints.Count == 0)
+            return parent;
+
+        var replacements = new List<(ExpressionPoint Point, ExpressionNode Replacement)>(selectedPoints.Count);
+        foreach (var selectedPoint in selectedPoints)
         {
-            var node = result.GetNode(location.InstructionIndex);
-            if (node.Symbol.TryPerturb(node, random, out var perturbed))
-                result = result.WithNode(location, perturbed);
+            if (selectedPoint.Node.Symbol.TryPerturb(selectedPoint.Node, random, out var perturbed))
+                replacements.Add((selectedPoint, perturbed));
         }
 
-        return result;
+        return parent.ReplaceMany(replacements);
     }
-
 }

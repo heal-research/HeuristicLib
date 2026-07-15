@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions;
 public sealed class SymbolicExpressionCompilerTests
 {
     [Fact]
-    public void Compile_LowersTokensWithoutSymbolMetadata()
+    public void Compile_LowersNodesWithoutSymbolMetadata()
     {
         var symbol = new EvolvableConstantSymbol(new UniformDoubleDistribution(10, 20), new ResampleInitialNumericPerturbation());
         var expression = (Variable("x0") + Constant(12.0, symbol)).Build();
@@ -92,6 +92,15 @@ public sealed class SymbolicExpressionCompilerTests
     }
 
     [Fact]
+    public void Compile_EliminatesLeftIdentityBeforeComplexRightOperand()
+    {
+        var product = Variable("x0") * Variable("x1");
+
+        (FixedConstant(0.0) + product).Build().Compile().ToInfixString().ShouldBe("(x0 * x1)");
+        (FixedConstant(1.0) * product).Build().Compile().ToInfixString().ShouldBe("(x0 * x1)");
+    }
+
+    [Fact]
     public void Compile_DoesNotApplyUnsafeAnnihilatorOrDivisionRewrites()
     {
         (Variable("x0") * FixedConstant(0.0)).Build().Compile().ToInfixString().ShouldBe("(x0 * 0)");
@@ -122,7 +131,7 @@ public sealed class SymbolicExpressionCompilerTests
         }
     }
 
-    private static double[] GetConstants(CompiledExpressionTree expression)
+    private static double[] GetConstants(CompiledExpression expression)
     {
         var constants = new List<double>();
         foreach (var node in expression.TraversePostOrder().Where(node => node.OpCode == OpCode.Constant))

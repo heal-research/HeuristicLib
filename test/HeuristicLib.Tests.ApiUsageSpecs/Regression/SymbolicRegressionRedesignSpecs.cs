@@ -20,10 +20,10 @@ public class SymbolicRegressionRedesignSpecs
 
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
         var root = expression.Root;
-        root.Child(0).TryGetVariableReference(out var leftVariable).ShouldBeTrue();
-        root.Child(1).Child(1).TryGetVariableReference(out var rightVariable).ShouldBeTrue();
-        leftVariable.Name.ShouldBe("x0");
-        rightVariable.Name.ShouldBe("x1");
+        root.Child(0).TryGetVariableName(out var leftVariable).ShouldBeTrue();
+        root.Child(1).Child(1).TryGetVariableName(out var rightVariable).ShouldBeTrue();
+        leftVariable.ShouldBe("x0");
+        rightVariable.ShouldBe("x1");
         var data = DataFrame.FromMatrix(
           ["x0", "x1"],
           new double[,]
@@ -63,13 +63,13 @@ public class SymbolicRegressionRedesignSpecs
         var rightRight = right.Child(1);
 
         root.Symbol.ShouldBe(new AdditionSymbol());
-        left.TryGetVariableReference(out var leftVariable).ShouldBeTrue();
-        leftVariable.Name.ShouldBe("x0");
+        left.TryGetVariableName(out var leftVariable).ShouldBeTrue();
+        leftVariable.ShouldBe("x0");
         right.Symbol.ShouldBe(new MultiplicationSymbol());
         rightLeft.TryGetConstantValue(out var literal).ShouldBeTrue();
-        rightRight.TryGetVariableReference(out var rightVariable).ShouldBeTrue();
+        rightRight.TryGetVariableName(out var rightVariable).ShouldBeTrue();
         literal.ShouldBe(2.0);
-        rightVariable.Name.ShouldBe("x1");
+        rightVariable.ShouldBe("x1");
     }
 
     [Fact]

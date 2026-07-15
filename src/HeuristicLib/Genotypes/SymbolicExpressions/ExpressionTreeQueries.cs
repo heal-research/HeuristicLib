@@ -4,17 +4,16 @@ public static class ExpressionTreeQueries
 {
     extension(ExpressionTree expression)
     {
-        public IEnumerable<ExpressionSubtree> FindNodesOfSymbol<TSymbol>()
+        public IEnumerable<ExpressionNode> FindNodesOfSymbol<TSymbol>()
             where TSymbol : Symbol
         {
-            return expression.TraversePostOrder().Where(node => node.Symbol is TSymbol);
+            return expression.TraversePreOrder().Where(node => node.Symbol is TSymbol);
         }
 
-        public IEnumerable<ExpressionLocation> FindLocallyPerturbableLocations()
+        public IEnumerable<ExpressionPoint> FindLocallyPerturbablePoints()
         {
-            return expression.TraversePostOrder()
-                .Where(node => node.Symbol.SupportsLocalPerturbation && node.Symbol.CanPerturb(node.Node))
-                .Select(node => node.Location);
+            return expression.RootPoint.TraversePreOrder()
+                .Where(point => point.Node.Symbol.SupportsLocalPerturbation && point.Node.Symbol.CanPerturb(point.Node));
         }
     }
 }
