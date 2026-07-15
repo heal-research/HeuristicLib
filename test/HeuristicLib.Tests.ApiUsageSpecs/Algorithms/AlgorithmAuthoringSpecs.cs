@@ -81,7 +81,7 @@ public class AlgorithmAuthoringSpecs
             Evaluator = evaluator
         };
 
-        var run = algorithm.Run(problem);
+        var run = algorithm.CreateRun(problem);
         var registry = run.CreateNewRegistry();
 
         _ = registry.Resolve(algorithm);
@@ -93,12 +93,18 @@ public class AlgorithmAuthoringSpecs
     }
 
     private sealed record SingleCreateAlgorithm
-        : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, SingleCreateAlgorithm.ExecutionState>
+        : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
+            SingleCreateAlgorithm.ExecutionState>
     {
         public new sealed class ExecutionState
-            : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, ExecutionState>.ExecutionState
+            : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>
+                , ExecutionState>.ExecutionState
         {
-            public required ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
+            public required ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator
+            {
+                get;
+                init;
+            }
         }
 
         public required ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
@@ -127,13 +133,19 @@ public class AlgorithmAuthoringSpecs
     }
 
     private sealed record DoubleCreateAlgorithm
-        : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, DoubleCreateAlgorithm.ExecutionState>
+        : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
+            DoubleCreateAlgorithm.ExecutionState>
     {
         public new sealed class ExecutionState
-            : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>, ExecutionState>.ExecutionState
+            : IterativeAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>
+                , ExecutionState>.ExecutionState
         {
             public int Steps { get; set; }
-            public required ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
+            public required ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator
+            {
+                get;
+                init;
+            }
         }
 
         public required ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Creator { get; init; }
@@ -218,15 +230,18 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionInstancesCreated { get; private set; }
         public int CreateCalls { get; private set; }
 
-        public ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(
+            ExecutionInstanceRegistry instanceRegistry)
         {
             ExecutionInstancesCreated++;
             return new Instance(this);
         }
 
-        private sealed class Instance(InstancingCreator owner) : ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Instance(InstancingCreator owner)
+            : ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
-            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random,
+                                                    RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {
                 owner.CreateCalls++;
                 return Enumerable.Range(0, count)
@@ -241,15 +256,20 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionInstancesCreated { get; private set; }
         public int EvaluateCalls { get; private set; }
 
-        public IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        public IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(
+            ExecutionInstanceRegistry instanceRegistry)
         {
             ExecutionInstancesCreated++;
             return new Instance(this);
         }
 
-        private sealed class Instance(InstancingEvaluator owner) : IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Instance(InstancingEvaluator owner)
+            : IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates,
+                                                           IRandomNumberGenerator random,
+                                                           RealVectorSearchSpace searchSpace,
+                                                           TestFunctionProblem problem)
             {
                 owner.EvaluateCalls++;
                 return Enumerable.Range(0, candidates.Count)

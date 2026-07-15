@@ -5,9 +5,10 @@ namespace HEAL.HeuristicLib.Analysis.Scoring;
 public class ParetoState<T>
 {
     protected Lazy<ObjectiveVector>? HyperVolume;
-    private List<ISolution<T>> Front { get; } = [];
+    private List<EvaluatedCandidate<T>> Front { get; } = [];
 
-    public void AddPoints(IEnumerable<ISolution<T>> solutions, Objective objective, ObjectiveVector referencePoint)
+    public void AddPoints(IEnumerable<EvaluatedCandidate<T>> solutions, ObjectiveDirections objective,
+                          ObjectiveVector referencePoint)
     {
         var t = false;
         foreach (var solution in solutions)
@@ -18,7 +19,8 @@ public class ParetoState<T>
 
         if (!t)
             return;
-        HyperVolume = new Lazy<ObjectiveVector>(() => HyperVolumeCalculator.Calculate(Front.Select(x => x.ObjectiveVector), referencePoint, objective));
+        HyperVolume = new Lazy<ObjectiveVector>(() =>
+            HyperVolumeCalculator.Calculate(Front.Select(x => x.ObjectiveVector), referencePoint, objective));
     }
 
     public void Clear()

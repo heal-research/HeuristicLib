@@ -27,7 +27,7 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
         var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.Run(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, analysis);
 
         var finalState = await run.CompleteAsync(
             RandomNumberGenerator.Create(777),
@@ -47,7 +47,7 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
         var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.Run(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, analysis);
 
         await using var enumerator = run.StreamAsync(
                                             RandomNumberGenerator.Create(888),
@@ -78,7 +78,7 @@ public class AnalysisSpecs
             [baseAlgorithm.Evaluator],
             [interceptor]);
 
-        var run = baseAlgorithm.Run(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, analysis);
 
         await run.CompleteAsync(
             RandomNumberGenerator.Create(321),
@@ -98,7 +98,7 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
         var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.Run(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, analysis);
         var finalState = await run.CompleteAsync(
             RandomNumberGenerator.Create(333),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -114,10 +114,11 @@ public class AnalysisSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
-        TestFunctionProblem problem,
-        IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
-        int maximumGenerations)
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        CreateSimpleGeneticAlgorithm(
+            TestFunctionProblem problem,
+            IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
+            int maximumGenerations)
     {
         return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {

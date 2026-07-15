@@ -5,11 +5,13 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analysis.Scoring;
 
-public record BestQualityAlgorithmScorer<T, TS, TP> : AlgorithmPerformanceEvaluator<QualityScorerState>
-    where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<T, TS>
+public record
+    BestQualityAlgorithmScorer<TCandidate, TSearchSpace, TProblem> : AlgorithmPerformanceEvaluator<QualityScorerState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public BestQualityAlgorithmScorer(Objective Objective, params IEvaluator<T, TS, TP>[] Evaluator) : base()
+    public BestQualityAlgorithmScorer(ObjectiveDirections Objective,
+                                      params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluator) : base()
     {
         this.Objective = Objective;
         this.Evaluator = Evaluator;
@@ -22,7 +24,8 @@ public record BestQualityAlgorithmScorer<T, TS, TP> : AlgorithmPerformanceEvalua
         foreach (var evaluator in Evaluator)
         {
             observations.Observe(evaluator,
-                (_, objectives, _, _) => result.CurrentScore = objectives.OrderBy(x => x, Objective.TotalOrderComparer).First());
+                (_, objectives, _, _) =>
+                    result.CurrentScore = objectives.OrderBy(x => x, Objective.TotalOrderComparer).First());
         }
     }
 

@@ -6,19 +6,21 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public record QualityCurveAnalysis<T, TS, TP> : Analyzer<QualityCurve<T>>
-    where TS : class, ISearchSpace<T>
-    where TP : class, IProblem<T, TS>
+public record QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem> : Analyzer<QualityCurve<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 
 {
     private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
 
-    public QualityCurveAnalysis(params IEvaluator<T, TS, TP>[] Evaluators)
+    public QualityCurveAnalysis(params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators)
     {
         this.Evaluators = Evaluators;
     }
 
-    public void AfterEvaluation(QualityCurve<TCandidate> state, IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectiveVectors, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+    public void AfterEvaluation(QualityCurve<TCandidate> state, IReadOnlyList<TCandidate> candidates,
+                                IReadOnlyList<ObjectiveVector> objectiveVectors,
+                                IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {
         for (var i = 0; i < candidates.Count; i++)
         {
@@ -50,7 +52,9 @@ public record QualityCurveAnalysis<T, TS, TP> : Analyzer<QualityCurve<T>>
     {
         foreach (var evaluator in Evaluators)
         {
-            observations.Observe(evaluator, (candidates, objectiveVectors, _, problem) => AfterEvaluation(curve, candidates, objectiveVectors, problem));
+            observations.Observe(evaluator,
+                (candidates, objectiveVectors, _, problem) =>
+                    AfterEvaluation(curve, candidates, objectiveVectors, problem));
         }
     }
 }

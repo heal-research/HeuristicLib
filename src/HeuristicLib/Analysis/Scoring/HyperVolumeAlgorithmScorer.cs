@@ -6,7 +6,10 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis.Scoring;
 
-public record HyperVolumeAlgorithmScorer<T, TS, TP, TSearchState>(Objective ProblemObjective, ObjectiveVector ReferencePoint, params IEvaluator<T, TS, TP>[] Evaluator)
+public record HyperVolumeAlgorithmScorer<T, TS, TP, TSearchState>(
+    ObjectiveDirections ProblemObjective,
+    ObjectiveVector ReferencePoint,
+    params IEvaluator<T, TS, TP>[] Evaluator)
     : AlgorithmPerformanceEvaluator<HyperVolumeAlgorithmScorer<T, TS, TP, TSearchState>.State>
     where TS : class, ISearchSpace<T>
     where TP : class, IProblem<T, TS>
@@ -21,12 +24,14 @@ public record HyperVolumeAlgorithmScorer<T, TS, TP, TSearchState>(Objective Prob
             observations.Observe(evaluator,
                 (genotypes, objectives, _, _) =>
                 {
-                    result.AddPoints(genotypes.Zip(objectives).Select(x => new Solution<T>(x.First, x.Second)), ProblemObjective, ReferencePoint);
+                    result.AddPoints(
+                        genotypes.Zip(objectives).Select(x => new EvaluatedCandidate<T>(x.First, x.Second)),
+                        ProblemObjective, ReferencePoint);
                 });
         }
     }
 
-    public override Objective Objective { get; } = SingleObjective.Maximize;
+    public override ObjectiveDirections Objective { get; } = SingleObjective.Maximize;
 
     public class State : ParetoState<T>, IAlgorithmPerformanceState
     {

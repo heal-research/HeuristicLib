@@ -10,11 +10,11 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms;
 
 public abstract record Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>
-  : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TSearchState : class, ISearchState
-  where TExecutionState : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
+    : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
+    where TExecutionState : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
 {
     public class ExecutionState
     {
@@ -26,19 +26,21 @@ public abstract record Algorithm<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     protected abstract TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
 
-    protected abstract IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState);
+    protected abstract IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(
+        Run run, TExecutionState executionState);
 
-    public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
+        ExecutionInstanceRegistry instanceRegistry)
     {
         return CreateAlgorithmInstance(instanceRegistry.Run, CreateInitialExecutionState(instanceRegistry));
     }
 }
 
 public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-  : IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TSearchState : class, ISearchState
+    : IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
 {
     protected readonly IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> Evaluator;
 
@@ -59,12 +61,14 @@ public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSea
 
 public static class AlgorithmExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-      where TSearchSpace : class, ISearchSpace<TCandidate>
-      where TProblem : class, IProblem<TCandidate, TSearchSpace>
-      where TSearchState : class, ISearchState
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(
+        IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
-        public Run<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, params IReadOnlyList<IAnalyzer> analyzers)
+        public Run<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(
+            TProblem problem, params IReadOnlyList<IAnalyzer> analyzers)
         {
             return new Run<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem, analyzers);
         }
@@ -75,7 +79,7 @@ public static class AlgorithmExtensions
             TSearchState? initialState = null,
             CancellationToken ct = default)
         {
-            var run = algorithm.Run(problem);
+            var run = algorithm.CreateRun(problem);
             return run.StreamAsync(random, initialState, ct);
         }
 
@@ -86,7 +90,7 @@ public static class AlgorithmExtensions
             CancellationToken ct = default
         )
         {
-            var run = algorithm.Run(problem);
+            var run = algorithm.CreateRun(problem);
             return await run.CompleteAsync(random, initialState, ct);
         }
 
@@ -97,7 +101,7 @@ public static class AlgorithmExtensions
             CancellationToken ct = default
         )
         {
-            var run = algorithm.Run(problem);
+            var run = algorithm.CreateRun(problem);
             return run.Stream(random, initialState, ct);
         }
 
@@ -108,15 +112,16 @@ public static class AlgorithmExtensions
             CancellationToken ct = default
         )
         {
-            var run = algorithm.Run(problem);
+            var run = algorithm.CreateRun(problem);
             return run.Complete(random, initialState, ct);
         }
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmInstance)
-      where TSearchSpace : class, ISearchSpace<TCandidate>
-      where TProblem : class, IProblem<TCandidate, TSearchSpace>
-      where TSearchState : class, ISearchState
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(
+        IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmInstance)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
         public async Task<TSearchState> RunToCompletionAsync(
             TProblem problem,

@@ -29,7 +29,7 @@ public static class Analyzer
     }
 
     public static BestQualityAlgorithmScorer<T, TS, TP> BestQuality<T, TS, TP>(
-        Objective objective,
+        ObjectiveDirections objective,
         params IEvaluator<T, TS, TP>[] evaluators)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
@@ -38,7 +38,7 @@ public static class Analyzer
     }
 
     public static HyperVolumeAlgorithmScorer<T, TS, TP, SearchState> HyperVolume<T, TS, TP>(
-        Objective problemObjective,
+        ObjectiveDirections problemObjective,
         ObjectiveVector referencePoint,
         params IEvaluator<T, TS, TP>[] evaluators)
         where TS : class, ISearchSpace<T>

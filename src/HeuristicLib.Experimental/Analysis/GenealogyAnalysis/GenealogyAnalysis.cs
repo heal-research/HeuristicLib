@@ -8,21 +8,20 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 
 public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState> :
-  Analyzer<TCandidate, TSearchSpace, TProblem, TSearchState, GenealogyGraph<TCandidate>>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TSearchState : PopulationState<TCandidate>
-  where TCandidate : notnull
+    Analyzer<GenealogyGraph<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : PopulationState<TCandidate>
+    where TCandidate : notnull
 {
     private readonly IEqualityComparer<TCandidate>? equality;
     private readonly bool saveSpace;
 
-    public GenealogyAnalysis(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm,
-                             ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
+    public GenealogyAnalysis(ICrossover<TCandidate, TSearchSpace, TProblem>? crossover = null,
                              IMutator<TCandidate, TSearchSpace, TProblem>? mutator = null,
                              IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor = null,
                              IEqualityComparer<TCandidate>? equality = null,
-                             bool saveSpace = false) : base(Algorithm)
+                             bool saveSpace = false)
     {
         this.equality = equality;
         this.saveSpace = saveSpace;
@@ -49,11 +48,13 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
 
         if (Interceptor is not null)
         {
-            observations.Observe(Interceptor, ((currentState, _, _, _, problem) => AfterInterception(graph, currentState, problem)));
+            observations.Observe(Interceptor,
+                ((currentState, _, _, _, problem) => AfterInterception(graph, currentState, problem)));
         }
     }
 
-    public void AfterCross(GenealogyGraph<TCandidate> graph, IReadOnlyList<TCandidate> offspring, IReadOnlyList<IParents<TCandidate>> parents)
+    public void AfterCross(GenealogyGraph<TCandidate> graph, IReadOnlyList<TCandidate> offspring,
+                           IReadOnlyList<IParents<TCandidate>> parents)
     {
         foreach (var (parents1, child) in parents.Zip(offspring))
         {
@@ -61,7 +62,8 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
         }
     }
 
-    public void AfterMutate(GenealogyGraph<TCandidate> graph, IReadOnlyList<TCandidate> offspring, IReadOnlyList<TCandidate> parent)
+    public void AfterMutate(GenealogyGraph<TCandidate> graph, IReadOnlyList<TCandidate> offspring,
+                            IReadOnlyList<TCandidate> parent)
     {
         foreach (var (parents1, child) in parent.Zip(offspring))
         {
@@ -71,9 +73,12 @@ public record GenealogyAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState
 
     public void AfterInterception(GenealogyGraph<TCandidate> graph, TSearchState currentState, TProblem problem)
     {
-        var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer).ToArray();
+        var ordered = currentState.Population
+                                  .OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.TotalOrderComparer)
+                                  .ToArray();
         graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
     }
 
-    public override GenealogyGraph<TCandidate> CreateInitialResult() => new(equality ?? EqualityComparer<TCandidate>.Default);
+    public override GenealogyGraph<TCandidate> CreateInitialResult() =>
+        new(equality ?? EqualityComparer<TCandidate>.Default);
 }
