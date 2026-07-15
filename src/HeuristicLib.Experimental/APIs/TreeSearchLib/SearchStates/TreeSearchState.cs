@@ -11,10 +11,12 @@ public abstract class TreeSearchState<TMove> : IState<TreeSearchState<TMove>, Ob
     protected abstract TreeSearchState<TMove> Copy();
     protected abstract IEnumerable<TMove> Branches();
     protected abstract TreeSearchState<TMove> Branch(TMove move);
-    protected abstract Objective Objective { get; }
+    protected abstract ObjectiveDirections Objective { get; }
 
     #region explicit treesearchlib implementation
-    IEnumerable<TreeSearchState<TMove>> IState<TreeSearchState<TMove>, ObjectiveVectorQuality>.GetBranches() => Branches().Select(Branch);
+    IEnumerable<TreeSearchState<TMove>> IState<TreeSearchState<TMove>, ObjectiveVectorQuality>.GetBranches() =>
+        Branches().Select(Branch);
+
     object ICloneable.Clone() => Copy();
     bool IQualifiable<ObjectiveVectorQuality>.IsTerminal => IsTerminal;
     ObjectiveVectorQuality IQualifiable<ObjectiveVectorQuality>.Bound => new(Bound, Objective);
