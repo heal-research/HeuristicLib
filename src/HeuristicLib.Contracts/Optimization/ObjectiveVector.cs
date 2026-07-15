@@ -7,24 +7,9 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
 {
     private readonly double[] values;
 
-    public ObjectiveVector(params IEnumerable<double> values)
-    {
-        this.values = values.ToArray();
-    }
+    public ObjectiveVector(params IEnumerable<double> values) => this.values = values.ToArray();
 
-    public ObjectiveVector(params ReadOnlySpan<double> values)
-    {
-        if (values.Length == 0)
-        {
-            throw new ArgumentException("Objective values must not be empty");
-        }
-
-        this.values = values.ToArray();
-        if (this.values.Length == 0)
-        {
-            throw new ArgumentException("Objective values must not be empty");
-        }
-    }
+    public ObjectiveVector(params ReadOnlySpan<double> values) => this.values = values.ToArray();
 
     public bool IsSingleObjective => Count == 1;
     public ObjectiveValue? SingleObjectiveValue => Count == 1 ? new ObjectiveValue(values[0]) : null;
@@ -103,12 +88,20 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
         };
     }
 
-    public bool Dominates(ObjectiveVector other, ObjectiveDirections objective) => CompareTo(other, objective) == DominanceRelation.Dominates;
-    public bool IsDominatedBy(ObjectiveVector other, ObjectiveDirections objective) => CompareTo(other, objective) == DominanceRelation.IsDominatedBy;
-    public bool IsEquivalentTo(ObjectiveVector other, ObjectiveDirections objective) => CompareTo(other, objective) == DominanceRelation.Equivalent;
-    public bool IsIncomparableTo(ObjectiveVector other, ObjectiveDirections objective) => CompareTo(other, objective) == DominanceRelation.Incomparable;
+    public bool Dominates(ObjectiveVector other, ObjectiveDirections objective) =>
+        CompareTo(other, objective) == DominanceRelation.Dominates;
 
-    public override string ToString() => $"[{string.Join(", ", values.Select(v => v.ToString(CultureInfo.InvariantCulture)))}]";
+    public bool IsDominatedBy(ObjectiveVector other, ObjectiveDirections objective) =>
+        CompareTo(other, objective) == DominanceRelation.IsDominatedBy;
+
+    public bool IsEquivalentTo(ObjectiveVector other, ObjectiveDirections objective) =>
+        CompareTo(other, objective) == DominanceRelation.Equivalent;
+
+    public bool IsIncomparableTo(ObjectiveVector other, ObjectiveDirections objective) =>
+        CompareTo(other, objective) == DominanceRelation.Incomparable;
+
+    public override string ToString() =>
+        $"[{string.Join(", ", values.Select(v => v.ToString(CultureInfo.InvariantCulture)))}]";
 
     public ObjectiveVector Add(ObjectiveVector apply)
     {
