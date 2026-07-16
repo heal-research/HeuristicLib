@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Analysis.Scoring;
+using HEAL.HeuristicLib.Analysis.Quality;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -28,22 +28,21 @@ public static class Analyzer
         return new BestMedianWorstPerEvaluationAnalysis<T, TS, TP, TR>(evaluators, interceptors);
     }
 
-    public static BestQualityAlgorithmScorer<T, TS, TP> BestQuality<T, TS, TP>(
-        ObjectiveDirections objective,
+    public static BestQualityAlgorithmAnalysis<T, TS, TP> BestQuality<T, TS, TP>(
         params IEvaluator<T, TS, TP>[] evaluators)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {
-        return new BestQualityAlgorithmScorer<T, TS, TP>(objective, evaluators);
+        return new BestQualityAlgorithmAnalysis<T, TS, TP>(evaluators);
     }
 
-    public static HyperVolumeAlgorithmScorer<T, TS, TP, SearchState> HyperVolume<T, TS, TP>(
+    public static HyperVolumeAnalysis<T, TS, TP> HyperVolume<T, TS, TP>(
         ObjectiveDirections problemObjective,
         ObjectiveVector referencePoint,
         params IEvaluator<T, TS, TP>[] evaluators)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {
-        return new HyperVolumeAlgorithmScorer<T, TS, TP, SearchState>(problemObjective, referencePoint, evaluators);
+        return new HyperVolumeAnalysis<T, TS, TP>(problemObjective, referencePoint, evaluators);
     }
 }

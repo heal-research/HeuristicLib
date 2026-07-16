@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -7,7 +6,7 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public record AllPopulationsTracker<TCandidate, TSearchSpace, TProblem, TSearchState>(
+public record AllPopulationsAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
     IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor)
     : Analyzer<List<EvaluatedCandidate<TCandidate>[]>>
     where TSearchSpace : class, ISearchSpace<TCandidate>

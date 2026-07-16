@@ -8,21 +8,21 @@ namespace HEAL.HeuristicLib.Analysis;
 
 public static class ExperimentalAnalyzers
 {
-    public static QualityCurveAnalysis<T, TS, TP> QualityCurve<T, TS, TP>(
+    public static BestPerEvaluationAnalysis<T, TS, TP> QualityCurve<T, TS, TP>(
         params IEvaluator<T, TS, TP>[] evaluators)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {
-        return new QualityCurveAnalysis<T, TS, TP>(evaluators);
+        return new BestPerEvaluationAnalysis<T, TS, TP>(evaluators);
     }
 
-    public static AllPopulationsTracker<T, TS, TP, TR> AllPopulations<T, TS, TP, TR>(
+    public static AllPopulationsAnalysis<T, TS, TP, TR> AllPopulations<T, TS, TP, TR>(
         IInterceptor<T, TS, TP, TR> interceptor)
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
     {
-        return new AllPopulationsTracker<T, TS, TP, TR>(interceptor);
+        return new AllPopulationsAnalysis<T, TS, TP, TR>(interceptor);
     }
 
     public static GenealogyAnalysis<T, TS, TP, TR> Genealogy<T, TS, TP, TR>(

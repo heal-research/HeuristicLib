@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
-
 namespace HEAL.HeuristicLib.Analysis;
 
 public abstract record Analyzer<TResult> : IAnalyzer<TResult>

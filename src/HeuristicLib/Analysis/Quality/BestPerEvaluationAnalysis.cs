@@ -2,18 +2,17 @@ using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-public record QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem> : Analyzer<QualityCurve<TCandidate>>
+public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : Analyzer<QualityCurve<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 
 {
     private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
 
-    public QualityCurveAnalysis(params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators)
+    public BestPerEvaluationAnalysis(params IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators)
     {
         this.Evaluators = Evaluators;
     }

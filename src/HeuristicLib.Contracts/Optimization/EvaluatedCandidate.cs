@@ -4,6 +4,11 @@ public record EvaluatedCandidate<TCandidate>(TCandidate Candidate, ObjectiveVect
 
 public static class EvaluatedCandidate
 {
-    public static EvaluatedCandidate<TCandidate> From<TCandidate>(TCandidate candidate, ObjectiveVector objectiveVector) =>
-      new(candidate, objectiveVector);
+    public static EvaluatedCandidate<TCandidate>
+        From<TCandidate>(TCandidate candidate, ObjectiveVector objectiveVector) =>
+        new(candidate, objectiveVector);
+
+    public static EvaluatedCandidate<TCandidate> ToEvaluated<TCandidate>(
+        this TCandidate candidate, ObjectiveVector objectiveVector) =>
+        new(candidate, objectiveVector);
 }

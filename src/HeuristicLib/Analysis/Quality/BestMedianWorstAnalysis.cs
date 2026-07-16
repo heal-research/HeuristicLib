@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -6,11 +5,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Analysis;
-
-public record BestMedianWorstEntry<TCandidate>(
-    EvaluatedCandidate<TCandidate> Best,
-    EvaluatedCandidate<TCandidate> Median,
-    EvaluatedCandidate<TCandidate> Worst);
 
 public record BestMedianWorstAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(
     params IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[] Interceptor)
