@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;

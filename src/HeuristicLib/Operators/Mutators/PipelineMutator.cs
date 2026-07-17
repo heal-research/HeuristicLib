@@ -23,15 +23,21 @@ public partial record PipelineMutator<TCandidate, TSearchSpace, TProblem>
         }
     }
 
-    protected override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents,
-      IReadOnlyList<InnerMutate> innerMutators, IRandomNumberGenerator random, TSearchSpace searchSpace,
-      TProblem problem)
+    protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(
+        ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators) => new Instance(innerMutators);
+
+    private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators)
+        : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(innerMutators)
     {
-        var current = parents;
-        foreach (var mutator in innerMutators)
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            current = mutator(current, random, searchSpace, problem);
+            var current = parents;
+            foreach (var mutator in InnerMutators)
+            {
+                current = mutator.Mutate(current, random, searchSpace, problem);
+            }
+
+            return current;
         }
-        return current;
     }
 }

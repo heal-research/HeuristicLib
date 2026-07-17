@@ -17,14 +17,13 @@ public partial record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TS
     {
     }
 
-    protected override TSearchState Transform(
-      TSearchState currentState,
-      TSearchState? previousState,
-      IReadOnlyList<InnerTransform> innerInterceptors,
-      TSearchSpace searchSpace,
-      TProblem problem)
+    protected override MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> innerInterceptors) =>
+        new Instance(innerInterceptors);
+
+    private sealed class Instance(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> innerInterceptors)
+        : MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(innerInterceptors)
     {
-        return innerInterceptors.Aggregate(currentState, (current, interceptor) => interceptor(current, previousState, searchSpace, problem));
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem) =>
+            InnerInterceptors.Aggregate(currentState, (current, interceptor) => interceptor.Transform(current, previousState, searchSpace, problem));
     }
 }
-

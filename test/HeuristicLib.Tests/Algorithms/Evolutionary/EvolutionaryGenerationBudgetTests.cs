@@ -11,7 +11,6 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 

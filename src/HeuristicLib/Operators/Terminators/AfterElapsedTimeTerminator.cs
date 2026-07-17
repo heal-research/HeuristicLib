@@ -1,7 +1,7 @@
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record AfterElapsedTimeTerminator<TCandidate>
-  : Terminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.ExecutionState>
+  : StatefulTerminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.ExecutionState>
 {
     public AfterElapsedTimeTerminator(TimeSpan maximumElapsedTime)
       : this(maximumElapsedTime, TimeProvider.System)
@@ -22,9 +22,7 @@ public record AfterElapsedTimeTerminator<TCandidate>
     public TimeSpan MaximumElapsedTime
     {
         get;
-        init => field = value > TimeSpan.Zero
-            ? value
-            : throw new ArgumentOutOfRangeException(nameof(MaximumElapsedTime), "MaximumElapsedTime must be positive.");
+        init => field = value > TimeSpan.Zero ? value : throw new ArgumentOutOfRangeException(nameof(MaximumElapsedTime), "MaximumElapsedTime must be positive.");
     }
 
     public TimeProvider TimeProvider { get; }

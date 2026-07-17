@@ -5,12 +5,10 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-/// <summary>
-/// Discrete crossover for integer vectors.
-/// </summary>
-/// 
+/// <remarks>
 /// It is implemented as described in Gwiazda, T.D. 2006.
 /// Genetic algorithms reference Volume I Crossover for single-objective numerical optimization problems, p.17.
+/// </remarks>
 public record DiscreteCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
     public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)

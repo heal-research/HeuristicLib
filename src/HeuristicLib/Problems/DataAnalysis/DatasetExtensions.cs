@@ -32,7 +32,6 @@ public static class DatasetExtensions
     ///   values must be specified.
     /// </param>
     /// <param name="rows">An enumerable of row indices for the dataset</param>
-    /// <returns></returns>
     /// <remarks>
     ///   Factor variables (categorical variables) are split up into multiple binary variables one for each specified
     ///   value.

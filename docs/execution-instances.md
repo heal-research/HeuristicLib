@@ -4,8 +4,10 @@ This page documents an advanced execution concept.
 
 For most users and most extension authors, the preferred model is:
 
-- operators: author through `Creator`, `Mutator`, `Evaluator`, `Selector`, `Crossover`, `Replacer`, `Terminator`, `Interceptor`, `Wrapping*`, and `Multi*`
-- algorithms: author through `IterativeAlgorithm<...>` with explicit execution state
+1. Stateless operators use role specific stateless bases.
+2. Operators needing ordinary execution data use role specific stateful bases with a framework managed state object.
+3. Operators needing child execution instances or custom execution structure use an authored execution instance.
+4. Algorithms use authored execution instances because they coordinate operators and own execution lifecycle concerns.
 
 You usually do **not** need to work with execution instances directly.
 
@@ -52,10 +54,21 @@ Most users should not call these methods directly. They are intended for meta-al
 
 The current intended model is eager, local resolution:
 
-- when an algorithm creates its execution instance, it resolves the operators it will use into execution state
-- when a wrapping or multi operator creates its execution instance, it resolves its declared inner operators into its execution state
+1. When an algorithm creates its execution instance, it resolves the operators it will use into execution state.
+2. When a wrapping or multi operator creates its execution instance, it resolves its declared inner operators once.
+3. Authored operator instances store resolved children as private instance data.
 
 This gives one-time resolution cost per execution instance and avoids per-call dictionary lookups during steady-state execution.
+
+## Framework managed state lifecycle
+
+A role specific stateful operator base creates one state object whenever it creates an execution instance. `CreateInitialState()` must return a fresh object for every invocation.
+
+Registry identity determines state sharing. Resolving the same configuration object repeatedly through one registry returns the same execution instance and state. Independent registries create independent instances and state objects. A child registry may reuse an instance from its parent registry, so it also reuses that instance's state.
+
+Stateful operator calls are not inherently thread safe. An operator may use ordinary mutable state, but concurrent use is valid only when the owning execution path provides suitable synchronization or the state implementation is itself safe for concurrent access.
+
+Execution instances currently have no disposal contract. Framework managed state must therefore not own resources that require deterministic cleanup. Such ownership requires an explicitly authored execution instance and a defined lifecycle mechanism.
 
 ## When you should care
 

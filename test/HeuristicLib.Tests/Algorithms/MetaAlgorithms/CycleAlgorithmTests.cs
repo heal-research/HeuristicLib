@@ -80,7 +80,7 @@ public class CycleAlgorithmTests
       state.Population.EvaluatedCandidates[0].ObjectiveVector[0];
 
     private sealed record YieldedStateStampingInterceptor
-      : Interceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
+      : StatefulInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
     {
         protected override ExecutionState CreateInitialState() => new();
 

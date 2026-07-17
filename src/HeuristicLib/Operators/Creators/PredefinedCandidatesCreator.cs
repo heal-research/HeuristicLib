@@ -5,9 +5,12 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Creators;
 
+/// <summary>
+/// Emits predefined candidates across successive calls before delegating remaining requests to a fallback creator.
+/// </summary>
 [Equatable]
 public partial record PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem>
-  : WrappingCreator<TCandidate, TSearchSpace, TProblem, PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem>.ExecutionState>
+    : WrappingCreator<TCandidate, TSearchSpace, TProblem>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -21,41 +24,41 @@ public partial record PredefinedCandidatesCreator<TCandidate, TSearchSpace, TPro
         PredefinedCandidates = predefinedCandidates;
     }
 
-    protected override ExecutionState CreateInitialState() => new();
+    protected override WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator) =>
+        new Instance(innerCreator, PredefinedCandidates);
 
-    protected override IReadOnlyList<TCandidate> Create(int count, ExecutionState executionState, InnerCreate innerCreate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator, ImmutableArray<TCandidate> predefinedCandidates)
+        : WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem>(innerCreator)
     {
-        var offspring = new TCandidate[count];
+        private int currentCandidateIndex;
 
-        var countPredefined = Math.Min(PredefinedCandidates.Length - executionState.CurrentCandidateIndex, count);
-        if (countPredefined > 0)
+        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            for (var i = 0; i < countPredefined; i++)
+            var offspring = new TCandidate[count];
+            var countPredefined = Math.Min(predefinedCandidates.Length - currentCandidateIndex, count);
+            if (countPredefined > 0)
             {
-                offspring[i] = PredefinedCandidates[executionState.CurrentCandidateIndex + i];
+                for (var i = 0; i < countPredefined; i++)
+                {
+                    offspring[i] = predefinedCandidates[currentCandidateIndex + i];
+                }
+
+                currentCandidateIndex += countPredefined;
             }
 
-            executionState.CurrentCandidateIndex += countPredefined;
-        }
+            var countRemaining = count - countPredefined;
+            if (countRemaining <= 0)
+            {
+                return offspring;
+            }
 
-        var countRemaining = count - countPredefined;
-        if (countRemaining <= 0)
-        {
+            var remaining = InnerCreator.Create(countRemaining, random, searchSpace, problem);
+            for (var i = 0; i < remaining.Count; i++)
+            {
+                offspring[countPredefined + i] = remaining[i];
+            }
+
             return offspring;
         }
-
-        var remainingRandom = random.Fork(1);
-        var remaining = innerCreate(countRemaining, remainingRandom, searchSpace, problem);
-        for (var i = 0; i < remaining.Count; i++)
-        {
-            offspring[countPredefined + i] = remaining[i];
-        }
-
-        return offspring;
-    }
-
-    public sealed class ExecutionState
-    {
-        public int CurrentCandidateIndex { get; set; } = 0;
     }
 }

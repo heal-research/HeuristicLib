@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.MoveAppliers;
 using HEAL.HeuristicLib.Operators.MoveCreators;
 using HEAL.HeuristicLib.Operators.MoveEvaluators;

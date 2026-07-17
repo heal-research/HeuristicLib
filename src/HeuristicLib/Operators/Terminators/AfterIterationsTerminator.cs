@@ -1,7 +1,7 @@
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record AfterIterationsTerminator<TCandidate>
-  : Terminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
+  : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
 {
     public sealed class ExecutionState
     {

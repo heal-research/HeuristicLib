@@ -17,7 +17,9 @@ public class ObservableEvaluatorTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatorCalls(counter);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        evaluator.Counter.ShouldBeSameAs(counter);
+        evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
+        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -31,7 +33,7 @@ public class ObservableEvaluatorTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -46,7 +48,9 @@ public class ObservableEvaluatorTests
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var evaluator = CreateEvaluator().MeasureEvaluatorDuration(duration, timeProvider);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        evaluator.Duration.ShouldBeSameAs(duration);
+        evaluator.TimeProvider.ShouldBeSameAs(timeProvider);
+        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

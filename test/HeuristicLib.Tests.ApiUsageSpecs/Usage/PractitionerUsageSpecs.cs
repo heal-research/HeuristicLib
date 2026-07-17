@@ -5,6 +5,7 @@ using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -411,6 +412,24 @@ public class PractitionerUsageSpecs
         statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
         statesByMutatedCandidates.Count.ShouldBe(3);
         statesByMutatedCandidates.All(state => state.Population.EvaluatedCandidates.Length == 16).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void InstrumentationOperators_CanBeConstructedDirectlyOrThroughFluentMethods()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var mutator = CreateSimpleGeneticAlgorithm(problem).Mutator;
+        var counter = new ObservationCounter();
+        var duration = new ObservationDuration();
+
+        var counted = new CountingMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(mutator, counter, OperatorCountMetric.Candidates);
+        var measured = mutator.MeasureMutatorDuration(duration);
+
+        counted.Mutator.ShouldBeSameAs(mutator);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
+        measured.Mutator.ShouldBeSameAs(mutator);
+        measured.Duration.ShouldBeSameAs(duration);
     }
 
     [Fact]

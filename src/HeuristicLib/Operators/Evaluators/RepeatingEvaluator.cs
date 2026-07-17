@@ -37,22 +37,27 @@ public record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
         this.aggregator = aggregator;
     }
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates,
-      InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
-      TSearchSpace searchSpace, TProblem problem)
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
+        new Instance(innerEvaluator, repeats, aggregator);
+
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
     {
-        var results = innerEvaluate(candidates, random, searchSpace, problem).ToArray();
-
-        for (var i = 0; i < repeats; i++)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            var reevaluationResult = innerEvaluate(candidates, random, searchSpace, problem);
-            for (var j = 0; j < results.Length; j++)
-            {
-                results[j] = aggregator(results[j], reevaluationResult[j]);
-            }
-        }
+            var results = InnerEvaluator.Evaluate(candidates, random, searchSpace, problem).ToArray();
 
-        return results;
+            for (var i = 0; i < repeats; i++)
+            {
+                var reevaluationResult = InnerEvaluator.Evaluate(candidates, random, searchSpace, problem);
+                for (var j = 0; j < results.Length; j++)
+                {
+                    results[j] = aggregator(results[j], reevaluationResult[j]);
+                }
+            }
+
+            return results;
+        }
     }
 }
 
@@ -73,18 +78,19 @@ public record RepeatedEvaluator<TCandidate, TSearchSpace, TProblem>
         this.maxDegreeOfParallelism = maxDegreeOfParallelism;
     }
 
-    protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates,
-      InnerEvaluate innerEvaluate, IRandomNumberGenerator random,
-      TSearchSpace searchSpace, TProblem problem)
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
+        new Instance(innerEvaluator, repeats, aggregator, maxDegreeOfParallelism);
+
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, int repeats, Func<ObjectiveVector[], ObjectiveVector> aggregator, int maxDegreeOfParallelism)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
     {
-        var res = BatchExecution.Parallel(
-          repeats,
-          r => innerEvaluate(candidates, r, searchSpace, problem),
-          random,
-          maxDegreeOfParallelism: maxDegreeOfParallelism);
-        return Enumerable.Range(0, candidates.Count)
-                         .Select(i => Enumerable.Range(0, repeats).Select(j => res[j][i]).ToArray())
-                         .Select(aggregator)
-                         .ToArray();
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            var res = BatchExecution.Parallel(repeats, r => InnerEvaluator.Evaluate(candidates, r, searchSpace, problem), random, maxDegreeOfParallelism: maxDegreeOfParallelism);
+            return Enumerable.Range(0, candidates.Count)
+                .Select(i => Enumerable.Range(0, repeats).Select(j => res[j][i]).ToArray())
+                .Select(aggregator)
+                .ToArray();
+        }
     }
 }

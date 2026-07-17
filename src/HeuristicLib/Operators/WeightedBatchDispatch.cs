@@ -16,6 +16,11 @@ public sealed class WeightedBatchDispatch
             throw new ArgumentException("At least one weight must be provided.", nameof(weights));
         }
 
+        if (weights.Any(weight => !double.IsFinite(weight)))
+        {
+            throw new ArgumentException("Weights must be finite.", nameof(weights));
+        }
+
         if (weights.Any(weight => weight < 0))
         {
             throw new ArgumentException("Weights must be non-negative.", nameof(weights));
@@ -35,11 +40,7 @@ public sealed class WeightedBatchDispatch
         }
     }
 
-    public IReadOnlyList<TOutput> Dispatch<TInput, TOutput, TOperator>(
-      IReadOnlyList<TInput> inputs,
-      IReadOnlyList<TOperator> operators,
-      IRandomNumberGenerator random,
-      Func<TOperator, IReadOnlyList<TInput>, IReadOnlyList<TOutput>> invokeBatch)
+    public IReadOnlyList<TOutput> Dispatch<TInput, TOutput, TOperator>(IReadOnlyList<TInput> inputs, IReadOnlyList<TOperator> operators, IRandomNumberGenerator random, Func<TOperator, IReadOnlyList<TInput>, IReadOnlyList<TOutput>> invokeBatch)
     {
         if (operators.Count != Weights.Length)
         {
@@ -99,6 +100,8 @@ public sealed class WeightedBatchDispatch
         return results;
     }
 
+    public int ChooseOperator(IRandomNumberGenerator random) => ChooseOperator(random.NextDouble());
+
     private int ChooseOperator(double sample)
     {
         var scaledSample = sample * totalWeight;
@@ -106,4 +109,3 @@ public sealed class WeightedBatchDispatch
         return operatorIndex >= 0 ? operatorIndex : cumulativeWeights.Length - 1;
     }
 }
-

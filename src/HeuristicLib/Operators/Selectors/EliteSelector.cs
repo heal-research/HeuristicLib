@@ -21,15 +21,20 @@ public record EliteSelector<TCandidate, TSearchSpace, TProblem>
         this.elites = elites;
     }
 
-    protected override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
-                                                                  ObjectiveDirections objective, int count, InnerSelect innerSelect,
-                                                                  IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-    {
-        var selectedElites = BestSelector.Select(population, objective, elites);
-        var remainingCount = count - selectedElites.Count;
-        var selecterdRemaining = innerSelect(population, objective, remainingCount, random, searchSpace, problem);
+    protected override WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector) =>
+        new Instance(innerSelector, elites);
 
-        return selectedElites.Concat(selecterdRemaining).ToArray();
+    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector, int elites)
+        : WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem>(innerSelector)
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            var selectedElites = BestSelector.Select(population, objective, elites);
+            var remainingCount = count - selectedElites.Count;
+            var selectedRemaining = InnerSelector.Select(population, objective, remainingCount, random, searchSpace, problem);
+
+            return selectedElites.Concat(selectedRemaining).ToArray();
+        }
     }
 }
 

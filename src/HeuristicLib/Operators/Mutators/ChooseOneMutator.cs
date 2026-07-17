@@ -7,9 +7,9 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
 public partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
-  : MultiMutator<TCandidate, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    : MultiMutator<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     [IgnoreEquality] public ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> Mutators => InnerMutators;
 
@@ -20,14 +20,14 @@ public partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
     private readonly WeightedBatchDispatch dispatcher;
 
     public ChooseOneMutator(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
-      : base(mutators)
+        : base(mutators)
     {
         if (mutators.Length == 0)
         {
             throw new ArgumentException("At least one mutator must be provided.", nameof(mutators));
         }
 
-        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0, mutators.Length)];
+        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / mutators.Length, mutators.Length)];
         if (effectiveWeights.Length != mutators.Length)
         {
             throw new ArgumentException("Weights must have the same length as mutators.", nameof(weights));
@@ -37,11 +37,14 @@ public partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
         Weights = dispatcher.Weights;
     }
 
-    protected override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents,
-      IReadOnlyList<InnerMutate> innerMutators,
-      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+    protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators)
+        => new Instance(innerMutators, dispatcher);
+
+    private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators, WeightedBatchDispatch dispatcher)
+        : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(innerMutators)
     {
-        return dispatcher.Dispatch(parents, innerMutators, random, (mutator, batchParents) => mutator(batchParents, random, searchSpace, problem));
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            dispatcher.Dispatch(parents, InnerMutators, random, (mutator, batchParents) => mutator.Mutate(batchParents, random, searchSpace, problem));
     }
 }
 
@@ -51,10 +54,10 @@ public static class ChooseOneMutator
       where TSearchSpace : class, ISearchSpace<TCandidate>
       where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        var r = mutators.ToImmutableArray();
-        var weights = r.Select(_ => 1.0 / r.Length).ToImmutableArray();
-        return new ChooseOneMutator<TCandidate, TSearchSpace, TProblem>(r, weights);
+        var mutatorArray = mutators.ToImmutableArray();
+        return new ChooseOneMutator<TCandidate, TSearchSpace, TProblem>(mutatorArray);
     }
+
     public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
       where TSearchSpace : class, ISearchSpace<TCandidate>
       where TProblem : class, IProblem<TCandidate, TSearchSpace>

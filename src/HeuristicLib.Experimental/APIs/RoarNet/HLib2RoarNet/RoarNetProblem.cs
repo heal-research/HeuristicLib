@@ -23,26 +23,6 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
 {
-    /// <summary>
-    /// this is the only entry point needed 
-    /// </summary>
-    /// <typeparam name="TG"></typeparam>
-    /// <typeparam name="TS"></typeparam>
-    /// <typeparam name="TP"></typeparam>
-    /// <typeparam name="TM1"></typeparam>
-    /// <typeparam name="TM2"></typeparam>
-    /// <typeparam name="TM3"></typeparam>
-    /// <param name="Problem"></param>
-    /// <param name="Evaluator"></param>
-    /// <param name="BoundsEvaluator"></param>
-    /// <param name="ConstructionNeighborhood"></param>
-    /// <param name="DestructionNeighborhood"></param>
-    /// <param name="LocalNeighborhood"></param>
-    /// <param name="EmptyCreator"></param>
-    /// <param name="RandomCreator"></param>
-    /// <param name="HeuristicCreator"></param>
-    /// <param name="Rng"></param>
-    /// <param name="Registry"></param>
     public RoarNetProblem(
         TP Problem,
         IEvaluator<TG, TS, TP> Evaluator,

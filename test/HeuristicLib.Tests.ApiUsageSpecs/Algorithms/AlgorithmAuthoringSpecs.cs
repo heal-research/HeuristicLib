@@ -178,7 +178,7 @@ public class AlgorithmAuthoringSpecs
     }
 
     private sealed record CountingCreator
-        : Creator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingCreator.ExecutionState>
+        : StatefulCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingCreator.ExecutionState>
     {
         public sealed class ExecutionState
         {

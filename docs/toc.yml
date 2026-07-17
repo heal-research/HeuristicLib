@@ -24,6 +24,9 @@
       href: objective-vectors-and-evaluated-candidates.md
     - name: Operators
       href: operators.md
+      items:
+        - name: Operator composition
+          href: operator-composition.md
     - name: Algorithm
       href: algorithm.md
     - name: Search state

@@ -6,77 +6,64 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public abstract record Replacer<TCandidate, TSearchSpace, TProblem, TExecutionState>
-  : IReplacer<TCandidate, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TExecutionState : class
+/// <remarks>
+/// Derive directly from this base when the replacer owns child execution instances or needs direct control over its execution structure.
+/// Use <see cref="StatelessReplacer{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
+/// Use <see cref="StatefulReplacer{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
+/// </remarks>
+public abstract record Replacer<TCandidate, TSearchSpace, TProblem>
+    : IReplacer<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected abstract TExecutionState CreateInitialState();
+    protected abstract IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IExecutionInstanceResolver resolver);
 
-    protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TExecutionState executionState,
-      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-    public IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new ReplacerInstance(this, CreateInitialState());
-
-    private sealed class ReplacerInstance(Replacer<TCandidate, TSearchSpace, TProblem, TExecutionState> replacer, TExecutionState executionState)
-      : IReplacerInstance<TCandidate, TSearchSpace, TProblem>
-    {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-        {
-            return replacer.Replace(previousPopulation, offspringPopulation, objective, count, executionState, random, searchSpace, problem);
-        }
-    }
+    IReplacerInstance<TCandidate, TSearchSpace, TProblem> IExecutionInstanceResolvable<IReplacerInstance<TCandidate, TSearchSpace, TProblem>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateReplacerInstance(instanceRegistry);
 }
 
-public abstract record Replacer<TCandidate, TSearchSpace, TExecutionState>
-  : IReplacer<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TExecutionState : class
+public abstract record Replacer<TCandidate, TSearchSpace>
+    : IReplacer<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected abstract TExecutionState CreateInitialState();
+    protected abstract IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateReplacerInstance(IExecutionInstanceResolver resolver);
 
-    protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TExecutionState executionState,
-      IRandomNumberGenerator random, TSearchSpace searchSpace);
-
-    public IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new ReplacerInstance(this, CreateInitialState());
-
-    private sealed class ReplacerInstance(Replacer<TCandidate, TSearchSpace, TExecutionState> replacer, TExecutionState executionState)
-      : IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
-    {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem)
-        {
-            return replacer.Replace(previousPopulation, offspringPopulation, objective, count, executionState, random, searchSpace);
-        }
-    }
+    IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> IExecutionInstanceResolvable<IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateReplacerInstance(instanceRegistry);
 }
 
-public abstract record Replacer<TCandidate, TExecutionState>
-  : IReplacer<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
-  where TExecutionState : class
+public abstract record Replacer<TCandidate>
+    : IReplacer<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    protected abstract TExecutionState CreateInitialState();
+    protected abstract IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateReplacerInstance(IExecutionInstanceResolver resolver);
 
-    protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TExecutionState executionState,
-      IRandomNumberGenerator random);
-
-    public IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new ReplacerInstance(this, CreateInitialState());
-
-    private sealed class ReplacerInstance(Replacer<TCandidate, TExecutionState> replacer, TExecutionState executionState)
-      : IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
-    {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
-        {
-            return replacer.Replace(previousPopulation, offspringPopulation, objective, count, executionState, random);
-        }
-    }
+    IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> IExecutionInstanceResolvable<IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateReplacerInstance(instanceRegistry);
 }
 
+public abstract class ReplacerInstance<TCandidate, TSearchSpace, TProblem>
+    : IReplacerInstance<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+}
 
+public abstract class ReplacerInstance<TCandidate, TSearchSpace>
+    : IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+{
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+        Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace);
+}
+
+public abstract class ReplacerInstance<TCandidate>
+    : IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+{
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
+
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        Replace(previousPopulation, offspringPopulation, objective, count, random);
+}

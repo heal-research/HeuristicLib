@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\HeuristicLib\HeuristicLib.csproj" />
+        <ProjectReference Include="..\..\analyzers\HeuristicLib.Analyzers\HeuristicLib.Analyzers.csproj" />
     </ItemGroup>
 
     <ItemGroup>

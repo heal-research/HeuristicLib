@@ -2,7 +2,6 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -140,7 +139,7 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5), timeProvider);
-        var instance = terminator.CreateExecutionInstance(new ExecutionInstanceRegistry(TestRun.Instance));
+        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(terminator);
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
 

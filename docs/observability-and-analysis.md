@@ -81,7 +81,7 @@ This is intentionally **post-hoc**: it observes the produced offspring.
 
 ## Attaching observers
 
-Most observable wrappers provide convenience extension methods.
+The preferred way to attach observers is through the fluent extension methods provided by the observable wrappers.
 
 For mutators:
 
@@ -98,6 +98,38 @@ var observed = mutator.ObserveWith(offspring => {
   // e.g. record offspring.Count, log stats, update metrics
 });
 ```
+
+## Public instrumentation operators
+
+Instrumentation is represented by regular public operator configurations. Each operator role provides the same three forms:
+
+- `Observable*` invokes one or more observers after a successful call.
+- `Counting*` updates an `ObservationCounter` after a successful call. Batched roles can count either calls or candidates through `OperatorCountMetric`.
+- `DurationMeasuring*` updates an `ObservationDuration` with time spent inside the wrapped operation. It records duration even when the wrapped call throws.
+
+Prefer the fluent methods for ordinary instrumentation. They keep instrumentation close to the operator being wrapped and are usually the most concise and readable authoring style:
+
+```csharp
+var observed = mutator.ObserveWith(offspring => Record(offspring));
+var counted = mutator.CountMutatedCandidates(counter);
+var measured = mutator.MeasureMutatorDuration(duration, timeProvider);
+```
+
+The fluent methods return the concrete instrumentation types, so their configuration remains available for inspection. The public wrapper constructors are an explicit alternative for factories or advanced composition where naming the configuration type directly is useful:
+
+```csharp
+var counted = new CountingMutator<TCandidate, TSearchSpace, TProblem>(
+    mutator,
+    counter,
+    OperatorCountMetric.Candidates);
+
+var measured = new DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>(
+    mutator,
+    duration,
+    timeProvider);
+```
+
+The wrapper exposes the instrumented operator and its sink as properties regardless of how it was created.
 
 ## External sinks: `ObservationCounter`
 
@@ -118,7 +150,7 @@ var observed = mutator.CountMutatorCalls(counter);
 // later: counter.CurrentCount contains total mutator calls
 ```
 
-For `ObservableMutator`, `CountMutatorCalls(...)` increments once per mutation call.
+`CountMutatorCalls(...)` creates a `CountingMutator` that increments once per successful mutation call.
 
 Use `CountMutatedCandidates(...)` when the budget should count the mutated candidates returned by those batched mutation calls instead:
 
