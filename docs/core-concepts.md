@@ -17,8 +17,8 @@ The goal is a single dominant mental model:
 | Evaluated candidate  | Candidate + objective vector                            | `EvaluatedCandidate<TCandidate>`                                                                            |
 | Problem              | Owns search space, evaluation, and objective directions | `IProblem<TCandidate, TSearchSpace>`                                                                        |
 | Search state         | The public progress value produced by algorithms        | `ISearchState`                                                                                              |
-| Algorithm loop       | The step-based algorithm authoring model                | `IterativeAlgorithm<...>`                                                                                   |
-| Execution state      | Hidden per-run mutable execution state                  | `TExecutionState` on `IterativeAlgorithm<...>`                                                              |
+| Algorithm loop       | The step based algorithm authoring model                 | `IterativeAlgorithmInstance<...>`                                                                           |
+| Execution instance   | Run scoped behavior, resolved dependencies and mutable data | `AlgorithmInstance<...>` or an operator instance contract                                                |
 | Operators            | Pluggable building blocks used by algorithms            | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor` |
 
 ## How the types fit together
@@ -36,14 +36,14 @@ This is deliberate: once you’ve understood one family of types, the rest of th
 
 During execution, the loop looks like this:
 
-1. `CreateInitialExecutionState(resolver)` resolves dependencies and prepares per-run mutable state.
-2. `ExecuteStep(previousState, executionState, problem, random)` produces the next public state.
-3. Optional: `Interceptor.Transform(newState, previousState, ...)` post-processes the state.
+1. The algorithm configuration resolves child execution instances and creates an algorithm execution instance.
+2. `ExecuteStep(previousState, problem, random)` on the iterative execution instance produces the next public state.
+3. Optional: `Interceptor.Transform(newState, previousState, ...)` post processes the state.
 4. Streaming continues until the algorithm completes or an external termination wrapper stops it.
 
 The public search state is the “unit of progress”: it is what streaming execution yields, and it’s what termination and interception reason about.
 
-The execution state is the hidden carrier for resolved execution instances and per-run mutable data.
+The algorithm execution instance owns resolved child instances, private execution data and the execution behavior. Configurations remain reusable and unchanged during execution.
 
 ## Where to dive deeper
 

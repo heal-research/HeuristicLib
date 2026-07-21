@@ -16,7 +16,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected abstract IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver);
+    protected abstract IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry);
 
     IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> IExecutionInstanceResolvable<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         CreateInterceptorInstance(instanceRegistry);
@@ -27,7 +27,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TSearchState>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected abstract IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver);
+    protected abstract IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry);
 
     IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> IExecutionInstanceResolvable<IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         CreateInterceptorInstance(instanceRegistry);
@@ -37,7 +37,7 @@ public abstract record Interceptor<TCandidate, TSearchState>
     : IInterceptor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
-    protected abstract IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver);
+    protected abstract IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry);
 
     IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> IExecutionInstanceResolvable<IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         CreateInterceptorInstance(instanceRegistry);

@@ -113,7 +113,7 @@ public class OperatorAuthoringAnalyzerTests
 
               public sealed class Helper
               {
-                  public IExecutionInstanceResolver? Resolver { get; set; }
+                  public ExecutionInstanceRegistry? Registry { get; set; }
               }
 
               protected override State CreateInitialState() => new();
@@ -175,7 +175,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public IExecutionInstanceResolver? Resolver { get; set; }
+                  public ExecutionInstanceRegistry? Registry { get; set; }
               }
 
               protected override State CreateInitialState() => new();
@@ -184,7 +184,7 @@ public class OperatorAuthoringAnalyzerTests
 
         var diagnostic = diagnostics.ShouldHaveSingleItem();
         diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("Resolver");
+        diagnostic.GetMessage().ShouldContain("Registry");
     }
 
     [Fact]

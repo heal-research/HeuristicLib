@@ -21,7 +21,7 @@ public abstract record StatefulReplacer<TCandidate, TSearchSpace, TProblem, TSta
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulReplacer<TCandidate, TSearchSpace, TProblem, TState> replacer, TState state) : IReplacerInstance<TCandidate, TSearchSpace, TProblem>
     {
@@ -38,7 +38,7 @@ public abstract record StatefulReplacer<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateReplacerInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateReplacerInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulReplacer<TCandidate, TSearchSpace, TState> replacer, TState state) : IReplacerInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     {
@@ -54,7 +54,7 @@ public abstract record StatefulReplacer<TCandidate, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random);
 
-    protected sealed override IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateReplacerInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateReplacerInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulReplacer<TCandidate, TState> replacer, TState state) : IReplacerInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
     {

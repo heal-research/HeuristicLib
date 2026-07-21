@@ -16,8 +16,8 @@ public abstract record WrappingReplacer<TCandidate, TSearchSpace, TProblem>
         InnerReplacer = innerReplacer;
     }
 
-    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IExecutionInstanceResolver resolver) =>
-        CreateReplacerInstance(resolver.Resolve(InnerReplacer));
+    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) =>
+        CreateReplacerInstance(registry.Resolve(InnerReplacer));
 
     protected abstract WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer);
 }

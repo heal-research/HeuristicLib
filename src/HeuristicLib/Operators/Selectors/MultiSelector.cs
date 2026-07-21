@@ -19,8 +19,8 @@ public abstract partial record MultiSelector<TCandidate, TSearchSpace, TProblem>
         InnerSelectors = innerSelectors;
     }
 
-    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(IExecutionInstanceResolver resolver) =>
-        CreateSelectorInstance([.. InnerSelectors.Select(resolver.Resolve)]);
+    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ExecutionInstanceRegistry registry) =>
+        CreateSelectorInstance([.. InnerSelectors.Select(registry.Resolve)]);
 
     protected abstract MultiSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> innerSelectors);
 }

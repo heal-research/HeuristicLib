@@ -34,9 +34,7 @@ Important properties:
 - the same configuration object resolves to the same execution instance within one registry
 - different runs can use different registries and therefore different execution graphs
 
-`ExecutionInstanceRegistry` also implements `IExecutionInstanceResolver`, the narrow API that high-level authoring bases receive.
-
-That means ordinary authoring code can resolve the execution instances it needs without depending on the full registry API.
+Explicit operator and algorithm instance creation methods receive the registry. Ordinary creation methods should resolve their declared children eagerly. Meta algorithms, budget wrappers and other execution graph compositions may additionally create child registries, register replacements or control execution instance reuse.
 
 ## Registry replacements
 
@@ -54,7 +52,7 @@ Most users should not call these methods directly. They are intended for meta-al
 
 The current intended model is eager, local resolution:
 
-1. When an algorithm creates its execution instance, it resolves the operators it will use into execution state.
+1. When an algorithm creates its execution instance, it resolves the operators it will use and passes them to that instance.
 2. When a wrapping or multi operator creates its execution instance, it resolves its declared inner operators once.
 3. Authored operator instances store resolved children as private instance data.
 
@@ -66,19 +64,21 @@ A role specific stateful operator base creates one state object whenever it crea
 
 Registry identity determines state sharing. Resolving the same configuration object repeatedly through one registry returns the same execution instance and state. Independent registries create independent instances and state objects. A child registry may reuse an instance from its parent registry, so it also reuses that instance's state.
 
+A child registry inherits replacement policy and may reuse instances already resolved by its parent. Runtime composing meta algorithms create child algorithm instances directly through child registries. This gives each requested stage or cycle a new algorithm instance without preventing intentional sharing of operator configurations from the parent execution graph.
+
 Stateful operator calls are not inherently thread safe. An operator may use ordinary mutable state, but concurrent use is valid only when the owning execution path provides suitable synchronization or the state implementation is itself safe for concurrent access.
 
 Execution instances currently have no disposal contract. Framework managed state must therefore not own resources that require deterministic cleanup. Such ownership requires an explicitly authored execution instance and a defined lifecycle mechanism.
 
 ## When you should care
 
-You usually only need to think about execution instances when you work on:
+Explicitly authored execution instances matter when working on:
 
-- meta-algorithms
-- advanced analyzer/observation plumbing
-- very low-level custom algorithms or operators that intentionally bypass the higher-level authoring bases
+* algorithms and meta algorithms
+* advanced analyzer and observation plumbing
+* operators that coordinate child execution instances or need custom execution structure
 
-If you are implementing a normal operator or a normal iterative algorithm, this page is background knowledge, not the first tool you should reach for.
+Every algorithm uses an authored execution instance. Ordinary operators can instead use stateless or framework managed state authoring bases when they do not coordinate execution graph dependencies.
 
 ## Related pages
 

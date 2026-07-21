@@ -94,12 +94,12 @@ public static class MetaOptimizationProblemExamples
         });
     }
 
-    public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, EvolutionStrategyState<TCandidate>> EvolutionStrategyMetaOptimizationProblem<TCandidate, TSearchSpace, TProblem>(
+    public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> EvolutionStrategyMetaOptimizationProblem<TCandidate, TSearchSpace, TProblem>(
       this TProblem problem,
       ICreator<TCandidate, TSearchSpace, TProblem>[] creators,
       ICrossover<TCandidate, TSearchSpace, TProblem>[] crossovers,
       IEvaluator<TCandidate, TSearchSpace, TProblem>[] evaluators,
-      IInterceptor<TCandidate, TSearchSpace, TProblem, EvolutionStrategyState<TCandidate>>[] interceptors,
+      IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>[] interceptors,
       IMutator<TCandidate, TSearchSpace, TProblem>[] mutators,
       EvolutionStrategyType[] strategies,
       IReplacer<TCandidate, TSearchSpace, TProblem>[] replacers,
@@ -127,9 +127,9 @@ public static class MetaOptimizationProblemExamples
         var realVectorSearchSpace = new RealVectorSearchSpace(1, mutationRate.min, mutationRate.max);
         var combinedSearchSpace = realVectorSearchSpace.WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(integerVectorSearchSpace);
 
-        return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, EvolutionStrategyState<TCandidate>>(problem, combinedSearchSpace, AlgBuilder);
+        return new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(problem, combinedSearchSpace, AlgBuilder);
 
-        IAlgorithm<TCandidate, TSearchSpace, TProblem, EvolutionStrategyState<TCandidate>> AlgBuilder(CompositeGenotype<RealVector, IntegerVector> x)
+        IAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> AlgBuilder(CompositeGenotype<RealVector, IntegerVector> x)
         {
             var ints = x.Part2;
             return new EvolutionStrategy<TCandidate, TSearchSpace, TProblem>

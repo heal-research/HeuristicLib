@@ -19,8 +19,8 @@ public abstract partial record MultiReplacer<TCandidate, TSearchSpace, TProblem>
         InnerReplacers = innerReplacers;
     }
 
-    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IExecutionInstanceResolver resolver) =>
-        CreateReplacerInstance([.. InnerReplacers.Select(resolver.Resolve)]);
+    protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) =>
+        CreateReplacerInstance([.. InnerReplacers.Select(registry.Resolve)]);
 
     protected abstract MultiReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ImmutableArray<IReplacerInstance<TCandidate, TSearchSpace, TProblem>> innerReplacers);
 }

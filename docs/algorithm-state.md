@@ -26,6 +26,8 @@ Built-in examples include `PopulationState<TCandidate>` and `SingleEvaluatedCand
 
 Iteration counts are not part of the search-state contract. In nested, wrapped, or cycled executions there is no single globally meaningful notion of “the current iteration”, so that kind of counting remains an execution concern rather than public search state.
 
+Private counters, resolved operators, caches and other execution data belong to the algorithm execution instance. Search state should contain only progress that the algorithm intentionally exposes to stream consumers.
+
 ## Iteration semantics
 
 `IterativeAlgorithm<...>` internally advances a loop-local counter for its execution loop and uses it for tasks like deterministic RNG forking.

@@ -16,8 +16,8 @@ public abstract record WrappingMutator<TCandidate, TSearchSpace, TProblem>
         InnerMutator = innerMutator;
     }
 
-    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(IExecutionInstanceResolver resolver) =>
-        CreateMutatorInstance(resolver.Resolve(InnerMutator));
+    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
+        CreateMutatorInstance(registry.Resolve(InnerMutator));
 
     protected abstract WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> innerMutator);
 }

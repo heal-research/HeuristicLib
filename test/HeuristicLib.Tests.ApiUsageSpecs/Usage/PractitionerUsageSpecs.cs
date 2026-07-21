@@ -291,7 +291,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxEvaluatorCalls(2)
+            .WithMaxEvaluatorCalls(algorithm.Evaluator, 2)
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -314,14 +314,14 @@ public class PractitionerUsageSpecs
         };
 
         var statesByEvaluatorCalls = algorithm
-            .WithMaxEvaluatorCalls(2)
+            .WithMaxEvaluatorCalls(algorithm.Evaluator, 2)
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
             .ToList();
         var statesByEvaluatedCandidates = algorithm
-            .WithMaxEvaluatedCandidates(2)
+            .WithMaxEvaluatedCandidates(algorithm.Evaluator, 2)
             .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -344,6 +344,7 @@ public class PractitionerUsageSpecs
 
         var states = algorithm
             .WithMaxEvaluatorDuration(
+                algorithm.Evaluator,
                 TimeSpan.FromSeconds(3),
                 new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
             .RunStreaming(
@@ -600,7 +601,6 @@ public class PractitionerUsageSpecs
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Crossover = null,
             Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
-            InitialMutationStrength = 0.15,
             MaximumGenerations = 5
         };
 

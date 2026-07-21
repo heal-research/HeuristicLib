@@ -488,8 +488,8 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingEvaluator(IEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Evaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateEvaluatorInstance(IExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Inner));
+        protected override EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Inner));
 
         private sealed class Instance(IEvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : EvaluatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
@@ -524,8 +524,8 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingSelector(ISelector<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Selector<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override SelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSelectorInstance(IExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Inner));
+        protected override SelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSelectorInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Inner));
 
         private sealed class Instance(ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : SelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
@@ -557,8 +557,8 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingReplacer(IReplacer<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Replacer<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override ReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateReplacerInstance(IExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Inner));
+        protected override ReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Inner));
 
         private sealed class Instance(IReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : ReplacerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
@@ -595,8 +595,8 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingInterceptor(IInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> Inner)
         : Interceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        protected override InterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Inner));
+        protected override InterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Inner));
 
         private sealed class Instance(IInterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> inner)
             : InterceptorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
@@ -626,8 +626,8 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingTerminator(ITerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> Inner)
         : Terminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        protected override TerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateTerminatorInstance(IExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Inner));
+        protected override TerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Inner));
 
         private sealed class Instance(ITerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState> inner)
             : TerminatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
@@ -639,8 +639,8 @@ public class OperatorAuthoringSpecs
     private sealed record ForwardingCrossover(ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Crossover<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override CrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateCrossoverInstance(IExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Inner));
+        protected override CrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Inner));
 
         private sealed class Instance(ICrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : CrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
@@ -707,8 +707,8 @@ public class OperatorAuthoringSpecs
     private sealed record ApplyTwiceMutator(IMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
         : Mutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateMutatorInstance(IExecutionInstanceResolver resolver) =>
-            new Instance(resolver.Resolve(Inner));
+        protected override IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Inner));
 
         private sealed class Instance(IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : MutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>

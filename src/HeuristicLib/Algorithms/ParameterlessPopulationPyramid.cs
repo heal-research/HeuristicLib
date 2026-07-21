@@ -38,8 +38,8 @@
 //    }
 //  }
 
-//  protected override State CreateInitialExecutionState(IExecutionInstanceResolver resolver) => new () {
-//    Evaluator = resolver.Resolve(Evaluator)
+//  protected override State CreateInitialExecutionState(ExecutionInstanceRegistry registry) => new () {
+//    Evaluator = registry.Resolve(Evaluator)
 //  };
 
 //  protected override ParameterlessPopulationPyramidResultState ExecuteStep(ParameterlessPopulationPyramidResultState? previousState, State executionState, TProblem problem, IRandomNumberGenerator random)

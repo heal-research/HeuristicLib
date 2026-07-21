@@ -18,8 +18,8 @@ public abstract record WrappingTerminator<TCandidate, TSearchSpace, TProblem, TS
         InnerTerminator = innerTerminator;
     }
 
-    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(IExecutionInstanceResolver resolver) =>
-        CreateTerminatorInstance(resolver.Resolve(InnerTerminator));
+    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) =>
+        CreateTerminatorInstance(registry.Resolve(InnerTerminator));
 
     protected abstract WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator);
 }

@@ -91,9 +91,8 @@ State must not contain or provide access to:
 3. Operator execution instances
 4. Algorithm execution instances
 5. Other execution instances
-6. Execution instance resolvers
-7. Execution instance registries
-8. Delegates bound to child execution instances
+6. Execution instance registries
+7. Delegates bound to child execution instances
 
 An operator needing any of these belongs on the explicit execution instance path.
 
@@ -141,15 +140,15 @@ The exact role specific base names must be settled through executable API usage 
 
 The preferred direction to prototype is option 1. Option 2 remains the fallback when a base does not remove meaningful boilerplate. Names such as `ExplicitExecutionInstanceCreator` are considered too verbose unless no clearer API emerges.
 
-Any explicit path base must do useful work, such as adapting a protected resolver based factory to the public registry contract. It must not exist only to classify the derived type.
+Any explicit path base must do useful work, such as explicitly implementing the public execution instance creation contract and exposing a role specific protected instance creation method. It must not exist only to classify the derived type.
 
-The mutator prototype resolved this checkpoint in favor of option 1. `Mutator` provides the common resolver factory plumbing. `StatelessMutator`, `StatefulMutator`, `WrappingMutator` and `MultiMutator` derive from it. Authors derive directly from `Mutator` and return a `MutatorInstance` when they need full control. Each remaining operator role should validate the same naming pattern through usage specs before migration.
+The mutator prototype resolved this checkpoint in favor of option 1. `Mutator` provides the common execution instance creation plumbing. `StatelessMutator`, `StatefulMutator`, `WrappingMutator` and `MultiMutator` derive from it. Authors derive directly from `Mutator` and return a `MutatorInstance` when they need full control. Each remaining operator role should validate the same naming pattern through usage specs before migration.
 
 ## Wrapping And Multi Bases
 
 Wrapping and multi bases describe configuration graph topology. They are shortcuts within the explicit execution instance path because their defining responsibility is resolving child execution instances once and transferring ownership to an authored execution instance.
 
-Do not introduce stateless and stateful variants of wrapping and multi bases by default. That would create a cross product between topology and execution data ownership while providing little additional safety. A wrapping or multi execution instance may own ordinary private execution data as well as its resolved children. When the topology specific factory does not offer enough control, the author can derive directly from the unprefixed role base.
+Do not introduce stateless and stateful variants of wrapping and multi bases by default. That would create a cross product between topology and execution data ownership while providing little additional safety. A wrapping or multi execution instance may own ordinary private execution data as well as its resolved children. When the topology specific creation method does not offer enough control, the author can derive directly from the unprefixed role base.
 
 Introduce an additional topology and state convenience base only if repeated usage specs demonstrate substantial boilerplate that cannot be removed through composition or a small protected helper.
 
@@ -159,11 +158,17 @@ Algorithms exclusively use the explicit execution instance path.
 
 Algorithms normally coordinate operators and also own execution lifecycle concerns such as streaming, continuation, completion and private execution data. A separate algorithm execution instance gives those responsibilities a natural owner even for a small algorithm.
 
-HeuristicLib will not introduce stateless or state object convenience paths for algorithms.
+HeuristicLib does not provide stateless or state object convenience paths for algorithms.
 
-The algorithm configuration acts as the reusable configuration and factory. The algorithm execution instance owns the execution loop, mutable execution data and resolved child execution instances as private fields.
+`Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>` is the common configuration base. It explicitly implements execution instance resolution and exposes `CreateAlgorithmInstance(ExecutionInstanceRegistry)` to derived configurations. The full registry supports meta algorithm child registries and execution wrapper replacements.
 
-Common loop mechanics must remain reusable. An iterative algorithm execution instance base should continue to provide cancellation handling, deterministic random number generator forking, interception and yielded state semantics. Moving ownership into the execution instance must not force every algorithm author to duplicate that machinery.
+`IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>` resolves its optional interceptor once and delegates instance creation to `CreateIterativeAlgorithmInstance(...)`. The algorithm execution instance owns the execution loop, mutable execution data and resolved child execution instances as private fields.
+
+`IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>` provides cancellation handling, deterministic random number generator forking, interception and yielded state semantics. Its streaming entry point is sealed so concrete iterative algorithms cannot bypass that lifecycle.
+
+Algorithm instance bases do not retain `Run` or `ExecutionInstanceRegistry`. Ordinary algorithms receive resolved dependencies through their instance constructors. Runtime composing meta algorithms such as pipelines and cycles may retain their originating registry. They directly create child algorithm instances through normal child registries when configurations must be instantiated during execution, preserving access to parent operator instances and replacement policy.
+
+`IAlgorithm<...>` does not expose an evaluator. Concrete algorithms declare an evaluator only when they use one. Evaluator budget helpers require the observed evaluator explicitly.
 
 ## Enforcement And Guardrails
 
@@ -175,16 +180,15 @@ The analyzer will report an error when a state member exposes an execution graph
 
 1. `IExecutionInstance`
 2. `IExecutionInstanceResolvable`
-3. `IExecutionInstanceResolver`
-4. `ExecutionInstanceRegistry`
-5. Known operator configuration contracts
-6. Known algorithm configuration contracts
+3. `ExecutionInstanceRegistry`
+4. Known operator configuration contracts
+5. Known algorithm configuration contracts
 
 Inspection must include direct fields and properties as well as arrays, tuples and generic type arguments. For user defined state helper types, inspection should recurse with cycle protection. Arbitrary external implementation graphs should not be recursively inspected because that would create fragile diagnostics.
 
 The diagnostic should identify the offending member and explain that execution graph dependencies require the explicit execution instance path.
 
-The analyzer is a practical guardrail, not a proof of data purity. The stateful authoring API must also avoid providing a resolver or registry that would encourage delayed child resolution.
+The analyzer is a practical guardrail, not a proof of data purity. The stateful authoring API must also avoid providing a registry that would encourage delayed child resolution.
 
 ### Operator Configuration Mutation Analyzer
 
@@ -227,6 +231,6 @@ Backward compatibility is not a goal for this migration. Weak or misleading base
 6. [x] Add the general stateful operator state analyzer using the operator authoring shape rather than a catalog of role specific bases.
 7. [x] Add the general operator configuration mutation analyzer.
 8. [x] Migrate existing operators to the appropriate authoring path.
-9. [ ] Migrate algorithms to explicit algorithm execution instances.
-10. [ ] Update `docs/operators.md`, execution documentation, examples and related API usage specs.
-11. [ ] Run focused tests while migrating, then run the full release test suite and formatting verification.
+9. [x] Migrate algorithms to explicit algorithm execution instances.
+10. [x] Update `docs/operators.md`, execution documentation, examples and related API usage specs.
+11. [x] Run focused tests while migrating, then run the full release test suite and formatting verification.

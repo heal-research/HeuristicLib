@@ -19,8 +19,8 @@ public abstract partial record MultiMutator<TCandidate, TSearchSpace, TProblem>
         InnerMutators = innerMutators;
     }
 
-    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(IExecutionInstanceResolver resolver) =>
-        CreateMutatorInstance([.. InnerMutators.Select(resolver.Resolve)]);
+    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
+        CreateMutatorInstance([.. InnerMutators.Select(registry.Resolve)]);
 
     protected abstract MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators);
 }

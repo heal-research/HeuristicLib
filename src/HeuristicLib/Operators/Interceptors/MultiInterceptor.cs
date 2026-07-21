@@ -21,8 +21,8 @@ public abstract partial record MultiInterceptor<TCandidate, TSearchSpace, TProbl
         InnerInterceptors = innerInterceptors;
     }
 
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) =>
-        CreateInterceptorInstance([.. InnerInterceptors.Select(resolver.Resolve)]);
+    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) =>
+        CreateInterceptorInstance([.. InnerInterceptors.Select(registry.Resolve)]);
 
     protected abstract MultiInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ImmutableArray<IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> innerInterceptors);
 }

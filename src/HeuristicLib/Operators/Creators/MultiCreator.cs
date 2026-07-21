@@ -19,8 +19,8 @@ public abstract partial record MultiCreator<TCandidate, TSearchSpace, TProblem>
         InnerCreators = innerCreators;
     }
 
-    protected sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(IExecutionInstanceResolver resolver) =>
-        CreateCreatorInstance([.. InnerCreators.Select(resolver.Resolve)]);
+    protected sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ExecutionInstanceRegistry registry) =>
+        CreateCreatorInstance([.. InnerCreators.Select(registry.Resolve)]);
 
     protected abstract MultiCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ImmutableArray<ICreatorInstance<TCandidate, TSearchSpace, TProblem>> innerCreators);
 }

@@ -16,8 +16,8 @@ public abstract record WrappingSelector<TCandidate, TSearchSpace, TProblem>
         InnerSelector = innerSelector;
     }
 
-    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(IExecutionInstanceResolver resolver) =>
-        CreateSelectorInstance(resolver.Resolve(InnerSelector));
+    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ExecutionInstanceRegistry registry) =>
+        CreateSelectorInstance(registry.Resolve(InnerSelector));
 
     protected abstract WrappingSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> innerSelector);
 }

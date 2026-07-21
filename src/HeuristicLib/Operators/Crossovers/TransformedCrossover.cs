@@ -19,8 +19,8 @@ public partial record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(I
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected override CrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(IExecutionInstanceResolver resolver) =>
-        new Instance(resolver.Resolve(Crossover), resolver.Resolve(Mutator));
+    protected override CrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) =>
+        new Instance(registry.Resolve(Crossover), registry.Resolve(Mutator));
 
     private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
         : CrossoverInstance<TCandidate, TSearchSpace, TProblem>

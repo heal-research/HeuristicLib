@@ -15,8 +15,8 @@ public partial record TransformedCreator<TCandidate, TSearchSpace, TProblem>(ICr
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(IExecutionInstanceResolver resolver) =>
-        new Instance(resolver.Resolve(Creator), resolver.Resolve(Mutator));
+    protected override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ExecutionInstanceRegistry registry) =>
+        new Instance(registry.Resolve(Creator), registry.Resolve(Mutator));
 
     private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
         : CreatorInstance<TCandidate, TSearchSpace, TProblem>

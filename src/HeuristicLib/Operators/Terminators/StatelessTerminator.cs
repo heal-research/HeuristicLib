@@ -11,7 +11,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchSpace, TProblem, T
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(IExecutionInstanceResolver resolver) => this;
+    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 }
@@ -21,7 +21,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchSpace, TSearchStat
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateTerminatorInstance(IExecutionInstanceResolver resolver) => this;
+    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace);
 
@@ -33,7 +33,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchState>
     : Terminator<TCandidate, TSearchState>, ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
-    protected sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateTerminatorInstance(IExecutionInstanceResolver resolver) => this;
+    protected sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract bool IsTerminalState(TSearchState state);
 
@@ -43,7 +43,7 @@ public abstract record StatelessTerminator<TCandidate, TSearchState>
 public abstract record StatelessTerminator<TCandidate>
     : Terminator<TCandidate>, ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
 {
-    protected sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateTerminatorInstance(IExecutionInstanceResolver resolver) => this;
+    protected sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract bool IsTerminalState();
 

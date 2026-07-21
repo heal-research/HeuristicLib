@@ -21,8 +21,8 @@ public abstract partial record MultiTerminator<TCandidate, TSearchSpace, TProble
         InnerTerminators = innerTerminators;
     }
 
-    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(IExecutionInstanceResolver resolver) =>
-        CreateTerminatorInstance([.. InnerTerminators.Select(resolver.Resolve)]);
+    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) =>
+        CreateTerminatorInstance([.. InnerTerminators.Select(registry.Resolve)]);
 
     protected abstract MultiTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ImmutableArray<ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators);
 }

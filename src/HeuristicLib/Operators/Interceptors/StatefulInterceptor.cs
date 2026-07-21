@@ -21,7 +21,7 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, T
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state) : IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
@@ -39,7 +39,7 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TSearchStat
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, TSearchSpace searchSpace);
 
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state) : IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
     {
@@ -56,7 +56,7 @@ public abstract record StatefulInterceptor<TCandidate, TSearchState, TState>
 
     protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state);
 
-    protected sealed override IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state) : IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     {

@@ -56,6 +56,7 @@ This is the intended everyday style:
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -63,66 +64,46 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
-  : IterativeAlgorithm<
-      TCandidate,
-      TSearchSpace,
-      TProblem,
-      SingleEvaluatedCandidateState<TCandidate>,
-      MyAlgorithm<TCandidate, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-  public new sealed class ExecutionState
-    : IterativeAlgorithm<
-        TCandidate,
-        TSearchSpace,
-        TProblem,
-        SingleEvaluatedCandidateState<TCandidate>,
-        ExecutionState>.ExecutionState
-  {
-    public required ICreatorInstance<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-  }
-
   public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
 
-  protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
-  {
-    return new ExecutionState {
-      Evaluator = resolver.Resolve(Evaluator),
-      Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
-      Creator = resolver.Resolve(Creator)
-    };
-  }
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
+        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
+        new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator));
 
-  protected override SingleEvaluatedCandidateState<TCandidate> ExecuteStep(
-    SingleEvaluatedCandidateState<TCandidate>? previousState,
-    ExecutionState executionState,
-    TProblem problem,
-    IRandomNumberGenerator random)
-  {
-    var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-    var objectiveVector = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
-
-    return new SingleEvaluatedCandidateState<TCandidate> {
-      Population = Population.From([candidate], [objectiveVector])
-    };
+    private sealed class Instance(
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
+        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
+        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
+    {
+        private int producedStates  ;  
+    
+        protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
+        {
+            producedStates++;
+            var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
+            var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+    
+            return new SingleSolutionState<TCandidate> {
+        Population = Population.From([candidate], [objectiveVector])
+      };
+    }
   }
 }
 ```
 
 Here the public search state is the current evaluated candidate. If your algorithm needs other public progress data, add it explicitly to your concrete search-state type.
 
-When the algorithm depends on operators, resolve them in `CreateInitialExecutionState(...)` and store the resulting execution instances and other per-run mutable data in the nested `ExecutionState`.
+The reusable configuration contains settings and child operator configurations. The nested instance owns resolved child operator instances, step behavior and mutable run data such as `producedStates`. The iterative base resolves and invokes the optional interceptor as part of its sealed streaming lifecycle.
 
 ## What not to learn first
 
-You do not need to start with:
-
-- manual execution-instance classes
-- full registry control
-- meta-algorithms
-
-Those are real parts of the system, but they are not the intended first extension path anymore.
+You do not need full registry control or meta algorithm infrastructure to implement an ordinary algorithm. Resolve declared children eagerly in the instance creation method then keep execution behavior inside the nested instance.
 
 ## Next steps
 

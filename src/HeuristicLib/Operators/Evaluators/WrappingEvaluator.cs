@@ -16,8 +16,8 @@ public abstract record WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
         InnerEvaluator = innerEvaluator;
     }
 
-    protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IExecutionInstanceResolver resolver) =>
-        CreateEvaluatorInstance(resolver.Resolve(InnerEvaluator));
+    protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>
+        CreateEvaluatorInstance(registry.Resolve(InnerEvaluator));
 
     protected abstract WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator);
 }

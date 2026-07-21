@@ -115,16 +115,11 @@ public class CycleAlgorithmAnalysisTests
         }
     }
 
-    private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>,
-        IProblem<int, DummySearchSpace<int>>, PopulationState<int>, SingleStepAlgorithm.ExecutionState>
+    private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public new sealed class ExecutionState
-            : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ExecutionState>.ExecutionState
-        {
-            public required IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; init; }
-        }
-
         public int Candidate { get; }
+
+        public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; }
 
         public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; }
 
@@ -135,18 +130,14 @@ public class CycleAlgorithmAnalysisTests
             Evaluator = evaluator;
         }
 
-        protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver) => new()
-        {
-            Evaluator = resolver.Resolve(Evaluator),
-            Interceptor = resolver.Resolve(Interceptor)
-        };
+        protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Evaluator), registry.Resolve(Interceptor), Candidate);
 
-        protected override IAlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(Run run, ExecutionState executionState) =>
-            new Instance(run, executionState.Evaluator, executionState.Interceptor, Candidate);
-
-        private sealed class Instance(Run run, IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor, int candidate)
-            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(run, evaluator)
+        private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor, int candidate)
+            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
         {
+            private readonly IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator = evaluator;
+
             private readonly IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor = interceptor;
 
             private readonly int candidate = candidate;
@@ -155,7 +146,7 @@ public class CycleAlgorithmAnalysisTests
             {
                 ct.ThrowIfCancellationRequested();
 
-                var objectiveVector = Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
+                var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
                 var currentState = new PopulationState<int>
                 {
                     Population = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)])

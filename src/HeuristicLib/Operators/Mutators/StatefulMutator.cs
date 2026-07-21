@@ -21,7 +21,7 @@ public abstract record StatefulMutator<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(IExecutionInstanceResolver resolver) =>
+    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulMutator<TCandidate, TSearchSpace, TProblem, TState> mutator, TState state)
@@ -41,7 +41,7 @@ public abstract record StatefulMutator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateMutatorInstance(IExecutionInstanceResolver resolver) =>
+    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulMutator<TCandidate, TSearchSpace, TState> mutator, TState state)
@@ -60,7 +60,7 @@ public abstract record StatefulMutator<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state, IRandomNumberGenerator random);
 
-    protected sealed override IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateMutatorInstance(IExecutionInstanceResolver resolver) =>
+    protected sealed override IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
         new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulMutator<TCandidate, TState> mutator, TState state)

@@ -179,9 +179,9 @@ See also: Objective direction, Objective vector.
 
 Status: `Canonical`
 
-An algorithm defines a reusable search process.
+An algorithm defines a reusable search process through an algorithm configuration and its run scoped execution instances.
 
-In a run, an algorithm advances search state until the run stops. This may depend on previous search state, private execution state, the problem, randomness and child operators. One-shot algorithms are still algorithms. They produce a search process with a single state.
+In a run, an algorithm execution instance advances search state until the run stops. It owns resolved child operator instances, private execution data and execution behavior. One shot algorithms are still algorithms. They produce a search process with a single state.
 
 Use algorithm for the reusable configuration unless the text explicitly says algorithm execution instance.
 
@@ -327,7 +327,7 @@ Status: `Canonical`
 
 A configuration is a reusable algorithm or operator object that users set up before execution.
 
-A configuration can contain parameters, child configurations, validation or helper logic, and the mechanism that creates execution instances. It is not required to be a passive data object. Mutable execution data belongs in execution state, not in the reusable configuration.
+A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates execution instances. It is not required to be a passive data object. Mutable execution data belongs to an execution instance, either directly or in framework managed operator state.
 
 Use more specific terms when the context benefits from them:
 
@@ -423,21 +423,11 @@ See also: Configuration graph, Execution instance, Run.
 
 Status: `Canonical`
 
-An execution instance registry is the advanced mechanism that resolves configurations to execution instances during a run.
+An execution instance registry resolves configurations to execution instances during a run.
 
-The registry controls execution-instance identity and sharing. Ordinary algorithm and operator authoring should usually use an execution instance resolver rather than managing a registry directly.
+The registry controls execution-instance identity and sharing. Explicit operator and algorithm instance creation methods receive the registry and normally resolve their declared children eagerly. Execution graph compositions may additionally create child registries, register replacements or control instance reuse.
 
-See also: Configuration, Execution graph, Execution instance, Execution instance resolver, Run.
-
-### Execution instance resolver
-
-Status: `Canonical`
-
-An execution instance resolver is the restricted resolving capability used by ordinary authoring code to obtain child execution instances.
-
-It lets an algorithm or operator resolve the configured child algorithms or operators it depends on.
-
-See also: Configuration, Execution graph, Execution instance, Execution instance registry.
+See also: Configuration, Execution graph, Execution instance, Run.
 
 ### Random number generator (RNG)
 

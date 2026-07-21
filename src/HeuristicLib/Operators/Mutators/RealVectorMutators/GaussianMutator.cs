@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -6,8 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
 public record GaussianMutator
-  : SingleSolutionMutator<RealVector, RealVectorSearchSpace>,
-    IVariableStrengthMutator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>
+    : Mutator<RealVector, RealVectorSearchSpace>, IVariableStrengthMutator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>
 {
     public GaussianMutator(double mutationRate, double mutationStrength)
     {
@@ -15,27 +15,31 @@ public record GaussianMutator
         MutationStrength = mutationStrength;
     }
 
-    public double MutationRate { get; set; }
-    public double MutationStrength { get; set; }
+    public double MutationRate { get; init; }
+    public double MutationStrength { get; init; }
 
-    public override RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
-      => Mutate(solution, random, searchSpace, MutationRate, MutationStrength);
+    protected override IMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
+        CreateVariableStrengthMutatorInstance();
 
-    public static RealVector Mutate(
-      RealVector solution,
-      IRandomNumberGenerator random,
-      RealVectorSearchSpace searchSpace,
-      double mutationRate,
-      double mutationStrength)
-      => Mutate(solution, random, mutationRate, mutationStrength, searchSpace.Minimum, searchSpace.Maximum);
+    IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> IExecutionInstanceResolvable<IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>.CreateExecutionInstance(
+        ExecutionInstanceRegistry instanceRegistry) => CreateVariableStrengthMutatorInstance();
 
-    public static RealVector Mutate(
-      RealVector solution,
-      IRandomNumberGenerator random,
-      double mutationRate,
-      double mutationStrength,
-      RealVector minimum,
-      RealVector maximum)
+    private IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> CreateVariableStrengthMutatorInstance() =>
+        new Instance(MutationRate, MutationStrength);
+
+    private sealed class Instance(double mutationRate, double mutationStrength)
+        : MutatorInstance<RealVector, RealVectorSearchSpace>, IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>
+    {
+        public double CurrentMutationStrength { get; set; } = mutationStrength;
+
+        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) =>
+            BatchExecution.Sequential(parents, (parent, itemRandom) => GaussianMutator.Mutate(parent, itemRandom, searchSpace, mutationRate, CurrentMutationStrength), random);
+    }
+
+    public static RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double mutationRate, double mutationStrength) =>
+        Mutate(solution, random, mutationRate, mutationStrength, searchSpace.Minimum, searchSpace.Maximum);
+
+    public static RealVector Mutate(RealVector solution, IRandomNumberGenerator random, double mutationRate, double mutationStrength, RealVector minimum, RealVector maximum)
     {
         var newElements = solution.ToArray();
         for (var i = 0; i < newElements.Length; i++)

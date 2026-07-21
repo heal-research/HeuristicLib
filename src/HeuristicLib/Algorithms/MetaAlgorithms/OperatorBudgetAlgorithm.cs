@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
-    : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -29,24 +29,19 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
             : throw new ArgumentOutOfRangeException(nameof(MaximumCount), "MaximumCount must be positive.");
     }
 
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator => Algorithm.Evaluator;
-
-    public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    protected override OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
     {
         var counter = new ObservationCounter();
         var countedOperator = CountedOperatorFactory(ObservedOperator, counter);
-        var childRegistry = instanceRegistry.CreateChildRegistry();
+        var childRegistry = registry.CreateChildRegistry();
         childRegistry.RegisterReplacement(ObservedOperator, countedOperator);
 
-        return new OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(
-            childRegistry.Resolve(Algorithm),
-            counter,
-            MaximumCount);
+        return new OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childRegistry.Resolve(Algorithm), counter, MaximumCount);
     }
 }
 
 public sealed class OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -55,21 +50,14 @@ public sealed class OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TP
     private readonly ObservationCounter counter;
     private readonly int maximumCount;
 
-    public OperatorBudgetAlgorithmInstance(
-        IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm,
-        ObservationCounter counter,
-        int maximumCount)
+    public OperatorBudgetAlgorithmInstance(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ObservationCounter counter, int maximumCount)
     {
         this.algorithm = algorithm;
         this.counter = counter;
         this.maximumCount = maximumCount;
     }
 
-    public async IAsyncEnumerable<TSearchState> RunStreamingAsync(
-        TProblem problem,
-        IRandomNumberGenerator random,
-        TSearchState? initialState = null,
-        [EnumeratorCancellation] CancellationToken ct = default)
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         await foreach (var state in algorithm.RunStreamingAsync(problem, random, initialState, ct))
         {

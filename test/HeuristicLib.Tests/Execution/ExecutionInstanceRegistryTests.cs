@@ -122,6 +122,19 @@ public class ExecutionInstanceRegistryTests
         childReplacement.CreateCount.ShouldBe(1);
     }
 
+    [Fact]
+    public void CreateChildRegistry_ReusesResolvedParentInstance()
+    {
+        var parentRegistry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var resolvable = new CountingResolvable("instance");
+        var parentInstance = parentRegistry.Resolve(resolvable);
+
+        var childInstance = parentRegistry.CreateChildRegistry().Resolve(resolvable);
+
+        childInstance.ShouldBeSameAs(parentInstance);
+        resolvable.CreateCount.ShouldBe(1);
+    }
+
     private interface INamedInstance : IExecutionInstance
     {
         string Name { get; }

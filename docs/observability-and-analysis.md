@@ -209,7 +209,7 @@ This is not whole-run elapsed time or active algorithm duration. It increases on
 
 Terminator duration and call-count instrumentation exists for consistency because terminators are operators too. Treat it as an advanced diagnostic or budgeting tool for expensive or shared terminator checks, not as the ordinary way to cap a run.
 
-Budget helpers such as `WithMaxEvaluatorCalls(...)`, `WithMaxMutatorDuration(...)`, and `WithMaxCount(...)` install the observed replacement for the run and attach the matching external early-stopping policy. The helper form exists so ordinary users do not need to manually create a sink, wrap the operator, replace that operator on the algorithm, and wire a separate terminator against the same sink.
+Budget helpers such as `algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, ...)`, `WithMaxMutatorDuration(...)` and `WithMaxCount(...)` install the observed replacement for the run and attach the matching external early stopping policy. Evaluator helpers require the observed evaluator explicitly because the general algorithm contract does not imply that an algorithm has one. The helper form exists so ordinary users do not need to manually create a sink, wrap the operator, replace that operator on the algorithm and wire a separate terminator against the same sink.
 
 ## Relationship to analyzers
 

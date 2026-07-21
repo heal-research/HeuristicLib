@@ -11,7 +11,7 @@ public abstract record StatelessInterceptor<TCandidate, TSearchSpace, TProblem, 
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) => this;
+    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem);
 }
@@ -21,7 +21,7 @@ public abstract record StatelessInterceptor<TCandidate, TSearchSpace, TSearchSta
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) => this;
+    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace);
 
@@ -33,7 +33,7 @@ public abstract record StatelessInterceptor<TCandidate, TSearchState>
     : Interceptor<TCandidate, TSearchState>, IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
-    protected sealed override IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) => this;
+    protected sealed override IInterceptorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState);
 

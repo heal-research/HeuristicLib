@@ -21,7 +21,7 @@ public abstract record StatefulSelector<TCandidate, TSearchSpace, TProblem, TSta
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulSelector<TCandidate, TSearchSpace, TProblem, TState> selector, TState state) : ISelectorInstance<TCandidate, TSearchSpace, TProblem>
     {
@@ -38,7 +38,7 @@ public abstract record StatefulSelector<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateSelectorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateSelectorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulSelector<TCandidate, TSearchSpace, TState> selector, TState state) : ISelectorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     {
@@ -54,7 +54,7 @@ public abstract record StatefulSelector<TCandidate, TState>
 
     protected abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TState state, IRandomNumberGenerator random);
 
-    protected sealed override ISelectorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateSelectorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override ISelectorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateSelectorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulSelector<TCandidate, TState> selector, TState state) : ISelectorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
     {

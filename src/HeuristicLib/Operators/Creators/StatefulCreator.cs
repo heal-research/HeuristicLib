@@ -20,7 +20,7 @@ public abstract record StatefulCreator<TCandidate, TSearchSpace, TProblem, TStat
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    protected sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulCreator<TCandidate, TSearchSpace, TProblem, TState> creator, TState state) : ICreatorInstance<TCandidate, TSearchSpace, TProblem>
     {
@@ -37,7 +37,7 @@ public abstract record StatefulCreator<TCandidate, TSearchSpace, TState>
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    protected sealed override ICreatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateCreatorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override ICreatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateCreatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulCreator<TCandidate, TSearchSpace, TState> creator, TState state) : ICreatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
     {
@@ -53,7 +53,7 @@ public abstract record StatefulCreator<TCandidate, TState>
 
     protected abstract IReadOnlyList<TCandidate> Create(int count, TState state, IRandomNumberGenerator random);
 
-    protected sealed override ICreatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateCreatorInstance(IExecutionInstanceResolver resolver) => new Instance(this, CreateInitialState());
+    protected sealed override ICreatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateCreatorInstance(ExecutionInstanceRegistry registry) => new Instance(this, CreateInitialState());
 
     private sealed class Instance(StatefulCreator<TCandidate, TState> creator, TState state) : ICreatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
     {

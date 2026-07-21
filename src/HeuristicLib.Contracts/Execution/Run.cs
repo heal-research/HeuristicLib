@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
@@ -107,6 +108,8 @@ public class Run<TCandidate, TSearchSpace, TProblem, TSearchState> : Run
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
+    private int executionStarted;
+
     public IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; }
 
     public TProblem Problem { get; }
@@ -118,9 +121,17 @@ public class Run<TCandidate, TSearchSpace, TProblem, TSearchState> : Run
         Problem = problem;
     }
 
-    public IAsyncEnumerable<TSearchState> StreamAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<TSearchState> StreamAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        return RootRegistry.Resolve(Algorithm).RunStreamingAsync(Problem, random, initialState, cancellationToken);
+        if (Interlocked.Exchange(ref executionStarted, 1) != 0)
+        {
+            throw new InvalidOperationException("A run can only be executed once. Create a new run for another execution.");
+        }
+
+        await foreach (var state in RootRegistry.Resolve(Algorithm).RunStreamingAsync(Problem, random, initialState, cancellationToken))
+        {
+            yield return state;
+        }
     }
 
     public async Task<TSearchState> CompleteAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken cancellationToken = default)

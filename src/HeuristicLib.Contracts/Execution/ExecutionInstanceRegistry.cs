@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace HEAL.HeuristicLib.Execution;
 
-public class ExecutionInstanceRegistry : IExecutionInstanceResolver
+public class ExecutionInstanceRegistry
 {
     public Run Run { get; }
 

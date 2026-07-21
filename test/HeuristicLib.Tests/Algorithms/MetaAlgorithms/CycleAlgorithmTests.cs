@@ -1,6 +1,8 @@
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
@@ -14,12 +16,80 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
 public class CycleAlgorithmTests
 {
+    [Fact]
+    public void CycleAlgorithm_RequiresAtLeastOneAlgorithm()
+    {
+        var exception = Should.Throw<ArgumentException>(() =>
+            new CycleAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([]));
+
+        exception.ParamName.ShouldBe("algorithms");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void CycleAlgorithm_RequiresPositiveMaximumCycles(int maximumCycles)
+    {
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            new CycleAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([new AdditiveStepAlgorithm(1)])
+            {
+                MaximumCycles = maximumCycles
+            });
+    }
+
+    [Fact]
+    public void CycleAlgorithm_RetriesCyclesWithoutProgressUntilMaximumCycles()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var algorithm = new NoProgressAlgorithm();
+        var cycle = new CycleAlgorithm<NoProgressAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm])
+        {
+            MaximumCycles = 3
+        };
+
+        var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+
+        states.ShouldBeEmpty();
+        algorithm.InstanceCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public void CycleAlgorithm_ContinuesWhenALaterChildProducesProgress()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var cycle = new CycleAlgorithm<IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>, int,
+            DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([new NoProgressAlgorithm(), new AdditiveStepAlgorithm(1)])
+        {
+            MaximumCycles = 2
+        };
+
+        var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
+    }
+
+    [Fact]
+    public void CycleAlgorithm_ChecksCancellationBeforeCreatingAChildInstance()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var evaluator = new CountingResolutionEvaluator();
+        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var cycle = new CycleAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm]);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Should.Throw<OperationCanceledException>(() => cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+
+        algorithm.InstanceCount.ShouldBe(0);
+    }
+
     [Fact]
     public void CycleAlgorithm_RunStreaming_RepeatsStagesAndPassesStateAcrossCycles()
     {
@@ -60,6 +130,30 @@ public class CycleAlgorithmTests
         states.Select(GetStateStamp).ShouldBe([1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0]);
     }
 
+    [Theory]
+    [InlineData(true, 2)]
+    [InlineData(false, 1)]
+    public void CycleAlgorithm_UsesConfiguredAlgorithmInstanceLifecycleWhileReusingResolvedParentDependencies(bool newExecutionInstancesPerCycle, int expectedAlgorithmInstances)
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var evaluator = new CountingResolutionEvaluator();
+        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var cycle = new CycleAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm])
+        {
+            MaximumCycles = 2,
+            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+        };
+        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        _ = registry.Resolve(evaluator);
+        var cycleInstance = registry.Resolve(cycle);
+
+        var states = cycleInstance.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
+        algorithm.InstanceCount.ShouldBe(expectedAlgorithmInstances);
+        evaluator.InstanceCount.ShouldBe(1);
+    }
+
     private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateStampedGeneticAlgorithm(
       TestFunctionProblem problem)
     {
@@ -78,6 +172,27 @@ public class CycleAlgorithmTests
 
     private static double GetStateStamp(PopulationState<RealVector> state) =>
       state.Population.EvaluatedCandidates[0].ObjectiveVector[0];
+
+    private sealed record NoProgressAlgorithm
+        : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    {
+        public int InstanceCount { get; private set; }
+
+        protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+        {
+            InstanceCount++;
+            return new Instance();
+        }
+
+        private sealed class Instance : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        {
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            {
+                await Task.CompletedTask;
+                yield break;
+            }
+        }
+    }
 
     private sealed record YieldedStateStampingInterceptor
       : StatefulInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>

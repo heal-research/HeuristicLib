@@ -19,8 +19,8 @@ public abstract partial record MultiCrossover<TCandidate, TSearchSpace, TProblem
         InnerCrossovers = innerCrossovers;
     }
 
-    protected sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(IExecutionInstanceResolver resolver) =>
-        CreateCrossoverInstance([.. InnerCrossovers.Select(resolver.Resolve)]);
+    protected sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) =>
+        CreateCrossoverInstance([.. InnerCrossovers.Select(registry.Resolve)]);
 
     protected abstract MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> innerCrossovers);
 }

@@ -162,8 +162,7 @@ public class PythonGenealogyAnalysis
                         };
                     }
 
-                    var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Crossover, gaAlgorithm.Mutator,
-                        callback);
+                    var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
                     var gaRun = gaAlgorithm.WithMaxIterations(parameters.Iterations)
                                            .CreateRun(problem, analyzers.GetAll());
                     gaRun.Complete(RandomNumberGenerator.Create(parameters.Seed));
@@ -191,12 +190,11 @@ public class PythonGenealogyAnalysis
                     {
                         esAlgorithm = esAlgorithm with
                         {
-                            Interceptor = new IdentityInterceptor<TCandidate, EvolutionStrategyState<TCandidate>>()
+                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
                         };
                     }
 
-                    var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Crossover, esAlgorithm.Mutator,
-                        callback);
+                    var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Evaluator, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
 
                     var esRun = esAlgorithm.WithMaxIterations(parameters.Iterations)
                                            .CreateRun(problem, analyzers.GetAll());
@@ -232,8 +230,7 @@ public class PythonGenealogyAnalysis
                         };
                     }
 
-                    var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Crossover,
-                        nsga2Algorithm.Mutator, callback);
+                    var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
                     var nsga2Run = nsga2Algorithm.WithMaxIterations(parameters.Iterations)
                                                  .CreateRun(problem, analyzers.GetAll());
                     _ = nsga2Run.Complete(RandomNumberGenerator.Create(parameters.Seed));
@@ -326,6 +323,7 @@ public class PythonGenealogyAnalysis
     private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace, TProblem, TSearchState>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
         IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm,
+        IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
         ICrossover<TCandidate, TSearchSpace, TProblem>? crossover,
         IMutator<TCandidate, TSearchSpace, TProblem>? mutator,
         Action<PopulationState<TCandidate>>? callback)
@@ -340,7 +338,7 @@ public class PythonGenealogyAnalysis
         var rankAnalysis = parameters.TrackGenealogy
             ? ExperimentalAnalyzers.Rank(crossover, mutator, interceptor)
             : null;
-        var qc = ExperimentalAnalyzers.QualityCurve(algorithm.Evaluator);
+        var qc = ExperimentalAnalyzers.QualityCurve(evaluator);
         var apt = parameters.TrackPopulations ? ExperimentalAnalyzers.AllPopulations(interceptor) : null;
         var c = callback != null
             ? new CallbackAnalysis<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, callback)

@@ -16,8 +16,8 @@ public abstract record WrappingCrossover<TCandidate, TSearchSpace, TProblem>
         InnerCrossover = innerCrossover;
     }
 
-    protected sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(IExecutionInstanceResolver resolver) =>
-        CreateCrossoverInstance(resolver.Resolve(InnerCrossover));
+    protected sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) =>
+        CreateCrossoverInstance(registry.Resolve(InnerCrossover));
 
     protected abstract WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover);
 }

@@ -18,8 +18,8 @@ public abstract partial record MultiEvaluator<TCandidate, TSearchSpace, TProblem
         InnerEvaluators = innerEvaluators;
     }
 
-    protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IExecutionInstanceResolver resolver) =>
-        CreateEvaluatorInstance([.. InnerEvaluators.Select(resolver.Resolve)]);
+    protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>
+        CreateEvaluatorInstance([.. InnerEvaluators.Select(registry.Resolve)]);
 
     protected abstract MultiEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ImmutableArray<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> innerEvaluators);
 }

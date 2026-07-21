@@ -132,6 +132,14 @@ Wrapping a complete composition observes the outer operation boundary and includ
 
 See [Observability and analysis](observability-and-analysis.md) for observer, counter and duration APIs.
 
+## Specialized execution instance capabilities
+
+General wrappers and compositions currently preserve the operator role contract, but they do not automatically preserve additional execution instance capabilities. In particular, wrapping or composing an `IVariableStrengthMutator` such as `GaussianMutator` currently exposes an ordinary `IMutatorInstance` at the outer boundary.
+
+`EvolutionStrategy` adapts mutation strength only when its resolved mutator instance implements `IVariableStrengthMutatorInstance`. Placing an observable, counting, duration measuring or other general mutator wrapper around a variable strength mutator therefore currently disables that adaptation. The wrapped mutator continues to use its configured mutation strength.
+
+This is a known limitation. Avoid wrapping an adaptive mutator when the evolution strategy must retain mutation strength adaptation. A future design must preserve specialized run scoped capabilities through composition without requiring every general wrapper to contain role specific type checks.
+
 ## Randomness and execution instances
 
 Compositions whose role receives an explicit random number generator invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. Interceptors and terminators do not receive a random number generator, so their built in compositions are deterministic with respect to child ordering unless a child depends on some other explicit input or external resource.

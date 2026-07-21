@@ -18,8 +18,8 @@ public abstract record WrappingInterceptor<TCandidate, TSearchSpace, TProblem, T
         InnerInterceptor = innerInterceptor;
     }
 
-    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IExecutionInstanceResolver resolver) =>
-        CreateInterceptorInstance(resolver.Resolve(InnerInterceptor));
+    protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) =>
+        CreateInterceptorInstance(registry.Resolve(InnerInterceptor));
 
     protected abstract WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor);
 }

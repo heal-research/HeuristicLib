@@ -43,11 +43,6 @@ public static class OperatorCountBudgetExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatorCalls(int maximumCalls)
-        {
-            return algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, maximumCalls);
-        }
-
         public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatorCalls(
             IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
             int maximumCalls)
@@ -56,11 +51,6 @@ public static class OperatorCountBudgetExtensions
                 evaluator,
                 maximumCalls,
                 static (observedOperator, counter) => observedOperator.CountEvaluatorCalls(counter));
-        }
-
-        public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatedCandidates(int maximumCandidates)
-        {
-            return algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, maximumCandidates);
         }
 
         public OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatedCandidates(

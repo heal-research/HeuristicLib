@@ -52,7 +52,7 @@ A stateless operator configuration also performs the operation. Configuration va
 
 ### Stateful operators
 
-The framework creates one `TState` for each execution instance and passes it to operation logic. `CreateInitialState()` must return a fresh state object each time it is called. State may contain ordinary mutable data and helper data structures. It must not contain operator or algorithm configurations, execution instances, resolvers, registries or delegates bound to child execution instances.
+The framework creates one `TState` for each execution instance and passes it to operation logic. `CreateInitialState()` must return a fresh state object each time it is called. State may contain ordinary mutable data and helper data structures. It must not contain operator or algorithm configurations, execution instances, registries or delegates bound to child execution instances.
 
 Resolving the same operator configuration more than once in one registry returns the same execution instance and therefore the same state. Resolving it through independent registries creates independent execution instances and state objects. Stateful operators must not assume that operation calls are serialized or that their state is safe for concurrent access unless the owning execution path provides that guarantee.
 

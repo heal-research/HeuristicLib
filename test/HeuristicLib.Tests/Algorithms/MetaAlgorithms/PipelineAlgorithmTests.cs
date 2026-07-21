@@ -1,18 +1,44 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.States;
+using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
 public class PipelineAlgorithmTests
 {
+    [Fact]
+    public void PipelineAlgorithm_RequiresAtLeastOneAlgorithm()
+    {
+        var exception = Should.Throw<ArgumentException>(() =>
+            new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([]));
+
+        exception.ParamName.ShouldBe("algorithms");
+    }
+
+    [Fact]
+    public void PipelineAlgorithm_ChecksCancellationBeforeCreatingAStageInstance()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var evaluator = new CountingResolutionEvaluator();
+        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var pipeline = new PipelineAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm]);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Should.Throw<OperationCanceledException>(() => pipeline.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+
+        algorithm.InstanceCount.ShouldBe(0);
+    }
+
     [Fact]
     public void PipelineAlgorithm_RunStreaming_PassesEachStageResultToNextStage()
     {
@@ -55,6 +81,24 @@ public class PipelineAlgorithmTests
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
         run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public void PipelineAlgorithm_CreatesEachStageInstanceWhileReusingResolvedParentDependencies()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var evaluator = new CountingResolutionEvaluator();
+        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var pipeline = new PipelineAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm, algorithm]);
+        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        _ = registry.Resolve(evaluator);
+        var pipelineInstance = registry.Resolve(pipeline);
+
+        var states = pipelineInstance.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
+        algorithm.InstanceCount.ShouldBe(2);
+        evaluator.InstanceCount.ShouldBe(1);
     }
 
     private sealed record ForwardingEvaluator
