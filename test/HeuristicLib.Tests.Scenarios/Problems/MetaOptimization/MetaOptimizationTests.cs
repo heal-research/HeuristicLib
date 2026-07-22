@@ -66,7 +66,7 @@ public class MetaOptimizationTests
         //run meta alg
         var finalState = hc.Build()
           .WithMaxIterations(5)
-          .RunToCompletion(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+          .Complete(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         metaProblem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
         finalState.EvaluatedCandidate.ObjectiveVector.Count.ShouldBe(1);

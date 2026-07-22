@@ -164,8 +164,9 @@ public class PythonGenealogyAnalysis
 
                     var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
                     var gaRun = gaAlgorithm.WithMaxIterations(parameters.Iterations)
-                                           .CreateRun(problem, analyzers.GetAll());
-                    gaRun.Complete(RandomNumberGenerator.Create(parameters.Seed));
+                                           .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed))
+                                           .WithAnalyzers(analyzers.GetAll());
+                    gaRun.Complete();
                     return analyzers.ToExperimentResult(gaRun);
                 }
             case "es":
@@ -197,8 +198,9 @@ public class PythonGenealogyAnalysis
                     var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Evaluator, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
 
                     var esRun = esAlgorithm.WithMaxIterations(parameters.Iterations)
-                                           .CreateRun(problem, analyzers.GetAll());
-                    esRun.Complete(RandomNumberGenerator.Create(parameters.Seed));
+                                           .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed))
+                                           .WithAnalyzers(analyzers.GetAll());
+                    esRun.Complete();
                     return analyzers.ToExperimentResult(esRun);
                 }
             case "ls":
@@ -206,8 +208,8 @@ public class PythonGenealogyAnalysis
                 ls.BatchSize = ls.MaxNeighbors = parameters.NoChildren;
                 //ls.Terminator = terminator;
 
-                var lsRun = ls.Build().WithMaxIterations(parameters.Iterations).CreateRun(problem);
-                lsRun.Complete(RandomNumberGenerator.Create(parameters.Seed));
+                var lsRun = ls.Build().WithMaxIterations(parameters.Iterations).CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed));
+                lsRun.Complete();
                 throw new NotSupportedException(
                     "Configured experiment result extraction is not implemented for local search in this analyzer pipeline.");
             case "nsga2":
@@ -232,8 +234,9 @@ public class PythonGenealogyAnalysis
 
                     var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
                     var nsga2Run = nsga2Algorithm.WithMaxIterations(parameters.Iterations)
-                                                 .CreateRun(problem, analyzers.GetAll());
-                    _ = nsga2Run.Complete(RandomNumberGenerator.Create(parameters.Seed));
+                                                 .CreateRun(problem, RandomNumberGenerator.Create(parameters.Seed))
+                                                 .WithAnalyzers(analyzers.GetAll());
+                    _ = nsga2Run.Complete();
                     return analyzers.ToExperimentResult(nsga2Run);
                 }
             default:
@@ -244,7 +247,7 @@ public class PythonGenealogyAnalysis
     private interface IAnalyzerSet<TCandidate>
         where TCandidate : notnull
     {
-        ExperimentResult<TCandidate> ToExperimentResult(Run run);
+        ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run);
         IReadOnlyList<IAnalyzer> GetAll();
     }
 
@@ -257,7 +260,7 @@ public class PythonGenealogyAnalysis
         : IAnalyzerSet<TCandidate>
         where TCandidate : notnull
     {
-        public ExperimentResult<TCandidate> ToExperimentResult(Run run)
+        public ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run)
         {
             var qRes = run.GetAnalyzerResult(Qualities);
 

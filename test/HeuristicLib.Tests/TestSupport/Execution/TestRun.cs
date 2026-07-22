@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Execution;
 
 namespace HEAL.HeuristicLib.Tests.TestSupport.Execution;
 
-internal sealed class TestRun : Run
+internal sealed class TestRun : AlgorithmRun
 {
     public static TestRun Instance { get; } = new();
 
@@ -10,4 +10,3 @@ internal sealed class TestRun : Run
     {
     }
 }
-

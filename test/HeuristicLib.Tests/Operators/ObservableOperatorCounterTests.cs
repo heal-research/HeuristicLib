@@ -26,7 +26,7 @@ public class ObservableOperatorCounterTests
         var creator = new SequenceCreator().CountCreatorCalls(counter);
         creator.Counter.ShouldBeSameAs(counter);
         creator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = creator.CreateExecutionInstance(TestRun.Instance);
+        var instance = creator.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -40,7 +40,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var creator = new SequenceCreator().CountCreatedCandidates(counter);
-        var instance = creator.CreateExecutionInstance(TestRun.Instance);
+        var instance = creator.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -57,7 +57,7 @@ public class ObservableOperatorCounterTests
         var creator = new SequenceCreator().MeasureCreatorDuration(duration, timeProvider);
         creator.Duration.ShouldBeSameAs(duration);
         creator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = creator.CreateExecutionInstance(TestRun.Instance);
+        var instance = creator.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -73,7 +73,7 @@ public class ObservableOperatorCounterTests
         var mutator = new AddOneMutator().CountMutatorCalls(counter);
         mutator.Counter.ShouldBeSameAs(counter);
         mutator.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = mutator.CreateExecutionInstance(TestRun.Instance);
+        var instance = mutator.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -87,7 +87,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var mutator = new AddOneMutator().CountMutatedCandidates(counter);
-        var instance = mutator.CreateExecutionInstance(TestRun.Instance);
+        var instance = mutator.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -104,7 +104,7 @@ public class ObservableOperatorCounterTests
         var mutator = new AddOneMutator().MeasureMutatorDuration(duration, timeProvider);
         mutator.Duration.ShouldBeSameAs(duration);
         mutator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = mutator.CreateExecutionInstance(TestRun.Instance);
+        var instance = mutator.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -120,7 +120,7 @@ public class ObservableOperatorCounterTests
         var crossover = new SumParentsCrossover().CountCrossoverCalls(counter);
         crossover.Counter.ShouldBeSameAs(counter);
         crossover.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = crossover.CreateExecutionInstance(TestRun.Instance);
+        var instance = crossover.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Cross(
@@ -142,7 +142,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var crossover = new SumParentsCrossover().CountCrossedCandidates(counter);
-        var instance = crossover.CreateExecutionInstance(TestRun.Instance);
+        var instance = crossover.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Cross(
@@ -167,7 +167,7 @@ public class ObservableOperatorCounterTests
         var crossover = new SumParentsCrossover().MeasureCrossoverDuration(duration, timeProvider);
         crossover.Duration.ShouldBeSameAs(duration);
         crossover.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = crossover.CreateExecutionInstance(TestRun.Instance);
+        var instance = crossover.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Cross(
@@ -191,7 +191,7 @@ public class ObservableOperatorCounterTests
         var selector = new FirstCandidatesSelector().CountSelectorCalls(counter);
         selector.Counter.ShouldBeSameAs(counter);
         selector.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = selector.CreateExecutionInstance(TestRun.Instance);
+        var instance = selector.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -205,7 +205,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var selector = new FirstCandidatesSelector().CountSelectedCandidates(counter);
-        var instance = selector.CreateExecutionInstance(TestRun.Instance);
+        var instance = selector.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -222,7 +222,7 @@ public class ObservableOperatorCounterTests
         var selector = new FirstCandidatesSelector().MeasureSelectorDuration(duration, timeProvider);
         selector.Duration.ShouldBeSameAs(duration);
         selector.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = selector.CreateExecutionInstance(TestRun.Instance);
+        var instance = selector.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -238,7 +238,7 @@ public class ObservableOperatorCounterTests
         var replacer = new FirstReplacementCandidatesReplacer().CountReplacerCalls(counter);
         replacer.Counter.ShouldBeSameAs(counter);
         replacer.Metric.ShouldBe(OperatorCountMetric.Calls);
-        var instance = replacer.CreateExecutionInstance(TestRun.Instance);
+        var instance = replacer.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Replace(
@@ -266,7 +266,7 @@ public class ObservableOperatorCounterTests
     {
         var counter = new ObservationCounter();
         var replacer = new FirstReplacementCandidatesReplacer().CountReplacementCandidates(counter);
-        var instance = replacer.CreateExecutionInstance(TestRun.Instance);
+        var instance = replacer.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Replace(
@@ -297,7 +297,7 @@ public class ObservableOperatorCounterTests
         var replacer = new FirstReplacementCandidatesReplacer().MeasureReplacerDuration(duration, timeProvider);
         replacer.Duration.ShouldBeSameAs(duration);
         replacer.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = replacer.CreateExecutionInstance(TestRun.Instance);
+        var instance = replacer.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Replace(
@@ -326,7 +326,7 @@ public class ObservableOperatorCounterTests
         var counter = new ObservationCounter();
         var interceptor = new AddOneInterceptor().CountInterceptorCalls(counter);
         interceptor.Counter.ShouldBeSameAs(counter);
-        var instance = interceptor.CreateExecutionInstance(TestRun.Instance);
+        var instance = interceptor.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Transform(new CounterState { Value = 1 }, previousState: null, problem.SearchSpace, problem);
@@ -343,7 +343,7 @@ public class ObservableOperatorCounterTests
         var interceptor = new AddOneInterceptor().MeasureInterceptorDuration(duration, timeProvider);
         interceptor.Duration.ShouldBeSameAs(duration);
         interceptor.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = interceptor.CreateExecutionInstance(TestRun.Instance);
+        var instance = interceptor.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.Transform(new CounterState { Value = 1 }, previousState: null, problem.SearchSpace, problem);
@@ -358,7 +358,7 @@ public class ObservableOperatorCounterTests
         var counter = new ObservationCounter();
         var terminator = new NeverTerminalStateTerminator().CountTerminatorCalls(counter);
         terminator.Counter.ShouldBeSameAs(counter);
-        var instance = terminator.CreateExecutionInstance(TestRun.Instance);
+        var instance = terminator.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
@@ -375,7 +375,7 @@ public class ObservableOperatorCounterTests
         var terminator = new NeverTerminalStateTerminator().MeasureTerminatorDuration(duration, timeProvider);
         terminator.Duration.ShouldBeSameAs(duration);
         terminator.TimeProvider.ShouldBeSameAs(timeProvider);
-        var instance = terminator.CreateExecutionInstance(TestRun.Instance);
+        var instance = terminator.CreateExecutionInstance();
         var problem = CreateProblem();
 
         instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);

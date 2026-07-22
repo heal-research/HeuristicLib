@@ -88,7 +88,7 @@ public class OperatorAuthoringSpecs
             MaxNeighbors = 3
         };
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
@@ -366,7 +366,7 @@ public class OperatorAuthoringSpecs
             MaxNeighbors = 2
         }.WithMaxIterations(1);
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(456),
           ct: TestContext.Current.CancellationToken);
@@ -398,7 +398,7 @@ public class OperatorAuthoringSpecs
             MaxNeighbors = 1
         };
 
-        return algorithm.CreateRun(problem).CreateNewRegistry();
+        return new ExecutionInstanceRegistry();
     }
 
     private sealed record PrefixingWrappingCreator(ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)

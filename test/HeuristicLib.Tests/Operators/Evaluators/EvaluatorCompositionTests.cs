@@ -17,8 +17,8 @@ public class EvaluatorCompositionTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatorCalls(counter).WithCache();
-        var firstInstance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(evaluator);
-        var secondInstance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(evaluator);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         firstInstance.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -33,8 +33,8 @@ public class EvaluatorCompositionTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter).LimitEvaluations(2, strict: true);
-        var firstInstance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(evaluator);
-        var secondInstance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(evaluator);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         var limited = firstInstance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -49,7 +49,7 @@ public class EvaluatorCompositionTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatorCalls(counter).AsRepeatingAggregating(2, static (left, right) => left);
-        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

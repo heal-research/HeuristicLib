@@ -30,7 +30,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 1).RunStreaming(
+        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 1).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -48,7 +48,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 2).RunStreaming(
+        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -65,7 +65,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, 2).RunStreaming(
+        var results = algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -83,7 +83,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, 6).RunStreaming(
+        var results = algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, 6).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -104,7 +104,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -126,7 +126,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -151,7 +151,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -175,7 +175,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -196,7 +196,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxAlgorithmDuration(
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -217,7 +217,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxAlgorithmDuration(
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -241,7 +241,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxAlgorithmDuration(
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -264,7 +264,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxAlgorithmDuration(
             TimeSpan.FromSeconds(10),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -288,7 +288,7 @@ public class OperatorBudgetAlgorithmTests
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)),
             static (observedOperator, duration, timeProvider) =>
                 observedOperator.MeasureEvaluatorDuration(duration, timeProvider))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -309,7 +309,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxCreatorCalls(
             algorithm.Creator,
             maximumCalls: 1)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -330,7 +330,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxCreatedCandidates(
             algorithm.Creator,
             maximumCandidates: 2)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -352,7 +352,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Creator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -374,7 +374,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxCrossoverCalls(
             algorithm.Crossover,
             maximumCalls: 1)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -396,7 +396,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxCrossedCandidates(
             algorithm.Crossover,
             maximumCandidates: 6)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -419,7 +419,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Crossover,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -443,7 +443,7 @@ public class OperatorBudgetAlgorithmTests
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
                 observedOperator.CountMutatorCalls(counter))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -465,7 +465,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxMutatorCalls(
             algorithm.Mutator,
             maximumCalls: 1)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -489,7 +489,7 @@ public class OperatorBudgetAlgorithmTests
             maximumCount: 6,
             countedOperatorFactory: static (observedOperator, counter) =>
                 observedOperator.CountMutatedCandidates(counter))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -511,7 +511,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxMutatedCandidates(
             algorithm.Mutator,
             maximumCandidates: 6)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -534,7 +534,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Mutator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -557,7 +557,7 @@ public class OperatorBudgetAlgorithmTests
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
                 observedOperator.CountEvaluatorCalls(counter))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -589,7 +589,7 @@ public class OperatorBudgetAlgorithmTests
             Terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 3)
         };
 
-        var results = externallyStoppedAlgorithm.RunStreaming(
+        var results = externallyStoppedAlgorithm.Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();

@@ -4,23 +4,21 @@ namespace HEAL.HeuristicLib.Execution;
 
 public class ExecutionInstanceRegistry
 {
-    public Run Run { get; }
-
     private readonly ExecutionInstanceRegistry? parentRegistry;
 
     private readonly Dictionary<IExecutionInstanceResolvable<IExecutionInstance>, IExecutionInstance> registry = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<IExecutionInstanceResolvable<IExecutionInstance>, IExecutionInstanceResolvable<IExecutionInstance>> replacementResolvables = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<IExecutionInstanceResolvable<IExecutionInstance>> resolvablesBeingCreated = new(ReferenceEqualityComparer.Instance);
 
-    public ExecutionInstanceRegistry(Run run, ExecutionInstanceRegistry? parentRegistry = null)
+    public ExecutionInstanceRegistry()
     {
-        Run = run;
-        this.parentRegistry = parentRegistry;
     }
+
+    private ExecutionInstanceRegistry(ExecutionInstanceRegistry parentRegistry) => this.parentRegistry = parentRegistry;
 
     public ExecutionInstanceRegistry CreateChildRegistry()
     {
-        return new ExecutionInstanceRegistry(Run, this);
+        return new ExecutionInstanceRegistry(this);
     }
 
     private bool TryResolve(IExecutionInstanceResolvable<IExecutionInstance> resolvable, [MaybeNullWhen(false)] out IExecutionInstance instance)

@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -36,36 +35,24 @@ public static class AlgorithmExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public Run<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(
-            TProblem problem, params IReadOnlyList<IAnalyzer> analyzers)
+        public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, IRandomNumberGenerator random)
         {
-            return new Run<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem, analyzers);
+            return new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem, random);
         }
 
-        public IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
+        public ExecutionStream<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            var run = algorithm.CreateRun(problem);
-            return run.StreamAsync(random, initialState, ct);
+            return algorithm.CreateRun(problem, random).Stream(initialState, ct);
         }
 
-        public async Task<TSearchState> RunToCompletionAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default
-        )
+        public async Task<TSearchState> CompleteAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            var run = algorithm.CreateRun(problem);
-            return await run.CompleteAsync(random, initialState, ct);
+            return await algorithm.CreateRun(problem, random).CompleteAsync(initialState, ct);
         }
 
-        public IEnumerable<TSearchState> RunStreaming(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default
-        )
+        public TSearchState Complete(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            var run = algorithm.CreateRun(problem);
-            return run.Stream(random, initialState, ct);
-        }
-
-        public TSearchState RunToCompletion(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
-        {
-            var run = algorithm.CreateRun(problem);
-            return run.Complete(random, initialState, ct);
+            return algorithm.CreateRun(problem, random).Complete(initialState, ct);
         }
     }
 
@@ -75,19 +62,19 @@ public static class AlgorithmExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public async Task<TSearchState> RunToCompletionAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
+        public async Task<TSearchState> CompleteAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
             return await algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
         }
 
-        public IEnumerable<TSearchState> RunStreaming(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
+        public IEnumerable<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
             return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
         }
 
-        public TSearchState RunToCompletion(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
+        public TSearchState Complete(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            return algorithmInstance.RunToCompletionAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
+            return algorithmInstance.CompleteAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
         }
     }
 }

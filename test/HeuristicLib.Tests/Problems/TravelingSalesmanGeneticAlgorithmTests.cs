@@ -32,7 +32,7 @@ public class TravelingSalesmanGeneticAlgorithmTests
         {
             MaximumGenerations = 5
         })
-                       .RunToCompletion(
+                       .Complete(
                          problem,
                          RandomNumberGenerator.Create(42),
                          ct: TestContext.Current.CancellationToken);

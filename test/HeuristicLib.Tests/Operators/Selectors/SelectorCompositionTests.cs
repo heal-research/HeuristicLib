@@ -16,7 +16,7 @@ public class SelectorCompositionTests
     {
         var counter = new ObservationCounter();
         var selector = new NoSameMatesSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new BestSelector<int>().CountSelectorCalls(counter), 3);
-        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(selector);
+        var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var problem = CreateProblem();
         var population = new[]
         {
@@ -36,7 +36,7 @@ public class SelectorCompositionTests
         var femaleSelector = new RangeSelector(0);
         var maleSelector = new RangeSelector(2);
         var selector = new GenderSpecificSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(femaleSelector, maleSelector);
-        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(selector);
+        var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var problem = CreateProblem();
         var population = CreatePopulation(1, 2, 3, 4);
 
@@ -51,7 +51,7 @@ public class SelectorCompositionTests
     public void GenderSpecificSelector_RejectsOddRequestedCount()
     {
         var selector = new GenderSpecificSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new RangeSelector(0), new RangeSelector(1));
-        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(selector);
+        var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var problem = CreateProblem();
 
         Should.Throw<ArgumentException>(() => instance.Select(CreatePopulation(1, 2), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem))

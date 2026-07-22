@@ -134,7 +134,7 @@ public class ExtendedSymbolicRegressionProblem(ObjectiveDirections objective, Sy
         var res = (ga.Build() with
         {
             MaximumGenerations = 200
-        }).RunToCompletion(problem, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
+        }).Complete(problem, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
         return res.Population;
     }
     #endregion

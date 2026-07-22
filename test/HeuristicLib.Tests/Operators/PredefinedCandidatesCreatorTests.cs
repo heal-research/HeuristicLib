@@ -16,7 +16,7 @@ public class PredefinedCandidatesCreatorTests
         var fallback = new ExpectedRandomCreator(random, 99);
         var creator = new PredefinedCandidatesCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>([10, 20], fallback);
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(creator);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(creator);
 
         var first = instance.Create(1, random, DummySearchSpace<int>.Instance, problem);
         var second = instance.Create(3, random, DummySearchSpace<int>.Instance, problem);

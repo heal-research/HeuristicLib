@@ -25,7 +25,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -43,7 +43,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -64,7 +64,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -83,7 +83,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();

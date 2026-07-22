@@ -26,7 +26,7 @@ public class ChooseOneOperatorTests
           [new ConstantCreator(100), new ConstantCreator(200)],
           [1.0, 1.0]);
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(creator);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(creator);
 
         var result = instance.Create(3, new SequenceRandomNumberGenerator(0.2, 0.8, 0.3), DummySearchSpace<int>.Instance, problem);
 
@@ -38,7 +38,7 @@ public class ChooseOneOperatorTests
     {
         var creator = new TransformedCreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new ConstantCreator(5), new AddOffsetMutator(10));
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(creator);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(creator);
 
         var result = instance.Create(3, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
 
@@ -50,7 +50,7 @@ public class ChooseOneOperatorTests
     {
         var crossover = new TransformedCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new FirstParentCrossover(100), new AddOffsetMutator(10));
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(crossover);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(crossover);
 
         var result = instance.Cross([new Parents<int>(1, 10), new Parents<int>(2, 20)], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
 
@@ -69,7 +69,7 @@ public class ChooseOneOperatorTests
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
         var rng = new SequenceRandomNumberGenerator(0.2, 0.8, 0.3);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(mutator);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(mutator);
 
         var result = instance.Mutate([1, 2, 3], rng, DummySearchSpace<int>.Instance, problem);
 
@@ -84,7 +84,7 @@ public class ChooseOneOperatorTests
             [1.0, 1.0]);
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var population = CreateEvaluatedCandidates(1, 2, 3);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(selector);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(selector);
 
         var selected = instance.Select(population, problem.Objective, 2, new SequenceRandomNumberGenerator(0.8), problem.SearchSpace, problem);
 
@@ -98,7 +98,7 @@ public class ChooseOneOperatorTests
             [new PreviousCandidatesReplacer(), new OffspringCandidatesReplacer()],
             [1.0, 1.0]);
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(replacer);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(replacer);
 
         var replaced = instance.Replace(CreateEvaluatedCandidates(1, 2), CreateEvaluatedCandidates(3, 4), problem.Objective, 2, new SequenceRandomNumberGenerator(0.8), problem.SearchSpace, problem);
 
@@ -173,7 +173,7 @@ public class ChooseOneOperatorTests
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
         var rng = new SequenceRandomNumberGenerator(0.2, 0.8, 0.3);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(crossover);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(crossover);
 
         var result = instance.Cross(
           [new Parents<int>(1, 10), new Parents<int>(2, 20), new Parents<int>(3, 30)],
@@ -196,7 +196,7 @@ public class ChooseOneOperatorTests
           evaluateFunc: x => x,
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(mutator);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(mutator);
 
         var result = instance.Mutate([1, 2, 3], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
 
@@ -215,7 +215,7 @@ public class ChooseOneOperatorTests
           evaluateFunc: x => x,
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(mutator);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(mutator);
 
         var first = instance.Mutate([1], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
         var second = instance.Mutate([1], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, problem);
@@ -244,7 +244,7 @@ public class ChooseOneOperatorTests
           evaluateFunc: x => x,
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(interceptor);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(interceptor);
 
         var result = instance.Transform(new TestAlgorithmState { Value = 1 }, previousState: null, DummySearchSpace<int>.Instance, problem);
 
@@ -256,7 +256,7 @@ public class ChooseOneOperatorTests
     {
         var interceptor = new PipelineInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>([]);
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry(TestRun.Instance).Resolve(interceptor);
+        var instance = new Execution.ExecutionInstanceRegistry().Resolve(interceptor);
         var state = new TestAlgorithmState { Value = 1 };
 
         instance.Transform(state, previousState: null, DummySearchSpace<int>.Instance, problem).ShouldBeSameAs(state);
@@ -267,7 +267,7 @@ public class ChooseOneOperatorTests
     {
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var state = new TestAlgorithmState { Value = 1 };
-        var registry = new Execution.ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new Execution.ExecutionInstanceRegistry();
         var any = registry.Resolve(new AnyTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new ConstantTerminator(true), new ThrowingTerminator()));
         var all = registry.Resolve(new AllTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new ConstantTerminator(false), new ThrowingTerminator()));
 
@@ -280,7 +280,7 @@ public class ChooseOneOperatorTests
     {
         var problem = FuncProblem.Create<int, DummySearchSpace<int>>(x => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var state = new TestAlgorithmState { Value = 1 };
-        var registry = new Execution.ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new Execution.ExecutionInstanceRegistry();
         var any = registry.Resolve(new AnyTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>([]));
         var all = registry.Resolve(new AllTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>([]));
 

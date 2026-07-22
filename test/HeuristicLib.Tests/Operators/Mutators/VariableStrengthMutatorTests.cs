@@ -70,7 +70,7 @@ public class VariableStrengthMutatorTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(state => state.Population.EvaluatedCandidates.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
         gaussian.MutationStrength.ShouldBe(3.0);
@@ -78,7 +78,7 @@ public class VariableStrengthMutatorTests
 
     private static IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> Resolve(GaussianMutator mutator)
     {
-        var registry = new ExecutionInstanceRegistry(new TestRun());
+        var registry = new ExecutionInstanceRegistry();
         return registry.Resolve<IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>(mutator);
     }
 
@@ -101,5 +101,5 @@ public class VariableStrengthMutatorTests
         public IRandomNumberGenerator Fork(ulong forkKey) => this;
     }
 
-    private sealed class TestRun : Run;
+    private sealed class TestRun : AlgorithmRun;
 }

@@ -29,7 +29,7 @@ public class NSGA2Tests
         var result = (algorithm.Build() with
         {
             MaximumGenerations = 5
-        }).RunToCompletion(
+        }).Complete(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);

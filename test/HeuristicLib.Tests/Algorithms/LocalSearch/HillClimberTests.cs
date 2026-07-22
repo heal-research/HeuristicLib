@@ -20,7 +20,7 @@ public class HillClimberTests
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
 
         var states = algorithm.WithMaxIterations(5)
-          .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+          .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
           .ToList();
 
         states.Select(StateCandidate).ShouldBe([0]);
@@ -37,7 +37,7 @@ public class HillClimberTests
         };
 
         var states = algorithm.WithMaxIterations(5)
-          .RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
+          .Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
           .ToList();
 
         states.ShouldBeEmpty();

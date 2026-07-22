@@ -22,7 +22,7 @@ public class GeneticAlgorithmSolvingTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
 
-        var result = algorithm.RunToCompletion(
+        var result = algorithm.Complete(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);
@@ -37,7 +37,7 @@ public class GeneticAlgorithmSolvingTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
 
-        var results = algorithm.RunStreaming(
+        var results = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -58,7 +58,7 @@ public class GeneticAlgorithmSolvingTests
             MaximumGenerations = 1
         };
 
-        var results = algorithm.RunStreaming(
+        var results = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -77,7 +77,7 @@ public class GeneticAlgorithmSolvingTests
             MaximumGenerations = 3
         };
 
-        var results = algorithm.RunStreaming(
+        var results = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -93,7 +93,7 @@ public class GeneticAlgorithmSolvingTests
         var initialState = (CreateUnwrappedAlgorithm(problem) with
         {
             MaximumGenerations = 1
-        }).RunStreaming(
+        }).Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).Single();
@@ -102,7 +102,7 @@ public class GeneticAlgorithmSolvingTests
             MaximumGenerations = 2
         };
 
-        var results = algorithm.RunStreaming(
+        var results = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(43),
           initialState,
@@ -133,7 +133,7 @@ public class GeneticAlgorithmSolvingTests
             Terminator = terminator
         };
 
-        var results = algorithm.RunStreaming(
+        var results = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -150,7 +150,7 @@ public class GeneticAlgorithmSolvingTests
         var initialState = (CreateUnwrappedAlgorithm(problem) with
         {
             MaximumGenerations = 1
-        }).RunStreaming(
+        }).Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).Single();
@@ -160,7 +160,7 @@ public class GeneticAlgorithmSolvingTests
             Terminator = terminator
         };
 
-        var results = algorithm.RunStreaming(
+        var results = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(43),
           initialState,
@@ -183,7 +183,7 @@ public class GeneticAlgorithmSolvingTests
             Terminator = terminator
         };
 
-        var results = algorithm.RunStreaming(
+        var results = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -202,7 +202,7 @@ public class GeneticAlgorithmSolvingTests
             Terminator = terminator
         };
 
-        var results = algorithm.RunStreaming(
+        var results = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -217,11 +217,11 @@ public class GeneticAlgorithmSolvingTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
 
-        var result = algorithm.RunToCompletion(
+        var result = algorithm.Complete(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);
-        var streamingResult = algorithm.RunStreaming(
+        var streamingResult = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).Last();

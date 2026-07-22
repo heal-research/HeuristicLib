@@ -10,12 +10,14 @@ public class RunTests
     public void Run_CannotBeExecutedMoreThanOnce()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var run = new AdditiveStepAlgorithm(1).CreateRun(problem);
+        var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42));
 
-        _ = run.Complete(RandomNumberGenerator.Create(42), cancellationToken: TestContext.Current.CancellationToken);
+        run.ExecutionStarted.ShouldBeFalse();
+        _ = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
+        run.ExecutionStarted.ShouldBeTrue();
 
         var exception = Should.Throw<InvalidOperationException>(() =>
-            run.Complete(RandomNumberGenerator.Create(42), cancellationToken: TestContext.Current.CancellationToken));
-        exception.Message.ShouldBe("A run can only be executed once. Create a new run for another execution.");
+            run.Complete(cancellationToken: TestContext.Current.CancellationToken));
+        exception.Message.ShouldBe("A run can only be configured and executed once. Create a new run for another execution.");
     }
 }

@@ -26,10 +26,9 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
         var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(777)).WithAnalyzer(analysis);
 
         var finalState = await run.CompleteAsync(
-            RandomNumberGenerator.Create(777),
             cancellationToken: TestContext.Current.CancellationToken);
 
         var analysisResult = run.GetAnalyzerResult(analysis);
@@ -46,11 +45,9 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
         var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(888)).WithAnalyzer(analysis);
 
-        await using var enumerator = run.StreamAsync(
-                                            RandomNumberGenerator.Create(888),
-                                            cancellationToken: TestContext.Current.CancellationToken)
+        await using var enumerator = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
                                         .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         (await enumerator.MoveNextAsync()).ShouldBeTrue();
@@ -77,10 +74,9 @@ public class AnalysisSpecs
             [baseAlgorithm.Evaluator],
             [interceptor]);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(321)).WithAnalyzer(analysis);
 
         await run.CompleteAsync(
-            RandomNumberGenerator.Create(321),
             cancellationToken: TestContext.Current.CancellationToken);
 
         var analysisResult = run.GetAnalyzerResult(analysis);
@@ -97,9 +93,8 @@ public class AnalysisSpecs
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
         var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(333)).WithAnalyzer(analysis);
         var finalState = await run.CompleteAsync(
-            RandomNumberGenerator.Create(333),
             cancellationToken: TestContext.Current.CancellationToken);
 
         var result = run.GetAnalyzerResult(analysis);

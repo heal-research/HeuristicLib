@@ -54,7 +54,7 @@ public class CycleAlgorithmTests
             MaximumCycles = 3
         };
 
-        var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.ShouldBeEmpty();
         algorithm.InstanceCount.ShouldBe(3);
@@ -70,7 +70,7 @@ public class CycleAlgorithmTests
             MaximumCycles = 2
         };
 
-        var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
     }
@@ -85,7 +85,7 @@ public class CycleAlgorithmTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Should.Throw<OperationCanceledException>(() => cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+        Should.Throw<OperationCanceledException>(() => cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
 
         algorithm.InstanceCount.ShouldBe(0);
     }
@@ -103,7 +103,7 @@ public class CycleAlgorithmTests
             MaximumCycles = 2
         };
 
-        var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 12, 22]);
         states.Select(MetaAlgorithmTestHelpers.StateObjective).ShouldBe([1.0, 11.0, 12.0, 22.0]);
@@ -123,7 +123,7 @@ public class CycleAlgorithmTests
         };
 
         var states = cycle.WithMaxIterations(8)
-          .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+          .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
           .ToList();
 
         states.Count.ShouldBe(8);
@@ -143,11 +143,11 @@ public class CycleAlgorithmTests
             MaximumCycles = 2,
             NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
         };
-        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new ExecutionInstanceRegistry();
         _ = registry.Resolve(evaluator);
         var cycleInstance = registry.Resolve(cycle);
 
-        var states = cycleInstance.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycleInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
         algorithm.InstanceCount.ShouldBe(expectedAlgorithmInstances);

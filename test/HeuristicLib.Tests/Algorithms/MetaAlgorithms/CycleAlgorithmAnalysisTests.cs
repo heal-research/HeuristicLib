@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
@@ -30,11 +28,9 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, analysis1, analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzers(analysis1, analysis2);
 
-        GetReplacementCount(run).ShouldBe(1);
-
-        run.Complete(RandomNumberGenerator.Create(0), cancellationToken: TestContext.Current.CancellationToken);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetAnalyzerResult(analysis1).ObjectiveValues.ShouldBe([1.0]);
         run.GetAnalyzerResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
@@ -45,7 +41,8 @@ public class CycleAlgorithmAnalysisTests
     {
         var evaluator = new IncrementingEvaluator();
         var analysis = new EvaluationTraceAnalysis(evaluator);
-        var run = new AnalyzerTestRun(analysis);
+        var run = CreateRun(analysis);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         run.GetAnalyzerResult(analysis).ShouldBeSameAs(run.GetResult(analysis));
     }
@@ -55,7 +52,8 @@ public class CycleAlgorithmAnalysisTests
     {
         var evaluator = new IncrementingEvaluator();
         var analysis = new EvaluationTraceAnalysis(evaluator);
-        var run = new AnalyzerTestRun(analysis);
+        var run = CreateRun(analysis);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         run.TryGetAnalyzerResult(analysis, out var result).ShouldBeTrue();
 
@@ -68,7 +66,8 @@ public class CycleAlgorithmAnalysisTests
     {
         var attached = new EvaluationTraceAnalysis(new IncrementingEvaluator());
         var missing = new EvaluationTraceAnalysis(new IncrementingEvaluator());
-        var run = new AnalyzerTestRun(attached);
+        var run = CreateRun(attached);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         run.TryGetAnalyzerResult(missing, out var result).ShouldBeFalse();
 
@@ -79,24 +78,21 @@ public class CycleAlgorithmAnalysisTests
     public void AnalyzerResultRetrieval_ThrowsInvalidOperationExceptionForMismatchedRunState()
     {
         var analyzer = new MalformedAnalyzer();
-        var run = new AnalyzerTestRun(analyzer);
+        var run = CreateRun(analyzer);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         Should.Throw<InvalidOperationException>(() => run.GetAnalyzerResult(analyzer));
         Should.Throw<InvalidOperationException>(() =>
             run.TryGetAnalyzerResult<MalformedAnalyzer.Result>(analyzer, out _));
     }
 
-    private static int GetReplacementCount(Run run)
+    private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IAnalyzer analyzer)
     {
-        var rootRegistryField = typeof(Run).GetField("rootRegistry", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var rootRegistry = ((Lazy<ExecutionInstanceRegistry>)rootRegistryField.GetValue(run)!).Value;
-        var replacementResolvablesField = typeof(ExecutionInstanceRegistry).GetField("replacementResolvables",
-            BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var replacementResolvables = (IDictionary)replacementResolvablesField.GetValue(rootRegistry)!;
-        return replacementResolvables.Count;
+        var evaluator = new IncrementingEvaluator();
+        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(evaluateFunc: x => x, encoding: DummySearchSpace<int>.Instance, objective: SingleObjective.Minimize);
+        var algorithm = new SingleStepAlgorithm(1, evaluator, new IdentityInterceptor<int, PopulationState<int>>());
+        return algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analyzer);
     }
-
-    private sealed class AnalyzerTestRun(params IAnalyzer[] analyzers) : Run(analyzers);
 
     private sealed record IncrementingEvaluator
         : StatefulEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,

@@ -34,7 +34,7 @@ public class PipelineAlgorithmTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Should.Throw<OperationCanceledException>(() => pipeline.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+        Should.Throw<OperationCanceledException>(() => pipeline.Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
 
         algorithm.InstanceCount.ShouldBe(0);
     }
@@ -53,7 +53,7 @@ public class PipelineAlgorithmTests
             ]);
 
         var states = pipeline
-                     .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+                     .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
                      .ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
@@ -74,10 +74,9 @@ public class PipelineAlgorithmTests
                 new AdditiveStepAlgorithm(100) { Evaluator = evaluator }
             ]);
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, analysis);
+        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
 
-        var states = run.Stream(RandomNumberGenerator.Create(42),
-            cancellationToken: TestContext.Current.CancellationToken).ToList();
+        var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
         run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
@@ -90,11 +89,11 @@ public class PipelineAlgorithmTests
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
         var pipeline = new PipelineAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm, algorithm]);
-        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new ExecutionInstanceRegistry();
         _ = registry.Resolve(evaluator);
         var pipelineInstance = registry.Resolve(pipeline);
 
-        var states = pipelineInstance.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = pipelineInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
         algorithm.InstanceCount.ShouldBe(2);

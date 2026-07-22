@@ -246,7 +246,7 @@ public static class InteractiveSymbolicRegression
         {
             MaximumGenerations = parameters.Generations
         })
-          .RunToCompletion(problem, RandomNumberGenerator.Create(seed), null, ct);
+          .Complete(problem, RandomNumberGenerator.Create(seed), null, ct);
 
         return res.Population;
     }

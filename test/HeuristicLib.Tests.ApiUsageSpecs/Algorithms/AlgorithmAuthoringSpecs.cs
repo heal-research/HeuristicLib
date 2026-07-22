@@ -24,7 +24,7 @@ public class AlgorithmAuthoringSpecs
         var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
         var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() }.WithMaxIterations(1);
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken);
@@ -38,12 +38,12 @@ public class AlgorithmAuthoringSpecs
         var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
         var algorithm = new DoubleCreateAlgorithm { Creator = new CountingCreator() }.WithMaxIterations(1);
 
-        var firstRunState = await algorithm.RunToCompletionAsync(
+        var firstRunState = await algorithm.CompleteAsync(
             problem,
             RandomNumberGenerator.Create(123),
             ct: TestContext.Current.CancellationToken);
 
-        var secondRunState = await algorithm.RunToCompletionAsync(
+        var secondRunState = await algorithm.CompleteAsync(
             problem,
             RandomNumberGenerator.Create(456),
             ct: TestContext.Current.CancellationToken);
@@ -61,8 +61,8 @@ public class AlgorithmAuthoringSpecs
         var algorithm = configuration.WithMaxIterations(1);
 
         var runs = await Task.WhenAll(
-            algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(123), ct: TestContext.Current.CancellationToken),
-            algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken));
+            algorithm.CompleteAsync(problem, RandomNumberGenerator.Create(123), ct: TestContext.Current.CancellationToken),
+            algorithm.CompleteAsync(problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken));
 
         runs.Select(state => state.EvaluatedCandidate.Candidate).ShouldBe([new RealVector(1.0, 2.0, 1.0), new RealVector(1.0, 2.0, 1.0)]);
         configuration.Creator.ShouldBeSameAs(creator);
@@ -78,7 +78,7 @@ public class AlgorithmAuthoringSpecs
             Interceptor = new ThirdCoordinateIncrementingInterceptor()
         }.WithMaxIterations(1);
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
             problem,
             RandomNumberGenerator.Create(789),
             ct: TestContext.Current.CancellationToken);
@@ -100,8 +100,7 @@ public class AlgorithmAuthoringSpecs
             Interceptor = interceptor
         };
 
-        var run = algorithm.CreateRun(problem);
-        var registry = run.CreateNewRegistry();
+        var registry = new ExecutionInstanceRegistry();
 
         _ = registry.Resolve(algorithm);
 

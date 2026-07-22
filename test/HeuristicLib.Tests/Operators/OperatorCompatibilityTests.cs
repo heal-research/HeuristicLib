@@ -35,11 +35,11 @@ public class OperatorCompatibilityTests
     private static bool AlgorithmUsingProblemDoesCompile(Type algorithmType, Type problemType)
     {
         var code = $@"
-      using HEAL.HeuristicLib.Algorithms; // for RunStreamingAsync extension
+      using HEAL.HeuristicLib.Algorithms;
       var algorithm = new {GetCompilableName(algorithmType)}();
       var problem = new {GetCompilableName(problemType)}();
       var rng = HEAL.HeuristicLib.Random.RandomNumberGenerator.Create(0);
-      algorithm.RunStreamingAsync(problem, rng);
+      algorithm.Stream(problem, rng);
     ";
 
         return DoesCompile(code, typeof(object), algorithmType, problemType);

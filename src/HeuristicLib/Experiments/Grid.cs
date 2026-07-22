@@ -24,6 +24,11 @@ public sealed partial class Grid<T> : IEnumerable<T>
 
     public Grid<T> VaryBy<TProblem>(IReadOnlyList<TProblem> values, Func<T, TProblem, T> configurator)
     {
+        if (values.Count == 0)
+        {
+            throw new ArgumentException("A grid dimension must contain at least one value.", nameof(values));
+        }
+
         return new Grid<T>(Prototype, Parameters.Add(new GridParameter<T, TProblem>(values, configurator)));
     }
 
@@ -61,8 +66,4 @@ public static class Grid
         return new Grid<T>(prototype);
     }
 
-    extension<T>(T prototype)
-    {
-        public Grid<T> AsGrid() => Create(prototype);
-    }
 }

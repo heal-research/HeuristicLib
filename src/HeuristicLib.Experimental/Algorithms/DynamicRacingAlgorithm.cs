@@ -159,10 +159,9 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
-            var run = algorithm.CreateRun(problem);
-            var registry = run.CreateNewRegistry();
+            var registry = new ExecutionInstanceRegistry();
             registry.RegisterReplacement(evaluator, evaluator.CountEvaluatedCandidates(counter));
-            return registry.Resolve(algorithm).RunStreaming(problem, random, initialState, ct).GetEnumerator();
+            return registry.Resolve(algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
     }
 }

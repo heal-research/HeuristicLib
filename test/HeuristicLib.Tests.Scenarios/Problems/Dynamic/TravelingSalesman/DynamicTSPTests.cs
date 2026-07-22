@@ -43,7 +43,7 @@ public class DynamicTSPTests
         var resGa = (ga.Build() with
         {
             MaximumGenerations = 1000
-        }).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        }).Complete(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         //look at results
         var objGa = resGa.Population

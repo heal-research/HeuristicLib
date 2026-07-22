@@ -94,7 +94,7 @@ public class PythonInterOptEquationScoring(ObjectiveDirections objective, Symbol
         var res = (ga.Build() with
         {
             MaximumGenerations = 200
-        }).RunToCompletion(p, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
+        }).Complete(p, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
         return res.Population;
     }
 

@@ -39,7 +39,7 @@ public class TspScenarios
         var resGa = (ga.Build() with
         {
             MaximumGenerations = 10
-        }).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        }).Complete(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         // look at results
         var objGa = resGa.Population

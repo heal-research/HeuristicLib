@@ -22,7 +22,7 @@ public class StateTerminatedAlgorithmTests
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
         var initialState = CreateState(41);
 
-        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([42]);
         terminator.CheckedCandidates.ShouldBe([42]);
@@ -36,7 +36,7 @@ public class StateTerminatedAlgorithmTests
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
         var initialState = CreateState(41);
 
-        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([42]);
         terminator.CheckedCandidates.ShouldBe([42]);
@@ -49,7 +49,7 @@ public class StateTerminatedAlgorithmTests
         var terminator = new RecordingTerminator(_ => true);
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
 
-        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
         terminator.CheckedCandidates.ShouldBe([1]);
@@ -61,7 +61,7 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new AdditiveStepAlgorithm(1).WithMaxIterations(1);
 
-        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
@@ -79,7 +79,7 @@ public class StateTerminatedAlgorithmTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Should.Throw<OperationCanceledException>(() => new AdditiveStepAlgorithm(1).RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+        Should.Throw<OperationCanceledException>(() => new AdditiveStepAlgorithm(1).Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class StateTerminatedAlgorithmTests
         cts.Cancel();
         var algorithm = CreateStateTerminatedAlgorithm(new CancellationTokenTerminator<int>(cts.Token));
 
-        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
@@ -103,7 +103,7 @@ public class StateTerminatedAlgorithmTests
         var algorithm = CreateStateTerminatedAlgorithm(new CancellationTokenTerminator<int>(cts.Token));
 
         cts.Cancel();
-        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
@@ -114,7 +114,7 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5), timeProvider);
-        var instance = new ExecutionInstanceRegistry(TestRun.Instance).Resolve(terminator);
+        var instance = new ExecutionInstanceRegistry().Resolve(terminator);
 
         instance.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
 
@@ -139,7 +139,7 @@ public class StateTerminatedAlgorithmTests
             Terminator = new RecordingResolveTerminator(events)
         };
 
-        _ = algorithm.CreateExecutionInstance(TestRun.Instance);
+        _ = algorithm.CreateExecutionInstance();
 
         events.ShouldBe(["terminator", "algorithm"]);
     }
