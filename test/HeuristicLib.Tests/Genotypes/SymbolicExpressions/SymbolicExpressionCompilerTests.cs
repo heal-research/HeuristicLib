@@ -131,6 +131,17 @@ public sealed class SymbolicExpressionCompilerTests
         }
     }
 
+    [Fact]
+    public void CompiledExpression_CanBeRetainedAndEvaluatedRepeatedly()
+    {
+        var compiled = (Variable("x0") + FixedConstant(2.0)).Build().Compile();
+        var first = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
+        var second = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 3.0, 4.0 })]);
+
+        ExpressionInterpreter.Interpret(compiled, first).ShouldBe([3.0, 4.0]);
+        ExpressionInterpreter.Interpret(compiled, second).ShouldBe([5.0, 6.0]);
+    }
+
     private static double[] GetConstants(CompiledExpression expression)
     {
         var constants = new List<double>();
@@ -145,7 +156,7 @@ public sealed class SymbolicExpressionCompilerTests
 
     private sealed record DoubleSymbol() : OperationSymbol("double", 1)
     {
-        protected override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+        public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
         {
             emitter.EmitChild(0);
             emitter.EmitConstant(2.0);

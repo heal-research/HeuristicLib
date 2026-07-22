@@ -42,14 +42,12 @@ public sealed class CompiledExpression : IEquatable<CompiledExpression>
 
     internal CompiledSubExpression CreateSubExpression(int rootInstructionIndex)
     {
-        if ((uint)rootInstructionIndex >= (uint)instructions.Length)
+        if (rootInstructionIndex < 0 || rootInstructionIndex >= instructions.Length)
         {
             throw new ArgumentOutOfRangeException(nameof(rootInstructionIndex));
         }
 
-        var root = instructions[rootInstructionIndex];
-        var start = rootInstructionIndex - root.SubtreeLength + 1;
-        return new CompiledSubExpression(this, start, root.SubtreeLength, rootInstructionIndex);
+        return new CompiledSubExpression(this, rootInstructionIndex);
     }
 
     internal Instruction GetInstruction(int instructionIndex) => instructions[instructionIndex];

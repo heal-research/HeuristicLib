@@ -3,22 +3,18 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 public readonly struct CompiledSubExpression
 {
     private readonly CompiledExpression expression;
-    private readonly int startIndex;
     private readonly int rootInstructionIndex;
 
-    internal CompiledSubExpression(CompiledExpression expression, int startIndex, int length, int rootInstructionIndex)
+    internal CompiledSubExpression(CompiledExpression expression, int rootInstructionIndex)
     {
         this.expression = expression;
-        this.startIndex = startIndex;
-        Length = length;
         this.rootInstructionIndex = rootInstructionIndex;
     }
 
     public Instruction Instruction => expression.GetInstruction(rootInstructionIndex);
     public OpCode OpCode => Instruction.OpCode;
     public int Arity => Instruction.Arity;
-    public int Length { get; }
-    public int SubtreeLength => Instruction.SubtreeLength;
+    public int Length => Instruction.SubtreeLength;
 
     public IEnumerable<CompiledSubExpression> TraverseChildren() => EnumerateChildren();
     public IEnumerable<CompiledSubExpression> TraversePreOrder() => EnumeratePreOrder();
@@ -27,7 +23,7 @@ public readonly struct CompiledSubExpression
 
     public CompiledSubExpression Child(int index)
     {
-        if ((uint)index >= (uint)Arity)
+        if (index < 0 || index >= Arity)
         {
             throw new ArgumentOutOfRangeException(nameof(index));
         }
@@ -38,9 +34,7 @@ public readonly struct CompiledSubExpression
             childRootIndex -= expression.GetInstruction(childRootIndex).SubtreeLength;
         }
 
-        var childRoot = expression.GetInstruction(childRootIndex);
-        var childStartIndex = childRootIndex - childRoot.SubtreeLength + 1;
-        return new CompiledSubExpression(expression, childStartIndex, childRoot.SubtreeLength, childRootIndex);
+        return new CompiledSubExpression(expression, childRootIndex);
     }
 
     public bool TryGetConstantValue(out double value)
@@ -77,7 +71,8 @@ public readonly struct CompiledSubExpression
 
     private IEnumerable<CompiledSubExpression> EnumeratePostOrder()
     {
-        for (var i = startIndex; i < startIndex + Length; i++)
+        var startIndex = rootInstructionIndex - Length + 1;
+        for (var i = startIndex; i <= rootInstructionIndex; i++)
         {
             yield return CreateSubExpression(i);
         }
@@ -184,8 +179,6 @@ public readonly struct CompiledSubExpression
 
     private CompiledSubExpression CreateSubExpression(int instructionIndex)
     {
-        var instruction = expression.GetInstruction(instructionIndex);
-        var start = instructionIndex - instruction.SubtreeLength + 1;
-        return new CompiledSubExpression(expression, start, instruction.SubtreeLength, instructionIndex);
+        return new CompiledSubExpression(expression, instructionIndex);
     }
 }

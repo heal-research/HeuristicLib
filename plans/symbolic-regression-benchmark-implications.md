@@ -7,9 +7,10 @@ This document records the architectural implications of the expression-tree repr
 The decision is:
 
 - use a persistent hierarchical `ExpressionTree` as the authoritative genotype;
+- specialize terminal payloads and common operation arities in the production node hierarchy;
 - retain `CompiledExpression` as the compact opcode/RPN execution representation;
 - expose compilation and `CompiledExpression` as an advanced public API so callers can explicitly precompile, optimize, retain, and repeatedly execute a plan;
-- retain direct hierarchical evaluation as a supported CPU path;
+- compile every expression before evaluation; direct hierarchical evaluation is not part of the initial production API;
 - do not use flat class RPN or chunked RPN as the production genotype;
 - keep genotype and execution storage as deliberately different representations with a compilation boundary between them.
 
@@ -33,7 +34,7 @@ The final population workloads covered:
 - a complete 256-individual, 10-generation pipeline evaluated on 1,000 rows;
 - retained-memory diagnostics before and after 25 generations.
 
-The detailed result files remain under [`benchmarks/results`](../benchmarks/results/) and [`benchmarks/results/pop-based`](../benchmarks/results/pop-based/).
+The completed node-layout benchmark source and detailed result files are archived under [`benchmarks-references/expression-node-layouts`](../benchmarks-references/expression-node-layouts/).
 
 ## Main Results
 
@@ -114,7 +115,8 @@ The rope attempted to combine sharing with RPN ordering. In practice, balancing,
 
 `ExpressionTree` becomes an immutable persistent hierarchy:
 
-- `ExpressionTree` is rooted directly in an immutable hierarchical `ExpressionNode` that owns its symbol, local payload, and child array;
+- `ExpressionTree` is rooted directly in an immutable hierarchical `ExpressionNode` specialized by terminal payload and operation arity;
+- payloadless, variable, and numeric terminals are distinct node types; unary and binary nodes store direct references, while n-ary nodes use a child array;
 - each node caches metadata justified by common operators, initially length, depth, and hash;
 - edits rebuild only the affected ancestor path and reuse unchanged subtrees;
 - macros remain one genotype node even when compilation lowers them to multiple instructions;
@@ -130,30 +132,22 @@ Compiled artifacts are not part of genotype equality, hashing, search-space cont
 The compilation and interpreter system should remain. The benchmark does not show that opcode RPN is unnecessary; it shows that opcode RPN belongs after the genotype boundary.
 
 ```text
-                              +-> direct hierarchical CPU evaluator
-ExpressionTree ---------------+
-                              +-> compiler/optimizer
-                                      |
-                                      v
-                              CompiledExpression
-                                      |
-                                      +-> batched CPU interpreter
-                                      +-> future backend-specific packing
+ExpressionTree -> compiler/optimizer -> CompiledExpression
                                               |
-                                              v
-                                       GPU population evaluator
+                                              +-> batched CPU interpreter
+                                              +-> future backend-specific packing
+                                                       |
+                                                       v
+                                                GPU population evaluator
 ```
 
 ### CPU Execution
 
-Retain two CPU paths:
-
-1. `ExpressionCompiler` lowers a hierarchy to `CompiledExpression`, optionally optimizing it, and `ExpressionInterpreter` executes the compact opcode stream.
-2. A direct hierarchical evaluator executes semantic nodes with the same batched kernels and workspace discipline.
+Use one CPU execution path: `ExpressionCompiler` lowers a hierarchy to `CompiledExpression`, optionally optimizing it, and `ExpressionInterpreter` executes the compact opcode stream.
 
 The CPU interpreter hot loop uses direct opcode-specific scalar/span paths and `TensorPrimitives` calls. Avoid delegates and per-instruction callback abstraction in this path unless benchmarks demonstrate an improvement.
 
-Compilation is the canonical complete semantic path. A symbol that implements `IExpressionEmitter`, including a macro that lowers to several built-in opcodes, is executable without also supplying a second evaluation implementation. A direct evaluator must therefore either support the encountered symbol explicitly or fall back to compilation. Do not require every custom symbol to maintain equivalent emitter and direct-evaluator logic merely to enable this optimization.
+Compilation is the canonical complete semantic path. A symbol that implements `IExpressionEmitter`, including a macro that lowers to several built-in opcodes, is executable without supplying a second evaluation implementation. This keeps custom-symbol semantics in one place and preserves one execution format for CPU and future backends.
 
 The compiled path remains the primary general execution representation because it provides:
 
@@ -168,11 +162,7 @@ Expose this path publicly through an API equivalent to `ExpressionCompiler.Compi
 
 Keep the compiled artifact read-only. Do not expose generic instruction locations or compiled-expression editing; a future need for efficient parameter updates should introduce an explicit parameterized execution-plan design.
 
-The direct hierarchy path remains useful for built-in-only one-shot evaluations, small datasets where compilation cannot amortize, debugging, and reference validation. For example, with a 55-node tree, direct hierarchy evaluation beat compile-plus-interpret at 100 and 1,000 rows, while compiled execution recovered the advantage at 10,000 rows in the measured fixture. The results do not justify making either path universal, nor do they establish a stable automatic crossover threshold for production expressions.
-
-For ordinary interpretation, compilation remains an implementation detail of the high-level evaluator. Most callers should be able to pass an `ExpressionTree` and data without understanding execution representations. The evaluator may use direct execution, compile and execute, or reuse an evaluator-owned compiled plan when all relevant context is known.
-
-For advanced use, compiled execution is an explicit public path as well as the correctness-complete fallback. Direct execution should be selected only when all symbols support it. Do not put automatic dispatch policy on `ExpressionTree`; its explicit `Compile` convenience, if provided, only requests compilation. After the production hierarchy is implemented, benchmark a high-level evaluator policy over realistic combinations of tree length, row count, repeat count, optimization opportunity, and backend. Only then consider automatic selection.
+For ordinary interpretation, compilation remains an implementation detail of the high-level evaluator. Most callers pass an `ExpressionTree` and data without handling execution representations. Advanced callers may explicitly compile once, retain the immutable result, and invoke `ExpressionInterpreter` repeatedly.
 
 ### Compilation Lifetime And Caching
 
@@ -215,18 +205,16 @@ Both preserve the important decision: GPU-oriented linear storage is a derived e
 5. Keep `CompiledExpression`, payload compaction, macro lowering, constant folding, and the batched opcode interpreter.
 6. Keep `CompiledExpression` and its compilation/optimization entry point public so advanced callers can precompile once and repeatedly interpret the result.
 7. Provide a high-level interpretation API over `ExpressionTree` that does not require ordinary callers to know whether compilation occurred.
-8. Keep compiled batch execution cohesive inside `ExpressionInterpreter`. Extract shared kernels only when a direct hierarchy evaluator creates demonstrated reuse.
-9. Add production tests for hierarchy navigation, metadata, equality, path-copy edits, structural sharing, public precompilation, repeated compiled evaluation, direct evaluation, and semantic parity.
-10. Re-run the focused and population benchmarks against the production hierarchy after migration. Prototype results justify the direction but do not replace regression measurements on final code.
-11. Defer GPU implementation and automatic CPU execution dispatch to separate, benchmark-driven work.
+8. Keep compiled batch execution cohesive inside `ExpressionInterpreter`; do not duplicate its arithmetic kernels in a tree evaluator.
+9. Add production tests for hierarchy navigation, metadata, equality, path-copy edits, structural sharing, public precompilation, repeated compiled evaluation, and compile/interpret parity.
+10. Preserve the completed benchmark harness and results under `benchmarks-references/expression-node-layouts` for future regression investigations.
+11. Defer GPU implementation and any reconsideration of direct tree execution to separate, benchmark-driven work.
 
-## Deferred Node Layout Benchmark
+## Final Node Layout Decision
 
-The initial production `ExpressionNode` should use one child array for every arity, with an empty array for terminals. This keeps the hierarchy uniform and the implementation straightforward while the larger representation change settles.
+The follow-up node-layout benchmarks compared the uniform child-array hierarchy with specialized arity nodes, specialized arity plus terminal payload nodes, and inline-child storage. Specialized arity and specialized terminals were consistently equal to or faster than the uniform layout while allocating less; inline-child storage was generally slower and larger. Because the two specialized variants performed similarly, the production model uses specialized terminal types as the stronger semantic design: invalid variable, constant, and payloadless-terminal states are excluded by construction.
 
-After the production hierarchy and operator workloads are stable, compare this baseline against specialized terminal, unary, and binary node implementations behind the same public node API. The specialized variants should store unary and binary children in dedicated reference fields and retain equivalent metadata, immutability, structural sharing, equality, compilation, and evaluation behavior.
-
-Measure at least tree construction, node replacement, subtree replacement, crossover, direct evaluation, compilation, allocation, and the multi-generation population workload. Adopt specialized node layouts only if they provide a material whole-workload improvement; isolated object-size or microbenchmark gains are insufficient.
+The final layout uses direct fields for unary and binary children and an array only for arity three and above. The completed benchmark source, correctness harness, scripts, and results are archived under `benchmarks-references/expression-node-layouts` and are not part of the active solution.
 
 ## Benchmark Caveats
 

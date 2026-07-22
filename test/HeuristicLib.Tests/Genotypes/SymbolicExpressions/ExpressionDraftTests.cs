@@ -30,10 +30,11 @@ public sealed class ExpressionDraftTests
         var searchSpace = new ExpressionTreeSearchSpace(10, 5, [new AdditionSymbol(), variable, constant]);
 
         var expression = (Variable("x0", variable) + Constant(12.0, constant)).Build(searchSpace);
+        var root = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
 
-        expression.Root.Symbol.ShouldBe(new AdditionSymbol());
-        expression.Root.Child(0).Symbol.ShouldBe(variable);
-        expression.Root.Child(1).Symbol.ShouldBe(constant);
+        root.Symbol.ShouldBe(new AdditionSymbol());
+        root.Left.Symbol.ShouldBe(variable);
+        root.Right.Symbol.ShouldBe(constant);
     }
 
     [Fact]
@@ -58,12 +59,8 @@ public sealed class ExpressionDraftTests
         var expression = (Variable("x0") + Variable("x0")).Build();
 
         expression.TraversePostOrder()
-            .Where(node => node.TryGetVariableName(out _))
-            .Select(node =>
-            {
-                node.TryGetVariableName(out var name);
-                return name;
-            })
+            .OfType<VariableExpressionNode>()
+            .Select(node => node.VariableName)
             .ShouldBe(["x0", "x0"]);
     }
 
@@ -71,9 +68,10 @@ public sealed class ExpressionDraftTests
     public void Build_PreservesFixedAndEvolvableConstantMetadata()
     {
         var expression = (FixedConstant(1.0) + Constant(2.0)).Build();
+        var root = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
 
-        expression.Root.Child(0).Symbol.ShouldBe(new FixedConstantSymbol(1.0));
-        expression.Root.Child(1).Symbol.ShouldBe(new EvolvableConstantSymbol());
+        root.Left.Symbol.ShouldBe(new FixedConstantSymbol(1.0));
+        root.Right.Symbol.ShouldBe(new EvolvableConstantSymbol());
     }
 
     [Fact]

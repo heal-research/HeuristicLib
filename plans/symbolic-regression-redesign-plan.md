@@ -101,8 +101,8 @@ Stage 0 is done when the intended public flow is executable and every design hol
 
 Implement:
 
-- `ExpressionTree` rooted in an immutable `ExpressionNode`, with immutable child references, structurally shared path-copy edits, and cached length/depth/hash.
-- Regular construction through `Symbol.CreateNode(...)` or the public `ExpressionNode` constructor copies/materializes child inputs. `ExpressionNode.FromOwnedChildren(...)` is the explicit no-copy path, primarily for internal construction and edits; its caller must not mutate the transferred array afterward.
+- `ExpressionTree` rooted in an immutable `ExpressionNode` hierarchy with specialized payloadless, variable, numeric, unary, binary, and n-ary nodes, structurally shared path-copy edits, and cached length/depth/hash.
+- Regular construction uses `Symbol.CreateNode(...)` or the public concrete node constructors. Unary and binary nodes store direct references; n-ary nodes materialize a private child array, with ownership transfer restricted to internal construction and edit paths.
 - Runtime validation for the instruction invariants listed above.
 - `ExpressionDraft.Compile()`, `ExpressionSlice`, and formatting from compiled variable names.
 - Series/batch interpretation against a supplied `Dataset` and input-variable order.
@@ -205,7 +205,7 @@ Low-level genotype operations:
 - support variable-reference payload edits
 - support sub-expression replacement and splicing
 - return new validated `ExpressionTree` instances and never mutate existing candidates
-- use ancestor path copying and immutable child-array reuse for edits and subtree replacement
+- use ancestor path copying, direct unary/binary child reuse, and single-clone n-ary child arrays for edits and subtree replacement
 
 Rules:
 

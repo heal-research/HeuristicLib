@@ -1,5 +1,11 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
+/// <summary>Owns an immutable symbolic-expression genotype and coordinates edits to its node occurrences.</summary>
+/// <remarks>
+/// <see cref="ExpressionTree"/> is the aggregate root for editing. Identify an occurrence with an
+/// <see cref="ExpressionPoint"/> and use the tree's replacement methods, which return a new tree while
+/// preserving structurally shared, unaffected nodes.
+/// </remarks>
 public sealed class ExpressionTree : IEquatable<ExpressionTree>
 {
     public ExpressionTree(ExpressionNode root)
@@ -40,6 +46,11 @@ public sealed class ExpressionTree : IEquatable<ExpressionTree>
         return new ExpressionTree(updated);
     }
 
+    public ExpressionTree Replace(ExpressionPoint point, ExpressionTree replacement)
+    {
+        return Replace(point, replacement.Root);
+    }
+
     public ExpressionTree ReplaceMany(IEnumerable<(ExpressionPoint Point, ExpressionNode Replacement)> replacements)
     {
         var effectiveReplacements = new List<(ExpressionPoint Point, ExpressionNode Replacement)>();
@@ -63,24 +74,19 @@ public sealed class ExpressionTree : IEquatable<ExpressionTree>
         return new ExpressionTree(ApplyPatch(Root, patch));
     }
 
-    public ExpressionTree ReplaceSubtree(ExpressionPoint point, ExpressionTree replacement)
-    {
-        return Replace(point, replacement.Root);
-    }
-
     public ExpressionTree WithVariable(ExpressionPoint point, VariableSymbol symbol, string variableName)
     {
-        return Replace(point, new ExpressionNode(symbol, variableName));
+        return Replace(point, new VariableExpressionNode(symbol, variableName));
     }
 
     public ExpressionTree WithConstant(ExpressionPoint point, ConstantSymbol symbol, double value)
     {
-        return Replace(point, new ExpressionNode(symbol, value));
+        return Replace(point, new NumericConstantExpressionNode(symbol, value));
     }
 
     internal ExpressionPoint GetPoint(int index)
     {
-        if ((uint)index >= (uint)Length)
+        if (index < 0 || index >= Length)
             throw new ArgumentOutOfRangeException(nameof(index));
 
         return FindPoint(RootPoint, index);
@@ -95,9 +101,7 @@ public sealed class ExpressionTree : IEquatable<ExpressionTree>
         if (other is null)
             return false;
 
-        return ReferenceEquals(this, other)
-               || ReferenceEquals(Root, other.Root)
-               || Root.Equals(other.Root);
+        return ReferenceEquals(this, other) || ReferenceEquals(Root, other.Root) || Root.Equals(other.Root);
     }
 
     public override bool Equals(object? obj) => obj is ExpressionTree other && Equals(other);
@@ -116,7 +120,7 @@ public sealed class ExpressionTree : IEquatable<ExpressionTree>
         index--;
         for (var i = 0; i < point.Node.Arity; i++)
         {
-            var child = point.Node.Child(i);
+            var child = point.Node.GetChild(i);
             if (index < child.Length)
                 return FindPoint(point.Child(i), index);
 
@@ -169,33 +173,36 @@ public sealed class ExpressionTree : IEquatable<ExpressionTree>
             return patch.Replacement;
         if (patch.Children is null)
             return original;
-
-        ExpressionNode[]? updatedChildren = null;
+        Dictionary<int, ExpressionNode>? updatedChildren = null;
         foreach (var (childIndex, childPatch) in patch.Children)
         {
-            var child = original.Child(childIndex);
+            var child = original.GetChild(childIndex);
             var updatedChild = ApplyPatch(child, childPatch);
             if (child.Equals(updatedChild))
                 continue;
 
-            updatedChildren ??= original.Children.ToArray();
-            updatedChildren[childIndex] = updatedChild;
+            updatedChildren ??= new Dictionary<int, ExpressionNode>();
+            updatedChildren.Add(childIndex, updatedChild);
         }
 
         return updatedChildren is null
             ? original
-            : original.WithOwnedChildren(updatedChildren);
+            : original.WithChildren(updatedChildren);
     }
 
     private static string FormatNode(ExpressionNode node)
     {
-        return node.Symbol switch
+        return node switch
         {
-            VariableSymbol => node.VariableName!,
-            ConstantSymbol => node.NumericValue.ToString("G", System.Globalization.CultureInfo.InvariantCulture),
-            BuiltInOperationSymbol operation when operation.Arity == 1 => $"{operation.Name}({FormatNode(node.Child(0))})",
-            BuiltInOperationSymbol operation when operation.Arity == 2 => $"({FormatNode(node.Child(0))} {operation.Name} {FormatNode(node.Child(1))})",
-            _ => $"{node.Name}({string.Join(", ", node.TraverseChildren().Select(FormatNode))})"
+            VariableExpressionNode variable => variable.VariableName,
+            NumericConstantExpressionNode constant => constant.Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture),
+            TerminalExpressionNode => node.Name,
+            UnaryExpressionNode { Symbol: BuiltInOperationSymbol operation } unary => $"{operation.Name}({FormatNode(unary.Operand)})",
+            BinaryExpressionNode { Symbol: BuiltInOperationSymbol operation } binary => $"({FormatNode(binary.Left)} {operation.Name} {FormatNode(binary.Right)})",
+            UnaryExpressionNode unary => $"{node.Name}({FormatNode(unary.Operand)})",
+            BinaryExpressionNode binary => $"{node.Name}({FormatNode(binary.Left)}, {FormatNode(binary.Right)})",
+            NaryExpressionNode nary => $"{node.Name}({string.Join(", ", nary.Children.Select(FormatNode))})",
+            _ => node.Name
         };
     }
 

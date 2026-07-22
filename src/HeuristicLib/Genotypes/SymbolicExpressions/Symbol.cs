@@ -8,10 +8,7 @@ public abstract record Symbol(string Name, int Arity)
 {
     public virtual bool SupportsLocalPerturbation => false;
 
-    public ExpressionNode CreateNode(IRandomNumberGenerator random, params IEnumerable<ExpressionNode> children)
-    {
-        return ExpressionNode.FromOwnedChildren(this, random, children.ToArray());
-    }
+    public abstract ExpressionNode CreateNode(IRandomNumberGenerator random, params ImmutableArray<ExpressionNode> children);
 
     public virtual bool CanPerturb(ExpressionNode node)
     {
@@ -24,59 +21,34 @@ public abstract record Symbol(string Name, int Arity)
         return false;
     }
 
-    internal void EmitNode(ExpressionNode node, IExpressionEmitter emitter)
+    public abstract void Emit(ExpressionNode node, IExpressionEmitter emitter);
+
+    private protected void ValidateChildCount(ImmutableArray<ExpressionNode> children)
     {
-        Emit(node, emitter);
-    }
-
-    protected abstract void Emit(ExpressionNode node, IExpressionEmitter emitter);
-}
-
-public abstract record OperationSymbol(string Name, int Arity) : Symbol(Name, Arity);
-
-public abstract record BuiltInOperationSymbol(string Name, OpCode OpCode)
-    : OperationSymbol(Name, OpCodes.GetArity(OpCode))
-{
-    protected override void Emit(ExpressionNode node, IExpressionEmitter emitter)
-    {
-        for (var i = 0; i < Arity; i++)
-            emitter.EmitChild(i);
-
-        emitter.EmitOperator(OpCode);
+        if (children.Length != Arity)
+            throw new ArgumentException($"Symbol '{Name}' requires {Arity} children but received {children.Length}.", nameof(children));
     }
 }
 
-public sealed record AdditionSymbol() : BuiltInOperationSymbol("+", OpCode.Add);
-public sealed record SubtractionSymbol() : BuiltInOperationSymbol("-", OpCode.Subtract);
-public sealed record MultiplicationSymbol() : BuiltInOperationSymbol("*", OpCode.Multiply);
-public sealed record DivisionSymbol() : BuiltInOperationSymbol("/", OpCode.Divide);
-public sealed record NegationSymbol() : BuiltInOperationSymbol("negate", OpCode.Negate);
-public sealed record ExponentialSymbol() : BuiltInOperationSymbol("exp", OpCode.Exp);
-public sealed record LogarithmSymbol() : BuiltInOperationSymbol("log", OpCode.Log);
-public sealed record SquareRootSymbol() : BuiltInOperationSymbol("sqrt", OpCode.Sqrt);
+public abstract record TerminalSymbol(string Name) : Symbol(Name, 0);
 
-public sealed record SigmoidSymbol() : OperationSymbol("sigmoid", 1)
-{
-    protected override void Emit(ExpressionNode node, IExpressionEmitter emitter)
-    {
-        emitter.EmitConstant(1.0);
-        emitter.EmitConstant(1.0);
-        emitter.EmitChild(0);
-        emitter.EmitOperator(OpCode.Negate);
-        emitter.EmitOperator(OpCode.Exp);
-        emitter.EmitOperator(OpCode.Add);
-        emitter.EmitOperator(OpCode.Divide);
-    }
-}
-
-public abstract record ConstantSymbol(string Name) : Symbol(Name, 0);
+public abstract record ConstantSymbol(string Name) : TerminalSymbol(Name);
 
 public sealed record FixedConstantSymbol(double Value, string? DisplayName = null)
     : ConstantSymbol(DisplayName ?? Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture))
 {
-    protected override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+    public override ExpressionNode CreateNode(IRandomNumberGenerator random, params ImmutableArray<ExpressionNode> children)
     {
-        emitter.EmitConstant(node.NumericValue);
+        ValidateChildCount(children);
+        return new NumericConstantExpressionNode(this, Value);
+    }
+
+    public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+    {
+        if (node is not NumericConstantExpressionNode constant || constant.Symbol != this)
+            throw new InvalidOperationException("A fixed constant symbol can emit only its own numeric constant node.");
+
+        emitter.EmitConstant(constant.Value);
     }
 }
 
@@ -90,45 +62,51 @@ public sealed record EvolvableConstantSymbol(IDistribution<double> InitialDistri
 
     public override bool SupportsLocalPerturbation => true;
 
-    internal double SampleInitialValue(IRandomNumberGenerator random) => InitialDistribution.Sample(random);
+    public override ExpressionNode CreateNode(IRandomNumberGenerator random, params ImmutableArray<ExpressionNode> children)
+    {
+        ValidateChildCount(children);
+        return new NumericConstantExpressionNode(this, SampleInitialValue(random));
+    }
 
     public override bool CanPerturb(ExpressionNode node)
     {
-        return node.Symbol == this && node.HasNumericValue;
+        return node is NumericConstantExpressionNode && node.Symbol == this;
     }
 
     public override bool TryPerturb(ExpressionNode node, IRandomNumberGenerator random, out ExpressionNode perturbed)
     {
-        if (!CanPerturb(node))
+        if (node is not NumericConstantExpressionNode constant || constant.Symbol != this)
         {
             perturbed = node;
             return false;
         }
 
-        if (!Perturbation.TryApply(node.NumericValue, this, random, out var value))
+        if (!Perturbation.TryApply(constant.Value, this, random, out var value))
         {
             perturbed = node;
             return false;
         }
 
-        perturbed = ExpressionNode.FromOwnedChildren(this, value, node.Children);
+        perturbed = new NumericConstantExpressionNode(this, value);
         return true;
     }
 
-    protected override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+    public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
     {
-        emitter.EmitConstant(node.NumericValue);
+        if (node is not NumericConstantExpressionNode constant || constant.Symbol != this)
+            throw new InvalidOperationException("An evolvable constant symbol can emit only its own numeric constant node.");
+
+        emitter.EmitConstant(constant.Value);
     }
+
+    internal double SampleInitialValue(IRandomNumberGenerator random) => InitialDistribution.Sample(random);
 }
 
 [Equatable]
-public sealed partial record VariableSymbol : Symbol
+public sealed partial record VariableSymbol : TerminalSymbol
 {
-    [OrderedEquality] public ImmutableArray<string> Variables { get; }
-    [OrderedEquality] public ImmutableArray<double> SelectionWeights { get; }
-
     public VariableSymbol(IEnumerable<string> variables, IEnumerable<double>? selectionWeights = null)
-        : base("variable", 0)
+        : base("variable")
     {
         Variables = variables.ToImmutableArray();
         if (Variables.IsDefaultOrEmpty)
@@ -140,17 +118,20 @@ public sealed partial record VariableSymbol : Symbol
         SelectionWeights = WeightSelection.Normalize(selectionWeights?.ToImmutableArray(), Variables.Length);
     }
 
+    [OrderedEquality] public ImmutableArray<string> Variables { get; }
+    [OrderedEquality] public ImmutableArray<double> SelectionWeights { get; }
+
     public override bool SupportsLocalPerturbation => true;
 
-    internal string Sample(IRandomNumberGenerator random)
+    public override ExpressionNode CreateNode(IRandomNumberGenerator random, params ImmutableArray<ExpressionNode> children)
     {
-        var index = WeightSelection.SelectIndex(random, Variables.Length, SelectionWeights);
-        return Variables[index];
+        ValidateChildCount(children);
+        return new VariableExpressionNode(this, Sample(random));
     }
 
     public override bool CanPerturb(ExpressionNode node)
     {
-        return node.Symbol == this && node.HasVariableName;
+        return node is VariableExpressionNode && node.Symbol == this;
     }
 
     public override bool TryPerturb(ExpressionNode node, IRandomNumberGenerator random, out ExpressionNode perturbed)
@@ -161,16 +142,84 @@ public sealed partial record VariableSymbol : Symbol
             return false;
         }
 
-        perturbed = ExpressionNode.FromOwnedChildren(this, Sample(random), node.Children);
+        perturbed = new VariableExpressionNode(this, Sample(random));
         return true;
     }
 
-    protected override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+    public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
     {
-        if (node.Symbol != this || !node.HasVariableName)
+        if (node is not VariableExpressionNode variable || variable.Symbol != this)
             throw new InvalidOperationException("A variable symbol can emit only its own variable node.");
 
-        emitter.EmitVariable(node.VariableName!);
+        emitter.EmitVariable(variable.VariableName);
+    }
+
+    internal string Sample(IRandomNumberGenerator random)
+    {
+        var index = WeightSelection.SelectIndex(random, Variables.Length, SelectionWeights);
+        return Variables[index];
+    }
+}
+
+public abstract record PayloadlessTerminalSymbol(string Name) : TerminalSymbol(Name)
+{
+    public override ExpressionNode CreateNode(IRandomNumberGenerator random, params ImmutableArray<ExpressionNode> children)
+    {
+        ValidateChildCount(children);
+
+        return new PayloadlessTerminalExpressionNode(this);
+    }
+}
+
+public abstract record OperationSymbol(string Name, int Arity) : Symbol(Name, Arity)
+{
+    public override ExpressionNode CreateNode(IRandomNumberGenerator random, params ImmutableArray<ExpressionNode> children)
+    {
+        ValidateChildCount(children);
+
+        return Arity switch
+        {
+            1 => new UnaryExpressionNode(this, children[0]),
+            2 => new BinaryExpressionNode(this, children[0], children[1]),
+            >= 3 => new NaryExpressionNode(this, children),
+            _ => throw new InvalidOperationException("An operation symbol must have positive arity.")
+        };
+    }
+}
+
+public abstract record BuiltInOperationSymbol(string Name, OpCode OpCode)
+    : OperationSymbol(Name, OpCodes.GetArity(OpCode))
+{
+    public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+    {
+        for (var i = 0; i < Arity; i++)
+            emitter.EmitChild(i);
+
+        emitter.EmitOperator(OpCode);
+    }
+}
+
+public sealed record AdditionSymbol() : BuiltInOperationSymbol("+", OpCode.Add);
+public sealed record SubtractionSymbol() : BuiltInOperationSymbol("-", OpCode.Subtract);
+public sealed record MultiplicationSymbol() : BuiltInOperationSymbol("*", OpCode.Multiply);
+public sealed record DivisionSymbol() : BuiltInOperationSymbol("/", OpCode.Divide);
+
+public sealed record NegationSymbol() : BuiltInOperationSymbol("negate", OpCode.Negate);
+public sealed record ExponentialSymbol() : BuiltInOperationSymbol("exp", OpCode.Exp);
+public sealed record LogarithmSymbol() : BuiltInOperationSymbol("log", OpCode.Log);
+public sealed record SquareRootSymbol() : BuiltInOperationSymbol("sqrt", OpCode.Sqrt);
+
+public sealed record SigmoidSymbol() : OperationSymbol("sigmoid", 1)
+{
+    public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+    {
+        emitter.EmitConstant(1.0);
+        emitter.EmitConstant(1.0);
+        emitter.EmitChild(0);
+        emitter.EmitOperator(OpCode.Negate);
+        emitter.EmitOperator(OpCode.Exp);
+        emitter.EmitOperator(OpCode.Add);
+        emitter.EmitOperator(OpCode.Divide);
     }
 }
 

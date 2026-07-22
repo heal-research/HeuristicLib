@@ -41,7 +41,8 @@ public static class ExpressionCompiler
             if (current is null)
                 throw new InvalidOperationException("Child emission is only available while compiling a symbol.");
 
-            CompileExpressionNode(current.Child(childIndex));
+            var child = current.GetChild(childIndex);
+            CompileExpressionNode(child);
         }
 
         public void EmitVariable(string name)
@@ -100,7 +101,7 @@ public static class ExpressionCompiler
             current = node;
             try
             {
-                node.Symbol.EmitNode(node, this);
+                node.Symbol.Emit(node, this);
             }
             finally
             {

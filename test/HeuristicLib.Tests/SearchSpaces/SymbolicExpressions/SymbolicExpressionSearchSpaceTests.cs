@@ -101,6 +101,16 @@ public sealed class SymbolicExpressionSearchSpaceTests
     }
 
     [Fact]
+    public void Contains_AcceptsAnAllowedPayloadlessTerminal()
+    {
+        var symbol = new TestPayloadlessTerminalSymbol();
+        var searchSpace = new ExpressionTreeSearchSpace(1, 1, [symbol]);
+        var expression = new ExpressionTree(new PayloadlessTerminalExpressionNode(symbol));
+
+        searchSpace.Contains(expression).ShouldBeTrue();
+    }
+
+    [Fact]
     public void Constructor_ExposesTerminalFamilyCapabilities()
     {
         var constants = new ExpressionTreeSearchSpace(1, 1, [new EvolvableConstantSymbol()]);
@@ -128,7 +138,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
         ]);
 
         var symbol = searchSpace.SelectSymbol(0, new SequenceRandomNumberGenerator(0.9));
-        symbol.CreateNode(new SequenceRandomNumberGenerator(0.9)).NumericValue.ShouldBe(2.0);
+        symbol.CreateNode(new SequenceRandomNumberGenerator(0.9)).ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(2.0);
     }
 
     [Fact]
@@ -162,4 +172,12 @@ public sealed class SymbolicExpressionSearchSpaceTests
 
     private static ExpressionTree CreateLinearExpression() =>
         (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
+
+    private sealed record TestPayloadlessTerminalSymbol() : PayloadlessTerminalSymbol("terminal")
+    {
+        public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+        {
+            emitter.EmitConstant(0.0);
+        }
+    }
 }

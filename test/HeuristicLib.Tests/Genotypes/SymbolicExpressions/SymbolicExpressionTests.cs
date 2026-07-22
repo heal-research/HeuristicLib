@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using System.Reflection;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
@@ -8,48 +10,94 @@ namespace HEAL.HeuristicLib.Tests.Genotypes.SymbolicExpressions;
 public sealed class SymbolicExpressionTests
 {
     [Fact]
-    public void Node_RejectsMissingOperationChildren()
+    public void NodeTypes_ExposeOnlyTheirNaturalChildShapes()
     {
-        Should.Throw<ArgumentException>(() => new ExpressionNode(new AdditionSymbol()));
+        typeof(ExpressionNode).GetMethod(nameof(ExpressionNode.GetChild)).ShouldNotBeNull();
+        typeof(ExpressionNode).GetProperty(nameof(ExpressionNode.Symbol), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!.PropertyType.ShouldBe(typeof(Symbol));
+        typeof(ExpressionNode).GetProperty("Children").ShouldBeNull();
+        typeof(TerminalExpressionNode).GetProperty("Children").ShouldBeNull();
+        typeof(TerminalExpressionNode).GetProperty(nameof(ExpressionNode.Symbol), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!.PropertyType.ShouldBe(typeof(TerminalSymbol));
+        typeof(PayloadlessTerminalExpressionNode).GetProperty(nameof(ExpressionNode.Symbol), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!.PropertyType.ShouldBe(typeof(PayloadlessTerminalSymbol));
+        typeof(OperationExpressionNode).GetProperty("Children").ShouldBeNull();
+        typeof(OperationExpressionNode).GetProperty(nameof(ExpressionNode.Symbol), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!.PropertyType.ShouldBe(typeof(OperationSymbol));
+        typeof(VariableExpressionNode).GetProperty(nameof(ExpressionNode.Symbol), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!.PropertyType.ShouldBe(typeof(VariableSymbol));
+        typeof(NumericConstantExpressionNode).GetProperty(nameof(ExpressionNode.Symbol), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)!.PropertyType.ShouldBe(typeof(ConstantSymbol));
+
+        typeof(UnaryExpressionNode).GetProperty(nameof(UnaryExpressionNode.Operand)).ShouldNotBeNull();
+        typeof(UnaryExpressionNode).GetProperty("Children").ShouldBeNull();
+        typeof(BinaryExpressionNode).GetProperty(nameof(BinaryExpressionNode.Left)).ShouldNotBeNull();
+        typeof(BinaryExpressionNode).GetProperty(nameof(BinaryExpressionNode.Right)).ShouldNotBeNull();
+        typeof(BinaryExpressionNode).GetProperty("Children").ShouldBeNull();
+        typeof(NaryExpressionNode).GetProperty(nameof(NaryExpressionNode.Children)).ShouldNotBeNull();
     }
 
     [Fact]
-    public void Node_RejectsAnIncorrectNumberOfChildren()
+    public void OperationNodes_RejectSymbolsWithDifferentArities()
     {
         var child = Variable("x0").Build().Root;
 
-        Should.Throw<ArgumentException>(() => new ExpressionNode(new AdditionSymbol(), child));
+        Should.Throw<ArgumentException>(() => new UnaryExpressionNode(new AdditionSymbol(), child));
+        Should.Throw<ArgumentException>(() => new BinaryExpressionNode(new SquareRootSymbol(), child, child));
+        Should.Throw<ArgumentException>(() => new NaryExpressionNode(new SumThreeSymbol(), child, child));
     }
 
     [Fact]
     public void Node_RequiresPayloadsForPayloadBearingSymbols()
     {
-        Should.Throw<ArgumentException>(() => new ExpressionNode(new VariableSymbol(["x0"])));
-        Should.Throw<ArgumentException>(() => new ExpressionNode(new FixedConstantSymbol(1.0)));
+        Should.Throw<ArgumentException>(() => new VariableExpressionNode(new VariableSymbol(["x0"]), "x1"));
     }
 
     [Fact]
-    public void SymbolCreateNode_CopiesTheSuppliedChildren()
+    public void PayloadlessTerminalNode_SupportsCustomTerminalSymbols()
+    {
+        var symbol = new OneSymbol();
+        var node = symbol.CreateNode(new SequenceRandomNumberGenerator());
+        var expression = new ExpressionTree(node);
+
+        node.GetType().ShouldBe(typeof(PayloadlessTerminalExpressionNode));
+        node.Symbol.ShouldBe(symbol);
+        node.Arity.ShouldBe(0);
+        expression.EvaluateSingleRow(new Dictionary<string, double>()).ShouldBe(1.0);
+    }
+
+    [Fact]
+    public void SymbolCreateNode_AcceptsImmutableChildren()
     {
         var left = Variable("x0").Build().Root;
         var right = Variable("x1").Build().Root;
-        var children = new[] { left, right };
+        var children = ImmutableArray.Create(left, right);
 
         var node = Symbols.Addition.CreateNode(new SequenceRandomNumberGenerator(), children);
 
-        node.Children.ShouldNotBeSameAs(children);
-        children[0] = Variable("changed").Build().Root;
-        node.Child(0).ShouldBeSameAs(left);
+        var binary = node.ShouldBeOfType<BinaryExpressionNode>();
+        binary.Left.ShouldBeSameAs(left);
+        binary.Right.ShouldBeSameAs(right);
     }
 
     [Fact]
-    public void FromOwnedChildren_StoresTheSuppliedArrayWithoutCopying()
+    public void SymbolCreateNode_SelectsTheSpecializedNodeType()
     {
-        var children = new[] { Variable("x0").Build().Root, Variable("x1").Build().Root };
+        var random = new SequenceRandomNumberGenerator();
+        var child = Variable("x0").Build().Root;
 
-        var node = ExpressionNode.FromOwnedChildren(Symbols.Addition, children);
+        Symbols.FixedConstant(1.0).CreateNode(random).ShouldBeOfType<NumericConstantExpressionNode>();
+        Symbols.Variable(["x0"]).CreateNode(random).ShouldBeOfType<VariableExpressionNode>();
+        Symbols.Negation.CreateNode(random, child).ShouldBeOfType<UnaryExpressionNode>();
+        Symbols.Addition.CreateNode(random, child, child).ShouldBeOfType<BinaryExpressionNode>();
+        new SumThreeSymbol().CreateNode(random, child, child, child).ShouldBeOfType<NaryExpressionNode>();
+    }
 
-        node.Children.ShouldBeSameAs(children);
+    [Fact]
+    public void NaryNode_AcceptsImmutableChildrenWithoutChangingTheirOrder()
+    {
+        var children = ImmutableArray.Create(
+            Variable("x0").Build().Root,
+            Variable("x1").Build().Root,
+            FixedConstant(1.0).Build().Root);
+
+        var node = new NaryExpressionNode(new SumThreeSymbol(), children);
+
+        node.Children.ShouldBe(children);
     }
 
     [Fact]
@@ -69,8 +117,9 @@ public sealed class SymbolicExpressionTests
 
         expression.Length.ShouldBe(5);
         expression.Depth.ShouldBe(3);
-        expression.Root.Symbol.ShouldBe(new AdditionSymbol());
-        expression.Root.Child(1).Symbol.ShouldBe(new MultiplicationSymbol());
+        var root = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
+        root.Symbol.ShouldBe(new AdditionSymbol());
+        root.Right.Symbol.ShouldBe(new MultiplicationSymbol());
         expression.TraversePreOrder().Select(node => node.Symbol).ShouldBe([
             new AdditionSymbol(), new VariableSymbol(["x0"]), new MultiplicationSymbol(), new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
         ]);
@@ -95,14 +144,15 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void RootAndChildren_ExposeTheLogicalTree()
     {
-        var root = CreateLinearExpression().Root;
+        var root = CreateLinearExpression().Root.ShouldBeOfType<BinaryExpressionNode>();
+        var multiplication = root.Right.ShouldBeOfType<BinaryExpressionNode>();
 
         root.Length.ShouldBe(5);
         root.Arity.ShouldBe(2);
-        root.Child(0).TryGetVariableName(out var left).ShouldBeTrue();
-        root.Child(1).Symbol.ShouldBe(Symbols.Multiplication);
-        root.Child(1).Child(0).TryGetConstantValue(out var literal).ShouldBeTrue();
-        root.Child(1).Child(1).TryGetVariableName(out var right).ShouldBeTrue();
+        var left = root.Left.ShouldBeOfType<VariableExpressionNode>().VariableName;
+        multiplication.Symbol.ShouldBe(Symbols.Multiplication);
+        var literal = multiplication.Left.ShouldBeOfType<NumericConstantExpressionNode>().Value;
+        var right = multiplication.Right.ShouldBeOfType<VariableExpressionNode>().VariableName;
         left.ShouldBe("x0");
         literal.ShouldBe(2.0);
         right.ShouldBe("x1");
@@ -122,7 +172,7 @@ public sealed class SymbolicExpressionTests
     public void ExpressionPoint_IdentifiesAnOccurrenceByItsTreeAndParentPath()
     {
         var shared = Variable("x0").Build().Root;
-        var expression = new ExpressionTree(new ExpressionNode(Symbols.Addition, shared, shared));
+        var expression = new ExpressionTree(new BinaryExpressionNode(Symbols.Addition, shared, shared));
         var left = expression.RootPoint.Child(0);
         var right = expression.RootPoint.Child(1);
 
@@ -146,8 +196,7 @@ public sealed class SymbolicExpressionTests
         var rebound = point.Rebind(edited);
 
         rebound.Tree.ShouldBeSameAs(edited);
-        rebound.Node.TryGetVariableName(out var variableName).ShouldBeTrue();
-        variableName.ShouldBe("x1");
+        rebound.Node.ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x1");
         Should.Throw<ArgumentException>(() => edited.Replace(point, point.Node));
     }
 
@@ -158,21 +207,23 @@ public sealed class SymbolicExpressionTests
 
         root.Symbol.ShouldBe(Symbols.SquareRoot);
         root.Arity.ShouldBe(1);
-        root.Child(0).TryGetVariableName(out var variable).ShouldBeTrue();
-        variable.ShouldBe("x0");
+        root.ShouldBeOfType<UnaryExpressionNode>().Operand.ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x0");
     }
 
     [Fact]
-    public void Child_PreservesLeftToRightOrderAndRejectsInvalidIndexes()
+    public void BinaryNode_ExposesLeftAndRightWhilePointsValidateChildIndexes()
     {
-        var root = (Variable("left") - Variable("right")).Build().Root;
+        var expression = (Variable("left") - Variable("right")).Build();
+        var root = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
 
-        root.Child(0).TryGetVariableName(out var left).ShouldBeTrue();
-        root.Child(1).TryGetVariableName(out var right).ShouldBeTrue();
-        left.ShouldBe("left");
-        right.ShouldBe("right");
-        Should.Throw<ArgumentOutOfRangeException>(() => root.Child(2));
-        Should.Throw<ArgumentOutOfRangeException>(() => Variable("x0").Build().Root.Child(0));
+        root.Left.ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("left");
+        root.Right.ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("right");
+        root.GetChild(0).ShouldBeSameAs(root.Left);
+        root.GetChild(1).ShouldBeSameAs(root.Right);
+        Should.Throw<ArgumentOutOfRangeException>(() => root.GetChild(2));
+        Should.Throw<ArgumentOutOfRangeException>(() => Variable("x0").Build().Root.GetChild(0));
+        Should.Throw<ArgumentOutOfRangeException>(() => expression.RootPoint.Child(2));
+        Should.Throw<ArgumentOutOfRangeException>(() => expression.RootPoint.Child(0).Child(0));
     }
 
     [Fact]
@@ -183,14 +234,14 @@ public sealed class SymbolicExpressionTests
         expression.TraversePostOrder().Select(node => node.Symbol).ShouldBe([
             new VariableSymbol(["x0"]), new FixedConstantSymbol(2.0), new VariableSymbol(["x1"]), Symbols.Multiplication, Symbols.Addition
         ]);
-        expression.TraversePostOrder().Select(node => node.SubtreeLength).ShouldBe([1, 1, 1, 3, 5]);
+        expression.TraversePostOrder().Select(node => node.Length).ShouldBe([1, 1, 1, 3, 5]);
         expression.TraversePreOrder().Select(node => node.Symbol).ShouldBe([
             Symbols.Addition, new VariableSymbol(["x0"]), Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
         ]);
         expression.TraverseBreadthFirst().Select(node => node.Symbol).ShouldBe([
             Symbols.Addition, new VariableSymbol(["x0"]), Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
         ]);
-        expression.Root.Child(1).TraversePreOrder().Select(node => node.Symbol).ShouldBe([
+        expression.Root.ShouldBeOfType<BinaryExpressionNode>().Right.TraversePreOrder().Select(node => node.Symbol).ShouldBe([
             Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])
         ]);
     }
@@ -201,7 +252,9 @@ public sealed class SymbolicExpressionTests
         var expression = CreateLinearExpression();
         var point = expression.RootPoint.TraversePostOrder().Last();
 
-        point.ReplaceWith(point.Node.WithSymbol(Symbols.Subtraction)).ToInfixString().ShouldBe("(x0 - (2 * x1))");
+        var binary = point.Node.ShouldBeOfType<BinaryExpressionNode>();
+        point.ReplaceWith(new BinaryExpressionNode(Symbols.Subtraction, binary.Left, binary.Right))
+            .ToInfixString().ShouldBe("(x0 - (2 * x1))");
     }
 
     [Fact]
@@ -223,19 +276,20 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void SubtreeTraversal_StaysWithinTheSelectedBranch()
     {
-        var branch = CreateLinearExpression().Root.Child(1);
+        var branch = CreateLinearExpression().Root.ShouldBeOfType<BinaryExpressionNode>().Right;
 
         branch.TraversePostOrder().Select(node => node.Symbol).ShouldBe([new FixedConstantSymbol(2.0), new VariableSymbol(["x1"]), Symbols.Multiplication]);
         branch.TraversePreOrder().Select(node => node.Symbol).ShouldBe([Symbols.Multiplication, new FixedConstantSymbol(2.0), new VariableSymbol(["x1"])]);
     }
 
     [Fact]
-    public void TryGetHelpers_ReturnFalseForTheWrongTerminalKind()
+    public void TerminalSubtypesExposeOnlyTheirValidPayload()
     {
-        var root = CreateLinearExpression().Root;
+        var root = CreateLinearExpression().Root.ShouldBeOfType<BinaryExpressionNode>();
+        var multiplication = root.Right.ShouldBeOfType<BinaryExpressionNode>();
 
-        root.TryGetConstantValue(out _).ShouldBeFalse();
-        root.Child(1).Child(0).TryGetVariableName(out _).ShouldBeFalse();
+        root.Left.ShouldBeOfType<VariableExpressionNode>();
+        multiplication.Left.ShouldBeOfType<NumericConstantExpressionNode>();
     }
 
     [Fact]
@@ -262,19 +316,31 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
-    public void WithSymbol_RequiresMatchingArity()
+    public void NaryNode_EqualityUsesOrderedChildValues()
     {
-        var expression = (Variable("x0") + Variable("x1")).Build();
+        var symbol = new SumThreeSymbol();
+        var first = new NaryExpressionNode(symbol, Variable("x0").Build().Root, Variable("x1").Build().Root, FixedConstant(1.0).Build().Root);
+        var second = new NaryExpressionNode(symbol, Variable("x0").Build().Root, Variable("x1").Build().Root, FixedConstant(1.0).Build().Root);
+        var reordered = new NaryExpressionNode(symbol, Variable("x1").Build().Root, Variable("x0").Build().Root, FixedConstant(1.0).Build().Root);
 
-        Should.Throw<ArgumentException>(() => expression.Root.WithSymbol(new SquareRootSymbol()));
+        first.ShouldBe(second);
+        first.GetHashCode().ShouldBe(second.GetHashCode());
+        first.ShouldNotBe(reordered);
+    }
+
+    [Fact]
+    public void FixedConstantNode_RequiresItsSymbolsValue()
+    {
+        Should.Throw<ArgumentException>(() => new NumericConstantExpressionNode(new FixedConstantSymbol(1.0), 2.0));
     }
 
     [Fact]
     public void PointReplacement_ReplacesSameAritySymbolWithoutMutatingTheOriginal()
     {
         var expression = (Variable("x0") + Variable("x1")).Build();
+        var root = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
 
-        var edited = expression.RootPoint.ReplaceWith(expression.Root.WithSymbol(Symbols.Subtraction));
+        var edited = expression.RootPoint.ReplaceWith(new BinaryExpressionNode(Symbols.Subtraction, root.Left, root.Right));
 
         expression.ToInfixString().ShouldBe("(x0 + x1)");
         edited.ToInfixString().ShouldBe("(x0 - x1)");
@@ -288,12 +354,33 @@ public sealed class SymbolicExpressionTests
         var point = expression.RootPoint.Child(1).Child(1);
 
         var edited = expression.WithVariable(point, new VariableSymbol(["x2"]), "x2");
+        var originalRoot = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
+        var editedRoot = edited.Root.ShouldBeOfType<BinaryExpressionNode>();
+        var originalMultiplication = originalRoot.Right.ShouldBeOfType<BinaryExpressionNode>();
+        var editedMultiplication = editedRoot.Right.ShouldBeOfType<BinaryExpressionNode>();
 
         ReferenceEquals(expression.Root, edited.Root).ShouldBeFalse();
-        ReferenceEquals(expression.Root.Child(0), edited.Root.Child(0)).ShouldBeTrue();
-        ReferenceEquals(expression.Root.Child(1), edited.Root.Child(1)).ShouldBeFalse();
-        ReferenceEquals(expression.Root.Child(1).Child(0), edited.Root.Child(1).Child(0)).ShouldBeTrue();
-        ReferenceEquals(expression.Root.Child(1).Child(1), edited.Root.Child(1).Child(1)).ShouldBeFalse();
+        ReferenceEquals(originalRoot.Left, editedRoot.Left).ShouldBeTrue();
+        ReferenceEquals(originalMultiplication, editedMultiplication).ShouldBeFalse();
+        ReferenceEquals(originalMultiplication.Left, editedMultiplication.Left).ShouldBeTrue();
+        ReferenceEquals(originalMultiplication.Right, editedMultiplication.Right).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void PointReplacement_RebuildsUnaryAndBinaryAncestorsWithoutCopyingUnaffectedNodes()
+    {
+        var expression = Sqrt(Variable("x0") + Variable("x1")).Build();
+        var originalUnary = expression.Root.ShouldBeOfType<UnaryExpressionNode>();
+        var originalBinary = originalUnary.Operand.ShouldBeOfType<BinaryExpressionNode>();
+
+        var edited = expression.WithVariable(expression.RootPoint.Child(0).Child(0), new VariableSymbol(["x2"]), "x2");
+        var editedUnary = edited.Root.ShouldBeOfType<UnaryExpressionNode>();
+        var editedBinary = editedUnary.Operand.ShouldBeOfType<BinaryExpressionNode>();
+
+        editedUnary.ShouldNotBeSameAs(originalUnary);
+        editedBinary.ShouldNotBeSameAs(originalBinary);
+        editedBinary.Right.ShouldBeSameAs(originalBinary.Right);
+        editedBinary.Left.ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x2");
     }
 
     [Fact]
@@ -317,21 +404,42 @@ public sealed class SymbolicExpressionTests
             (constantPoint, FixedConstant(3.0).Build().Root),
             (variablePoint, Variable("x2").Build().Root)
         ]);
+        var originalRoot = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
+        var editedRoot = edited.Root.ShouldBeOfType<BinaryExpressionNode>();
 
         edited.ToInfixString().ShouldBe("(x0 + (3 * x2))");
-        edited.Root.Child(0).ShouldBeSameAs(expression.Root.Child(0));
-        edited.Root.Child(1).ShouldNotBeSameAs(expression.Root.Child(1));
+        editedRoot.Left.ShouldBeSameAs(originalRoot.Left);
+        editedRoot.Right.ShouldNotBeSameAs(originalRoot.Right);
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
+    }
+
+    [Fact]
+    public void ReplaceMany_RebuildsAnNaryNodeOnceAndSharesUnaffectedChildren()
+    {
+        var expression = ExpressionDraft.Apply(new SumThreeSymbol(), Variable("x0"), Variable("x1"), Variable("x2")).Build();
+        var original = expression.Root.ShouldBeOfType<NaryExpressionNode>();
+
+        var edited = expression.ReplaceMany([
+            (expression.RootPoint.Child(0), Variable("x3").Build().Root),
+            (expression.RootPoint.Child(2), Variable("x4").Build().Root)
+        ]);
+        var replacement = edited.Root.ShouldBeOfType<NaryExpressionNode>();
+
+        replacement.ShouldNotBeSameAs(original);
+        replacement.Children[1].ShouldBeSameAs(original.Children[1]);
+        replacement.Children[0].ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x3");
+        replacement.Children[2].ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x4");
     }
 
     [Fact]
     public void ReplaceMany_ReturnsTheOriginalTreeWhenEveryReplacementIsEqual()
     {
         var expression = CreateLinearExpression();
+        var root = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
 
         var edited = expression.ReplaceMany([
-            (expression.RootPoint.Child(0), expression.Root.Child(0)),
-            (expression.RootPoint.Child(1), expression.Root.Child(1))
+            (expression.RootPoint.Child(0), root.Left),
+            (expression.RootPoint.Child(1), root.Right)
         ]);
 
         edited.ShouldBeSameAs(expression);
@@ -375,10 +483,10 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
-    public void ReplaceSubtree_ReplacesOnlyTheSelectedBranch()
+    public void Replace_WithTree_ReplacesOnlyTheSelectedBranch()
     {
         var expression = CreateLinearExpression();
-        var edited = expression.ReplaceSubtree(expression.RootPoint.Child(1), Variable("x2").Build());
+        var edited = expression.Replace(expression.RootPoint.Child(1), Variable("x2").Build());
 
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
         edited.ToInfixString().ShouldBe("(x0 + x2)");
@@ -386,15 +494,17 @@ public sealed class SymbolicExpressionTests
     }
 
     [Fact]
-    public void ReplaceSubtree_SharesTheUnaffectedBranchAndTheReplacementTree()
+    public void Replace_WithTree_SharesTheUnaffectedBranchAndTheReplacementTree()
     {
         var expression = CreateLinearExpression();
         var replacement = (Variable("x2") - FixedConstant(1.0)).Build();
 
-        var edited = expression.ReplaceSubtree(expression.RootPoint.Child(1), replacement);
+        var edited = expression.Replace(expression.RootPoint.Child(1), replacement);
+        var originalRoot = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
+        var editedRoot = edited.Root.ShouldBeOfType<BinaryExpressionNode>();
 
-        ReferenceEquals(expression.Root.Child(0), edited.Root.Child(0)).ShouldBeTrue();
-        ReferenceEquals(replacement.Root, edited.Root.Child(1)).ShouldBeTrue();
+        ReferenceEquals(originalRoot.Left, editedRoot.Left).ShouldBeTrue();
+        ReferenceEquals(replacement.Root, editedRoot.Right).ShouldBeTrue();
     }
 
     [Fact]
@@ -408,7 +518,10 @@ public sealed class SymbolicExpressionTests
 
         expression.Length.ShouldBe(4);
         expression.Depth.ShouldBe(2);
-        expression.Root.TraverseChildren().Select(child => child.VariableName).ShouldBe(["x0", "x1", "x2"]);
+        expression.Root.ShouldBeOfType<NaryExpressionNode>().Children
+            .Cast<VariableExpressionNode>()
+            .Select(child => child.VariableName)
+            .ShouldBe(["x0", "x1", "x2"]);
         expression.EvaluateSingleRow(("x0", 1.0), ("x1", 2.0), ("x2", 3.0)).ShouldBe(6.0);
     }
 
@@ -553,13 +666,21 @@ public sealed class SymbolicExpressionTests
 
     private sealed record SumThreeSymbol() : OperationSymbol("sum3", 3)
     {
-        protected override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+        public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
         {
             emitter.EmitChild(0);
             emitter.EmitChild(1);
             emitter.EmitOperator(OpCode.Add);
             emitter.EmitChild(2);
             emitter.EmitOperator(OpCode.Add);
+        }
+    }
+
+    private sealed record OneSymbol() : PayloadlessTerminalSymbol("one")
+    {
+        public override void Emit(ExpressionNode node, IExpressionEmitter emitter)
+        {
+            emitter.EmitConstant(1.0);
         }
     }
 }

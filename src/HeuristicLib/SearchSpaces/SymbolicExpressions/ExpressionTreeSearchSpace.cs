@@ -122,8 +122,9 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
         if (!ContainsNode(node))
             return false;
 
-        foreach (var child in node.TraverseChildren())
+        for (var i = 0; i < node.Arity; i++)
         {
+            var child = node.GetChild(i);
             if (!ContainsNodeAndDescendants(child))
                 return false;
         }
@@ -131,17 +132,13 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
         return true;
     }
 
-    private bool ContainsNode(ExpressionNode node) => node.Symbol switch
+    private bool ContainsNode(ExpressionNode node) => node switch
     {
-        OperationSymbol operation => Symbols.Contains(operation),
-        VariableSymbol => node.VariableName is not null
-                              && Symbols.OfType<VariableSymbol>()
-                                  .Any(variable => variable.Variables.Contains(node.VariableName, StringComparer.Ordinal)),
-        FixedConstantSymbol fixedConstant => node.HasNumericValue
-                                                && node.NumericValue == fixedConstant.Value
-                                                && Symbols.Contains(fixedConstant),
-        EvolvableConstantSymbol => node.HasNumericValue && AllowsEvolvableConstants,
-        _ => false
+        VariableExpressionNode variable => Symbols.OfType<VariableSymbol>().Any(symbol => symbol.Variables.Contains(variable.VariableName, StringComparer.Ordinal)),
+        NumericConstantExpressionNode { Symbol: FixedConstantSymbol fixedConstant } constant => constant.Value.Equals(fixedConstant.Value) && Symbols.Contains(fixedConstant),
+        NumericConstantExpressionNode { Symbol: EvolvableConstantSymbol } => AllowsEvolvableConstants,
+        TerminalExpressionNode => Symbols.Contains(node.Symbol),
+        _ => node.Symbol is OperationSymbol operation && Symbols.Contains(operation),
     };
 
     private ImmutableArray<double> CreateSelection(IReadOnlyList<int> indexes)
@@ -169,5 +166,4 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
     }
 
     private readonly record struct WeightedSymbolSet(Symbol[] Symbols, double[] Weights);
-
 }

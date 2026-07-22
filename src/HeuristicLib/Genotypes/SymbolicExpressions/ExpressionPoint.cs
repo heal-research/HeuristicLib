@@ -1,5 +1,10 @@
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
+/// <summary>Identifies one node occurrence and its path within a particular <see cref="ExpressionTree"/>.</summary>
+/// <remarks>
+/// Use expression points to target immutable edits through <see cref="ExpressionTree"/>. A point distinguishes
+/// occurrences even when multiple parts of a tree reference the same <see cref="ExpressionNode"/> instance.
+/// </remarks>
 public sealed class ExpressionPoint
 {
     private readonly int childIndex;
@@ -23,7 +28,8 @@ public sealed class ExpressionPoint
 
     public ExpressionPoint Child(int index)
     {
-        return new ExpressionPoint(Tree, Node.Child(index), this, index);
+        var child = Node.GetChild(index);
+        return new ExpressionPoint(Tree, child, this, index);
     }
 
     public IEnumerable<ExpressionPoint> TraverseChildren()

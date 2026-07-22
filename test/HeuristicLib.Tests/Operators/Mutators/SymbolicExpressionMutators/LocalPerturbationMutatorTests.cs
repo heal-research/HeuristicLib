@@ -17,9 +17,10 @@ public sealed class LocalPerturbationMutatorTests
 
         var result = LocalPerturbationMutation.Mutate(parent, new SequenceRandomNumberGenerator(0.0, 0.75), new OneLocalPerturbationTarget());
 
-        result.Root.Symbol.ShouldBe(narrow);
-        result.Root.NumericValue.ShouldBe(0.5);
-        result.Root.ShouldNotBe(new ExpressionNode(broad, 0.5));
+        var constant = result.Root.ShouldBeOfType<NumericConstantExpressionNode>();
+        constant.Symbol.ShouldBe(narrow);
+        constant.Value.ShouldBe(0.5);
+        constant.ShouldNotBe(new NumericConstantExpressionNode(broad, 0.5));
     }
 
     [Fact]
@@ -49,7 +50,9 @@ public sealed class LocalPerturbationMutatorTests
         result.ToInfixString().ShouldBe("(x0 + (2 * 3))");
         result.Length.ShouldBe(parent.Length);
         result.Depth.ShouldBe(parent.Depth);
-        result.Root.Child(0).ShouldBeSameAs(parent.Root.Child(0));
+        var resultRoot = result.Root.ShouldBeOfType<BinaryExpressionNode>();
+        var parentRoot = parent.Root.ShouldBeOfType<BinaryExpressionNode>();
+        resultRoot.Left.ShouldBeSameAs(parentRoot.Left);
         parent.ToInfixString().ShouldBe("(x0 + (1 * 2))");
     }
 

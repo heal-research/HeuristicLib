@@ -19,11 +19,10 @@ public class SymbolicRegressionRedesignSpecs
         var expression = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
 
         expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
-        var root = expression.Root;
-        root.Child(0).TryGetVariableName(out var leftVariable).ShouldBeTrue();
-        root.Child(1).Child(1).TryGetVariableName(out var rightVariable).ShouldBeTrue();
-        leftVariable.ShouldBe("x0");
-        rightVariable.ShouldBe("x1");
+        var root = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
+        root.Left.ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x0");
+        root.Right.ShouldBeOfType<BinaryExpressionNode>().Right
+            .ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x1");
         var data = DataFrame.FromMatrix(
           ["x0", "x1"],
           new double[,]
@@ -56,20 +55,17 @@ public class SymbolicRegressionRedesignSpecs
     {
         var expression = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
 
-        var root = expression.Root;
-        var left = root.Child(0);
-        var right = root.Child(1);
-        var rightLeft = right.Child(0);
-        var rightRight = right.Child(1);
+        var root = expression.Root.ShouldBeOfType<BinaryExpressionNode>();
+        var left = root.Left;
+        var right = root.Right.ShouldBeOfType<BinaryExpressionNode>();
+        var rightLeft = right.Left;
+        var rightRight = right.Right;
 
         root.Symbol.ShouldBe(new AdditionSymbol());
-        left.TryGetVariableName(out var leftVariable).ShouldBeTrue();
-        leftVariable.ShouldBe("x0");
+        left.ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x0");
         right.Symbol.ShouldBe(new MultiplicationSymbol());
-        rightLeft.TryGetConstantValue(out var literal).ShouldBeTrue();
-        rightRight.TryGetVariableName(out var rightVariable).ShouldBeTrue();
-        literal.ShouldBe(2.0);
-        rightVariable.ShouldBe("x1");
+        rightLeft.ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(2.0);
+        rightRight.ShouldBeOfType<VariableExpressionNode>().VariableName.ShouldBe("x1");
     }
 
     [Fact]
@@ -167,8 +163,8 @@ public class SymbolicRegressionRedesignSpecs
           problem).Single();
 
         solution.Genotype.ShouldNotBeSameAs(rawExpression);
-        rawExpression.Root.Child(0).TryGetConstantValue(out var rawParameter).ShouldBeTrue();
-        rawParameter.Value.ShouldBe(1.0);
+        rawExpression.Root.ShouldBeOfType<BinaryExpressionNode>().Left
+          .ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(1.0);
         evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
 

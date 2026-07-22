@@ -4,11 +4,14 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public abstract record ExpressionDraft
 {
-    public ExpressionTree Build() => BuildCore(searchSpace: null);
+    public ExpressionTree Build()
+    {
+        return new ExpressionTree(BuildNode(this, searchSpace: null));
+    }
 
     public ExpressionTree Build(ExpressionTreeSearchSpace searchSpace)
     {
-        return BuildCore(searchSpace);
+        return new ExpressionTree(BuildNode(this, searchSpace));
     }
 
     public ExpressionTree Build(IEnumerable<Symbol> symbols)
@@ -44,42 +47,42 @@ public abstract record ExpressionDraft
         }
     }
 
-    private ExpressionTree BuildCore(ExpressionTreeSearchSpace? searchSpace)
-    {
-        return new ExpressionTree(BuildNode(this, searchSpace));
-    }
-
     private static ExpressionNode BuildNode(ExpressionDraft draft, ExpressionTreeSearchSpace? searchSpace)
     {
         switch (draft)
         {
-            case VariableDraft variable:
-                var localVariableSymbol = variable.Symbol ?? new VariableSymbol([variable.Name]);
-                return new ExpressionNode(Resolve(localVariableSymbol, searchSpace,
-                    candidate => variable.Symbol is not null ? candidate == variable.Symbol : candidate.Variables.Contains(variable.Name, StringComparer.Ordinal),
-                    $"variable '{variable.Name}'"), variable.Name);
-            case FixedConstantDraft constant:
-                var fixedSymbol = Resolve(constant.Symbol, searchSpace, candidate => candidate == constant.Symbol, "fixed constant");
-                return new ExpressionNode(fixedSymbol, constant.Value);
-            case EvolvableConstantDraft constant:
-                var localEvolvableSymbol = constant.Symbol ?? new EvolvableConstantSymbol();
-                var evolvableSymbol = Resolve(localEvolvableSymbol, searchSpace,
-                    candidate => constant.Symbol is null || candidate == constant.Symbol,
+            case VariableDraft(var name, var localVariableSymbol):
+                var resolvedVariable = Resolve(
+                    localVariableSymbol ?? new VariableSymbol([name]), searchSpace,
+                    candidate => localVariableSymbol is not null ? candidate == localVariableSymbol : candidate.Variables.Contains(name, StringComparer.Ordinal),
+                    $"variable '{name}'");
+                return new VariableExpressionNode(resolvedVariable, name);
+            case FixedConstantDraft(var value, var localFixedSymbol):
+                var resolvedFixedSymbol = Resolve(localFixedSymbol, searchSpace, candidate => candidate == localFixedSymbol, "fixed constant");
+                return new NumericConstantExpressionNode(resolvedFixedSymbol, value);
+            case EvolvableConstantDraft(var value, var localEvolvableSymbol):
+                var evolvableSymbol = Resolve(localEvolvableSymbol ?? new EvolvableConstantSymbol(), searchSpace,
+                    candidate => localEvolvableSymbol is null || candidate == localEvolvableSymbol,
                     "evolvable constant");
-                return new ExpressionNode(evolvableSymbol, constant.Value);
-            case UnaryDraft unary:
-                return ExpressionNode.FromOwnedChildren(
-                    Resolve(unary.Symbol, searchSpace, candidate => candidate == unary.Symbol, unary.Symbol.Name),
-                    [BuildNode(unary.Child, searchSpace)]);
-            case BinaryDraft binary:
-                return ExpressionNode.FromOwnedChildren(
-                    Resolve(binary.Symbol, searchSpace, candidate => candidate == binary.Symbol, binary.Symbol.Name),
-                    [BuildNode(binary.Left, searchSpace), BuildNode(binary.Right, searchSpace)]);
-            case OperationDraft operation:
-                var children = operation.Children.Select(child => BuildNode(child, searchSpace)).ToArray();
-                return ExpressionNode.FromOwnedChildren(
-                    Resolve(operation.Symbol, searchSpace, candidate => candidate == operation.Symbol, operation.Symbol.Name),
-                    children);
+                return new NumericConstantExpressionNode(evolvableSymbol, value);
+            case UnaryDraft(var localUnarySymbol, var childDraft):
+                var resolvedUnarySymbol = Resolve(localUnarySymbol, searchSpace, candidate => candidate == localUnarySymbol, localUnarySymbol.Name);
+                var childNode = BuildNode(childDraft, searchSpace);
+                return new UnaryExpressionNode(resolvedUnarySymbol, childNode);
+            case BinaryDraft(var localBinarySymbol, var leftChildDraft, var rightChildDraft):
+                var resolvedBinarySymbol = Resolve(localBinarySymbol, searchSpace, candidate => candidate == localBinarySymbol, localBinarySymbol.Name);
+                var leftChildNode = BuildNode(leftChildDraft, searchSpace);
+                var rightChildNode = BuildNode(rightChildDraft, searchSpace);
+                return new BinaryExpressionNode(resolvedBinarySymbol, leftChildNode, rightChildNode);
+            case OperationDraft(var localOperationSymbol, var childDrafts):
+                var symbol = Resolve(localOperationSymbol, searchSpace, candidate => candidate == localOperationSymbol, localOperationSymbol.Name);
+                var childNodes = childDrafts.Select(child => BuildNode(child, searchSpace)).ToImmutableArray();
+                return childNodes.Length switch
+                {
+                    1 => new UnaryExpressionNode(symbol, childNodes[0]),
+                    2 => new BinaryExpressionNode(symbol, childNodes[0], childNodes[1]),
+                    _ => new NaryExpressionNode(symbol, childNodes)
+                };
             default:
                 throw new InvalidOperationException($"Unsupported expression draft node {draft.GetType()}.");
         }

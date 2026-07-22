@@ -149,10 +149,9 @@ public sealed class NumericConfigurationTests
     {
         var symbol = new VariableSymbol(["x0", "x1"], [1.0, 3.0]);
 
-        var node = symbol.CreateNode(new SequenceRandomNumberGenerator(0.9));
+        var node = symbol.CreateNode(new SequenceRandomNumberGenerator(0.9)).ShouldBeOfType<VariableExpressionNode>();
 
-        node.TryGetVariableName(out var name).ShouldBeTrue();
-        name.ShouldBe("x1");
+        node.VariableName.ShouldBe("x1");
         symbol.SelectionWeights.ShouldBe([0.25, 0.75]);
     }
 

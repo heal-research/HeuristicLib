@@ -18,6 +18,8 @@
       href: problem.md
     - name: Search spaces
       href: search-space.md
+    - name: Symbolic expressions
+      href: symbolic-expressions.md
     - name: Objectives & solutions
       href: objectives-and-solutions.md
     - name: Operators
