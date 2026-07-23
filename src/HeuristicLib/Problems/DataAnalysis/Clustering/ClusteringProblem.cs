@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering;
 
 public class ClusteringProblem<TProblemData, TSolution, TSearchSpace>(TProblemData problemData, ICollection<IClusteringEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace encoding)
-  : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), encoding)
+  : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>(problemData, new ObjectiveDirections(objective.Select(x => x.Direction).ToArray(), a), encoding)
   where TProblemData : ClusteringProblemData
   where TSearchSpace : class, ISearchSpace<TSolution>
   where TSolution : IClusteringModel

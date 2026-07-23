@@ -5,15 +5,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ICrossover<TGenotype, in TSearchSpace, in TProblem>
-  : IOperator<ICrossoverInstance<TGenotype, TSearchSpace, TProblem>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
+public interface ICrossover<TCandidate, in TSearchSpace, in TProblem>
+  : IOperator<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
-public interface ICrossoverInstance<TGenotype, in TSearchSpace, in TProblem>
+public interface ICrossoverInstance<TCandidate, in TSearchSpace, in TProblem>
   : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    IReadOnlyList<TGenotype> Cross(IReadOnlyList<IParents<TGenotype>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

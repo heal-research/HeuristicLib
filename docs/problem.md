@@ -1,6 +1,6 @@
 # Problem
 
-A **problem** defines what it means to evaluate a genotype.
+A **problem** defines what it means to evaluate a candidate.
 
 It is the boundary between “search” and “domain”:
 
@@ -9,21 +9,21 @@ It is the boundary between “search” and “domain”:
 
 ## Contract
 
-`IProblem<TGenotype, TSearchSpace>` provides three things:
+A problem provides three things:
 
-- `TSearchSpace SearchSpace { get; }`
-- `Objective Objective { get; }`
-- `IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random)`
+- a search space
+- objective directions and any ordering needed by the problem
+- an evaluation function that maps a candidate to an objective vector
 
-This makes problems self-contained: they own both evaluation and the objective definition (directions + ordering).
+This makes problems self-contained: they own the search space, evaluation semantics, and objective directions.
 
-The problem contract deliberately returns objective vectors, not `Solution<TGenotype>` values. A problem defines how a genotype scores. The evaluator layer is responsible for turning evaluated candidates into `Solution<TGenotype>` values that algorithms pass through selection, replacement, logging, and analysis.
+## The base class in this repository
 
-## Base classes
+In `HEAL.HeuristicLib` there is a convenient abstract base class:
 
-In `HEAL.HeuristicLib`, `Problem<TSolution, TSearchSpace>` is the batch native base class. It stores `Objective` and `SearchSpace` and leaves batch `Evaluate(...)` abstract.
+- `Problem<TCandidate, TSearchSpace>`
 
-For the common case where each candidate can be evaluated independently, use `SingleSolutionProblem<TSolution, TSearchSpace>`. It derives from `Problem<TSolution, TSearchSpace>`, leaves scalar `Evaluate(...)` abstract and provides the batch implementation through `BatchExecution`.
+It stores the search space and objective-direction model, and leaves `Evaluate(...)` abstract.
 
 ## Deterministic vs stochastic evaluation
 
@@ -33,7 +33,7 @@ That design keeps the call sites uniform and makes it easy to introduce stochast
 
 ## Minimal example: `FuncProblem`
 
-If your objective is a single number, `FuncProblem<TGenotype, TSearchSpace>` is the lightest way to model it:
+If your objective is a single number, `FuncProblem<TCandidate, TSearchSpace>` is the lightest way to model it:
 
 ```csharp
 using HEAL.HeuristicLib.Optimization;
@@ -43,7 +43,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 public sealed record Candidate(double X);
 
 sealed class AnyCandidateSpace : ISearchSpace<Candidate> {
-	public bool Contains(Candidate genotype) => true;
+	public bool Contains(Candidate candidate) => true;
 }
 
 var problem = FuncProblem.Create<Candidate, AnyCandidateSpace>(
@@ -56,5 +56,5 @@ var problem = FuncProblem.Create<Candidate, AnyCandidateSpace>(
 ## Related pages
 
 - [Search spaces](search-space.md)
-- [Objectives & solutions](objectives-and-solutions.md)
+- [Objective vectors and evaluated candidates](objective-vectors-and-evaluated-candidates.md)
 - [Operators](operators.md)

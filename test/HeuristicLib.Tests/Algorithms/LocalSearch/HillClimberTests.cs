@@ -20,10 +20,10 @@ public class HillClimberTests
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
 
         var states = algorithm.WithMaxIterations(5)
-          .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+          .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
           .ToList();
 
-        states.Select(StateGenotype).ShouldBe([0]);
+        states.Select(StateCandidate).ShouldBe([0]);
     }
 
     [Fact]
@@ -37,7 +37,7 @@ public class HillClimberTests
         };
 
         var states = algorithm.WithMaxIterations(5)
-          .RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
+          .Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
           .ToList();
 
         states.ShouldBeEmpty();
@@ -57,7 +57,7 @@ public class HillClimberTests
         };
     }
 
-    private static int StateGenotype(SingleSolutionState<int> state) => state.Solution.Genotype;
+    private static int StateCandidate(SingleSolutionState<int> state) => state.EvaluatedCandidate.Candidate;
 
     private sealed record ConstantCreator(int Value)
       : ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>,

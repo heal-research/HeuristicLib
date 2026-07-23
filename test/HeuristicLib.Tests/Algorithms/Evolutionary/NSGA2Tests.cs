@@ -29,13 +29,13 @@ public class NSGA2Tests
         var result = (algorithm.Build() with
         {
             MaximumGenerations = 5
-        }).RunToCompletion(
+        }).Complete(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);
 
-        result.Population.Solutions.Length.ShouldBe(5);
-        result.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        result.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 2).ShouldBeTrue();
+        result.Population.EvaluatedCandidates.Length.ShouldBe(5);
+        result.Population.EvaluatedCandidates.All(solution => problem.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
+        result.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 2).ShouldBeTrue();
     }
 }

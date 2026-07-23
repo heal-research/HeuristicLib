@@ -5,22 +5,29 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public record ProblemEvaluator<TGenotype>
-    : StatelessEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+public record ProblemEvaluator<TCandidate, TSearchSpace, TProblem>
+    : StatelessEvaluator<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public override IReadOnlyList<Solution<TGenotype>> Evaluate(
-        IReadOnlyList<TGenotype> genotypes,
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(
+        IReadOnlyList<TCandidate> candidates,
         IRandomNumberGenerator random,
-        ISearchSpace<TGenotype> searchSpace,
-        IProblem<TGenotype, ISearchSpace<TGenotype>> problem) =>
-        problem.Evaluate(genotypes, random)
-            .Select((objectiveVector, index) => Solution.From(genotypes[index], objectiveVector))
+        TSearchSpace searchSpace,
+        TProblem problem) =>
+        problem.Evaluate(candidates, random)
+            .Select((objectiveVector, index) => candidates[index].ToEvaluated(objectiveVector))
             .ToArray();
 }
 
+public record ProblemEvaluator<TCandidate>
+    : ProblemEvaluator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
+
 public static class ProblemEvaluatorExtensions
 {
-    public static ProblemEvaluator<TGenotype> CreateEvaluator<TGenotype>(
-        this IProblem<TGenotype, ISearchSpace<TGenotype>> problem) =>
+    public static ProblemEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+        CreateEvaluator<TCandidate, TSearchSpace>(
+            this IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> =>
         new();
 }

@@ -24,7 +24,7 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
     {
         if ((x is not null && x.Count != objectives.Length) || (y is not null && y.Count != objectives.Length))
         {
-            throw new ArgumentException("Fitness must have the same length as the objective");
+            throw new ArgumentException("Objective vector must have the same length as the objective directions");
         }
 
         if (x is null && y is null)
@@ -42,8 +42,8 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
             return +1;
         }
 
-        var xFitness = new RealVector(x);
-        var yFitness = new RealVector(y);
+        var xObjectiveVector = new RealVector(x);
+        var yObjectiveVector = new RealVector(y);
 
         var directions = new RealVector(objectives.Select(d => d switch
         {
@@ -53,8 +53,8 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
         }));
         var directedWeights = weights * directions;
 
-        var xSum = (xFitness * directedWeights).Sum();
-        var ySum = (yFitness * directedWeights).Sum();
+        var xSum = (xObjectiveVector * directedWeights).Sum();
+        var ySum = (yObjectiveVector * directedWeights).Sum();
 
         return xSum.CompareTo(ySum);
     }

@@ -4,16 +4,16 @@ using Generator.Equals;
 namespace HEAL.HeuristicLib.Optimization;
 
 [Equatable]
-public partial record IslandPopulation<TGenotype> : ISolutionLayout<TGenotype>
+public partial record IslandPopulation<TCandidate> : ISolutionLayout<TCandidate>
 {
     [OrderedEquality]
-    public IReadOnlyList<Population<TGenotype>> Islands { get; init; }
+    public IReadOnlyList<Population<TCandidate>> Islands { get; init; }
 
-    public IslandPopulation(IReadOnlyList<Population<TGenotype>> Islands)
+    public IslandPopulation(IReadOnlyList<Population<TCandidate>> Islands)
     {
         this.Islands = Islands;
     }
-    public IEnumerator<Solution<TGenotype>> GetEnumerator() => Islands.SelectMany(island => island.Solutions).GetEnumerator();
+    public IEnumerator<EvaluatedCandidate<TCandidate>> GetEnumerator() => Islands.SelectMany(island => island.EvaluatedCandidates).GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

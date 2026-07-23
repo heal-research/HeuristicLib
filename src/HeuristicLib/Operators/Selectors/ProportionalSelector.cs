@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record ProportionalSelector<TGenotype>
-  : StatelessSelector<TGenotype>
+public record ProportionalSelector<TCandidate>
+  : StatelessSelector<TCandidate>
 {
     public ProportionalSelector(bool windowing = true)
     {
@@ -14,15 +14,15 @@ public record ProportionalSelector<TGenotype>
     // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
     public bool Windowing { get; init; }
 
-    public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
       => ProportionalSelector.Select(population, objective, count, random, Windowing);
 }
 
 public static class ProportionalSelector
 {
-    public static IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<Solution<TGenotype>> population,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective,
       int count,
       IRandomNumberGenerator random,
       bool windowing = true)
@@ -67,7 +67,7 @@ public static class ProportionalSelector
         var list = qualities.ToArray();
         var qualitySum = list.Sum();
 
-        var selected = new Solution<TGenotype>[count];
+        var selected = new EvaluatedCandidate<TCandidate>[count];
         for (var i = 0; i < selected.Length; i++)
         {
             var selectedQuality = random.NextDouble() * qualitySum;

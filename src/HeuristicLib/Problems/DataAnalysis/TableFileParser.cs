@@ -78,12 +78,6 @@ public class TableFileParser : Progress<long>
         return tokenizer.PeekType() != TokenType.Double;
     }
 
-    /// <summary>
-    ///   Parses a file and determines the format first
-    /// </summary>
-    /// <param name="fileName">file which is parsed</param>
-    /// <param name="columnNamesInFirstLine"></param>
-    /// <param name="lineLimit"></param>
     public void Parse(string fileName, bool columnNamesInFirstLine, int lineLimit = -1)
     {
         DetermineFileFormat(fileName, out var numberFormat, out var dateTimeFormatInfo, out var separator);
@@ -91,29 +85,12 @@ public class TableFileParser : Progress<long>
         Parse(new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite), numberFormat, dateTimeFormatInfo, separator, columnNamesInFirstLine, lineLimit);
     }
 
-    /// <summary>
-    ///   Parses a file with the given formats
-    /// </summary>
-    /// <param name="fileName">file which is parsed</param>
-    /// <param name="numberFormat">Format of numbers</param>
-    /// <param name="dateTimeFormatInfo">Format of datetime</param>
-    /// <param name="separator">defines the separator</param>
-    /// <param name="columnNamesInFirstLine"></param>
-    /// <param name="lineLimit"></param>
     public void Parse(string fileName, NumberFormatInfo numberFormat, DateTimeFormatInfo dateTimeFormatInfo, char separator, bool columnNamesInFirstLine, int lineLimit = -1)
     {
         EstimateNumberOfLines(fileName);
         using var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         Parse(stream, numberFormat, dateTimeFormatInfo, separator, columnNamesInFirstLine, lineLimit);
     }
-
-    /// <summary>
-    ///   Takes a Stream and parses it with default format. NumberFormatInfo.InvariantInfo, DateTimeFormatInfo.InvariantInfo
-    ///   and separator = ','
-    /// </summary>
-    /// <param name="stream">stream which is parsed</param>
-    /// <param name="columnNamesInFirstLine"></param>
-    /// <param name="lineLimit"></param>
     public void Parse(Stream stream, bool columnNamesInFirstLine, int lineLimit = -1)
     {
         var numberFormat = NumberFormatInfo.InvariantInfo;
@@ -122,15 +99,6 @@ public class TableFileParser : Progress<long>
         Parse(stream, numberFormat, dateTimeFormatInfo, separator, columnNamesInFirstLine, lineLimit);
     }
 
-    /// <summary>
-    ///   Parses a stream with the given formats.
-    /// </summary>
-    /// <param name="stream">Stream which is parsed</param>
-    /// <param name="numberFormat">Format of numbers</param>
-    /// <param name="dateTimeFormatInfo">Format of datetime</param>
-    /// <param name="separator">defines the separator</param>
-    /// <param name="columnNamesInFirstLine"></param>
-    /// <param name="lineLimit"></param>
     public void Parse(Stream stream, NumberFormatInfo numberFormat, DateTimeFormatInfo dateTimeFormatInfo, char separator, bool columnNamesInFirstLine, int lineLimit = -1)
     {
         if (lineLimit > 0)

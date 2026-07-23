@@ -50,21 +50,21 @@ public record VisualizationCallbackEvaluator(
   : StatelessEvaluator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace, SymbolicRegressionProblem>
 {
 
-    public override IReadOnlyList<Solution<SymbolicExpressionTree>> Evaluate(
-      IReadOnlyList<SymbolicExpressionTree> genotypes,
+    public override IReadOnlyList<EvaluatedCandidate<SymbolicExpressionTree>> Evaluate(
+      IReadOnlyList<SymbolicExpressionTree> candidates,
       IRandomNumberGenerator random,
       SymbolicExpressionTreeSearchSpace searchSpace,
       SymbolicRegressionProblem problem)
     {
 
-        var solutions = new ProblemEvaluator<SymbolicExpressionTree>()
-          .Evaluate(genotypes, random, searchSpace, problem);
-        var objectives = solutions.Select(x => x.ObjectiveVector).ToArray();
+        var objectives = problem.Evaluate(candidates, random);
 
         // Call Python callback for visualization side-effects.
         // Callback returns the objectives to use (allows pass-through).
-        var result = PopulationCallback(genotypes.ToArray(), objectives);
-        return result.Select((x, i) => Solution.From(solutions[i].Genotype, (ObjectiveVector)x)).ToArray();
+        var result = PopulationCallback(candidates.ToArray(), objectives.ToArray());
+        return candidates
+          .Select((candidate, index) => candidate.ToEvaluated((ObjectiveVector)result[index]))
+          .ToArray();
     }
 }
 
@@ -247,7 +247,7 @@ public static class InteractiveSymbolicRegression
         {
             MaximumGenerations = parameters.Generations
         })
-          .RunToCompletion(problem, RandomNumberGenerator.Create(seed), null, ct);
+          .Complete(problem, RandomNumberGenerator.Create(seed), null, ct);
 
         return res.Population;
     }

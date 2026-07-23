@@ -6,17 +6,17 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record AlgorithmBuilder<TG, TS, TP, TR, TAlg>
-  : IAlgorithmBuilder<TG, TS, TP, TR, TAlg>,
-    IBuilderWithEvaluator<TG, TS, TP>, IBuilderWithInterceptor<TG, TS, TP, TR>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, ISearchState
-  where TAlg : IAlgorithm<TG, TS, TP, TR>
+public abstract record AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
+  : IAlgorithmBuilder<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>,
+    IBuilderWithEvaluator<TCandidate, TSearchSpace, TProblem>, IBuilderWithInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : class, ISearchState
+  where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    public IEvaluator<TG, TS, TP> Evaluator { get; set; } = new ProblemEvaluator<TG>();
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; set; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
 
-    public IInterceptor<TG, TS, TP, TR>? Interceptor { get; set; }
+    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; set; }
 
-    public abstract TAlg Build();
+    public abstract TAlgorithm Build();
 }

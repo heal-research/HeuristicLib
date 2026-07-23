@@ -8,6 +8,6 @@ public interface IMultiObjectiveTestFunction
     int Dimension { get; }
     double Min { get; }
     double Max { get; }
-    Objective Objective { get; }
+    ObjectiveDirections Objective { get; }
     RealVector Evaluate(RealVector solution);
 }

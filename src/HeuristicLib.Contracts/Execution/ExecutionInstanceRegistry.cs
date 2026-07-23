@@ -2,35 +2,33 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace HEAL.HeuristicLib.Execution;
 
-public class ExecutionInstanceRegistry : IExecutionInstanceResolver
+public class ExecutionInstanceRegistry
 {
-    public Run Run { get; }
-
     private readonly ExecutionInstanceRegistry? parentRegistry;
 
-    private readonly Dictionary<IExecutable<IExecutionInstance>, IExecutionInstance> registry = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<IExecutable<IExecutionInstance>, IExecutable<IExecutionInstance>> replacementExecutables = new(ReferenceEqualityComparer.Instance);
-    private readonly HashSet<IExecutable<IExecutionInstance>> executablesBeingCreated = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IExecutionInstanceResolvable<IExecutionInstance>, IExecutionInstance> registry = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<IExecutionInstanceResolvable<IExecutionInstance>, IExecutionInstanceResolvable<IExecutionInstance>> replacementResolvables = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<IExecutionInstanceResolvable<IExecutionInstance>> resolvablesBeingCreated = new(ReferenceEqualityComparer.Instance);
 
-    public ExecutionInstanceRegistry(Run run, ExecutionInstanceRegistry? parentRegistry = null)
+    public ExecutionInstanceRegistry()
     {
-        Run = run;
-        this.parentRegistry = parentRegistry;
     }
+
+    private ExecutionInstanceRegistry(ExecutionInstanceRegistry parentRegistry) => this.parentRegistry = parentRegistry;
 
     public ExecutionInstanceRegistry CreateChildRegistry()
     {
-        return new ExecutionInstanceRegistry(Run, this);
+        return new ExecutionInstanceRegistry(this);
     }
 
-    private bool TryResolve(IExecutable<IExecutionInstance> executable, [MaybeNullWhen(false)] out IExecutionInstance instance)
+    private bool TryResolve(IExecutionInstanceResolvable<IExecutionInstance> resolvable, [MaybeNullWhen(false)] out IExecutionInstance instance)
     {
-        if (registry.TryGetValue(executable, out instance))
+        if (registry.TryGetValue(resolvable, out instance))
         {
             return true;
         }
 
-        if (parentRegistry is not null && parentRegistry.TryResolve(executable, out instance))
+        if (parentRegistry is not null && parentRegistry.TryResolve(resolvable, out instance))
         {
             return true;
         }
@@ -38,14 +36,14 @@ public class ExecutionInstanceRegistry : IExecutionInstanceResolver
         return false;
     }
 
-    private bool TryGetReplacementExecutable(IExecutable<IExecutionInstance> executable, [MaybeNullWhen(false)] out IExecutable<IExecutionInstance> replacementExecutable)
+    private bool TryGetReplacementResolvable(IExecutionInstanceResolvable<IExecutionInstance> resolvable, [MaybeNullWhen(false)] out IExecutionInstanceResolvable<IExecutionInstance> replacementResolvable)
     {
-        if (replacementExecutables.TryGetValue(executable, out replacementExecutable))
+        if (replacementResolvables.TryGetValue(resolvable, out replacementResolvable))
         {
             return true;
         }
 
-        if (parentRegistry is not null && parentRegistry.TryGetReplacementExecutable(executable, out replacementExecutable))
+        if (parentRegistry is not null && parentRegistry.TryGetReplacementResolvable(resolvable, out replacementResolvable))
         {
             return true;
         }
@@ -53,62 +51,63 @@ public class ExecutionInstanceRegistry : IExecutionInstanceResolver
         return false;
     }
 
-    public TExecutionInstance Resolve<TExecutionInstance>(IExecutable<TExecutionInstance> executable)
-      where TExecutionInstance : class, IExecutionInstance
+    public TExecutionInstance Resolve<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable)
+        where TExecutionInstance : class, IExecutionInstance
     {
-        IExecutable<IExecutionInstance> untypedExecutable = executable;
-
-        if (registry.TryGetValue(untypedExecutable, out var localInstance))
+        if (registry.TryGetValue(resolvable, out var localInstance))
         {
             return (TExecutionInstance)localInstance;
         }
 
-        if (TryGetReplacementExecutable(untypedExecutable, out var replacementExecutable))
+        if (TryGetReplacementResolvable(resolvable, out var replacementResolvable))
         {
-            if (!executablesBeingCreated.Add(untypedExecutable))
+            if (!resolvablesBeingCreated.Add(resolvable))
             {
-                return executable.CreateExecutionInstance(this);
+                return resolvable.CreateExecutionInstance(this);
             }
 
             try
             {
-                var createdInstance = replacementExecutable.CreateExecutionInstance(this);
-                registry.Add(untypedExecutable, createdInstance);
+                var createdInstance = replacementResolvable.CreateExecutionInstance(this);
+                StoreInstance(resolvable, createdInstance);
                 return (TExecutionInstance)createdInstance;
             }
             finally
             {
-                executablesBeingCreated.Remove(untypedExecutable);
+                resolvablesBeingCreated.Remove(resolvable);
             }
         }
 
-        if (parentRegistry is not null && parentRegistry.TryResolve(untypedExecutable, out var parentInstance))
+        if (parentRegistry is not null && parentRegistry.TryResolve(resolvable, out var parentInstance))
         {
             return (TExecutionInstance)parentInstance;
         }
 
-        var instance = executable.CreateExecutionInstance(this);
-        registry.Add(untypedExecutable, instance);
+        var instance = resolvable.CreateExecutionInstance(this);
+        StoreInstance(resolvable, instance);
         return instance;
     }
 
-    public void PreRegister<TExecutionInstance>(IExecutable<TExecutionInstance> executable, TExecutionInstance instance)
-      where TExecutionInstance : class, IExecutionInstance
+    public void RegisterInstance<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, TExecutionInstance instance)
+        where TExecutionInstance : class, IExecutionInstance
     {
-        IExecutable<IExecutionInstance> untypedExecutable = executable;
-        if (!registry.TryAdd(untypedExecutable, instance))
+        StoreInstance(resolvable, instance);
+    }
+
+    private void StoreInstance(IExecutionInstanceResolvable<IExecutionInstance> resolvable, IExecutionInstance instance)
+    {
+        if (!registry.TryAdd(resolvable, instance))
         {
-            throw new InvalidOperationException("Object has already been registered");
+            throw new InvalidOperationException("Execution instance has already been registered for this resolvable.");
         }
     }
 
-    public void PreRegister<TExecutionInstance>(IExecutable<TExecutionInstance> executable, IExecutable<TExecutionInstance> replacementExecutable)
-      where TExecutionInstance : class, IExecutionInstance
+    public void RegisterReplacement<TExecutionInstance>(IExecutionInstanceResolvable<TExecutionInstance> resolvable, IExecutionInstanceResolvable<TExecutionInstance> replacementResolvable)
+        where TExecutionInstance : class, IExecutionInstance
     {
-        IExecutable<IExecutionInstance> untypedExecutable = executable;
-        if (!replacementExecutables.TryAdd(untypedExecutable, replacementExecutable))
+        if (!replacementResolvables.TryAdd(resolvable, replacementResolvable))
         {
-            throw new InvalidOperationException("Replacement executable has already been registered");
+            throw new InvalidOperationException("Replacement has already been registered for this resolvable.");
         }
     }
 }

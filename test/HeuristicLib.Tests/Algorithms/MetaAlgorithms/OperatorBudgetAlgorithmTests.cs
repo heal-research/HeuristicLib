@@ -30,13 +30,13 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorCalls(1).RunStreaming(
+        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 1).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorCalls(2).RunStreaming(
+        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -57,7 +57,7 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxEvaluatorCalls_CanObserveExplicitEvaluator()
+    public void WithMaxEvaluatedCandidates_StopsAfterObservedEvaluatedCandidateCount()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
@@ -65,17 +65,17 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, 1).RunStreaming(
+        var results = algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
-    public void WithMaxEvaluatedGenotypes_StopsAfterObservedEvaluatedGenotypeCount()
+    public void WithMaxEvaluatedCandidates_AllowsAnotherStateWhenBudgetIsNotReached()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
@@ -83,43 +83,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxEvaluatedGenotypes(2).RunStreaming(
-            problem,
-            RandomNumberGenerator.Create(42),
-            ct: TestContext.Current.CancellationToken).ToList();
-
-        results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
-    }
-
-    [Fact]
-    public void WithMaxEvaluatedGenotypes_CanObserveExplicitEvaluator()
-    {
-        var problem = CreateProblem();
-        var algorithm = CreateAlgorithm(problem) with
-        {
-            MaximumGenerations = 5
-        };
-
-        var results = algorithm.WithMaxEvaluatedGenotypes(algorithm.Evaluator, 2).RunStreaming(
-            problem,
-            RandomNumberGenerator.Create(42),
-            ct: TestContext.Current.CancellationToken).ToList();
-
-        results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
-    }
-
-    [Fact]
-    public void WithMaxEvaluatedGenotypes_AllowsAnotherStateWhenBudgetIsNotReached()
-    {
-        var problem = CreateProblem();
-        var algorithm = CreateAlgorithm(problem) with
-        {
-            MaximumGenerations = 5
-        };
-
-        var results = algorithm.WithMaxEvaluatedGenotypes(6).RunStreaming(
+        var results = algorithm.WithMaxEvaluatedCandidates(algorithm.Evaluator, 6).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -137,9 +101,10 @@ public class OperatorBudgetAlgorithmTests
         };
 
         var results = algorithm.WithMaxEvaluatorDuration(
+            algorithm.Evaluator,
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -158,16 +123,17 @@ public class OperatorBudgetAlgorithmTests
         };
 
         var results = algorithm.WithMaxEvaluatorDuration(
+            algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
             .ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
@@ -182,9 +148,10 @@ public class OperatorBudgetAlgorithmTests
         };
 
         var results = algorithm.WithMaxEvaluatorDuration(
+            algorithm.Evaluator,
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -208,7 +175,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Evaluator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -229,7 +196,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxAlgorithmDuration(
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -250,14 +217,14 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxAlgorithmDuration(
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
             .ToList();
 
         results.Count.ShouldBe(1);
-        results.Single().Population.Solutions.Length.ShouldBe(5);
+        results.Single().Population.EvaluatedCandidates.Length.ShouldBe(5);
     }
 
     [Fact]
@@ -274,7 +241,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxAlgorithmDuration(
             TimeSpan.FromSeconds(3),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -297,7 +264,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxAlgorithmDuration(
             TimeSpan.FromSeconds(10),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -321,7 +288,7 @@ public class OperatorBudgetAlgorithmTests
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)),
             static (observedOperator, duration, timeProvider) =>
                 observedOperator.MeasureEvaluatorDuration(duration, timeProvider))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -342,7 +309,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxCreatorCalls(
             algorithm.Creator,
             maximumCalls: 1)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -352,7 +319,7 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxCreatedGenotypes_CanObserveExplicitCreator()
+    public void WithMaxCreatedCandidates_CanObserveExplicitCreator()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
@@ -360,10 +327,10 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.WithMaxCreatedGenotypes(
+        var results = algorithm.WithMaxCreatedCandidates(
             algorithm.Creator,
-            maximumGenotypes: 2)
-            .RunStreaming(
+            maximumCandidates: 2)
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -385,7 +352,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Creator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -407,7 +374,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxCrossoverCalls(
             algorithm.Crossover,
             maximumCalls: 1)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -417,7 +384,7 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxCrossedGenotypes_CanObserveExplicitCrossover()
+    public void WithMaxCrossedCandidates_CanObserveExplicitCrossover()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
@@ -426,10 +393,10 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 0.0
         };
 
-        var results = algorithm.WithMaxCrossedGenotypes(
+        var results = algorithm.WithMaxCrossedCandidates(
             algorithm.Crossover,
-            maximumGenotypes: 6)
-            .RunStreaming(
+            maximumCandidates: 6)
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -452,7 +419,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Crossover,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -476,7 +443,7 @@ public class OperatorBudgetAlgorithmTests
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
                 observedOperator.CountMutatorCalls(counter))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -498,7 +465,7 @@ public class OperatorBudgetAlgorithmTests
         var results = algorithm.WithMaxMutatorCalls(
             algorithm.Mutator,
             maximumCalls: 1)
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -508,7 +475,7 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxCount_CanObserveMutatedGenotypes()
+    public void WithMaxCount_CanObserveMutatedCandidates()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
@@ -521,8 +488,8 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Mutator,
             maximumCount: 6,
             countedOperatorFactory: static (observedOperator, counter) =>
-                observedOperator.CountMutatedGenotypes(counter))
-            .RunStreaming(
+                observedOperator.CountMutatedCandidates(counter))
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -532,7 +499,7 @@ public class OperatorBudgetAlgorithmTests
     }
 
     [Fact]
-    public void WithMaxMutatedGenotypes_CanObserveExplicitMutator()
+    public void WithMaxMutatedCandidates_CanObserveExplicitMutator()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with
@@ -541,10 +508,10 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.WithMaxMutatedGenotypes(
+        var results = algorithm.WithMaxMutatedCandidates(
             algorithm.Mutator,
-            maximumGenotypes: 6)
-            .RunStreaming(
+            maximumCandidates: 6)
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -567,7 +534,7 @@ public class OperatorBudgetAlgorithmTests
             algorithm.Mutator,
             TimeSpan.FromSeconds(1),
             new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -590,7 +557,7 @@ public class OperatorBudgetAlgorithmTests
             maximumCount: 1,
             countedOperatorFactory: static (observedOperator, counter) =>
                 observedOperator.CountEvaluatorCalls(counter))
-            .RunStreaming(
+            .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
                 ct: TestContext.Current.CancellationToken)
@@ -622,7 +589,7 @@ public class OperatorBudgetAlgorithmTests
             Terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 3)
         };
 
-        var results = externallyStoppedAlgorithm.RunStreaming(
+        var results = externallyStoppedAlgorithm.Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();

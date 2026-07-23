@@ -5,38 +5,35 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
-public abstract record StatelessMutator<TGenotype, TSearchSpace, TProblem>
-  : IMutator<TGenotype, TSearchSpace, TProblem>,
-    IMutatorInstance<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record StatelessMutator<TCandidate, TSearchSpace, TProblem>
+    : Mutator<TCandidate, TSearchSpace, TProblem>, IMutatorInstance<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public IMutatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) => this;
 
-    public abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract record StatelessMutator<TGenotype, TSearchSpace>
-  : IMutator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>,
-    IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+public abstract record StatelessMutator<TCandidate, TSearchSpace>
+    : Mutator<TCandidate, TSearchSpace>, IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateMutatorInstance(ExecutionInstanceRegistry registry) => this;
 
-    public abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<TGenotype> IMutatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>.Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) =>
-       Mutate(parents, random, searchSpace);
+    IReadOnlyList<TCandidate> IMutatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Mutate(
+        IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) => Mutate(parents, random, searchSpace);
 }
 
-public abstract record StatelessMutator<TGenotype>
-  : IMutator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>,
-    IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
+public abstract record StatelessMutator<TCandidate>
+    : Mutator<TCandidate>, IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    public IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateMutatorInstance(ExecutionInstanceRegistry registry) => this;
 
-    public abstract IReadOnlyList<TGenotype> Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random);
+    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
 
-    IReadOnlyList<TGenotype> IMutatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>.Mutate(IReadOnlyList<TGenotype> parents, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) =>
-      Mutate(parents, random);
+    IReadOnlyList<TCandidate> IMutatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Mutate(
+        IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => Mutate(parents, random);
 }

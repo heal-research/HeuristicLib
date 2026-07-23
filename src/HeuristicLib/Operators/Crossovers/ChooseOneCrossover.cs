@@ -7,12 +7,12 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
 [Equatable]
-public partial record ChooseOneCrossover<TGenotype, TSearchSpace, TProblem>
-  : MultiCrossover<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public partial record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
+    : MultiCrossover<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [IgnoreEquality] public ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> Crossovers => InnerCrossovers;
+    [IgnoreEquality] public ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> Crossovers => InnerCrossovers;
 
     [OrderedEquality]
     public ImmutableArray<double> Weights { get; }
@@ -20,15 +20,15 @@ public partial record ChooseOneCrossover<TGenotype, TSearchSpace, TProblem>
     [IgnoreEquality]
     private readonly WeightedBatchDispatch dispatcher;
 
-    public ChooseOneCrossover(ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
-  : base(crossovers)
+    public ChooseOneCrossover(ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+        : base(crossovers)
     {
         if (crossovers.Length == 0)
         {
             throw new ArgumentException("At least one crossover must be provided.", nameof(crossovers));
         }
 
-        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0, crossovers.Length)];
+        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / crossovers.Length, crossovers.Length)];
         if (effectiveWeights.Length != crossovers.Length)
         {
             throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
@@ -38,49 +38,36 @@ public partial record ChooseOneCrossover<TGenotype, TSearchSpace, TProblem>
         Weights = dispatcher.Weights;
     }
 
-    protected override IReadOnlyList<TGenotype> Cross(
-      IReadOnlyList<IParents<TGenotype>> parents,
-      IReadOnlyList<InnerCross> innerCrossovers,
-      IRandomNumberGenerator random,
-      TSearchSpace searchSpace,
-      TProblem problem)
+    protected override MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> innerCrossovers) =>
+        new Instance(innerCrossovers, dispatcher);
+
+    private sealed class Instance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> innerCrossovers, WeightedBatchDispatch dispatcher)
+        : MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem>(innerCrossovers)
     {
-        return dispatcher.Dispatch(
-          parents,
-          innerCrossovers,
-          random,
-          (crossover, batchParents) => crossover(batchParents, random, searchSpace, problem));
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            dispatcher.Dispatch(parents, InnerCrossovers, random, (crossover, batchParents) => crossover.Cross(batchParents, random, searchSpace, problem));
     }
 }
 
 public static class ChooseOneCrossover
 {
-    public static ChooseOneCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(
-    params IEnumerable<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers)
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        var r = crossovers.ToImmutableArray();
-        var weights = r.Select(_ => 1.0 / r.Length).ToImmutableArray();
-        return new ChooseOneCrossover<TGenotype, TSearchSpace, TProblem>(r, weights);
+        var crossoverArray = crossovers.ToImmutableArray();
+        return new ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>(crossoverArray);
     }
 
-    public static ChooseOneCrossover<TGenotype, TSearchSpace, TProblem> Create<TGenotype, TSearchSpace, TProblem>(
-    ImmutableArray<ICrossover<TGenotype, TSearchSpace, TProblem>> crossovers,
-    ImmutableArray<double>? weights = null)
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
-    {
-        return new ChooseOneCrossover<TGenotype, TSearchSpace, TProblem>(crossovers, weights);
-    }
+    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(crossovers, weights);
 
-    extension<TGenotype, TSearchSpace, TProblem>(ICrossover<TGenotype, TSearchSpace, TProblem> crossover)
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    extension<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ChooseOneCrossover<TGenotype, TSearchSpace, TProblem> WithRate(double crossoverRate)
-        {
-            return Create([crossover, SelectFirstParentCrossover<TGenotype>.Instance], [crossoverRate, 1 - crossoverRate]);
-        }
+        public ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> WithRate(double crossoverRate) =>
+            Create([crossover, SelectFirstParentCrossover<TCandidate>.Instance], [crossoverRate, 1 - crossoverRate]);
     }
 }

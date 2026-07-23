@@ -40,27 +40,27 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
             Elites = 1
         };
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken);
 
-        var best = finalState.Population.Solutions
+        var best = finalState.Population.EvaluatedCandidates
             .OrderBy(solution => solution.ObjectiveVector[0])
             .First();
         var baseline = CalculateConstantMeanBaseline(data.TrainingTarget.Values.Span);
-        var compiled = best.Genotype.Compile(optimize: true);
+        var compiled = best.Candidate.Compile(optimize: true);
         var firstPredictions = ExpressionInterpreter.Interpret(compiled, data.TrainingInputs);
         var repeatedPredictions = ExpressionInterpreter.Interpret(compiled, data.TrainingInputs);
         var retainedCompiledScore = Metrics.RMSE.Evaluate(firstPredictions, data.TrainingTarget.Values.Span);
 
-        finalState.Population.Solutions.Length.ShouldBe(80);
-        finalState.Population.Solutions.All(solution => searchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+        finalState.Population.EvaluatedCandidates.Length.ShouldBe(80);
+        finalState.Population.EvaluatedCandidates.All(candidate => searchSpace.Contains(candidate.Candidate)).ShouldBeTrue();
         best.ObjectiveVector[0].ShouldBeLessThan(baseline);
         retainedCompiledScore.ShouldBe(best.ObjectiveVector[0], tolerance: 1e-12);
         repeatedPredictions.ShouldBe(firstPredictions, tolerance: 0.0);
 
-        output.WriteLine($"Best expression: {best.Genotype.ToInfixString()}");
+        output.WriteLine($"Best expression: {best.Candidate.ToInfixString()}");
         output.WriteLine($"Training RMSE: {best.ObjectiveVector[0]:G6}");
         output.WriteLine($"Compiled instructions: {compiled.Length}");
     }

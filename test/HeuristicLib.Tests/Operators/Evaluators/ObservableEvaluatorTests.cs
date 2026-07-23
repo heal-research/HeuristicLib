@@ -17,7 +17,9 @@ public class ObservableEvaluatorTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatorCalls(counter);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        evaluator.Counter.ShouldBeSameAs(counter);
+        evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -27,11 +29,11 @@ public class ObservableEvaluatorTests
     }
 
     [Fact]
-    public void CountEvaluatedGenotypes_IncrementsByBatchSize()
+    public void CountEvaluatedCandidates_IncrementsByBatchSize()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatedGenotypes(counter);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -46,7 +48,9 @@ public class ObservableEvaluatorTests
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var evaluator = CreateEvaluator().MeasureEvaluatorDuration(duration, timeProvider);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        evaluator.Duration.ShouldBeSameAs(duration);
+        evaluator.TimeProvider.ShouldBeSameAs(timeProvider);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -74,14 +78,14 @@ public class ObservableEvaluatorTests
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
     {
         return FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: static genotype => genotype,
+            evaluateFunc: static candidate => candidate,
             encoding: DummySearchSpace<int>.Instance,
             objective: CreateObjective());
     }
 
-    private static Objective CreateObjective()
+    private static ObjectiveDirections CreateObjective()
     {
-        return new Objective(
+        return new ObjectiveDirections(
             [ObjectiveDirection.Minimize],
             Comparer<ObjectiveVector>.Create(static (left, right) => left[0].CompareTo(right[0])));
     }

@@ -6,22 +6,17 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public record LimitEvaluator<TG, TS, TP>
-  : WrappingEvaluator<TG, TS, TP, LimitEvaluator<TG, TS, TP>.ExecutionState>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
+    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed class ExecutionState
-    {
-        public ObservationCounter Counter { get; } = new();
-    }
-
     private readonly int maxEvaluations;
     private readonly ObjectiveVector? alternativeValue;
     private readonly bool strict;
 
-    // ToDo: document that strict means in-batch checking
-    public LimitEvaluator(IEvaluator<TG, TS, TP> evaluator, int maxEvaluations, ObjectiveVector? alternativeValue, bool strict = false)
+    /// <param name="strict">Whether the limit must also be respected within a single batch. When false, a batch that starts below the limit is evaluated completely.</param>
+    public LimitEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, int maxEvaluations, ObjectiveVector? alternativeValue, bool strict = false)
       : base(evaluator)
     {
         this.maxEvaluations = maxEvaluations;
@@ -29,45 +24,51 @@ public record LimitEvaluator<TG, TS, TP>
         this.strict = strict;
     }
 
-    protected override ExecutionState CreateInitialState() => new();
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
+        new Instance(innerEvaluator, maxEvaluations, alternativeValue, strict);
 
-    protected override IReadOnlyList<Solution<TG>> Evaluate(IReadOnlyList<TG> genotypes, ExecutionState executionState,
-      InnerEvaluate innerEvaluate, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, int maxEvaluations, ObjectiveVector? alternativeValue, bool strict)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
     {
-        var remainingEvaluations = maxEvaluations - executionState.Counter.CurrentCount;
+        private readonly ObservationCounter counter = new();
 
-        var alternative = alternativeValue ?? problem.Objective.Worst;
-
-        if (remainingEvaluations <= 0)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            return genotypes.Select(genotype => Solution.From(genotype, alternative)).ToArray();
+            var remainingEvaluations = maxEvaluations - counter.CurrentCount;
+            var alternative = alternativeValue ?? problem.Objective.Worst;
+
+            if (remainingEvaluations <= 0)
+            {
+                return candidates.Select(candidate => candidate.ToEvaluated(alternative)).ToArray();
+            }
+
+            if (strict && remainingEvaluations < candidates.Count)
+            {
+                var candidatesToEvaluate = candidates.Take(remainingEvaluations).ToList();
+                var candidatesToSkip = candidates.Skip(remainingEvaluations).ToList();
+                var evaluated = InnerEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
+                counter.IncrementBy(candidatesToEvaluate.Count);
+                var skipped = candidatesToSkip.Select(candidate => candidate.ToEvaluated(alternative));
+
+                return evaluated.Concat(skipped).ToArray();
+            }
+
+            var result = InnerEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            counter.IncrementBy(candidates.Count);
+            return result;
         }
-
-        if (strict && remainingEvaluations < genotypes.Count)
-        {
-            var genotypesToEvaluate = genotypes.Take(remainingEvaluations).ToList();
-            var genotypesToSkip = genotypes.Skip(remainingEvaluations).ToList();
-
-            var evaluated = innerEvaluate(genotypesToEvaluate, random, searchSpace, problem);
-            executionState.Counter.IncrementBy(genotypesToEvaluate.Count);
-            var skipped = genotypesToSkip.Select(genotype => Solution.From(genotype, alternative));
-
-            return evaluated.Concat(skipped).ToArray();
-        }
-
-        var result = innerEvaluate(genotypes, random, searchSpace, problem);
-        executionState.Counter.IncrementBy(genotypes.Count);
-        return result;
     }
 }
 
 public static class LimitEvaluatorExtensions
 {
-    extension<TG, TS, TP>(IEvaluator<TG, TS, TP> evaluator) where TS : class, ISearchSpace<TG> where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public LimitEvaluator<TG, TS, TP> LimitEvaluations(int maxEvaluations, ObjectiveVector? alternativeValue = null, bool strict = false)
+        public LimitEvaluator<TCandidate, TSearchSpace, TProblem> LimitEvaluations(int maxEvaluations, ObjectiveVector? alternativeValue = null, bool strict = false)
         {
-            return new LimitEvaluator<TG, TS, TP>(evaluator, maxEvaluations, alternativeValue, strict);
+            return new LimitEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, maxEvaluations, alternativeValue, strict);
         }
     }
 }

@@ -6,67 +6,79 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 [Equatable]
-public partial record ObservableInterceptor<TG, TS, TP, TR>
-  : WrappingInterceptor<TG, TS, TP, TR>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, ISearchState
+public partial record ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+  : WrappingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : class, ISearchState
 {
-    [OrderedEquality]
-    public ImmutableArray<IInterceptorObserver<TG, TS, TP, TR>> Observers { get; }
+    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Interceptor => InnerInterceptor;
 
-    public ObservableInterceptor(IInterceptor<TG, TS, TP, TR> interceptor, ImmutableArray<IInterceptorObserver<TG, TS, TP, TR>> observers)
+    [OrderedEquality]
+    public ImmutableArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> Observers { get; }
+
+    public ObservableInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, ImmutableArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
       : base(interceptor)
     {
         Observers = observers;
     }
 
-    public ObservableInterceptor(IInterceptor<TG, TS, TP, TR> interceptor, params IEnumerable<IInterceptorObserver<TG, TS, TP, TR>> observers)
+    public ObservableInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, params IEnumerable<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
       : this(interceptor, [.. observers])
     {
     }
 
-    protected override TR Transform(TR currentState, TR? previousState, InnerTransform innerTransform, TS searchSpace, TP problem)
+    protected override WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor) =>
+        new Instance(innerInterceptor, Observers);
+
+    private sealed class Instance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor, ImmutableArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
+        : WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(innerInterceptor)
     {
-        var result = innerTransform(currentState, previousState, searchSpace, problem);
-        foreach (var observer in Observers)
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem)
         {
-            observer.AfterInterception(result, currentState, previousState, searchSpace, problem);
+            var result = InnerInterceptor.Transform(currentState, previousState, searchSpace, problem);
+            foreach (var observer in observers)
+            {
+                observer.AfterInterception(result, currentState, previousState, searchSpace, problem);
+            }
+            return result;
         }
-        return result;
     }
 }
 
-public interface IInterceptorObserver<in TG, in TS, in TP, in TR>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, ISearchState
+public interface IInterceptorObserver<in TCandidate, in TSearchSpace, in TProblem, in TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
 {
-    void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem);
+    void AfterInterception(TSearchState newState, TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem);
+}
+
+public sealed class ActionInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(
+    Action<TSearchState, TSearchState, TSearchState?, TSearchSpace, TProblem> afterInterception)
+    : IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
+{
+    public void AfterInterception(TSearchState newState, TSearchState currentState, TSearchState? previousState, TSearchSpace searchSpace, TProblem problem) =>
+        afterInterception(newState, currentState, previousState, searchSpace, problem);
 }
 
 public static class ObservableInterceptorExtensions
 {
-    extension<TG, TS, TP, TR>(IInterceptor<TG, TS, TP, TR> interceptor)
-      where TS : class, ISearchSpace<TG>
-      where TP : class, IProblem<TG, TS>
-      where TR : class, ISearchState
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
-        public IInterceptor<TG, TS, TP, TR> ObserveWith(IInterceptorObserver<TG, TS, TP, TR> observer)
-          => new ObservableInterceptor<TG, TS, TP, TR>(interceptor, observer);
-        public IInterceptor<TG, TS, TP, TR> ObserveWith(params IEnumerable<IInterceptorObserver<TG, TS, TP, TR>> observers)
-          => new ObservableInterceptor<TG, TS, TP, TR>(interceptor, observers);
-        public IInterceptor<TG, TS, TP, TR> ObserveWith(Action<TR, TR, TR?, TS, TP> afterInterception)
-          => interceptor.ObserveWith(new ActionInterceptorObserver<TG, TS, TP, TR>(afterInterception));
-        public IInterceptor<TG, TS, TP, TR> ObserveWith(Action<TR> afterInterception)
-          => interceptor.ObserveWith(new ActionInterceptorObserver<TG, TS, TP, TR>((newState, _, _, _, _) => afterInterception(newState)));
+        public ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer) =>
+            new ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observer);
+        public ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(params IEnumerable<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers) =>
+            new ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observers);
+        public ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(Action<TSearchState, TSearchState, TSearchState?, TSearchSpace, TProblem> afterInterception) =>
+            interceptor.ObserveWith(new ActionInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterInterception));
+        public ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(Action<TSearchState> afterInterception) =>
+            interceptor.ObserveWith(new ActionInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>((newState, _, _, _, _) => afterInterception(newState)));
     }
-}
-
-public sealed class ActionInterceptorObserver<TG, TS, TP, TR>(Action<TR, TR, TR?, TS, TP> afterInterception) : IInterceptorObserver<TG, TS, TP, TR>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, ISearchState
-{
-    public void AfterInterception(TR newState, TR currentState, TR? previousState, TS searchSpace, TP problem) => afterInterception(newState, currentState, previousState, searchSpace, problem);
 }

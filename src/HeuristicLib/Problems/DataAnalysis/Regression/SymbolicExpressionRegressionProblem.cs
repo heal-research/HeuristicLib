@@ -53,6 +53,6 @@ public sealed class SymbolicExpressionRegressionProblem
         return new ObjectiveVector(Metric.Evaluate(predictions, target.Values.Span));
     }
 
-    private static Objective CreateObjective(IRegressionMetric metric) =>
+    private static ObjectiveDirections CreateObjective(IRegressionMetric metric) =>
         new([metric.Direction], new SingleObjectiveComparer(metric.Direction));
 }

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
@@ -10,127 +11,99 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.LocalSearch;
 
-public record HillClimber<TGenotype, TSearchSpace, TProblem>
-    : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>, HillClimber<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record HillClimber<TCandidate, TSearchSpace, TProblem>
+    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public new sealed class ExecutionState
-        : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, SingleSolutionState<TGenotype>, ExecutionState>.ExecutionState
-    {
-        public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-        public required IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-    }
-
-    public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
     public required LocalSearchDirection Direction { get; init; }
     public required int MaxNeighbors { get; init; }
     public required int BatchSize { get; init; }
 
-    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
-    {
-        return new ExecutionState
-        {
-            Evaluator = resolver.Resolve(Evaluator),
-            Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
-            Creator = resolver.Resolve(Creator),
-            Mutator = resolver.Resolve(Mutator)
-        };
-    }
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
+        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
+        new Instance(resolvedInterceptor, registry.Resolve(Evaluator), registry.Resolve(Creator), registry.Resolve(Mutator), Direction, MaxNeighbors, BatchSize);
 
-    protected override SingleSolutionState<TGenotype> ExecuteStep(
-        SingleSolutionState<TGenotype>? previousState,
-        ExecutionState executionState,
-        TProblem problem,
-        IRandomNumberGenerator random)
+    private sealed class Instance(
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
+        IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
+        LocalSearchDirection direction,
+        int maxNeighbors,
+        int batchSize)
+        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
     {
-        return TryExecuteStep(previousState, executionState, problem, random, out var nextState)
-          ? nextState!
-          : throw new InvalidOperationException("HillClimber has structurally completed and cannot produce another step.");
-    }
+        protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random) =>
+            TryExecuteStep(previousState, problem, random, out var nextState)
+                ? nextState
+                : throw new InvalidOperationException("HillClimber has structurally completed and cannot produce another step.");
 
-    protected override bool TryExecuteStep(
-        SingleSolutionState<TGenotype>? previousState,
-        ExecutionState executionState,
-        TProblem problem,
-        IRandomNumberGenerator random,
-        [NotNullWhen(true)] out SingleSolutionState<TGenotype>? nextState)
-    {
-        if (previousState is null)
+        protected override bool TryExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out SingleSolutionState<TCandidate>? nextState)
         {
-            nextState = CreateInitialState(executionState, problem, random);
+            if (previousState is null)
+            {
+                nextState = CreateInitialState(problem, random);
+                return true;
+            }
+
+            if (!TryFindImprovement(previousState.EvaluatedCandidate, problem, random, out var improvement))
+            {
+                nextState = null;
+                return false;
+            }
+
+            nextState = ToState(improvement);
             return true;
         }
 
-        if (!TryFindImprovement(previousState.Solution, executionState, problem, random, out var improvement))
+        private SingleSolutionState<TCandidate> CreateInitialState(TProblem problem, IRandomNumberGenerator random)
         {
-            nextState = null;
-            return false;
+            var initialSolution = creator.Create(1, random, problem.SearchSpace, problem)[0];
+            var initialCandidate = evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
+            return ToState(initialCandidate);
         }
 
-        nextState = ToState(improvement);
-        return true;
-    }
-
-    private static SingleSolutionState<TGenotype> CreateInitialState(
-        ExecutionState executionState,
-        TProblem problem,
-        IRandomNumberGenerator random)
-    {
-        var initialSolution = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-        var evaluatedInitialSolution = executionState.Evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
-        return ToState(evaluatedInitialSolution);
-    }
-
-    private bool TryFindImprovement(
-        Solution<TGenotype> current,
-        ExecutionState executionState,
-        TProblem problem,
-        IRandomNumberGenerator random,
-        [NotNullWhen(true)] out Solution<TGenotype>? improvement)
-    {
-        improvement = null;
-
-        for (var i = 0; i < MaxNeighbors; i += BatchSize)
+        private bool TryFindImprovement(EvaluatedCandidate<TCandidate> current, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out EvaluatedCandidate<TCandidate>? improvement)
         {
-            var candidates = executionState.Mutator.Mutate(Enumerable.Repeat(current.Genotype, BatchSize).ToArray(), random, problem.SearchSpace, problem);
-            var evaluatedCandidates = executionState.Evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
-            var candidateObjectives = evaluatedCandidates.Select(x => x.ObjectiveVector).ToArray();
-            var bestIndex = BestSelector.Select(candidateObjectives, problem.Objective, count: 1)[0];
+            improvement = null;
 
-            if (problem.Objective.TotalOrderComparer.Compare(evaluatedCandidates[bestIndex].ObjectiveVector, current.ObjectiveVector) >= 0)
+            for (var i = 0; i < maxNeighbors; i += batchSize)
             {
-                continue;
+                var candidates = mutator.Mutate(Enumerable.Repeat(current.Candidate, batchSize).ToArray(), random, problem.SearchSpace, problem);
+                var evaluatedCandidates = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
+                var objectiveVectors = evaluatedCandidates.Select(candidate => candidate.ObjectiveVector).ToArray();
+                var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
+
+                if (problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
+                {
+                    continue;
+                }
+
+                improvement = evaluatedCandidates[bestIndex];
+                if (direction == LocalSearchDirection.FirstImprovement)
+                {
+                    return true;
+                }
             }
 
-            improvement = evaluatedCandidates[bestIndex];
-            if (Direction == LocalSearchDirection.FirstImprovement)
-            {
-                return true;
-            }
+            return improvement is not null;
         }
 
-        return improvement is not null;
-    }
-
-    private static SingleSolutionState<TGenotype> ToState(Solution<TGenotype> solution)
-    {
-        return new SingleSolutionState<TGenotype>
-        {
-            Population = Population.From([solution])
-        };
+        private static SingleSolutionState<TCandidate> ToState(EvaluatedCandidate<TCandidate> solution) => new() { Population = Population.From([solution]) };
     }
 }
 
 public static class HillClimber
 {
-    public static HillClimberBuilder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
-        ICreator<TGenotype, TSearchSpace, TProblem> creator, IMutator<TGenotype, TSearchSpace, TProblem> mutator)
-        where TSearchSpace : class, ISearchSpace<TGenotype>
-        where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    public static HillClimberBuilder<TCandidate, TSearchSpace, TProblem> GetBuilder<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator, IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new HillClimberBuilder<TGenotype, TSearchSpace, TProblem>
+        return new HillClimberBuilder<TCandidate, TSearchSpace, TProblem>
         {
             Mutator = mutator,
             Creator = creator

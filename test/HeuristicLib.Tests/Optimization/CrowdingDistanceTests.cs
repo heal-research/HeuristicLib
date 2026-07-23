@@ -129,5 +129,5 @@ public class CrowdingDistanceTests
 
     // ---------------- helpers ----------------
 
-    private static Solution<T> Sol<T>(params double[] objs) => new(default!, new ObjectiveVector(objs));
+    private static EvaluatedCandidate<T> Sol<T>(params double[] objs) => new(default!, new ObjectiveVector(objs));
 }

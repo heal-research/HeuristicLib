@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public record ParetoCrowdingReplacer<TGenotype>
-  : StatelessReplacer<TGenotype>
+public record ParetoCrowdingReplacer<TCandidate>
+  : StatelessReplacer<TCandidate>
 {
     private readonly bool dominateOnEqualities;
 
@@ -13,23 +13,23 @@ public record ParetoCrowdingReplacer<TGenotype>
         this.dominateOnEqualities = dominateOnEqualities;
     }
 
-    public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
       => ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, dominateOnEqualities);
 }
 
 public static class ParetoCrowdingReplacer
 {
-    public static IReadOnlyList<Solution<TGenotype>> Replace<TGenotype>(
-      IReadOnlyList<Solution<TGenotype>> previousPopulation,
-      IReadOnlyList<Solution<TGenotype>> offspringPopulation,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
+      ObjectiveDirections objective,
       int count,
       bool dominateOnEqualities)
     {
         var all = previousPopulation.Concat(offspringPopulation).ToArray();
         var fronts = DominationCalculator.CalculateAllParetoFronts(all, objective, out _, dominateOnEqualities);
 
-        var l = new List<Solution<TGenotype>>();
+        var l = new List<EvaluatedCandidate<TCandidate>>();
         var size = count;
         foreach (var front in fronts)
         {

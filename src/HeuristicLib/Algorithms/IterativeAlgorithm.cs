@@ -9,110 +9,82 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>
-  : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>,
-    IIterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TSearchState : class, ISearchState
-  where TExecutionState : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
+public abstract record IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
 {
-    public new class ExecutionState
-      : Algorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
+    public IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
+
+    protected sealed override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
     {
-        public IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
+        var resolvedInterceptor = Interceptor is null ? null : registry.Resolve(Interceptor);
+        return CreateIterativeAlgorithmInstance(registry, resolvedInterceptor);
     }
 
-    public IInterceptor<TGenotype, TSearchSpace, TProblem, TSearchState>? Interceptor { get; init; }
+    protected abstract IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateIterativeAlgorithmInstance(
+        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
+}
 
-    protected abstract TSearchState ExecuteStep(
-      TSearchState? previousState,
-      TExecutionState executionState,
-      TProblem problem,
-      IRandomNumberGenerator random);
+public abstract class IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
+{
+    private readonly IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor;
 
-    protected virtual bool TryExecuteStep(
-      TSearchState? previousState,
-      TExecutionState executionState,
-      TProblem problem,
-      IRandomNumberGenerator random,
-      [NotNullWhen(true)] out TSearchState? nextState)
+    protected IterativeAlgorithmInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor)
     {
-        nextState = ExecuteStep(previousState, executionState, problem, random);
+        this.interceptor = interceptor;
+    }
+
+    protected abstract TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random);
+
+    protected virtual bool TryExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)
+    {
+        nextState = ExecuteStep(previousState, problem, random);
         return true;
     }
 
-    protected virtual bool HasCompleted(
-      int yieldedStateCount,
-      TSearchState? previousState,
-      TExecutionState executionState,
-      TProblem problem) => false;
+    protected virtual bool HasCompleted(int yieldedStateCount, TSearchState? previousState, TProblem problem) => false;
 
-    protected virtual bool IsTerminalState(
-      TSearchState state,
-      int yieldedStateCount,
-      TSearchState? previousState,
-      TExecutionState executionState,
-      TProblem problem) => false;
+    protected virtual bool IsTerminalState(TSearchState state, int yieldedStateCount, TSearchState? previousState, TProblem problem) => false;
 
-    protected sealed override IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(Run run, TExecutionState executionState)
+    public sealed override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        return new Instance(this, run, executionState);
-    }
+        var previousState = initialState;
 
-    private sealed class Instance(
-      IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState> algorithm,
-      Run run,
-      TExecutionState executionState)
-      : AlgorithmInstance<TGenotype, TSearchSpace, TProblem, TSearchState>(run, executionState.Evaluator)
-    {
-        private readonly IInterceptorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>? interceptor = executionState.Interceptor;
-
-        private bool TryExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)
+        foreach (var yieldedStateCount in Enumerable.InfiniteSequence(0, 1))
         {
-            return algorithm.TryExecuteStep(previousState, executionState, problem, random, out nextState);
-        }
-
-        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(
-          TProblem problem,
-          IRandomNumberGenerator random,
-          TSearchState? initialState = null,
-          [EnumeratorCancellation] CancellationToken ct = default)
-        {
-            var previousState = initialState;
-
-            foreach (var yieldedStateCount in Enumerable.InfiniteSequence(0, 1))
+            if (HasCompleted(yieldedStateCount, previousState, problem))
             {
-                if (algorithm.HasCompleted(yieldedStateCount, previousState, executionState, problem))
-                {
-                    yield break;
-                }
-
-                ct.ThrowIfCancellationRequested();
-                var iterationRandom = random.Fork(yieldedStateCount);
-                if (!TryExecuteStep(previousState, problem, iterationRandom, out var newState))
-                {
-                    yield break;
-                }
-
-                if (interceptor is not null)
-                {
-                    newState = interceptor.Transform(newState, previousState, problem.SearchSpace, problem);
-                }
-
-                var isTerminalState = algorithm.IsTerminalState(newState, yieldedStateCount + 1, previousState, executionState, problem);
-
-                yield return newState;
-
-                if (isTerminalState)
-                {
-                    yield break;
-                }
-
-                await Task.Yield();
-
-                previousState = newState;
+                yield break;
             }
+
+            ct.ThrowIfCancellationRequested();
+            var iterationRandom = random.Fork(yieldedStateCount);
+            if (!TryExecuteStep(previousState, problem, iterationRandom, out var newState))
+            {
+                yield break;
+            }
+
+            if (interceptor is not null)
+            {
+                newState = interceptor.Transform(newState, previousState, problem.SearchSpace, problem);
+            }
+
+            var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, problem);
+            yield return newState;
+
+            if (isTerminalState)
+            {
+                yield break;
+            }
+
+            await Task.Yield();
+            previousState = newState;
         }
     }
 }

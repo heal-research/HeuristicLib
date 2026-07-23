@@ -6,63 +6,75 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
-public partial record ObservableMutator<TG, TS, TP>
-  : WrappingMutator<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public partial record ObservableMutator<TCandidate, TSearchSpace, TProblem>
+  : WrappingMutator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality]
-    public ImmutableArray<IMutatorObserver<TG, TS, TP>> Observers { get; }
+    public IMutator<TCandidate, TSearchSpace, TProblem> Mutator => InnerMutator;
 
-    public ObservableMutator(IMutator<TG, TS, TP> mutator, ImmutableArray<IMutatorObserver<TG, TS, TP>> observers)
+    [OrderedEquality]
+    public ImmutableArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
+
+    public ObservableMutator(IMutator<TCandidate, TSearchSpace, TProblem> mutator, ImmutableArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
       : base(mutator)
     {
         Observers = observers;
     }
 
-    public ObservableMutator(IMutator<TG, TS, TP> mutator, params IEnumerable<IMutatorObserver<TG, TS, TP>> observers)
+    public ObservableMutator(IMutator<TCandidate, TSearchSpace, TProblem> mutator, params IEnumerable<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
       : this(mutator, [.. observers])
     {
     }
 
-    protected override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents, InnerMutate innerMutate, IRandomNumberGenerator random, TS searchSpace, TP problem)
+    protected override WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> innerMutator) =>
+        new Instance(innerMutator, Observers);
+
+    private sealed class Instance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> innerMutator, ImmutableArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem>(innerMutator)
     {
-        var result = innerMutate(parents, random, searchSpace, problem);
-        foreach (var observer in Observers)
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            observer.AfterMutate(result, parents, searchSpace, problem);
+            var result = InnerMutator.Mutate(parents, random, searchSpace, problem);
+            foreach (var observer in observers)
+            {
+                observer.AfterMutate(result, parents, searchSpace, problem);
+            }
+
+            return result;
         }
-        return result;
     }
 }
 
-public interface IMutatorObserver<in TG, in TS, in TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IMutatorObserver<in TCandidate, in TSearchSpace, in TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, TS searchSpace, TP problem);
+    void AfterMutate(IReadOnlyList<TCandidate> offspring, IReadOnlyList<TCandidate> parent, TSearchSpace searchSpace, TProblem problem);
+}
+
+public sealed class ActionMutatorObserver<TCandidate, TSearchSpace, TProblem>(Action<IReadOnlyList<TCandidate>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterMutate)
+    : IMutatorObserver<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public void AfterMutate(IReadOnlyList<TCandidate> offspring, IReadOnlyList<TCandidate> parent, TSearchSpace searchSpace, TProblem problem) =>
+        afterMutate(offspring, parent, searchSpace, problem);
 }
 
 public static class ObservableMutatorExtensions
 {
-    extension<TG, TS, TP>(IMutator<TG, TS, TP> mutator)
-      where TS : class, ISearchSpace<TG>
-      where TP : class, IProblem<TG, TS>
+    extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+      where TSearchSpace : class, ISearchSpace<TCandidate>
+      where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IMutator<TG, TS, TP> ObserveWith(IMutatorObserver<TG, TS, TP> observer)
-          => new ObservableMutator<TG, TS, TP>(mutator, observer);
-        public IMutator<TG, TS, TP> ObserveWith(params IEnumerable<IMutatorObserver<TG, TS, TP>> observers)
-          => new ObservableMutator<TG, TS, TP>(mutator, observers);
-        public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, TS, TP> afterMutate)
-          => mutator.ObserveWith(new ActionMutatorObserver<TG, TS, TP>(afterMutate));
-        public IMutator<TG, TS, TP> ObserveWith(Action<IReadOnlyList<TG>> afterMutate)
-          => mutator.ObserveWith(new ActionMutatorObserver<TG, TS, TP>((offspring, _, _, _) => afterMutate(offspring)));
+        public ObservableMutator<TCandidate, TSearchSpace, TProblem> ObserveWith(IMutatorObserver<TCandidate, TSearchSpace, TProblem> observer) =>
+            new ObservableMutator<TCandidate, TSearchSpace, TProblem>(mutator, observer);
+        public ObservableMutator<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
+            new ObservableMutator<TCandidate, TSearchSpace, TProblem>(mutator, observers);
+        public ObservableMutator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterMutate) =>
+            mutator.ObserveWith(new ActionMutatorObserver<TCandidate, TSearchSpace, TProblem>(afterMutate));
+        public ObservableMutator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>> afterMutate) =>
+            mutator.ObserveWith(new ActionMutatorObserver<TCandidate, TSearchSpace, TProblem>((offspring, _, _, _) => afterMutate(offspring)));
     }
-}
-
-public sealed class ActionMutatorObserver<TG, TS, TP>(Action<IReadOnlyList<TG>, IReadOnlyList<TG>, TS, TP> afterMutate) : IMutatorObserver<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-{
-    public void AfterMutate(IReadOnlyList<TG> offspring, IReadOnlyList<TG> parent, TS searchSpace, TP problem) => afterMutate(offspring, parent, searchSpace, problem);
 }

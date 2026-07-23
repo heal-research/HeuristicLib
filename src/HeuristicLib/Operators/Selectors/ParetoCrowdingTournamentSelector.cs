@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record ParetoCrowdingTournamentSelector<TGenotype>
-  : StatelessSelector<TGenotype>
+public record ParetoCrowdingTournamentSelector<TCandidate>
+  : StatelessSelector<TCandidate>
 {
     public int TournamentSize { get; init; }
     public bool DominateOnEqualities { get; init; }
@@ -15,9 +15,9 @@ public record ParetoCrowdingTournamentSelector<TGenotype>
         TournamentSize = tournamentSize;
     }
 
-    public override IReadOnlyList<Solution<TGenotype>> Select(
-      IReadOnlyList<Solution<TGenotype>> population,
-      Objective objective,
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective,
       int count,
       IRandomNumberGenerator random)
       => ParetoCrowdingTournamentSelector.Select(population, objective, count, random, DominateOnEqualities, TournamentSize);
@@ -25,9 +25,9 @@ public record ParetoCrowdingTournamentSelector<TGenotype>
 
 public static class ParetoCrowdingTournamentSelector
 {
-    public static IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<Solution<TGenotype>> population,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective,
       int count,
       IRandomNumberGenerator random,
       bool dominateOnEqualities,
@@ -36,8 +36,8 @@ public static class ParetoCrowdingTournamentSelector
         var fronts = DominationCalculator.CalculateAllParetoFronts(population, objective, out var rank, dominateOnEqualities);
 
         // Key by solution instead of ObjectiveVector
-        var crowdingBySolution = new Dictionary<Solution<TGenotype>, double>(ReferenceEqualityComparer.Instance);
-        var res = new Solution<TGenotype>[count];
+        var crowdingBySolution = new Dictionary<EvaluatedCandidate<TCandidate>, double>(ReferenceEqualityComparer.Instance);
+        var res = new EvaluatedCandidate<TCandidate>[count];
 
         var calculatedFront = new HashSet<int>();
 

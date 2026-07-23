@@ -1,58 +1,81 @@
 # Algorithm
 
-An algorithm drives the optimization process by producing a stream of search states.
+An algorithm configuration is a reusable description of a search process. An algorithm execution instance performs that process and produces a stream of public search states.
 
-For normal authoring, HeuristicLib now has one main iterative base:
+Algorithms use one authoring path: a configuration paired with an explicitly authored execution instance. HeuristicLib does not provide stateless or framework managed state variants for algorithms because algorithms normally coordinate child operators and own execution flow.
 
-- derive from `IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, TSearchState, TExecutionState>`
-- implement the step logic on the algorithm type itself
-- resolve operator dependencies once in `CreateInitialExecutionState(IExecutionInstanceResolver resolver)`
-- store the resolved execution instances and any mutable per-run data in `TExecutionState`
+## Authoring an iterative algorithm
 
-## Main authoring shape
+Derive the reusable configuration from `IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>`. Put settings and child operator configurations on that type.
+
+Create a nested execution instance derived from `IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>`. Resolve child operators eagerly in `CreateIterativeAlgorithmInstance(...)` then pass them into the instance. Mutable counters, caches and other run scoped data belong on the instance.
 
 ```csharp
-protected override TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
+public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
+    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } =
+        new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
 
-protected override TSearchState ExecuteStep(
-  TSearchState? previousState,
-  TExecutionState executionState,
-  TProblem problem,
-  IRandomNumberGenerator random)
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
+        ExecutionInstanceRegistry registry,
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
+        new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator));
+
+    private sealed class Instance(
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
+        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
+        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
+    {
+        private int producedStates;
+
+        protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
+        {
+            producedStates++;
+            var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
+            var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+            return new SingleSolutionState<TCandidate> { Population = Population.From([evaluatedCandidate]) };
+        }
+    }
+}
 ```
 
-`TExecutionState` is hidden per-run state. It is not the streamed public search state.
+The `resolvedInterceptor` parameter is the interceptor instance already resolved by the iterative base. The registry remains available for dependencies owned by the concrete algorithm.
 
-Typical execution-state contents:
+The instance creation method returns the most concrete accessible instance type that is useful to callers. A private nested instance is returned through `IterativeAlgorithmInstance<...>`.
 
-- resolved `ICreatorInstance`, `IMutatorInstance`, `IEvaluatorInstance`, ...
-- counters, caches, and other mutable per-run data
+## Ownership rules
 
-## Evaluator and interceptor
+The configuration owns reusable settings and child configurations. It must not be mutated during execution. Referenced child configurations and behavior affecting collections must also remain unchanged.
 
-`Algorithm<...>` still provides the explicit `Evaluator`.
+The execution instance owns resolved child instances, mutable execution data and execution behavior. Repeated runs create independent execution graphs so their instance data is independent.
 
-`IterativeAlgorithm<...>` additionally supports an optional `Interceptor` that transforms the produced state after each step.
+The search state is different. It is the public progress value yielded by the algorithm. Private execution data should not be placed in the search state merely to make it available to the next step.
 
-## Why this model exists
+## Why instance creation receives the registry
 
-This keeps algorithm logic on the algorithm type, while still preserving:
+Algorithm instance creation methods receive the full `ExecutionInstanceRegistry`. Ordinary algorithms use it to resolve child operators once. Meta algorithms and execution wrappers also need it to create child registries, install replacements or control child execution instance reuse.
 
-- run-local mutable state
-- shared execution-instance identity within one run
-- explicit, eager dependency resolution
+Resolution remains local and eager for ordinary algorithms. Do not retain the registry merely to resolve ordinary child operators later during step execution. A meta algorithm that creates child algorithm instances during execution may pass its originating registry to its execution instance. It can directly create each algorithm instance through a child registry so parent operator instances and replacement policy remain available.
 
-Nested operator use is no longer hidden behind an executor object. If an algorithm depends on operators, its execution state makes that dependency explicit.
+## Iterative lifecycle
 
-## Advanced path
+`IterativeAlgorithmInstance<...>` owns the common stream lifecycle. It checks internal completion and cancellation, forks randomness by yielded state count, calls `TryExecuteStep(...)`, applies the resolved interceptor, evaluates terminal state logic, yields the state and then schedules the next iteration with `Task.Yield()`.
 
-The low-level execution-instance model still exists.
+`RunStreamingAsync(...)` is sealed on this base so a concrete iterative algorithm cannot accidentally bypass that ordering. Override `HasCompleted(...)`, `ExecuteStep(...)`, `TryExecuteStep(...)` or `IsTerminalState(...)` as required by the algorithm.
 
-If a very advanced algorithm needs full manual control, it can still implement `IAlgorithm<...>` directly and work with `ExecutionInstanceRegistry`.
+## Noniterative algorithms
+
+Derive from `Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>` when the iterative lifecycle is not appropriate. Implement `CreateAlgorithmInstance(...)` and return an `AlgorithmInstance<...>` that owns the complete streaming behavior.
+
 
 ## Related pages
 
-- [Search state](algorithm-state.md)
-- [Execution model](execution-model.md)
-- [Definition vs execution instances](execution-instances.md)
-- [Operators](operators.md)
+* [Search state](algorithm-state.md)
+* [Execution model](execution-model.md)
+* [Configuration and execution instances](execution-instances.md)
+* [Operators](operators.md)

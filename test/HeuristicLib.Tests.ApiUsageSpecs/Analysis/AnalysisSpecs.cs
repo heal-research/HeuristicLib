@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
@@ -25,20 +24,17 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
-        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-          baseAlgorithm,
-          interceptor);
+        var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(777)).WithAnalyzer(analysis);
 
-        var finalState = await run.RunToCompletionAsync(
-          RandomNumberGenerator.Create(777),
-          cancellationToken: TestContext.Current.CancellationToken);
+        var finalState = await run.CompleteAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var analysisResult = run.GetAnalyzerResult(analysis);
 
         analysisResult.Count.ShouldBe(4);
-        finalState.Population.Solutions.Length.ShouldBe(16);
+        finalState.Population.EvaluatedCandidates.Length.ShouldBe(16);
     }
 
     [Fact]
@@ -47,16 +43,12 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
-        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-          baseAlgorithm,
-          interceptor);
+        var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(888)).WithAnalyzer(analysis);
 
-        await using var enumerator = run.RunStreamingAsync(
-            RandomNumberGenerator.Create(888),
-            cancellationToken: TestContext.Current.CancellationToken)
-          .GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        await using var enumerator = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
+                                        .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         (await enumerator.MoveNextAsync()).ShouldBeTrue();
         run.GetAnalyzerResult(analysis).Count.ShouldBe(1);
@@ -78,16 +70,14 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 3);
-        var analysis = new BestMedianWorstPerEvaluationAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-          baseAlgorithm,
-          [baseAlgorithm.Evaluator],
-          [interceptor]);
+        var analysis = Analyzer.BestMedianWorstPerEvaluation(
+            [baseAlgorithm.Evaluator],
+            [interceptor]);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(321)).WithAnalyzer(analysis);
 
-        await run.RunToCompletionAsync(
-          RandomNumberGenerator.Create(321),
-          cancellationToken: TestContext.Current.CancellationToken);
+        await run.CompleteAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var analysisResult = run.GetAnalyzerResult(analysis);
 
@@ -101,19 +91,16 @@ public class AnalysisSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
-        var analysis = new BestMedianWorstAnalysis<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-          baseAlgorithm,
-          interceptor);
+        var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, analysis);
-        var finalState = await run.RunToCompletionAsync(
-          RandomNumberGenerator.Create(333),
-          cancellationToken: TestContext.Current.CancellationToken);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(333)).WithAnalyzer(analysis);
+        var finalState = await run.CompleteAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var result = run.GetAnalyzerResult(analysis);
 
         result.Count.ShouldBe(4);
-        finalState.Population.Solutions.Length.ShouldBe(16);
+        finalState.Population.EvaluatedCandidates.Length.ShouldBe(16);
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)
@@ -121,10 +108,11 @@ public class AnalysisSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
-      TestFunctionProblem problem,
-      IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
-      int maximumGenerations)
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        CreateSimpleGeneticAlgorithm(
+            TestFunctionProblem problem,
+            IdentityInterceptor<RealVector, PopulationState<RealVector>> interceptor,
+            int maximumGenerations)
     {
         return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {

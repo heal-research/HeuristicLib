@@ -3,22 +3,22 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public record GeneralizedRankSelector<TGenotype>(double Pressure) : StatelessSelector<TGenotype>
+public record GeneralizedRankSelector<TCandidate>(double Pressure) : StatelessSelector<TCandidate>
 {
-    public override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
       => GeneralizedRankSelector.Select(population, objective, count, random, Pressure);
 }
 
 public static class GeneralizedRankSelector
 {
-    public static IReadOnlyList<Solution<TGenotype>> Select<TGenotype>(
-      IReadOnlyList<Solution<TGenotype>> population,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
+      ObjectiveDirections objective,
       int count,
       IRandomNumberGenerator random,
       double pressure)
     {
-        var selected = new Solution<TGenotype>[count];
+        var selected = new EvaluatedCandidate<TCandidate>[count];
         var source = population.OrderBy(x => x.ObjectiveVector, objective.TotalOrderComparer).ToArray();
         var scale = Math.Pow(population.Count, 1.0 / pressure) - 1;
         for (var i = 0; i < count; i++)

@@ -12,7 +12,7 @@ public abstract class RegressionProblem<TProblemData, TSolution, TSearchSpace> :
 
     private readonly double[] trainingTargetCache;
 
-    protected RegressionProblem(TProblemData problemData, ICollection<IRegressionEvaluator<TSolution>> objective, IComparer<ObjectiveVector> a, TSearchSpace encoding) : base(problemData, new Objective(objective.Select(x => x.Direction).ToArray(), a), encoding)
+    protected RegressionProblem(TProblemData problemData, ICollection<IRegressionEvaluator<TSolution>> objective, IComparer<ObjectiveVector> a, TSearchSpace encoding) : base(problemData, new ObjectiveDirections(objective.Select(x => x.Direction).ToArray(), a), encoding)
     {
         Evaluators = objective.ToList();
         trainingTargetCache = problemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ToArray();

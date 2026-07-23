@@ -33,7 +33,7 @@ Resolve these before or during Stage 0:
 - **Reference behavior scope:** maintain a matrix for each legacy symbol/behavior: new target, reference level, test status, and intentional difference.
 - **Instruction validity:** define runtime validation for non-empty code, RPN stack balance, arity, `SubtreeLength`, payload indexes, root position, max length/depth, and invalid opcodes.
 - **Formatting/serialization:** decide the Stage 1 minimum for equality/hash, debug/infix formatting, optional variable names, and whether binary/JSON serialization is included or deferred.
-- **Evaluator contract:** allow evaluators to return the authoritative `Solution<TGenotype>`, not only objective values, so evaluation can explicitly return a refined or repaired candidate together with its objectives.
+- **Evaluator contract:** evaluators return authoritative `EvaluatedCandidate<TCandidate>` values, not only objective values, so evaluation can explicitly return a refined or repaired candidate together with its objectives.
 - **Operator validity:** decide bounded retry versus repair behavior for creation, mutation, crossover, and repair failure.
 - **Numeric literal metadata:** settle fixed versus optimizable literal representation and authoring names before Stage 1 hardens the genotype.
 - **Symbol definition versus instance:** split search-space admissibility from concrete genotype occurrences, including fixed constants and ephemeral random constants. See [symbol-definition-instance-plan.md](symbol-definition-instance-plan.md).
@@ -59,7 +59,7 @@ Resolve these before or during Stage 0:
 | `ExpressionInterpreter`             | Executes opcodes over series/batch buffers and maps variable indexes to dataset columns from the supplied dataset/input-variable order.                                                                                          |
 | `SymbolicRegressionProblem`                 | Composition root for data, search space, interpreter, objectives, bounds policy, and problem context needed by typed operators.                                                                                                  |
 | `SymbolicExpressionEvaluator`               | Problem-specific evaluator surface for symbolic-expression regression, including optional numeric-parameter optimization before objective calculation.                                                                           |
-| `Evaluator`                                 | Operator that receives a candidate and returns the authoritative `Solution<TGenotype>` that was actually evaluated. The returned genotype may be identical to the input candidate or an immutable refined/repaired replacement. |
+| `Evaluator`                                 | Operator that receives a candidate and returns the authoritative `EvaluatedCandidate<TCandidate>` that was actually evaluated. The returned candidate may be identical to the input candidate or an immutable refined/repaired replacement. |
 
 Boundary rules:
 
@@ -73,7 +73,7 @@ Boundary rules:
 - A symbolic regression problem instance has exactly one expression search-space instance. Unrestricted versus grammar-constrained behavior is selected when the problem is constructed, not switched dynamically during a run.
 - The unrestricted scalar search space is not represented as a `SimpleGrammar`. Fast unrestricted operators must not call grammar predicates or enumerate grammar-derived cut points.
 - Prediction bounds, penalties, and objectives stay outside expression interpretation.
-- Evaluation never mutates candidates in place. Any numeric constant optimization returns a replacement `ExpressionTree`, and the evaluator returns a `Solution<ExpressionTree>` containing the genotype that was actually evaluated.
+- Evaluation never mutates candidates in place. Any numeric constant optimization returns a replacement `ExpressionTree`, and the evaluator returns an `EvaluatedCandidate<ExpressionTree>` containing the candidate that was actually evaluated.
 - `Problem.Evaluate(...)` is the batch native problem contract. `SingleSolutionProblem.Evaluate(...)` stays scalar and pure for scalar authoring, while its batch override currently adapts scalar evaluation through `BatchExecution`.
 - Interceptors run after an algorithm step and are too late for candidate changes that affect offspring fitness or replacement.
 - Determinism is required: the same candidate, problem data, evaluator configuration, and explicit random source must produce the same returned solution.
@@ -170,7 +170,7 @@ Defaults:
 
 Evaluation contract:
 
-- extend the evaluator contract so evaluation returns `Solution<TGenotype>` instead of only `ObjectiveVector`
+- use the evaluator contract that returns `EvaluatedCandidate<TCandidate>` instead of only `ObjectiveVector`
 - the returned solution is authoritative: replacement, selection, logging, and analysis consume the genotype and objective vector returned by the evaluator
 - evaluators may return the original genotype unchanged or an immutable refined/repaired replacement genotype
 - evaluator-driven candidate changes must be explicit in the return value; evaluators must not mutate input candidates in place or update hidden genotype state through caches
@@ -248,7 +248,7 @@ Add the first concrete symbolic-regression evaluator with numeric-parameter opti
 - distinguish evolvable constant symbols from fixed constant symbols so constants introduced for scaling, structural templates, protected-operation thresholds, or user-authored fixed values can stay unchanged.
 - keep one `Constant` opcode with a `double` side table addressed by `PayloadIndex`. The interpreter and compiled representation read only numeric values; fixed versus evolvable status belongs exclusively to the genotype.
 - return a new `ExpressionTree` with optimized evolvable-constant payloads; never mutate an existing candidate.
-- evaluate newly created initial candidates and all offspring through the evaluator; if numeric optimization is enabled, the evaluator returns the optimized candidate in the resulting `Solution<ExpressionTree>`.
+- evaluate newly created initial candidates and all offspring through the evaluator; if numeric optimization is enabled, the evaluator returns the optimized candidate in the resulting `EvaluatedCandidate<ExpressionTree>`.
 - store the returned solution in the population; the raw pre-optimization candidate is not the candidate associated with the fitness.
 - expose function/gradient evaluation counters and numeric-optimization outcome status.
 - keep optimization budget, maximum iterations, tolerances, and failure behavior explicit.
@@ -389,6 +389,6 @@ dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severit
 - Legacy: old mutable symbolic-expression-tree APIs move under `HEAL.HeuristicLib.Legacy...`; obsolete legacy types/methods use `Legacy` prefixes or suffixes only when needed to avoid name clashes.
 - Formatting/serialization: Stage 1 includes debug/infix formatting; full serialization is deferred.
 - Problem and search spaces: one symbolic-regression problem concept, with unrestricted and grammar-constrained scalar search spaces as distinct operator families.
-- Evaluation/refinement: evaluators return the authoritative `Solution<TGenotype>`, not only objective values. An evaluator may return the original genotype or an immutable refined/repaired replacement genotype, and algorithms must pass that returned solution into replacement, selection, logging, and analysis.
+- Evaluation/refinement: evaluators return authoritative `EvaluatedCandidate<TCandidate>` values, not only objective values. An evaluator may return the original candidate or an immutable refined/repaired replacement candidate, and algorithms must pass that returned evaluated candidate into replacement, selection, logging, and analysis.
 - Problem evaluation: `IProblem` and `Problem` are batch native. `SingleSolutionProblem` is the scalar authoring base and currently owns the scalar to batch adapter.
 - Extensions: compose around expression components; add search-space types only when local structural admissibility changes. Shape constraints live in evaluator/evaluation-strategy objects, not the base problem.

@@ -1,68 +1,34 @@
 using Generator.Equals;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
 [Equatable]
-public abstract partial record MultiSelector<TGenotype, TSearchSpace, TProblem, TExecutionState>
-  : ISelector<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract partial record MultiSelector<TCandidate, TSearchSpace, TProblem>
+    : Selector<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     [OrderedEquality]
-    protected ImmutableArray<ISelector<TGenotype, TSearchSpace, TProblem>> InnerSelectors { get; }
+    protected ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> InnerSelectors { get; }
 
-    protected delegate IReadOnlyList<Solution<TGenotype>> InnerSelect(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-    protected MultiSelector(ImmutableArray<ISelector<TGenotype, TSearchSpace, TProblem>> innerSelectors)
+    protected MultiSelector(ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> innerSelectors)
     {
         InnerSelectors = innerSelectors;
     }
 
-    public ISelectorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new Instance(this, InnerSelectors.Select(instanceRegistry.Resolve).Select(x => (InnerSelect)x.Select).ToArray(), CreateInitialState());
+    protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ExecutionInstanceRegistry registry) =>
+        CreateSelectorInstance([.. InnerSelectors.Select(registry.Resolve)]);
 
-    protected abstract TExecutionState CreateInitialState();
-
-    protected abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population,
-                                                                  Objective objective, int count, TExecutionState state, IReadOnlyList<InnerSelect> innerSelectors,
-                                                                  IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-    private sealed class Instance(
-      MultiSelector<TGenotype, TSearchSpace, TProblem, TExecutionState> multiSelector,
-      IReadOnlyList<InnerSelect> innerSelectors,
-      TExecutionState executionState)
-      : ISelectorInstance<TGenotype, TSearchSpace, TProblem>
-    {
-        public IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population, Objective objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-        {
-            return multiSelector.Select(population, objective, count, executionState, innerSelectors, random, searchSpace, problem);
-        }
-    }
+    protected abstract MultiSelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> innerSelectors);
 }
 
-public abstract record MultiSelector<TGenotype, TSearchSpace, TProblem>
-  : MultiSelector<TGenotype, TSearchSpace, TProblem, NoState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract class MultiSelectorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> innerSelectors)
+    : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected MultiSelector(ImmutableArray<ISelector<TGenotype, TSearchSpace, TProblem>> innerSelectors)
-      : base(innerSelectors)
-    { }
-
-    protected sealed override NoState CreateInitialState() => NoState.Instance;
-
-    protected sealed override IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population,
-                                                                         Objective objective, int count, NoState state,
-                                                                         IReadOnlyList<InnerSelect> innerSelectors,
-                                                                         IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-      => Select(population, objective, count, innerSelectors, random, searchSpace, problem);
-
-    protected abstract IReadOnlyList<Solution<TGenotype>> Select(IReadOnlyList<Solution<TGenotype>> population,
-                                                                  Objective objective, int count, IReadOnlyList<InnerSelect> innerSelectors,
-                                                                  IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected ImmutableArray<ISelectorInstance<TCandidate, TSearchSpace, TProblem>> InnerSelectors { get; } = innerSelectors;
 }

@@ -5,10 +5,10 @@ namespace HEAL.HeuristicLib.Tests.TestSupport.SpecialTestEncoding;
 
 public record SpecialGenotypeMutator : SingleSolutionMutator<SpecialGenotype, SpecialSearchSpace, SpecialProblem>
 {
-    public override SpecialGenotype Mutate(SpecialGenotype genotype, IRandomNumberGenerator random, SpecialSearchSpace searchSpace, SpecialProblem problem)
+    public override SpecialGenotype Mutate(SpecialGenotype candidate, IRandomNumberGenerator random, SpecialSearchSpace searchSpace, SpecialProblem problem)
     {
         var strength = (int)Math.Round(problem.Data);
         var offset = random.NextInt(-strength, strength + 1);
-        return new SpecialGenotype(genotype.Value + offset);
+        return new SpecialGenotype(candidate.Value + offset);
     }
 }

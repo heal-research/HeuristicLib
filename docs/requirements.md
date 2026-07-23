@@ -54,7 +54,7 @@ This page records what HeuristicLib must support, what it should optimize for, w
 - It must strongly support experimentation over algorithm configurations, operators, and parameters.
 - It must support defining families of algorithm configurations from a prototype plus variation axes.
 - It must support repeated independent executions of the same configuration for statistical significance.
-- Repeated execution must be modeled as experiment orchestration over independent runs, not as a state-transforming metaalgorithm.
+- Repeated execution must be modeled as experiment orchestration over independent runs, not as a state-transforming meta-algorithm.
 
 ## Non-functional requirements
 

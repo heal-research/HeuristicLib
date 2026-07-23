@@ -21,11 +21,11 @@ public record SymbolicExpressionTreeSearchSpace : SearchSpace<Genotypes.Trees.Sy
 
     public int FunctionArguments { get; set; }
 
-    public override bool Contains(Genotypes.Trees.SymbolicExpressionTree genotype)
+    public override bool Contains(Genotypes.Trees.SymbolicExpressionTree candidate)
     {
-        return genotype.Length <= TreeLength &&
-          genotype.Depth <= TreeDepth
-          && Grammar.Conforms(genotype)
+        return candidate.Length <= TreeLength &&
+          candidate.Depth <= TreeDepth
+          && Grammar.Conforms(candidate)
           ;
     }
 }

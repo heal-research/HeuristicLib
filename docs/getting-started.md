@@ -2,7 +2,7 @@
 
 This page is the shortest path from having a problem to running an algorithm and understanding the default extension story.
 
-The most important current ideas are:
+The most important ideas are:
 
 1. configure problems and operators as plain objects
 2. run algorithms streaming-first
@@ -34,12 +34,11 @@ var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, Travel
   Mutator = new SwapSingleSolutionMutator(),
   MutationRate = 0.20,
   Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
-  Elites = 2,
-  Evaluator = new ProblemEvaluator<Permutation>()
+  Elites = 2
 };
 
 await foreach (var state in algorithm.RunStreamingAsync(problem, rng)) {
-  Console.WriteLine(state.Population.Solutions.Count);
+  Console.WriteLine(state.Population.EvaluatedCandidates.Count);
 }
 ```
 
@@ -56,75 +55,59 @@ This is the intended everyday style:
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-public sealed record MyAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<
-      TGenotype,
-      TSearchSpace,
-      TProblem,
-      SingleSolutionState<TGenotype>,
-      MyAlgorithm<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
+    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-  public new sealed class ExecutionState
-    : IterativeAlgorithm<
-        TGenotype,
-        TSearchSpace,
-        TProblem,
-        SingleSolutionState<TGenotype>,
-        ExecutionState>.ExecutionState
-  {
-    public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-  }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
 
-  public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } =
+        new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
 
-  protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
-  {
-    return new ExecutionState {
-      Evaluator = resolver.Resolve(Evaluator),
-      Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
-      Creator = resolver.Resolve(Creator)
-    };
-  }
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
+        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
+        new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator));
 
-  protected override SingleSolutionState<TGenotype> ExecuteStep(
-    SingleSolutionState<TGenotype>? previousState,
-    ExecutionState executionState,
-    TProblem problem,
-    IRandomNumberGenerator random)
-  {
-    var candidate = executionState.Creator.Create(1, random, problem.SearchSpace, problem)[0];
-    var solution = executionState.Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+    private sealed class Instance(
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
+        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
+        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
+    {
+        private int producedStates;
 
-    return new SingleSolutionState<TGenotype> {
-      Population = Population.From([solution])
-    };
-  }
+        protected override SingleSolutionState<TCandidate> ExecuteStep(
+            SingleSolutionState<TCandidate>? previousState,
+            TProblem problem,
+            IRandomNumberGenerator random)
+        {
+            producedStates++;
+            var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
+            var evaluatedCandidate = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+
+            return new SingleSolutionState<TCandidate> {
+                Population = Population.From([evaluatedCandidate])
+            };
+        }
+    }
 }
 ```
 
-Here the public search state is the current solution. If your algorithm needs other public progress data, add it explicitly to your concrete search-state type.
+Here the public search state is the current evaluated candidate. If your algorithm needs other public progress data, add it explicitly to your concrete search-state type.
 
-When the algorithm depends on operators, resolve them in `CreateInitialExecutionState(...)` and store the resulting execution instances and other per-run mutable data in the nested `ExecutionState`.
-
-Evaluator output is authoritative. A custom algorithm should pass the returned `Solution<TGenotype>` forward, because an evaluator may return a repaired, refined or otherwise replaced genotype together with its objective vector.
+The reusable configuration contains settings and child operator configurations. The nested instance owns resolved child operator instances, step behavior and mutable run data such as `producedStates`. The iterative base resolves and invokes the optional interceptor as part of its sealed streaming lifecycle.
 
 ## What not to learn first
 
-You do not need to start with:
-
-- manual execution-instance classes
-- full registry control
-- meta algorithms
-
-Those are real parts of the system, but they are not the intended first extension path anymore.
+You do not need full registry control or meta algorithm infrastructure to implement an ordinary algorithm. Resolve declared children eagerly in the instance creation method then keep execution behavior inside the nested instance.
 
 ## Next steps
 

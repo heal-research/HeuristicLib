@@ -1,3 +1,3 @@
 namespace HEAL.HeuristicLib.Optimization;
 
-public interface ISolutionLayout<TGenotype> : IEnumerable<Solution<TGenotype>>;
+public interface ISolutionLayout<TCandidate> : IEnumerable<EvaluatedCandidate<TCandidate>>;

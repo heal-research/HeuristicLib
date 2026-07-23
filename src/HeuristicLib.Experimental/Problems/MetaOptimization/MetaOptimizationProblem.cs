@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
@@ -10,29 +11,29 @@ namespace HEAL.HeuristicLib.Problems.MetaOptimization;
 
 public static class MetaOptimizationProblem
 {
-    public static MetaOptimizationProblem<T, TE, TP, TS> AsMetaProblem<T, TE, TP, TS>(this TP problem,
+    public static MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearchState> AsMetaProblem<TCandidate, TSearchSpace, TProblem, TSearchState>(this TProblem problem,
                                                                                       CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> searchSpace,
-                                                                                      Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<T, TE, TP, TS>> algBuilder) where T : class where TE : class, ISearchSpace<T> where TP : class, IProblem<T, TE> where TS : PopulationState<T> => new MetaOptimizationProblem<T, TE, TP, TS>(problem, searchSpace, algBuilder);
+                                                                                      Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algBuilder) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> where TSearchState : PopulationState<TCandidate> => new MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearchState>(problem, searchSpace, algBuilder);
 }
 
-public class MetaOptimizationProblem<T, TE, TP, TS> :
+public class MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearchState> :
   SingleSolutionProblem<CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>
-  where T : class
-  where TE : class, ISearchSpace<T>
-  where TP : class, IProblem<T, TE>
-  where TS : PopulationState<T>
+  where TCandidate : class
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : PopulationState<TCandidate>
 {
-    private readonly TP problem;
-    private readonly Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<T, TE, TP, TS>> algBuilder;
+    private readonly TProblem problem;
+    private readonly Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algBuilder;
 
-    public MetaOptimizationProblem(TP problem,
+    public MetaOptimizationProblem(TProblem problem,
                                    CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace> searchSpace,
-                                   Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<T, TE, TP, TS>> algBuilder) : base(problem.Objective, searchSpace)
+                                   Func<CompositeGenotype<RealVector, IntegerVector>, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algBuilder) : base(problem.Objective, searchSpace)
     {
         this.problem = problem;
         this.algBuilder = algBuilder;
     }
 
     public override ObjectiveVector Evaluate(CompositeGenotype<RealVector, IntegerVector> solution, IRandomNumberGenerator random)
-      => algBuilder(solution).RunToCompletion(problem, random).Population.MinBy(x => x.ObjectiveVector, Objective.TotalOrderComparer)?.ObjectiveVector ?? Objective.Worst;
+        => algBuilder(solution).Complete(problem, random).Population.MinBy(x => x.ObjectiveVector, Objective.TotalOrderComparer)?.ObjectiveVector ?? Objective.Worst;
 }

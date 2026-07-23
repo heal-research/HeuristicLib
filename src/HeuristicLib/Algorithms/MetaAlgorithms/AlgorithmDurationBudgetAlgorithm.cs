@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -8,13 +7,13 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-public record AlgorithmDurationBudgetAlgorithm<TG, TS, TP, TSearchState>
-    : IAlgorithm<TG, TS, TP, TSearchState>
-    where TS : class, ISearchSpace<TG>
-    where TP : class, IProblem<TG, TS>
+public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public required IAlgorithm<TG, TS, TP, TSearchState> Algorithm { get; init; }
+    public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     public TimeSpan MaximumDuration
@@ -25,42 +24,28 @@ public record AlgorithmDurationBudgetAlgorithm<TG, TS, TP, TSearchState>
             : throw new ArgumentOutOfRangeException(nameof(MaximumDuration), "MaximumDuration must be positive.");
     }
 
-    public IEvaluator<TG, TS, TP> Evaluator => Algorithm.Evaluator;
-
-    public IAlgorithmInstance<TG, TS, TP, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
-    {
-        return new AlgorithmDurationBudgetAlgorithmInstance<TG, TS, TP, TSearchState>(
-            instanceRegistry.Resolve(Algorithm),
-            MaximumDuration,
-            TimeProvider);
-    }
+    protected override AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
+        new(registry.Resolve(Algorithm), MaximumDuration, TimeProvider);
 }
 
-public sealed class AlgorithmDurationBudgetAlgorithmInstance<TG, TS, TP, TSearchState>
-    : IAlgorithmInstance<TG, TS, TP, TSearchState>
-    where TS : class, ISearchSpace<TG>
-    where TP : class, IProblem<TG, TS>
+public sealed class AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm;
+    private readonly IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
     private readonly TimeSpan maximumDuration;
     private readonly TimeProvider timeProvider;
 
-    public AlgorithmDurationBudgetAlgorithmInstance(
-        IAlgorithmInstance<TG, TS, TP, TSearchState> algorithm,
-        TimeSpan maximumDuration,
-        TimeProvider timeProvider)
+    public AlgorithmDurationBudgetAlgorithmInstance(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
     {
         this.algorithm = algorithm;
         this.maximumDuration = maximumDuration;
         this.timeProvider = timeProvider;
     }
 
-    public async IAsyncEnumerable<TSearchState> RunStreamingAsync(
-        TP problem,
-        IRandomNumberGenerator random,
-        TSearchState? initialState = null,
-        [EnumeratorCancellation] CancellationToken ct = default)
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var duration = TimeSpan.Zero;
         await using var enumerator = algorithm

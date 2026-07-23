@@ -5,7 +5,6 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 /// <summary>
 ///   Note that the standard definition of ZDT4 uses values for the variables 2..n in the range [ -5, 5 ].
 /// </summary>
-/// <param name="dimension"></param>
 public class Zdt4(int dimension) : Zdt(dimension)
 {
     protected override double G(RealVector solution)

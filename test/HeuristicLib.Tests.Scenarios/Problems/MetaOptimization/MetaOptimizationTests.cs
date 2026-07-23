@@ -37,7 +37,7 @@ public class MetaOptimizationTests
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();
         var mutatorExtractor = b.AddChoiceParameter(
-          new StatelessMutator<RealVector, RealVectorSearchSpace>[] {//TODO c# can not infer array type 
+          new Mutator<RealVector, RealVectorSearchSpace>[] {//TODO c# can not infer array type
       new GaussianMutator(0.5, 0.5),
       new GaussianMutator(0.5, 1),
       new PolynomialMutator(),
@@ -66,10 +66,10 @@ public class MetaOptimizationTests
         //run meta alg
         var finalState = hc.Build()
           .WithMaxIterations(5)
-          .RunToCompletion(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+          .Complete(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
-        metaProblem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
-        finalState.Solution.ObjectiveVector.Count.ShouldBe(1);
-        double.IsFinite(finalState.Solution.ObjectiveVector[0]).ShouldBeTrue();
+        metaProblem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
+        finalState.EvaluatedCandidate.ObjectiveVector.Count.ShouldBe(1);
+        double.IsFinite(finalState.EvaluatedCandidate.ObjectiveVector[0]).ShouldBeTrue();
     }
 }

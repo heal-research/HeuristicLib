@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Optimization;
@@ -10,26 +11,17 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
-public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
-  : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>, GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
+    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public new sealed class ExecutionState
-      : IterativeAlgorithm<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>, ExecutionState>.ExecutionState
-    {
-        public required ICreatorInstance<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-        public required ICrossoverInstance<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
-        public required IMutatorInstance<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-        public required ISelectorInstance<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
-        public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? Terminator { get; init; }
-    }
-
     public required int PopulationSize { get; init; }
-    public required ICreator<TGenotype, TSearchSpace, TProblem> Creator { get; init; }
-    public required ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; init; }
-    public required IMutator<TGenotype, TSearchSpace, TProblem> Mutator { get; init; }
-    public ITerminator<TGenotype, TSearchSpace, TProblem, PopulationState<TGenotype>>? Terminator { get; init; }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+    public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
+    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
+    public ITerminator<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? Terminator { get; init; }
+    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
     public int? MaximumGenerations
     {
         get;
@@ -46,100 +38,75 @@ public record GeneticAlgorithm<TGenotype, TSearchSpace, TProblem>
         init => field = value is >= 0.0 and <= 1.0 ? value : throw new ArgumentOutOfRangeException(nameof(MutationRate), "MutationRate must be in [0, 1].");
     } = 0.1;
 
-    public required ISelector<TGenotype, TSearchSpace, TProblem> Selector { get; init; }
+    public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
 
-    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateIterativeAlgorithmInstance(
+        ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
-        var effectiveMutator = MutationRate >= 1.0
-          ? Mutator
-          : Mutator.WithRate(MutationRate);
+        var effectiveMutator = MutationRate >= 1.0 ? Mutator : Mutator.WithRate(MutationRate);
+        return new Instance(resolvedInterceptor, registry.Resolve(Evaluator), registry.Resolve(Creator), registry.Resolve(Crossover),
+            registry.Resolve(effectiveMutator), registry.Resolve(Selector), Terminator is null ? null : registry.Resolve(Terminator), PopulationSize, MaximumGenerations, Elites);
+    }
 
-        return new ExecutionState
+    private sealed class Instance(
+        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
+        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
+        ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover,
+        IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
+        ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
+        ITerminatorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? terminator,
+        int populationSize,
+        int? maximumGenerations,
+        int elites)
+        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+    {
+        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
+            maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
+
+        protected override bool IsTerminalState(PopulationState<TCandidate> state, int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
+            terminator?.IsTerminalState(state, problem.SearchSpace, problem) == true;
+
+        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
         {
-            Evaluator = resolver.Resolve(Evaluator),
-            Interceptor = Interceptor is not null ? resolver.Resolve(Interceptor) : null,
-            Creator = resolver.Resolve(Creator),
-            Crossover = resolver.Resolve(Crossover),
-            Mutator = resolver.Resolve(effectiveMutator),
-            Selector = resolver.Resolve(Selector),
-            Terminator = Terminator is not null ? resolver.Resolve(Terminator) : null
-        };
-    }
-
-    protected override bool HasCompleted(
-      int yieldedStateCount,
-      PopulationState<TGenotype>? previousState,
-      ExecutionState executionState,
-      TProblem problem)
-    {
-        return MaximumGenerations is not null && yieldedStateCount >= MaximumGenerations.Value;
-    }
-
-    protected override bool IsTerminalState(
-      PopulationState<TGenotype> state,
-      int yieldedStateCount,
-      PopulationState<TGenotype>? previousState,
-      ExecutionState executionState,
-      TProblem problem)
-    {
-        return executionState.Terminator?.IsTerminalState(state, problem.SearchSpace, problem) == true;
-    }
-
-    protected override PopulationState<TGenotype> ExecuteStep(
-      PopulationState<TGenotype>? previousState,
-      ExecutionState executionState,
-      TProblem problem,
-      IRandomNumberGenerator random)
-    {
-        if (previousState is null)
-        {
-            var initialSolutions = executionState.Creator.Create(PopulationSize, random, problem.SearchSpace, problem);
-            var evaluatedInitialSolutions = executionState.Evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-            return new PopulationState<TGenotype>
+            if (previousState is null)
             {
-                Population = Population.From(evaluatedInitialSolutions)
-            };
+                var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                var initialPopulation = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+                return new PopulationState<TCandidate> { Population = Population.From(initialPopulation) };
+            }
+
+            var oldPopulation = previousState.Population.EvaluatedCandidates;
+            var offspringSize = populationSize * 2;
+            var parents = selector.Select(oldPopulation, problem.Objective, offspringSize, random, problem.SearchSpace, problem).Select(x => x.Candidate).ToList();
+            var offspring = crossover.Cross(parents.ToParentPairs(), random, problem.SearchSpace, problem);
+            offspring = mutator.Mutate(offspring, random, problem.SearchSpace, problem);
+            var offspringPopulation = evaluator.Evaluate(offspring, random, problem.SearchSpace, problem);
+            var newPopulation = ElitismReplacer<TCandidate>.Replace(oldPopulation, offspringPopulation, problem.Objective, populationSize, elites);
+            return new PopulationState<TCandidate> { Population = Population.From(newPopulation) };
         }
-
-        var oldPopulation = previousState.Population.Solutions;
-        var offspringSize = PopulationSize * 2;
-
-        var parents = executionState.Selector.Select(oldPopulation, problem.Objective, offspringSize, random, problem.SearchSpace, problem)
-          .Select(x => x.Genotype)
-          .ToList();
-
-        var offspring = executionState.Crossover.Cross(parents.ToParentPairs(), random, problem.SearchSpace, problem);
-        offspring = executionState.Mutator.Mutate(offspring, random, problem.SearchSpace, problem);
-        var offspringPopulation = executionState.Evaluator.Evaluate(offspring, random, problem.SearchSpace, problem);
-
-        var newPopulation = ElitismReplacer<TGenotype>.Replace(oldPopulation, offspringPopulation, problem.Objective, PopulationSize, Elites);
-
-        return new PopulationState<TGenotype>
-        {
-            Population = Population.From(newPopulation)
-        };
     }
 }
 
-public record GeneticAlgorithm<TGenotype, TSearchSpace> : GeneticAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>;
+public record GeneticAlgorithm<TCandidate, TSearchSpace> : GeneticAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>;
 
-public record GeneticAlgorithm<TGenotype> : GeneticAlgorithm<TGenotype, ISearchSpace<TGenotype>>;
+public record GeneticAlgorithm<TCandidate> : GeneticAlgorithm<TCandidate, ISearchSpace<TCandidate>>;
 
 public static class GeneticAlgorithm
 {
-    public static GeneticAlgorithm<TG, TS, TP> Create<TG, TS, TP>(
-      ICreator<TG, TS, TP> creator, ICrossover<TG, TS, TP> crossover, IMutator<TG, TS, TP> mutator,
-      double mutationRate,
-      ISelector<TG, TS, TP> selector, int populationSize,
-      IEvaluator<TG, TS, TP> evaluator,
-      int elites = 1,
-      IInterceptor<TG, TS, TP, PopulationState<TG>>? interceptor = null
+    public static GeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
+        ICreator<TCandidate, TSearchSpace, TProblem> creator, ICrossover<TCandidate, TSearchSpace, TProblem> crossover, IMutator<TCandidate, TSearchSpace, TProblem> mutator,
+        double mutationRate,
+        ISelector<TCandidate, TSearchSpace, TProblem> selector, int populationSize,
+        IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
+        int elites = 1,
+        IInterceptor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor = null
     )
-      where TS : class, ISearchSpace<TG>
-      where TP : class, IProblem<TG, TS>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new GeneticAlgorithm<TG, TS, TP>
+        return new GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
         {
             Creator = creator,
             Crossover = crossover,
@@ -153,12 +120,12 @@ public static class GeneticAlgorithm
         };
     }
 
-    public static GeneticAlgorithmBuilder<TGenotype, TSearchSpace, TProblem> GetBuilder<TGenotype, TSearchSpace, TProblem>(
-      ICreator<TGenotype, TSearchSpace, TProblem> creator,
-      ICrossover<TGenotype, TSearchSpace, TProblem> crossover,
-      IMutator<TGenotype, TSearchSpace, TProblem> mutator)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : class, IProblem<TGenotype, TSearchSpace>
+    public static GeneticAlgorithmBuilder<TCandidate, TSearchSpace, TProblem> GetBuilder<TCandidate, TSearchSpace, TProblem>(
+        ICreator<TCandidate, TSearchSpace, TProblem> creator,
+        ICrossover<TCandidate, TSearchSpace, TProblem> crossover,
+        IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         return new()
         {

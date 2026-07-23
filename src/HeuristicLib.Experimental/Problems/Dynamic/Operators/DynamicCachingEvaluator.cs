@@ -7,33 +7,30 @@ using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic.Operators;
 
-public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-  : WrappingEvaluator<TGenotype, TSearchSpace, TProblem, DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : DynamicProblem<TGenotype, TSearchSpace>
-  where TGenotype : notnull
-  where TKey : notnull
+public record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
+    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    where TCandidate : notnull
+    where TKey : notnull
 {
-    public sealed class ExecutionState
+    private sealed class ExecutionData
     {
         public MemoryCache Cache { get; }
         public long HitCount { get; set; }
 
-        public ExecutionState(long? sizeLimit)
+        public ExecutionData(long? sizeLimit)
         {
             Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
         }
     }
 
     private readonly TProblem sourceProblem;
-    private readonly Func<TGenotype, TKey> keySelector;
+    private readonly Func<TCandidate, TKey> keySelector;
     private readonly long? sizeLimit;
 
-    public DynamicCachingEvaluator(
-      IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
-      TProblem problem,
-      Func<TGenotype, TKey> keySelector, long? sizeLimit = null)
-      : base(evaluator)
+    public DynamicCachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, TProblem problem, Func<TCandidate, TKey> keySelector, long? sizeLimit = null)
+        : base(evaluator)
     {
         sourceProblem = problem;
         this.keySelector = keySelector;
@@ -42,145 +39,138 @@ public record DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
 
     public long GraceCount { get; init; } = long.MaxValue;
 
-    protected override ExecutionState CreateInitialState()
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
+        new Instance(innerEvaluator, sourceProblem, keySelector, sizeLimit, GraceCount);
+
+    private sealed class Instance : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
     {
-        var executionState = new ExecutionState(sizeLimit);
-        sourceProblem.EpochClock.OnEpochChange += (_, _) =>
+        private readonly ExecutionData executionData;
+        private readonly Func<TCandidate, TKey> keySelector;
+        private readonly long graceCount;
+
+        public Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, TProblem sourceProblem, Func<TCandidate, TKey> keySelector, long? sizeLimit, long graceCount)
+            : base(innerEvaluator)
         {
-            executionState.Cache.Clear();
-            executionState.HitCount = 0;
-        };
-        return executionState;
-    }
-
-    protected override IReadOnlyList<Solution<TGenotype>> Evaluate(
-      IReadOnlyList<TGenotype> genotypes,
-      ExecutionState executionState,
-      InnerEvaluate innerEvaluate,
-      IRandomNumberGenerator random,
-      TSearchSpace searchSpace,
-      TProblem problem)
-    {
-        var cache = executionState.Cache;
-        var beforeCacheStatistics = cache.GetCurrentStatistics();
-        var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
-        var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
-
-        var n = genotypes.Count;
-        var results = new Solution<TGenotype>[n];
-
-        var uncachedGenotypes = new List<TGenotype>();
-        var uncachedKeys = new List<TKey>();
-        var uncachedMap = new Dictionary<TKey, (int j, List<int> indices)>();
-
-        for (var i = 0; i < n; i++)
-        {
-            var genotype = genotypes[i];
-            var key = keySelector(genotype);
-
-            if (cache.TryGetValue(key, out Solution<TGenotype>? cached))
+            executionData = new ExecutionData(sizeLimit);
+            this.keySelector = keySelector;
+            this.graceCount = graceCount;
+            sourceProblem.EpochClock.OnEpochChange += (_, _) =>
             {
-                results[i] = cached!;
-                continue;
+                executionData.Cache.Clear();
+                executionData.HitCount = 0;
+            };
+        }
+
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            var cache = executionData.Cache;
+            var beforeCacheStatistics = cache.GetCurrentStatistics();
+            var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
+            var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
+
+            var n = candidates.Count;
+            var results = new EvaluatedCandidate<TCandidate>[n];
+
+            var uncachedCandidates = new List<TCandidate>();
+            var uncachedKeys = new List<TKey>();
+            var uncachedMap = new Dictionary<TKey, (int j, List<int> indices)>();
+
+            for (var i = 0; i < n; i++)
+            {
+                var candidate = candidates[i];
+                var key = keySelector(candidate);
+
+                if (cache.TryGetValue(key, out EvaluatedCandidate<TCandidate>? cached))
+                {
+                    results[i] = cached!;
+                    continue;
+                }
+
+                if (!uncachedMap.TryGetValue(key, out var entry))
+                {
+                    var j = uncachedCandidates.Count;
+                    uncachedCandidates.Add(candidate);
+                    uncachedKeys.Add(key);
+                    uncachedMap.Add(key, (j, [i]));
+                }
+                else
+                {
+                    entry.indices.Add(i);
+                }
             }
 
-            if (!uncachedMap.TryGetValue(key, out var entry))
+            if (uncachedCandidates.Count > 0)
             {
-                var j = uncachedGenotypes.Count;
-                uncachedGenotypes.Add(genotype);
-                uncachedKeys.Add(key);
-                uncachedMap.Add(key, (j, [i]));
+                var newEvaluatedCandidates = InnerEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+                for (var k = 0; k < uncachedKeys.Count; k++)
+                {
+                    cache.Set(uncachedKeys[k], newEvaluatedCandidates[k], new MemoryCacheEntryOptions { Size = 1 });
+                }
+
+                foreach (var (_, entry) in uncachedMap)
+                {
+                    var evaluatedCandidate = newEvaluatedCandidates[entry.j];
+                    foreach (var i in entry.indices)
+                    {
+                        results[i] = evaluatedCandidate;
+                    }
+                }
+            }
+
+            var afterCacheStatistics = cache.GetCurrentStatistics();
+            var afterHits = afterCacheStatistics?.TotalHits ?? 0;
+            var afterMisses = afterCacheStatistics?.TotalMisses ?? 0;
+
+            var uniqueEvaluatedCount = afterMisses - beforeMisses;
+            var cachedSolutionsCount = afterHits - beforeHits;
+
+            if (candidates.Count == 0)
+            {
+                return results;
+            }
+
+            if (uniqueEvaluatedCount == 0)
+            {
+                executionData.HitCount += cachedSolutionsCount;
+                if (executionData.HitCount >= graceCount)
+                {
+                    problem.EpochClock.AdvanceEpoch();
+                }
             }
             else
             {
-                entry.indices.Add(i);
-            }
-        }
-
-        if (uncachedGenotypes.Count > 0)
-        {
-            var newSolutions = innerEvaluate(uncachedGenotypes, random, searchSpace, problem);
-            for (var k = 0; k < uncachedKeys.Count; k++)
-            {
-                cache.Set(uncachedKeys[k], newSolutions[k], new MemoryCacheEntryOptions { Size = 1 });
+                executionData.HitCount = 0;
             }
 
-            foreach (var (_, entry) in uncachedMap)
-            {
-                var solution = newSolutions[entry.j];
-                foreach (var i in entry.indices)
-                {
-                    results[i] = solution;
-                }
-            }
-        }
-
-        var afterCacheStatistics = cache.GetCurrentStatistics();
-        var afterHits = afterCacheStatistics?.TotalHits ?? 0;
-        var afterMisses = afterCacheStatistics?.TotalMisses ?? 0;
-
-        var uniqueEvaluatedCount = afterMisses - beforeMisses;
-        var cachedSolutionsCount = afterHits - beforeHits;
-
-        if (genotypes.Count == 0)
-        {
             return results;
         }
-
-        if (uniqueEvaluatedCount == 0)
-        {
-            executionState.HitCount += cachedSolutionsCount;
-            if (executionState.HitCount >= GraceCount)
-            {
-                problem.EpochClock.AdvanceEpoch();
-            }
-        }
-        else
-        {
-            executionState.HitCount = 0;
-        }
-
-        return results;
     }
 }
 
 public static class DynamicCachedEvaluatorExtension
 {
-    public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-      WithCache<TGenotype, TSearchSpace, TProblem, TKey>(this IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
-                                                         TProblem problem,
-                                                         Func<TGenotype, TKey> keySelector)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : DynamicProblem<TGenotype, TSearchSpace>
-      where TGenotype : class
-      where TKey : notnull
-
+    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace>
     {
-        return new DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>(evaluator, problem, keySelector);
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(TProblem problem, Func<TCandidate, TKey> keySelector) where TKey : notnull
+        {
+            return new DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>(evaluator, problem, keySelector);
+        }
+
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache(TProblem problem)
+        {
+            return new DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate>(evaluator, problem, x => x);
+        }
     }
 
-    public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>
-      WithCache<TGenotype, TSearchSpace, TProblem>(this IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
-                                                   TProblem problem)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : DynamicProblem<TGenotype, TSearchSpace>
-      where TGenotype : class
-
+    extension<TCandidate, TSearchSpace, TProblem, TKey>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace> where TKey : notnull
     {
-        return new DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>(evaluator, problem, x => x);
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache(Func<TCandidate, TKey> keySelector) =>
+            new(new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>(), problem, keySelector);
     }
 
-    public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TKey>
-      WithCache<TGenotype, TSearchSpace, TProblem, TKey>(this TProblem problem, Func<TGenotype, TKey> keySelector)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : DynamicProblem<TGenotype, TSearchSpace>
-      where TGenotype : class
-      where TKey : notnull => new(new ProblemEvaluator<TGenotype>(), problem, keySelector);
-
-    public static DynamicCachingEvaluator<TGenotype, TSearchSpace, TProblem, TGenotype>
-      WithCache<TGenotype, TSearchSpace, TProblem>(this TProblem problem)
-      where TSearchSpace : class, ISearchSpace<TGenotype>
-      where TProblem : DynamicProblem<TGenotype, TSearchSpace>
-      where TGenotype : class
-      => new(new ProblemEvaluator<TGenotype>(), problem, x => x);
+    extension<TCandidate, TSearchSpace, TProblem>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    {
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache() =>
+            new(new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>(), problem, x => x);
+    }
 }

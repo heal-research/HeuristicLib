@@ -34,12 +34,12 @@ public class CompositionSpecs
           TestFunctionProblem,
           SingleSolutionState<RealVector>>(ImmutableArray.Create(stages));
 
-        var finalState = await pipeline.RunToCompletionAsync(
+        var finalState = await pipeline.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(111),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -63,12 +63,12 @@ public class CompositionSpecs
             MaximumCycles = 2
         };
 
-        var finalState = await cycle.RunToCompletionAsync(
+        var finalState = await cycle.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(222),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)

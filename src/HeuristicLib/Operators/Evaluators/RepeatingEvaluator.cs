@@ -6,73 +6,136 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public record RepeatedEvaluator<TGenotype, TSearchSpace, TProblem>
-    : WrappingEvaluator<TGenotype, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public static class RepeatingEvaluator
+{
+    public static RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeatingAggregating<TCandidate, TSearchSpace, TProblem>(
+      this IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
+      int repeats,
+      Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
+      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(evaluator, repeats, aggregator);
+
+    public static RepeatedEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated<TCandidate, TSearchSpace, TProblem>(
+        this IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
+        int repeats,
+        Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector>? aggregator = null,
+        IEqualityComparer<TCandidate>? comparer = null,
+        int maxDegreeOfParallelism = -1)
+      where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>
+      => new(evaluator, repeats, aggregator, comparer, maxDegreeOfParallelism);
+}
+
+public record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
+  : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    private readonly int repeats;
+    private readonly Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator;
+
+    public RepeatingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
+      : base(evaluator)
+    {
+        this.repeats = repeats;
+        this.aggregator = aggregator;
+    }
+
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
+        new Instance(innerEvaluator, repeats, aggregator);
+
+    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator, int repeats, Func<ObjectiveVector, ObjectiveVector, ObjectiveVector> aggregator)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            var results = InnerEvaluator.Evaluate(candidates, random, searchSpace, problem).ToArray();
+
+            for (var i = 0; i < repeats; i++)
+            {
+                var reevaluationResult = InnerEvaluator.Evaluate(candidates, random, searchSpace, problem);
+                for (var j = 0; j < results.Length; j++)
+                {
+                    results[j] = results[j] with
+                    {
+                        ObjectiveVector = aggregator(results[j].ObjectiveVector, reevaluationResult[j].ObjectiveVector)
+                    };
+                }
+            }
+
+            return results;
+        }
+    }
+}
+
+public record RepeatedEvaluator<TCandidate, TSearchSpace, TProblem>
+  : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     private readonly int repeats;
     private readonly Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector> aggregator;
-    private readonly IEqualityComparer<TGenotype> comparer;
+    private readonly IEqualityComparer<TCandidate> comparer;
     private readonly int maxDegreeOfParallelism;
 
     public RepeatedEvaluator(
-        IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
+        IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
         int repeats,
         Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector>? aggregator = null,
-        IEqualityComparer<TGenotype>? comparer = null,
+        IEqualityComparer<TCandidate>? comparer = null,
         int maxDegreeOfParallelism = -1)
-        : base(evaluator)
+      : base(evaluator)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(repeats);
         this.repeats = repeats;
         this.aggregator = aggregator ?? Mean;
-        this.comparer = comparer ?? EqualityComparer<TGenotype>.Default;
+        this.comparer = comparer ?? EqualityComparer<TCandidate>.Default;
         this.maxDegreeOfParallelism = maxDegreeOfParallelism;
     }
 
-    protected override IReadOnlyList<Solution<TGenotype>> Evaluate(
-        IReadOnlyList<TGenotype> genotypes,
-        InnerEvaluate innerEvaluate,
-        IRandomNumberGenerator random,
-        TSearchSpace searchSpace,
-        TProblem problem)
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
+        new Instance(innerEvaluator, repeats, aggregator, comparer, maxDegreeOfParallelism);
+
+    private sealed class Instance(
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator,
+        int repeats,
+        Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector> aggregator,
+        IEqualityComparer<TCandidate> comparer,
+        int maxDegreeOfParallelism)
+        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(innerEvaluator)
     {
-        var res = BatchExecution.Parallel(
-            repeats,
-            r => innerEvaluate(genotypes, r, searchSpace, problem),
-            random,
-            maxDegreeOfParallelism: maxDegreeOfParallelism);
-        var objectiveVectors = new ObjectiveVector[repeats];
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            var evaluations = BatchExecution.Parallel(
+                repeats,
+                r => InnerEvaluator.Evaluate(candidates, r, searchSpace, problem),
+                random,
+                maxDegreeOfParallelism: maxDegreeOfParallelism);
 
-        return Enumerable.Range(0, genotypes.Count)
-            .Select(genotypeIndex =>
-            {
-                var genotype = res[0][genotypeIndex].Genotype;
-                for (var repetition = 1; repetition < repeats; repetition++)
+            var objectiveVectors = new ObjectiveVector[repeats];
+            return Enumerable.Range(0, candidates.Count)
+                .Select(candidateIndex =>
                 {
-                    EnsureSameGenotype(genotype, res[repetition][genotypeIndex].Genotype, comparer);
-                }
+                    var evaluatedCandidate = evaluations[0][candidateIndex];
+                    for (var repetition = 1; repetition < repeats; repetition++)
+                    {
+                        EnsureSameCandidate(
+                            evaluatedCandidate.Candidate,
+                            evaluations[repetition][candidateIndex].Candidate,
+                            comparer);
+                    }
 
-                for (var repetition = 0; repetition < repeats; repetition++)
-                {
-                    objectiveVectors[repetition] = res[repetition][genotypeIndex].ObjectiveVector;
-                }
+                    for (var repetition = 0; repetition < repeats; repetition++)
+                    {
+                        objectiveVectors[repetition] = evaluations[repetition][candidateIndex].ObjectiveVector;
+                    }
 
-                return Solution.From(
-                    genotype,
-                    aggregator(objectiveVectors));
-            })
-            .ToArray();
+                    return evaluatedCandidate with { ObjectiveVector = aggregator(objectiveVectors) };
+                })
+                .ToArray();
+        }
     }
 
     private static ObjectiveVector Mean(ReadOnlySpan<ObjectiveVector> objectiveVectors)
     {
-        if (objectiveVectors.Length == 0)
-        {
-            throw new ArgumentException("At least one objective vector is required.", nameof(objectiveVectors));
-        }
-
         var dimension = objectiveVectors[0].Count;
         var values = new double[dimension];
         foreach (var objectiveVector in objectiveVectors)
@@ -96,24 +159,15 @@ public record RepeatedEvaluator<TGenotype, TSearchSpace, TProblem>
         return new ObjectiveVector(values);
     }
 
-    private static void EnsureSameGenotype(TGenotype first, TGenotype second, IEqualityComparer<TGenotype> genotypeComparer)
+    private static void EnsureSameCandidate(
+        TCandidate first,
+        TCandidate second,
+        IEqualityComparer<TCandidate> candidateComparer)
     {
-        if (!genotypeComparer.Equals(first, second))
+        if (!candidateComparer.Equals(first, second))
         {
-            throw new InvalidOperationException("Repeated evaluator aggregation requires all repeated evaluations of one input slot to return the same genotype.");
+            throw new InvalidOperationException(
+                "Repeated evaluator aggregation requires all repeated evaluations of one input slot to return the same candidate.");
         }
     }
-}
-
-public static class RepeatingEvaluator
-{
-    public static RepeatedEvaluator<TGenotype, TSearchSpace, TProblem> AsRepeated<TGenotype, TSearchSpace, TProblem>(
-        this IEvaluator<TGenotype, TSearchSpace, TProblem> evaluator,
-        int repeats,
-        Func<ReadOnlySpan<ObjectiveVector>, ObjectiveVector>? aggregator = null,
-        IEqualityComparer<TGenotype>? comparer = null,
-        int maxDegreeOfParallelism = -1)
-        where TSearchSpace : class, ISearchSpace<TGenotype>
-        where TProblem : class, IProblem<TGenotype, TSearchSpace>
-        => new(evaluator, repeats, aggregator, comparer, maxDegreeOfParallelism);
 }

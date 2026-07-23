@@ -10,7 +10,6 @@ public record TuringSolution(int State, int Head, List<int> Tape, int Steps) : S
             Tape.Add(move.Symbol);
         else
             Tape[Head] = move.Symbol;
-
         return new TuringSolution(move.State, Head + (move.Right ? 1 : -1), Tape, Steps + 1);
     }
 }

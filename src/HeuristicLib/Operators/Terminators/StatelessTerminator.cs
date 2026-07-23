@@ -5,53 +5,47 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public abstract record StatelessTerminator<TGenotype, TSearchSpace, TProblem, TSearchState>
-  : ITerminator<TGenotype, TSearchSpace, TProblem, TSearchState>,
-    ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState>
-  where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public abstract record StatelessTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Terminator<TCandidate, TSearchSpace, TProblem, TSearchState>, ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchState : class, ISearchState
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ITerminatorInstance<TGenotype, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
 }
 
-public abstract record StatelessTerminator<TGenotype, TSearchState, TSearchSpace>
-  : ITerminator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState>,
-    ITerminatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState>
-  where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TGenotype>
+public abstract record StatelessTerminator<TCandidate, TSearchSpace, TSearchState>
+    : Terminator<TCandidate, TSearchSpace, TSearchState>, ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
+    where TSearchState : class, ISearchState
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public ITerminatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace);
 
-    bool ITerminatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>, TSearchState>.IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem) =>
-      IsTerminalState(state, searchSpace);
+    bool ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+        IsTerminalState(state, searchSpace);
 }
 
-public abstract record StatelessTerminator<TGenotype, TSearchState>
-  : ITerminator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState>,
-    ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState>
-  where TSearchState : class, ISearchState
+public abstract record StatelessTerminator<TCandidate, TSearchState>
+    : Terminator<TCandidate, TSearchState>, ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
+    where TSearchState : class, ISearchState
 {
-    public ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract bool IsTerminalState(TSearchState state);
 
-    bool ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, TSearchState>.IsTerminalState(TSearchState state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) =>
-      IsTerminalState(state);
+    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => IsTerminalState(state);
 }
 
-public abstract record StatelessTerminator<TGenotype>
-  : ITerminator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, ISearchState>,
-    ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, ISearchState>
+public abstract record StatelessTerminator<TCandidate>
+    : Terminator<TCandidate>, ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
 {
-    public ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, ISearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) => this;
 
     public abstract bool IsTerminalState();
 
-    bool ITerminatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, ISearchState>.IsTerminalState(ISearchState state, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem) =>
-      IsTerminalState();
+    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>.IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => IsTerminalState();
 }

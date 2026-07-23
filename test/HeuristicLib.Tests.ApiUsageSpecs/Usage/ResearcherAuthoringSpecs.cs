@@ -31,12 +31,12 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         }.WithMaxIterations(5);
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(1234),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -58,12 +58,12 @@ public class ResearcherAuthoringSpecs
             Terminator = new FirstEvaluatedStateTerminator()
         };
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(4321),
           ct: TestContext.Current.CancellationToken);
 
-        problem.SearchSpace.Contains(finalState.Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -87,13 +87,13 @@ public class ResearcherAuthoringSpecs
             Terminator = new CancellationTokenTerminator<RealVector>(stopAfterCurrentState.Token)
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(2468),
           ct: TestContext.Current.CancellationToken).ToList();
 
         states.Count.ShouldBe(1);
-        problem.SearchSpace.Contains(states.Single().Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(states.Single().EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -118,13 +118,13 @@ public class ResearcherAuthoringSpecs
               timeProvider)
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(8642),
           ct: TestContext.Current.CancellationToken).ToList();
 
         states.Count.ShouldBe(1);
-        problem.SearchSpace.Contains(states.Single().Solution.Genotype).ShouldBeTrue();
+        problem.SearchSpace.Contains(states.Single().EvaluatedCandidate.Candidate).ShouldBeTrue();
     }
 
     [Fact]
@@ -140,12 +140,12 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(9876),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Solution.Genotype.ShouldBe(RealVector.Repeat(0.0, problem.TestFunction.Dimension));
+        finalState.EvaluatedCandidate.Candidate.ShouldBe(RealVector.Repeat(0.0, problem.TestFunction.Dimension));
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension)
@@ -175,7 +175,7 @@ public class ResearcherAuthoringSpecs
           RealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {
-            return state.Solution.ObjectiveVector[0] >= 0.0;
+            return state.EvaluatedCandidate.ObjectiveVector[0] >= 0.0;
         }
     }
 

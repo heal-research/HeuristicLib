@@ -5,9 +5,6 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
-/// <summary>
-/// Single point crossover for integer vectors.
-/// </summary>
 /// <remarks>
 /// It is implemented as described in Michalewicz, Z. 1999. Genetic Algorithms + Data Structures = Evolution Programs. Third, Revised and Extended Edition, Spring-Verlag Berlin Heidelberg.
 /// </remarks>

@@ -92,11 +92,11 @@ Debug and release builds must not differ in behavior.
 - `Debug.Assert` is not allowed in library code because it creates different observable behavior between debug and release builds.
 - If an invariant matters for correctness, enforce it explicitly in normal runtime code or express it through types and tests.
 
-### Immutable solution candidates
+### Immutable candidates
 
-Any type used as `TGenotype` is part of the solution-candidate model and must be immutable.
+Any type used as `TCandidate` is part of the candidate model and must be immutable.
 
-- Solution candidate types must behave like values, not mutable containers.
+- Candidate types must behave like values, not mutable containers.
 - Operators must not mutate parent candidates in place.
 - Mutation and crossover may produce new candidates, but they must not change the identity-bearing state of existing candidates.
 - Search spaces, problems, and algorithms should be designed around immutable candidate flow.
@@ -113,7 +113,7 @@ The design may place an explicit evaluator layer between algorithms and `Problem
 - dynamic-problem-aware behavior
 - specialized scheduling
 
-Problems score genotypes by returning objective vectors. Evaluators return the authoritative evaluated `Solution<TGenotype>`, so an evaluator may return the original candidate or an explicit replacement candidate together with its objective vector.
+Problems score candidates by returning objective vectors. Evaluators return authoritative `EvaluatedCandidate<TCandidate>` values, so an evaluator may return the original candidate or an explicit replacement candidate together with its objective vector.
 
 Shared operators should prefer batch-first APIs when batch context is the honest semantic model.
 
@@ -188,7 +188,7 @@ Some current patterns are promising, but should remain justified by use:
 
 - streaming execution
 - explicit runs
-- definition versus execution separation
+- configuration versus execution-instance separation
 
 Use them where they solve a real problem. Do not preserve them as doctrine.
 

@@ -15,56 +15,59 @@ namespace HEAL.HeuristicLib.Tests.Problems.DataAnalysis.Regression;
 public class SymbolicRegressionTests
 {
     private const int AlgorithmRandomSeed = 42;
-    public static readonly double[,] Data = new double[,] { { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 }, { 9, 10 }, { 10, 10 } };
+    public static readonly double[,] Data = new double[,]
+    {
+        { 0, 10 }, { 1, 10 }, { 2, 10 }, { 3, 10 }, { 4, 10 }, { 5, 10 }, { 6, 10 }, { 7, 10 }, { 8, 10 },
+        { 9, 10 }, { 10, 10 }
+    };
 
-    public static IEnumerable<TheoryDataRow<ISymbolicDataAnalysisExpressionTreeInterpreter>> InterpreterParameters => [
-      new(new SymbolicDataAnalysisExpressionTreeInterpreter()),
-    new(new SymbolicDataAnalysisExpressionTreeBatchInterpreter())
+    public static IEnumerable<TheoryDataRow<ISymbolicDataAnalysisExpressionTreeInterpreter>> InterpreterParameters =>
+    [
+        new(new SymbolicDataAnalysisExpressionTreeInterpreter()),
+        new(new SymbolicDataAnalysisExpressionTreeBatchInterpreter())
     ];
 
-    private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, int treeLength = 40, bool multiObjective = false, int constOptIteration = 5)
+    private static SymbolicRegressionProblem CreateTestSymbolicRegressionProblem(
+        ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, int treeLength = 40, bool multiObjective = false,
+        int constOptIteration = 5)
     {
         var problemData = new RegressionProblemData(new ModifiableDataset(["x", "y"], Data));
 
         IRegressionEvaluator<SymbolicExpressionTree>[] objectives = multiObjective
-          ? [
-            new MaxAbsoluteErrorEvaluator(),
-        new MeanAbsoluteErrorEvaluator(),
-        new MeanLogErrorEvaluator(),
-        new MeanRelativeErrorEvaluator(),
-        new MeanSquaredErrorCalculator(),
-        new NormalizedMeanSquaredErrorEvaluator(),
-        new NumberOfVariablesEvaluator(),
-        new PearsonR2Evaluator(),
-        new RootMeanSquaredErrorEvaluator(),
-        new TreeComplexityEvaluator(),
-        new TreeLengthEvaluator()
-          ]
-          : [new RootMeanSquaredErrorEvaluator()];
+            ?
+            [
+                new MaxAbsoluteErrorEvaluator(),
+                new MeanAbsoluteErrorEvaluator(),
+                new MeanLogErrorEvaluator(),
+                new MeanRelativeErrorEvaluator(),
+                new MeanSquaredErrorCalculator(),
+                new NormalizedMeanSquaredErrorEvaluator(),
+                new NumberOfVariablesEvaluator(),
+                new PearsonR2Evaluator(),
+                new RootMeanSquaredErrorEvaluator(),
+                new TreeComplexityEvaluator(),
+                new TreeLengthEvaluator()
+            ]
+            : [new RootMeanSquaredErrorEvaluator()];
         var problem = new SymbolicRegressionProblem(problemData, objectives)
         {
             LowerPredictionBound = 0,
             UpperPredictionBound = 100,
-            SearchSpace = {
-        TreeDepth = treeLength,
-        TreeLength = treeLength
-      },
+            SearchSpace =
+            {
+                TreeDepth = treeLength,
+                TreeLength = treeLength
+            },
             ParameterOptimizationIterations = constOptIteration,
             Interpreter = interpreter
         };
 
         var linearScalingRoot = problem.SearchSpace.Grammar.AddLinearScaling();
-        var symbols = new Symbol[] {
-      new Addition(),
-      new Subtraction(),
-      new Multiplication(),
-      new Division(),
-      new Number(),
-      new SquareRoot(),
-      new Logarithm(),
-      new Exponential(),
-      new Variable { VariableNames = problemData.InputVariables }
-    };
+        var symbols = new Symbol[]
+        {
+            new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(),
+            new Logarithm(), new Exponential(), new Variable { VariableNames = problemData.InputVariables }
+        };
 
         problem.SearchSpace.Grammar.AddFullyConnectedSymbols(linearScalingRoot, symbols);
         return problem;
@@ -80,7 +83,8 @@ public class SymbolicRegressionTests
         var numberNode = new Number().CreateTreeNode(10);
         tree.Root[0].AddSubtree(numberNode);
         var res = problem.Evaluate(tree);
-        res.ShouldBe([0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3]);
+        Assert.Equal(new ObjectiveVector(0.0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3), res);
+        res.ShouldBe(new[] { 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3 });
         const ObjectiveDirection min = ObjectiveDirection.Minimize;
         const ObjectiveDirection max = ObjectiveDirection.Maximize;
         problem.Objective.Directions.ShouldBe([min, min, min, min, min, min, min, max, min, min, min]);
@@ -151,7 +155,7 @@ public class SymbolicRegressionTests
         add.AddSubtree(numberTreeNode);
         tree.Root[0].AddSubtree(add);
         SymbolicRegressionParameterOptimization.OptimizeParameters(problem.Interpreter, tree, problem.ProblemData,
-          problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(), 10);
+            problem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate().ToArray(), 10);
         var y = problem.Evaluate(tree)[0];
         y.ShouldBe(0, 1.0e-8);
     }
@@ -161,7 +165,8 @@ public class SymbolicRegressionTests
     public void Creators(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
     {
         var problem = CreateTestSymbolicRegressionProblem(interpreter, 12);
-        var creators = new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator() };
+        var creators =
+            new SymbolicExpressionTreeCreator[] { new BalancedTreeCreator(), new ProbabilisticTreeCreator() };
         var r = RandomNumberGenerator.Create(AlgorithmRandomSeed);
 
         foreach (var c in creators)
@@ -172,7 +177,10 @@ public class SymbolicRegressionTests
         }
 
         //these creators often create invalid trees (ignore tree length)
-        var invalidCreators = new SymbolicExpressionTreeCreator[] { new FullTreeCreator(), new RampedHalfAndHalfTreeCreator(), new GrowTreeCreator() };
+        var invalidCreators = new SymbolicExpressionTreeCreator[]
+        {
+            new FullTreeCreator(), new RampedHalfAndHalfTreeCreator(), new GrowTreeCreator()
+        };
         foreach (var c in invalidCreators)
         {
             var tree = c.Create(r, problem.SearchSpace);

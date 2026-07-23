@@ -5,12 +5,12 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record StagnationTerminator<TGenotype>
-  : Terminator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>, PopulationState<TGenotype>, StagnationTerminator<TGenotype>.ExecutionState>
+public record StagnationTerminator<TCandidate>
+    : StatefulTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>, StagnationTerminator<TCandidate>.ExecutionState>
 {
     public sealed class ExecutionState
     {
-        public ObjectiveVector? BestQualitySoFar { get; set; }
+        public ObjectiveVector? BestObjectiveVectorSoFar { get; set; }
         public int StagnationCounter { get; set; }
     }
 
@@ -23,16 +23,16 @@ public record StagnationTerminator<TGenotype>
 
     protected override ExecutionState CreateInitialState() => new();
 
-    protected override bool IsTerminalState(PopulationState<TGenotype> algorithmState, ExecutionState executionState, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
+    protected override bool IsTerminalState(PopulationState<TCandidate> algorithmState, ExecutionState executionState, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {
-        executionState.BestQualitySoFar ??= problem.Objective.Worst;
+        executionState.BestObjectiveVectorSoFar ??= problem.Objective.Worst;
 
         var comparer = problem.Objective.TotalOrderComparer;
 
-        var currentBestQuality = algorithmState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
-        if (comparer.Compare(currentBestQuality, executionState.BestQualitySoFar) < 0)
+        var currentBestObjectiveVector = algorithmState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
+        if (comparer.Compare(currentBestObjectiveVector, executionState.BestObjectiveVectorSoFar) < 0)
         {
-            executionState.BestQualitySoFar = currentBestQuality;
+            executionState.BestObjectiveVectorSoFar = currentBestObjectiveVector;
             executionState.StagnationCounter = 0;
         }
         else

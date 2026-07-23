@@ -5,7 +5,11 @@
         <PackageId>HEAL.HeuristicLib.PythonInterop</PackageId>
         <RootNamespace>HEAL.HeuristicLib.PythonInterop</RootNamespace>
         <Description>Python-facing interop helpers and workflows for HeuristicLib.</Description>
+		<GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     </PropertyGroup>
+    <ItemGroup>
+      <PackageReference Include="pythonnet" Version="3.1.0" />
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\HeuristicLib.Experimental\HeuristicLib.Experimental.csproj" />

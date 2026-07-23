@@ -1,7 +1,7 @@
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record AfterIterationsTerminator<TGenotype>
-  : Terminator<TGenotype, AfterIterationsTerminator<TGenotype>.ExecutionState>
+public record AfterIterationsTerminator<TCandidate>
+  : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
 {
     public sealed class ExecutionState
     {

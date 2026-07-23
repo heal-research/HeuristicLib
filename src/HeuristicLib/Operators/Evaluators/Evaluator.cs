@@ -6,71 +6,64 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public abstract record Evaluator<TGenotype, TSearchSpace, TProblem, TExecutionState>
-  : IEvaluator<TGenotype, TSearchSpace, TProblem>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
-  where TExecutionState : class
+/// <remarks>
+/// Derive directly from this base when the evaluator owns child execution instances or needs direct control over its execution structure.
+/// Use <see cref="StatelessEvaluator{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
+/// Use <see cref="StatefulEvaluator{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
+/// </remarks>
+public abstract record Evaluator<TCandidate, TSearchSpace, TProblem>
+    : IEvaluator<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected abstract TExecutionState CreateInitialState();
+    protected abstract IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry);
 
-    protected abstract IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
-      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-    public IEvaluatorInstance<TGenotype, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new EvaluatorInstance(this, CreateInitialState());
-
-    private sealed class EvaluatorInstance(Evaluator<TGenotype, TSearchSpace, TProblem, TExecutionState> evaluator, TExecutionState executionState)
-      : IEvaluatorInstance<TGenotype, TSearchSpace, TProblem>
-    {
-        public IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-        {
-            return evaluator.Evaluate(genotypes, executionState, random, searchSpace, problem);
-        }
-    }
+    IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> IExecutionInstanceResolvable<IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateEvaluatorInstance(instanceRegistry);
 }
 
-public abstract record Evaluator<TGenotype, TSearchSpace, TExecutionState>
-  : IEvaluator<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TExecutionState : class
+public abstract record Evaluator<TCandidate, TSearchSpace>
+    : IEvaluator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected abstract TExecutionState CreateInitialState();
+    protected abstract IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateEvaluatorInstance(ExecutionInstanceRegistry registry);
 
-    protected abstract IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
-      IRandomNumberGenerator random, TSearchSpace searchSpace);
-
-    public IEvaluatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new EvaluatorInstance(this, CreateInitialState());
-
-    private sealed class EvaluatorInstance(Evaluator<TGenotype, TSearchSpace, TExecutionState> evaluator, TExecutionState executionState)
-      : IEvaluatorInstance<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-    {
-        public IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TGenotype, TSearchSpace> problem)
-        {
-            return evaluator.Evaluate(genotypes, executionState, random, searchSpace);
-        }
-    }
+    IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> IExecutionInstanceResolvable<IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateEvaluatorInstance(instanceRegistry);
 }
 
-public abstract record Evaluator<TGenotype, TExecutionState>
-  : IEvaluator<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-  where TExecutionState : class
+public abstract record Evaluator<TCandidate>
+    : IEvaluator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    protected abstract TExecutionState CreateInitialState();
+    protected abstract IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateEvaluatorInstance(ExecutionInstanceRegistry registry);
 
-    protected abstract IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, TExecutionState executionState,
-      IRandomNumberGenerator random);
+    IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> IExecutionInstanceResolvable<IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateEvaluatorInstance(instanceRegistry);
+}
 
-    public IEvaluatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-      new EvaluatorInstance(this, CreateInitialState());
+public abstract class EvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+    : IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+}
 
-    private sealed class EvaluatorInstance(Evaluator<TGenotype, TExecutionState> evaluator, TExecutionState executionState)
-      : IEvaluatorInstance<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>
-    {
-        public IReadOnlyList<Solution<TGenotype>> Evaluate(IReadOnlyList<TGenotype> genotypes, IRandomNumberGenerator random, ISearchSpace<TGenotype> searchSpace, IProblem<TGenotype, ISearchSpace<TGenotype>> problem)
-        {
-            return evaluator.Evaluate(genotypes, executionState, random);
-        }
-    }
+public abstract class EvaluatorInstance<TCandidate, TSearchSpace>
+    : IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+{
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
+
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> IEvaluatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
+        Evaluate(candidates, random, searchSpace);
+}
+
+public abstract class EvaluatorInstance<TCandidate>
+    : IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+{
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
+
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> IEvaluatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        Evaluate(candidates, random);
 }

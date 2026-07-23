@@ -3,18 +3,18 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public record CommaSelectionReplacer<TGenotype>
-  : StatelessReplacer<TGenotype>
+public record CommaSelectionReplacer<TCandidate>
+  : StatelessReplacer<TCandidate>
 {
-    public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
       => CommaSelectionReplacer.Replace(offspringPopulation, objective, count);
 }
 
 public static class CommaSelectionReplacer
 {
-    public static IReadOnlyList<Solution<TGenotype>> Replace<TGenotype>(
-      IReadOnlyList<Solution<TGenotype>> offspringPopulation,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
+      ObjectiveDirections objective,
       int count)
     {
         return offspringPopulation

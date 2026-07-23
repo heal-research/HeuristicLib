@@ -35,11 +35,11 @@ public class OperatorCompatibilityTests
     private static bool AlgorithmUsingProblemDoesCompile(Type algorithmType, Type problemType)
     {
         var code = $@"
-      using HEAL.HeuristicLib.Algorithms; // for RunStreamingAsync extension
+      using HEAL.HeuristicLib.Algorithms;
       var algorithm = new {GetCompilableName(algorithmType)}();
       var problem = new {GetCompilableName(problemType)}();
       var rng = HEAL.HeuristicLib.Random.RandomNumberGenerator.Create(0);
-      algorithm.RunStreamingAsync(problem, rng);
+      algorithm.Stream(problem, rng);
     ";
 
         return DoesCompile(code, typeof(object), algorithmType, problemType);
@@ -58,7 +58,7 @@ public class OperatorCompatibilityTests
 
     private static bool DoesCompile(string code, params Type[] usedTypes)
     {
-        var references = usedTypes.Concat([typeof(object), typeof(IAlgorithm<,,,>), typeof(Algorithm<,,,,>)])
+        var references = usedTypes.Concat([typeof(object), typeof(IAlgorithm<,,,>), typeof(Algorithm<,,,>)])
                                   .Select(t => t.Assembly)
                                   .Concat([Assembly.Load("System.Runtime")])
                                   .Distinct()
@@ -223,92 +223,57 @@ public class OperatorCompatibilityTests
     public void AlgorithmOperatorCompatibility(Type algorithm, Type @operator, bool shouldCompile) => AlgorithmUsingOperatorDoesCompile(algorithm, @operator).ShouldBe(shouldCompile);
 }
 
-public record IndependentAlgorithm<TGenotype, TSearchSpace, TProblem> : Algorithm<TGenotype, TSearchSpace, TProblem, SearchState, IndependentAlgorithm<TGenotype, TSearchSpace, TProblem>.ExecutionState>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+public record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algorithm<TCandidate, TSearchSpace, TProblem, SearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public new sealed class ExecutionState
-      : Algorithm<TGenotype, TSearchSpace, TProblem, SearchState, ExecutionState>.ExecutionState
-    {
-    }
+    public ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; set; }
 
-    public ICrossover<TGenotype, TSearchSpace, TProblem> Crossover { get; set; }
-
-    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver) => new() { Evaluator = resolver.Resolve(Evaluator) };
-
-    protected override IAlgorithmInstance<TGenotype, TSearchSpace, TProblem, SearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState) => throw new NotImplementedException();
+    protected override AlgorithmInstance<TCandidate, TSearchSpace, TProblem, SearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) => throw new NotImplementedException();
 }
 
-public record IndependentAlgorithm<TGenotype, TSearchSpace> : IndependentAlgorithm<TGenotype, TSearchSpace, IProblem<TGenotype, TSearchSpace>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>;
+public record IndependentAlgorithm<TCandidate, TSearchSpace> : IndependentAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>;
 
-public record IndependentAlgorithm<TGenotype> : IndependentAlgorithm<TGenotype, ISearchSpace<TGenotype>, IProblem<TGenotype, ISearchSpace<TGenotype>>>;
+public record IndependentAlgorithm<TCandidate> : IndependentAlgorithm<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutation, PermutationSearchSpace, TProblem, SearchState, PermutationEncodingSpecificAlgorithm<TProblem>.ExecutionState>
-  where TProblem : class, IProblem<Permutation, PermutationSearchSpace>
+public record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permutation, PermutationSearchSpace, TProblem, SearchState>
+    where TProblem : class, IProblem<Permutation, PermutationSearchSpace>
 {
-    public new sealed class ExecutionState
-      : Algorithm<Permutation, PermutationSearchSpace, TProblem, SearchState, ExecutionState>.ExecutionState
-    {
-    }
-
     public ICrossover<Permutation, PermutationSearchSpace, TProblem> Crossover { get; set; }
 
-    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver) => new() { Evaluator = resolver.Resolve(Evaluator) };
-
-    protected override IAlgorithmInstance<Permutation, PermutationSearchSpace, TProblem, SearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState) => throw new NotImplementedException();
+    protected override AlgorithmInstance<Permutation, PermutationSearchSpace, TProblem, SearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) => throw new NotImplementedException();
 }
 
 public record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>;
 
-public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState, TravelingSalesmanProblemSpecificAlgorithm.ExecutionState>
+public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState>
 {
-    public new sealed class ExecutionState
-      : Algorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState, ExecutionState>.ExecutionState
-    {
-    }
-
     public ICrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> Crossover { get; set; }
 
-    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver) => new() { Evaluator = resolver.Resolve(Evaluator) };
-
-    protected override IAlgorithmInstance<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState) => throw new NotImplementedException();
+    protected override AlgorithmInstance<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) => throw new NotImplementedException();
 }
 
-public record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorSearchSpace, TProblem, SearchState, RealVectorEncodingSpecificAlgorithm<TProblem>.ExecutionState>
-  where TProblem : class, IProblem<RealVector, RealVectorSearchSpace>
+public record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVector, RealVectorSearchSpace, TProblem, SearchState>
+    where TProblem : class, IProblem<RealVector, RealVectorSearchSpace>
 {
-    public new sealed class ExecutionState
-      : Algorithm<RealVector, RealVectorSearchSpace, TProblem, SearchState, ExecutionState>.ExecutionState
-    {
-    }
-
     public ICrossover<RealVector, RealVectorSearchSpace, TProblem> Crossover { get; set; }
 
-    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver) => new() { Evaluator = resolver.Resolve(Evaluator) };
-
-    protected override IAlgorithmInstance<RealVector, RealVectorSearchSpace, TProblem, SearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState) => throw new NotImplementedException();
+    protected override AlgorithmInstance<RealVector, RealVectorSearchSpace, TProblem, SearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) => throw new NotImplementedException();
 }
 
 public record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, RealVectorSearchSpace>>;
 
-public record TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SearchState, TestFunctionProblemSpecificAlgorithm.ExecutionState>
+public record TestFunctionProblemSpecificAlgorithm : Algorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SearchState>
 {
-    public new sealed class ExecutionState
-      : Algorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SearchState, ExecutionState>.ExecutionState
-    {
-    }
-
     public ICrossover<RealVector, RealVectorSearchSpace, TestFunctionProblem> Crossover { get; set; }
 
-    protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver) => new() { Evaluator = resolver.Resolve(Evaluator) };
-
-    protected override IAlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SearchState> CreateAlgorithmInstance(Run run, ExecutionState executionState) => throw new NotImplementedException();
+    protected override AlgorithmInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem, SearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) => throw new NotImplementedException();
 }
 
-public record IndependentCrossover<TGenotype> : SingleSolutionCrossover<TGenotype>
+public record IndependentCrossover<TCandidate> : SingleSolutionCrossover<TCandidate>
 {
-    public override TGenotype Cross(IParents<TGenotype> parents, IRandomNumberGenerator random) => throw new NotImplementedException();
+    public override TCandidate Cross(IParents<TCandidate> parents, IRandomNumberGenerator random) => throw new NotImplementedException();
 }
 
 public record PermutationSpecificCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>

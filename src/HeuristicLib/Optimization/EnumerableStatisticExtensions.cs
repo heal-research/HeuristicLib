@@ -5,24 +5,14 @@ namespace HEAL.HeuristicLib.Optimization;
 [Obsolete("We should switch to a library that provides this functionality instead of maintaining our own implementation.")]
 public static class EnumerableStatisticExtensions
 {
-    /// <param name="values"></param>
     extension(IEnumerable<double> values)
     {
-        /// <summary>
-        ///   Calculates the median element of the enumeration.
-        /// </summary>
-        /// <returns></returns>
         public double Median()
         {
             // See unit tests for comparison with naive implementation
             return values.Quantile(0.5);
         }
 
-        /// <summary>
-        ///   Calculates the alpha-quantile element of the enumeration.
-        /// </summary>
-        /// <param name="alpha"></param>
-        /// <returns></returns>
         public double Quantile(double alpha)
         {
             // See unit tests for comparison with naive implementation
@@ -146,13 +136,8 @@ public static class EnumerableStatisticExtensions
         }
     }
 
-    /// <param name="values"></param>
     extension(IEnumerable<double> values)
     {
-        /// <summary>
-        ///   Calculates the range (max - min) of the enumeration.
-        /// </summary>
-        /// <returns></returns>
         public double Range()
         {
             var min = double.PositiveInfinity;
@@ -181,28 +166,12 @@ public static class EnumerableStatisticExtensions
             return max - min;
         }
 
-        /// <summary>
-        ///   Calculates the sample standard deviation of values.
-        /// </summary>
-        /// <returns></returns>
         public double StandardDeviation() => Math.Sqrt(values.Variance());
 
-        /// <summary>
-        ///   Calculates the population standard deviation of values.
-        /// </summary>
-        /// <returns></returns>
         public double StandardDeviationPop() => Math.Sqrt(values.VariancePop());
 
-        /// <summary>
-        ///   Calculates the sample variance of values. (sum (x - x_mean)² / (n-1))
-        /// </summary>
-        /// <returns></returns>
         public double Variance() => Variance(values, true);
 
-        /// <summary>
-        ///   Calculates the population variance of values. (sum (x - x_mean)² / n)
-        /// </summary>
-        /// <returns></returns>
         public double VariancePop() => Variance(values, false);
     }
 

@@ -43,16 +43,16 @@ public class DynamicTSPTests
         var resGa = (ga.Build() with
         {
             MaximumGenerations = 1000
-        }).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        }).Complete(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         //look at results
         var objGa = resGa.Population
                          .OrderBy(x => x.ObjectiveVector[0])
                          .First();
 
-        resGa.Population.Solutions.Length.ShouldBe(100);
-        resGa.Population.Solutions.All(solution => prob.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        resGa.Population.Solutions.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
+        resGa.Population.EvaluatedCandidates.Length.ShouldBe(100);
+        resGa.Population.EvaluatedCandidates.All(solution => prob.SearchSpace.Contains(solution.Candidate)).ShouldBeTrue();
+        resGa.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
         double.IsFinite(objGa.ObjectiveVector[0]).ShouldBeTrue();
         objGa.ObjectiveVector[0].ShouldBeGreaterThan(0.0);
     }

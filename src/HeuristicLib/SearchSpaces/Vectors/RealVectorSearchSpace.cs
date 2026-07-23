@@ -22,10 +22,13 @@ public record RealVectorSearchSpace : SearchSpace<RealVector>
         Maximum = maximum;
     }
 
-    public override bool Contains(RealVector genotype)
+    public override bool Contains(RealVector candidate)
     {
-        return genotype.Count == Length
-               && (genotype >= Minimum).All()
-               && (genotype <= Maximum).All();
+        return candidate.Count == Length
+               && (candidate >= Minimum).All()
+               && (candidate <= Maximum).All();
     }
+
+    public double GetMinimum(int dim) => Minimum.Count == 1 ? Minimum[0] : Minimum[dim];
+    public double GetMaximum(int dim) => Maximum.Count == 1 ? Maximum[0] : Maximum[dim];
 }

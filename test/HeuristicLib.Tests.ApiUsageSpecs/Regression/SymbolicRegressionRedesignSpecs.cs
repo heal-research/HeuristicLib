@@ -106,13 +106,13 @@ public class SymbolicRegressionRedesignSpecs
             Elites = 1
         };
 
-        var finalState = await algorithm.RunToCompletionAsync(
+        var finalState = await algorithm.CompleteAsync(
           problem,
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        finalState.Population.Solutions.Length.ShouldBe(24);
+        finalState.Population.EvaluatedCandidates.All(candidate => problem.SearchSpace.Contains(candidate.Candidate)).ShouldBeTrue();
+        finalState.Population.EvaluatedCandidates.Length.ShouldBe(24);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class SymbolicRegressionRedesignSpecs
           problem.SearchSpace,
           problem).Single();
 
-        solution.Genotype.ShouldNotBeSameAs(rawExpression);
+        solution.Candidate.ShouldNotBeSameAs(rawExpression);
         rawExpression.Root.ShouldBeOfType<BinaryExpressionNode>().Left
           .ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(1.0);
         evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
@@ -185,7 +185,7 @@ public class SymbolicRegressionRedesignSpecs
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
+        finalState.Population.EvaluatedCandidates.All(candidate => problem.SearchSpace.Contains(candidate.Candidate)).ShouldBeTrue();
         algorithm.Evaluator.Counters.FunctionEvaluations.ShouldBeGreaterThan(0);
         */
 

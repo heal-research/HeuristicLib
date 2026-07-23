@@ -6,14 +6,14 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
 [Equatable]
-public partial record PipelineMutator<TG, TS, TP>
-  : MultiMutator<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public partial record PipelineMutator<TCandidate, TSearchSpace, TProblem>
+  : MultiMutator<TCandidate, TSearchSpace, TProblem>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [IgnoreEquality] public ImmutableArray<IMutator<TG, TS, TP>> Mutators => InnerMutators;
+    [IgnoreEquality] public ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> Mutators => InnerMutators;
 
-    public PipelineMutator(ImmutableArray<IMutator<TG, TS, TP>> mutators)
+    public PipelineMutator(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
       : base(mutators)
     {
         // ToDo: think if we want to allow empty pipelines.
@@ -23,15 +23,21 @@ public partial record PipelineMutator<TG, TS, TP>
         }
     }
 
-    protected override IReadOnlyList<TG> Mutate(IReadOnlyList<TG> parents,
-      IReadOnlyList<InnerMutate> innerMutators, IRandomNumberGenerator random, TS searchSpace,
-      TP problem)
+    protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(
+        ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators) => new Instance(innerMutators);
+
+    private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators)
+        : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(innerMutators)
     {
-        var current = parents;
-        foreach (var mutator in innerMutators)
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            current = mutator(current, random, searchSpace, problem);
+            var current = parents;
+            foreach (var mutator in InnerMutators)
+            {
+                current = mutator.Mutate(current, random, searchSpace, problem);
+            }
+
+            return current;
         }
-        return current;
     }
 }

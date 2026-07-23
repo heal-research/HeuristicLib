@@ -3,11 +3,20 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-[Obsolete("This should be replaced by a proper operator or an operator feature.")]
-public interface IVariableStrengthMutator<TG, in TS, in TP>
-  : IMutator<TG, TS, TP>
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IVariableStrengthMutator<TCandidate, in TSearchSpace, in TProblem>
+    : IMutator<TCandidate, TSearchSpace, TProblem>, IOperator<IVariableStrengthMutatorInstance<TCandidate, TSearchSpace, TProblem>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    double MutationStrength { get; [Obsolete("Should not be mutable")] set; }
+    /// <summary>Gets the value used to initialize each execution instance's current mutation strength.</summary>
+    double MutationStrength { get; }
+}
+
+public interface IVariableStrengthMutatorInstance<TCandidate, in TSearchSpace, in TProblem>
+    : IMutatorInstance<TCandidate, TSearchSpace, TProblem>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+{
+    /// <summary>Gets or sets the run scoped strength without changing the reusable mutator configuration.</summary>
+    double CurrentMutationStrength { get; set; }
 }

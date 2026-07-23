@@ -1,19 +1,19 @@
 # Analyzer architecture
 
-This page explains the current analyzer system in HeuristicLib.
+This page explains the analyzer system in HeuristicLib.
 
-It builds on the ideas from [Observability & analysis](observability-and-analysis.md) and [Definition vs execution instances](execution-instances.md), but adds one crucial concept:
+It builds on the ideas from [Observability & analysis](observability-and-analysis.md) and [Configuration vs execution instances](execution-instances.md), but adds one crucial concept:
 
-> Analyzer state belongs to the **run**, not to the algorithm/operator definition and not to a short-lived operator execution instance.
+> Analyzer state belongs to the **run**, not to the algorithm/operator configuration and not to a short-lived operator execution instance.
 
 ## Why analyzers need their own architecture
 
 Analyzer data has a different lifetime from normal operator or algorithm configuration.
 
-- **Definitions** are declarative and reusable.
+- **Configurations** are declarative and reusable.
   - They should contain configuration and graph structure only.
   - They must stay safe to reuse across multiple runs.
-- **Execution instances** are runtime objects.
+- **Execution instances** are stateful execution objects.
   - They may hold temporary state while something executes.
   - Their lifetime is controlled by `ExecutionInstanceRegistry` and by meta-algorithms such as `CycleAlgorithm`.
 - **Analyzer state** is usually meaningful at the **run** level.
@@ -22,22 +22,22 @@ Analyzer data has a different lifetime from normal operator or algorithm configu
   - per-iteration statistics
   - accumulated counters and traces
 
-If analysis state were stored directly on a definition, rerunning the same definition would mix old and new results.
+If analysis state were stored directly on a configuration, rerunning the same configuration would mix old and new results.
 If analysis state were stored only inside an observer/decorator execution instance, results would be tied to registry mechanics rather than to the logical run.
 
-That is why HeuristicLib models analyzers as **definition-side descriptions + run-scoped analyzer run states + run-owned analyzer result lookup**.
+That is why HeuristicLib models analyzers as **analyzer configurations + run-scoped analyzer states + run-owned analyzer result lookup**.
 
 ## The three layers of the analyzer system
 
-### 1) Analyzer definition
+### 1) Analyzer configuration
 
-An analyzer definition is a reusable object that describes:
+An analyzer configuration is a reusable object that describes:
 
 - what the analyzer observes
 - which operators it needs references to
 - how to create its analyzer run state and result for a run
 
-The current contracts are:
+The contracts are:
 
 ```csharp
 public interface IAnalyzer
@@ -52,12 +52,12 @@ public interface IAnalyzer<out TResult> : IAnalyzer
 }
 ```
 
-An analyzer definition is still part of the **definition graph**.
-It is configuration-time information, not runtime mutable state.
+An analyzer configuration is still part of the **configuration graph**.
+It is reusable configuration information, not mutable execution state.
 
 ### 2) Observation requirements
 
-Analyzers do not mutate the definition graph directly.
+Analyzers do not mutate the configuration graph directly.
 Instead, analyzer states declare observation requirements through `RegisterObservations(ObservationPlan)`.
 
 Typical hook points are:
@@ -86,7 +86,7 @@ What analyzers contribute is the **declarative registration** of which operator 
 
 ### 3) Run-scoped analyzer state
 
-At runtime, every analyzer gets **one analyzer run state per run**.
+During execution, every analyzer gets **one analyzer run state per run**.
 
 That instance:
 
@@ -125,9 +125,9 @@ This helper is only a convenience. It is **not** part of the abstraction assembl
 
 ## Ownership and lifetimes
 
-### Definition owns configuration
+### Analyzer owns reusable configuration
 
-The analyzer definition owns:
+The analyzer configuration owns:
 
 - configuration
 - identity
@@ -150,7 +150,7 @@ This result exists only for the current run.
 
 ### Run owns analyzer result lookup
 
-The `Run` object creates one analyzer run state per analyzer definition and stores that mapping.
+The `Run` object creates one analyzer run state per analyzer configuration and stores that mapping.
 Users retrieve analyzer results through the run:
 
 ```csharp
@@ -165,11 +165,11 @@ This makes analyzer retrieval:
 - independent of `ExecutionInstanceRegistry` reuse details
 - available through a stable run-level API
 
-## Runtime flow
+## Execution flow
 
 ### Run creation
 
-1. Create analyzer definitions.
+1. Create analyzer configurations.
 2. Create a run with those analyzers:
 
 ```csharp
@@ -188,7 +188,7 @@ Those entries:
 
 - identify the original operator they belong to
 - merge multiple analyzer subscriptions for the same operator
-- pre-register one observable replacement into an `ExecutionInstanceRegistry`
+- register one observable replacement into an `ExecutionInstanceRegistry`
 
 This keeps analyzer registration declarative while avoiding deep wrapper chains when several analyzers observe the same operator.
 
@@ -222,11 +222,11 @@ For example, with `CycleAlgorithm`:
 
 Because analyzer run states are created by `Run` and then registered into every relevant registry, analyzer scope stays stable even when execution registries change.
 
-## Definition-side hooks vs execution-side logic
+## Configuration-side hooks vs execution-side logic
 
 An analyzer usually has two responsibilities that should stay separate.
 
-### Definition side: what to observe
+### Configuration side: what to observe
 
 This side answers:
 
@@ -234,7 +234,7 @@ This side answers:
 - Which interceptor should I observe?
 - Do I need crossover, mutation, selector, replacer, creator, or terminator hooks?
 
-This is handled by the analyzer definition holding references to the relevant operators.
+This is handled by the analyzer configuration holding references to the relevant operators.
 
 ### Execution side: what to do with the data
 
@@ -248,13 +248,13 @@ This is handled by the analyzer result.
 
 ## Example patterns
 
-### `QualityCurveAnalysis<TGenotype, ...>`
+### `QualityCurveAnalysis<TCandidate, ...>`
 
 This analyzer observes evaluator events and stores a best-so-far quality curve.
 
 Its analyzer result stores:
 
-- current best solution
+- current best evaluated candidate
 - current evaluation count
 - collected curve points
 
@@ -262,9 +262,9 @@ Its analyzer result stores:
 
 This analyzer observes iteration-boundary interception and stores one entry per completed iteration:
 
-- best solution
-- median solution
-- worst solution
+- best evaluated candidate
+- median evaluated candidate
+- worst evaluated candidate
 
 ### `GenealogyAnalysis<T, ...>`
 
@@ -283,7 +283,7 @@ Consumers retrieve analyzer results from the run.
 Preferred pattern:
 
 ```csharp
-var analyzer = new QualityCurveAnalysis<MyGenotype, MySearchSpace, MyProblem>(evaluator);
+var analyzer = new QualityCurveAnalysis<MyCandidate, MySearchSpace, MyProblem>(evaluator);
 var run = algorithm.CreateRun(problem, analyzer);
 var finalState = run.RunToCompletion(random);
 
@@ -297,7 +297,7 @@ The registry is an execution detail; the run is the public analyzer-result scope
 
 ### Do
 
-- keep analyzer definitions reusable and configuration-only
+- keep analyzer configurations reusable and configuration-only
 - put mutable analysis data into the analyzer result
 - register observation needs through `RegisterObservations(...)`
 - retrieve analyzer results through `Run.GetAnalyzerResult(...)`
@@ -305,7 +305,7 @@ The registry is an execution detail; the run is the public analyzer-result scope
 
 ### Do not
 
-- store mutable analysis results directly on definitions
+- store mutable analysis results directly on configurations
 - treat observable wrapper instances as the permanent home of results
 - rely on registry reuse details for analyzer lifetime
 - mutate algorithm outcomes from analyzer callbacks
@@ -329,7 +329,7 @@ This keeps concerns separate:
 
 The distinction is:
 
-- an **observable operator** is a callback hook on one wrapped definition
+- an **observable operator** is a callback hook on one wrapped configuration
 - an **analyzer** is a run-scoped analysis object that uses those hooks
 
 In practice:
@@ -351,5 +351,5 @@ If you want users to retrieve a coherent result object from `Run`, prefer an ana
 ## Related pages
 
 - [Observability & analysis](observability-and-analysis.md)
-- [Definition vs execution instances](execution-instances.md)
+- [Configuration vs execution instances](execution-instances.md)
 - [Execution model](execution-model.md)

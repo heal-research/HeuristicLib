@@ -24,14 +24,10 @@ public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Rea
     ///   The manipulated value is not restricted by the (possibly) specified lower and upper bounds. Use the
     ///   <see cref="BoundsChecker" /> to correct the values after performing the crossover.
     /// </remarks>
-    /// <param name="random">The random number generator to use.</param>
-    /// <param name="parent1">The first parent vector.</param>
-    /// <param name="parent2">The second parent vector.</param>
     /// <param name="contiguity">
     ///   The contiguity value that specifies how close a child should be to its parents (larger value
     ///   means closer). The value must be greater or equal than 0. Typical values are in the range [2;5].
     /// </param>
-    /// <returns>The vector resulting from the crossover.</returns>
     public static RealVector Cross(IRandomNumberGenerator random, RealVector parent1, RealVector parent2, double contiguity)
     {
         var length = parent1.Count;
@@ -78,17 +74,6 @@ public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Rea
         return RealVector.FromOwnedArray(result);
     }
 
-    /// <summary>
-    ///   Checks number of parents, availability of the parameters and forwards the call to
-    ///   <see cref="Cross(IRandomNumberGenerator, RealVector, RealVector, double)" />.
-    /// </summary>
-    /// <exception cref="ArgumentException">
-    ///   Thrown when there are not exactly 2 parents or when the contiguity parameter could
-    ///   not be found.
-    /// </exception>
-    /// <param name="random">The random number generator.</param>
-    /// <param name="parents">The collection of parents (must be of size 2).</param>
-    /// <returns>The real vector resulting from the crossover.</returns>
     protected RealVector Cross(IRandomNumberGenerator random, RealVector[] parents)
     {
         if (parents.Length != 2)

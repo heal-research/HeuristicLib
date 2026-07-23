@@ -29,7 +29,7 @@ namespace HEAL.HeuristicLib.Optimization
         /// 
         /// </summary>
         /// 
-        public static double Calculate(IEnumerable<ObjectiveVector> front, ObjectiveVector referencePoint, Objective maximization)
+        public static double Calculate(IEnumerable<ObjectiveVector> front, ObjectiveVector referencePoint, ObjectiveDirections maximization)
         {
             var dominatingVectors = GetDominatingVectors(front, referencePoint, maximization);
             if (dominatingVectors.Count == 0)
@@ -42,12 +42,12 @@ namespace HEAL.HeuristicLib.Optimization
               : throw new NotImplementedException("Hypervolume calculation for more than two dimensions is supported only with minimization problems.");
         }
 
-        private static List<ObjectiveVector> GetDominatingVectors(IEnumerable<ObjectiveVector> qualities, ObjectiveVector reference, Objective objective)
+        private static List<ObjectiveVector> GetDominatingVectors(IEnumerable<ObjectiveVector> qualities, ObjectiveVector reference, ObjectiveDirections objective)
         {
             return qualities.Where(vec => vec.CompareTo(reference, objective) == DominanceRelation.Dominates).ToList();
         }
 
-        private static double Calculate2D(List<ObjectiveVector> front, ObjectiveVector referencePoint, Objective objective)
+        private static double Calculate2D(List<ObjectiveVector> front, ObjectiveVector referencePoint, ObjectiveDirections objective)
         {
             if (front.Count == 0)
                 return 0;
@@ -77,7 +77,7 @@ namespace HEAL.HeuristicLib.Optimization
             private readonly int dim;
             private readonly int descending;
 
-            public DimensionComparer(int dimension, Objective objective)
+            public DimensionComparer(int dimension, ObjectiveDirections objective)
             {
                 dim = dimension;
                 descending = objective.Directions[dimension] == ObjectiveDirection.Maximize ? -1 : 1;

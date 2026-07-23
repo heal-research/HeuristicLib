@@ -3,29 +3,29 @@ namespace HEAL.HeuristicLib.Optimization;
 public static class Extensions
 {
     // ToDo: pack the extensions to the actual classes they belong to, not in a global extensions class.
-    extension<TGenotype>(IReadOnlyList<TGenotype> parents)
+    extension<TCandidate>(IReadOnlyList<TCandidate> parents)
     {
-        public IReadOnlyList<IParents<TGenotype>> ToParentPairs()
+        public IReadOnlyList<IParents<TCandidate>> ToParentPairs()
         {
             var offspringCount = parents.Count / 2;
-            var parentPairs = new IParents<TGenotype>[offspringCount];
+            var parentPairs = new IParents<TCandidate>[offspringCount];
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
             {
                 var p1 = parents[j];
                 var p2 = parents[j + 1];
-                parentPairs[i] = new Parents<TGenotype>(p1, p2);
+                parentPairs[i] = new Parents<TCandidate>(p1, p2);
             }
 
             return parentPairs;
         }
     }
 
-    extension<TGenotype>(IReadOnlyList<Solution<TGenotype>> parents)
+    extension<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> parents)
     {
-        public IParents<TGenotype>[] ToParents(Objective? objective = null)
+        public IParents<TCandidate>[] ToParents(ObjectiveDirections? objective = null)
         {
             var offspringCount = parents.Count / 2;
-            var parentPairs = new IParents<TGenotype>[offspringCount];
+            var parentPairs = new IParents<TCandidate>[offspringCount];
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
             {
                 var p1 = parents[j];
@@ -34,16 +34,16 @@ public static class Extensions
                     && objective.TotalOrderComparer is not NoTotalOrderComparer
                     && objective.TotalOrderComparer.Compare(p1.ObjectiveVector, p2.ObjectiveVector) > 0)
                     (p1, p2) = (p2, p1);
-                parentPairs[i] = new Parents<TGenotype>(p1.Genotype, p2.Genotype);
+                parentPairs[i] = new Parents<TCandidate>(p1.Candidate, p2.Candidate);
             }
 
             return parentPairs;
         }
 
-        public (Solution<TGenotype>, Solution<TGenotype>)[] ToSolutionPairs()
+        public (EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>)[] ToSolutionPairs()
         {
             var offspringCount = parents.Count / 2;
-            var parentPairs = new (Solution<TGenotype>, Solution<TGenotype>)[offspringCount];
+            var parentPairs = new (EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>)[offspringCount];
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
             {
                 parentPairs[i] = (parents[j], parents[j + 1]);

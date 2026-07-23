@@ -19,7 +19,12 @@ public sealed class RealVectorTests
     [Fact]
     public void Create_FromEnumerable_CopiesElements()
     {
-        var elements = new List<double> { 1.0, 2.0, 3.0 };
+        var elements = new List<double>
+        {
+            1.0,
+            2.0,
+            3.0
+        };
 
         var vector = RealVector.Create(elements);
         elements[0] = 99.0;
@@ -44,7 +49,9 @@ public sealed class RealVectorTests
         RealVector v = RealVector.Create(1.0, 2.0, 3.0);
 
         v.Equals(v).ShouldBeTrue();
+        // ReSharper disable once EqualExpressionComparison
         (v == v).ShouldBeTrue();
+        // ReSharper disable once EqualExpressionComparison
         (v != v).ShouldBeFalse();
     }
 
@@ -699,11 +706,7 @@ public sealed class RealVectorTests
     public void CreateNormal_ReturnsVectorOfRequestedLength()
     {
         var rng = new StubRandomNumberGenerator(
-          nextDoubleSequence: new[] {
-        0.5, 0.25,
-        0.6, 0.75,
-        0.7, 0.1
-          });
+            nextDoubleSequence: new[] { 0.5, 0.25, 0.6, 0.75, 0.7, 0.1 });
 
         RealVector mean = 0.0;
         RealVector std = 1.0;
@@ -717,10 +720,7 @@ public sealed class RealVectorTests
     public void CreateNormal_BroadcastsScalarMeanAndStd()
     {
         var rng = new StubRandomNumberGenerator(
-          nextDoubleSequence: new[] {
-        0.5, 0.25,
-        0.6, 0.75
-          });
+            nextDoubleSequence: new[] { 0.5, 0.25, 0.6, 0.75 });
 
         RealVector mean = 10.0;
         RealVector std = 2.0;
@@ -804,11 +804,7 @@ public sealed class RealVectorTests
     public void AreCompatible_VectorAndEnumerable_ReturnsTrue_WhenAllAreCompatible()
     {
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
-        var others = new RealVector[] {
-      RealVector.Create(4.0, 5.0, 6.0),
-      7.0,
-      RealVector.Create(8.0, 9.0, 10.0)
-    };
+        var others = new RealVector[] { RealVector.Create(4.0, 5.0, 6.0), 7.0, RealVector.Create(8.0, 9.0, 10.0) };
 
         var result = RealVector.AreCompatible(vector, others);
 
@@ -819,10 +815,7 @@ public sealed class RealVectorTests
     public void AreCompatible_VectorAndEnumerable_ReturnsFalse_WhenAtLeastOneIsIncompatible()
     {
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
-        var others = new RealVector[] {
-      RealVector.Create(4.0, 5.0, 6.0),
-      RealVector.Create(7.0, 8.0)
-    };
+        var others = new RealVector[] { RealVector.Create(4.0, 5.0, 6.0), RealVector.Create(7.0, 8.0) };
 
         var result = RealVector.AreCompatible(vector, others);
 
@@ -843,11 +836,7 @@ public sealed class RealVectorTests
     [Fact]
     public void AreCompatible_LengthAndEnumerable_ReturnsTrue_WhenAllMatchLengthOrAreScalar()
     {
-        var vectors = new RealVector[] {
-      RealVector.Create(1.0, 2.0, 3.0),
-      4.0,
-      RealVector.Create(5.0, 6.0, 7.0)
-    };
+        var vectors = new RealVector[] { RealVector.Create(1.0, 2.0, 3.0), 4.0, RealVector.Create(5.0, 6.0, 7.0) };
 
         var result = RealVector.AreCompatible(3, vectors);
 
@@ -857,10 +846,7 @@ public sealed class RealVectorTests
     [Fact]
     public void AreCompatible_LengthAndEnumerable_ReturnsFalse_WhenAtLeastOneIsIncompatible()
     {
-        var vectors = new RealVector[] {
-      RealVector.Create(1.0, 2.0, 3.0),
-      RealVector.Create(4.0, 5.0)
-    };
+        var vectors = new RealVector[] { RealVector.Create(1.0, 2.0, 3.0), RealVector.Create(4.0, 5.0) };
 
         var result = RealVector.AreCompatible(3, vectors);
 
@@ -871,10 +857,7 @@ public sealed class RealVectorTests
     public void BroadcastLength_VectorAndEnumerable_ReturnsVectorLength_WhenOthersAreScalar()
     {
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
-        var others = new RealVector[] {
-      4.0,
-      (RealVector)5.0
-    };
+        var others = new RealVector[] { 4.0, (RealVector)5.0 };
 
         var result = RealVector.BroadcastLength(vector, others);
 
@@ -885,11 +868,7 @@ public sealed class RealVectorTests
     public void BroadcastLength_VectorAndEnumerable_ReturnsMaximumCompatibleLength()
     {
         RealVector vector = 1.0;
-        var others = new RealVector[] {
-      RealVector.Create(1.0, 2.0, 3.0, 4.0),
-      2.0,
-      RealVector.Create(5.0, 6.0, 7.0, 8.0)
-    };
+        var others = new RealVector[] { RealVector.Create(1.0, 2.0, 3.0, 4.0), 2.0, RealVector.Create(5.0, 6.0, 7.0, 8.0) };
 
         var result = RealVector.BroadcastLength(vector, others);
 
@@ -911,9 +890,7 @@ public sealed class RealVectorTests
     public void BroadcastLength_VectorAndEnumerable_Throws_WhenIncompatible()
     {
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
-        var others = new RealVector[] {
-      RealVector.Create(4.0, 5.0)
-    };
+        var others = new RealVector[] { RealVector.Create(4.0, 5.0) };
 
         Should.Throw<ArgumentException>(() => RealVector.BroadcastLength(vector, others));
     }

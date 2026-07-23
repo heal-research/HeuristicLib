@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Analysis;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public record AfterOperatorDurationTerminator<TGenotype> : StatelessTerminator<TGenotype>
+public record AfterOperatorDurationTerminator<TCandidate> : StatelessTerminator<TCandidate>
 {
     public AfterOperatorDurationTerminator(ObservationDuration duration, TimeSpan maximumDuration)
     {

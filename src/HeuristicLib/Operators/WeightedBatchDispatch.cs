@@ -6,18 +6,43 @@ public sealed class WeightedBatchDispatch
 {
     public ImmutableArray<double> Weights { get; }
 
+    private readonly double totalWeight;
+    private readonly double[] cumulativeWeights;
+
     public WeightedBatchDispatch(ImmutableArray<double> weights)
     {
-        Weights = WeightSelection.Normalize(weights, weights.Length);
+        if (weights.Length == 0)
+        {
+            throw new ArgumentException("At least one weight must be provided.", nameof(weights));
+        }
+
+        if (weights.Any(weight => !double.IsFinite(weight)))
+        {
+            throw new ArgumentException("Weights must be finite.", nameof(weights));
+        }
+
+        if (weights.Any(weight => weight < 0))
+        {
+            throw new ArgumentException("Weights must be non-negative.", nameof(weights));
+        }
+
+        if (weights.All(weight => weight <= 0))
+        {
+            throw new ArgumentException("At least one weight must be greater than zero.", nameof(weights));
+        }
+
+        Weights = weights;
+        cumulativeWeights = new double[weights.Length];
+        for (var i = 0; i < weights.Length; i++)
+        {
+            totalWeight += weights[i];
+            cumulativeWeights[i] = totalWeight;
+        }
     }
 
-    public IReadOnlyList<TOutput> Dispatch<TInput, TOutput, TOperator>(
-      IReadOnlyList<TInput> inputs,
-      IReadOnlyList<TOperator> operators,
-      IRandomNumberGenerator random,
-      Func<TOperator, IReadOnlyList<TInput>, IReadOnlyList<TOutput>> invokeBatch)
+    public IReadOnlyList<TOutput> Dispatch<TInput, TOutput, TOperator>(IReadOnlyList<TInput> inputs, IReadOnlyList<TOperator> operators, IRandomNumberGenerator random, Func<TOperator, IReadOnlyList<TInput>, IReadOnlyList<TOutput>> invokeBatch)
     {
-        if (operators.Count != Weights.Length && !Weights.IsEmpty)
+        if (operators.Count != Weights.Length)
         {
             throw new ArgumentException("Weights must have the same length as operators.", nameof(operators));
         }
@@ -29,9 +54,10 @@ public sealed class WeightedBatchDispatch
 
         var operatorAssignments = new int[inputs.Count];
         var operatorCounts = new int[operators.Count];
+        var randoms = random.NextDoubles(inputs.Count);
         for (var i = 0; i < inputs.Count; i++)
         {
-            var operatorIndex = WeightSelection.SelectIndex(random, operators.Count, Weights);
+            var operatorIndex = ChooseOperator(randoms[i]);
             operatorAssignments[i] = operatorIndex;
             operatorCounts[operatorIndex]++;
         }
@@ -72,5 +98,14 @@ public sealed class WeightedBatchDispatch
         }
 
         return results;
+    }
+
+    public int ChooseOperator(IRandomNumberGenerator random) => ChooseOperator(random.NextDouble());
+
+    private int ChooseOperator(double sample)
+    {
+        var scaledSample = sample * totalWeight;
+        var operatorIndex = Array.FindIndex(cumulativeWeights, weight => scaledSample < weight);
+        return operatorIndex >= 0 ? operatorIndex : cumulativeWeights.Length - 1;
     }
 }

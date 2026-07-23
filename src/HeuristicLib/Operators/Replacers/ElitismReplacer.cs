@@ -3,8 +3,8 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public record ElitismReplacer<TGenotype>
-  : StatelessReplacer<TGenotype>
+public record ElitismReplacer<TCandidate>
+  : StatelessReplacer<TCandidate>
 {
     public int Elites { get; }
 
@@ -14,15 +14,15 @@ public record ElitismReplacer<TGenotype>
         Elites = elites;
     }
 
-    public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
     {
         return Replace(previousPopulation, offspringPopulation, objective, count, Elites);
     }
 
-    public static IReadOnlyList<Solution<TGenotype>> Replace(
-      IReadOnlyList<Solution<TGenotype>> previousPopulation,
-      IReadOnlyList<Solution<TGenotype>> offspringPopulation,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
+      ObjectiveDirections objective,
       int count,
       int elites)
     {

@@ -2,30 +2,23 @@ namespace HEAL.HeuristicLib.Optimization;
 
 public static class ParetoFront
 {
-    public static IReadOnlyList<T> ExtractFrom<T>(IEnumerable<T> population, Func<T, ObjectiveVector> fitnessSelector, Objective objective)
+    public static IReadOnlyList<T> ExtractFrom<T>(IEnumerable<T> population, Func<T, ObjectiveVector> fitnessSelector, ObjectiveDirections objective)
       where T : IEquatable<T>
     {
-        var uniqueISolutions = population.Distinct().ToList();
+        var uniqueItems = population.Distinct().ToList();
 
-        return uniqueISolutions
-          .Where(ind => !uniqueISolutions.Any(other => !ind.Equals(other) && fitnessSelector(ind).IsDominatedBy(fitnessSelector(other), objective)))
+        return uniqueItems
+          .Where(ind => !uniqueItems.Any(other => !ind.Equals(other) && fitnessSelector(ind).IsDominatedBy(fitnessSelector(other), objective)))
           .ToList();
     }
 
-    public static IReadOnlyList<Solution<TGenotype>> ExtractFrom<TGenotype>(IEnumerable<Solution<TGenotype>> population, Objective objective)
-      where TGenotype : IEquatable<TGenotype>
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> ExtractFrom<TCandidate>(IEnumerable<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective)
+      where TCandidate : IEquatable<TCandidate>
     {
-        var uniqueISolutions = population.Distinct().ToList();
+        var uniqueEvaluatedCandidates = population.Distinct().ToList();
 
-        return uniqueISolutions
-          .Where(ind => !uniqueISolutions.Any(other => ind != other && ind.ObjectiveVector.IsDominatedBy(other.ObjectiveVector, objective)))
+        return uniqueEvaluatedCandidates
+          .Where(ind => !uniqueEvaluatedCandidates.Any(other => ind != other && ind.ObjectiveVector.IsDominatedBy(other.ObjectiveVector, objective)))
           .ToList();
     }
-
-    // public static IReadOnlyList<Solution<TGenotype, TPhenotype>> ExtractFrom<TGenotype, TPhenotype>(IEnumerable<Solution<TGenotype, TPhenotype>> population, Objective objective) {
-    //   var uniqueISolutions = population.Distinct().ToList();
-    //   return uniqueISolutions
-    //     .Where(ind => !uniqueISolutions.Any(other => ind != other && ind.Fitness.IsDominatedBy(other.Fitness, objective)))
-    //     .ToList();
-    // }
 }

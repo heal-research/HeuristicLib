@@ -13,9 +13,9 @@
 
 //namespace HEAL.HeuristicLib.Algorithms;
 
-//public record ParameterlessPopulationPyramid<TP>
-//  : IterativeAlgorithm<BoolVector, BoolVectorSearchSpace, TP, ParameterlessPopulationPyramidResultState, ParameterlessPopulationPyramid<TP>.State>
-//  where TP : class, IProblem<BoolVector, BoolVectorSearchSpace>
+//public record ParameterlessPopulationPyramid<TProblem>
+//  : IterativeAlgorithm<BoolVector, BoolVectorSearchSpace, TProblem, ParameterlessPopulationPyramidResultState, ParameterlessPopulationPyramid<TProblem>.State>
+//  where TProblem : class, IProblem<BoolVector, BoolVectorSearchSpace>
 //{
 
 //  public class State : ExecutionState
@@ -38,11 +38,11 @@
 //    }
 //  }
 
-//  protected override State CreateInitialExecutionState(IExecutionInstanceResolver resolver) => new () {
-//    Evaluator = resolver.Resolve(Evaluator)
+//  protected override State CreateInitialExecutionState(ExecutionInstanceRegistry registry) => new () {
+//    Evaluator = registry.Resolve(Evaluator)
 //  };
 
-//  protected override ParameterlessPopulationPyramidResultState ExecuteStep(ParameterlessPopulationPyramidResultState? previousState, State executionState, TP problem, IRandomNumberGenerator random)
+//  protected override ParameterlessPopulationPyramidResultState ExecuteStep(ParameterlessPopulationPyramidResultState? previousState, State executionState, TProblem problem, IRandomNumberGenerator random)
 //  {
 //    var solution = new BoolVector(random.NextBools(tracker.Length));
 //    var fitness = tracker.Evaluate(solution, random);
@@ -51,7 +51,7 @@
 
 //    for (var level = 0; level < pyramid.Count; level++) {
 //      var current = pyramid[level];
-//      var newFitness = LinkageCrossover.ImproveUsingTree(current.Tree, current.Solutions, solution, fitness, tracker, random);
+//      var newFitness = LinkageCrossover.ImproveUsingTree(current.Tree, current.EvaluatedCandidates, solution, fitness, tracker, random);
 //      // add it to the next level if its a strict fitness improvement
 //      if (!tracker.IsBetter(newFitness, fitness)) {
 //        continue;

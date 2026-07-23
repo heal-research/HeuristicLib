@@ -5,18 +5,18 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IReplacer<TGenotype, in TSearchSpace, in TProblem>
-  : IOperator<IReplacerInstance<TGenotype, TSearchSpace, TProblem>>
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>;
+public interface IReplacer<TCandidate, in TSearchSpace, in TProblem>
+  : IOperator<IReplacerInstance<TCandidate, TSearchSpace, TProblem>>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
-public interface IReplacerInstance<TGenotype, in TSearchSpace, in TProblem>
+public interface IReplacerInstance<TCandidate, in TSearchSpace, in TProblem>
   : IOperatorInstance
-  where TSearchSpace : class, ISearchSpace<TGenotype>
-  where TProblem : class, IProblem<TGenotype, TSearchSpace>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    IReadOnlyList<Solution<TGenotype>> Replace(
-      IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation,
-      Objective objective, int count,
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
+      ObjectiveDirections objective, int count,
       IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

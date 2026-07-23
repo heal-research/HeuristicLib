@@ -5,60 +5,60 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public interface IBuilderWithEvaluator<TG, TS, TP> : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IBuilderWithEvaluator<TCandidate, TSearchSpace, TProblem> : IAlgorithmBuilder
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    IEvaluator<TG, TS, TP> Evaluator { get; set; }
+    IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; set; }
 }
 
-public interface IBuilderWithCreator<TG, TS, TP> : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IBuilderWithCreator<TCandidate, TSearchSpace, TProblem> : IAlgorithmBuilder
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    ICreator<TG, TS, TP> Creator { get; set; }
+    ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; set; }
 }
 
-public interface IBuilderWithSelector<TG, TS, TP> : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IBuilderWithSelector<TCandidate, TSearchSpace, TProblem> : IAlgorithmBuilder
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    ISelector<TG, TS, TP> Selector { get; set; }
+    ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; set; }
 }
 
-public interface IBuilderWithCrossover<TG, TS, TP> : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IBuilderWithCrossover<TCandidate, TSearchSpace, TProblem> : IAlgorithmBuilder
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    ICrossover<TG, TS, TP> Crossover { get; set; }
+    ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; set; }
 }
 
-public interface IBuilderWithMutator<TG, TS, TP> : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IBuilderWithMutator<TCandidate, TSearchSpace, TProblem> : IAlgorithmBuilder
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    IMutator<TG, TS, TP> Mutator { get; set; }
+    IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; set; }
 }
 
-public interface IBuilderWithReplacer<TG, TS, TP> : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
+public interface IBuilderWithReplacer<TCandidate, TSearchSpace, TProblem> : IAlgorithmBuilder
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    IReplacer<TG, TS, TP> Replacer { get; set; }
+    IReplacer<TCandidate, TSearchSpace, TProblem> Replacer { get; set; }
 }
 
-public interface IBuilderWithTerminator<TG, TS, TP, TR> : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, ISearchState
+public interface IBuilderWithTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> : IAlgorithmBuilder
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : class, ISearchState
 {
-    ITerminator<TG, TS, TP, TR> Terminator { get; set; }
+    ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator { get; set; }
 }
 
-public interface IBuilderWithInterceptor<TG, TS, TP, TR> : IAlgorithmBuilder
-  where TS : class, ISearchSpace<TG>
-  where TP : class, IProblem<TG, TS>
-  where TR : class, ISearchState
+public interface IBuilderWithInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> : IAlgorithmBuilder
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+  where TSearchState : class, ISearchState
 {
-    IInterceptor<TG, TS, TP, TR>? Interceptor { get; set; }
+    IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>? Interceptor { get; set; }
 }

@@ -15,11 +15,11 @@ public class RepeatedEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repeats: 3);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance.CreateNewRegistry());
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         var solutions = instance.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        solutions.Single().ShouldBe(Solution.From(7, new ObjectiveVector(2.0)));
+        solutions.Single().ShouldBe(EvaluatedCandidate.From(7, new ObjectiveVector(2.0)));
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class RepeatedEvaluatorTests
         var evaluator = new StatefulReplacingEvaluator().AsRepeated(
             repeats: 2,
             aggregator: objectives => objectives[0]);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance.CreateNewRegistry());
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         Should.Throw<InvalidOperationException>(() =>
             instance.Evaluate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
@@ -42,11 +42,11 @@ public class RepeatedEvaluatorTests
         var evaluator = new StatefulReplacingEvaluator().AsRepeated(
             repeats: 2,
             comparer: EqualityComparer<int>.Create(static (_, _) => true));
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance.CreateNewRegistry());
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         var solutions = instance.Evaluate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        solutions.Single().ShouldBe(Solution.From(1, new ObjectiveVector(1.5)));
+        solutions.Single().ShouldBe(EvaluatedCandidate.From(1, new ObjectiveVector(1.5)));
     }
 
     [Fact]
@@ -54,11 +54,11 @@ public class RepeatedEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new IncrementingEvaluator().AsIterated(iterations: 3);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance.CreateNewRegistry());
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         var solutions = instance.Evaluate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        solutions.Single().ShouldBe(Solution.From(3, new ObjectiveVector(3.0)));
+        solutions.Single().ShouldBe(EvaluatedCandidate.From(3, new ObjectiveVector(3.0)));
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
@@ -72,20 +72,20 @@ public class RepeatedEvaluatorTests
     private sealed record IncrementingEvaluator
         : StatelessEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<Solution<int>> Evaluate(
-            IReadOnlyList<int> genotypes,
+        public override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(
+            IReadOnlyList<int> candidates,
             IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,
             FuncProblem<int, DummySearchSpace<int>> problem)
-            => genotypes.Select(genotype =>
+            => candidates.Select(candidate =>
             {
-                var next = genotype + 1;
-                return Solution.From(next, problem.Evaluate(next, random));
+                var next = candidate + 1;
+                return EvaluatedCandidate.From(next, problem.Evaluate(next, random));
             }).ToArray();
     }
 
     private sealed record StatefulReplacingEvaluator
-        : Evaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulReplacingEvaluator.ExecutionState>
+        : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulReplacingEvaluator.ExecutionState>
     {
         public sealed class ExecutionState
         {
@@ -94,20 +94,20 @@ public class RepeatedEvaluatorTests
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override IReadOnlyList<Solution<int>> Evaluate(
-            IReadOnlyList<int> genotypes,
+        protected override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(
+            IReadOnlyList<int> candidates,
             ExecutionState executionState,
             IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,
             FuncProblem<int, DummySearchSpace<int>> problem)
         {
             var calls = Interlocked.Increment(ref executionState.Calls);
-            return genotypes.Select(_ => Solution.From(calls, problem.Evaluate(calls, random))).ToArray();
+            return candidates.Select(_ => EvaluatedCandidate.From(calls, problem.Evaluate(calls, random))).ToArray();
         }
     }
 
     private sealed record StatefulObjectiveEvaluator
-        : Evaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulObjectiveEvaluator.ExecutionState>
+        : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulObjectiveEvaluator.ExecutionState>
     {
         public sealed class ExecutionState
         {
@@ -116,15 +116,15 @@ public class RepeatedEvaluatorTests
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override IReadOnlyList<Solution<int>> Evaluate(
-            IReadOnlyList<int> genotypes,
+        protected override IReadOnlyList<EvaluatedCandidate<int>> Evaluate(
+            IReadOnlyList<int> candidates,
             ExecutionState executionState,
             IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,
             FuncProblem<int, DummySearchSpace<int>> problem)
         {
             var calls = Interlocked.Increment(ref executionState.Calls);
-            return genotypes.Select(genotype => Solution.From(genotype, problem.Evaluate(calls, random))).ToArray();
+            return candidates.Select(candidate => EvaluatedCandidate.From(candidate, problem.Evaluate(calls, random))).ToArray();
         }
     }
 }

@@ -13,9 +13,6 @@ public record RampedHalfAndHalfTreeCreator : SymbolicExpressionTreeCreator
     ///   GetEvaluator a symbolic expression tree using 'RampedHalfAndHalf' strategy.
     ///   Half the trees are created with the 'Grow' method, and the other half are created with the 'Full' method.
     /// </summary>
-    /// <param name="random">Random generator</param>
-    /// <param name="searchSpace"></param>
-    /// <returns></returns>
     public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)
     {
         var tree = searchSpace.Grammar.MakeStump(random);

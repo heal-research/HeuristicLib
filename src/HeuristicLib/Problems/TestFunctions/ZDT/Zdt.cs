@@ -15,7 +15,7 @@ public abstract class Zdt : IMultiObjectiveGradientTestFunction
     public int Dimension { get; }
     public double Min => 0;
     public double Max => 1;
-    public Objective Objective => MultiObjective.Create(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize);
+    public ObjectiveDirections Objective => MultiObjective.Create(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize);
 
     public RealVector Evaluate(RealVector solution)
     {

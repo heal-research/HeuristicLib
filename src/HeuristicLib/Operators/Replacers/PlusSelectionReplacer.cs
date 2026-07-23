@@ -3,18 +3,18 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public record PlusSelectionReplacer<TGenotype>
-  : StatelessReplacer<TGenotype>
+public record PlusSelectionReplacer<TCandidate>
+  : StatelessReplacer<TCandidate>
 {
-    public override IReadOnlyList<Solution<TGenotype>> Replace(IReadOnlyList<Solution<TGenotype>> previousPopulation, IReadOnlyList<Solution<TGenotype>> offspringPopulation, Objective objective, int count, IRandomNumberGenerator random)
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
     {
         return Replace(previousPopulation, offspringPopulation, objective, count);
     }
 
-    public static IReadOnlyList<Solution<TGenotype>> Replace(
-      IReadOnlyList<Solution<TGenotype>> previousPopulation,
-      IReadOnlyList<Solution<TGenotype>> offspringPopulation,
-      Objective objective,
+    public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
+      ObjectiveDirections objective,
       int count)
     {
         var combinedPopulation = previousPopulation.Concat(offspringPopulation).ToList();

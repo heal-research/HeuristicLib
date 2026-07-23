@@ -1,65 +1,109 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public interface IPartialSolutionProblem<TGenotype, out TSearchSpace>
-    : IProblem<TGenotype, TSearchSpace>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
+public interface IPartialSolutionProblem<in TCandidate, out TSearchSpace>
+    : IProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    bool IsTerminal(TGenotype genotype, IRandomNumberGenerator random);
+    IReadOnlyList<bool> IsTerminal(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 
-    ObjectiveVector? EvaluatePartial(TGenotype genotype, IRandomNumberGenerator random);
-}
-
-public interface IBoundedProblem<TGenotype, out TSearchSpace>
-    : IProblem<TGenotype, TSearchSpace>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-{
-    ObjectiveVector Bound(
-        TGenotype genotype,
+    IReadOnlyList<ObjectiveVector?> EvaluatePartial(
+        IReadOnlyList<TCandidate> candidates,
         IRandomNumberGenerator random);
 }
 
-public abstract class SingleSolutionBoundedProblem<TGenotype, TSearchSpace>
-    : SingleSolutionProblem<TGenotype, TSearchSpace>,
-      IBoundedProblem<TGenotype, TSearchSpace>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
+public static class PartialSolutionProblemExtensions
 {
-    protected SingleSolutionBoundedProblem(Objective objective, TSearchSpace searchSpace)
-        : base(objective, searchSpace)
-    { }
+    public static bool IsTerminal<TCandidate, TSearchSpace>(
+        this IPartialSolutionProblem<TCandidate, TSearchSpace> problem,
+        TCandidate candidate,
+        IRandomNumberGenerator random)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        => problem.IsTerminal([candidate], random)[0];
 
-    public abstract ObjectiveVector Bound(
-        TGenotype genotype,
+    public static ObjectiveVector? EvaluatePartial<TCandidate, TSearchSpace>(
+        this IPartialSolutionProblem<TCandidate, TSearchSpace> problem,
+        TCandidate candidate,
+        IRandomNumberGenerator random)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        => problem.EvaluatePartial([candidate], random)[0];
+}
+
+public interface IBoundedProblem<in TCandidate, out TSearchSpace>
+    : IProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+{
+    IReadOnlyList<ObjectiveVector> Bound(
+        IReadOnlyList<TCandidate> candidates,
         IRandomNumberGenerator random);
 }
 
-public abstract class SingleSolutionPartialProblem<TGenotype, TSearchSpace>
-    : SingleSolutionProblem<TGenotype, TSearchSpace>,
-      IPartialSolutionProblem<TGenotype, TSearchSpace>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
+public static class BoundedProblemExtensions
 {
-    protected SingleSolutionPartialProblem(Objective objective, TSearchSpace searchSpace)
-        : base(objective, searchSpace)
-    { }
-
-    public abstract bool IsTerminal(TGenotype genotype, IRandomNumberGenerator random);
-
-    public abstract ObjectiveVector? EvaluatePartial(TGenotype genotype, IRandomNumberGenerator random);
+    public static ObjectiveVector Bound<TCandidate, TSearchSpace>(
+        this IBoundedProblem<TCandidate, TSearchSpace> problem,
+        TCandidate candidate,
+        IRandomNumberGenerator random)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        => problem.Bound([candidate], random)[0];
 }
 
-public abstract class SingleSolutionPartialBoundedProblem<TGenotype, TSearchSpace>
-    : SingleSolutionPartialProblem<TGenotype, TSearchSpace>,
-      IBoundedProblem<TGenotype, TSearchSpace>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
+public abstract class SingleSolutionBoundedProblem<TCandidate, TSearchSpace>
+    : SingleSolutionProblem<TCandidate, TSearchSpace>,
+      IBoundedProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected SingleSolutionPartialBoundedProblem(Objective objective, TSearchSpace searchSpace)
+    protected SingleSolutionBoundedProblem(ObjectiveDirections objective, TSearchSpace searchSpace)
         : base(objective, searchSpace)
     { }
 
+    public IReadOnlyList<ObjectiveVector> Bound(
+        IReadOnlyList<TCandidate> candidates,
+        IRandomNumberGenerator random)
+        => BatchExecution.Parallel(candidates, Bound, random, DegreeOfParallelism);
+
     public abstract ObjectiveVector Bound(
-        TGenotype genotype,
+        TCandidate candidate,
+        IRandomNumberGenerator random);
+}
+
+public abstract class SingleSolutionPartialProblem<TCandidate, TSearchSpace>
+    : SingleSolutionProblem<TCandidate, TSearchSpace>,
+      IPartialSolutionProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+{
+    protected SingleSolutionPartialProblem(ObjectiveDirections objective, TSearchSpace searchSpace)
+        : base(objective, searchSpace)
+    { }
+
+    public IReadOnlyList<bool> IsTerminal(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => BatchExecution.Parallel(candidates, IsTerminal, random, DegreeOfParallelism);
+
+    public IReadOnlyList<ObjectiveVector?> EvaluatePartial(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => BatchExecution.Parallel(candidates, EvaluatePartial, random, DegreeOfParallelism);
+
+    public abstract bool IsTerminal(TCandidate candidate, IRandomNumberGenerator random);
+
+    public abstract ObjectiveVector? EvaluatePartial(TCandidate candidate, IRandomNumberGenerator random);
+}
+
+public abstract class SingleSolutionPartialBoundedProblem<TCandidate, TSearchSpace>
+    : SingleSolutionPartialProblem<TCandidate, TSearchSpace>,
+      IBoundedProblem<TCandidate, TSearchSpace>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+{
+    protected SingleSolutionPartialBoundedProblem(ObjectiveDirections objective, TSearchSpace searchSpace)
+        : base(objective, searchSpace)
+    { }
+
+    public IReadOnlyList<ObjectiveVector> Bound(
+        IReadOnlyList<TCandidate> candidates,
+        IRandomNumberGenerator random)
+        => BatchExecution.Parallel(candidates, Bound, random, DegreeOfParallelism);
+
+    public abstract ObjectiveVector Bound(
+        TCandidate candidate,
         IRandomNumberGenerator random);
 }
