@@ -9,6 +9,7 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
 {
     [IgnoreEquality] private readonly Dictionary<int, Symbol[]> symbolsByArity;
     [IgnoreEquality] private readonly Dictionary<int, ImmutableArray<double>> selectionWeightsByArity;
+    [IgnoreEquality] private readonly HashSet<string> allowedVariableNames;
     [IgnoreEquality] private readonly bool allowsVariables;
     [IgnoreEquality] private readonly bool allowsEvolvableConstants;
 
@@ -64,7 +65,11 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
                 .Where(entry => entry.Symbol.Arity == arity)
                 .Select(entry => entry.Index)
                 .ToArray()));
-        allowsVariables = Symbols.OfType<VariableSymbol>().Any();
+        allowedVariableNames = Symbols
+            .OfType<VariableSymbol>()
+            .SelectMany(symbol => symbol.Variables)
+            .ToHashSet(StringComparer.Ordinal);
+        allowsVariables = allowedVariableNames.Count > 0;
         allowsEvolvableConstants = Symbols.OfType<EvolvableConstantSymbol>().Any();
     }
 
@@ -87,6 +92,57 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
         var weights = selectionWeightsByArity[arity];
         var index = WeightSelection.SelectIndex(random, symbols.Length, weights);
         return symbols[index];
+    }
+
+    public Symbol SelectSymbol(int minimumArity, int maximumArity, IRandomNumberGenerator random)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(minimumArity);
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumArity, minimumArity);
+
+        var candidateCount = Symbols.Count(symbol => symbol.Arity >= minimumArity && symbol.Arity <= maximumArity);
+
+        if (candidateCount == 0)
+            throw new ArgumentException($"No symbols with arity in [{minimumArity}, {maximumArity}] are allowed.", nameof(maximumArity));
+
+        if (SelectionWeights.IsEmpty)
+        {
+            var selectedIndex = random.NextInt(candidateCount);
+            foreach (var symbol in Symbols)
+            {
+                if (symbol.Arity < minimumArity || symbol.Arity > maximumArity)
+                    continue;
+                if (selectedIndex-- == 0)
+                    return symbol;
+            }
+        }
+        else
+        {
+            var totalWeight = 0.0;
+            for (var i = 0; i < Symbols.Length; i++)
+            {
+                if (Symbols[i].Arity >= minimumArity && Symbols[i].Arity <= maximumArity)
+                    totalWeight += SelectionWeights[i];
+            }
+
+            var value = random.NextDouble() * totalWeight;
+            Symbol? lastCandidate = null;
+            for (var i = 0; i < Symbols.Length; i++)
+            {
+                var symbol = Symbols[i];
+                if (symbol.Arity < minimumArity || symbol.Arity > maximumArity)
+                    continue;
+
+                lastCandidate = symbol;
+                value -= SelectionWeights[i];
+                if (value < 0.0)
+                    return symbol;
+            }
+
+            if (lastCandidate is not null)
+                return lastCandidate;
+        }
+
+        throw new InvalidOperationException("Symbol selection failed despite an available candidate.");
     }
 
     internal ImmutableArray<double> GetSelectionWeights(int arity) =>
@@ -134,7 +190,7 @@ public sealed partial record ExpressionTreeSearchSpace : SearchSpace<ExpressionT
 
     private bool ContainsNode(ExpressionNode node) => node switch
     {
-        VariableExpressionNode variable => Symbols.OfType<VariableSymbol>().Any(symbol => symbol.Variables.Contains(variable.VariableName, StringComparer.Ordinal)),
+        VariableExpressionNode variable => variable.Symbol.Variables.All(allowedVariableNames.Contains),
         NumericConstantExpressionNode { Symbol: FixedConstantSymbol fixedConstant } constant => constant.Value.Equals(fixedConstant.Value) && Symbols.Contains(fixedConstant),
         NumericConstantExpressionNode { Symbol: EvolvableConstantSymbol } => AllowsEvolvableConstants,
         TerminalExpressionNode => Symbols.Contains(node.Symbol),

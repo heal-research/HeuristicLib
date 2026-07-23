@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
 namespace HEAL.HeuristicLib.Tests.Problems.DataAnalysis.Regression;
@@ -96,9 +97,7 @@ public sealed class SymbolicExpressionRegressionProblemTests
     [Fact]
     public void Predict_EvaluatesExpressionAgainstTrainingData()
     {
-        var problem = new SymbolicExpressionRegressionProblem(
-            CreateLinearRegressionData(),
-            Metrics.RMSE);
+        var problem = CreateProblem(CreateLinearRegressionData(), Metrics.RMSE);
         var expression = CreateLinearExpression();
 
         var predictions = problem.Predict(expression);
@@ -109,9 +108,7 @@ public sealed class SymbolicExpressionRegressionProblemTests
     [Fact]
     public void Evaluate_UsesMetricAgainstTrainingTargets()
     {
-        var problem = new SymbolicExpressionRegressionProblem(
-            CreateLinearRegressionData(),
-            Metrics.RMSE);
+        var problem = CreateProblem(CreateLinearRegressionData(), Metrics.RMSE);
         var expression = CreateLinearExpression();
 
         var objective = problem.Evaluate(expression);
@@ -124,9 +121,7 @@ public sealed class SymbolicExpressionRegressionProblemTests
     [Fact]
     public void Evaluate_UsesMaximizationDirectionForR2Metric()
     {
-        var problem = new SymbolicExpressionRegressionProblem(
-            CreateLinearRegressionData(),
-            Metrics.R2);
+        var problem = CreateProblem(CreateLinearRegressionData(), Metrics.R2);
         var expression = CreateLinearExpression();
 
         var objective = problem.Evaluate(expression);
@@ -138,9 +133,7 @@ public sealed class SymbolicExpressionRegressionProblemTests
     [Fact]
     public void EvaluateValidation_UsesValidationSplitWhenAvailable()
     {
-        var problem = new SymbolicExpressionRegressionProblem(
-            CreateLinearRegressionDataWithValidation(),
-            Metrics.RMSE);
+        var problem = CreateProblem(CreateLinearRegressionDataWithValidation(), Metrics.RMSE);
         var expression = CreateLinearExpression();
 
         var objective = problem.EvaluateValidation(expression);
@@ -151,9 +144,7 @@ public sealed class SymbolicExpressionRegressionProblemTests
     [Fact]
     public void EvaluateValidation_RejectsMissingValidationSplit()
     {
-        var problem = new SymbolicExpressionRegressionProblem(
-            CreateLinearRegressionData(),
-            Metrics.RMSE);
+        var problem = CreateProblem(CreateLinearRegressionData(), Metrics.RMSE);
         var expression = CreateLinearExpression();
 
         Should.Throw<InvalidOperationException>(() => problem.EvaluateValidation(expression));
@@ -161,6 +152,17 @@ public sealed class SymbolicExpressionRegressionProblemTests
 
     private static ExpressionTree CreateLinearExpression() =>
         (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
+
+    private static SymbolicExpressionRegressionProblem CreateProblem(RegressionData data, IRegressionMetric metric) =>
+        new(
+            data,
+            metric,
+            new ExpressionTreeSearchSpace(
+                maximumLength: 31,
+                maximumDepth: 6,
+                operations: Symbols.BasicArithmetic,
+                variables: ["x0", "x1"],
+                constants: [new FixedConstantSymbol(2.0)]));
 
     private static RegressionData CreateLinearRegressionData() =>
         RegressionData.Training(

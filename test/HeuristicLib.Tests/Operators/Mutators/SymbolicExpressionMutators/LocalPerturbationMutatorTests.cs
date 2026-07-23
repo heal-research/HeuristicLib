@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 using HEAL.HeuristicLib.Random.Distributions;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
@@ -32,6 +33,27 @@ public sealed class LocalPerturbationMutatorTests
         var result = LocalPerturbationMutation.Mutate(expression, new SequenceRandomNumberGenerator(0.0, 0.0), new AllLocalPerturbationTargets());
 
         result.ShouldBe(expression);
+    }
+
+    [Fact]
+    public void Mutate_PreservesAggregateContainmentForAnOriginSpanningSeparateVariableSymbols()
+    {
+        var origin = new VariableSymbol(["x0", "x1"]);
+        var parent = new ExpressionTree(new VariableExpressionNode(origin, "x0"));
+        var searchSpace = new ExpressionTreeSearchSpace(1, 1,
+        [
+            new VariableSymbol(["x0"]),
+            new VariableSymbol(["x1"])
+        ]);
+
+        var offspring = new LocalPerturbationMutator().Mutate(
+            parent,
+            new SequenceRandomNumberGenerator(0.0, 0.9),
+            searchSpace);
+
+        searchSpace.Contains(parent).ShouldBeTrue();
+        offspring.ToInfixString().ShouldBe("x1");
+        searchSpace.Contains(offspring).ShouldBeTrue();
     }
 
     [Fact]

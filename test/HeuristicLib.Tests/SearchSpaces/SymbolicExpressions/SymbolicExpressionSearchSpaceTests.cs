@@ -88,6 +88,50 @@ public sealed class SymbolicExpressionSearchSpaceTests
     }
 
     [Fact]
+    public void Contains_AggregatesVariableDomainsAcrossSeparateSymbols()
+    {
+        var origin = new VariableSymbol(["x0", "x1"]);
+        var expression = new ExpressionTree(new VariableExpressionNode(origin, "x0"));
+        var searchSpace = new ExpressionTreeSearchSpace(1, 1,
+        [
+            new VariableSymbol(["x0"]),
+            new VariableSymbol(["x1"])
+        ]);
+
+        searchSpace.Contains(expression).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Contains_AcceptsVariableOriginsNarrowerThanTheAggregateDomain()
+    {
+        var origin = new VariableSymbol(["x0"]);
+        var expression = new ExpressionTree(new VariableExpressionNode(origin, "x0"));
+        var searchSpace = new ExpressionTreeSearchSpace(1, 1, [new VariableSymbol(["x0", "x1"])]);
+
+        searchSpace.Contains(expression).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Contains_IgnoresVariableSelectionWeights()
+    {
+        var origin = new VariableSymbol(["x0", "x1"], [1.0, 3.0]);
+        var expression = new ExpressionTree(new VariableExpressionNode(origin, "x1"));
+        var searchSpace = new ExpressionTreeSearchSpace(1, 1, [new VariableSymbol(["x0", "x1"], [3.0, 1.0])]);
+
+        searchSpace.Contains(expression).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Contains_RejectsVariableOriginsThatCanPerturbToDisallowedNames()
+    {
+        var origin = new VariableSymbol(["x0", "x1"]);
+        var expression = new ExpressionTree(new VariableExpressionNode(origin, "x0"));
+        var searchSpace = new ExpressionTreeSearchSpace(1, 1, Array.Empty<OperationSymbol>(), ["x0"], constants: []);
+
+        searchSpace.Contains(expression).ShouldBeFalse();
+    }
+
+    [Fact]
     public void Contains_AcceptsEvolvableConstantsOnlyWhenThatTerminalFamilyIsPresent()
     {
         var evolvable = Constant(100.0).Build();
@@ -139,6 +183,31 @@ public sealed class SymbolicExpressionSearchSpaceTests
 
         var symbol = searchSpace.SelectSymbol(0, new SequenceRandomNumberGenerator(0.9));
         symbol.CreateNode(new SequenceRandomNumberGenerator(0.9)).ShouldBeOfType<NumericConstantExpressionNode>().Value.ShouldBe(2.0);
+    }
+
+    [Fact]
+    public void SelectSymbol_ChoosesOnlyFromTheRequestedArityRange()
+    {
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5,
+        [
+            (Symbols.Addition, 100.0),
+            (new VariableSymbol(["x0"]), 1.0),
+            (new FixedConstantSymbol(2.0), 3.0),
+            (Symbols.Negation, 6.0)
+        ]);
+
+        var symbol = searchSpace.SelectSymbol(0, 1, new SequenceRandomNumberGenerator(0.9));
+
+        symbol.ShouldBe(Symbols.Negation);
+    }
+
+    [Fact]
+    public void SelectSymbol_RejectsAnArityRangeWithoutCandidates()
+    {
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5, Symbols.BasicArithmetic, ["x0"]);
+
+        Should.Throw<ArgumentException>(() =>
+            searchSpace.SelectSymbol(3, 4, new SequenceRandomNumberGenerator(0.5)));
     }
 
     [Fact]

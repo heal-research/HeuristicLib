@@ -14,13 +14,13 @@ Implementation order:
 - Stage 3: add the unrestricted scalar search space and fast unrestricted search operators.
 - Stage 3.1: add constant optimization with Levenberg-Marquardt and automatic differentiation after the unrestricted operators are stable.
 - Stage 4: add the grammar-constrained scalar search space and grammar-preserving search operators.
-- Stage 5: add extensions in sub-stages: templates, shape constraints, normalization/transformers, vectorial GP, and time-series support.
+- Stage 5: add extensions in sub-stages: templates, shape constraints, normalization/transformers, vectorial GP, time-series support, and interval-arithmetic evaluation.
 
 Non-goals for the scalar Stages 1-4 redesign:
 
 - no HeuristicLab architecture/source copy
 - no full data-layer redesign before Stage 1
-- no first-slice implementation of templates, shape constraints, vectorial GP, or time-series support
+- no first-slice implementation of templates, shape constraints, vectorial GP, time-series support, or interval-arithmetic evaluation
 - no long-term compatibility promise for the old mutable tree API
 
 ## Design Holes
@@ -210,6 +210,7 @@ Low-level genotype operations:
 Rules:
 
 - All scalar-producing subtrees are mutually composable in this search space.
+- Unrestricted containment uses aggregate coverage across configured symbols rather than requiring a structurally equal origin symbol. This keeps different partitions of the same unrestricted variable or constant domain containment-compatible; see [Containment Matching](symbol-definition-instance-plan.md#containment-matching).
 - Operators must not require or call a grammar.
 - Operators must not require or call a generic restriction provider.
 - Operators never mutate parents.
@@ -221,6 +222,21 @@ Rules:
 - Operator-family presets may be added later so switching from unrestricted to grammar search spaces can replace creator, mutator, crossover, and repair families together without manual one-by-one rewiring.
 
 Stage 3 tests: genotype editing immutability and side-table reuse behavior, unrestricted search-space containment, creator validity, mutation validity, crossover validity, parent immutability, bounded failure behavior, and one GA usage spec using unrestricted operators.
+
+Current executable vertical slice:
+
+- `SymbolicExpressionRegressionProblem` implements the standard single-solution problem contract and owns one explicit `ExpressionTreeSearchSpace`.
+- `GrowTreeCreator` samples from all symbols that are structurally viable under the remaining length and depth budget. Its optional maximum depth defaults to the search space maximum. Its bounded subtree-generation operation is shared with subtree mutation.
+- `FullTreeCreator` keeps every leaf at one selected depth. Its optional exact depth defaults to the deepest depth feasible under both the search space's length and depth limits. Operation arities are constrained during creation so full trees do not require rejection retries.
+- `RampedHalfAndHalfTreeCreator` initializes populations with paired full and grow trees across a configurable inclusive depth range. The minimum defaults to two and the nullable maximum defaults to the deepest feasible search-space depth. Larger populations repeat that deterministic depth/method ramp while each tree retains independent randomness.
+- `SubtreeCrossover` selects one destination and one valid donor without retry loops. Its nullable internal-node probability defaults to uniform selection across all nodes; setting it to `0.9` enables the conventional Koza-style function-versus-terminal bias.
+- `NodeReplacementMutator`, `SubtreeMutator`, and `LocalPerturbationMutator` provide complementary same-arity, structural, and symbol-local mutation paths. They compose through the general `ChooseOneMutator` with explicit weights.
+- `SubtreeMutator` selects one occurrence, derives the exact remaining global length and depth budgets at that point, creates one viable subtree, and replaces the occurrence without rejection retries.
+- Nullable creator depth settings inherit the search-space limits. Explicit depth settings must remain feasible within those limits; users who need a larger candidate domain construct a correspondingly larger search space.
+- The ordinary problem evaluator compiles each expression through `CompiledExpression`, interprets it against the training data, and scores it with the configured regression metric.
+- The API usage specs run this path through the generic genetic algorithm for multiple generations with all three mutation paths and verify that the final population remains inside the search space.
+- A deterministic synthetic-regression scenario exercises creation, crossover, all mutation forms, evaluation, best-solution selection, explicit optimized compilation, and repeated interpretation of the retained compiled best expression. It asserts a real improvement over a constant-mean baseline.
+- Numeric parameter optimization, a named symbolic-regression operator preset, protected-operation policy, convenience problem factories, and grammar-constrained operators remain follow-up work. They are not required for the executable unrestricted GP loop.
 
 ## Stage 3.1: Constant Optimization During Evaluation
 
@@ -263,6 +279,8 @@ Add the smallest typed grammar model needed for valid scalar symbolic regression
 Rules:
 
 - Grammar-constrained operators should ask for viable options at a site instead of blindly sampling edit points and relying on rejection.
+- Grammar containment will probably use structural origin-symbol matching, or a grammar-specific refinement, because production and nonterminal identity can be semantically significant. This remains provisional until the grammar model is designed; it must not inherit unrestricted aggregate coverage by default.
+- The first grammar implementation supports scalar expressions, but scalar must be an explicit grammar value category rather than the absence of type information. Operation productions have explicit input and output signatures so later vector/tensor value categories can extend the model without replacing the grammar representation.
 - Grammar logic drives option selection in the first restricted implementation. Do not add a public generic restriction-provider abstraction before the grammar implementation proves the shape.
 - `Contains` is a final validation check for grammar operators, not the primary construction strategy.
 - Grammar-constrained operators may enumerate viable sites, cache grammar-derived metadata, use repair, or use bounded retry.
@@ -277,9 +295,16 @@ Add later symbolic-regression features without multiplying search-space subclass
 
 ### Stage 5.1: Structure Templates
 
-- Structure templates use a different genotype shape: fixed template plus one expression component per wildcard. Each wildcard chooses an unrestricted or grammar-constrained expression search space. Wildcards should not be nested symbolic-regression problems unless they truly have independent data, objectives, and evaluation semantics.
+- Structure templates use a different composite genotype shape: one immutable fixed template plus one evolvable `ExpressionTree` component per wildcard slot.
+- A wildcard owns or references an expression search space, not a nested symbolic-regression problem. The outer problem owns data, compilation, evaluation, objectives, and fitness because only the fully instantiated template is evaluable.
+- The composite search space validates the fixed template, wildcard count, wildcard-to-component association, each component against its own unrestricted or grammar-constrained search space, and the component output type against the wildcard's expected type.
+- Template structure is not exposed to ordinary expression mutation or crossover. Operators first select a wildcard component and then delegate creation, mutation, or crossover to the operator family compatible with that component's search space.
+- Crossover requires compatible templates and wildcard slots. Whether repeated appearances of one named wildcard share one component or represent independent slots must be explicit in the template model.
+- Compilation substitutes component roots while traversing the fixed template and produces the ordinary compact `CompiledExpression`. A simple first implementation may materialize the combined immutable `ExpressionTree`; a later direct compiler may avoid that temporary allocation without changing genotype semantics.
+- Components retain normal immutable structural sharing. Composite equality and hashing include the template and the ordered wildcard components.
+- Manually replacing placeholder nodes in an ordinary `ExpressionTree` can emulate one template instance today, but it does not protect the fixed structure or provide component-specific containment and operators. It is not the first-class template design.
 
-Stage 5.1 tests: template genotype composition, wildcard-specific search-space containment, template instantiation, and one usage spec showing a future template wildcard owning either unrestricted or grammar-constrained expression search space.
+Stage 5.1 tests: template and wildcard invariants, wildcard-specific search-space containment, component output compatibility, immutable component replacement, fixed-template preservation under mutation and crossover, shared versus independent repeated wildcards, template instantiation/compilation, full-expression evaluation, and one usage spec showing wildcard components with unrestricted and grammar-constrained expression search spaces.
 
 ### Stage 5.2: Shape Constraints
 
@@ -297,9 +322,18 @@ Stage 5.3 tests: constant folding, candidate immutability, equivalent-form compa
 
 ### Stage 5.4: Vectorial GP Value-System Support
 
-- Vectorial GP primarily extends expression value metadata, interpreter buffers, operation signatures, and result typing. The interpreter should become value-system-aware instead of assuming only scalar `double` series. If scalar-only assumptions break, add a value-system-aware expression search-space family rather than a cross-product with every other extension.
+- Vectorial GP means that one expression value for one observation can be a vector or tensor. This value dimension is distinct from the current interpreter's batched `double` buffers, which contain one scalar value for each observation.
+- The current scalar genotype and interpreter cannot directly represent vector-valued variables. The extension requires explicit expression value metadata, typed variable schema, typed grammar productions, resolved operation signatures, shape-aware compiled instructions, and shape-aware evaluation buffers.
+- Introduce an explicit value category/shape model with at least scalar and vector categories and a path to fixed-rank tensors. Do not encode scalar as `null`, rank zero by convention alone, or an untyped default.
+- Variable symbols bind to schema entries carrying value category and shape. Numeric constants initially remain scalar and participate in broadcasting.
+- Grammar productions define input and output signatures such as `Vector + Vector -> Vector`, `Vector + Scalar -> Vector`, and `Mean(Vector) -> Scalar`. The grammar enforces that the symbolic-regression root returns a scalar.
+- Broadcasting is part of resolved operation semantics, not an implicit interpreter guess. Initial support should prefer fixed per-observation shapes; general NumPy-style rank and dimension broadcasting requires explicit compatibility rules and runtime validation when dimensions are not statically known.
+- Compilation retains compact postorder/RPN storage but records the resolved operation overload or equivalent value-shape metadata needed by execution. It must not rediscover grammar overloads in the interpreter hot loop.
+- Vector/tensor interpreter buffers represent `batch size x elements per observation`; aggregation operations reduce only the per-observation value dimensions and never accidentally reduce the observation batch dimension.
+- Keep the current scalar `double` interpreter as a specialized fast path. Do not force scalar execution through boxed values, virtual per-instruction dispatch, or a general tensor union solely to support vectorial GP.
+- Add a value-system-aware search-space and operator family only where typed local admissibility differs. Avoid subclasses for every cross-product of vectorial GP with templates, shape constraints, or other evaluator-only extensions.
 
-Stage 5.4 tests: value metadata, vector/scalar operation signatures, interpreter buffer typing, result typing, and search-space containment for value-compatible expressions.
+Stage 5.4 tests: explicit scalar/vector/tensor metadata, typed variable binding, scalar/vector operation signatures, broadcasting compatibility and rejection, scalar aggregation roots, grammar-preserving creation/mutation/crossover, compiled shape metadata, interpreter buffer layout, aggregation over the correct dimensions, result typing, and search-space containment for value-compatible expressions.
 
 ### Stage 5.5: Time-Series Expression Support
 
@@ -307,9 +341,22 @@ Stage 5.4 tests: value metadata, vector/scalar operation signatures, interpreter
 
 Stage 5.5 tests: lag/window binding, time-aware operation signatures, row-window validity, interpreter behavior fixtures, and regression usage specs over time-series data.
 
+### Stage 5.6: Interval-Arithmetic Evaluation
+
+- Interval arithmetic is initially an alternative evaluation domain for an otherwise ordinary scalar expression, not a new genotype. A numeric constant `c` becomes the degenerate interval `[c, c]`, variable bindings provide intervals, and built-in operations apply their interval-arithmetic definitions.
+- The existing `ExpressionTree` and compact `CompiledExpression` can be reused because their structure, opcodes, numeric constants, and variable references are sufficient for scalar interval evaluation. What is missing is an interval value type, interval input binding, operation semantics, and a dedicated interpreter/evaluation backend.
+- Keep `ExpressionInterpreter` specialized for `double`. Add a separate interval interpreter rather than genericizing the hot scalar interpreter through interface dispatch or boxed numeric values.
+- Define interval behavior explicitly for division across zero, logarithm and square root outside their domains, infinities, empty/invalid intervals, and outward rounding. These rules are part of interval evaluation semantics and must not inherit the ordinary `double` invalid-result policy accidentally.
+- Validate compiler optimizations against interval semantics. Unoptimized compilation is the reference path; constant folding and identity elimination may be enabled only when they preserve the selected interval semantics.
+- Interval evaluation can support range analysis, safety checks, and shape constraints without changing GP containment. If intervals later become first-class expression values that mix with scalars or vectors, they join the typed value-system and grammar work from Stage 5.4 instead of being handled by the scalar interval backend.
+- Keep interval results separate from ordinary prediction series. The regression objective still consumes scalar predictions unless an evaluator deliberately converts interval results into penalties, bounds, or another objective representation.
+
+Stage 5.6 tests: interval construction and invariants, degenerate constants, variable binding, arithmetic enclosure, division across zero, domain-invalid unary operations, infinities and empty intervals, outward-rounding fixtures, optimized-versus-unoptimized semantic equivalence where optimization is enabled, range-analysis use, and no regression in the specialized `double` interpreter.
+
 ### Stage 5 Shared Rules
 
 - Extensions compose around the expression component. A new search-space type is justified only when the feature changes the set of structurally valid candidates or the local closure rules needed by creation, crossover, mutation, or repair.
+- Evaluation domains that do not change expression admissibility, such as scalar interval analysis, reuse the genotype and compiled representation through a separate evaluator/interpreter. Value systems that change valid operation signatures, such as vector/tensor values, require typed grammar and search-space support.
 
 Follow-up details stay outside this plan unless separately scheduled:
 

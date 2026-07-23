@@ -1,22 +1,25 @@
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
 public sealed class SymbolicExpressionRegressionProblem
+    : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>
 {
     public SymbolicExpressionRegressionProblem(
         RegressionData data,
-        IRegressionMetric metric)
+        IRegressionMetric metric,
+        ExpressionTreeSearchSpace searchSpace)
+        : base(CreateObjective(metric), searchSpace)
     {
         Data = data;
         Metric = metric;
-        Objective = new Objective([metric.Direction], new SingleObjectiveComparer(metric.Direction));
     }
 
     public RegressionData Data { get; }
     public IRegressionMetric Metric { get; }
-    public Objective Objective { get; }
 
     public double[] Predict(ExpressionTree expression) =>
         expression.Evaluate(Data.TrainingInputs);
@@ -33,6 +36,9 @@ public sealed class SymbolicExpressionRegressionProblem
         return new ObjectiveVector(Metric.Evaluate(predictions, Data.TrainingTarget.Values.Span));
     }
 
+    public override ObjectiveVector Evaluate(ExpressionTree expression, IRandomNumberGenerator random) =>
+        Evaluate(expression);
+
     public ObjectiveVector EvaluateValidation(ExpressionTree expression)
     {
         var predictions = PredictValidation(expression);
@@ -46,4 +52,7 @@ public sealed class SymbolicExpressionRegressionProblem
         var target = Data.TestTarget ?? throw new InvalidOperationException("Test data is not available.");
         return new ObjectiveVector(Metric.Evaluate(predictions, target.Values.Span));
     }
+
+    private static Objective CreateObjective(IRegressionMetric metric) =>
+        new([metric.Direction], new SingleObjectiveComparer(metric.Direction));
 }

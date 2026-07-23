@@ -21,7 +21,7 @@ Explicitly model both numeric terminal families:
 - Keep evolvable-constant local mutation tied to the originating symbol. A numeric-value mutator delegates to the symbol that owns the value's perturbation semantics.
 - Fixed constants are not evolvable constants with zero-width distributions. They are fixed terminal symbols whose local mutation is a no-op or unsupported, while replacement mutation may still replace them through normal terminal replacement rules.
 - `ExpressionTreeSearchSpace` internally owns symbols and exposes compatible-symbol selection and queries for creation, replacement, containment, and local mutation.
-- `ExpressionTreeSearchSpace` is an operational search-space configuration: it combines hard admissibility with default proposal guidance. `Contains` checks only structural admissibility; it deliberately ignores evolvable-constant initialization and local-perturbation policies, while each node retains its originating symbol for future local perturbation.
+- `ExpressionTreeSearchSpace` is an operational search-space configuration: it combines hard admissibility with default proposal guidance. Its unrestricted containment uses aggregate coverage rather than requiring one structurally equal origin symbol. It deliberately ignores evolvable-constant initialization and local-perturbation policies, while each node retains its originating symbol for future local perturbation. See [Containment Matching](#containment-matching).
 - Retain duplicate symbols in their supplied order. They are separate selection entries; callers express their relative selection probability through the aligned search-space weights. During expression-draft resolution, duplicate matches remain ambiguous so accidental duplication is visible to the caller.
 - Retire `SymbolicExpressionSamplingProfile`. Its current sole responsibility, constant initialization, belongs to evolvable constant symbols. Do not retain an empty profile merely for hypothetical future cross-cutting settings.
 
@@ -139,9 +139,96 @@ The mutator, not the symbol, selects which perturbable nodes are targeted. It fi
 - Provide overloads for the common cases: operations plus variables with default evolvable constants, and operations plus variables plus an explicit list of constant symbols.
 - Provide weighted construction overloads using either aligned symbol/weight arrays or symbol/weight pairs. The paired form avoids positional misalignment; all forms normalize internally to a symbol array plus optional aligned weight array.
 - Internally, the search space maintains both the canonical symbol list and pre-grouped cached candidate sets for fast terminal and arity queries. A candidate set with equal weights stores no weights and samples uniformly; weighted sets store aligned weights.
-- `Contains` is a validity check, not a check of creation guidance. It ignores search-space symbol-selection weights and evolvable-constant initialization/perturbation configuration. It validates operation kind/arity, allowed variable names, fixed constants, and whether evolvable constants are permitted.
+- `Contains` is a validity check, not a check of creation guidance. The unrestricted search space uses aggregate-coverage matching: its configured symbols may collectively cover an origin symbol even when no individual configured symbol is equivalent to it. It ignores search-space symbol-selection weights and evolvable-constant initialization/perturbation configuration. It validates operation semantics, every variable reachable through an origin variable symbol, fixed constants, and whether evolvable constants are permitted.
 - Support both explicit operation construction such as `new AdditionSymbol()` and predefined operation groups through `Symbols`. Static operation-symbol factories may be added when their final naming is coordinated with `Symbol`, `ExpressionNode`, opcode, and `ExpressionDraft` vocabulary.
 - `Symbols.BasicArithmetic` contains addition, subtraction, multiplication, and division. `ElementaryFunctions` contains unary mathematical functions such as `exp`, `log`, and `sqrt`. `Standard` is their documented union; use `Standard`, not `Default`, to describe a curated explicit group rather than an implicit configuration choice.
+
+## Containment Matching
+
+Symbol-bearing expression nodes retain their originating `Symbol`, which can contain both admissibility information and proposal guidance. Search-space containment therefore needs an explicit rule for relating a node's origin symbol to the symbols configured in a search space. Reference identity is not considered: symbols have semantic value equality and may be reconstructed independently.
+
+Three containment models are available.
+
+### Structural Matching
+
+One symbol in the search space must structurally equal the node's origin symbol, including behavior-affecting configuration.
+
+Advantages:
+
+- The stored origin provides exactly the initialization and perturbation behavior configured by the active search space.
+- Operators require no symbol resolution or rebinding.
+- Symbol partitions and production identity remain significant.
+- Containment and future origin-based local perturbation follow one consistent configuration.
+
+Disadvantages:
+
+- It is the least flexible model.
+- A variable origin containing only `{x}` does not match a search-space symbol containing `{x, y}`.
+- Separately configured symbols describing the same admissible values may not match.
+- Changing proposal guidance can make an otherwise valid expression fail containment.
+- Guidance effectively becomes part of search-space membership.
+
+### Admissibility-Equivalence Matching
+
+One symbol in the search space must describe the same admissible values or operation semantics as the node's origin, while proposal guidance such as selection weights, initialization distributions, and perturbation strategies is ignored.
+
+Advantages:
+
+- It separates mathematical admissibility from search guidance.
+- Independently configured but semantically equivalent symbols can match.
+- Guidance changes do not invalidate an otherwise equivalent expression.
+- Symbol partitions remain meaningful because one matching search-space symbol is still required.
+
+Disadvantages:
+
+- It is difficult to reconcile with origin-authoritative perturbation.
+- A contained node may retain guidance that is absent from the active search space.
+- Operators must choose between the retained origin, a resolved search-space symbol, or rebinding the node.
+- The system needs a separate containment-specific equivalence relation in addition to ordinary symbol value equality.
+
+### Aggregate-Coverage Matching
+
+The configured search-space symbols collectively cover the admissible outcomes of the node's origin symbol. No single search-space symbol has to be equivalent to the origin.
+
+For example, search-space variable symbols `{x}` and `{y}` collectively cover a node whose origin allows `{x, y}`. Conversely, a search-space symbol `{x, y}` covers an origin allowing only `{x}`.
+
+Advantages:
+
+- It is the most flexible containment model.
+- Different partitions of the same unrestricted domain remain containment-compatible.
+- Draft-local and independently constructed symbols can be accepted when their outcomes remain in the aggregate domain.
+- A broad origin can locally perturb across alternatives supplied by multiple search-space symbols.
+
+Disadvantages:
+
+- The partitioning of alternatives into search-space symbols becomes irrelevant to containment.
+- A node with a narrower origin can have a narrower mutation neighborhood than the search space permits.
+- Two contained nodes can explore the same search space differently because they retain different origins.
+- Search-space selection guidance does not necessarily describe origin-based local perturbation behavior.
+- It is unsuitable when a symbol's production or grammar origin is itself semantically significant.
+
+### Selected Models
+
+`ExpressionTreeSearchSpace`, the unrestricted symbolic-expression search space, uses **aggregate-coverage matching**.
+
+- Operation and payloadless-terminal semantics must be represented by the configured symbols.
+- A variable origin is covered when every variable it can produce is present in the aggregate variable domain of the search space.
+- A fixed constant requires its fixed semantic constant to be configured.
+- Evolvable constants are covered when the search space permits evolvable constants. Initialization distributions and numeric perturbation strategies are proposal guidance, not numeric bounds.
+- Maximum length and depth remain ordinary hard containment constraints.
+
+This rule is appropriate for unrestricted scalar GP because every scalar subtree is composition-compatible and symbol partitioning does not define a grammar. Origin symbols remain on nodes for equality and current local-perturbation behavior, but their exact configuration need not occur in the search space.
+
+The future grammar-guided search space will probably use **structural matching**, or a grammar-specific refinement of it. The originating production, nonterminal category, and position-dependent alternatives can be semantically significant. Aggregate coverage across an entire grammar would discard those distinctions and could admit edits that no individual production permits. This grammar decision remains provisional until the grammar model is designed.
+
+Consequences:
+
+- Unrestricted containment is intentionally more permissive than symbol value equality.
+- Search-space symbol selection weights and symbol-owned proposal guidance do not participate in unrestricted containment.
+- A node with a narrower origin than the aggregate search-space domain remains contained but may have a narrower local perturbation neighborhood.
+- Unrestricted operators must still guarantee that produced nodes remain within the aggregate domain.
+- Grammar-aware operators and containment must not automatically reuse unrestricted aggregate matching.
+- The coexistence of hard admissibility and proposal guidance in the current symbol/search-space model remains a possible future separation point.
 
 ## Expression Draft Resolution
 
@@ -172,7 +259,7 @@ The mutator, not the symbol, selects which perturbable nodes are targeted. It fi
   - variable local mutation only selects names from the originating variable symbol and may validly retain the current name;
   - a variable symbol with one allowed name produces valid no-op local perturbations.
 - Search-space behavior:
-  - containment validates operation kind/arity, allowed variable names, fixed constants, and evolvable-constant availability while ignoring sampling guidance;
+  - unrestricted containment uses aggregate coverage and validates operation semantics, all variable names reachable through a node's originating variable symbol, fixed constants, and evolvable-constant availability while ignoring sampling guidance;
   - duplicate symbols remain distinct supplied selection entries;
   - full and grow creators select structurally viable symbols according to their distinct terminal/nonterminal rules;
   - node replacement preserves terminal/nonterminal category and operation arity, while allowing no-op replacement;

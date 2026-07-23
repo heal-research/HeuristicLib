@@ -46,6 +46,27 @@ public sealed class NodeReplacementMutatorTests
     }
 
     [Fact]
+    public void Mutate_PreservesAggregateContainmentForANonCanonicalVariableOrigin()
+    {
+        var origin = new VariableSymbol(["x0", "x1"]);
+        var parent = new ExpressionTree(new VariableExpressionNode(origin, "x0"));
+        var searchSpace = new ExpressionTreeSearchSpace(1, 1,
+        [
+            new VariableSymbol(["x0"]),
+            new VariableSymbol(["x1"])
+        ]);
+
+        var offspring = NodeReplacementMutation.Mutate(
+            parent,
+            new SequenceRandomNumberGenerator(0.0, 0.9),
+            searchSpace);
+
+        searchSpace.Contains(parent).ShouldBeTrue();
+        offspring.ToInfixString().ShouldBe("x1");
+        searchSpace.Contains(offspring).ShouldBeTrue();
+    }
+
+    [Fact]
     public void Mutate_UsesTheInstanceEntryPoint()
     {
         var searchSpace = new ExpressionTreeSearchSpace(2, 2, [Symbols.Logarithm, Symbols.SquareRoot, new VariableSymbol(["x0"])]);

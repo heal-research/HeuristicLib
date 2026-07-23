@@ -1,11 +1,17 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
+using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using Xunit;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
 
@@ -72,52 +78,33 @@ public class SymbolicRegressionRedesignSpecs
     public void Problem_AuthoringShape_ConstructsDefaultSymbolicRegressionProblemWithRmseMetric()
     {
         var data = CreateLinearRegressionData();
-
-        /*
-        var problem = SymbolicRegressionProblem.CreateDefault(
-          data,
-          inputVariables: ["x0", "x1"],
-          metric: Metrics.RMSE,
-          searchSpace: new ExpressionTreeSearchSpace(
-             maximumLength: 40,
-             maximumDepth: 12,
-             allowedSymbols: Symbols.BasicArithmetic,
-             allowedVariables: ["x0", "x1"]));
+        var searchSpace = CreateSearchSpace();
+        var problem = new SymbolicExpressionRegressionProblem(data, Metrics.RMSE, searchSpace);
 
         problem.Metric.ShouldBe(Metrics.RMSE);
+        problem.SearchSpace.ShouldBeSameAs(searchSpace);
         problem.Objective.Directions.ShouldBe([ObjectiveDirection.Minimize]);
-        */
-
-        var currentProblem = new SymbolicExpressionRegressionProblem(data, Metrics.RMSE);
-        currentProblem.Metric.ShouldBe(Metrics.RMSE);
-        currentProblem.Objective.Directions.ShouldBe([ObjectiveDirection.Minimize]);
     }
 
     [Fact]
-    public void GeneticAlgorithm_AuthoringShape_RunsWithNewCreatorCrossoverAndMutator()
+    public async Task GeneticAlgorithm_AuthoringShape_RunsWithNewCreatorCrossoverAndMutator()
     {
-        /*
         var data = CreateLinearRegressionData();
-        var problem = SymbolicRegressionProblem.CreateDefault(
-          data,
-          inputVariables: ["x0", "x1"],
-          metric: Metrics.RMSE,
-          searchSpace: new ExpressionTreeSearchSpace(
-             maximumLength: 40,
-             maximumDepth: 12,
-             allowedSymbols: Symbols.BasicArithmetic,
-             allowedVariables: ["x0", "x1"]));
-
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+        var searchSpace = CreateSearchSpace();
+        var problem = new SymbolicExpressionRegressionProblem(data, Metrics.RMSE, searchSpace);
+        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicExpressionRegressionProblem>
         {
             PopulationSize = 24,
-            Creator = new UnrestrictedSymbolicExpressionCreator(),
-            Crossover = new UnrestrictedSymbolicExpressionCrossover(),
-            Mutator = new UnrestrictedSymbolicExpressionMutator(),
+            MaximumGenerations = 8,
+            Creator = new RampedHalfAndHalfTreeCreator(),
+            Crossover = new SubtreeCrossover(),
+            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicExpressionRegressionProblem>(
+                [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()],
+                [1.0, 1.0, 1.0]),
             MutationRate = 0.2,
             Selector = new TournamentSelector<ExpressionTree>(tournamentSize: 2),
             Elites = 1
-        }.WithMaxIterations(8);
+        };
 
         var finalState = await algorithm.RunToCompletionAsync(
           problem,
@@ -125,15 +112,7 @@ public class SymbolicRegressionRedesignSpecs
           ct: TestContext.Current.CancellationToken);
 
         finalState.Population.Solutions.All(solution => problem.SearchSpace.Contains(solution.Genotype)).ShouldBeTrue();
-        */
-
-        var currentProblem = new SymbolicExpressionRegressionProblem(CreateLinearRegressionData(), Metrics.RMSE);
-        var selector = new TournamentSelector<object>(tournamentSize: 2);
-
-        currentProblem.Objective.Directions.ShouldBe([ObjectiveDirection.Minimize]);
-        selector.ShouldNotBeNull();
-        RandomNumberGenerator.Create(123).ShouldNotBeNull();
-        typeof(GeneticAlgorithm<,,>).ShouldNotBeNull();
+        finalState.Population.Solutions.Length.ShouldBe(24);
     }
 
     [Fact]
@@ -243,4 +222,11 @@ public class SymbolicRegressionRedesignSpecs
               { 3.0, 5.0 }
           }),
         Series<double>.Create([7.0, 10.0, 13.0], name: "y"));
+
+    private static ExpressionTreeSearchSpace CreateSearchSpace() =>
+      new(
+        maximumLength: 31,
+        maximumDepth: 6,
+        operations: [Symbols.Addition, Symbols.Subtraction, Symbols.Multiplication],
+        variables: ["x0", "x1"]);
 }
