@@ -14,6 +14,28 @@ This matrix tracks Stage 1 reference behavior while the mutable tree API is phas
 | Sqrt | `SquareRoot` symbol | `SquareRoot` | Unary `Sqrt` opcode | Ordinary `double` behavior | Covered by primitive operation tests | Invalid numeric results produce `NaN`. |
 | Linear scaling | Regression model scaling | `PredictAndAdjustScaling` / grammar linear scaling | Ordinary `Add(Multiply(scale, model), offset)` expression nodes | Behavioral equivalence after lowering | Not started | No dedicated opcode in Stage 1. Scaling constants can be authored as fixed or optimizable literals depending on the caller. |
 
+## Operator Parity
+
+The new immutable expression-tree operator family targets behavioral coverage rather than one-to-one preservation of legacy type names. Operators that are compositions or parameterizations of the new generic operators should not be reintroduced as separate compatibility types.
+
+| Behavior | Legacy operator | New operator or decision | Status | Notes |
+| --- | --- | --- | --- | --- |
+| Grow initialization | `GrowTreeCreator` | `GrowTreeCreator` | Implemented | Samples any structurally viable symbol within the remaining length and depth budgets. |
+| Full initialization | `FullTreeCreator` | `FullTreeCreator` | Implemented | Produces trees whose leaves occur at one selected depth. |
+| Ramped half-and-half initialization | Ramped full/grow population initialization | `RampedHalfAndHalfTreeCreator` | Implemented | Distributes creation across an inclusive depth range and alternates full and grow creation. |
+| Balanced target-length initialization | `BalancedTreeCreator` | Deferred `BalancedTreeCreator` design | Deferred | A useful initialization policy, but not required by the unrestricted vertical slice. Its target-length, breadth-first expansion, mixed-arity, depth-limit, and irregularity-bias semantics must be specified before implementation. |
+| Probabilistic target-size initialization | `ProbabilisticTreeCreator` / PTC2 | Deferred probabilistic creator design | Deferred | Keep separate from balanced creation. A future implementation should expose the intended size distribution and symbol-probability contract explicitly. |
+| Subtree crossover | `SubtreeCrossover` | `SubtreeCrossover` | Implemented | Selects a destination and a valid donor without bounded retry loops. |
+| Same-arity node replacement | `ChangeNodeTypeManipulation` | `NodeReplacementMutator` | Implemented | Replaces a symbol while retaining the existing children when arity is unchanged. |
+| Random subtree replacement | `ReplaceBranchManipulation` | `SubtreeMutator` | Implemented | Generates one structurally viable replacement subtree within the exact remaining budgets. |
+| One-point local-parameter mutation | `OnePointShaker` | `LocalPerturbationMutator(One)` | Implemented | Perturbation behavior belongs to the originating symbol. |
+| All-point local-parameter mutation | `FullTreeShaker` | `LocalPerturbationMutator(All)` | Implemented | Also supports independent per-point selection through `Each(probability)`. |
+| Random choice among mutators | `MultiSymbolicExpressionTreeManipulator` | `ChooseOneMutator` | Implemented through generic composition | Symbolic expressions do not require a dedicated multi-mutator type. |
+| Strict structural shrinking | `RemoveBranchManipulation` | `ShrinkSubtreeMutator` | Implemented | Replaces a selected operation occurrence with a terminal sampled from the search space, guaranteeing a strict length reduction without retries. |
+| Hoist mutation | No direct legacy equivalent | Deferred | Optional | Replaces a selected subtree with one of its descendants. Consider only after measured need; shrink mutation already provides a simple anti-bloat structural operator. |
+| Size-fair or homologous crossover | No direct legacy equivalent | Deferred | Optional | These are alternative crossover policies, not prerequisites for numeric-parameter optimization. |
+| Evolvable-constant optimization | Levenberg-Marquardt parameter optimization | `NumericParameterOptimizer.Optimize(...)` | Direct solver implemented | Uses a parameter-aware compiler and batched reverse mode without a materialized Jacobian. Evaluator/population composition remains follow-up work. |
+
 ## Stage 0 Design-Hole Outcomes
 
 | Topic | Outcome or owner |
