@@ -58,6 +58,19 @@ public class ExperimentRunTests
         _ = run.Trials[1].Run.Stream(cancellationToken: TestContext.Current.CancellationToken);
     }
 
+    [Fact]
+    public void CombinedExecution_WithCancelledToken_ConsumesRun()
+    {
+        var run = CreateRun();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        Should.Throw<OperationCanceledException>(() => run.Stream(cancellationToken: cancellation.Token));
+
+        run.ExecutionStarted.ShouldBeTrue();
+        Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
+    }
+
     private static RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm> CreateExperiment() =>
         new AdditiveStepAlgorithm(1).Repeat(2);
 

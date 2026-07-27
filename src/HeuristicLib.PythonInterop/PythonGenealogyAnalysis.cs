@@ -262,20 +262,20 @@ public class PythonGenealogyAnalysis
     {
         public ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run)
         {
-            var qRes = run.GetAnalyzerResult(Qualities);
+            var qRes = run.GetResult(Qualities);
 
             var rankGraph = string.Empty;
             IReadOnlyList<List<double>> rankLines = [];
 
             if (RankAnalysis is not null)
             {
-                var rankResult = run.GetAnalyzerResult(RankAnalysis).Result();
+                var rankResult = run.GetResult(RankAnalysis).Result();
                 rankGraph = rankResult.Graph.ToGraphViz();
                 rankLines = rankResult.Ranks.Select(x => x.ToList()).ToArray();
             }
 
             IReadOnlyList<EvaluatedCandidate<TCandidate>[]> apRes = [];
-            if (AllPopulations is not null && run.TryGetAnalyzerResult(AllPopulations, out var populations) &&
+            if (AllPopulations is not null && run.TryGetResult(AllPopulations, out var populations) &&
                 populations is not null)
             {
                 apRes = populations;

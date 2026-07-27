@@ -44,7 +44,7 @@ public class ExperimentSpecs
 
         var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(123));
 
-        run.Trials.Count.ShouldBe(8);
+        run.Trials.Length.ShouldBe(8);
         run.Trials.Select(trial => (trial.Key.Inner.BatchSize, trial.Key.Inner.MaxNeighbors, trial.Key.Repetition)).ShouldBe([
             (2, 8, 0), (2, 8, 1), (2, 12, 0), (2, 12, 1),
             (4, 8, 0), (4, 8, 1), (4, 12, 0), (4, 12, 1)
@@ -52,16 +52,17 @@ public class ExperimentSpecs
     }
 
     [Fact]
-    public async Task ExperimentAnalysis_BindsOneAnalyzerToEachConcreteAlgorithm()
+    public async Task TrialAnalyzer_BindsOneAnalyzerToEachConcreteAlgorithm()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var experiment = CreateSimpleHillClimber(problem)
             .AsGrid()
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
-        var bestQuality = ExperimentAnalysis.ForEach(
-            (HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem> algorithm) => algorithm.Evaluator,
-            evaluator => Analyzer.BestQuality(evaluator));
-        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456)).WithAnalysis(bestQuality);
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456))
+            .WithAnalyzer(
+                algorithm => algorithm.Evaluator,
+                evaluator => Analyzer.BestQuality(evaluator),
+                out var bestQuality);
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         var results = run.GetResults(bestQuality);

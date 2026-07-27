@@ -32,58 +32,60 @@ public class CycleAlgorithmAnalysisTests
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetAnalyzerResult(analysis1).ObjectiveValues.ShouldBe([1.0]);
-        run.GetAnalyzerResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
+        run.GetResult(analysis1).ObjectiveValues.ShouldBe([1.0]);
+        run.GetResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
     }
 
     [Fact]
-    public void GetAnalyzerResult_ReturnsDirectAnalyzerResult()
+    public void GetResult_ReturnsSameResultOnRepeatedCalls()
     {
         var evaluator = new IncrementingEvaluator();
         var analysis = new EvaluationTraceAnalysis(evaluator);
         var run = CreateRun(analysis);
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetAnalyzerResult(analysis).ShouldBeSameAs(run.GetResult(analysis));
+        var result = run.GetResult(analysis);
+
+        result.ShouldBeSameAs(run.GetResult(analysis));
     }
 
     [Fact]
-    public void TryGetAnalyzerResult_ReturnsDirectAnalyzerResultWhenPresent()
+    public void TryGetResult_ReturnsDirectResultWhenPresent()
     {
         var evaluator = new IncrementingEvaluator();
         var analysis = new EvaluationTraceAnalysis(evaluator);
         var run = CreateRun(analysis);
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.TryGetAnalyzerResult(analysis, out var result).ShouldBeTrue();
+        run.TryGetResult(analysis, out var result).ShouldBeTrue();
 
         result.ShouldNotBeNull();
-        result.ShouldBeSameAs(run.GetAnalyzerResult(analysis));
+        result.ShouldBeSameAs(run.GetResult(analysis));
     }
 
     [Fact]
-    public void TryGetAnalyzerResult_ReturnsFalseWhenAnalyzerWasNotAttached()
+    public void TryGetResult_ReturnsFalseWhenAnalyzerWasNotAttached()
     {
         var attached = new EvaluationTraceAnalysis(new IncrementingEvaluator());
         var missing = new EvaluationTraceAnalysis(new IncrementingEvaluator());
         var run = CreateRun(attached);
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.TryGetAnalyzerResult(missing, out var result).ShouldBeFalse();
+        run.TryGetResult(missing, out var result).ShouldBeFalse();
 
         result.ShouldBeNull();
     }
 
     [Fact]
-    public void AnalyzerResultRetrieval_ThrowsInvalidOperationExceptionForMismatchedRunState()
+    public void ResultRetrieval_ThrowsInvalidOperationExceptionForMismatchedRunState()
     {
         var analyzer = new MalformedAnalyzer();
         var run = CreateRun(analyzer);
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        Should.Throw<InvalidOperationException>(() => run.GetAnalyzerResult(analyzer));
+        Should.Throw<InvalidOperationException>(() => run.GetResult(analyzer));
         Should.Throw<InvalidOperationException>(() =>
-            run.TryGetAnalyzerResult<MalformedAnalyzer.Result>(analyzer, out _));
+            run.TryGetResult<MalformedAnalyzer.Result>(analyzer, out _));
     }
 
     private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IAnalyzer analyzer)

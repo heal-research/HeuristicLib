@@ -17,8 +17,8 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchState : class, ISearchState
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    private readonly HashSet<object> attachedBindings = new(ReferenceEqualityComparer.Instance);
-    private readonly Dictionary<object, IReadOnlyList<IAnalyzer>> bindingAnalyzers = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<TrialAnalyzer, ImmutableArray<IAnalyzer>> trialAnalyzers = new(ReferenceEqualityComparer.Instance);
+    private bool executionStarted;
 
     public IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Experiment { get; }
 
@@ -26,9 +26,9 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     public IRandomNumberGenerator Random { get; }
 
-    public IReadOnlyList<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>> Trials { get; }
+    public ImmutableArray<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>> Trials { get; }
 
-    public bool ExecutionStarted => Trials.Any(trial => trial.Run.ExecutionStarted);
+    public bool ExecutionStarted => executionStarted || Trials.Any(trial => trial.Run.ExecutionStarted);
 
     public ExperimentRun(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
     {
@@ -57,43 +57,50 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
             trials.Add(new ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(index, experimentCase.Key, experimentCase.Algorithm, algorithmRun, experimentCase.RandomForkPath));
         }
 
-        Trials = trials;
+        Trials = trials.ToImmutableArray();
     }
 
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalysis<TOperator, TResult>(AnalyzerBinding<TAlgorithm, TOperator, TResult> binding)
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
         where TResult : class
     {
         EnsureNotStarted();
-        if (attachedBindings.Contains(binding))
+        if (trialAnalyzers.ContainsKey(trialAnalyzer))
         {
-            throw new InvalidOperationException("The same experiment analysis binding cannot be attached more than once.");
+            throw new InvalidOperationException("The same trial analyzer cannot be attached more than once.");
         }
 
-        var analyzers = Trials.Select(trial => binding.AnalyzerFactory(binding.Selector(trial.Algorithm))).ToList();
-        for (var index = 0; index < Trials.Count; index++)
+        var analyzers = Trials.Select(trial => (IAnalyzer)trialAnalyzer.AnalyzerFactory(trialAnalyzer.Selector(trial.Algorithm))).ToImmutableArray();
+        for (var index = 0; index < Trials.Length; index++)
         {
             Trials[index].Run.WithAnalyzer(analyzers[index]);
         }
 
-        attachedBindings.Add(binding);
-        bindingAnalyzers.Add(binding, analyzers);
+        trialAnalyzers.Add(trialAnalyzer, analyzers);
 
         return this;
     }
 
-    public IReadOnlyList<ExperimentAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>> GetResults<TOperator, TResult>(AnalyzerBinding<TAlgorithm, TOperator, TResult> binding)
+    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> WithAnalyzer<TOperator, TResult>(
+        Func<TAlgorithm, TOperator> selector,
+        Func<TOperator, IAnalyzer<TResult>> analyzerFactory,
+        out TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
         where TResult : class
     {
-        if (!bindingAnalyzers.TryGetValue(binding, out var analyzers))
-        {
-            throw new KeyNotFoundException("The analysis binding is not attached to this experiment run.");
-        }
+        trialAnalyzer = TrialAnalyzer.Create(selector, analyzerFactory);
+        return WithAnalyzer(trialAnalyzer);
+    }
+
+    public IReadOnlyList<TrialAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>> GetResults<TOperator, TResult>(
+        TrialAnalyzer<TAlgorithm, TOperator, TResult> trialAnalyzer)
+        where TResult : class
+    {
+        var analyzers = trialAnalyzers[trialAnalyzer];
 
         return Trials.Select((trial, index) =>
         {
             var analyzer = (IAnalyzer<TResult>)analyzers[index];
-            return new ExperimentAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>(trial, analyzer, trial.Run.GetResult(analyzer));
-        }).ToList();
+            return new TrialAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>(trial, analyzer, trial.Run.GetResult(analyzer));
+        }).ToImmutableArray();
     }
 
     public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExperimentExecutionPolicy? policy = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
@@ -104,9 +111,8 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     public async Task<IReadOnlyList<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> CompleteAsync(ExperimentExecutionPolicy? policy = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
-        var execution = PrepareCombinedExecution(initialState, cancellationToken);
-        var finalStates = new TSearchState?[Trials.Count];
-        await foreach (var entry in ExecuteCombined(execution, policy ?? ExperimentExecutionPolicy.Sequential(), cancellationToken).WithCancellation(cancellationToken))
+        var finalStates = new TSearchState?[Trials.Length];
+        await foreach (var entry in Stream(policy, initialState, cancellationToken).WithCancellation(cancellationToken))
         {
             finalStates[entry.Trial.Index] = entry.State;
         }
@@ -119,7 +125,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
             throw new AggregateException(missingStateFailures);
         }
 
-        return Trials.Select(trial => (trial, finalStates[trial.Index]!)).ToList();
+        return Trials.Select(trial => (trial, finalStates[trial.Index]!)).ToImmutableArray();
     }
 
     public IReadOnlyList<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> Complete(ExperimentExecutionPolicy? policy = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
@@ -173,7 +179,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         using var stopSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var channel = Channel.CreateUnbounded<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
         var nextPreparedTrialIndex = -1;
-        var workerCount = Math.Min(maximumConcurrency, execution.TrialStreams.Count);
+        var workerCount = Math.Min(maximumConcurrency, execution.TrialStreams.Length);
 
         var workers = Enumerable.Range(0, workerCount).Select(_ => ProduceEntries()).ToArray();
         var completion = CompleteChannelWhenFinished(workers, channel.Writer);
@@ -204,7 +210,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
             while (true)
             {
                 var preparedTrialIndex = Interlocked.Increment(ref nextPreparedTrialIndex);
-                if (preparedTrialIndex >= execution.TrialStreams.Count)
+                if (preparedTrialIndex >= execution.TrialStreams.Length)
                 {
                     return;
                 }
@@ -232,16 +238,37 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
 
     private static async Task CompleteChannelWhenFinished(Task[] tasks, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> writer)
     {
-        await Task.WhenAll(tasks);
-        writer.TryComplete();
+        try
+        {
+            await Task.WhenAll(tasks);
+            writer.TryComplete();
+        }
+        catch (Exception exception)
+        {
+            writer.TryComplete(exception);
+        }
+    }
+
+    private void StartExecution()
+    {
+        EnsureNotStarted();
+        executionStarted = true;
+    }
+
+    private void EnsureNotStarted()
+    {
+        if (ExecutionStarted)
+        {
+            throw new InvalidOperationException("An experiment run can only be configured and executed once. Create a new run for another execution.");
+        }
     }
 
     private PreparedCombinedExecution PrepareCombinedExecution(TSearchState? initialState, CancellationToken cancellationToken)
     {
-        EnsureNotStarted();
-        var trialStreams = new List<PreparedTrialStream>(Trials.Count);
-        var failures = new Exception?[Trials.Count];
-        for (var trialIndex = 0; trialIndex < Trials.Count; trialIndex++)
+        StartExecution();
+        var trialStreams = new List<PreparedTrialStream>(Trials.Length);
+        var failures = new Exception?[Trials.Length];
+        for (var trialIndex = 0; trialIndex < Trials.Length; trialIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var trial = Trials[trialIndex];
@@ -259,20 +286,12 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
             }
         }
 
-        return new PreparedCombinedExecution(trialStreams, failures);
-    }
-
-    private void EnsureNotStarted()
-    {
-        if (ExecutionStarted)
-        {
-            throw new InvalidOperationException("An experiment run can only be configured and executed once. Create a new run for another execution.");
-        }
+        return new PreparedCombinedExecution(trialStreams.ToImmutableArray(), failures);
     }
 
     private sealed record PreparedTrialStream(int TrialIndex, ExecutionStream<TSearchState> Stream);
 
-    private sealed record PreparedCombinedExecution(IReadOnlyList<PreparedTrialStream> TrialStreams, Exception?[] Failures);
+    private sealed record PreparedCombinedExecution(ImmutableArray<PreparedTrialStream> TrialStreams, Exception?[] Failures);
 }
 
 public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>

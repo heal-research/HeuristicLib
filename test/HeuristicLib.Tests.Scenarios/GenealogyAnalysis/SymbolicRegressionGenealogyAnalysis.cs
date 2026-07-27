@@ -68,7 +68,7 @@ public class GenealogyGraphTests
 
         var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzer(analysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-        var ares = run.GetAnalyzerResult(analysis);
+        var ares = run.GetResult(analysis);
 
         ares.Count.ShouldBe(6);
         res.Population.EvaluatedCandidates.Count().ShouldBe(8);
@@ -110,9 +110,9 @@ public class GenealogyGraphTests
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzers(evalQualities, qualities, genealogyAnalysis);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        var qres = run.GetAnalyzerResult(qualities);
-        var eres = run.GetAnalyzerResult(evalQualities);
-        var gres = run.GetAnalyzerResult(genealogyAnalysis);
+        var qres = run.GetResult(qualities);
+        var eres = run.GetResult(evalQualities);
+        var gres = run.GetResult(genealogyAnalysis);
 
         qres.Count.ShouldBe(gens);
         res.Population.EvaluatedCandidates.Length.ShouldBe(popsize);
@@ -142,7 +142,7 @@ public class GenealogyGraphTests
                 mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
         var run = algorithm.WithMaxIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzer(genealogy);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-        var gres = run.GetAnalyzerResult(genealogy);
+        var gres = run.GetResult(genealogy);
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
         problem.SearchSpace.Contains(res.Population.EvaluatedCandidates.Single().Candidate).ShouldBeTrue();
         res.Population.EvaluatedCandidates.Single().ObjectiveVector.Count.ShouldBe(1);
@@ -180,8 +180,8 @@ public class GenealogyGraphTests
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzers(genealogy, qualities);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-        var gres = run.GetAnalyzerResult(genealogy);
-        var qres = run.GetAnalyzerResult(qualities);
+        var gres = run.GetResult(genealogy);
+        var qres = run.GetResult(qualities);
 
         qres.Count.ShouldBe(maximumIterations);
         res.Population.EvaluatedCandidates.Length.ShouldBe(populationSize);

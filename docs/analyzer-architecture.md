@@ -154,10 +154,10 @@ The `Run` object creates one analyzer run state per analyzer configuration and s
 Users retrieve analyzer results through the run:
 
 ```csharp
-var result = run.GetAnalyzerResult(analyzer);
+var result = run.GetResult(analyzer);
 ```
 
-The `GetResult(...)` and `TryGetResult(...)` aliases delegate to the same state lookup.
+`GetResult(...)` and `TryGetResult(...)` perform the typed state lookup.
 
 This makes analyzer retrieval:
 
@@ -197,9 +197,9 @@ This keeps analyzer registration declarative while avoiding deep wrapper chains 
 1. The operator or algorithm performs its normal work.
 2. The observable wrapper invokes the analyzer callback.
 3. The analyzer callback updates its analyzer result.
-4. Users can inspect that result through `Run.GetAnalyzerResult(...)` during or after execution.
+4. Users can inspect that result through `Run.GetResult(...)` during or after execution.
 
-There is currently **no separate publish step**. The analyzer run state exposes the result object directly through `IAnalyzerRunState<TResult>.Result`, and `Run.GetAnalyzerResult(...)` returns that result.
+There is currently **no separate publish step**. The analyzer run state exposes the result object directly through `IAnalyzerRunState<TResult>.Result`, and `Run.GetResult(...)` returns that result.
 
 ## Why the run is the right scope
 
@@ -287,7 +287,7 @@ var analyzer = new QualityCurveAnalysis<MyCandidate, MySearchSpace, MyProblem>(e
 var run = algorithm.CreateRun(problem, analyzer);
 var finalState = run.RunToCompletion(random);
 
-var qualityCurve = run.GetAnalyzerResult(analyzer);
+var qualityCurve = run.GetResult(analyzer);
 ```
 
 Avoid treating observable wrapper instances or execution registries as the result container.
@@ -300,7 +300,7 @@ The registry is an execution detail; the run is the public analyzer-result scope
 - keep analyzer configurations reusable and configuration-only
 - put mutable analysis data into the analyzer result
 - register observation needs through `RegisterObservations(...)`
-- retrieve analyzer results through `Run.GetAnalyzerResult(...)`
+- retrieve analyzer results through `Run.GetResult(...)`
 - rely on observable wrappers as the callback mechanism
 
 ### Do not

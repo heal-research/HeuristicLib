@@ -66,9 +66,9 @@ public class CycleAlgorithmAnalysisScenarios
 
         return new CycleRunResult(
             finalState,
-            run.GetAnalyzerResult(evaluationTrace1),
-            run.GetAnalyzerResult(evaluationTrace2),
-            run.GetAnalyzerResult(interceptionTrace));
+            run.GetResult(evaluationTrace1),
+            run.GetResult(evaluationTrace2),
+            run.GetResult(interceptionTrace));
     }
 
     private sealed record CycleRunResult(PopulationState<int> FinalState, EvaluationTraceAnalysis.ExecutionState EvaluationTrace1, EvaluationTraceAnalysis.ExecutionState EvaluationTrace2, InterceptionTraceAnalysis.ExecutionState InterceptionTrace);

@@ -84,9 +84,9 @@ Configuration convenience extensions should use the same names. The existing `Ru
 
 ### Setup And Execution Types
 
-The first implementation uses one mutable `AlgorithmRun` or `ExperimentRun` object. A run contains its algorithm or experiment, problem and random number generator. `WithAnalyzer(...)` and `WithAnalysis(...)` mutably attach analyzers before execution and return the same run for fluent composition. Calling `Stream(...)`, `Complete(...)` or `CompleteAsync(...)` starts execution and prevents later analyzer attachment.
+The first implementation uses one mutable `AlgorithmRun` or `ExperimentRun` object. A run contains its algorithm or experiment, problem and random number generator. `WithAnalyzer(...)` mutably attaches an analyzer or trial analyzer before execution and returns the same run for fluent composition. Calling `Stream(...)`, `Complete(...)` or `CompleteAsync(...)` starts execution and prevents later analyzer attachment.
 
-Both run types use the same delayed execution initialization rule. The configurable run records concrete configurations only. The first execution call creates analyzer states, observation plans, execution registries and algorithm or operator execution instances. Neither `CreateRun(...)`, `WithAnalyzer(...)` nor `WithAnalysis(...)` creates that runtime infrastructure.
+Both run types use the same delayed execution initialization rule. The configurable run records concrete configurations only. The first execution call creates analyzer states, observation plans, execution registries and algorithm or operator execution instances. Neither `CreateRun(...)` nor `WithAnalyzer(...)` creates that runtime infrastructure.
 
 There is no public setup method or setup type in the first implementation. The public API must not mix a mutable run with a partial explicit setup abstraction. The alternative design would require a separate immutable setup type and a separate running type with an explicit conversion between them. That complete alternative is postponed because it currently requires another public concept or a final build step that weakens the easy fluent API. C# does not provide linear types, so returning a new running type cannot by itself prevent callers from retaining and reusing an older setup object.
 
@@ -105,7 +105,7 @@ A future separate immutable setup type may expose an explicit conversion to a ru
 | `false` | Allowed | The first call starts execution | Not available because analyzer states do not exist yet |
 | `true` | Rejected | Rejected | Available after analyzer states are created |
 
-`ExperimentRun.ExecutionStarted` is derived from its trials and becomes `true` as soon as any trial run has started. Combined execution first verifies that no trial has started, then calls the ordinary `Stream(...)` method on every trial run before scheduling begins. This prepares every trial and prevents direct trial execution after combined execution starts. Starting any trial individually prevents later combined execution while leaving the other trials available for individual execution.
+`ExperimentRun.ExecutionStarted` records combined execution directly and also reflects whether any individual trial run has started. Combined execution marks the experiment run as started before preparing its trials, then calls the ordinary `Stream(...)` method on every trial run before scheduling begins. This prepares every trial and prevents direct trial execution after combined execution starts. Starting any trial individually prevents later combined execution while leaving the other trials available for individual execution.
 
 Runs do not track separate completed, faulted, canceled or stopped phases. They remain single use after execution starts regardless of how execution ends. The first implementation does not promise thread safety for configuring or starting the same run concurrently, so lifecycle guards use simple Boolean state without locks.
 
@@ -131,7 +131,7 @@ The current preferred conceptual shape is:
 
 ```csharp
 ExperimentRun<TAlgorithm, TKey, ...>
-    IReadOnlyList<ExperimentTrial<TAlgorithm, TKey, ...>> Trials
+    ImmutableArray<ExperimentTrial<TAlgorithm, TKey, ...>> Trials
 
 ExperimentTrial<TAlgorithm, TKey, ...>
     TKey Key
@@ -158,16 +158,16 @@ Each trial exposes its underlying algorithm run, which owns the assigned mutable
 
 Creating an experiment run receives the experiment root random number generator, expands its finite experiment configuration into concrete trial descriptions, assigns deterministic keys and random forks and creates the corresponding algorithm run setup objects without starting them. Algorithm run analyzer states, registries and execution instances remain unresolved until execution starts.
 
-`WithAnalysis(...)` immediately evaluates its selectors against every concrete trial, creates the concrete analyzer configurations and attaches those configurations to the corresponding algorithm run setup. It does not create analyzer states, registries or execution instances. The experiment run must not retain the selector or analyzer factory delegates after attachment. Calling `WithAnalysis(...)` several times before execution remains valid.
+`ExperimentRun.WithAnalyzer(...)` immediately evaluates its trial analyzer against every concrete trial, creates the concrete analyzer configurations and attaches those configurations to the corresponding algorithm run setup. It does not create analyzer states, registries or execution instances. Calling `WithAnalyzer(...)` several times before execution remains valid.
 
 Analysis attachment has its own transactional boundary while the experiment run is configurable:
 
-1. Reject the binding immediately if the same binding handle was already attached.
+1. Reject the trial analyzer immediately if the same object was already attached.
 2. Evaluate its selector and analyzer factory for every trial into temporary storage.
-3. If any selector or factory call fails, attach nothing from that binding and leave the run configurable.
+3. If any selector or factory call fails, attach nothing from that trial analyzer and leave the run configurable.
 4. After all concrete analyzer configurations were created successfully, attach the complete set to the child algorithm runs in deterministic trial order.
 
-This transaction occurs during `WithAnalysis(...)`, not during execution preparation, because the materialized run must not retain the binding lambdas.
+This transaction occurs during `WithAnalyzer(...)`, not during execution preparation.
 
 In this document, materializing an experiment means expanding it into concrete trial and analyzer configurations. Instantiating execution means creating run scoped analyzer states, registries and execution instances. Materialization is eager during setup. Execution instantiation is delayed consistently for algorithm runs and experiment runs.
 
@@ -200,6 +200,17 @@ var run = algorithm.CreateRun(problem, random)
 
 `WithAnalyzer(...)` mutates the configurable run and returns that same run for fluent composition. Attachment after execution starts is rejected because analyzer observations determine registry replacements.
 
+When an analyzer helper is used inline, an `out` overload returns the same analyzer configuration as the typed result lookup object:
+
+```csharp
+var run = algorithm.CreateRun(problem, random)
+    .WithAnalyzer(
+        Analyzer.BestQuality(algorithm.Evaluator),
+        out var bestQuality);
+
+var result = run.GetResult(bestQuality);
+```
+
 Analyzers are attached only through the fluent run API. `CreateRun(...)` does not accept analyzers. The first draft may also provide `WithAnalyzers(...)` as a `params` convenience for attaching several analyzers in one call while preserving parameter order.
 
 The regular `AlgorithmRun` remains the owner of concrete analyzer attachments, analyzer states and analyzer results. This is the correct ownership boundary because observations are installed into that run's registry and results describe that one algorithm execution.
@@ -207,51 +218,48 @@ The regular `AlgorithmRun` remains the owner of concrete analyzer attachments, a
 Analyzer attachment has three distinct levels:
 
 1. An analyzer configuration describes one analysis.
-2. An experiment analyzer binding describes how to select or create an analyzer configuration for each materialized experiment trial.
+2. A trial analyzer describes how to select and create an analyzer configuration for each materialized experiment trial.
 3. Each child `AlgorithmRun` owns the concrete analyzer state and result created from its attached analyzer configuration.
 
 An experiment run may index and aggregate child analyzer results, but it should not become a second owner of those results.
 
-## Analyzer Binding In Experiments
+## Trial Analyzers In Experiments
 
 Operator bound analyzers require a stronger mechanism. A grid may produce algorithm configurations whose observed mutator, evaluator or other child differs by configuration. The analyzer must therefore be selected after each algorithm configuration has been materialized.
 
-The experiment API should support a typed analyzer binding based on the concrete algorithm configuration. `ExperimentAnalysis.ForEach` returns a runtime binding that represents one operator selector and one analyzer factory. It does not attach or execute analyzers immediately.
+The experiment API supports a typed `TrialAnalyzer` based on the concrete algorithm configuration. It represents one operator selector and one analyzer factory. `ExperimentRun.WithAnalyzer(...)` mirrors `AlgorithmRun.WithAnalyzer(...)`, evaluates the trial analyzer immediately and returns the same run for fluent composition. Its selector and factory overload returns the created trial analyzer through an `out` parameter, following the same convention as instrumentation helpers that return an observation sink.
 
 The exact generic declaration is an implementation detail for the first draft. The conceptual contract is the combination of a selector lambda from the concrete algorithm configuration to exactly one `TOperator` and a factory lambda from that selected operator to one analyzer configuration.
 
 For example:
 
 ```csharp
-var mutationCalls = ExperimentAnalysis.ForEach(
-    algorithm => algorithm.Mutator,
-    mutator => new CallCountAnalyzer(mutator));
-
 var run = experiment.CreateRun(problem, random)
-    .WithAnalysis(mutationCalls);
+    .WithAnalyzer(
+        algorithm => algorithm.Mutator,
+        mutator => new CallCountAnalyzer(mutator),
+        out var mutationCalls);
 ```
 
-One binding initially creates one analyzer type. Several analyzers for the same selected operator use several bindings and several `WithAnalysis(...)` calls:
+One trial analyzer creates one analyzer type for every trial. Several analyzers for the same selected operator use several trial analyzers and several `WithAnalyzer(...)` calls:
 
 ```csharp
-var mutationCalls = ExperimentAnalysis.ForEach(
-    algorithm => algorithm.Mutator,
-    mutator => new CallCountAnalyzer(mutator));
-
-var mutationDuration = ExperimentAnalysis.ForEach(
-    algorithm => algorithm.Mutator,
-    mutator => new DurationAnalyzer(mutator));
-
 var run = experiment.CreateRun(problem, random)
-    .WithAnalysis(mutationCalls)
-    .WithAnalysis(mutationDuration);
+    .WithAnalyzer(
+        algorithm => algorithm.Mutator,
+        mutator => new CallCountAnalyzer(mutator),
+        out var mutationCalls)
+    .WithAnalyzer(
+        algorithm => algorithm.Mutator,
+        mutator => new DurationAnalyzer(mutator),
+        out var mutationDuration);
 ```
 
-Bindings are applied in attachment order. When several analyzers observe the same operator, all observations must be merged rather than replacing one another. Their observers must be invoked deterministically in attachment order. Focused tests must cover both result production and invocation order for multiple analyses attached to the same operator.
+Trial analyzers are applied in attachment order. When several analyzers observe the same operator, all observations must be merged rather than replacing one another. Their observers must be invoked deterministically in attachment order. Focused tests must cover both result production and invocation order for multiple analyses attached to the same operator.
 
-The selector actively navigates from the concrete algorithm configuration to exactly one desired operator. It cannot skip a trial or select several operators. Observing another operator requires another binding. The experiment infrastructure should not automatically traverse the configuration graph and evaluate a boolean filter against every operator.
+The selector actively navigates from the concrete algorithm configuration to exactly one desired operator. It cannot skip a trial or select several operators. Observing another operator requires another trial analyzer. The experiment infrastructure should not automatically traverse the configuration graph and evaluate a boolean filter against every operator.
 
-Names remain provisional. The important requirements are:
+The important requirements are:
 
 1. The selector runs once per materialized experiment trial before its algorithm run starts.
 2. It receives the concrete algorithm configuration used by that trial.
@@ -259,9 +267,9 @@ Names remain provisional. The important requirements are:
 4. Each analyzer factory receives that operator and produces a concrete analyzer configuration.
 5. The produced analyzer configuration is attached only to that algorithm run.
 6. Analyzer states and results remain isolated per algorithm run.
-7. The binding provides typed keyed result retrieval without requiring users to manually retain every generated analyzer configuration.
+7. The trial analyzer provides typed keyed result retrieval without requiring users to manually retain every generated analyzer configuration.
 
-The design should support several independent analyzer bindings in one experiment run. An `ExperimentRun` does not offer direct constant analyzer attachment. Every experiment analyzer is created through a binding against each concrete algorithm configuration.
+The design supports several independent trial analyzers in one experiment run. An `ExperimentRun` does not offer direct constant analyzer attachment. Every experiment analyzer is created through a trial analyzer against each concrete algorithm configuration.
 
 The intended materialization flow is:
 
@@ -269,16 +277,18 @@ The intended materialization flow is:
 experiment configuration
   -> materialized trial with concrete algorithm configuration
   -> create the child AlgorithmRun
-  -> evaluate analyzer bindings for that trial
+  -> evaluate trial analyzers for that trial
   -> attach the selected analyzers
   -> instantiate analyzer states, registries and execution instances when execution starts
 ```
 
-An `ExperimentRun` does not need a second analyzer store. Each trial exposes its regular `AlgorithmRun`, which remains the source of truth. `ExperimentTrial` does not forward analyzer result methods. Individual result access uses `trial.Run.GetResult(...)` while binding based aggregate access uses `experimentRun.GetResults(...)`.
+An `ExperimentRun` does not need a second analyzer result store. Each trial exposes its regular `AlgorithmRun`, which remains the source of truth. `ExperimentTrial` does not forward analyzer result methods. Individual result access uses `trial.Run.GetResult(...)` while aggregate access uses `experimentRun.GetResults(trialAnalyzer)`.
+
+`GetResults(...)` materializes an immutable ordered result collection and requires every trial run to have started. If users execute trial runs individually, aggregate results become available after all trials have started. A separately attached analyzer on one trial remains accessible through that trial's `AlgorithmRun`.
 
 Analyzer result availability follows the same lifecycle for algorithm and experiment runs. Results are unavailable before execution starts. Calling `Stream(...)`, `Complete(...)` or `CompleteAsync(...)` eagerly creates analyzer states, so their initial results are available immediately after the execution method returns. During stream enumeration callers may read live results. After completion the same objects contain their final values.
 
-When an analyzer binding creates a different analyzer configuration for every trial, the experiment run retains a mapping from an opaque binding identity and trial key to the concrete analyzer configuration. It does not retain the binding delegates. This enables a typed result query such as:
+When a trial analyzer creates a different analyzer configuration for every trial, the experiment run retains a mapping from the trial analyzer and trial key to the concrete analyzer configuration. This enables a typed result query such as:
 
 ```csharp
 var results = run.GetResults(mutationAnalysis);
@@ -288,7 +298,7 @@ without requiring the user to manually retain every generated analyzer configura
 
 ### Experiment Result Analysis
 
-Experiment result access must make comparisons and aggregation across trials straightforward. A typed result entry obtained through a binding handle exposes:
+Experiment result access must make comparisons and aggregation across trials straightforward. A typed `TrialAnalysisResult` exposes:
 
 1. The `ExperimentTrial` that produced the result.
 2. The concrete analyzer configuration attached to that trial.
@@ -303,13 +313,13 @@ This surface must let users use normal typed collection operations to answer at 
 
 The trial key supplies the grid and repetition identity required by those queries. The initial design does not need dedicated mean, variance or best result methods if the typed result collection makes the corresponding LINQ queries direct and readable.
 
-### Runtime Bindings And Persistable Configurations
+### Runtime Trial Analyzers And Persistable Configurations
 
-Lambdas may be used for temporary setup, selection and runtime binding. They must not remain in the materialized experiment run or its algorithm runs after setup has produced the concrete configuration objects.
+Lambdas may be used for temporary setup, selection and runtime trial analyzers. They are not expected to be persistable.
 
-Analyzer selector and factory delegates belong to not yet started `ExperimentRun` setup. `WithAnalysis(...)` evaluates them immediately for every concrete trial and converts them into ordinary analyzer configurations attached to the corresponding algorithm runs. The external binding handle may remain a runtime only object containing delegates because it is not retained by the experiment run. The run uses only the handle's opaque identity for later typed result lookup.
+Analyzer selector and factory delegates belong to a runtime only `TrialAnalyzer`. `WithAnalyzer(...)` evaluates them immediately for every concrete trial and converts them into ordinary analyzer configurations attached to the corresponding algorithm runs. The experiment run may retain the trial analyzer as the typed key for later result lookup.
 
-Formal serialization requirements should be postponed until the intended serialization boundary has been reconsidered. Runs, execution registries, random number generators, runtime binding handles and active execution instances are not realistic serialization targets. The first implementation should preserve the existing property that algorithm, operator and concrete analyzer configuration objects are serialization friendly in principle. It should not claim that complete experiment setup or execution state is serializable.
+Formal serialization requirements should be postponed until the intended serialization boundary has been reconsidered. Runs, execution registries, random number generators, trial analyzers and active execution instances are not realistic serialization targets. The first implementation should preserve the existing property that algorithm, operator and concrete analyzer configuration objects are serialization friendly in principle. It should not claim that complete experiment setup or execution state is serializable.
 
 Grid construction lambdas should likewise be treated as temporary setup helpers when an experiment run is materialized. The current grid configuration may retain them until `CreateRun(...)` expands the finite grid. The resulting experiment run retains only concrete algorithm configurations and typed keys. Whether the grid configuration itself must become serializable is part of the postponed serialization discussion.
 
@@ -490,7 +500,7 @@ Each algorithm run keeps its own stream. Every combined stream entry contains it
 
 Scheduling must not change the random sequence or optimization result of any individual run.
 
-Materialization order is the canonical deterministic order for all nonstreaming collections. `ExperimentRun.Trials`, successful completion tuples, binding based analyzer results and exceptions inside the final `AggregateException` retain that order regardless of scheduling. Parallel combined stream emission order remains schedule dependent, but every emitted entry retains its deterministic trial and key identity.
+Materialization order is the canonical deterministic order for all nonstreaming collections. `ExperimentRun.Trials`, successful completion tuples, trial analysis results and exceptions inside the final `AggregateException` retain that order regardless of scheduling. Parallel combined stream emission order remains schedule dependent, but every emitted entry retains its deterministic trial and key identity.
 
 ## Completion, Cancellation And Failure
 
@@ -560,7 +570,7 @@ Focused lifecycle tests must cover:
 7. Remaining trials being independently executable after individual execution starts.
 8. Multiple analyses of the same operator all executing in attachment order.
 9. A failing selector or analyzer factory attaching no partial analysis configuration.
-10. Attaching the same binding handle twice being rejected.
+10. Attaching the same trial analyzer twice being rejected.
 11. Completion results, analyzer results and aggregate failures retaining materialization order under parallel execution.
 12. Every combined failure being wrapped in an `ExperimentTrialException<TKey>` with the correct trial key and original inner exception.
 

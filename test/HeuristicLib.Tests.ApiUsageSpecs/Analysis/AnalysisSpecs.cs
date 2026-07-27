@@ -31,7 +31,7 @@ public class AnalysisSpecs
         var finalState = await run.CompleteAsync(
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var analysisResult = run.GetAnalyzerResult(analysis);
+        var analysisResult = run.GetResult(analysis);
 
         analysisResult.Count.ShouldBe(4);
         finalState.Population.EvaluatedCandidates.Length.ShouldBe(16);
@@ -51,17 +51,17 @@ public class AnalysisSpecs
                                         .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         (await enumerator.MoveNextAsync()).ShouldBeTrue();
-        run.GetAnalyzerResult(analysis).Count.ShouldBe(1);
+        run.GetResult(analysis).Count.ShouldBe(1);
 
         (await enumerator.MoveNextAsync()).ShouldBeTrue();
-        run.GetAnalyzerResult(analysis).Count.ShouldBe(2);
+        run.GetResult(analysis).Count.ShouldBe(2);
 
         while (await enumerator.MoveNextAsync())
         {
             _ = enumerator.Current;
         }
 
-        run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
+        run.GetResult(analysis).Count.ShouldBe(3);
     }
 
     [Fact]
@@ -79,25 +79,25 @@ public class AnalysisSpecs
         await run.CompleteAsync(
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var analysisResult = run.GetAnalyzerResult(analysis);
+        var analysisResult = run.GetResult(analysis);
 
         analysisResult.BestSolutions.Count.ShouldBe(3);
         analysisResult.BestSolutions.All(entry => entry.evaluations > 0).ShouldBeTrue();
     }
 
     [Fact]
-    public async Task AnalyzerAttachment_Example_ProducesTypedResult()
+    public async Task AnalyzerAttachment_OutOverloadProducesTypedResult()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem, interceptor, maximumGenerations: 4);
-        var analysis = Analyzer.BestMedianWorst(interceptor);
 
-        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(333)).WithAnalyzer(analysis);
+        var run = baseAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(333))
+            .WithAnalyzer(Analyzer.BestMedianWorst(interceptor), out var analysis);
         var finalState = await run.CompleteAsync(
             cancellationToken: TestContext.Current.CancellationToken);
 
-        var result = run.GetAnalyzerResult(analysis);
+        var result = run.GetResult(analysis);
 
         result.Count.ShouldBe(4);
         finalState.Population.EvaluatedCandidates.Length.ShouldBe(16);

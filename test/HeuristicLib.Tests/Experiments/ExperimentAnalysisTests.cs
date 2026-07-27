@@ -13,18 +13,23 @@ namespace HEAL.HeuristicLib.Tests.Experiments;
 public class ExperimentAnalysisTests
 {
     [Fact]
-    public async Task MultipleBindings_ObserveTheSameOperatorInAttachmentOrder()
+    public async Task MultipleTrialAnalyzers_ObserveTheSameOperatorInAttachmentOrder()
     {
         var invocationOrder = new List<int>();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
         var experiment = algorithm.Repeat(2);
-        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
-        var first = CreateBinding(marker: 1, invocationOrder);
-        var second = CreateBinding(marker: 2, invocationOrder);
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
+            .WithAnalyzer(
+                algorithm => algorithm.Evaluator,
+                evaluator => new OrderedEvaluationAnalyzer(evaluator, 1, invocationOrder),
+                out var first)
+            .WithAnalyzer(
+                algorithm => algorithm.Evaluator,
+                evaluator => new OrderedEvaluationAnalyzer(evaluator, 2, invocationOrder),
+                out var second);
 
-        run.WithAnalysis(first).WithAnalysis(second);
-        Should.Throw<InvalidOperationException>(() => run.WithAnalysis(first));
+        Should.Throw<InvalidOperationException>(() => run.WithAnalyzer(first));
         Should.Throw<InvalidOperationException>(() => run.GetResults(first));
 
         var stream = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
@@ -35,7 +40,10 @@ public class ExperimentAnalysisTests
         run.GetResults(first).Select(result => result.Trial.Key).ShouldBe([0, 1]);
         run.GetResults(first).ShouldAllBe(result => result.Result.Count == 1);
         run.GetResults(second).ShouldAllBe(result => result.Result.Count == 1);
-        Should.Throw<InvalidOperationException>(() => run.WithAnalysis(CreateBinding(marker: 3, invocationOrder)));
+        var third = TrialAnalyzer.Create(
+            (CountingInstanceAlgorithm algorithm) => algorithm.Evaluator,
+            evaluator => new OrderedEvaluationAnalyzer(evaluator, 3, invocationOrder));
+        Should.Throw<InvalidOperationException>(() => run.WithAnalyzer(third));
     }
 
     [Fact]
@@ -49,23 +57,57 @@ public class ExperimentAnalysisTests
             new ExperimentCase<CountingInstanceAlgorithm, int>(secondAlgorithm, 1, [1])
         ]);
         var run = ExperimentTestSupport.CreateRun(experiment);
-        var binding = ExperimentAnalysis.ForEach<CountingInstanceAlgorithm, CountingInstanceAlgorithm, EvaluationResult>(
+
+        Should.Throw<InvalidOperationException>(() => run.WithAnalyzer(
             algorithm => algorithm,
             algorithm => algorithm.Increment == 2
                 ? throw new InvalidOperationException("Analyzer creation failed.")
-                : new OrderedEvaluationAnalyzer(algorithm.Evaluator, 1, invocations));
-
-        Should.Throw<InvalidOperationException>(() => run.WithAnalysis(binding));
+                : new OrderedEvaluationAnalyzer(algorithm.Evaluator, 1, invocations),
+            out _));
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         invocations.ShouldBeEmpty();
     }
 
-    private static AnalyzerBinding<CountingInstanceAlgorithm, IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>, EvaluationResult> CreateBinding(
-        int marker, List<int> invocationOrder) => 
-        ExperimentAnalysis.ForEach(
-            (CountingInstanceAlgorithm algorithm) => algorithm.Evaluator,
-            evaluator => new OrderedEvaluationAnalyzer(evaluator, marker, invocationOrder));
+    [Fact]
+    public async Task ExistingTrialAnalyzer_CanBeAttachedToAnotherRun()
+    {
+        var invocations = new List<int>();
+        var algorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
+        var experiment = algorithm.Repeat(2);
+        _ = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(1))
+            .WithAnalyzer(
+                algorithm => algorithm.Evaluator,
+                evaluator => new OrderedEvaluationAnalyzer(evaluator, 1, invocations),
+                out var trialAnalyzer);
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(2))
+            .WithAnalyzer(trialAnalyzer);
+
+        _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        run.GetResults(trialAnalyzer).Select(result => result.Trial.Key).ShouldBe([0, 1]);
+        run.GetResults(trialAnalyzer).ShouldAllBe(result => result.Result.Count == 1);
+    }
+
+    [Fact]
+    public async Task GetResults_RequiresEveryTrialToHaveStarted()
+    {
+        var algorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
+        var run = algorithm.Repeat(2)
+            .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
+            .WithAnalyzer(
+                algorithm => algorithm.Evaluator,
+                evaluator => new OrderedEvaluationAnalyzer(evaluator, 1, []),
+                out var trialAnalyzer);
+
+        _ = await run.Trials[0].Run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        Should.Throw<InvalidOperationException>(() => run.GetResults(trialAnalyzer));
+
+        _ = await run.Trials[1].Run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        run.GetResults(trialAnalyzer).ShouldAllBe(result => result.Result.Count == 1);
+    }
 
     private sealed record OrderedEvaluationAnalyzer(
         IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator,

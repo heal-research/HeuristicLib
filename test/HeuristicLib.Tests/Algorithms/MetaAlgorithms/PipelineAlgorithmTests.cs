@@ -79,7 +79,7 @@ public class PipelineAlgorithmTests
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
-        run.GetAnalyzerResult(analysis).Count.ShouldBe(3);
+        run.GetResult(analysis).Count.ShouldBe(3);
     }
 
     [Fact]
