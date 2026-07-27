@@ -60,13 +60,21 @@ public sealed record RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSea
 
 public static class RepeatedExperimentExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>(TAlgorithm algorithm)
+    extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
-        where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
-        public RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> Repeat(int repetitions) => new(algorithm, repetitions);
+        public RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> Repeat(int repetitions) => new(algorithm.Self, repetitions);
+    }
+
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+    {
+        public RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> Repeat(int repetitions) => new(algorithm, repetitions);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey>(IExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey> experiment)

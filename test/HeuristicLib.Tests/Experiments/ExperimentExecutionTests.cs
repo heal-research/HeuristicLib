@@ -27,9 +27,8 @@ public class ExperimentExecutionTests
     {
         var probe = new ExecutionProbe();
         var algorithm = new ProbeAlgorithm(1, probe, DelayMilliseconds: 30);
-        var experiment = new RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ProbeAlgorithm>(algorithm, repetitions: 6);
-        var run = new ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ProbeAlgorithm, int>(
-            experiment, MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        var experiment = algorithm.Repeat(6);
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 
         _ = await run.CompleteAsync(ExperimentExecutionPolicy.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
 
@@ -58,11 +57,9 @@ public class ExperimentExecutionTests
     public async Task RandomAssignments_DoNotDependOnSchedulingPolicy()
     {
         var algorithm = new ProbeAlgorithm(0, UseRandomValue: true);
-        var experiment = new RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ProbeAlgorithm>(algorithm, repetitions: 5);
-        var sequentialRun = new ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ProbeAlgorithm, int>(
-            experiment, MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(123));
-        var concurrentRun = new ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, ProbeAlgorithm, int>(
-            experiment, MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(123));
+        var experiment = algorithm.Repeat(5);
+        var sequentialRun = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(123));
+        var concurrentRun = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(123));
 
         var sequential = await sequentialRun.CompleteAsync(ExperimentExecutionPolicy.Sequential(), cancellationToken: TestContext.Current.CancellationToken);
         var concurrent = await concurrentRun.CompleteAsync(ExperimentExecutionPolicy.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);

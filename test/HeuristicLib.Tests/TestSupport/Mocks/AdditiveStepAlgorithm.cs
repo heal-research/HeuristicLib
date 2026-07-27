@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 public sealed record AdditiveStepAlgorithm(int Increment)
-    : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    : Algorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
     public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; init; } = new DirectEvaluator<int>();
 

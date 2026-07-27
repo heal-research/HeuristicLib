@@ -571,8 +571,7 @@ public class PractitionerUsageSpecs
             BatchSize = 4,
             MaxNeighbors = 12
         }.WithMaxIterations(6);
-        var repeated = new RepeatedExperiment<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
-          IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>(algorithm, 3);
+        var repeated = algorithm.Repeat(3);
 
         var results = await repeated.CompleteAsync(
           problem,

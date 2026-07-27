@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 #pragma warning disable S101
 public record NSGA2<TCandidate, TSearchSpace, TProblem>
 #pragma warning restore S101
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
+    : IterativeAlgorithm<NSGA2<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {

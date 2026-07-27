@@ -11,9 +11,10 @@ public class ExperimentMaterializationTests
     [Fact]
     public void GridAndRepetition_MaterializeTypedKeysAndImmutableForkPaths()
     {
-        var grid = new GridExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm>(new AdditiveStepAlgorithm(0))
-            .VaryBy([1, 2], (algorithm, increment) => algorithm with { Increment = increment });
-        var experiment = new RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm, AdditiveStepAlgorithm>(grid, repetitions: 2);
+        var experiment = new AdditiveStepAlgorithm(0)
+            .AsGrid()
+            .VaryBy([1, 2], (algorithm, increment) => algorithm with { Increment = increment })
+            .Repeat(2);
 
         var cases = experiment.MaterializeCases();
 
@@ -24,7 +25,8 @@ public class ExperimentMaterializationTests
     [Fact]
     public void Grid_RejectsEqualMaterializedConfigurations()
     {
-        var experiment = new GridExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm>(new AdditiveStepAlgorithm(0))
+        var experiment = new AdditiveStepAlgorithm(0)
+            .AsGrid()
             .VaryBy([1, 1], (algorithm, increment) => algorithm with { Increment = increment });
 
         Should.Throw<InvalidOperationException>(() => experiment.MaterializeCases());

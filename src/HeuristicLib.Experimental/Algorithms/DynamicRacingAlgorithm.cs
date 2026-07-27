@@ -31,7 +31,7 @@ public class EmptyMetaOptProblem : MetaOptimizationProblem
 }
 
 public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IterativeAlgorithm<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : DynamicProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>

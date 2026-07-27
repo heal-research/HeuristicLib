@@ -18,7 +18,7 @@ public record AlpsState<TCandidate> : SearchState
 }
 
 public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>
+    : IterativeAlgorithm<AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {

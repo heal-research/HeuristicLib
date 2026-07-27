@@ -27,7 +27,7 @@ internal sealed record ProbeAlgorithm(
     bool FailDuringSetup = false,
     bool FailDuringExecution = false,
     bool YieldState = true)
-    : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    : Algorithm<ProbeAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
     protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
     {
@@ -126,7 +126,7 @@ internal static class ExperimentTestSupport
         IExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int> experiment,
         int seed = 42)
         where TAlgorithm : class, IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> =>
-        new(experiment, MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(seed));
+        experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(seed));
 
     public static PopulationState<int> CreateState(int candidate) => new()
     {

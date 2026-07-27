@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
 // Adapter for algorithms that do not have an inner termination criterion; revisit if every algorithm exposes a terminal-state hook.
 public record StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : Algorithm<StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState

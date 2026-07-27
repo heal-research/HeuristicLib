@@ -21,9 +21,8 @@ public class ExperimentSpecs
     public async Task RepeatedExperiment_UsesIndependentAlgorithmRuns()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> algorithm = CreateSimpleHillClimber(problem).WithMaxIterations(6);
-        var experiment = new RepeatedExperiment<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
-            IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>(algorithm, 3);
+        var algorithm = CreateSimpleHillClimber(problem).WithMaxIterations(6);
+        var experiment = algorithm.Repeat(3);
 
         var results = await experiment.CompleteAsync(problem, RandomNumberGenerator.Create(999), cancellationToken: TestContext.Current.CancellationToken);
 
@@ -37,12 +36,11 @@ public class ExperimentSpecs
     public void GridAndRepetition_ComposeWithTypedDeterministicKeys()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var grid = new GridExperiment<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
-            HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>>(CreateSimpleHillClimber(problem))
+        var experiment = CreateSimpleHillClimber(problem)
+            .AsGrid()
             .VaryBy([2, 4], (algorithm, batchSize) => algorithm with { BatchSize = batchSize })
-            .VaryBy([8, 12], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
-        var experiment = new RepeatedExperiment<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
-            HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>, HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>>(grid, 2);
+            .VaryBy([8, 12], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors })
+            .Repeat(2);
 
         var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(123));
 
@@ -57,8 +55,8 @@ public class ExperimentSpecs
     public async Task ExperimentAnalysis_BindsOneAnalyzerToEachConcreteAlgorithm()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var experiment = new GridExperiment<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>,
-            HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>>(CreateSimpleHillClimber(problem))
+        var experiment = CreateSimpleHillClimber(problem)
+            .AsGrid()
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
         var bestQuality = ExperimentAnalysis.ForEach(
             (HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem> algorithm) => algorithm.Evaluator,

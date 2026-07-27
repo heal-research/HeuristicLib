@@ -18,9 +18,8 @@ public class ExperimentAnalysisTests
         var invocationOrder = new List<int>();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
-        var experiment = new RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, CountingInstanceAlgorithm>(algorithm, repetitions: 2);
-        var run = new ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, CountingInstanceAlgorithm, int>(
-            experiment, MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        var experiment = algorithm.Repeat(2);
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
         var first = CreateBinding(marker: 1, invocationOrder);
         var second = CreateBinding(marker: 2, invocationOrder);
 

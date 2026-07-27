@@ -174,7 +174,7 @@ public class CycleAlgorithmTests
       state.Population.EvaluatedCandidates[0].ObjectiveVector[0];
 
     private sealed record NoProgressAlgorithm
-        : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        : Algorithm<NoProgressAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
         public int InstanceCount { get; private set; }
 

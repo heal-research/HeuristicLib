@@ -37,9 +37,8 @@ public class ExperimentRunTests
     {
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
-        var experiment = new RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, CountingInstanceAlgorithm>(algorithm, repetitions: 2);
-        var run = new ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, CountingInstanceAlgorithm, int>(
-            experiment, MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        var experiment = algorithm.Repeat(2);
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 
         _ = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -60,8 +59,8 @@ public class ExperimentRunTests
     }
 
     private static RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm> CreateExperiment() =>
-        new(new AdditiveStepAlgorithm(1), repetitions: 2);
+        new AdditiveStepAlgorithm(1).Repeat(2);
 
     private static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm, int> CreateRun() =>
-        new(CreateExperiment(), MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        CreateExperiment().CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 }
