@@ -16,6 +16,8 @@
       href: glossary.md
     - name: Core concepts
       href: core-concepts.md
+    - name: Symbolic expressions
+      href: symbolic-expressions.md
     - name: Problem
       href: problem.md
     - name: Search spaces

@@ -97,6 +97,32 @@ public sealed class SubtreeCrossoverTests
     }
 
     [Fact]
+    public void Cross_RejectsDonorBranchThatWouldOnlyExceedTheDepthLimit()
+    {
+        var searchSpace = new ExpressionTreeSearchSpace(
+            maximumLength: 5,
+            maximumDepth: 2,
+            operations: [Symbols.Addition],
+            variables: ["x0", "x1", "x2", "x3"]);
+        var parent1 = (Variable("x0") + Variable("x1")).Build(searchSpace);
+        var parent2 = (Variable("x2") + Variable("x3")).Build(searchSpace);
+        var random = new SequenceRandomNumberGenerator(
+            0.9,  // Select parent1's x1 terminal at preorder index 2.
+            0.75); // Retain x2 when x3 becomes the second valid donor.
+
+        var offspring = SubtreeCrossover.Cross(
+            parent1,
+            parent2,
+            random,
+            searchSpace);
+
+        offspring.ToInfixString().ShouldBe("(x0 + x2)");
+        offspring.Length.ShouldBe(3);
+        offspring.Depth.ShouldBe(2);
+        searchSpace.Contains(offspring).ShouldBeTrue();
+    }
+
+    [Fact]
     public void Cross_WithInternalNodeProbabilityOne_SelectsInternalNodes()
     {
         var searchSpace = new ExpressionTreeSearchSpace(

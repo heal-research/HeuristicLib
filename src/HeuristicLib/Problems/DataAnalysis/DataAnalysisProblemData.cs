@@ -1,6 +1,6 @@
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public abstract class DataAnalysisProblemData : IProblemData
+public abstract class DataAnalysisProblemData
 {
 
     public enum PartitionType

@@ -206,8 +206,20 @@ public sealed record DivisionSymbol() : BuiltInOperationSymbol("/", OpCode.Divid
 
 public sealed record NegationSymbol() : BuiltInOperationSymbol("negate", OpCode.Negate);
 public sealed record ExponentialSymbol() : BuiltInOperationSymbol("exp", OpCode.Exp);
+public sealed record SineSymbol() : BuiltInOperationSymbol("sin", OpCode.Sin);
+public sealed record CosineSymbol() : BuiltInOperationSymbol("cos", OpCode.Cos);
+public sealed record TangentSymbol() : BuiltInOperationSymbol("tan", OpCode.Tan);
+public sealed record HyperbolicTangentSymbol() : BuiltInOperationSymbol("tanh", OpCode.Tanh);
 public sealed record LogarithmSymbol() : BuiltInOperationSymbol("log", OpCode.Log);
 public sealed record SquareRootSymbol() : BuiltInOperationSymbol("sqrt", OpCode.Sqrt);
+public sealed record AbsoluteSymbol() : BuiltInOperationSymbol("abs", OpCode.Abs);
+public sealed record SquareSymbol() : BuiltInOperationSymbol("square", OpCode.Square);
+public sealed record CubeSymbol() : BuiltInOperationSymbol("cube", OpCode.Cube);
+public sealed record CubeRootSymbol() : BuiltInOperationSymbol("cbrt", OpCode.CubeRoot);
+
+public sealed record PowerSymbol() : BuiltInOperationSymbol("pow", OpCode.Power);
+public sealed record RootSymbol() : BuiltInOperationSymbol("root", OpCode.Root);
+public sealed record AnalyticQuotientSymbol() : BuiltInOperationSymbol("aq", OpCode.AnalyticQuotient);
 
 public sealed record SigmoidSymbol() : OperationSymbol("sigmoid", 1)
 {
@@ -231,14 +243,36 @@ public static class Symbols
     public static DivisionSymbol Division { get; } = new();
     public static NegationSymbol Negation { get; } = new();
     public static ExponentialSymbol Exponential { get; } = new();
+    public static SineSymbol Sine { get; } = new();
+    public static CosineSymbol Cosine { get; } = new();
+    public static TangentSymbol Tangent { get; } = new();
+    public static HyperbolicTangentSymbol HyperbolicTangent { get; } = new();
     public static LogarithmSymbol Logarithm { get; } = new();
     public static SquareRootSymbol SquareRoot { get; } = new();
+    public static AbsoluteSymbol Absolute { get; } = new();
+    public static SquareSymbol Square { get; } = new();
+    public static CubeSymbol Cube { get; } = new();
+    public static CubeRootSymbol CubeRoot { get; } = new();
+    public static PowerSymbol Power { get; } = new();
+    public static RootSymbol Root { get; } = new();
+    public static AnalyticQuotientSymbol AnalyticQuotient { get; } = new();
     public static SigmoidSymbol Sigmoid { get; } = new();
 
-    public static IReadOnlyList<OperationSymbol> BasicArithmetic { get; } = [Addition, Subtraction, Multiplication, Division];
-    public static IReadOnlyList<OperationSymbol> ElementaryFunctions { get; } = [Negation, Exponential, Logarithm, SquareRoot, Sigmoid];
+    public static IReadOnlyList<OperationSymbol> MinimalOperations { get; } =
+        [Addition, Subtraction, Multiplication, Division];
 
-    public static IReadOnlyList<OperationSymbol> Standard { get; } = [.. BasicArithmetic, .. ElementaryFunctions];
+    public static IReadOnlyList<OperationSymbol> DefaultOperations { get; } =
+        [Addition, Subtraction, Multiplication, Division, Exponential, Logarithm, SquareRoot, Square];
+
+    public static IReadOnlyList<OperationSymbol> AllOperations { get; } =
+    [
+        Addition, Subtraction, Multiplication, Division,
+        Negation, Exponential, Logarithm, SquareRoot,
+        Sine, Cosine, Tangent, HyperbolicTangent,
+        Absolute, Square, Cube, CubeRoot,
+        Power, Root, AnalyticQuotient,
+        Sigmoid
+    ];
 
     public static EvolvableConstantSymbol Constant(IDistribution<double>? initialDistribution = null, NumericPerturbation? perturbation = null)
     {

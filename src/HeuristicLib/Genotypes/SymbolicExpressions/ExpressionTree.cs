@@ -92,10 +92,6 @@ public sealed class ExpressionTree : IEquatable<ExpressionTree>
         return FindPoint(RootPoint, index);
     }
 
-    public string ToInfixString() => FormatNode(Root);
-
-    public override string ToString() => ToInfixString();
-
     public bool Equals(ExpressionTree? other)
     {
         if (other is null)
@@ -188,22 +184,6 @@ public sealed class ExpressionTree : IEquatable<ExpressionTree>
         return updatedChildren is null
             ? original
             : original.WithChildren(updatedChildren);
-    }
-
-    private static string FormatNode(ExpressionNode node)
-    {
-        return node switch
-        {
-            VariableExpressionNode variable => variable.VariableName,
-            NumericConstantExpressionNode constant => constant.Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture),
-            TerminalExpressionNode => node.Name,
-            UnaryExpressionNode { Symbol: BuiltInOperationSymbol operation } unary => $"{operation.Name}({FormatNode(unary.Operand)})",
-            BinaryExpressionNode { Symbol: BuiltInOperationSymbol operation } binary => $"({FormatNode(binary.Left)} {operation.Name} {FormatNode(binary.Right)})",
-            UnaryExpressionNode unary => $"{node.Name}({FormatNode(unary.Operand)})",
-            BinaryExpressionNode binary => $"{node.Name}({FormatNode(binary.Left)}, {FormatNode(binary.Right)})",
-            NaryExpressionNode nary => $"{node.Name}({string.Join(", ", nary.Children.Select(FormatNode))})",
-            _ => node.Name
-        };
     }
 
     private sealed class PatchNode

@@ -69,21 +69,23 @@ public static class OpCodes
             OpCode.Divide => new OpCodeMetadata(2, PayloadKind.None),
             OpCode.Negate => new OpCodeMetadata(1, PayloadKind.None),
             OpCode.Exp => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.Sin => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.Cos => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.Tan => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.Tanh => new OpCodeMetadata(1, PayloadKind.None),
             OpCode.Log => new OpCodeMetadata(1, PayloadKind.None),
             OpCode.Sqrt => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.Abs => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.Square => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.Cube => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.CubeRoot => new OpCodeMetadata(1, PayloadKind.None),
+            OpCode.Power => new OpCodeMetadata(2, PayloadKind.None),
+            OpCode.Root => new OpCodeMetadata(2, PayloadKind.None),
+            OpCode.AnalyticQuotient => new OpCodeMetadata(2, PayloadKind.None),
             _ => default
         };
 
-        return opCode is OpCode.Variable
-                         or OpCode.Constant
-                         or OpCode.Add
-                         or OpCode.Subtract
-                         or OpCode.Multiply
-                         or OpCode.Divide
-                         or OpCode.Negate
-                         or OpCode.Exp
-                         or OpCode.Log
-                         or OpCode.Sqrt;
+        return metadata.Arity != 0 || opCode is OpCode.Variable or OpCode.Constant;
     }
 
     internal static bool MatchesArity(OpCode opCode, int arity)

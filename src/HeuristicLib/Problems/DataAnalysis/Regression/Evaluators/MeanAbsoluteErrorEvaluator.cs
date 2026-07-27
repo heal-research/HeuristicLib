@@ -1,7 +1,7 @@
+using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
-namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 
 public class MeanAbsoluteErrorEvaluator : RegressionEvaluator
 {
@@ -9,12 +9,6 @@ public class MeanAbsoluteErrorEvaluator : RegressionEvaluator
 
     public override double Evaluate(IEnumerable<double> predictedValues, IEnumerable<double> trueValues)
     {
-        var r = OnlineMeanAbsoluteErrorCalculator.Calculate(trueValues, predictedValues, out var state);
-        if (state != OnlineCalculatorError.None)
-        {
-            throw new InvalidOperationException("can not calculate Normalized Mean Absolute Error");
-        }
-
-        return r;
+        return EvaluateMetric(Metrics.MAE, predictedValues, trueValues);
     }
 }

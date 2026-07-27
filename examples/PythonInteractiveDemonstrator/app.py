@@ -100,7 +100,7 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
             InteractiveSymbolicRegression,
             InteractiveSymRegParameters,
         )
-        from HEAL.HeuristicLib.Genotypes.Trees import SymbolicExpressionTree
+        from HEAL.HeuristicLib.Genotypes.SymbolicExpressions import ExpressionTree
         from HEAL.HeuristicLib.Optimization import ObjectiveVector
         from System import Func, Array, Double
 
@@ -226,7 +226,7 @@ def _run_regression(points_json: str, params_json: str, result_queue: mp.Queue):
             return Array[Array[Double]](result)
 
         callback_func = Func[
-            Array[SymbolicExpressionTree],
+            Array[ExpressionTree],
             Array[ObjectiveVector],
             Array[Array[Double]]
         ](population_callback)

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.DataAnalysis.Statistics;
 using HEAL.HeuristicLib.Optimization;
 
 #pragma warning disable S2178
@@ -5,37 +6,31 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 
 public class OnlineLinearScalingParameterCalculator
 {
-    private readonly OnlineMeanAndVarianceCalculator originalMeanAndVarianceCalculator;
-    private readonly OnlineCovarianceCalculator originalTargetCovarianceCalculator;
-
-    private readonly OnlineMeanAndVarianceCalculator targetMeanCalculator;
+    private readonly RunningCovariance statistics;
+    private OnlineCalculatorError errorState;
 
     public OnlineLinearScalingParameterCalculator()
     {
-        targetMeanCalculator = new OnlineMeanAndVarianceCalculator();
-        originalMeanAndVarianceCalculator = new OnlineMeanAndVarianceCalculator();
-        originalTargetCovarianceCalculator = new OnlineCovarianceCalculator();
+        statistics = new RunningCovariance();
         Reset();
     }
 
     /// <summary>
     ///   Additive offset
     /// </summary>
-    public double Alpha => targetMeanCalculator.Mean - Beta * originalMeanAndVarianceCalculator.Mean;
+    public double Alpha => statistics.MeanY - Beta * statistics.MeanX;
 
     /// <summary>
     ///   Multiplicative factor
     /// </summary>
-    public double Beta => originalMeanAndVarianceCalculator.PopulationVariance.IsAlmost(0.0) ? 1 : originalTargetCovarianceCalculator.Covariance / originalMeanAndVarianceCalculator.PopulationVariance;
+    public double Beta => statistics.PopulationVarianceX.IsAlmost(0.0) ? 1 : statistics.PopulationCovariance / statistics.PopulationVarianceX;
 
-    public OnlineCalculatorError ErrorState => targetMeanCalculator.MeanErrorState | originalMeanAndVarianceCalculator.MeanErrorState |
-      originalMeanAndVarianceCalculator.PopulationVarianceErrorState | originalTargetCovarianceCalculator.ErrorState;
+    public OnlineCalculatorError ErrorState => errorState;
 
     public void Reset()
     {
-        targetMeanCalculator.Reset();
-        originalMeanAndVarianceCalculator.Reset();
-        originalTargetCovarianceCalculator.Reset();
+        statistics.Reset();
+        errorState = OnlineCalculatorError.InsufficientElementsAdded;
     }
 
     /// <summary>
@@ -45,10 +40,14 @@ public class OnlineLinearScalingParameterCalculator
     /// </summary>
     public void Add(double original, double target)
     {
-        // validity of values is checked in mean calculator and covariance calculator
-        targetMeanCalculator.Add(target);
-        originalMeanAndVarianceCalculator.Add(original);
-        originalTargetCovarianceCalculator.Add(original, target);
+        if (!double.IsFinite(original) || !double.IsFinite(target) || (errorState & OnlineCalculatorError.InvalidValueAdded) > 0)
+        {
+            errorState |= OnlineCalculatorError.InvalidValueAdded;
+            return;
+        }
+
+        statistics.Add(original, target);
+        errorState &= ~OnlineCalculatorError.InsufficientElementsAdded;
     }
 
     /// <summary>

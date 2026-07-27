@@ -28,7 +28,9 @@ Non-goals for the scalar Stages 1-4 redesign:
 Resolve these before or during Stage 0:
 
 - **API specs:** add executable usage specs before hardening public APIs.
-- **Legacy boundary:** decide namespace, obsolete message, in-repo migration order, and whether a temporary forwarding shim is allowed.
+- **Legacy migration:** keep still-required mutable components in their domain
+  folders, use `.Legacy` namespaces only for actual name collisions, and remove
+  components only after consumer and test parity plus explicit approval.
 - **Interpreter binding:** define the Stage 1 name-first authoring contract: `ExpressionDraft.Variable(name)` interns names into the compiled expression variable table, variable instructions store payload indexes into that table, and the interpreter uses those names to fetch dataset series.
 - **Reference behavior scope:** maintain a matrix for each legacy symbol/behavior: new target, reference level, test status, and intentional difference.
 - **Instruction validity:** define runtime validation for non-empty code, RPN stack balance, arity, `SubtreeLength`, payload indexes, root position, max length/depth, and invalid opcodes.
@@ -68,7 +70,9 @@ Boundary rules:
 - Ordinary interpretation accepts an `ExpressionTree` without requiring users to manage compilation. Advanced users may explicitly compile and optimize a tree, retain the resulting public `CompiledExpression`, and execute it repeatedly without recompilation.
 - The current `ExpressionTree` system is the closed, built-in-opcode implementation optimized for speed. Built-in symbols are deliberately fixed in HeuristicLib code so catalog lookup, interpretation, validation, and operator logic can use compile-time-known opcodes and fast switches in hot paths.
 - A more flexible custom-symbol system may be added later if real use cases require it. That system should be designed as a separate layer or sibling implementation and must not slow down the built-in fast path.
-- The interpreter owns translation from compiled variable-reference names to dataset series; Stage 1 does not add a separate public data-view or translation type.
+- The interpreter owns translation from compiled variable-reference names to
+  `DataFrame` series; it does not add a separate public data-view or
+  translation type.
 - Search spaces and their matching operators generate, mutate, cross, repair, and validate candidates; they do not evaluate them.
 - A symbolic regression problem instance has exactly one expression search-space instance. Unrestricted versus grammar-constrained behavior is selected when the problem is constructed, not switched dynamically during a run.
 - The unrestricted scalar search space is not represented as a `SimpleGrammar`. Fast unrestricted operators must not call grammar predicates or enumerate grammar-derived cut points.
@@ -86,7 +90,8 @@ Add API usage specs in `test/HeuristicLib.Tests.ApiUsageSpecs` for:
 
 - building `x0 + 2 * x1` with `ExpressionDraft`
 - evaluating a compiled expression against regression data
-- constructing a default symbolic regression problem with an explicit RMSE metric/loss object
+- constructing a symbolic regression problem with either the default MSE or an
+  explicit regression metric
 - running GA with the new creator, crossover, and mutator
 - enabling numeric-parameter optimization through the evaluator without in-place mutation
 - configuring GA with an evaluator that can return refined symbolic-expression solutions
@@ -105,7 +110,7 @@ Implement:
 - Regular construction uses `Symbol.CreateNode(...)` or the public concrete node constructors. Unary and binary nodes store direct references; n-ary nodes materialize a private child array, with ownership transfer restricted to internal construction and edit paths.
 - Runtime validation for the instruction invariants listed above.
 - `ExpressionDraft.Compile()`, `ExpressionSlice`, and formatting from compiled variable names.
-- Series/batch interpretation against a supplied `Dataset` and input-variable order.
+- Series/batch interpretation against a supplied `DataFrame`.
 - Constant side-table entries are plain `double` values. The `Constant` opcode references the table by `PayloadIndex`; fixed versus evolvable status remains genotype-side symbol information and is irrelevant to compiled evaluation.
 - Draft authoring APIs expose fixed and optimizable literal authoring through `FixedConstant(value)` and `Constant(value)`.
 - Revisit the draft API after the first operators clarify authoring pressure. Consider additional fluent expression composition and static-import helpers so common expressions can be authored without a static factory style.
@@ -150,23 +155,38 @@ Stage 1 tests: immutability, validation failures, sub-expression navigation, dra
 
 ## Stage 2: Problem Composition And Evaluation Contract
 
-`SymbolicRegressionProblem` becomes explicit composition of:
+`SymbolicRegressionProblem` composes one `RegressionData` training set, one
+`IRegressionMetric`, and one `ExpressionTreeSearchSpace`. It evaluates only its
+bound training data and exposes no arbitrary-data prediction API.
 
-- regression data and input-variable order
-- one scalar `ExpressionTreeSearchSpace`
-- interpreter
-- metric/loss/objectives
-- prediction bound and invalid-value policy
-- problem context needed by typed evaluators, such as data, input variables, target values, interpreter, bounds policy, and numeric-optimization options
+`SymbolicRegressor` is a fitted `IRegressor`. It owns an `ExpressionTree`, its
+name-based compiled representation, and a prediction name. `BoundedRegressor`
+decorates any `IRegressor` with numeric output bounds. Prediction on validation
+or test data is performed through these predictors rather than through the
+problem. `ExpressionTree.ToRegressor(...)` is the concise conversion path and
+performs the one-time compilation owned by the returned regressor.
+`IRegressor.ToBounded(...)` adds output bounds through normal predictor
+composition.
 
-Before Stage 2 implementation, choose the concrete problem/search-space type shape. Current preferred direction is `SymbolicRegressionProblem<TSearchSpace>` with convenience factories, but this remains a Stage 2 design decision.
+The maintained data-analysis foundation and its migration sequence are
+specified in
+[data-analysis-modernization-plan.md](data-analysis-modernization-plan.md).
 
 Defaults:
 
-- if a `CreateDefault` convenience factory is added, it remains metric-agnostic and accepts an explicit metric/loss object; it must not encode metric names such as RMSE into method names
-- provide common regression metrics through object shortcuts such as `Metrics.RMSE`
-- RMSE may be the default metric only when no metric/loss is supplied
-- multi-objective behavior remains explicit
+- the simple `SymbolicRegressionProblem(data, searchSpace)` constructor uses
+  `Metrics.MSE`
+- the explicit single-metric constructor remains the concise path for another
+  prediction metric
+- advanced construction takes separate ordered prediction-metric and
+  expression-metric collections
+- prediction metrics are evaluated from one shared prediction vector and
+  appear before expression metrics in the objective vector
+- either metric collection may be empty, but both cannot be empty
+- multiple objectives use lexicographic total order by default; their
+  individual directions continue to govern dominance
+- common metric implementations are exposed through `Metrics` and
+  `ExpressionMetrics` shortcuts
 
 Evaluation contract:
 
@@ -225,7 +245,7 @@ Stage 3 tests: genotype editing immutability and side-table reuse behavior, unre
 
 Current executable vertical slice:
 
-- `SymbolicExpressionRegressionProblem` implements the standard single-solution problem contract and owns one explicit `ExpressionTreeSearchSpace`.
+- `SymbolicRegressionProblem` implements the standard single-solution problem contract and owns one explicit `ExpressionTreeSearchSpace`.
 - `GrowTreeCreator` samples from all symbols that are structurally viable under the remaining length and depth budget. Its optional maximum depth defaults to the search space maximum. Its bounded subtree-generation operation is shared with subtree mutation.
 - `FullTreeCreator` keeps every leaf at one selected depth. Its optional exact depth defaults to the deepest depth feasible under both the search space's length and depth limits. Operation arities are constrained during creation so full trees do not require rejection retries.
 - `RampedHalfAndHalfTreeCreator` initializes populations with paired full and grow trees across a configurable inclusive depth range. The minimum defaults to two and the nullable maximum defaults to the deepest feasible search-space depth. Larger populations repeat that deterministic depth/method ramp while each tree retains independent randomness.
@@ -233,37 +253,31 @@ Current executable vertical slice:
 - `NodeReplacementMutator`, `SubtreeMutator`, `ShrinkSubtreeMutator`, and `LocalPerturbationMutator` provide complementary same-arity, structural replacement, strict shrinking, and symbol-local mutation paths. `ShrinkSubtreeMutator` replaces a selected operation occurrence with a terminal sampled from the search space and therefore reduces tree length without retries. The mutators compose through the general `ChooseOneMutator` with explicit weights.
 - `SubtreeMutator` selects one occurrence, derives the exact remaining global length and depth budgets at that point, creates one viable subtree, and replaces the occurrence without rejection retries.
 - Nullable creator depth settings inherit the search-space limits. Explicit depth settings must remain feasible within those limits; users who need a larger candidate domain construct a correspondingly larger search space.
-- The ordinary problem evaluator compiles each expression through `CompiledExpression`, interprets it against the training data, and scores it with the configured regression metric.
+- The ordinary problem evaluator compiles and interprets an expression at most
+  once per evaluation, then scores the shared predictions with every configured
+  prediction metric and evaluates configured expression metrics directly on
+  the genotype. Expression-only objectives do not compile the expression.
 - The API usage specs run this path through the generic genetic algorithm for multiple generations with all three mutation paths and verify that the final population remains inside the search space.
 - A deterministic synthetic-regression scenario exercises creation, crossover, all mutation forms, evaluation, best-solution selection, explicit optimized compilation, and repeated interpretation of the retained compiled best expression. It asserts a real improvement over a constant-mean baseline.
-- Numeric parameter optimization, a named symbolic-regression operator preset, protected-operation policy, convenience problem factories, and grammar-constrained operators remain follow-up work. They are not required for the executable unrestricted GP loop.
+- Population-integrated numeric parameter optimization, a named symbolic-regression operator preset, protected-operation policy, convenience problem factories, and grammar-constrained operators remain follow-up work. Direct numeric optimization is available independently of evaluator composition.
 
 ## Stage 3.1: Constant Optimization During Evaluation
 
-Add the first concrete symbolic-regression evaluator with numeric-parameter optimization:
+The detailed design and incremental implementation sequence now live in
+[symbolic-regression-constant-optimization-plan.md](symbolic-regression-constant-optimization-plan.md).
 
-- implement Levenberg-Marquardt numeric refinement inside a problem-specific evaluator for `ExpressionTree` and `SymbolicRegressionProblem`; it reads input variables, target data, interpreter, and bounds/refinement configuration from the problem/search-space context passed through the evaluator contract.
-- provide `SymbolicExpressionEvaluator.OptimizeNumericParameters(...)` as the user-facing factory/configuration surface for this behavior; avoid requiring users to name the optimizer algorithm in the common authoring path.
-- optimize evolvable constant nodes through Levenberg-Marquardt using automatic differentiation over the immutable `ExpressionTree`.
-- distinguish evolvable constant symbols from fixed constant symbols so constants introduced for scaling, structural templates, protected-operation thresholds, or user-authored fixed values can stay unchanged.
-- keep one `Constant` opcode with a `double` side table addressed by `PayloadIndex`. The interpreter and compiled representation read only numeric values; fixed versus evolvable status belongs exclusively to the genotype.
-- return a new `ExpressionTree` with optimized evolvable-constant payloads; never mutate an existing candidate.
-- evaluate newly created initial candidates and all offspring through the evaluator; if numeric optimization is enabled, the evaluator returns the optimized candidate in the resulting `EvaluatedCandidate<ExpressionTree>`.
-- store the returned solution in the population; the raw pre-optimization candidate is not the candidate associated with the fitness.
-- expose function/gradient evaluation counters and numeric-optimization outcome status.
-- keep optimization budget, maximum iterations, tolerances, and failure behavior explicit.
-- do not add numeric value bounds in Stage 3.1.
-- expected non-convergence or numeric optimizer failure returns the original candidate with failure status; unexpected programming/configuration errors may throw.
-- crossover and mutation preserve symbols for copied nodes and assign deliberate symbols for newly generated nodes.
+The first direct `NumericParameterOptimizer` implementation was a useful prototype but combined expression lowering, differentiation, Levenberg-Marquardt, sampling, regression metrics, and immutable candidate replacement in one regression-specific feature. It is archived under `references/symbolic-regression/constant-optimization-prototype` and is not part of the maintained API.
 
-Algorithm integration:
+The replacement proceeds through independently usable layers:
 
-- Do not attach numeric optimization to crossover or mutation; candidate changes that affect fitness must happen through the evaluator after the complete variation pipeline.
-- Keep GA authoring explicit and friendly: builders expose `Crossover`, `Mutator`, `MutationRate`, and an evaluator/problem configuration that determines whether numeric parameters are optimized.
-- In Stage 3.1, GA can simply call the configured operators in the required order: select parents, cross, optionally mutate, evaluate into returned solutions, then replace.
-- A shared offspring-pipeline helper (like Jenetics-style alterer chains) may be introduced later if multiple population algorithms duplicate the same variation/evaluation flow, but it is not part of the Stage 3.1 public or required internal design.
+1. organize the old and new symbolic-regression systems;
+2. provide general automatic differentiation;
+3. provide first-class numerical optimization algorithms;
+4. provide generic local-improvement and memetic composition;
+5. adapt immutable symbolic expressions to those capabilities;
+6. integrate constant optimization into symbolic-regression evaluation.
 
-Stage 3.1 tests: no in-place evaluation mutation, immutable replacement candidate, initial-population optimization, offspring optimization after mutation, no optimization for fixed or absent constants, Levenberg-Marquardt convergence fixtures, automatic-differentiation gradient fixtures, optimization counters, failure fallback, and one GA usage spec with constant optimization enabled.
+The immutable-candidate invariant remains settled: any accepted constant optimization returns a replacement `ExpressionTree`, and the evaluator returns the authoritative candidate paired with its objective vector.
 
 ## Stage 4: Grammar Search Space And Operators
 
@@ -386,7 +400,10 @@ dotnet format ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severit
 
 - Genotype: immutable `ExpressionTree`, explicit `OpCode : ushort`, binary arity in Stage 1, identical-instruction equality, and `NaN` for invalid numeric results.
 - Binding and execution: draft authoring is name-first, compiled variable instructions use payload indexes into an expression variable table, interpreter memory is not shared mutably, and Operon remains the postfix/contiguous-encoding reference.
-- Legacy: old mutable symbolic-expression-tree APIs move under `HEAL.HeuristicLib.Legacy...`; obsolete legacy types/methods use `Legacy` prefixes or suffixes only when needed to avoid name clashes.
+- Legacy migration: still-required mutable symbolic-expression APIs remain in
+  their established domain folders until complete replacements exist. Use a
+  `.Legacy` namespace, or a `Legacy` filename qualifier, only where old and new
+  names would otherwise collide.
 - Formatting/serialization: Stage 1 includes debug/infix formatting; full serialization is deferred.
 - Problem and search spaces: one symbolic-regression problem concept, with unrestricted and grammar-constrained scalar search spaces as distinct operator families.
 - Evaluation/refinement: evaluators return authoritative `EvaluatedCandidate<TCandidate>` values, not only objective values. An evaluator may return the original candidate or an immutable refined/repaired replacement candidate, and algorithms must pass that returned evaluated candidate into replacement, selection, logging, and analysis.

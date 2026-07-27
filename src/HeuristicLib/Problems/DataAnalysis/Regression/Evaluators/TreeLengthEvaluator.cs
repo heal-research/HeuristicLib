@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 
-namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 
 public class TreeLengthEvaluator : IRegressionEvaluator<SymbolicExpressionTree>
 {

@@ -173,6 +173,77 @@ Use objective directions for the problem-level direction model. Objective direct
 
 See also: Objective direction, Objective vector.
 
+## Data Analysis
+
+### Series
+
+Status: `Canonical`
+
+A series is one immutable named column of values. Its name is the semantic column name and its generic element type defines the data type.
+
+### Data frame
+
+Status: `Canonical`
+
+A data frame is an immutable, insertion-ordered collection of equally sized series that may have different element types. Columns are addressed by their series names.
+
+### Supervised data
+
+Status: `Canonical`
+
+Supervised data pairs an input data frame with one named target series of the same row count. It does not imply whether the data is used for training, validation, or testing.
+
+### Predictor
+
+Status: `Canonical`
+
+A predictor is a fitted object that produces a named prediction series from an input data frame. It may also write predictions into caller-provided storage.
+
+Do not use predictor for an estimator configuration that still needs fitting.
+
+### Estimator
+
+Status: `Canonical`
+
+An estimator fits a predictor from training data. Fitting receives explicit randomness when the procedure may be stochastic.
+
+See also: Predictor.
+
+### Regressor
+
+Status: `Canonical`
+
+A regressor is a predictor whose predictions are `double` values.
+
+### Regression metric
+
+Status: `Canonical`
+
+A regression metric compares predicted and target numeric values and declares whether lower or higher values are better. A metric is independent of the problem that may use it as an optimization objective.
+
+### Prediction metric
+
+Status: `Canonical`
+
+A prediction metric compares predictions and targets of the same element type
+and declares whether lower or higher values are better. A regression metric is
+a prediction metric specialized for `double` values.
+
+### Perturbation feature importance
+
+Status: `Canonical`
+
+Perturbation feature importance measures how much a predictor's metric worsens
+when one input feature is replaced according to a perturbation policy. Positive
+importance always means degradation. Permutation feature importance is the
+common case where the policy shuffles the feature values.
+
+### Expression metric
+
+Status: `Canonical`
+
+An expression metric evaluates a symbolic expression's genotype without requiring prediction data. Examples include expression length, variable occurrence count, and structural complexity. A symbolic-regression problem may combine expression metrics with regression metrics in one objective vector.
+
 ## Algorithms and Operators
 
 ### Algorithm

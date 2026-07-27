@@ -1,5 +1,8 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.DataAnalysis;
+using HEAL.HeuristicLib.DataAnalysis.Inspection;
+using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
@@ -19,6 +22,58 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Regression;
 
 public class SymbolicRegressionRedesignSpecs
 {
+    [Fact]
+    public void Formatting_AuthoringShape_PreservesMacros()
+    {
+        var expression = Sigmoid(Variable("x")).Build();
+
+        expression.ToCSharpString().ShouldBe("sigmoid(x)");
+        ExpressionFormatters.Python.Format(expression).ShouldBe("sigmoid(x)");
+    }
+
+    [Fact]
+    public void Formatting_AuthoringShape_AllowsCustomFormatters()
+    {
+        var expression = (Variable("x") + FixedConstant(2)).Build();
+        var macro = Sigmoid(Variable("x")).Build();
+        var formatter = new PrefixExpressionFormatter();
+
+        formatter.Format(expression).ShouldBe("+[x, 2]");
+        formatter.Format(macro).ShouldBe("sigmoid[x]");
+    }
+
+    [Fact]
+    public void Parsing_AuthoringShape_ParsesInfixExpressions()
+    {
+        var expression = InfixExpressionParser.Parse("x0 + param(2) * x1");
+
+        expression.ToInfixString().ShouldBe("(x0 + (2 * x1))");
+        expression.ToInfixString(InfixConstantNotation.MarkParameters)
+            .ShouldBe("(x0 + (param(2) * x1))");
+        expression.TraversePreOrder()
+            .OfType<NumericConstantExpressionNode>()
+            .Single()
+            .Symbol.ShouldBeOfType<EvolvableConstantSymbol>();
+    }
+
+    [Fact]
+    public void FeatureImportance_AuthoringShape_UsesPermutationDefaults()
+    {
+        var data = CreateLinearRegressionData();
+        var predictor = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build()
+            .ToRegressor("prediction")
+            .ToBounded(double.NegativeInfinity, double.PositiveInfinity);
+
+        var result = FeatureImportance.Permutation(
+            predictor,
+            data,
+            RandomNumberGenerator.Create(42));
+
+        result.Metric.ShouldBeSameAs(Metrics.MSE);
+        result.Features.Select(feature => feature.FeatureName).ShouldBe(["x0", "x1"]);
+        result.Features.ShouldAllBe(feature => feature.MeanImportance >= 0.0);
+    }
+
     [Fact]
     public void ExpressionDraft_AuthoringShape_BuildsX0PlusTwoTimesX1()
     {
@@ -48,12 +103,12 @@ public class SymbolicRegressionRedesignSpecs
         var draft = Variable("x0") + FixedConstant(2.0) * Variable("x1");
         var expression = draft.Build();
 
-        var predictions = expression.Evaluate(data.TrainingInputs);
+        var predictions = expression.Evaluate(data.Inputs);
 
         predictions.ShouldBe([7.0, 10.0, 13.0], tolerance: 1e-12);
-        data.TrainingInputs.DoubleSeriesNames.Order().ShouldBe(["x0", "x1"]);
-        data.TargetName.ShouldBe("y");
-        data.TrainingTarget.Values.ToArray().ShouldBe([7.0, 10.0, 13.0]);
+        data.Inputs.Columns.Select(column => column.Name).Order().ShouldBe(["x0", "x1"]);
+        data.Target.Name.ShouldBe("y");
+        data.Target.Values.ToArray().ShouldBe([7.0, 10.0, 13.0]);
     }
 
     [Fact]
@@ -75,15 +130,33 @@ public class SymbolicRegressionRedesignSpecs
     }
 
     [Fact]
-    public void Problem_AuthoringShape_ConstructsDefaultSymbolicRegressionProblemWithRmseMetric()
+    public void Problem_AuthoringShape_ConstructsSymbolicRegressionProblemWithExplicitMetric()
     {
         var data = CreateLinearRegressionData();
         var searchSpace = CreateSearchSpace();
-        var problem = new SymbolicExpressionRegressionProblem(data, Metrics.RMSE, searchSpace);
+        var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
 
-        problem.Metric.ShouldBe(Metrics.RMSE);
+        problem.PredictionMetrics.ShouldBe([Metrics.RMSE]);
+        problem.ExpressionMetrics.ShouldBeEmpty();
         problem.SearchSpace.ShouldBeSameAs(searchSpace);
         problem.Objective.Directions.ShouldBe([ObjectiveDirection.Minimize]);
+    }
+
+    [Fact]
+    public void Problem_AuthoringShape_CombinesPredictionAndExpressionObjectives()
+    {
+        var data = CreateLinearRegressionData();
+        var searchSpace = CreateSearchSpace();
+        var problem = new SymbolicRegressionProblem(
+            data,
+            [Metrics.MSE],
+            [ExpressionMetrics.Length],
+            searchSpace);
+
+        problem.Evaluate((Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build())
+            .ShouldBe(new ObjectiveVector(0.0, 5.0));
+        problem.Objective.Directions.ShouldBe(
+            [ObjectiveDirection.Minimize, ObjectiveDirection.Minimize]);
     }
 
     [Fact]
@@ -91,14 +164,14 @@ public class SymbolicRegressionRedesignSpecs
     {
         var data = CreateLinearRegressionData();
         var searchSpace = CreateSearchSpace();
-        var problem = new SymbolicExpressionRegressionProblem(data, Metrics.RMSE, searchSpace);
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicExpressionRegressionProblem>
+        var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
+        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
         {
             PopulationSize = 24,
             MaximumGenerations = 8,
             Creator = new RampedHalfAndHalfTreeCreator(),
             Crossover = new SubtreeCrossover(),
-            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicExpressionRegressionProblem>(
+            Mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
                 [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()],
                 [1.0, 1.0, 1.0]),
             MutationRate = 0.2,
@@ -126,7 +199,7 @@ public class SymbolicRegressionRedesignSpecs
           searchSpace: new ExpressionTreeSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
-             allowedSymbols: Symbols.BasicArithmetic,
+             allowedSymbols: Symbols.MinimalOperations,
              allowedVariables: ["x0"]));
 
         var rawExpression = (Constant(1.0) + Variable("x0")).Build();
@@ -163,7 +236,7 @@ public class SymbolicRegressionRedesignSpecs
           searchSpace: new ExpressionTreeSearchSpace(
              maximumLength: 40,
              maximumDepth: 12,
-             allowedSymbols: Symbols.BasicArithmetic,
+             allowedSymbols: Symbols.MinimalOperations,
              allowedVariables: ["x0", "x1"]));
 
         var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
@@ -193,6 +266,12 @@ public class SymbolicRegressionRedesignSpecs
         typeof(GeneticAlgorithm<,,>).ShouldNotBeNull();
     }
 
+    private sealed class PrefixExpressionFormatter : ExpressionFormatter
+    {
+        protected override string FormatOperation(OperationSymbol symbol, IReadOnlyList<string> children) =>
+            $"{symbol.Name}[{string.Join(", ", children)}]";
+    }
+
     private static RegressionProblemData CreateLinearDataset()
     {
         var dataset = Dataset.FromRowData(
@@ -212,16 +291,16 @@ public class SymbolicRegressionRedesignSpecs
     }
 
     private static RegressionData CreateLinearRegressionData() =>
-      RegressionData.Training(
-        DataFrame.FromMatrix(
-          ["x0", "x1"],
-          new double[,]
-          {
-              { 1.0, 3.0 },
-              { 2.0, 4.0 },
-              { 3.0, 5.0 }
-          }),
-        Series<double>.Create([7.0, 10.0, 13.0], name: "y"));
+        new(
+            DataFrame.FromMatrix(
+                ["x0", "x1"],
+                new double[,]
+                {
+                    { 1.0, 3.0 },
+                    { 2.0, 4.0 },
+                    { 3.0, 5.0 }
+                }),
+            new Series<double>("y", [7.0, 10.0, 13.0]));
 
     private static ExpressionTreeSearchSpace CreateSearchSpace() =>
       new(

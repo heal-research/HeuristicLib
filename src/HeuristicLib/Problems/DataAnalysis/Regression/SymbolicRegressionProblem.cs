@@ -1,65 +1,92 @@
-using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.DataAnalysis.Regression;
+using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
-using HEAL.HeuristicLib.SearchSpaces.Trees;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 
-public class SymbolicRegressionProblem :
-  RegressionProblem<RegressionProblemData, SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
+public sealed class SymbolicRegressionProblem
+    : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public SymbolicRegressionProblem(RegressionProblemData data, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
-      this(data, objective, GetDefaultComparer(objective), new SymbolicExpressionTreeSearchSpace(new SimpleSymbolicExpressionGrammar()))
+    public SymbolicRegressionProblem(RegressionData trainingData, ExpressionTreeSearchSpace searchSpace)
+        : this(trainingData, [Metrics.MSE], [], searchSpace)
     {
     }
 
-    public SymbolicRegressionProblem(RegressionProblemData data, SymbolicExpressionTreeSearchSpace encoding, params ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) :
-      this(data, objective, GetDefaultComparer(objective), encoding)
+    public SymbolicRegressionProblem(RegressionData trainingData, IRegressionMetric metric, ExpressionTreeSearchSpace searchSpace)
+        : this(trainingData, [metric], [], searchSpace)
     {
     }
 
-    public SymbolicRegressionProblem(RegressionProblemData data,
-      ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective,
-      IComparer<ObjectiveVector> a,
-      SymbolicExpressionTreeSearchSpace encoding) : base(data, objective, a, encoding)
+    public SymbolicRegressionProblem(RegressionData trainingData, IEnumerable<IRegressionMetric> predictionMetrics, IEnumerable<IExpressionMetric> expressionMetrics, ExpressionTreeSearchSpace searchSpace, IComparer<ObjectiveVector>? totalOrderComparer = null)
+        : this(trainingData, predictionMetrics.ToImmutableArray(), expressionMetrics.ToImmutableArray(), searchSpace, totalOrderComparer)
     {
     }
 
-    public ISymbolicDataAnalysisExpressionTreeInterpreter Interpreter { get; init; } = new SymbolicDataAnalysisExpressionTreeInterpreter();
-    public int ParameterOptimizationIterations { get; init; } = -1;
-
-    public override IEnumerable<double> PredictAndTrain(SymbolicExpressionTree solution, IReadOnlyList<int> rows, IReadOnlyList<double> targets)
+    private SymbolicRegressionProblem(RegressionData trainingData, ImmutableArray<IRegressionMetric> predictionMetrics, ImmutableArray<IExpressionMetric> expressionMetrics, ExpressionTreeSearchSpace searchSpace, IComparer<ObjectiveVector>? totalOrderComparer)
+        : base(CreateObjective(predictionMetrics, expressionMetrics, totalOrderComparer), searchSpace)
     {
-        if (ParameterOptimizationIterations > 0)
+        ValidateVariables(trainingData, searchSpace);
+        TrainingData = trainingData;
+        PredictionMetrics = predictionMetrics;
+        ExpressionMetrics = expressionMetrics;
+    }
+
+    public RegressionData TrainingData { get; }
+    public ImmutableArray<IRegressionMetric> PredictionMetrics { get; }
+    public ImmutableArray<IExpressionMetric> ExpressionMetrics { get; }
+
+    public ObjectiveVector Evaluate(ExpressionTree expression)
+    {
+        var values = new double[PredictionMetrics.Length + ExpressionMetrics.Length];
+
+        if (PredictionMetrics.Length > 0)
         {
-            _ = SymbolicRegressionParameterOptimization.OptimizeParameters(
-              Interpreter,
-              solution,
-              ProblemData,
-              rows,
-              ParameterOptimizationIterations,
-              true,
-              LowerPredictionBound,
-              UpperPredictionBound);
+            var predictions = expression.Evaluate(TrainingData.Inputs);
+            var targets = TrainingData.Target.Values.Span;
+            for (var i = 0; i < PredictionMetrics.Length; i++)
+                values[i] = PredictionMetrics[i].Evaluate(predictions, targets);
         }
 
-        return solution.PredictAndAdjustScaling(Interpreter, ProblemData.Dataset, rows, targets);
+        for (var i = 0; i < ExpressionMetrics.Length; i++)
+            values[PredictionMetrics.Length + i] = ExpressionMetrics[i].Evaluate(expression);
+
+        return new ObjectiveVector(values);
     }
 
-    public static SymbolicExpressionTreeSearchSpace GetDefaultEncoding(IEnumerable<string> variableNames)
+    public override ObjectiveVector Evaluate(ExpressionTree expression, IRandomNumberGenerator random) =>
+        Evaluate(expression);
+
+    private static void ValidateVariables(RegressionData trainingData, ExpressionTreeSearchSpace searchSpace)
     {
-        var grammar = new SimpleSymbolicExpressionGrammar();
-        var root = grammar.AddLinearScaling();
-        var symbols = new Symbol[] { new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = variableNames } };
-        grammar.AddFullyConnectedSymbols(root, symbols);
-        return new SymbolicExpressionTreeSearchSpace(grammar);
+        foreach (var variableName in searchSpace.Symbols
+                     .OfType<VariableSymbol>()
+                     .SelectMany(symbol => symbol.Variables)
+                     .Distinct(StringComparer.Ordinal))
+        {
+            if (!trainingData.Inputs.TryGet<double>(variableName, out _))
+            {
+                throw new ArgumentException(
+                    $"The search-space variable '{variableName}' must refer to a double series in the training inputs.",
+                    nameof(trainingData));
+            }
+        }
     }
 
-    private static IComparer<ObjectiveVector>
-      GetDefaultComparer(ICollection<IRegressionEvaluator<SymbolicExpressionTree>> objective) => objective.Count == 1
-      ? new SingleObjectiveComparer(objective.Single().Direction)
-      : new LexicographicComparer(objective.Select(x => x.Direction).ToArray());
+    private static ObjectiveDirections CreateObjective(ImmutableArray<IRegressionMetric> predictionMetrics, ImmutableArray<IExpressionMetric> expressionMetrics, IComparer<ObjectiveVector>? totalOrderComparer)
+    {
+        if (predictionMetrics.Length == 0 && expressionMetrics.Length == 0)
+            throw new ArgumentException("At least one prediction metric or expression metric must be supplied.");
+
+        var directions = predictionMetrics
+            .Select(metric => metric.Direction)
+            .Concat(expressionMetrics.Select(metric => metric.Direction))
+            .ToArray();
+        var comparer = totalOrderComparer ?? (directions.Length == 1
+            ? new SingleObjectiveComparer(directions[0])
+            : new LexicographicComparer(directions));
+
+        return new ObjectiveDirections(directions, comparer);
+    }
 }

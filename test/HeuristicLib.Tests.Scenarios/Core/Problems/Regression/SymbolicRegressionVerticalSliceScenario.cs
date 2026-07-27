@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.DataAnalysis;
+using HEAL.HeuristicLib.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
@@ -24,11 +26,11 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
             operations: [Symbols.Addition, Symbols.Subtraction, Symbols.Multiplication],
             variables: ["x0", "x1"],
             constants: [new EvolvableConstantSymbol(), new FixedConstantSymbol(2.0)]);
-        var problem = new SymbolicExpressionRegressionProblem(data, Metrics.RMSE, searchSpace);
-        var mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicExpressionRegressionProblem>(
+        var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
+        var mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
             [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()],
             [1.0, 1.0, 1.0]);
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicExpressionRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
         {
             PopulationSize = 80,
             MaximumGenerations = 30,
@@ -48,11 +50,11 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
         var best = finalState.Population.EvaluatedCandidates
             .OrderBy(solution => solution.ObjectiveVector[0])
             .First();
-        var baseline = CalculateConstantMeanBaseline(data.TrainingTarget.Values.Span);
+        var baseline = CalculateConstantMeanBaseline(data.Target.Values.Span);
         var compiled = best.Candidate.Compile(optimize: true);
-        var firstPredictions = ExpressionInterpreter.Interpret(compiled, data.TrainingInputs);
-        var repeatedPredictions = ExpressionInterpreter.Interpret(compiled, data.TrainingInputs);
-        var retainedCompiledScore = Metrics.RMSE.Evaluate(firstPredictions, data.TrainingTarget.Values.Span);
+        var firstPredictions = ExpressionInterpreter.Interpret(compiled, data.Inputs);
+        var repeatedPredictions = ExpressionInterpreter.Interpret(compiled, data.Inputs);
+        var retainedCompiledScore = Metrics.RMSE.Evaluate(firstPredictions, data.Target.Values.Span);
 
         finalState.Population.EvaluatedCandidates.Length.ShouldBe(80);
         finalState.Population.EvaluatedCandidates.All(candidate => searchSpace.Contains(candidate.Candidate)).ShouldBeTrue();
@@ -84,9 +86,9 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
             }
         }
 
-        return RegressionData.Training(
+        return new RegressionData(
             DataFrame.FromMatrix(["x0", "x1"], inputs),
-            Series<double>.Create(target, name: "y"));
+            Series<double>.FromOwnedArray("y", target));
     }
 
     private static double CalculateConstantMeanBaseline(ReadOnlySpan<double> target)

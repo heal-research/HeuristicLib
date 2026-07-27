@@ -11,6 +11,17 @@ public enum OpCode : ushort
     Divide = 13,
     Negate = 14,
     Exp = 15,
+    Sin = 16,
+    Cos = 17,
+    Tan = 18,
+    Tanh = 19,
     Log = 20,
-    Sqrt = 21
+    Sqrt = 21,
+    Abs = 22,
+    Square = 23,
+    Cube = 24,
+    CubeRoot = 25,
+    Power = 30,
+    Root = 31,
+    AnalyticQuotient = 32
 }

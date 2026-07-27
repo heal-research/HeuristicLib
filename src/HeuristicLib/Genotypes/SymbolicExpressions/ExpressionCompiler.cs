@@ -168,8 +168,16 @@ public static class ExpressionCompiler
                 {
                     OpCode.Negate => -child.ConstantValue,
                     OpCode.Exp => Math.Exp(child.ConstantValue),
+                    OpCode.Sin => Math.Sin(child.ConstantValue),
+                    OpCode.Cos => Math.Cos(child.ConstantValue),
+                    OpCode.Tan => Math.Tan(child.ConstantValue),
+                    OpCode.Tanh => Math.Tanh(child.ConstantValue),
                     OpCode.Log => Math.Log(child.ConstantValue),
                     OpCode.Sqrt => Math.Sqrt(child.ConstantValue),
+                    OpCode.Abs => Math.Abs(child.ConstantValue),
+                    OpCode.Square => child.ConstantValue * child.ConstantValue,
+                    OpCode.Cube => child.ConstantValue * child.ConstantValue * child.ConstantValue,
+                    OpCode.CubeRoot => Math.Cbrt(child.ConstantValue),
                     _ => Unsupported()
                 };
                 if (!supported)
@@ -202,6 +210,9 @@ public static class ExpressionCompiler
                 OpCode.Subtract => left.ConstantValue - right.ConstantValue,
                 OpCode.Multiply => left.ConstantValue * right.ConstantValue,
                 OpCode.Divide => left.ConstantValue / right.ConstantValue,
+                OpCode.Power => Math.Pow(left.ConstantValue, right.ConstantValue),
+                OpCode.Root => Math.Pow(left.ConstantValue, 1.0 / right.ConstantValue),
+                OpCode.AnalyticQuotient => left.ConstantValue / Math.Sqrt(1.0 + right.ConstantValue * right.ConstantValue),
                 _ => UnsupportedBinary()
             };
             if (!supportedBinary)

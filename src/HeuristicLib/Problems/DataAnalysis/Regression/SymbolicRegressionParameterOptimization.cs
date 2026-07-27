@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;

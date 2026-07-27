@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
@@ -18,6 +18,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
 using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
+using SymbolicRegressionProblem = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.SymbolicRegressionProblem;
 
 namespace HEAL.HeuristicLib.PythonInterop;
 

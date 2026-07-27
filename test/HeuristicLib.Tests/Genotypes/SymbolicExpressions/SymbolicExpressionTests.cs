@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Reflection;
+using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Random.Distributions;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
@@ -537,9 +538,10 @@ public sealed class SymbolicExpressionTests
     {
         var expression = Variable("x0").Build();
 
-        Should.Throw<ArgumentException>(() => expression.Evaluate(DataFrame.FromOwnedColumns([])));
-        Should.Throw<ArgumentException>(() => expression.Evaluate(DataFrame.FromOwnedColumns([KeyValuePair.Create("x1", new[] { 1.0 })])));
-        Should.Throw<ArgumentException>(() => expression.EvaluateSingleRow(("x1", 1.0)));
+        Should.Throw<KeyNotFoundException>(() => expression.Evaluate(new DataFrame([])));
+        Should.Throw<KeyNotFoundException>(() =>
+            expression.Evaluate(new DataFrame([Series<double>.FromOwnedArray("x1", [1.0])])));
+        Should.Throw<KeyNotFoundException>(() => expression.EvaluateSingleRow(("x1", 1.0)));
         Should.Throw<ArgumentException>(() => expression.EvaluateSingleRow(("x0", 1.0), ("x0", 2.0)));
     }
 
@@ -567,7 +569,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_WritesOnlyTheExpressionRowsIntoTheDestination()
     {
-        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
+        var data = new DataFrame([Series<double>.FromOwnedArray("x0", [1.0, 2.0])]);
         var destination = new[] { double.NaN, double.NaN, 42.0 };
 
         Variable("x0").Build().Evaluate(data, destination);
@@ -579,7 +581,7 @@ public sealed class SymbolicExpressionTests
     public void Evaluate_UsesCallerProvidedWorkspace()
     {
         var expression = (Variable("x0") + FixedConstant(2.0)).Build();
-        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
+        var data = new DataFrame([Series<double>.FromOwnedArray("x0", [1.0, 2.0])]);
         var destination = new[] { double.NaN, double.NaN };
         var workspace = new double[ExpressionInterpreter.GetWorkspaceLength(expression.Compile(), data)];
 
@@ -591,7 +593,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_TerminalsRequireNoWorkspaceAndRejectInvalidBuffers()
     {
-        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
+        var data = new DataFrame([Series<double>.FromOwnedArray("x0", [1.0, 2.0])]);
         var terminal = Variable("x0").Build();
         var expression = Variable("x0") + FixedConstant(2.0);
         var compiled = expression.Build().Compile();
@@ -605,7 +607,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_TerminalExpressionsDoNotRequireWorkspace()
     {
-        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
+        var data = new DataFrame([Series<double>.FromOwnedArray("x0", [1.0, 2.0])]);
         var destination = new double[2];
 
         Variable("x0").Build().Evaluate(data, destination, []);
@@ -616,7 +618,11 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_RejectsDestinationAndWorkspaceBuffersThatAreTooSmall()
     {
-        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", Enumerable.Range(0, 4097).Select(value => (double)value).ToArray())]);
+        var data = new DataFrame([
+            Series<double>.FromOwnedArray(
+                "x0",
+                Enumerable.Range(0, 4097).Select(value => (double)value).ToArray())
+        ]);
         var expression = (Variable("x0") + FixedConstant(2.0)).Build();
         var workspaceLength = ExpressionInterpreter.GetWorkspaceLength(expression.Compile(), data);
 
@@ -627,7 +633,7 @@ public sealed class SymbolicExpressionTests
     [Fact]
     public void Evaluate_AppliesScalarVectorOperationsInBothOperandOrders()
     {
-        var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0, 3.0 })]);
+        var data = new DataFrame([Series<double>.FromOwnedArray("x0", [1.0, 2.0, 3.0])]);
 
         (FixedConstant(10.0) - Variable("x0")).Build().Evaluate(data).ShouldBe([9.0, 8.0, 7.0]);
         (FixedConstant(12.0) / Variable("x0")).Build().Evaluate(data).ShouldBe([12.0, 6.0, 4.0]);
@@ -659,10 +665,15 @@ public sealed class SymbolicExpressionTests
     private static ExpressionTree CreateLinearExpression() =>
         (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
 
-    private static DataFrame CreateLinearData(int rowCount) => DataFrame.FromOwnedColumns([
-        KeyValuePair.Create("x0", Enumerable.Range(0, rowCount).Select(row => (double)row).ToArray()),
-        KeyValuePair.Create("x1", Enumerable.Range(0, rowCount).Select(row => row * 0.5).ToArray())
-    ]);
+    private static DataFrame CreateLinearData(int rowCount) =>
+        new([
+            Series<double>.FromOwnedArray(
+                "x0",
+                Enumerable.Range(0, rowCount).Select(row => (double)row).ToArray()),
+            Series<double>.FromOwnedArray(
+                "x1",
+                Enumerable.Range(0, rowCount).Select(row => row * 0.5).ToArray())
+        ]);
 
     private sealed record SumThreeSymbol() : OperationSymbol("sum3", 3)
     {

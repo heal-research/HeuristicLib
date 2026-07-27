@@ -137,8 +137,19 @@ public abstract record ExpressionDraft
     public static ExpressionDraft Divide(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(Symbols.Division, left, right);
     public static ExpressionDraft Negate(ExpressionDraft child) => new UnaryDraft(Symbols.Negation, child);
     public static ExpressionDraft Exp(ExpressionDraft child) => new UnaryDraft(Symbols.Exponential, child);
+    public static ExpressionDraft Sin(ExpressionDraft child) => new UnaryDraft(Symbols.Sine, child);
+    public static ExpressionDraft Cos(ExpressionDraft child) => new UnaryDraft(Symbols.Cosine, child);
+    public static ExpressionDraft Tan(ExpressionDraft child) => new UnaryDraft(Symbols.Tangent, child);
+    public static ExpressionDraft Tanh(ExpressionDraft child) => new UnaryDraft(Symbols.HyperbolicTangent, child);
     public static ExpressionDraft Log(ExpressionDraft child) => new UnaryDraft(Symbols.Logarithm, child);
     public static ExpressionDraft Sqrt(ExpressionDraft child) => new UnaryDraft(Symbols.SquareRoot, child);
+    public static ExpressionDraft Abs(ExpressionDraft child) => new UnaryDraft(Symbols.Absolute, child);
+    public static ExpressionDraft Square(ExpressionDraft child) => new UnaryDraft(Symbols.Square, child);
+    public static ExpressionDraft Cube(ExpressionDraft child) => new UnaryDraft(Symbols.Cube, child);
+    public static ExpressionDraft CubeRoot(ExpressionDraft child) => new UnaryDraft(Symbols.CubeRoot, child);
+    public static ExpressionDraft Power(ExpressionDraft value, ExpressionDraft exponent) => new BinaryDraft(Symbols.Power, value, exponent);
+    public static ExpressionDraft Root(ExpressionDraft value, ExpressionDraft degree) => new BinaryDraft(Symbols.Root, value, degree);
+    public static ExpressionDraft AnalyticQuotient(ExpressionDraft numerator, ExpressionDraft denominator) => new BinaryDraft(Symbols.AnalyticQuotient, numerator, denominator);
     public static ExpressionDraft Sigmoid(ExpressionDraft child) => new UnaryDraft(Symbols.Sigmoid, child);
 
     public static ExpressionDraft operator +(ExpressionDraft left, ExpressionDraft right) => Add(left, right);

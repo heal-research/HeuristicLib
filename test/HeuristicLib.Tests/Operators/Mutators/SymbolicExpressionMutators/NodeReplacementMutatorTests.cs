@@ -26,7 +26,7 @@ public sealed class NodeReplacementMutatorTests
     public void Mutate_ReplacesOperationWithAnAllowedSymbolOfTheSameArity()
     {
         var parent = (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build();
-        var searchSpace = new ExpressionTreeSearchSpace(20, 10, Symbols.BasicArithmetic, ["x0", "x1"], [new FixedConstantSymbol(2.0)]);
+        var searchSpace = new ExpressionTreeSearchSpace(20, 10, Symbols.MinimalOperations, ["x0", "x1"], [new FixedConstantSymbol(2.0)]);
         var mutant = NodeReplacementMutation.Mutate(parent, new SequenceRandomNumberGenerator(0.0, 0.3), searchSpace);
 
         parent.ToInfixString().ShouldBe("(x0 + (2 * x1))");
@@ -157,5 +157,5 @@ public sealed class NodeReplacementMutatorTests
     }
 
     private static ExpressionTreeSearchSpace CreateSearchSpace(IReadOnlyList<string> variables) =>
-        new(20, 10, Symbols.BasicArithmetic, variables);
+        new(20, 10, Symbols.MinimalOperations, variables);
 }

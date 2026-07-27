@@ -38,6 +38,7 @@ These are still real open items:
 - fully implement ALPS-style age-layered workflow; the current ALPS algorithm still behaves like a simple single-layer evolutionary loop with a regular generation budget
 - add an offspring-selection genetic algorithm implementation
 - richer experiment scenarios
+- design a first-class problem-instance system for discovering, loading, and describing named domain instances independently of problem classes. Define loader/provider responsibilities, instance metadata, partition conventions, caching, and experiment integration before recreating legacy conveniences such as `RegressionCsvInstanceProvider`
 - symbolic-regression redesign follow-up, tracked in the [symbolic regression redesign plan](../plans/symbolic-regression-redesign-plan.md)
 - dynamic-problem extension workflow
 - meta-optimization by running an inner algorithm inside `Problem.Evaluate(...)`

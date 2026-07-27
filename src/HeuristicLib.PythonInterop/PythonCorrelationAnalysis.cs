@@ -7,7 +7,6 @@ using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.States;
@@ -42,10 +41,10 @@ public static class PythonCorrelationAnalysis
             var r = random.Fork((int)i);
             var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, sigma, vector.Count, false)).ToArray();
             var objectives = evaluator.Evaluate(n, r, problem.SearchSpace, problem);
-            var d = OnlinePearsonsRCalculator.Calculate(
+            var correlation = MathNet.Numerics.Statistics.Correlation.Pearson(
               objectives.Select(x => x.ObjectiveVector[0]),
-              objectives.Select(x => x.ObjectiveVector[1]), out _);
-            res[i] = d;
+              objectives.Select(x => x.ObjectiveVector[1]));
+            res[i] = double.IsNaN(correlation) ? 0.0 : correlation;
         });
 
         return res;

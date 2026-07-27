@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.DataAnalysis;
+
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
 public static class ExpressionEvaluationExtensions
@@ -23,9 +25,10 @@ public static class ExpressionEvaluationExtensions
     private static DataFrame CreateSingleRowDataFrame(IReadOnlyDictionary<string, double> variableValues)
     {
         if (variableValues.Count == 0)
-            return DataFrame.FromOwnedColumns([KeyValuePair.Create("__row", new[] { 0.0 })]);
+            return new DataFrame([Series<double>.FromOwnedArray("__row", [0.0])]);
 
-        return DataFrame.FromOwnedColumns(variableValues.Select(variable => KeyValuePair.Create(variable.Key, new[] { variable.Value })));
+        return new DataFrame(variableValues.Select(
+            variable => Series<double>.FromOwnedArray(variable.Key, [variable.Value])));
     }
 
     private static DataFrame CreateSingleRowDataFrame((string Name, double Value)[] variableValues)

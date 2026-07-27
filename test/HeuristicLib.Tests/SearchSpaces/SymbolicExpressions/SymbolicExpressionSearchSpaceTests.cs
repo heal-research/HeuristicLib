@@ -11,7 +11,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
     [Fact]
     public void Constructor_AddsDefaultEvolvableConstantForCommonAuthoring()
     {
-        var searchSpace = new ExpressionTreeSearchSpace(10, 5, Symbols.BasicArithmetic, ["x0", "x1"]);
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5, Symbols.MinimalOperations, ["x0", "x1"]);
 
         searchSpace.Symbols.OfType<VariableSymbol>().Single().Variables.ShouldBe(["x0", "x1"]);
         searchSpace.Symbols.OfType<EvolvableConstantSymbol>().ShouldHaveSingleItem();
@@ -32,7 +32,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
     [Fact]
     public void Contains_AcceptsExpressionsWithinStructuralLimits()
     {
-        var searchSpace = new ExpressionTreeSearchSpace(5, 3, Symbols.BasicArithmetic, ["x0", "x1"], [new FixedConstantSymbol(2.0)]);
+        var searchSpace = new ExpressionTreeSearchSpace(5, 3, Symbols.MinimalOperations, ["x0", "x1"], [new FixedConstantSymbol(2.0)]);
 
         searchSpace.Contains(CreateLinearExpression()).ShouldBeTrue();
     }
@@ -42,21 +42,21 @@ public sealed class SymbolicExpressionSearchSpaceTests
     {
         var expression = CreateLinearExpression();
 
-        new ExpressionTreeSearchSpace(4, 3, Symbols.BasicArithmetic, ["x0", "x1"], [new FixedConstantSymbol(2.0)]).Contains(expression).ShouldBeFalse();
-        new ExpressionTreeSearchSpace(5, 2, Symbols.BasicArithmetic, ["x0", "x1"], [new FixedConstantSymbol(2.0)]).Contains(expression).ShouldBeFalse();
+        new ExpressionTreeSearchSpace(4, 3, Symbols.MinimalOperations, ["x0", "x1"], [new FixedConstantSymbol(2.0)]).Contains(expression).ShouldBeFalse();
+        new ExpressionTreeSearchSpace(5, 2, Symbols.MinimalOperations, ["x0", "x1"], [new FixedConstantSymbol(2.0)]).Contains(expression).ShouldBeFalse();
     }
 
     [Fact]
     public void Contains_RejectsExpressionsAboveTheMaximumLength()
     {
-        new ExpressionTreeSearchSpace(4, 3, Symbols.BasicArithmetic, ["x0", "x1"], [new FixedConstantSymbol(2.0)])
+        new ExpressionTreeSearchSpace(4, 3, Symbols.MinimalOperations, ["x0", "x1"], [new FixedConstantSymbol(2.0)])
             .Contains(CreateLinearExpression()).ShouldBeFalse();
     }
 
     [Fact]
     public void Contains_RejectsExpressionsAboveTheMaximumDepth()
     {
-        new ExpressionTreeSearchSpace(5, 2, Symbols.BasicArithmetic, ["x0", "x1"], [new FixedConstantSymbol(2.0)])
+        new ExpressionTreeSearchSpace(5, 2, Symbols.MinimalOperations, ["x0", "x1"], [new FixedConstantSymbol(2.0)])
             .Contains(CreateLinearExpression()).ShouldBeFalse();
     }
 
@@ -65,7 +65,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
     {
         var expression = CreateLinearExpression();
         var operations = new ExpressionTreeSearchSpace(5, 3, [Symbols.Multiplication, new VariableSymbol(["x0", "x1"]), new FixedConstantSymbol(2.0)]);
-        var variables = new ExpressionTreeSearchSpace(5, 3, Symbols.BasicArithmetic, ["x0"], [new FixedConstantSymbol(2.0)]);
+        var variables = new ExpressionTreeSearchSpace(5, 3, Symbols.MinimalOperations, ["x0"], [new FixedConstantSymbol(2.0)]);
 
         operations.Contains(expression).ShouldBeFalse();
         variables.Contains(expression).ShouldBeFalse();
@@ -82,7 +82,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
     [Fact]
     public void Contains_RejectsDisallowedVariables()
     {
-        var searchSpace = new ExpressionTreeSearchSpace(5, 3, Symbols.BasicArithmetic, ["x0"], [new FixedConstantSymbol(2.0)]);
+        var searchSpace = new ExpressionTreeSearchSpace(5, 3, Symbols.MinimalOperations, ["x0"], [new FixedConstantSymbol(2.0)]);
 
         searchSpace.Contains(CreateLinearExpression()).ShouldBeFalse();
     }
@@ -204,7 +204,7 @@ public sealed class SymbolicExpressionSearchSpaceTests
     [Fact]
     public void SelectSymbol_RejectsAnArityRangeWithoutCandidates()
     {
-        var searchSpace = new ExpressionTreeSearchSpace(10, 5, Symbols.BasicArithmetic, ["x0"]);
+        var searchSpace = new ExpressionTreeSearchSpace(10, 5, Symbols.MinimalOperations, ["x0"]);
 
         Should.Throw<ArgumentException>(() =>
             searchSpace.SelectSymbol(3, 4, new SequenceRandomNumberGenerator(0.5)));
@@ -213,8 +213,8 @@ public sealed class SymbolicExpressionSearchSpaceTests
     [Fact]
     public void Equality_UsesOnlyCanonicalConfigurationValues()
     {
-        var first = new ExpressionTreeSearchSpace(10, 5, Symbols.BasicArithmetic, ["x0", "x1"]);
-        var second = new ExpressionTreeSearchSpace(10, 5, Symbols.BasicArithmetic, ["x0", "x1"]);
+        var first = new ExpressionTreeSearchSpace(10, 5, Symbols.MinimalOperations, ["x0", "x1"]);
+        var second = new ExpressionTreeSearchSpace(10, 5, Symbols.MinimalOperations, ["x0", "x1"]);
 
         first.ShouldBe(second);
         first.GetHashCode().ShouldBe(second.GetHashCode());

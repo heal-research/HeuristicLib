@@ -1,11 +1,13 @@
 using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using SymbolicRegressionProblem = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.SymbolicRegressionProblem;
 
 namespace HEAL.HeuristicLib.Tests.Problems.DataAnalysis.Regression;
 

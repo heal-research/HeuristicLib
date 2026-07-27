@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Numerics.Tensors;
+using HEAL.HeuristicLib.DataAnalysis;
 
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 
@@ -90,11 +91,44 @@ public static class ExpressionInterpreter
                     case OpCode.Exp:
                         ApplyExp(ref stack);
                         break;
+                    case OpCode.Sin:
+                        ApplySin(ref stack);
+                        break;
+                    case OpCode.Cos:
+                        ApplyCos(ref stack);
+                        break;
+                    case OpCode.Tan:
+                        ApplyTan(ref stack);
+                        break;
+                    case OpCode.Tanh:
+                        ApplyTanh(ref stack);
+                        break;
                     case OpCode.Log:
                         ApplyLog(ref stack);
                         break;
                     case OpCode.Sqrt:
                         ApplySqrt(ref stack);
+                        break;
+                    case OpCode.Abs:
+                        ApplyAbsolute(ref stack);
+                        break;
+                    case OpCode.Square:
+                        ApplySquare(ref stack);
+                        break;
+                    case OpCode.Cube:
+                        ApplyCube(ref stack);
+                        break;
+                    case OpCode.CubeRoot:
+                        ApplyCubeRoot(ref stack);
+                        break;
+                    case OpCode.Power:
+                        ApplyPower(ref stack);
+                        break;
+                    case OpCode.Root:
+                        ApplyRoot(ref stack);
+                        break;
+                    case OpCode.AnalyticQuotient:
+                        ApplyAnalyticQuotient(ref stack);
                         break;
                     default:
                         throw new InvalidOperationException($"Unsupported opcode {instruction.OpCode}.");
@@ -130,7 +164,7 @@ public static class ExpressionInterpreter
         for (var i = 0; i < variables.Length; i++)
         {
             var variable = expression.GetVariableReference(i);
-            variables[variable.Index] = data.GetDoubleSeries(variable.Name).Values;
+            variables[variable.Index] = data.Get<double>(variable.Name).Values;
         }
 
         return variables;
@@ -266,6 +300,62 @@ public static class ExpressionInterpreter
         stack.PushWorkspace(slotIndex);
     }
 
+    private static void ApplySin(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Sin(value.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        TensorPrimitives.Sin(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyCos(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Cos(value.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        TensorPrimitives.Cos(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyTan(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Tan(value.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        TensorPrimitives.Tan(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyTanh(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Tanh(value.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        TensorPrimitives.Tanh(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
+        stack.PushWorkspace(slotIndex);
+    }
+
     private static void ApplySqrt(ref EvaluationStack stack)
     {
         var value = stack.Pop();
@@ -277,6 +367,149 @@ public static class ExpressionInterpreter
 
         var slotIndex = stack.Count;
         TensorPrimitives.Sqrt(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyAbsolute(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Abs(value.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        TensorPrimitives.Abs(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplySquare(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(value.Scalar * value.Scalar);
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        var source = stack.Vector(value);
+        TensorPrimitives.Multiply(source, source, stack.WorkspaceSlot(slotIndex));
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyCube(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(value.Scalar * value.Scalar * value.Scalar);
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        var source = stack.Vector(value);
+        var result = stack.WorkspaceSlot(slotIndex);
+        TensorPrimitives.Pow(source, 3.0, result);
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyCubeRoot(ref EvaluationStack stack)
+    {
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Cbrt(value.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        TensorPrimitives.Cbrt(stack.Vector(value), stack.WorkspaceSlot(slotIndex));
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyPower(ref EvaluationStack stack)
+    {
+        var exponent = stack.Pop();
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar && exponent.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Pow(value.Scalar, exponent.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        var result = stack.WorkspaceSlot(slotIndex);
+        if (value.Kind == StackEntryKind.Scalar)
+            TensorPrimitives.Pow(value.Scalar, stack.Vector(exponent), result);
+        else if (exponent.Kind == StackEntryKind.Scalar)
+            TensorPrimitives.Pow(stack.Vector(value), exponent.Scalar, result);
+        else
+            TensorPrimitives.Pow(stack.Vector(value), stack.Vector(exponent), result);
+
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyRoot(ref EvaluationStack stack)
+    {
+        var degree = stack.Pop();
+        var value = stack.Pop();
+        if (value.Kind == StackEntryKind.Scalar && degree.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(Math.Pow(value.Scalar, 1.0 / degree.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        var result = stack.WorkspaceSlot(slotIndex);
+        if (degree.Kind == StackEntryKind.Scalar)
+        {
+            TensorPrimitives.Pow(stack.Vector(value), 1.0 / degree.Scalar, result);
+        }
+        else
+        {
+            var reciprocalDegree = stack.WorkspaceSlot(slotIndex + 1);
+            TensorPrimitives.Reciprocal(stack.Vector(degree), reciprocalDegree);
+            if (value.Kind == StackEntryKind.Scalar)
+                TensorPrimitives.Pow(value.Scalar, reciprocalDegree, result);
+            else
+                TensorPrimitives.Pow(stack.Vector(value), reciprocalDegree, result);
+        }
+
+        stack.PushWorkspace(slotIndex);
+    }
+
+    private static void ApplyAnalyticQuotient(ref EvaluationStack stack)
+    {
+        var denominator = stack.Pop();
+        var numerator = stack.Pop();
+        if (numerator.Kind == StackEntryKind.Scalar && denominator.Kind == StackEntryKind.Scalar)
+        {
+            stack.PushScalar(numerator.Scalar / Math.Sqrt(1.0 + denominator.Scalar * denominator.Scalar));
+            return;
+        }
+
+        var slotIndex = stack.Count;
+        var result = stack.WorkspaceSlot(slotIndex);
+        if (denominator.Kind == StackEntryKind.Scalar)
+        {
+            var scalarDenominator = Math.Sqrt(1.0 + denominator.Scalar * denominator.Scalar);
+            TensorPrimitives.Divide(stack.Vector(numerator), scalarDenominator, result);
+        }
+        else
+        {
+            var vectorDenominator = stack.WorkspaceSlot(slotIndex + 1);
+            var denominatorValues = stack.Vector(denominator);
+            TensorPrimitives.Multiply(denominatorValues, denominatorValues, vectorDenominator);
+            TensorPrimitives.Add(vectorDenominator, 1.0, vectorDenominator);
+            TensorPrimitives.Sqrt(vectorDenominator, vectorDenominator);
+            if (numerator.Kind == StackEntryKind.Scalar)
+                TensorPrimitives.Divide(numerator.Scalar, vectorDenominator, result);
+            else
+                TensorPrimitives.Divide(stack.Vector(numerator), vectorDenominator, result);
+        }
+
         stack.PushWorkspace(slotIndex);
     }
 
@@ -297,12 +530,15 @@ public static class ExpressionInterpreter
         internal void ApplyOperator(OpCode opCode)
         {
             var arity = OpCodes.GetArity(opCode);
+            var requiresTemporaryVector = arity == 2
+                                          && opCode is OpCode.Root or OpCode.AnalyticQuotient
+                                          && vectorStack[count - 1];
             var resultIsVector = false;
             for (var i = 0; i < arity; i++)
                 resultIsVector |= vectorStack[--count];
 
             if (resultIsVector)
-                MaximumSlots = Math.Max(MaximumSlots, count + 1);
+                MaximumSlots = Math.Max(MaximumSlots, count + (requiresTemporaryVector ? 2 : 1));
 
             vectorStack[count++] = resultIsVector;
         }

@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math.Variables;
 
-namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 
 public static class TreeComplexityCalculator
 {

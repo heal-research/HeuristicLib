@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Random.Distributions;
 using static HEAL.HeuristicLib.Genotypes.SymbolicExpressions.ExpressionDraft;
@@ -45,6 +46,20 @@ public sealed class SymbolicExpressionCompilerTests
         var compiled = (FixedConstant(1.0) + Constant(2.0)).Build().Compile();
 
         GetConstants(compiled).ShouldBe([3.0]);
+    }
+
+    [Fact]
+    public void Compile_FoldsExtendedNumericOperations()
+    {
+        Sin(FixedConstant(Math.PI / 2.0)).Build().Compile().ToInfixString().ShouldBe("1");
+        Abs(FixedConstant(-3.0)).Build().Compile().ToInfixString().ShouldBe("3");
+        Square(FixedConstant(-3.0)).Build().Compile().ToInfixString().ShouldBe("9");
+        Cube(FixedConstant(-2.0)).Build().Compile().ToInfixString().ShouldBe("-8");
+        CubeRoot(FixedConstant(-8.0)).Build().Compile().ToInfixString().ShouldBe("-2");
+        Power(FixedConstant(9.0), FixedConstant(0.5)).Build().Compile().ToInfixString().ShouldBe("3");
+        Root(FixedConstant(32.0), FixedConstant(2.5)).Build().Compile().ToInfixString().ShouldBe("4");
+        GetConstants(AnalyticQuotient(FixedConstant(6.0), FixedConstant(Math.Sqrt(3.0))).Build().Compile())[0]
+            .ShouldBe(3.0, tolerance: 1e-12);
     }
 
     [Fact]
@@ -126,7 +141,7 @@ public sealed class SymbolicExpressionCompilerTests
 
         foreach (var x0 in new[] { -2.0, 0.0, 4.5, double.PositiveInfinity, double.NaN })
         {
-            var data = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { x0 })]);
+            var data = new DataFrame([Series<double>.FromOwnedArray("x0", [x0])]);
             ExpressionInterpreter.Interpret(optimized, data)[0].ShouldBe(ExpressionInterpreter.Interpret(unoptimized, data)[0]);
         }
     }
@@ -135,8 +150,8 @@ public sealed class SymbolicExpressionCompilerTests
     public void CompiledExpression_CanBeRetainedAndEvaluatedRepeatedly()
     {
         var compiled = (Variable("x0") + FixedConstant(2.0)).Build().Compile();
-        var first = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 1.0, 2.0 })]);
-        var second = DataFrame.FromOwnedColumns([KeyValuePair.Create("x0", new[] { 3.0, 4.0 })]);
+        var first = new DataFrame([Series<double>.FromOwnedArray("x0", [1.0, 2.0])]);
+        var second = new DataFrame([Series<double>.FromOwnedArray("x0", [3.0, 4.0])]);
 
         ExpressionInterpreter.Interpret(compiled, first).ShouldBe([3.0, 4.0]);
         ExpressionInterpreter.Interpret(compiled, second).ShouldBe([5.0, 6.0]);

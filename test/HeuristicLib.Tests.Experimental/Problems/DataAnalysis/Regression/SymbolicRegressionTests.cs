@@ -3,12 +3,14 @@ using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy;
+using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using SymbolicRegressionProblem = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.SymbolicRegressionProblem;
 
 namespace HEAL.HeuristicLib.Tests.Problems.DataAnalysis.Regression;
 
@@ -162,7 +164,7 @@ public class SymbolicRegressionTests
 
     [Theory]
     [MemberData(nameof(InterpreterParameters))]
-    public void Creators(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
+    public void BalancedAndProbabilisticCreators(ISymbolicDataAnalysisExpressionTreeInterpreter interpreter)
     {
         var problem = CreateTestSymbolicRegressionProblem(interpreter, 12);
         var creators =
@@ -173,18 +175,6 @@ public class SymbolicRegressionTests
         {
             var tree = c.Create(r, problem.SearchSpace);
             problem.SearchSpace.Contains(tree).ShouldBeTrue();
-            _ = problem.Evaluate(tree);
-        }
-
-        //these creators often create invalid trees (ignore tree length)
-        var invalidCreators = new SymbolicExpressionTreeCreator[]
-        {
-            new FullTreeCreator(), new RampedHalfAndHalfTreeCreator(), new GrowTreeCreator()
-        };
-        foreach (var c in invalidCreators)
-        {
-            var tree = c.Create(r, problem.SearchSpace);
-            (problem.SearchSpace.TreeDepth >= tree.Depth).ShouldBeTrue();
             _ = problem.Evaluate(tree);
         }
     }

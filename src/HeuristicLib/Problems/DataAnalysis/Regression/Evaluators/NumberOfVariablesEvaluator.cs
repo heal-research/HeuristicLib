@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Genotypes.Trees;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Evaluators;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 
 public class NumberOfVariablesEvaluator : IRegressionEvaluator<SymbolicExpressionTree>
 {

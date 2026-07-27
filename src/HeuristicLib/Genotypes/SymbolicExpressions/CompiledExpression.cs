@@ -89,11 +89,44 @@ public sealed class CompiledExpression : IEquatable<CompiledExpression>
                 case OpCode.Exp:
                     PushUnary(stack, "exp");
                     break;
+                case OpCode.Sin:
+                    PushUnary(stack, "sin");
+                    break;
+                case OpCode.Cos:
+                    PushUnary(stack, "cos");
+                    break;
+                case OpCode.Tan:
+                    PushUnary(stack, "tan");
+                    break;
+                case OpCode.Tanh:
+                    PushUnary(stack, "tanh");
+                    break;
                 case OpCode.Log:
                     PushUnary(stack, "log");
                     break;
                 case OpCode.Sqrt:
                     PushUnary(stack, "sqrt");
+                    break;
+                case OpCode.Abs:
+                    PushUnary(stack, "abs");
+                    break;
+                case OpCode.Square:
+                    PushUnary(stack, "square");
+                    break;
+                case OpCode.Cube:
+                    PushUnary(stack, "cube");
+                    break;
+                case OpCode.CubeRoot:
+                    PushUnary(stack, "cbrt");
+                    break;
+                case OpCode.Power:
+                    PushBinaryFunction(stack, "pow");
+                    break;
+                case OpCode.Root:
+                    PushBinaryFunction(stack, "root");
+                    break;
+                case OpCode.AnalyticQuotient:
+                    PushBinaryFunction(stack, "aq");
                     break;
                 default:
                     throw new InvalidOperationException($"Unsupported opcode {instruction.OpCode}.");
@@ -136,6 +169,13 @@ public sealed class CompiledExpression : IEquatable<CompiledExpression>
     {
         var child = stack.Pop();
         stack.Push($"{functionName}({child})");
+    }
+
+    private static void PushBinaryFunction(Stack<string> stack, string functionName)
+    {
+        var right = stack.Pop();
+        var left = stack.Pop();
+        stack.Push($"{functionName}({left}, {right})");
     }
 
     private static int ValidateAndCalculateDepth(Instruction[] instructions, double[] constants, VariableReference[] variableReferences)

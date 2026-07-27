@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.SearchSpaces;
 
-namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy;
 
 public abstract class RegressionProblem<TProblemData, TSolution, TSearchSpace> : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>
   where TProblemData : RegressionProblemData
