@@ -60,7 +60,7 @@ public static class ChooseOneSelector
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         var selectorArray = selectors.ToImmutableArray();
-        return new ChooseOneSelector<TCandidate, TSearchSpace, TProblem>(selectorArray);
+        return new(selectorArray);
     }
 
     public static ChooseOneSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> selectors, ImmutableArray<double>? weights = null)

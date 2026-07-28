@@ -44,20 +44,16 @@ public class CycleAlgorithmAnalysisScenarios
         var interceptor = new IdentityInterceptor<int, PopulationState<int>>();
         var algorithm1 = new SingleStepAlgorithm(1, evaluator, interceptor);
         var algorithm2 = new SingleStepAlgorithm(2, evaluator, interceptor);
-        var cycleAlgorithm =
-            new CycleAlgorithm<SingleStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,
-                PopulationState<int>>(
-                [algorithm1, algorithm2])
-            {
-                MaximumCycles = 3,
-                NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
-            };
+        var cycleAlgorithm = algorithm1.CycleWith(algorithm2, maximumCycles: 3) with
+        {
+            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
+        };
 
         var evaluationTrace1 = new EvaluationTraceAnalysis(evaluator);
         var evaluationTrace2 = new EvaluationTraceAnalysis(evaluator);
         var interceptionTrace = new InterceptionTraceAnalysis(interceptor);
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: x => x,
+        var problem = FuncProblem.Create(
+            evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
@@ -131,10 +127,7 @@ public class CycleAlgorithmAnalysisScenarios
                 ct.ThrowIfCancellationRequested();
 
                 var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
-                var currentState = new PopulationState<int>
-                {
-                    Population = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)])
-                };
+                var currentState = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)]).ToPopulationState();
 
                 yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
                 await Task.CompletedTask;

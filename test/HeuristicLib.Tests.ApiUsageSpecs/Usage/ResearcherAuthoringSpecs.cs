@@ -52,11 +52,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
-        {
-            Algorithm = innerAlgorithm,
-            Terminator = new FirstEvaluatedStateTerminator()
-        };
+        var algorithm = innerAlgorithm.WithTerminator(new FirstEvaluatedStateTerminator());
 
         var finalState = await algorithm.CompleteAsync(
           problem,
@@ -81,11 +77,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
-        {
-            Algorithm = innerAlgorithm,
-            Terminator = new CancellationTokenTerminator<RealVector>(stopAfterCurrentState.Token)
-        };
+        var algorithm = innerAlgorithm.WithTerminator(CancellationTokenTerminator.For(problem, stopAfterCurrentState.Token));
 
         var states = algorithm.Stream(
           problem,
@@ -110,13 +102,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
-        {
-            Algorithm = innerAlgorithm,
-            Terminator = new AfterElapsedTimeTerminator<RealVector>(
-              TimeSpan.FromSeconds(1),
-              timeProvider)
-        };
+        var algorithm = innerAlgorithm.WithTerminator(AfterElapsedTimeTerminator.For(problem, TimeSpan.FromSeconds(1), timeProvider));
 
         var states = algorithm.Stream(
           problem,

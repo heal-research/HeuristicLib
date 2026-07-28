@@ -28,3 +28,9 @@ public sealed class TrialAnalyzer<TAlgorithm, TOperator, TResult> : TrialAnalyze
 
 public sealed record TrialAnalysisResult<TTrial, TResult>(TTrial Trial, IAnalyzer<TResult> Analyzer, TResult Result)
     where TResult : class;
+
+public static class TrialAnalysisResult
+{
+    public static TrialAnalysisResult<TTrial, TResult> From<TTrial, TResult>(TTrial trial, IAnalyzer<TResult> analyzer, TResult result)
+        where TResult : class => new(trial, analyzer, result);
+}

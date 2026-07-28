@@ -28,3 +28,21 @@ public partial record TransformedCreator<TCandidate, TSearchSpace, TProblem>(ICr
         }
     }
 }
+
+public static class TransformedCreator
+{
+    public static TransformedCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator, IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(creator, mutator);
+}
+
+public static class TransformedCreatorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public TransformedCreator<TCandidate, TSearchSpace, TProblem> TransformWith(IMutator<TCandidate, TSearchSpace, TProblem> mutator) =>
+            TransformedCreator.Create(creator, mutator);
+    }
+}

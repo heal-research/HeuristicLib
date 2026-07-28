@@ -19,6 +19,24 @@ The core roles used across algorithms in this repository are:
 
 The genetic algorithm (`GeneticAlgorithm<...>`) is the easiest place to see all of these roles working together.
 
+## Type inference helpers
+
+Generic methods can infer type arguments from an existing problem or algorithm even when an operator constructor has no type bearing argument. The static `For(...)` helpers use that argument as a type witness:
+
+```csharp
+var problemEvaluator = DirectEvaluator.For(problem);
+var tournamentSelector = TournamentSelector.For(problem, tournamentSize: 4);
+var randomSelector = RandomSelector.For(problem);
+var unchangedMutator = NoChangeMutator.For(problem);
+var firstParentCrossover = SelectFirstParentCrossover.For(problem);
+
+var algorithmEvaluator = DirectEvaluator.For(algorithm);
+var algorithmSelector = TournamentSelector.For(algorithm, tournamentSize: 4);
+var interceptor = IdentityInterceptor.For(algorithm);
+```
+
+Built in operator configurations whose concrete type otherwise contains only `TCandidate` consistently provide `For(problem, ...)`. The created operator does not retain or depend on the problem. It only supplies generic information to method inference. Direct generic construction remains appropriate when neither a problem nor a configured algorithm is available, such as a generic default declared on an algorithm configuration.
+
 ## The “shape” of an operator
 
 Operators are intentionally uniform:

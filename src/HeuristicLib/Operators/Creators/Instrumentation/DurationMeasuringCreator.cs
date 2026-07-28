@@ -61,13 +61,13 @@ public static class CreatorDurationExtensions
         public DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem> MeasureCreatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem>(creator, duration);
+            return new(creator, duration);
         }
 
         public DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem> MeasureCreatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringCreator<TCandidate, TSearchSpace, TProblem>(creator, duration, timeProvider);
+            return new(creator, duration, timeProvider);
         }
     }
 }

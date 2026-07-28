@@ -62,3 +62,23 @@ public partial record PredefinedCandidatesCreator<TCandidate, TSearchSpace, TPro
         }
     }
 }
+
+public static class PredefinedCandidatesCreator
+{
+    public static PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
+        IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        new(predefinedCandidates.ToImmutableArray(), creatorForRemainingCandidates);
+}
+
+public static class PredefinedCandidatesCreatorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public PredefinedCandidatesCreator<TCandidate, TSearchSpace, TProblem> WithPredefinedCandidates(IReadOnlyList<TCandidate> predefinedCandidates) =>
+            PredefinedCandidatesCreator.Create(predefinedCandidates, creator);
+    }
+}

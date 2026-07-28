@@ -77,8 +77,8 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
                 var res2 = operatorInstance2.Cross(parents.Select(Selector2).ToArray(), random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
                 return res1.Zip(res2, ((a, b) => new CompositeGenotype<T1, T2>(a, b))).ToArray();
 
-                static IParents<T2> Selector2(IParents<CompositeGenotype<T1, T2>> x) => new Parents<T2>(x.Parent1.Part2, x.Parent2.Part2);
-                static IParents<T1> Selector1(IParents<CompositeGenotype<T1, T2>> x) => new Parents<T1>(x.Parent1.Part1, x.Parent2.Part1);
+                static IParents<T2> Selector2(IParents<CompositeGenotype<T1, T2>> x) => Parents.From(x.Parent1.Part2, x.Parent2.Part2);
+                static IParents<T1> Selector1(IParents<CompositeGenotype<T1, T2>> x) => Parents.From(x.Parent1.Part1, x.Parent2.Part1);
             }
         }
     }

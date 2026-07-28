@@ -35,11 +35,11 @@ public class OperatorStaticMethodGuidelineTests
     public void ParetoCrowdingTournamentSelector_InstanceAndStaticProduceSameSelection()
     {
         IReadOnlyList<EvaluatedCandidate<int>> population = [
-          new EvaluatedCandidate<int>(0, new ObjectiveVector(0.0, 10.0)),
-      new EvaluatedCandidate<int>(1, new ObjectiveVector(10.0, 0.0)),
-      new EvaluatedCandidate<int>(2, new ObjectiveVector(2.0, 9.0)),
-      new EvaluatedCandidate<int>(3, new ObjectiveVector(9.0, 2.0)),
-      new EvaluatedCandidate<int>(4, new ObjectiveVector(5.0, 5.0))
+            EvaluatedCandidate.From(0, new ObjectiveVector(0.0, 10.0)),
+            EvaluatedCandidate.From(1, new ObjectiveVector(10.0, 0.0)),
+            EvaluatedCandidate.From(2, new ObjectiveVector(2.0, 9.0)),
+            EvaluatedCandidate.From(3, new ObjectiveVector(9.0, 2.0)),
+            EvaluatedCandidate.From(4, new ObjectiveVector(5.0, 5.0))
         ];
         var objective = CreateBiObjective();
 
@@ -55,13 +55,10 @@ public class OperatorStaticMethodGuidelineTests
     {
         var objective = CreateSingleObjective();
         var problem = new DummyProblem<int>(DummySearchSpace<int>.Instance, objective);
-        var state = new PopulationState<int>
-        {
-            Population = Population.From<int>([
-            new EvaluatedCandidate<int>(1, new ObjectiveVector(2.0)),
-        new EvaluatedCandidate<int>(2, new ObjectiveVector(0.5))
-          ])
-        };
+        var state = Population.From<int>([
+            EvaluatedCandidate.From(1, new ObjectiveVector(2.0)),
+            EvaluatedCandidate.From(2, new ObjectiveVector(0.5))
+        ]).ToPopulationState();
         var target = new ObjectiveVector(1.0);
 
         var viaInstance = new TargetTerminator<int>(target).IsTerminalState(state, DummySearchSpace<int>.Instance, problem);
@@ -73,14 +70,11 @@ public class OperatorStaticMethodGuidelineTests
     [Fact]
     public void RemoveDuplicatesInterceptor_StaticOverloadMatchesInstanceBehavior()
     {
-        var state = new PopulationState<string>
-        {
-            Population = Population.From<string>([
-            new EvaluatedCandidate<string>("A", new ObjectiveVector(1.0)),
-        new EvaluatedCandidate<string>("a", new ObjectiveVector(2.0)),
-        new EvaluatedCandidate<string>("B", new ObjectiveVector(3.0))
-          ])
-        };
+        var state = Population.From<string>([
+            EvaluatedCandidate.From("A", new ObjectiveVector(1.0)),
+            EvaluatedCandidate.From("a", new ObjectiveVector(2.0)),
+            EvaluatedCandidate.From("B", new ObjectiveVector(3.0))
+        ]).ToPopulationState();
         var comparer = CaseInsensitiveStringComparer.Instance;
 
         var viaInstance = new RemoveDuplicatesInterceptor<string, PopulationState<string>>(comparer).Transform(state, previousState: null);
@@ -119,10 +113,10 @@ public class OperatorStaticMethodGuidelineTests
     private static IReadOnlyList<EvaluatedCandidate<int>> CreateSingleObjectivePopulation()
     {
         return [
-          new EvaluatedCandidate<int>(0, new ObjectiveVector(4.0)),
-      new EvaluatedCandidate<int>(1, new ObjectiveVector(2.0)),
-      new EvaluatedCandidate<int>(2, new ObjectiveVector(1.0)),
-      new EvaluatedCandidate<int>(3, new ObjectiveVector(3.0))
+            EvaluatedCandidate.From(0, new ObjectiveVector(4.0)),
+            EvaluatedCandidate.From(1, new ObjectiveVector(2.0)),
+            EvaluatedCandidate.From(2, new ObjectiveVector(1.0)),
+            EvaluatedCandidate.From(3, new ObjectiveVector(3.0))
         ];
     }
 

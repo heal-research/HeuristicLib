@@ -41,7 +41,7 @@ public record BestPerEvaluationAnalysis<TCandidate, TSearchSpace, TProblem> : An
                 }
             }
 
-            state.Add(new EvaluatedCandidate<TCandidate>(candidate, objectiveVector));
+            state.Add(EvaluatedCandidate.From(candidate, objectiveVector));
         }
     }
 

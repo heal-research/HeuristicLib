@@ -13,7 +13,7 @@ public static class Extensions
             {
                 var p1 = parents[j];
                 var p2 = parents[j + 1];
-                parentPairs[i] = new Parents<TCandidate>(p1, p2);
+                parentPairs[i] = Parents.From(p1, p2);
             }
 
             return parentPairs;
@@ -34,7 +34,7 @@ public static class Extensions
                     && objective.TotalOrderComparer is not NoTotalOrderComparer
                     && objective.TotalOrderComparer.Compare(p1.ObjectiveVector, p2.ObjectiveVector) > 0)
                     (p1, p2) = (p2, p1);
-                parentPairs[i] = new Parents<TCandidate>(p1.Candidate, p2.Candidate);
+                parentPairs[i] = Parents.From(p1.Candidate, p2.Candidate);
             }
 
             return parentPairs;

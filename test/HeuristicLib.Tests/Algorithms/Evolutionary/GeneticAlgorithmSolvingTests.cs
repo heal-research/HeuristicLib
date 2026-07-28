@@ -255,7 +255,7 @@ public class GeneticAlgorithmSolvingTests
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
             MutationRate = 0.5,
-            Selector = new RandomSelector<RealVector>(),
+            Selector = RandomSelector.For(problem),
             Elites = 0
         };
     }

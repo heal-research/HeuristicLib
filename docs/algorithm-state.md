@@ -22,7 +22,7 @@ That base type does **not** imply any particular payload. In practice, concrete 
 - a best-so-far summary
 - any other public progress snapshot the algorithm wants to expose
 
-Built-in examples include `PopulationState<TCandidate>` and `SingleEvaluatedCandidateState<TCandidate>`.
+Built-in examples include `PopulationState<TCandidate>` and `SingleSolutionState<TCandidate>`. Use `PopulationState.From(population)` and `SingleSolutionState.From(evaluatedCandidate)` when the contained value should determine the generic type.
 
 Iteration counts are not part of the search-state contract. In nested, wrapped, or cycled executions there is no single globally meaningful notion of “the current iteration”, so that kind of counting remains an execution concern rather than public search state.
 

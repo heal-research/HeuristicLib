@@ -95,7 +95,7 @@ public class IterativeAlgorithmInstanceTests
 
     private static async Task<List<ProbeState>> Collect(ProbeInstance instance, IRandomNumberGenerator? random = null, ProbeState? initialState = null, CancellationToken ct = default)
     {
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(value => value, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        var problem = FuncProblem.Create((int value) => value, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var states = new List<ProbeState>();
         await foreach (var state in instance.RunStreamingAsync(problem, random ?? new RecordingRandom(), initialState, ct))
         {

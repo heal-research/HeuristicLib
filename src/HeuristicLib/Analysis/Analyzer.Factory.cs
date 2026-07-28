@@ -15,7 +15,7 @@ public static class Analyzer
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
     {
-        return new BestMedianWorstAnalysis<T, TS, TP, TR>(interceptors);
+        return new(interceptors);
     }
 
     public static BestMedianWorstPerEvaluationAnalysis<T, TS, TP, TR> BestMedianWorstPerEvaluation<T, TS, TP, TR>(
@@ -25,7 +25,7 @@ public static class Analyzer
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
     {
-        return new BestMedianWorstPerEvaluationAnalysis<T, TS, TP, TR>(evaluators, interceptors);
+        return new(evaluators, interceptors);
     }
 
     public static BestQualityAlgorithmAnalysis<T, TS, TP> BestQuality<T, TS, TP>(
@@ -33,7 +33,7 @@ public static class Analyzer
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {
-        return new BestQualityAlgorithmAnalysis<T, TS, TP>(evaluators);
+        return new(evaluators);
     }
 
     public static HyperVolumeAnalysis<T, TS, TP> HyperVolume<T, TS, TP>(
@@ -43,6 +43,6 @@ public static class Analyzer
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {
-        return new HyperVolumeAnalysis<T, TS, TP>(problemObjective, referencePoint, evaluators);
+        return new(problemObjective, referencePoint, evaluators);
     }
 }

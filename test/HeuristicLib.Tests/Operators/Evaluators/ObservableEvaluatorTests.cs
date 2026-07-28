@@ -77,8 +77,8 @@ public class ObservableEvaluatorTests
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
     {
-        return FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: static candidate => candidate,
+        return FuncProblem.Create(
+            evaluateFunc: static (int candidate) => candidate,
             encoding: DummySearchSpace<int>.Instance,
             objective: CreateObjective());
     }

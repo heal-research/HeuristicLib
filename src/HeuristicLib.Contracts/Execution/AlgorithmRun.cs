@@ -138,7 +138,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
         var algorithmInstance = StartExecution().Resolve(Algorithm);
-        return new ExecutionStream<TSearchState>(StreamStates(algorithmInstance, initialState, cancellationToken), cancellationToken);
+        return new(StreamStates(algorithmInstance, initialState, cancellationToken), cancellationToken);
     }
 
     public async Task<TSearchState> CompleteAsync(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>

@@ -277,5 +277,5 @@ public class ExperimentExecutionTests
     }
 
     private static FixedExperiment<ProbeAlgorithm> CreateExperiment(params IReadOnlyList<ProbeAlgorithm> algorithms) =>
-        new([.. algorithms.Select((algorithm, index) => new ExperimentCase<ProbeAlgorithm, int>(algorithm, index, [index]))]);
+        new([.. algorithms.Select((algorithm, index) => ExperimentCase.From(algorithm, index, [index]))]);
 }

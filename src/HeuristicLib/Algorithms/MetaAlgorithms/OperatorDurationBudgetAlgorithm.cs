@@ -37,7 +37,7 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem
         var childRegistry = registry.CreateChildRegistry();
         childRegistry.RegisterReplacement(ObservedOperator, measuredOperator);
 
-        return new OperatorDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childRegistry.Resolve(Algorithm), duration, MaximumDuration);
+        return new(childRegistry.Resolve(Algorithm), duration, MaximumDuration);
     }
 }
 

@@ -13,7 +13,7 @@ public static class ExperimentalAnalyzers
         where TS : class, ISearchSpace<T>
         where TP : class, IProblem<T, TS>
     {
-        return new BestPerEvaluationAnalysis<T, TS, TP>(evaluators);
+        return new(evaluators);
     }
 
     public static AllPopulationsAnalysis<T, TS, TP, TR> AllPopulations<T, TS, TP, TR>(
@@ -22,7 +22,7 @@ public static class ExperimentalAnalyzers
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
     {
-        return new AllPopulationsAnalysis<T, TS, TP, TR>(interceptor);
+        return new(interceptor);
     }
 
     public static GenealogyAnalysis<T, TS, TP, TR> Genealogy<T, TS, TP, TR>(
@@ -36,7 +36,7 @@ public static class ExperimentalAnalyzers
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
     {
-        return new GenealogyAnalysis<T, TS, TP, TR>(crossover, mutator, interceptor, equality, saveSpace);
+        return new(crossover, mutator, interceptor, equality, saveSpace);
     }
 
     public static RankAnalysis<T, TS, TP, TR> Rank<T, TS, TP, TR>(
@@ -49,6 +49,6 @@ public static class ExperimentalAnalyzers
         where TP : class, IProblem<T, TS>
         where TR : PopulationState<T>
     {
-        return new RankAnalysis<T, TS, TP, TR>(crossover, mutator, interceptor, equality);
+        return new(crossover, mutator, interceptor, equality);
     }
 }

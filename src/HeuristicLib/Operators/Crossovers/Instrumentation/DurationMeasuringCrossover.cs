@@ -63,13 +63,13 @@ public static class CrossoverDurationExtensions
         public DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem>(crossover, duration);
+            return new(crossover, duration);
         }
 
         public DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem> MeasureCrossoverDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringCrossover<TCandidate, TSearchSpace, TProblem>(crossover, duration, timeProvider);
+            return new(crossover, duration, timeProvider);
         }
     }
 }

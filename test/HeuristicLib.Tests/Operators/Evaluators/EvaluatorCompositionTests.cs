@@ -61,5 +61,5 @@ public class EvaluatorCompositionTests
         new DummyEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
-        FuncProblem.Create<int, DummySearchSpace<int>>(static candidate => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
 }

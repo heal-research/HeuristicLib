@@ -27,3 +27,23 @@ public partial record AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchS
             InnerTerminators.Any(terminator => terminator.IsTerminalState(state, searchSpace, problem));
     }
 }
+
+public static class AnyTerminator
+{
+    public static AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IEnumerable<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
+        where TSearchState : class, ISearchState
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. terminators]);
+}
+
+public static class AnyTerminatorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
+        where TSearchState : class, ISearchState
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Or(params IEnumerable<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> otherTerminators) =>
+            AnyTerminator.Create([terminator, .. otherTerminators]);
+    }
+}

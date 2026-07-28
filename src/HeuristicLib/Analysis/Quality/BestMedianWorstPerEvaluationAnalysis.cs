@@ -65,6 +65,6 @@ public sealed class BestMedianWorstPerEvaluationAnalysisState<TCandidate>
         var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
 
         bestSolutions.Add((currentEvaluationsCount,
-            new BestMedianWorstEntry<TCandidate>(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
+            BestMedianWorstEntry.From(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
     }
 }

@@ -24,6 +24,6 @@ public record ParetoFrontAnalysis<T, TS, TP>(
     public void AfterEvaluation(ParetoState<T> result, IReadOnlyList<T> genotypes,
                                 IReadOnlyList<ObjectiveVector> objectives)
     {
-        result.AddPoints(genotypes.Zip(objectives).Select(x => new EvaluatedCandidate<T>(x.First, x.Second)));
+        result.AddPoints(genotypes.Zip(objectives).Select(x => EvaluatedCandidate.From(x.First, x.Second)));
     }
 }

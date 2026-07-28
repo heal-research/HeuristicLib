@@ -73,7 +73,7 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
                 var initialFitnesses = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-                return new PopulationState<TCandidate> { Population = Population.From(initialSolutions, initialFitnesses) };
+                return Population.From(initialSolutions, initialFitnesses).ToPopulationState();
             }
 
             var oldPopulation = previousState.Population.EvaluatedCandidates;
@@ -83,8 +83,8 @@ public record GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             offspring = mutator.Mutate(offspring, random, problem.SearchSpace, problem);
             var fitnesses = evaluator.Evaluate(offspring, random, problem.SearchSpace, problem);
             var offspringPopulation = Population.From(offspring, fitnesses).EvaluatedCandidates;
-            var newPopulation = ElitismReplacer<TCandidate>.Replace(oldPopulation, offspringPopulation, problem.Objective, populationSize, elites);
-            return new PopulationState<TCandidate> { Population = Population.From(newPopulation) };
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, populationSize, elites);
+            return Population.From(newPopulation).ToPopulationState();
         }
     }
 }
@@ -107,7 +107,7 @@ public static class GeneticAlgorithm
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
+        return new()
         {
             Creator = creator,
             Crossover = crossover,

@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
@@ -12,6 +14,8 @@ public record RandomSelector<TCandidate>
 
 public static class RandomSelector
 {
+    public static RandomSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem) where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
     {
         var selected = new EvaluatedCandidate<TCandidate>[count];

@@ -33,7 +33,7 @@ public class TspScenarios
         // ga.RandomSeed = 42;
         ga.PopulationSize = 100;
         ga.MutationRate = 0.05;
-        ga.Selector = new TournamentSelector<Permutation>(2);
+        ga.Selector = TournamentSelector.For(prob, tournamentSize: 2);
         ga.Elites = 1;
         // execute
         var resGa = (ga.Build() with

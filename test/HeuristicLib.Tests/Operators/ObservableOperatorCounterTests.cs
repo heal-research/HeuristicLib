@@ -124,12 +124,12 @@ public class ObservableOperatorCounterTests
         var problem = CreateProblem();
 
         instance.Cross(
-            [new Parents<int>(1, 10), new Parents<int>(2, 20), new Parents<int>(3, 30)],
+            [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
         instance.Cross(
-            [new Parents<int>(4, 40)],
+            [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
             problem);
@@ -146,12 +146,12 @@ public class ObservableOperatorCounterTests
         var problem = CreateProblem();
 
         instance.Cross(
-            [new Parents<int>(1, 10), new Parents<int>(2, 20), new Parents<int>(3, 30)],
+            [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
         instance.Cross(
-            [new Parents<int>(4, 40)],
+            [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
             problem);
@@ -171,12 +171,12 @@ public class ObservableOperatorCounterTests
         var problem = CreateProblem();
 
         instance.Cross(
-            [new Parents<int>(1, 10), new Parents<int>(2, 20), new Parents<int>(3, 30)],
+            [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
             RandomNumberGenerator.Create(1),
             problem.SearchSpace,
             problem);
         instance.Cross(
-            [new Parents<int>(4, 40)],
+            [Parents.From(4, 40)],
             RandomNumberGenerator.Create(2),
             problem.SearchSpace,
             problem);
@@ -386,8 +386,8 @@ public class ObservableOperatorCounterTests
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
     {
-        return FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: static candidate => candidate,
+        return FuncProblem.Create(
+            evaluateFunc: static (int candidate) => candidate,
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
     }
@@ -395,7 +395,7 @@ public class ObservableOperatorCounterTests
     private static IReadOnlyList<EvaluatedCandidate<int>> CreateEvaluatedCandidates(IReadOnlyList<int> candidates)
     {
         return candidates
-            .Select(candidate => new EvaluatedCandidate<int>(candidate, new ObjectiveVector(candidate)))
+            .Select(candidate => EvaluatedCandidate.From(candidate, new ObjectiveVector(candidate)))
             .ToArray();
     }
 

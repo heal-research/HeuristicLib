@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
@@ -20,4 +22,10 @@ public record RandomCrossover<TCandidate>
     {
         return random.NextDouble() < Bias ? parents.Parent1 : parents.Parent2;
     }
+}
+
+public static class RandomCrossover
+{
+    public static RandomCrossover<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, double bias = 0.5)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(bias);
 }

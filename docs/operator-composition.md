@@ -71,13 +71,16 @@ Rate controlled composition is intended for operations that should be applied co
 `PipelineMutator` passes the complete result batch from each mutator to the next mutator in order.
 
 ```csharp
-var mutator = new PipelineMutator<TCandidate, TSearchSpace, TProblem>([
-    firstMutator,
-    secondMutator
-]);
+var mutator = PipelineMutator.Create(firstMutator, secondMutator);
+var fluentMutator = firstMutator.Then(secondMutator);
 ```
 
 `PipelineInterceptor` similarly passes the transformed search state from each interceptor to the next interceptor.
+
+```csharp
+var interceptor = PipelineInterceptor.Create(firstInterceptor, secondInterceptor);
+var fluentInterceptor = firstInterceptor.Then(secondInterceptor);
+```
 
 Selectors do not have a general pipeline because it is unclear whether a later selector should receive the original population or the previous selection and which count should apply at each stage. Replacers have the same ambiguity for the previous and offspring populations. A specialized pipeline may define those choices when an algorithm has a concrete use case.
 
@@ -92,8 +95,11 @@ Creators do not form a natural pipeline because a creator does not consume candi
 `TransformedCrossover` invokes a crossover and then always invokes one mutator on the resulting candidate batch.
 
 ```csharp
-var creator = new TransformedCreator<TCandidate, TSearchSpace, TProblem>(baseCreator, repairMutator);
-var crossover = new TransformedCrossover<TCandidate, TSearchSpace, TProblem>(baseCrossover, repairMutator);
+var creator = TransformedCreator.Create(baseCreator, repairMutator);
+var fluentCreator = baseCreator.TransformWith(repairMutator);
+
+var crossover = TransformedCrossover.Create(baseCrossover, repairMutator);
+var fluentCrossover = baseCrossover.TransformWith(repairMutator);
 ```
 
 The mutator is invoked once for every outer operation call, even when it performs no changes. A rate controlled or weighted mutator may be supplied deliberately, but users should normally read transformed composition as unconditional postprocessing.
@@ -103,6 +109,16 @@ Transformed composition does not require the mutator to preserve cardinality. Th
 ## Terminator composition
 
 `AnyTerminator` stops when any child terminator stops. `AllTerminator` stops when every child terminator stops.
+
+Use the static factories when the resulting composition type should be prominent. Use `Or(...)` and `And(...)` when the composition reads more clearly from its first condition.
+
+```csharp
+var any = AnyTerminator.Create(iterationTerminator, targetTerminator);
+var fluentAny = iterationTerminator.Or(targetTerminator);
+
+var all = AllTerminator.Create(iterationTerminator, targetTerminator);
+var fluentAll = iterationTerminator.And(targetTerminator);
+```
 
 Terminator checks may update execution data. Each composition invokes its child terminators according to ordinary `Any` and `All` short circuit behavior. Child order can therefore matter when terminators have effectful checks.
 
@@ -119,6 +135,22 @@ Some compositions express a role specific policy rather than a general choose on
 3. Selector wrappers provide policies such as elite inclusion and avoiding equal mates.
 4. `GenderSpecificSelector` requests half of the candidates from its female selector and half from its male selector, then returns consecutive female and male pairs.
 5. Domain specific operators may provide narrower composition, such as selecting among symbolic expression tree mutations.
+
+Specialized selector compositions also provide static and fluent construction:
+
+```csharp
+var predefinedCreator = PredefinedCandidatesCreator.Create(predefinedCandidates, fallbackCreator);
+var fluentPredefinedCreator = fallbackCreator.WithPredefinedCandidates(predefinedCandidates);
+
+var eliteSelector = EliteSelector.Create(selector, elites: 2);
+var fluentEliteSelector = selector.WithElites(elites: 2);
+
+var pairedSelector = GenderSpecificSelector.Create(femaleSelector, maleSelector);
+var fluentPairedSelector = femaleSelector.PairWith(maleSelector);
+
+var distinctMateSelector = NoSameMatesSelector.Create(selector, maximumAttempts: 10);
+var fluentDistinctMateSelector = selector.AvoidSameMates(maximumAttempts: 10);
+```
 
 These types should document their own batching, state and cardinality behavior because their policies are role specific.
 

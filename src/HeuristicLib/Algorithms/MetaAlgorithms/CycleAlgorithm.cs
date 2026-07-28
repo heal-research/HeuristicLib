@@ -47,6 +47,52 @@ public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProb
         new(registry, Algorithms, MaximumCycles, NewExecutionInstancesPerCycle);
 }
 
+public static class CycleAlgorithm
+{
+    public static CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
+        Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> firstAlgorithm, params IEnumerable<TAlgorithm> followingAlgorithms)
+        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState => new([firstAlgorithm.Self, .. followingAlgorithms]);
+
+    public static CycleAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
+        params IEnumerable<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState => new([.. algorithms]);
+}
+
+public static class CycleAlgorithmExtensions
+{
+    extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+    {
+        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null) =>
+            new([algorithm.Self, followingAlgorithm]) { MaximumCycles = maximumCycles };
+
+        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null) =>
+            new([algorithm.Self, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
+    }
+
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+    {
+        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> CycleWith(
+            IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> followingAlgorithm, int? maximumCycles = null) =>
+            new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles };
+
+        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> CycleWith(
+            IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> followingAlgorithms, int? maximumCycles = null) =>
+            new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
+    }
+}
+
 public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
     : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>

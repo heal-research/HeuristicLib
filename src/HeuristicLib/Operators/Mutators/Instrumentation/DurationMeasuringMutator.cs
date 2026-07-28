@@ -61,13 +61,13 @@ public static class MutatorDurationExtensions
         public DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>(mutator, duration);
+            return new(mutator, duration);
         }
 
         public DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem> MeasureMutatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>(mutator, duration, timeProvider);
+            return new(mutator, duration, timeProvider);
         }
     }
 }

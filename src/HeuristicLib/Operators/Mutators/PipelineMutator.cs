@@ -41,3 +41,21 @@ public partial record PipelineMutator<TCandidate, TSearchSpace, TProblem>
         }
     }
 }
+
+public static class PipelineMutator
+{
+    public static PipelineMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. mutators]);
+}
+
+public static class PipelineMutatorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public PipelineMutator<TCandidate, TSearchSpace, TProblem> Then(params IEnumerable<IMutator<TCandidate, TSearchSpace, TProblem>> followingMutators) =>
+            PipelineMutator.Create([mutator, .. followingMutators]);
+    }
+}

@@ -142,7 +142,7 @@ public class AlgorithmAuthoringSpecs
                 var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
                 var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-                return new SingleSolutionState<RealVector> { Population = Population.From([candidate], [objective]) };
+                return SingleSolutionState.From(candidate, objective);
             }
         }
     }
@@ -177,7 +177,7 @@ public class AlgorithmAuthoringSpecs
                 RealVector candidate = [first[0], second[0], steps];
                 var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-                return new SingleSolutionState<RealVector> { Population = Population.From([candidate], [objective]) };
+                return SingleSolutionState.From(candidate, objective);
             }
         }
     }
@@ -223,10 +223,7 @@ public class AlgorithmAuthoringSpecs
         {
             var current = currentState.EvaluatedCandidate.Candidate;
             RealVector transformed = [current[0], current[1], current[2] + 1.0];
-            return new SingleSolutionState<RealVector>
-            {
-                Population = Population.From([transformed], [currentState.EvaluatedCandidate.ObjectiveVector])
-            };
+            return SingleSolutionState.From(transformed, currentState.EvaluatedCandidate.ObjectiveVector);
         }
     }
 

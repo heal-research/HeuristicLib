@@ -21,7 +21,7 @@ public record HillClimberBuilder<TCandidate, TSearchSpace, TProblem>
 
     public override HillClimber<TCandidate, TSearchSpace, TProblem> Build()
     {
-        return new HillClimber<TCandidate, TSearchSpace, TProblem>
+        return new()
         {
             Interceptor = Interceptor,
             Creator = Creator,

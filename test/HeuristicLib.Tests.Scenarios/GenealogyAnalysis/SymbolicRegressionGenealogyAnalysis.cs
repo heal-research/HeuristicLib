@@ -51,13 +51,12 @@ public class GenealogyGraphTests
             CreateSymRegAllMutator());
         builder.PopulationSize = 8;
         builder.MutationRate = 0.05;
-        builder.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+        builder.Selector = TournamentSelector.For(problem, tournamentSize: 3);
         builder.Elites = 1;
         //ga.RandomSeed = AlgorithmRandomSeed;
         //builder.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
         var ga = builder.Build();
-        var interceptor = ga.Interceptor ??
-                          new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
+        var interceptor = ga.Interceptor ?? IdentityInterceptor.For(ga);
         ga = ga with
         {
             Interceptor = interceptor,
@@ -89,13 +88,12 @@ public class GenealogyGraphTests
             CreateSymRegAllMutator());
         ga.PopulationSize = popsize;
         ga.MutationRate = 0.05;
-        ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+        ga.Selector = TournamentSelector.For(problem, tournamentSize: 3);
         ga.Elites = 1;
         //ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
 
         var algorithm = ga.Build();
-        var interceptor = algorithm.Interceptor ??
-                          new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
+        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with
         {
             Interceptor = interceptor,
@@ -131,9 +129,7 @@ public class GenealogyGraphTests
         var problem = CreateTestSymbolicRegressionProblem();
         var builder = HillClimber.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
         var algorithm = builder.Build();
-        var interceptor = algorithm.Interceptor ??
-                          new IdentityInterceptor<SymbolicExpressionTree,
-                              SingleSolutionState<SymbolicExpressionTree>>();
+        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with { Interceptor = interceptor };
         var genealogy =
             new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace,
@@ -167,8 +163,7 @@ public class GenealogyGraphTests
         nsga2.MutationRate = mutationRate;
 
         var algorithm = nsga2.Build();
-        var interceptor = algorithm.Interceptor ??
-                          new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
+        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with
         {
             Interceptor = interceptor,

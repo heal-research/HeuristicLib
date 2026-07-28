@@ -61,7 +61,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
                 var initialFitnesses = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-                return new PopulationState<TCandidate> { Population = Population.From(initialSolutions, initialFitnesses) };
+                return Population.From(initialSolutions, initialFitnesses).ToPopulationState();
             }
 
             var oldPopulation = previousState.Population.EvaluatedCandidates;
@@ -85,9 +85,9 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
             }
 
             var targetPopulationSize = elites + newPop.Count;
-            var newPopulation = ElitismReplacer<TCandidate>.Replace(oldPopulation, newPop, problem.Objective, targetPopulationSize, elites);
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, newPop, problem.Objective, targetPopulationSize, elites);
 
-            return new PopulationState<TCandidate> { Population = Population.From(newPopulation) };
+            return Population.From(newPopulation).ToPopulationState();
         }
 
         private static ObjectiveVector Combine((EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>) parents, ObjectiveDirections problemObjective, double strictness)
@@ -130,7 +130,7 @@ public record OerapgaBuildBuilder<TCandidate, TSearchSpace, TProblem>
 
     public override OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Build()
     {
-        return new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>()
+        return new()
         {
             PopulationSize = PopulationSize,
             Creator = Creator,

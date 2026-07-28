@@ -89,14 +89,14 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         return Trials.Select((trial, index) =>
         {
             var analyzer = (IAnalyzer<TResult>)analyzers[index];
-            return new TrialAnalysisResult<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TResult>(trial, analyzer, trial.Run.GetResult(analyzer));
+            return TrialAnalysisResult.From(trial, analyzer, trial.Run.GetResult(analyzer));
         }).ToImmutableArray();
     }
 
     public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
         var execution = PrepareCombinedExecution(initialState, cancellationToken);
-        return new ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>(StreamScheduledExecution(execution, concurrency ?? ExecutionConcurrency.Sequential(), cancellationToken), cancellationToken);
+        return new(StreamScheduledExecution(execution, concurrency ?? ExecutionConcurrency.Sequential(), cancellationToken), cancellationToken);
     }
 
     public ImmutableArray<Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> StartTrials(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
@@ -188,7 +188,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
                 finalState = state;
                 if (progressWriter is not null)
                 {
-                    await progressWriter.WriteAsync(new ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>(trial, state), cancellationToken);
+                    await progressWriter.WriteAsync(ExperimentStreamEntry.From(trial, state), cancellationToken);
                 }
             }
         }
@@ -327,6 +327,11 @@ public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchS
 }
 
 public sealed record ExperimentStreamEntry<TTrial, TSearchState>(TTrial Trial, TSearchState State);
+
+public static class ExperimentStreamEntry
+{
+    public static ExperimentStreamEntry<TTrial, TSearchState> From<TTrial, TSearchState>(TTrial trial, TSearchState state) => new(trial, state);
+}
 
 public sealed class ExperimentTrialException<TKey> : Exception
 {

@@ -44,6 +44,8 @@ This separation is intentional:
 
 In this repository, `EvaluatedCandidate<TCandidate>` is a simple value object.
 
+Use `EvaluatedCandidate.From(candidate, objectiveVector)` or `candidate.ToEvaluated(objectiveVector)` when the candidate value should determine the generic type.
+
 ## Related pages
 
 - [Problem](problem.md)

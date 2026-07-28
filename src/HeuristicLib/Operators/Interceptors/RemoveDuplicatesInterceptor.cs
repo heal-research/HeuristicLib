@@ -29,7 +29,7 @@ public static class RemoveDuplicatesInterceptor
         var newSolutions = currentState.Population.DistinctBy(s => s.Candidate, comparer).ToImmutableArray();
         return currentState with
         {
-            Population = new Population<TCandidate>(newSolutions)
+            Population = Population.From(newSolutions)
         };
     }
 }

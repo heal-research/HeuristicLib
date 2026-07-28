@@ -50,8 +50,8 @@ public class ExperimentMaterializationTests
     {
         var algorithm = new ProbeAlgorithm(1);
         var experiment = new FixedExperiment<ProbeAlgorithm>([
-            new ExperimentCase<ProbeAlgorithm, int>(algorithm, 0, [0]),
-            new ExperimentCase<ProbeAlgorithm, int>(algorithm, 0, [1])
+            ExperimentCase.From(algorithm, 0, [0]),
+            ExperimentCase.From(algorithm, 0, [1])
         ]);
 
         Should.Throw<InvalidOperationException>(() => ExperimentTestSupport.CreateRun(experiment));

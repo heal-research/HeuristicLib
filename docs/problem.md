@@ -43,14 +43,13 @@ using HEAL.HeuristicLib.SearchSpaces;
 public sealed record Candidate(double X);
 
 sealed class AnyCandidateSpace : ISearchSpace<Candidate> {
-	public bool Contains(Candidate candidate) => true;
+    public bool Contains(Candidate candidate) => true;
 }
 
-var problem = FuncProblem.Create<Candidate, AnyCandidateSpace>(
-	evaluateFunc: c => c.X * c.X,
-	searchSpace: new AnyCandidateSpace(),
-	objective: SingleObjective.Minimize
-);
+var problem = FuncProblem.Create(
+    evaluateFunc: (Candidate c) => c.X * c.X,
+    encoding: new AnyCandidateSpace(),
+    objective: SingleObjective.Minimize);
 ```
 
 ## Related pages

@@ -579,15 +579,7 @@ public class OperatorBudgetAlgorithmTests
             Evaluator = baseAlgorithm.Evaluator.CountEvaluatorCalls(counter),
             Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
         };
-        var externallyStoppedAlgorithm = new StateTerminatedAlgorithm<
-            RealVector,
-            RealVectorSearchSpace,
-            TestFunctionProblem,
-            PopulationState<RealVector>>
-        {
-            Algorithm = algorithm,
-            Terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 3)
-        };
+        var externallyStoppedAlgorithm = algorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 3));
 
         var results = externallyStoppedAlgorithm.Stream(
             problem,
@@ -710,7 +702,7 @@ public class OperatorBudgetAlgorithmTests
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
             MutationRate = 0.5,
-            Selector = new RandomSelector<RealVector>(),
+            Selector = RandomSelector.For(problem),
             Elites = 0
         };
     }

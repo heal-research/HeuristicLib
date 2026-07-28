@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
@@ -21,18 +20,9 @@ public class CompositionSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
 
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>[] stages =
-        [
-            CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2),
-            CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(3)
-        ];
-
-        var pipeline = new PipelineAlgorithm<
-          IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>,
-          RealVector,
-          RealVectorSearchSpace,
-          TestFunctionProblem,
-          SingleSolutionState<RealVector>>(ImmutableArray.Create(stages));
+        var firstStage = CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2);
+        var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(3);
+        var pipeline = firstStage.Then(secondStage);
 
         var finalState = await pipeline.CompleteAsync(
           problem,
@@ -47,21 +37,9 @@ public class CompositionSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
 
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>[] stages =
-        [
-            CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2),
-            CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(2)
-        ];
-
-        var cycle = new CycleAlgorithm<
-          IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>,
-          RealVector,
-          RealVectorSearchSpace,
-          TestFunctionProblem,
-          SingleSolutionState<RealVector>>(ImmutableArray.Create(stages))
-        {
-            MaximumCycles = 2
-        };
+        var firstStage = CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2);
+        var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(2);
+        var cycle = firstStage.CycleWith(secondStage, maximumCycles: 2);
 
         var finalState = await cycle.CompleteAsync(
           problem,

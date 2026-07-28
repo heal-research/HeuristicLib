@@ -16,7 +16,6 @@ using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
@@ -34,9 +33,8 @@ var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, Travel
     Crossover = new OrderCrossover(),
     Mutator = new SwapSingleSolutionMutator(),
     MutationRate = 0.20,
-    Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
-    Elites = 2,
-    Evaluator = new DirectEvaluator<Permutation>()
+    Selector = TournamentSelector.For(problem, tournamentSize: 3),
+    Elites = 2
 };
 
 await foreach (var state in algorithm.Stream(problem, random))
@@ -96,10 +94,7 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
             var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
             var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
-            return new SingleSolutionState<TCandidate>
-            {
-                Population = Population.From([candidate], [objectiveVector])
-            };
+            return SingleSolutionState.From(candidate, objectiveVector);
         }
     }
 }

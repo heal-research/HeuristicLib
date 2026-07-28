@@ -29,7 +29,7 @@ public sealed partial class Grid<T> : IEnumerable<T>
             throw new ArgumentException("A grid dimension must contain at least one value.", nameof(values));
         }
 
-        return new Grid<T>(Prototype, Parameters.Add(new GridParameter<T, TProblem>(values, configurator)));
+        return new(Prototype, Parameters.Add(new GridParameter<T, TProblem>(values, configurator)));
     }
 
     public ImmutableArray<T> GetConfigurations()
@@ -73,7 +73,7 @@ public static class Grid
 {
     public static Grid<T> Create<T>(T prototype)
     {
-        return new Grid<T>(prototype);
+        return new(prototype);
     }
 
 }

@@ -14,8 +14,8 @@ public static class MetaAlgorithmTestHelpers
 {
     public static IProblem<int, DummySearchSpace<int>> CreateIntegerProblem()
     {
-        return FuncProblem.Create<int, DummySearchSpace<int>>(
-          evaluateFunc: x => x,
+        return FuncProblem.Create(
+          evaluateFunc: (int x) => x,
           encoding: DummySearchSpace<int>.Instance,
           objective: SingleObjective.Minimize);
     }
@@ -64,7 +64,7 @@ public sealed record CountingInstanceAlgorithm(int Increment, IEvaluator<int, Du
             var next = current + increment;
             var objective = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
 
-            yield return new PopulationState<int> { Population = Population.From([EvaluatedCandidate.From(next, objective)]) };
+            yield return Population.From([EvaluatedCandidate.From(next, objective)]).ToPopulationState();
             await Task.CompletedTask;
         }
     }

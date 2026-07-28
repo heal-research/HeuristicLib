@@ -56,7 +56,7 @@ public static class ChooseOneCrossover
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         var crossoverArray = crossovers.ToImmutableArray();
-        return new ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>(crossoverArray);
+        return new(crossoverArray);
     }
 
     public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)

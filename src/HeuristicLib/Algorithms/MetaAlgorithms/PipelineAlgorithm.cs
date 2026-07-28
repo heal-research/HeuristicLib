@@ -35,6 +35,44 @@ public partial record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TP
         new(registry, Algorithms);
 }
 
+public static class PipelineAlgorithm
+{
+    public static PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
+        Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> firstAlgorithm, params IEnumerable<TAlgorithm> followingAlgorithms)
+        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState => new([firstAlgorithm.Self, .. followingAlgorithms]);
+
+    public static PipelineAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
+        params IEnumerable<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState => new([.. algorithms]);
+}
+
+public static class PipelineAlgorithmExtensions
+{
+    extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+    {
+        public PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IEnumerable<TAlgorithm> followingAlgorithms) =>
+            PipelineAlgorithm.Create(algorithm, followingAlgorithms);
+    }
+
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+    {
+        public PipelineAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IEnumerable<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> followingAlgorithms) =>
+            PipelineAlgorithm.Create([algorithm, .. followingAlgorithms]);
+    }
+}
+
 public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
     : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>

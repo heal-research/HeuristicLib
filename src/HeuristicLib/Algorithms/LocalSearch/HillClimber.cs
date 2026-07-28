@@ -64,7 +64,7 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
         {
             var initialSolution = creator.Create(1, random, problem.SearchSpace, problem)[0];
             var initialFitness = evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0];
-            return ToState(new EvaluatedCandidate<TCandidate>(initialSolution, initialFitness));
+            return ToState(EvaluatedCandidate.From(initialSolution, initialFitness));
         }
 
         private bool TryFindImprovement(EvaluatedCandidate<TCandidate> current, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out EvaluatedCandidate<TCandidate>? improvement)
@@ -82,7 +82,7 @@ public record HillClimber<TCandidate, TSearchSpace, TProblem>
                     continue;
                 }
 
-                improvement = new EvaluatedCandidate<TCandidate>(candidates[bestIndex], objectiveVectors[bestIndex]);
+                improvement = EvaluatedCandidate.From(candidates[bestIndex], objectiveVectors[bestIndex]);
                 if (direction == LocalSearchDirection.FirstImprovement)
                 {
                     return true;
@@ -102,7 +102,7 @@ public static class HillClimber
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new HillClimberBuilder<TCandidate, TSearchSpace, TProblem>
+        return new()
         {
             Mutator = mutator,
             Creator = creator

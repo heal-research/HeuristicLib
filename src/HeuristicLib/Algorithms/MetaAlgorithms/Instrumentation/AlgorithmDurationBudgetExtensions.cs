@@ -21,7 +21,7 @@ public static class AlgorithmDurationBudgetExtensions
             TimeSpan maximumDuration,
             TimeProvider timeProvider)
         {
-            return new AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+            return new()
             {
                 Algorithm = algorithm,
                 MaximumDuration = maximumDuration,

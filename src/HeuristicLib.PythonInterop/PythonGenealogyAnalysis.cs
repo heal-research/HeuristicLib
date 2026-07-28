@@ -157,7 +157,7 @@ public class PythonGenealogyAnalysis
                     {
                         gaAlgorithm = gaAlgorithm with
                         {
-                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
+                            Interceptor = IdentityInterceptor.For(gaAlgorithm)
                         };
                     }
 
@@ -190,7 +190,7 @@ public class PythonGenealogyAnalysis
                     {
                         esAlgorithm = esAlgorithm with
                         {
-                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
+                            Interceptor = IdentityInterceptor.For(esAlgorithm)
                         };
                     }
 
@@ -227,7 +227,7 @@ public class PythonGenealogyAnalysis
                     {
                         nsga2Algorithm = nsga2Algorithm with
                         {
-                            Interceptor = new IdentityInterceptor<TCandidate, PopulationState<TCandidate>>()
+                            Interceptor = IdentityInterceptor.For(nsga2Algorithm)
                         };
                     }
 

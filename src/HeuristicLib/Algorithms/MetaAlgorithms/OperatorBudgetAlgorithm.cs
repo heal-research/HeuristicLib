@@ -36,7 +36,7 @@ public record OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearc
         var childRegistry = registry.CreateChildRegistry();
         childRegistry.RegisterReplacement(ObservedOperator, countedOperator);
 
-        return new OperatorBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(childRegistry.Resolve(Algorithm), counter, MaximumCount);
+        return new(childRegistry.Resolve(Algorithm), counter, MaximumCount);
     }
 }
 

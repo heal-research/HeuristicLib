@@ -23,8 +23,21 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSear
     {
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start at the earliest point this wrapper controls, including wrapped algorithm instancing.
         var terminator = registry.Resolve(Terminator);
-        return new StateTerminatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>(registry.Resolve(Algorithm), terminator);
+        return new(registry.Resolve(Algorithm), terminator);
     }
+}
+
+public static class StateTerminatedAlgorithm
+{
+    public static StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
+        IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState => new()
+        {
+            Algorithm = algorithm,
+            Terminator = terminator
+        };
 }
 
 public class StateTerminatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -62,13 +75,14 @@ public static class StateTerminatedAlgorithmExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
+        public StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> WithTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
+        {
+            return StateTerminatedAlgorithm.Create(algorithm, terminator);
+        }
+
         public StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> WithMaxIterations(int maximumIterations)
         {
-            return new StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-            {
-                Algorithm = algorithm,
-                Terminator = new AfterIterationsTerminator<TCandidate>(maximumIterations)
-            };
+            return algorithm.WithTerminator(new AfterIterationsTerminator<TCandidate>(maximumIterations));
         }
     }
 }

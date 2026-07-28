@@ -30,9 +30,9 @@ public class MetaOptimizationTests
           new UniformDistributedCreator(),
           new SimulatedBinaryCrossover(),
           new GaussianMutator(0.5, 0.5), 0.25,
-          new TournamentSelector<RealVector>(2),
+          TournamentSelector.For(problem, tournamentSize: 2),
           100,
-          new DirectEvaluator<RealVector>());
+          DirectEvaluator.For(problem));
 
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();

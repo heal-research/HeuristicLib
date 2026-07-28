@@ -159,8 +159,8 @@ public class PractitionerUsageSpecs
         var gaussianChild = GaussianMutator.Mutate(parent, RandomNumberGenerator.Create(2031), realSearchSpace, mutationRate: 1.0, mutationStrength: 100.0);
         realSearchSpace.Contains(gaussianChild).ShouldBeTrue();
 
-        SelectFirstParentCrossover.Cross(new Parents<RealVector>(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(parent);
-        SelectSecondParentCrossover.Cross(new Parents<RealVector>(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(otherParent);
+        SelectFirstParentCrossover.Cross(Parents.From(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(parent);
+        SelectSecondParentCrossover.Cross(Parents.From(parent, otherParent), RandomNumberGenerator.Create(2032)).ShouldBe(otherParent);
 
         var edgeChild = EdgeRecombinationCrossover.Cross(
           [0, 1, 2, 3],
@@ -173,8 +173,8 @@ public class PractitionerUsageSpecs
 
         IReadOnlyList<EvaluatedCandidate<RealVector>> solutions =
         [
-            new EvaluatedCandidate<RealVector>(parent, new ObjectiveVector(2.0)),
-            new EvaluatedCandidate<RealVector>(otherParent, new ObjectiveVector(1.0))
+            EvaluatedCandidate.From(parent, new ObjectiveVector(2.0)),
+            EvaluatedCandidate.From(otherParent, new ObjectiveVector(1.0))
         ];
 
         RandomSelector.Select(solutions, count: 2, RandomNumberGenerator.Create(2035)).Count.ShouldBe(2);
@@ -183,18 +183,15 @@ public class PractitionerUsageSpecs
 
         IReadOnlyList<EvaluatedCandidate<RealVector>> offspring =
         [
-            new EvaluatedCandidate<RealVector>([5.0, 5.0, 5.0], new ObjectiveVector(0.5)),
-            new EvaluatedCandidate<RealVector>([7.0, 7.0, 7.0], new ObjectiveVector(3.0))
+            EvaluatedCandidate.From(RealVector.Create(5.0, 5.0, 5.0), new ObjectiveVector(0.5)),
+            EvaluatedCandidate.From(RealVector.Create(7.0, 7.0, 7.0), new ObjectiveVector(3.0))
         ];
         var paretoReplacement = ParetoCrowdingReplacer.Replace(solutions, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
         paretoReplacement.Select(solution => solution.ObjectiveVector[0]).Order().ToArray().ShouldBe([0.5, 1.0]);
 
         NeverTerminator.IsTerminalState().ShouldBeFalse();
 
-        var state = new SingleSolutionState<RealVector>
-        {
-            Population = Population.From([parent], [evaluations[0]])
-        };
+        var state = SingleSolutionState.From(parent, evaluations[0]);
         IdentityInterceptor.Transform(state, previousState: null).ShouldBe(state);
     }
 
@@ -209,7 +206,7 @@ public class PractitionerUsageSpecs
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MutationRate = 0.2,
             Elites = 1
         };
@@ -499,11 +496,7 @@ public class PractitionerUsageSpecs
             Crossover = baseAlgorithm.Crossover.CountCrossoverCalls(counter),
             Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
         };
-        var algorithm = new StateTerminatedAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
-        {
-            Algorithm = observedAlgorithm,
-            Terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount: 2)
-        };
+        var algorithm = observedAlgorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
         var states = algorithm.Stream(
             problem,
@@ -544,7 +537,7 @@ public class PractitionerUsageSpecs
         var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
-            Mutator = NoChangeMutator<RealVector>.Instance,
+            Mutator = NoChangeMutator.For(problem),
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 4,
             MaxNeighbors = 12
@@ -595,7 +588,7 @@ public class PractitionerUsageSpecs
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Crossover = null,
-            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MaximumGenerations = 5
         };
 
@@ -622,7 +615,7 @@ public class PractitionerUsageSpecs
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new AlphaBetaBlendCrossover(alpha: 0.7),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
-            Selector = new TournamentSelector<RealVector>(tournamentSize: 2),
+            Selector = TournamentSelector.For(problem, tournamentSize: 2),
             MutationRate = 0.2,
             Elites = 1
         };

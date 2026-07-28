@@ -32,3 +32,21 @@ public partial record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(I
         }
     }
 }
+
+public static class TransformedCrossover
+{
+    public static TransformedCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(crossover, mutator);
+}
+
+public static class TransformedCrossoverExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem>(ICrossover<TCandidate, TSearchSpace, TProblem> crossover)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public TransformedCrossover<TCandidate, TSearchSpace, TProblem> TransformWith(IMutator<TCandidate, TSearchSpace, TProblem> mutator) =>
+            TransformedCrossover.Create(crossover, mutator);
+    }
+}

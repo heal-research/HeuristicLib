@@ -16,3 +16,9 @@ public interface IExperiment<TCandidate, in TSearchSpace, in TProblem, TSearchSt
 }
 
 public sealed record ExperimentCase<TAlgorithm, TKey>(TAlgorithm Algorithm, TKey Key, ImmutableArray<int> RandomForkPath);
+
+public static class ExperimentCase
+{
+    public static ExperimentCase<TAlgorithm, TKey> From<TAlgorithm, TKey>(TAlgorithm algorithm, TKey key, IReadOnlyList<int> randomForkPath) =>
+        new(algorithm, key, randomForkPath.ToImmutableArray());
+}

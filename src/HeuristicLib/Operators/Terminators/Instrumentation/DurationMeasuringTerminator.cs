@@ -64,13 +64,13 @@ public static class TerminatorDurationExtensions
         public DurationMeasuringTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> MeasureTerminatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator, duration);
+            return new(terminator, duration);
         }
 
         public DurationMeasuringTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> MeasureTerminatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator, duration, timeProvider);
+            return new(terminator, duration, timeProvider);
         }
     }
 }

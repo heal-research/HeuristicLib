@@ -30,7 +30,7 @@ public class PipelineAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
-        var pipeline = new PipelineAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm]);
+        var pipeline = PipelineAlgorithm.Create(algorithm);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
@@ -43,14 +43,7 @@ public class PipelineAlgorithmTests
     public void PipelineAlgorithm_Stream_PassesEachStageResultToNextStage()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var pipeline =
-            new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>,
-                IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-            [
-                new AdditiveStepAlgorithm(1),
-                new AdditiveStepAlgorithm(10),
-                new AdditiveStepAlgorithm(100)
-            ]);
+        var pipeline = new AdditiveStepAlgorithm(1).Then([new AdditiveStepAlgorithm(10), new AdditiveStepAlgorithm(100)]);
 
         var states = pipeline
                      .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
@@ -65,14 +58,10 @@ public class PipelineAlgorithmTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new ForwardingEvaluator();
-        var pipeline =
-            new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>,
-                IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-            [
-                new AdditiveStepAlgorithm(1) { Evaluator = evaluator },
-                new AdditiveStepAlgorithm(10) { Evaluator = evaluator },
-                new AdditiveStepAlgorithm(100) { Evaluator = evaluator }
-            ]);
+        var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then([
+            new AdditiveStepAlgorithm(10) { Evaluator = evaluator },
+            new AdditiveStepAlgorithm(100) { Evaluator = evaluator }
+        ]);
         var analysis = new EvaluationCountAnalysis(evaluator);
         var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
 
@@ -88,7 +77,7 @@ public class PipelineAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingInstanceAlgorithm(1, evaluator);
-        var pipeline = new PipelineAlgorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([algorithm, algorithm]);
+        var pipeline = algorithm.Then(algorithm);
         var registry = new ExecutionInstanceRegistry();
         _ = registry.Resolve(evaluator);
         var pipelineInstance = registry.Resolve(pipeline);

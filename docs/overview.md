@@ -25,7 +25,6 @@ using HEAL.HeuristicLib.Algorithms.Evolutionary;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
@@ -42,9 +41,8 @@ var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSale
    Crossover = new OrderCrossover(),
    Mutator = new SwapSingleSolutionMutator(),
    MutationRate = 0.20,
-   Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
-   Elites = 2,
-   Evaluator = new DirectEvaluator<Permutation>()
+   Selector = TournamentSelector.For(problem, tournamentSize: 3),
+   Elites = 2
 };
 
 var generation = 0;

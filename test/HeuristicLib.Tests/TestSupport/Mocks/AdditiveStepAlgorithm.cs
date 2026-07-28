@@ -31,10 +31,7 @@ public sealed record AdditiveStepAlgorithm(int Increment)
             var next = current + increment;
             var objective = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
 
-            yield return new PopulationState<int>
-            {
-                Population = Population.From([EvaluatedCandidate.From(next, objective)])
-            };
+            yield return Population.From([EvaluatedCandidate.From(next, objective)]).ToPopulationState();
 
             await Task.CompletedTask;
         }

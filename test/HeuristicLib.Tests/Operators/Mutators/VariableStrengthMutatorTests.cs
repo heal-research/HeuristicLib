@@ -66,7 +66,7 @@ public class VariableStrengthMutatorTests
             Creator = new ZeroCreator(),
             Mutator = gaussian,
             Crossover = null,
-            Selector = new BestSelector<RealVector>(),
+            Selector = BestSelector.For(problem),
             MaximumGenerations = 3
         };
 
@@ -83,7 +83,7 @@ public class VariableStrengthMutatorTests
     }
 
     private static FuncProblem<RealVector, RealVectorSearchSpace> CreateProblem(RealVectorSearchSpace searchSpace) =>
-        FuncProblem.Create<RealVector, RealVectorSearchSpace>(candidate => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
+        FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
 
     private sealed record ZeroCreator : SingleSolutionCreator<RealVector, RealVectorSearchSpace>
     {

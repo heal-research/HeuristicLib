@@ -1,3 +1,6 @@
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
+
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record NeverTerminator<TCandidate>
@@ -8,5 +11,8 @@ public record NeverTerminator<TCandidate>
 
 public static class NeverTerminator
 {
+    public static NeverTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+
     public static bool IsTerminalState() => false;
 }

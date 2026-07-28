@@ -64,13 +64,13 @@ public static class ReplacerDurationExtensions
         public DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> MeasureReplacerDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem>(replacer, duration);
+            return new(replacer, duration);
         }
 
         public DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem> MeasureReplacerDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringReplacer<TCandidate, TSearchSpace, TProblem>(replacer, duration, timeProvider);
+            return new(replacer, duration, timeProvider);
         }
     }
 }

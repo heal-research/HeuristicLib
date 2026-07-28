@@ -153,22 +153,22 @@ public static class DynamicCachedEvaluatorExtension
     {
         public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(TProblem problem, Func<TCandidate, TKey> keySelector) where TKey : notnull
         {
-            return new DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>(evaluator, problem, keySelector);
+            return new(evaluator, problem, keySelector);
         }
 
         public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache(TProblem problem)
         {
-            return new DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate>(evaluator, problem, x => x);
+            return new(evaluator, problem, x => x);
         }
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TKey>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace> where TKey : notnull
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache(Func<TCandidate, TKey> keySelector) => new(new DirectEvaluator<TCandidate>(), problem, keySelector);
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache(Func<TCandidate, TKey> keySelector) => new(DirectEvaluator.For(problem), problem, keySelector);
     }
 
     extension<TCandidate, TSearchSpace, TProblem>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace>
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache() => new(new DirectEvaluator<TCandidate>(), problem, x => x);
+        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache() => new(DirectEvaluator.For(problem), problem, x => x);
     }
 }

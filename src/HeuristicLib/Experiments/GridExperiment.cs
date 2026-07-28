@@ -29,7 +29,7 @@ public sealed record GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchS
             throw new InvalidOperationException("A grid produced equal algorithm configurations. Use Repeat to execute the same configuration more than once.");
         }
 
-        return configurations.Select((algorithm, index) => new ExperimentCase<TAlgorithm, TAlgorithm>(algorithm, algorithm, [index])).ToImmutableArray();
+        return configurations.Select((algorithm, index) => ExperimentCase.From(algorithm, algorithm, [index])).ToImmutableArray();
     }
 }
 

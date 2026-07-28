@@ -31,10 +31,7 @@ public class HillClimberTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
-        var initialState = new SingleSolutionState<int>
-        {
-            Population = Population.From([0], [new ObjectiveVector(0.0)])
-        };
+        var initialState = SingleSolutionState.From(0, new ObjectiveVector(0.0));
 
         var states = algorithm.WithMaxIterations(5)
           .Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)

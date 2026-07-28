@@ -25,7 +25,7 @@ public class TravelingSalesmanGeneticAlgorithmTests
         );
         ga.PopulationSize = 5;
         ga.MutationRate = 0.5;
-        ga.Selector = new RandomSelector<Permutation>();
+        ga.Selector = RandomSelector.For(problem);
         ga.Elites = 0;
 
         var result = (ga.Build() with

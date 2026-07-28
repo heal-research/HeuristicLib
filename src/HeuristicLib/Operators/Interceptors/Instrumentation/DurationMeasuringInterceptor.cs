@@ -65,14 +65,14 @@ public static class InterceptorDurationExtensions
         public DurationMeasuringInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> MeasureInterceptorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, duration);
+            return new(interceptor, duration);
         }
 
         public DurationMeasuringInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> MeasureInterceptorDuration(
             out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, duration, timeProvider);
+            return new(interceptor, duration, timeProvider);
         }
     }
 }

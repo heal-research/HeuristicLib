@@ -40,7 +40,7 @@ public static class AlgorithmExtensions
     {
         public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, IRandomNumberGenerator random)
         {
-            return new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem, random);
+            return new(algorithm, problem, random);
         }
 
         public ExecutionStream<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)

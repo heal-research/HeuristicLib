@@ -137,7 +137,7 @@ public class EvolutionaryGenerationBudgetTests
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(0.1, 0.1),
             Crossover = null,
-            Selector = new RandomSelector<RealVector>()
+            Selector = RandomSelector.For(problem)
         };
     }
 
@@ -150,8 +150,8 @@ public class EvolutionaryGenerationBudgetTests
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
-            Selector = new ParetoCrowdingTournamentSelector<RealVector>(dominateOnEqualities: false, tournamentSize: 2),
-            Replacer = new ParetoCrowdingReplacer<RealVector>(true)
+            Selector = ParetoCrowdingTournamentSelector.For(problem, dominateOnEqualities: false, tournamentSize: 2),
+            Replacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true)
         };
     }
 
@@ -165,7 +165,7 @@ public class EvolutionaryGenerationBudgetTests
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
             MutationRate = 0.5,
-            Selector = new RandomSelector<RealVector>(),
+            Selector = RandomSelector.For(problem),
             Elites = 0
         };
     }
@@ -179,7 +179,7 @@ public class EvolutionaryGenerationBudgetTests
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
-            Selector = new RandomSelector<RealVector>(),
+            Selector = RandomSelector.For(problem),
             Elites = 1,
             MaxEffort = 6
         };

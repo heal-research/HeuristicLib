@@ -120,7 +120,7 @@ public class OperatorAuthoringSpecs
         var crossover = new CountingStatefulCrossover();
         var firstInstance = CreateRegistry(problem).Resolve(crossover);
         var secondInstance = CreateRegistry(problem).Resolve(crossover);
-        var parents = new Parents<RealVector>(RealVector.Repeat(0.0, 3), RealVector.Repeat(10.0, 3));
+        var parents = Parents.From(RealVector.Repeat(0.0, 3), RealVector.Repeat(10.0, 3));
 
         var first = firstInstance.Cross([parents], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         var second = firstInstance.Cross([parents], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
@@ -135,9 +135,9 @@ public class OperatorAuthoringSpecs
     public void ExplicitCrossover_AuthoringExample_OwnsResolvedChildInstance()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var crossover = new ForwardingCrossover(SelectFirstParentCrossover<RealVector>.Instance);
+        var crossover = new ForwardingCrossover(SelectFirstParentCrossover.For(problem));
         var instance = CreateRegistry(problem).Resolve(crossover);
-        var parents = new Parents<RealVector>(RealVector.Repeat(1.0, 3), RealVector.Repeat(2.0, 3));
+        var parents = Parents.From(RealVector.Repeat(1.0, 3), RealVector.Repeat(2.0, 3));
 
         var offspring = instance.Cross([parents], RandomNumberGenerator.Create(4), problem.SearchSpace, problem);
 

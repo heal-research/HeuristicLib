@@ -27,3 +27,23 @@ public partial record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TS
             InnerInterceptors.Aggregate(currentState, (current, interceptor) => interceptor.Transform(current, previousState, searchSpace, problem));
     }
 }
+
+public static class PipelineInterceptor
+{
+    public static PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IEnumerable<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
+        where TSearchState : class, ISearchState
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. interceptors]);
+}
+
+public static class PipelineInterceptorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor)
+        where TSearchState : class, ISearchState
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IEnumerable<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> followingInterceptors) =>
+            PipelineInterceptor.Create([interceptor, .. followingInterceptors]);
+    }
+}

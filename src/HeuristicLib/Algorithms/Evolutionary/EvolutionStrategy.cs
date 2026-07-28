@@ -66,10 +66,7 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             {
                 var initialPopulation = creator.Create(populationSize, random, problem.SearchSpace, problem);
                 var objectives = evaluator.Evaluate(initialPopulation, random, problem.SearchSpace, problem);
-                return new PopulationState<TCandidate>
-                {
-                    Population = Population.From(initialPopulation, objectives)
-                };
+                return Population.From(initialPopulation, objectives).ToPopulationState();
             }
 
             IReadOnlyList<TCandidate> parents;
@@ -106,15 +103,12 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
             var population = Population.From(children, fitnesses);
             var newPopulation = strategy switch
             {
-                EvolutionStrategyType.Comma => ElitismReplacer<TCandidate>.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren, 0),
-                EvolutionStrategyType.Plus => PlusSelectionReplacer<TCandidate>.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren),
+                EvolutionStrategyType.Comma => ElitismReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren, 0),
+                EvolutionStrategyType.Plus => PlusSelectionReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren),
                 _ => throw new InvalidOperationException($"Unknown strategy {strategy}")
             };
 
-            return new PopulationState<TCandidate>
-            {
-                Population = Population.From(newPopulation)
-            };
+            return Population.From(newPopulation).ToPopulationState();
         }
     }
 }

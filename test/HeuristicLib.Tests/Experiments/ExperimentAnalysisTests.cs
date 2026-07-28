@@ -53,8 +53,8 @@ public class ExperimentAnalysisTests
         var firstAlgorithm = new CountingInstanceAlgorithm(1, new CountingResolutionEvaluator());
         var secondAlgorithm = new CountingInstanceAlgorithm(2, new CountingResolutionEvaluator());
         var experiment = new FixedExperiment<CountingInstanceAlgorithm>([
-            new ExperimentCase<CountingInstanceAlgorithm, int>(firstAlgorithm, 0, [0]),
-            new ExperimentCase<CountingInstanceAlgorithm, int>(secondAlgorithm, 1, [1])
+            ExperimentCase.From(firstAlgorithm, 0, [0]),
+            ExperimentCase.From(secondAlgorithm, 1, [1])
         ]);
         var run = ExperimentTestSupport.CreateRun(experiment);
 

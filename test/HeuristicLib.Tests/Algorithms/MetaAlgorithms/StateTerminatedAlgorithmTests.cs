@@ -133,11 +133,7 @@ public class StateTerminatedAlgorithmTests
     public void CreateExecutionInstance_ResolvesTerminatorBeforeWrappedAlgorithm()
     {
         var events = new List<string>();
-        var algorithm = new StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-        {
-            Algorithm = new RecordingAlgorithm(events),
-            Terminator = new RecordingResolveTerminator(events)
-        };
+        var algorithm = new RecordingAlgorithm(events).WithTerminator(new RecordingResolveTerminator(events));
 
         _ = algorithm.CreateExecutionInstance();
 
@@ -146,19 +142,12 @@ public class StateTerminatedAlgorithmTests
 
     private static StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> terminator)
     {
-        return new StateTerminatedAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-        {
-            Algorithm = new AdditiveStepAlgorithm(1),
-            Terminator = terminator
-        };
+        return new AdditiveStepAlgorithm(1).WithTerminator(terminator);
     }
 
     private static PopulationState<int> CreateState(int candidate)
     {
-        return new PopulationState<int>
-        {
-            Population = Population.From([EvaluatedCandidate.From(candidate, candidate)])
-        };
+        return Population.From([EvaluatedCandidate.From(candidate, candidate)]).ToPopulationState();
     }
 
     private sealed record RecordingTerminator(Func<int, bool> ShouldStop)

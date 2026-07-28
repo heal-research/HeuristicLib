@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
@@ -12,6 +14,9 @@ public record CommaSelectionReplacer<TCandidate>
 
 public static class CommaSelectionReplacer
 {
+    public static CommaSelectionReplacer<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(
       IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
       ObjectiveDirections objective,

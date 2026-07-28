@@ -1,5 +1,9 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
+using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
@@ -19,6 +23,14 @@ public record TournamentSelector<TCandidate>
 
 public static class TournamentSelector
 {
+    public static TournamentSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int tournamentSize)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(tournamentSize);
+
+    public static TournamentSelector<TCandidate> For<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, int tournamentSize)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState => new(tournamentSize);
+
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
       IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
       ObjectiveDirections objective,

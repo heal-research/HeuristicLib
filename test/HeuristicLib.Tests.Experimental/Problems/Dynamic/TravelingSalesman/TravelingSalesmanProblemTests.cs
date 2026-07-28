@@ -117,7 +117,7 @@ public class TravelingSalesmanProblemTests
         var env = RandomNumberGenerator.Create(0);
         var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 1.0, epochLength: 200);
         Permutation tour = [0, 1, 2, 3];
-        var cachedEval = new ExecutionInstanceRegistry().Resolve(p.CreateEvaluator().WithCache());
+        var cachedEval = new ExecutionInstanceRegistry().Resolve(DirectEvaluator.For(p).WithCache());
         p.EpochClock.CurrentEpoch.ShouldBe(0);
 
         var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];

@@ -28,7 +28,7 @@ public sealed record RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSea
     }
 
     public override ImmutableArray<ExperimentCase<TAlgorithm, int>> MaterializeCases() =>
-        Enumerable.Range(0, Repetitions).Select(repetition => new ExperimentCase<TAlgorithm, int>(Algorithm, repetition, [repetition])).ToImmutableArray();
+        Enumerable.Range(0, Repetitions).Select(repetition => ExperimentCase.From(Algorithm, repetition, [repetition])).ToImmutableArray();
 }
 
 public sealed record RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TInnerKey>
@@ -55,7 +55,7 @@ public sealed record RepeatedExperiment<TCandidate, TSearchSpace, TProblem, TSea
 
     public override ImmutableArray<ExperimentCase<TAlgorithm, (TInnerKey Inner, int Repetition)>> MaterializeCases() =>
         InnerExperiment.MaterializeCases().SelectMany(experimentCase => Enumerable.Range(0, Repetitions).Select(repetition =>
-            new ExperimentCase<TAlgorithm, (TInnerKey Inner, int Repetition)>(experimentCase.Algorithm, (experimentCase.Key, repetition), [.. experimentCase.RandomForkPath, repetition]))).ToImmutableArray();
+            ExperimentCase.From(experimentCase.Algorithm, (experimentCase.Key, repetition), [.. experimentCase.RandomForkPath, repetition]))).ToImmutableArray();
 }
 
 public static class RepeatedExperimentExtensions

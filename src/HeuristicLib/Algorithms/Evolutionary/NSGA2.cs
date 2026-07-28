@@ -56,7 +56,7 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
             {
                 var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
                 var initialFitnesses = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-                return new PopulationState<TCandidate> { Population = Population.From(initialSolutions, initialFitnesses) };
+                return Population.From(initialSolutions, initialFitnesses).ToPopulationState();
             }
 
             var parents = selector.Select(previousState.Population.EvaluatedCandidates, problem.Objective, populationSize * 2, random, problem.SearchSpace, problem).ToParents(problem.Objective);
@@ -65,7 +65,7 @@ public record NSGA2<TCandidate, TSearchSpace, TProblem>
             var newPopulation = Population.From(mutants, evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
             var nextPopulation = replacer.Replace(previousState.Population.EvaluatedCandidates, newPopulation.EvaluatedCandidates, problem.Objective, populationSize, random, problem.SearchSpace, problem);
 
-            return new PopulationState<TCandidate> { Population = Population.From(nextPopulation) };
+            return Population.From(nextPopulation).ToPopulationState();
         }
     }
 }
@@ -80,7 +80,7 @@ public static class NSGA2
       IMutator<TCandidate, TSearchSpace, TProblem> mutator, bool dominateOnEquals = true)
       where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new NSGA2Builder<TCandidate, TSearchSpace, TProblem>
+        return new()
         {
             Mutator = mutator,
             Crossover = crossover,

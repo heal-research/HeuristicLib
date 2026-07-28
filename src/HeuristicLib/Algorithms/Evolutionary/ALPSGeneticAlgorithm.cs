@@ -77,7 +77,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             {
                 var initialLayerPopulation = creator.Create(populationSize, random, searchSpace, problem);
                 var initialFitnesses = evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem);
-                return new AlpsState<TCandidate>
+                return new()
                 {
                     Population = [Population.From(initialLayerPopulation, initialFitnesses)],
                     Ages = [Enumerable.Repeat(0, populationSize).ToArray()]
@@ -92,7 +92,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             var nextAge = previousState.Ages[0].DefaultIfEmpty(0).Max() + 1;
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
             {
-                parentPairs[i] = new Parents<TCandidate>(selectedParents[j].Candidate, selectedParents[j + 1].Candidate);
+                parentPairs[i] = Parents.From(selectedParents[j].Candidate, selectedParents[j + 1].Candidate);
                 offspringAges[i] = nextAge;
             }
 
@@ -100,9 +100,9 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             offspring = mutator.Mutate(offspring, random, searchSpace, problem);
             var fitnesses = evaluator.Evaluate(offspring, random, searchSpace, problem);
             var offspringPopulation = Population.From(offspring, fitnesses).EvaluatedCandidates;
-            var newPopulation = ElitismReplacer<TCandidate>.Replace(oldPopulation, offspringPopulation, problem.Objective, offspringCount, elites);
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, offspringCount, elites);
 
-            return new AlpsState<TCandidate>
+            return new()
             {
                 Population = [Population.From(newPopulation)],
                 Ages = [offspringAges]

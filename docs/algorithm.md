@@ -42,7 +42,7 @@ public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
             producedStates++;
             var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
             var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
-            return new SingleSolutionState<TCandidate> { Population = Population.From([candidate], [objective]) };
+            return SingleSolutionState.From(candidate, objective);
         }
     }
 }
@@ -75,6 +75,28 @@ Resolution remains local and eager for ordinary algorithms. Do not retain the re
 ## Noniterative algorithms
 
 Derive from `Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>` when the iterative lifecycle is not appropriate. Implement `CreateAlgorithmInstance(...)` and return an `AlgorithmInstance<...>` that owns the complete streaming behavior.
+
+## Algorithm composition
+
+Meta algorithm factories infer candidate, search space, problem and search state types from their child algorithms. Fluent composition is also available from the first child.
+
+```csharp
+var pipeline = PipelineAlgorithm.Create(firstAlgorithm, secondAlgorithm);
+var fluentPipeline = firstAlgorithm.Then(secondAlgorithm);
+
+var cycle = CycleAlgorithm.Create(firstAlgorithm, secondAlgorithm) with { MaximumCycles = 10 };
+var fluentCycle = firstAlgorithm.CycleWith(secondAlgorithm, maximumCycles: 10);
+var multiAlgorithmCycle = firstAlgorithm.CycleWith([secondAlgorithm, thirdAlgorithm], maximumCycles: 10);
+```
+
+When every supplied child has the same concrete algorithm type derived from `Algorithm<TSelf, ...>`, the result preserves that concrete type as `TAlgorithm`. Heterogeneous or interface typed children use the `IAlgorithm<...>` fallback.
+
+An external state terminator can similarly be attached without spelling the wrapper type arguments.
+
+```csharp
+var wrapped = StateTerminatedAlgorithm.Create(algorithm, terminator);
+var fluentWrapped = algorithm.WithTerminator(terminator);
+```
 
 ## Related pages
 

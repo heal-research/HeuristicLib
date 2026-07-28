@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
@@ -20,6 +22,9 @@ public record ProportionalSelector<TCandidate>
 
 public static class ProportionalSelector
 {
+    public static ProportionalSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool windowing = true)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(windowing);
+
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
       IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
       ObjectiveDirections objective,

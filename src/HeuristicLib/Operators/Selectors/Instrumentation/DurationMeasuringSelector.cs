@@ -64,13 +64,13 @@ public static class SelectorDurationExtensions
         public DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem> MeasureSelectorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem>(selector, duration);
+            return new(selector, duration);
         }
 
         public DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem> MeasureSelectorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringSelector<TCandidate, TSearchSpace, TProblem>(selector, duration, timeProvider);
+            return new(selector, duration, timeProvider);
         }
     }
 }

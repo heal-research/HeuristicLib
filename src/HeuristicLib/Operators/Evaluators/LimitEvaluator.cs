@@ -68,7 +68,7 @@ public static class LimitEvaluatorExtensions
     {
         public LimitEvaluator<TCandidate, TSearchSpace, TProblem> LimitEvaluations(int maxEvaluations, ObjectiveVector? alternativeValue = null, bool strict = false)
         {
-            return new LimitEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, maxEvaluations, alternativeValue, strict);
+            return new(evaluator, maxEvaluations, alternativeValue, strict);
         }
     }
 }

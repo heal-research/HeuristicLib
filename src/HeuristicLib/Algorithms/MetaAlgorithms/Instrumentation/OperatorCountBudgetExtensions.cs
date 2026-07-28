@@ -28,7 +28,7 @@ public static class OperatorCountBudgetExtensions
             Func<TOperator, ObservationCounter, IOperator<TObservedInstance>> countedOperatorFactory)
             where TOperator : IOperator<TObservedInstance>
         {
-            return new OperatorBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
+            return new()
             {
                 Algorithm = algorithm,
                 ObservedOperator = observedOperator,

@@ -23,8 +23,8 @@ public class CycleAlgorithmAnalysisTests
         var algorithm = new SingleStepAlgorithm(1, evaluator, interceptor);
         var analysis1 = new EvaluationTraceAnalysis(evaluator);
         var analysis2 = new EvaluationTraceAnalysis(evaluator);
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: x => x,
+        var problem = FuncProblem.Create(
+            evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
@@ -91,7 +91,7 @@ public class CycleAlgorithmAnalysisTests
     private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IAnalyzer analyzer)
     {
         var evaluator = new IncrementingEvaluator();
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(evaluateFunc: x => x, encoding: DummySearchSpace<int>.Instance, objective: SingleObjective.Minimize);
+        var problem = FuncProblem.Create(evaluateFunc: (int x) => x, encoding: DummySearchSpace<int>.Instance, objective: SingleObjective.Minimize);
         var algorithm = new SingleStepAlgorithm(1, evaluator, new IdentityInterceptor<int, PopulationState<int>>());
         return algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analyzer);
     }
@@ -145,10 +145,7 @@ public class CycleAlgorithmAnalysisTests
                 ct.ThrowIfCancellationRequested();
 
                 var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
-                var currentState = new PopulationState<int>
-                {
-                    Population = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)])
-                };
+                var currentState = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)]).ToPopulationState();
 
                 yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
                 await Task.CompletedTask;

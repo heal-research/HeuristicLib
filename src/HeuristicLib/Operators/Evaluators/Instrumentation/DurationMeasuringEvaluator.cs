@@ -63,13 +63,13 @@ public static class EvaluatorDurationExtensions
         public DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProblem> MeasureEvaluatorDuration(out ObservationDuration duration)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, duration);
+            return new(evaluator, duration);
         }
 
         public DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProblem> MeasureEvaluatorDuration(out ObservationDuration duration, TimeProvider timeProvider)
         {
             duration = new ObservationDuration();
-            return new DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, duration, timeProvider);
+            return new(evaluator, duration, timeProvider);
         }
     }
 }

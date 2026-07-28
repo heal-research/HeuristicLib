@@ -15,9 +15,9 @@ public class SelectorCompositionTests
     public void NoSameMatesSelector_AcceptsDifferentMatesWithoutRetrying()
     {
         var counter = new ObservationCounter();
-        var selector = new NoSameMatesSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new BestSelector<int>().CountSelectorCalls(counter), 3);
-        var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var problem = CreateProblem();
+        var selector = BestSelector.For(problem).CountSelectorCalls(counter).AvoidSameMates(maximumAttempts: 3);
+        var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var population = new[]
         {
             EvaluatedCandidate.From(1, new ObjectiveVector(1.0)),
@@ -35,7 +35,7 @@ public class SelectorCompositionTests
     {
         var femaleSelector = new RangeSelector(0);
         var maleSelector = new RangeSelector(2);
-        var selector = new GenderSpecificSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(femaleSelector, maleSelector);
+        var selector = GenderSpecificSelector.Create(femaleSelector, maleSelector);
         var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var problem = CreateProblem();
         var population = CreatePopulation(1, 2, 3, 4);
@@ -50,7 +50,7 @@ public class SelectorCompositionTests
     [Fact]
     public void GenderSpecificSelector_RejectsOddRequestedCount()
     {
-        var selector = new GenderSpecificSelector<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new RangeSelector(0), new RangeSelector(1));
+        var selector = new RangeSelector(0).PairWith(new RangeSelector(1));
         var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var problem = CreateProblem();
 
@@ -59,7 +59,7 @@ public class SelectorCompositionTests
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
-        FuncProblem.Create<int, DummySearchSpace<int>>(static candidate => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
 
     private static IReadOnlyList<EvaluatedCandidate<int>> CreatePopulation(params int[] candidates) =>
         candidates.Select(candidate => EvaluatedCandidate.From(candidate, new ObjectiveVector(candidate))).ToArray();

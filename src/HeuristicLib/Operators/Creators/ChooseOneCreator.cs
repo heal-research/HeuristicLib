@@ -59,7 +59,7 @@ public static class ChooseOneCreator
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         var creatorArray = creators.ToImmutableArray();
-        return new ChooseOneCreator<TCandidate, TSearchSpace, TProblem>(creatorArray);
+        return new(creatorArray);
     }
 
     public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICreator<TCandidate, TSearchSpace, TProblem>> creators, ImmutableArray<double>? weights = null)

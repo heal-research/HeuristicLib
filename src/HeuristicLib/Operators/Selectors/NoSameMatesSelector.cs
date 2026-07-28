@@ -55,3 +55,20 @@ public record NoSameMatesSelector<TCandidate, TSearchSpace, TProblem>(
         }
     }
 }
+
+public static class NoSameMatesSelector
+{
+    public static NoSameMatesSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector, int maximumAttempts)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selector, maximumAttempts);
+}
+
+public static class NoSameMatesSelectorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> selector)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public NoSameMatesSelector<TCandidate, TSearchSpace, TProblem> AvoidSameMates(int maximumAttempts) => NoSameMatesSelector.Create(selector, maximumAttempts);
+    }
+}

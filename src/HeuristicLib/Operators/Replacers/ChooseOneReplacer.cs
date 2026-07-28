@@ -60,7 +60,7 @@ public static class ChooseOneReplacer
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         var replacerArray = replacers.ToImmutableArray();
-        return new ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>(replacerArray);
+        return new(replacerArray);
     }
 
     public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, ImmutableArray<double>? weights = null)

@@ -12,8 +12,8 @@ public class FuncProblemTests
         var searchSpace = DummySearchSpace<int>.Instance;
         var objective = SingleObjective.Minimize;
 
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-          evaluateFunc: x => x,
+        var problem = FuncProblem.Create(
+          evaluateFunc: (int x) => x,
           encoding: searchSpace,
           objective: objective);
 
@@ -29,8 +29,8 @@ public class FuncProblemTests
         var objective = SingleObjective.Minimize;
         var rng = DummyRandomNumberGenerator.Instance;
 
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-          evaluateFunc: x => x * 2.5,
+        var problem = FuncProblem.Create(
+          evaluateFunc: (int x) => x * 2.5,
           encoding: searchSpace,
           objective: objective);
 
@@ -51,8 +51,8 @@ public class FuncProblemTests
 
         int? receivedSolution = null;
 
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-          evaluateFunc: x =>
+        var problem = FuncProblem.Create(
+          evaluateFunc: (int x) =>
           {
               receivedSolution = x;
               return 123.0;
@@ -77,8 +77,8 @@ public class FuncProblemTests
 
         int calls = 0;
 
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-          evaluateFunc: x =>
+        var problem = FuncProblem.Create(
+          evaluateFunc: (int x) =>
           {
               calls++;
               return x;

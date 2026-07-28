@@ -55,14 +55,14 @@ public static class ChooseOneMutator
       where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         var mutatorArray = mutators.ToImmutableArray();
-        return new ChooseOneMutator<TCandidate, TSearchSpace, TProblem>(mutatorArray);
+        return new(mutatorArray);
     }
 
     public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
       where TSearchSpace : class, ISearchSpace<TCandidate>
       where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        return new ChooseOneMutator<TCandidate, TSearchSpace, TProblem>(mutators, weights);
+        return new(mutators, weights);
     }
 
     extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
