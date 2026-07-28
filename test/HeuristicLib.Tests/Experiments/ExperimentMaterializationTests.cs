@@ -33,6 +33,19 @@ public class ExperimentMaterializationTests
     }
 
     [Fact]
+    public void Grid_CapturesAnImmutableSnapshotOfDimensionValues()
+    {
+        var increments = new List<int> { 1, 2 };
+        var experiment = new AdditiveStepAlgorithm(0)
+            .AsGrid()
+            .VaryBy(increments, (algorithm, increment) => algorithm with { Increment = increment });
+
+        increments[0] = 3;
+
+        experiment.MaterializeCases().Select(experimentCase => experimentCase.Algorithm.Increment).ShouldBe([1, 2]);
+    }
+
+    [Fact]
     public void ExperimentRun_RejectsDuplicateKeys()
     {
         var algorithm = new ProbeAlgorithm(1);

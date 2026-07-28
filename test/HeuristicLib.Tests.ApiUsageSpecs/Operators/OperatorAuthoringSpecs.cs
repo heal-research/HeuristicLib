@@ -157,6 +157,22 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
+    public void SingleSolutionEvaluator_UsesGeneralExecutionConcurrency()
+    {
+        var problem = CreateRastriginProblem(dimension: 3);
+        var evaluator = new ConcurrentFirstValueEvaluator { Concurrency = ExecutionConcurrency.Concurrent(2) };
+        var instance = CreateRegistry(problem).Resolve(evaluator);
+
+        var objectives = instance.Evaluate(
+            [RealVector.Repeat(2.0, 3), RealVector.Repeat(4.0, 3)],
+            RandomNumberGenerator.Create(5),
+            problem.SearchSpace,
+            problem);
+
+        objectives.ShouldBe([new ObjectiveVector(2.0), new ObjectiveVector(4.0)]);
+    }
+
+    [Fact]
     public void StatefulEvaluator_AuthoringExample_GetsIndependentExecutionDataPerInstance()
     {
         var problem = CreateRastriginProblem(dimension: 3);
@@ -467,6 +483,12 @@ public class OperatorAuthoringSpecs
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
             candidates.Select(candidate => new ObjectiveVector(candidate[0])).ToArray();
+    }
+
+    private sealed record ConcurrentFirstValueEvaluator : SingleSolutionEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    {
+        public override ObjectiveVector Evaluate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            new(candidate[0]);
     }
 
     private sealed record CountingStatefulEvaluator : StatefulEvaluator<RealVector, RealVectorSearchSpace, TestFunctionProblem, CountingStatefulEvaluator.ExecutionState>

@@ -16,9 +16,27 @@ The core streaming shape is:
 IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 ```
 
-Convenience methods such as `RunToCompletion(...)` are just ways of consuming that stream.
+Convenience methods such as `Complete(...)` and `CompleteAsync(...)` are ways of consuming that stream.
 
 Run-level `CancellationToken` parameters are for immediate execution interruption. Algorithms and operators may check that token before or during a step, so cancellation can stop the current iteration before it produces another state.
+
+## Execution concurrency
+
+`ExecutionConcurrency` is the general scheduling input for operations that may execute several independent items:
+
+```csharp
+ExecutionConcurrency.Sequential()
+ExecutionConcurrency.Concurrent()
+ExecutionConcurrency.Concurrent(4)
+```
+
+Sequential and concurrent execution are distinct categories. `Sequential()` requires one operation to finish before the next input starts and preserves input order. `Concurrent()` permits all inputs to overlap. `Concurrent(maximumConcurrency)` limits the number of active operations but does not promise sequential ordering. `Concurrent(1)` therefore remains categorically concurrent.
+
+Maximum concurrency describes active operations, not worker objects or dedicated threads. A scheduler may implement that bound with workers, tasks, asynchronous operations or synchronous parallel execution as appropriate. The current experiment scheduler uses it to bound active algorithm runs.
+
+`BatchExecution.Execute(...)` uses the same input for synchronous batches. `BatchExecution.Sequential(...)` and `BatchExecution.Parallel(...)` are convenience forms for fixed scheduling choices. All forms preserve output order and fork the supplied random number generator by input index. Concurrent execution follows normal TPL exception behavior, including aggregating callback failures.
+
+`SingleSolutionEvaluator` and `SingleSolutionProblem` default to sequential execution and expose `Concurrency` for explicitly enabling concurrent batch processing. When concurrent execution is selected, the single-candidate `Evaluate(...)` method may be called concurrently on the same execution instance. Implementations and their dependencies must support that use. Repeated evaluation also defaults to sequential execution because each repetition uses the same resolved inner evaluator instance.
 
 ## The main authoring model
 
@@ -122,13 +140,13 @@ Avoid treating "iteration" as a universal synonym for generation, step, cycle, e
 
 ## Runs and analyzers
 
-`CreateRun(problem, analyzers...)` creates one logical execution.
+`CreateRun(problem, random)` creates one logical algorithm execution.
 
-A `Run` is a single execution object. It can start only one execution through its streaming and completion entry points. Create a new `Run` when executing the same algorithm configuration again. The convenience methods on an algorithm configuration create a new run for every call.
+An `AlgorithmRun` is a single execution object. It can start only one execution through its streaming and completion entry points. Create a new run when executing the same algorithm configuration again. The convenience methods on an algorithm configuration create a new run for every call.
 
-This restriction applies to the public `Run` lifecycle, not to every direct algorithm instance invocation. A meta algorithm may deliberately invoke the same child algorithm instance again when its documented lifecycle policy calls for retained instance data. Concurrent execution through one algorithm instance remains unsupported unless that instance explicitly documents otherwise.
+This restriction applies to the public `AlgorithmRun` lifecycle, not to every direct algorithm instance invocation. A meta algorithm may deliberately invoke the same child algorithm instance again when its documented lifecycle policy calls for retained instance data. Concurrent execution through one algorithm instance remains unsupported unless that instance explicitly documents otherwise.
 
-A run owns:
+An algorithm run owns:
 
 - the algorithm configuration
 - the problem

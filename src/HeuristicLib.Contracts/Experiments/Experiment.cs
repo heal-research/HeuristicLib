@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -12,5 +13,5 @@ public abstract record Experiment<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TSearchState : class, ISearchState
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    public abstract IReadOnlyList<ExperimentCase<TAlgorithm, TKey>> MaterializeCases();
+    public abstract ImmutableArray<ExperimentCase<TAlgorithm, TKey>> MaterializeCases();
 }

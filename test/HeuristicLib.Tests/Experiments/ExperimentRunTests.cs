@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -25,7 +26,7 @@ public class ExperimentRunTests
         var run = CreateRun();
 
         run.ExecutionStarted.ShouldBeFalse();
-        _ = run.Stream(ExperimentExecutionPolicy.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
+        _ = run.Stream(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
 
         run.ExecutionStarted.ShouldBeTrue();
         run.Trials.ShouldAllBe(trial => trial.Run.ExecutionStarted);
@@ -44,6 +45,18 @@ public class ExperimentRunTests
 
         algorithm.InstanceCount.ShouldBe(2);
         evaluator.InstanceCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void StartTrials_StartsAndConsumesTheExperimentRun()
+    {
+        var run = CreateRun();
+
+        _ = run.StartTrials(cancellationToken: TestContext.Current.CancellationToken);
+
+        run.ExecutionStarted.ShouldBeTrue();
+        run.Trials.ShouldAllBe(trial => trial.Run.ExecutionStarted);
+        Should.Throw<InvalidOperationException>(() => run.StartTrials(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]

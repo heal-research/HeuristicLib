@@ -16,10 +16,10 @@ public sealed partial class Grid<T> : IEnumerable<T>
         Prototype = prototype;
     }
 
-    public Grid(T prototype, ImmutableArray<IGridParameter<T>> parameters)
+    public Grid(T prototype, IReadOnlyList<IGridParameter<T>> parameters)
     {
         Prototype = prototype;
-        Parameters = parameters;
+        Parameters = parameters.ToImmutableArray();
     }
 
     public Grid<T> VaryBy<TProblem>(IReadOnlyList<TProblem> values, Func<T, TProblem, T> configurator)
@@ -32,14 +32,14 @@ public sealed partial class Grid<T> : IEnumerable<T>
         return new Grid<T>(Prototype, Parameters.Add(new GridParameter<T, TProblem>(values, configurator)));
     }
 
-    public IReadOnlyList<T> GetConfigurations()
+    public ImmutableArray<T> GetConfigurations()
     {
         IEnumerable<T> configurations = new List<T> { Prototype };
 
-        return Parameters.Aggregate(configurations, (current, parameter) => parameter.GetConfigurations(current)).ToList();
+        return Parameters.Aggregate(configurations, (current, parameter) => parameter.GetConfigurations(current)).ToImmutableArray();
     }
 
-    public IEnumerator<T> GetEnumerator() => GetConfigurations().GetEnumerator();
+    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)GetConfigurations()).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
@@ -49,9 +49,19 @@ public interface IGridParameter<T>
     IEnumerable<T> GetConfigurations(IEnumerable<T> prototypes);
 }
 
-public record GridParameter<T, TParam>(IReadOnlyList<TParam> Values, Func<T, TParam, T> Configurator) : IGridParameter<T>
+public sealed record GridParameter<T, TParam> : IGridParameter<T>
 {
-    public int Count => Values.Count;
+    public ImmutableArray<TParam> Values { get; }
+
+    public Func<T, TParam, T> Configurator { get; }
+
+    public int Count => Values.Length;
+
+    public GridParameter(IReadOnlyList<TParam> values, Func<T, TParam, T> configurator)
+    {
+        Values = values.ToImmutableArray();
+        Configurator = configurator;
+    }
 
     public IEnumerable<T> GetConfigurations(IEnumerable<T> prototypes)
     {

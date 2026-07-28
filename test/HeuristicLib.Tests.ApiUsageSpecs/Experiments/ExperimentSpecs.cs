@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.LocalSearch;
 using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
@@ -26,7 +27,7 @@ public class ExperimentSpecs
 
         var results = await experiment.CompleteAsync(problem, RandomNumberGenerator.Create(999), cancellationToken: TestContext.Current.CancellationToken);
 
-        results.Count.ShouldBe(3);
+        results.Length.ShouldBe(3);
         results.Select(result => result.Trial.Key).ShouldBe([0, 1, 2]);
         results.All(result => problem.SearchSpace.Contains(result.State.EvaluatedCandidate.Candidate)).ShouldBeTrue();
         results.Select(result => result.Trial.Run).Distinct(ReferenceEqualityComparer.Instance).Count().ShouldBe(3);
@@ -67,9 +68,44 @@ public class ExperimentSpecs
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         var results = run.GetResults(bestQuality);
 
-        results.Count.ShouldBe(2);
+        results.Length.ShouldBe(2);
         results.Select(result => result.Trial.Key.MaxNeighbors).ShouldBe([4, 8]);
         results.All(result => result.Result.CurrentScore is not null).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task StartTrials_AllowsProcessingTrialsAsTheyComplete()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var experiment = CreateSimpleHillClimber(problem).WithMaxIterations(6).Repeat(3);
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(789));
+        var trialTasks = run.StartTrials(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
+        var completedKeys = new List<int>();
+
+        await foreach (var completedTask in Task.WhenEach(trialTasks))
+        {
+            var (trial, state) = await completedTask;
+            completedKeys.Add(trial.Key);
+            problem.SearchSpace.Contains(state.EvaluatedCandidate.Candidate).ShouldBeTrue();
+        }
+
+        completedKeys.Order().ShouldBe([0, 1, 2]);
+    }
+
+    [Fact]
+    public void DirectExperimentExecutionExtensions_ExposeStreamAndComplete()
+    {
+        var problem = CreateRastriginProblem(dimension: 4);
+        var algorithm = CreateSimpleHillClimber(problem).WithMaxIterations(2);
+
+        var streamedEntries = algorithm.Repeat(2)
+            .Stream(problem, RandomNumberGenerator.Create(234), ExecutionConcurrency.Sequential(), cancellationToken: TestContext.Current.CancellationToken)
+            .ToList();
+        var completedTrials = algorithm.Repeat(2)
+            .Complete(problem, RandomNumberGenerator.Create(234), ExecutionConcurrency.Sequential(), cancellationToken: TestContext.Current.CancellationToken);
+
+        streamedEntries.Select(entry => entry.Trial.Key).Distinct().ShouldBe([0, 1]);
+        completedTrials.Select(result => result.Trial.Key).ShouldBe([0, 1]);
     }
 
     private static TestFunctionProblem CreateRastriginProblem(int dimension) => new(new RastriginFunction(dimension));

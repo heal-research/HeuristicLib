@@ -358,5 +358,6 @@ Examples include observable wrappers for mutators, crossovers, evaluators, termi
 
 - [Operators](operators.md)
 - [Execution model](execution-model.md)
+- [Experiments](experiments.md)
 - [Configuration vs execution instances](execution-instances.md)
 - [Analyzer architecture](analyzer-architecture.md)

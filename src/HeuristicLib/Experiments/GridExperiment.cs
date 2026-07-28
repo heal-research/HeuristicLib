@@ -21,15 +21,15 @@ public sealed record GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchS
     public GridExperiment<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> VaryBy<TValue>(IReadOnlyList<TValue> values, Func<TAlgorithm, TValue, TAlgorithm> configurator) =>
         new(ParameterGrid.VaryBy(values, configurator));
 
-    public override IReadOnlyList<ExperimentCase<TAlgorithm, TAlgorithm>> MaterializeCases()
+    public override ImmutableArray<ExperimentCase<TAlgorithm, TAlgorithm>> MaterializeCases()
     {
         var configurations = ParameterGrid.GetConfigurations();
-        if (configurations.Count != configurations.Distinct().Count())
+        if (configurations.Length != configurations.Distinct().Count())
         {
             throw new InvalidOperationException("A grid produced equal algorithm configurations. Use Repeat to execute the same configuration more than once.");
         }
 
-        return configurations.Select((algorithm, index) => new ExperimentCase<TAlgorithm, TAlgorithm>(algorithm, algorithm, [index])).ToList();
+        return configurations.Select((algorithm, index) => new ExperimentCase<TAlgorithm, TAlgorithm>(algorithm, algorithm, [index])).ToImmutableArray();
     }
 }
 

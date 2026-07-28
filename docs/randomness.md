@@ -13,6 +13,7 @@ There are two categories of operations:
   - If you call `Next...` in a different order, or a different number of times, you will get a different sequence.
 - **Creating independent child generators** via `Fork(ulong forkKey)`.
   - `Fork(...)` does **not** draw random numbers.
+  - `Fork(...)` does not modify the parent generator and may be called concurrently.
   - Forking is deterministic: the child generator is derived from the parent generator and the provided `forkKey`.
 
 This gives you a simple mental model:
@@ -84,8 +85,9 @@ Common fork keys:
 
 The execution APIs explicitly accept an RNG:
 
-- `RunToCompletion(problem, random, initialState?)`
-- `RunStreaming(problem, random, initialState?)`
+- `Complete(problem, random, initialState?)`
+- `CompleteAsync(problem, random, initialState?)`
+- `Stream(problem, random, initialState?)`
 
 This is intentional: algorithm behavior-affecting dependencies (especially randomness) stay visible and controllable.
 

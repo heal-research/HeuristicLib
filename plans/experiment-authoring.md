@@ -38,6 +38,8 @@ Every `VaryBy(...)` performs a left to right Cartesian expansion. Its transforma
 
 Users should not need to manually construct execution registries, child runs, random forks or nested generic orchestration types for common grid and repetition experiments. Exact generic declarations remain implementation details as long as normal use preserves this shape and static typing.
 
+Public experiment collection inputs use `IReadOnlyList<T>` so callers may supply arrays, lists or immutable arrays. Configurations immediately copy those inputs with `ToImmutableArray()` and store immutable snapshots. Materialized cases, trials, completion results and analysis results are exposed as `ImmutableArray<T>`.
+
 This usage should become an executable API usage spec before implementation is considered complete.
 
 ## Experiment Versus Meta Algorithm
@@ -72,7 +74,7 @@ The current non generic `Run` base and `Run<TCandidate, TSearchSpace, TProblem, 
 
 `AlgorithmRun` and `ExperimentRun` have different progress types, result types and scheduling needs. No current consumer needs to handle both polymorphically. Their single use lifecycle machinery may be shared internally. A public generic run abstraction should be extracted later only if a concrete polymorphic use case appears.
 
-Configurations create runs. Runs expose the three primary execution forms:
+Configurations create runs. Runs expose the primary combined execution forms:
 
 ```csharp
 run.Stream(...);
@@ -80,17 +82,19 @@ run.Complete(...);
 await run.CompleteAsync(...);
 ```
 
+Experiment runs additionally expose `StartTrials(...)`, which starts one completion task per trial. Callers may use `Task.WhenAll(...)`, `Task.WhenEach(...)` or individual awaits to observe those tasks and retain successful results when other trials fail.
+
 Configuration convenience extensions should use the same names. The existing `RunToCompletion` wording should be replaced so algorithm and experiment execution use one vocabulary.
 
 ### Setup And Execution Types
 
-The first implementation uses one mutable `AlgorithmRun` or `ExperimentRun` object. A run contains its algorithm or experiment, problem and random number generator. `WithAnalyzer(...)` mutably attaches an analyzer or trial analyzer before execution and returns the same run for fluent composition. Calling `Stream(...)`, `Complete(...)` or `CompleteAsync(...)` starts execution and prevents later analyzer attachment.
+The first implementation uses one mutable `AlgorithmRun` or `ExperimentRun` object. A run contains its algorithm or experiment, problem and random number generator. `WithAnalyzer(...)` mutably attaches an analyzer or trial analyzer before execution and returns the same run for fluent composition. Calling `Stream(...)`, `StartTrials(...)`, `Complete(...)` or `CompleteAsync(...)` starts experiment execution and prevents later analyzer attachment.
 
 Both run types use the same delayed execution initialization rule. The configurable run records concrete configurations only. The first execution call creates analyzer states, observation plans, execution registries and algorithm or operator execution instances. Neither `CreateRun(...)` nor `WithAnalyzer(...)` creates that runtime infrastructure.
 
 There is no public setup method or setup type in the first implementation. The public API must not mix a mutable run with a partial explicit setup abstraction. The alternative design would require a separate immutable setup type and a separate running type with an explicit conversion between them. That complete alternative is postponed because it currently requires another public concept or a final build step that weakens the easy fluent API. C# does not provide linear types, so returning a new running type cannot by itself prevent callers from retaining and reusing an older setup object.
 
-Preparation is internal and implicit in the first implementation. `Stream(...)`, `Complete(...)` and `CompleteAsync(...)` mark the run as started, freeze analyzer attachment and create the required analyzer states, observation plan, registry and execution instances. No public `Setup()`, `Freeze()` or `Prepare()` method is added.
+Preparation is internal and implicit in the first implementation. `Stream(...)`, `StartTrials(...)`, `Complete(...)` and `CompleteAsync(...)` mark the run as started, freeze analyzer attachment and create the required analyzer states, observation plan, registry and execution instances. No public `Setup()`, `Freeze()` or `Prepare()` method is added.
 
 Every lifecycle operation validates whether execution has started. A repeated execution call, analyzer attachment after execution started or a conflicting individual and combined experiment execution call throws a clear `InvalidOperationException`.
 
@@ -171,7 +175,7 @@ This transaction occurs during `WithAnalyzer(...)`, not during execution prepara
 
 In this document, materializing an experiment means expanding it into concrete trial and analyzer configurations. Instantiating execution means creating run scoped analyzer states, registries and execution instances. Materialization is eager during setup. Execution instantiation is delayed consistently for algorithm runs and experiment runs.
 
-Internal execution preparation creates analyzer states, registers observations and creates registries from the already concrete analyzer configurations. Combined experiment execution prepares every trial through its ordinary `Stream(...)` method before scheduling begins. Successfully prepared streams are scheduled according to the execution policy. A preparation failure in one trial does not prevent unaffected trials from running and contributes to the final aggregate exception in deterministic trial order.
+Internal execution preparation creates analyzer states, registers observations and creates registries from the already concrete analyzer configurations. Combined experiment execution prepares every trial through its ordinary `Stream(...)` method before scheduling begins. Successfully prepared streams are scheduled according to the selected concurrency. A preparation failure in one trial does not prevent unaffected trials from running and contributes to the final aggregate exception in deterministic trial order.
 
 The caller may then consume the trial runs sequentially, concurrently with bounded concurrency or individually.
 
@@ -179,7 +183,7 @@ An experiment run and each algorithm run are single use. Reusing the experiment 
 
 Aggregate and individual execution modes must not be mixed. The first execution start determines the mode:
 
-1. Calling `ExperimentRun.Stream(...)`, `Complete(...)` or `CompleteAsync(...)` prepares the stream of every trial and prevents direct execution of its trial runs.
+1. Calling `ExperimentRun.Stream(...)`, `StartTrials(...)`, `Complete(...)` or `CompleteAsync(...)` prepares the stream of every trial and prevents direct execution of its trial runs.
 2. Directly starting any trial run prevents later combined execution of the experiment run.
 3. Individual mode permits the caller to execute the remaining trial runs independently.
 4. Repeated execution of any individual algorithm run still fails through its own single use guard.
@@ -286,7 +290,7 @@ An `ExperimentRun` does not need a second analyzer result store. Each trial expo
 
 `GetResults(...)` materializes an immutable ordered result collection and requires every trial run to have started. If users execute trial runs individually, aggregate results become available after all trials have started. A separately attached analyzer on one trial remains accessible through that trial's `AlgorithmRun`.
 
-Analyzer result availability follows the same lifecycle for algorithm and experiment runs. Results are unavailable before execution starts. Calling `Stream(...)`, `Complete(...)` or `CompleteAsync(...)` eagerly creates analyzer states, so their initial results are available immediately after the execution method returns. During stream enumeration callers may read live results. After completion the same objects contain their final values.
+Analyzer result availability follows the same lifecycle for algorithm and experiment runs. Results are unavailable before execution starts. Calling `Stream(...)`, `StartTrials(...)`, `Complete(...)` or `CompleteAsync(...)` eagerly creates analyzer states, so their initial results are available immediately after the execution method returns. During execution callers may read live results. After completion the same objects contain their final values.
 
 When a trial analyzer creates a different analyzer configuration for every trial, the experiment run retains a mapping from the trial analyzer and trial key to the concrete analyzer configuration. This enables a typed result query such as:
 
@@ -425,7 +429,7 @@ Requirements are:
 
 1. Stable experiment trial ordering or an explicit structured fork path.
 2. Separate forks for nested dimensions such as grid configuration and repetition.
-3. Identical child random sequences under sequential, concurrent and bounded parallel execution.
+3. Identical child random sequences under sequential, unbounded concurrent and bounded concurrent execution.
 4. No accidental consumption of a child random number generator before its run starts.
 5. Retained seed or fork metadata sufficient to reproduce one child run.
 
@@ -433,7 +437,7 @@ Using object hash codes as fork keys is not acceptable because keys and hash imp
 
 ## Scheduling And Streaming
 
-An experiment run creates trials but does not prescribe one scheduling policy. The API must expose both individual trial streams and a convenient combined stream.
+An experiment run creates trials but does not prescribe one concurrency level. The API must expose both individual trial streams and a convenient combined stream.
 
 ### Individual Trial Streams
 
@@ -461,7 +465,7 @@ public sealed record ExperimentStreamEntry<TTrial, TSearchState>(TTrial Trial, T
 The concrete generic declaration may use the experiment type parameters directly rather than a generic `TTrial`. The important public shape is the `Trial` and `State` pair.
 
 ```csharp
-await foreach (var entry in experimentRun.Stream(policy, cancellationToken))
+await foreach (var entry in experimentRun.Stream(concurrency, cancellationToken))
 {
     Console.WriteLine(entry.Trial.Algorithm);
     Console.WriteLine(entry.Trial.Key);
@@ -472,7 +476,7 @@ await foreach (var entry in experimentRun.Stream(policy, cancellationToken))
 Callers may also deconstruct entries directly:
 
 ```csharp
-await foreach (var (trial, state) in experimentRun.Stream(policy, cancellationToken))
+await foreach (var (trial, state) in experimentRun.Stream(concurrency, cancellationToken))
 {
 }
 ```
@@ -483,24 +487,24 @@ The scheduling API should support:
 
 1. Sequential execution.
 2. Concurrent execution of all runs.
-3. Bounded parallel execution.
+3. Bounded concurrent execution.
 4. Manual execution and progress monitoring of selected runs.
 
-An execution policy parameter is preferred over separate method names such as `StreamSequentially` and `StreamInParallel`. A small policy API can provide sequential, unbounded and bounded concurrency without exposing magic integer values:
+A concurrency parameter is preferred over separate method names such as `StreamSequentially` and `StreamConcurrently`. A small concurrency API can provide sequential, unbounded and bounded concurrency without exposing magic integer values:
 
 ```csharp
-ExperimentExecutionPolicy.Sequential()
-ExperimentExecutionPolicy.Concurrent()
-ExperimentExecutionPolicy.Concurrent(4)
+ExecutionConcurrency.Sequential()
+ExecutionConcurrency.Concurrent()
+ExecutionConcurrency.Concurrent(4)
 ```
 
-The default policy should be sequential. Maximum concurrency describes concurrent algorithm runs rather than worker threads.
+Sequential and concurrent execution are distinct categories. Sequential execution preserves materialization order. Concurrent execution does not promise sequential ordering, even when its maximum concurrency is one. The default concurrency should be sequential. Maximum concurrency describes active algorithm runs rather than worker threads.
 
-Each algorithm run keeps its own stream. Every combined stream entry contains its trial, which provides the key and algorithm configuration. Parallel combined event order is schedule dependent and should not be described as reproducible.
+Each algorithm run keeps its own stream. Every combined stream entry contains its trial, which provides the key and algorithm configuration. Concurrent combined event order is schedule dependent and should not be described as reproducible.
 
 Scheduling must not change the random sequence or optimization result of any individual run.
 
-Materialization order is the canonical deterministic order for all nonstreaming collections. `ExperimentRun.Trials`, successful completion tuples, trial analysis results and exceptions inside the final `AggregateException` retain that order regardless of scheduling. Parallel combined stream emission order remains schedule dependent, but every emitted entry retains its deterministic trial and key identity.
+Materialization order is the canonical deterministic order for all nonstreaming collections. `ExperimentRun.Trials`, successful completion tuples, trial analysis results and exceptions inside the final `AggregateException` retain that order regardless of scheduling. Concurrent combined stream emission order remains schedule dependent, but every emitted entry retains its deterministic trial and key identity.
 
 ## Completion, Cancellation And Failure
 
@@ -521,12 +525,12 @@ public sealed class ExperimentTrialException<TKey> : Exception
 
 Each `ExperimentTrialException<TKey>` wraps the original failure as its inner exception and exposes the failed trial key. The aggregate contains these exceptions in deterministic trial materialization order regardless of scheduling. This applies to failures during trial preparation and execution. Exceptions are retained only until the combined operation finishes and do not become public inspectable experiment outcomes.
 
-`ExperimentRun.Complete(...)` and `CompleteAsync(...)` use the same policy. They allow unaffected trials to finish and throw an aggregate exception when combined execution finishes.
+The `Complete(...)` and `CompleteAsync(...)` extensions use the same concurrency. They allow unaffected trials to finish and throw an aggregate exception when combined execution finishes.
 
-Successful experiment completion does not introduce an `ExperimentTrialCompletion` type because ordinary algorithm completion returns its final search state directly. It returns a read only collection of trial and final state tuples:
+Successful experiment completion does not introduce an `ExperimentTrialCompletion` type because ordinary algorithm completion returns its final search state directly. It returns an immutable array of trial and final state tuples:
 
 ```csharp
-IReadOnlyList<(ExperimentTrial<TKey, ...> Trial, TSearchState State)>
+ImmutableArray<(ExperimentTrial<TKey, ...> Trial, TSearchState State)>
 ```
 
 Regular algorithm completion uses `LastAsync(...)` and therefore throws when an algorithm yields no state. Experiment completion should preserve that behavior. A trial that yields no state contributes a failure to the aggregate exception. If combined completion throws, no completion collection is returned. Successful algorithm runs and their analyzer results remain available through the experiment run and its trials after the caller handles the exception.
@@ -571,8 +575,13 @@ Focused lifecycle tests must cover:
 8. Multiple analyses of the same operator all executing in attachment order.
 9. A failing selector or analyzer factory attaching no partial analysis configuration.
 10. Attaching the same trial analyzer twice being rejected.
-11. Completion results, analyzer results and aggregate failures retaining materialization order under parallel execution.
+11. Completion results, analyzer results and aggregate failures retaining materialization order under concurrent execution.
 12. Every combined failure being wrapped in an `ExperimentTrialException<TKey>` with the correct trial key and original inner exception.
+13. `StartTrials(...)` exposing one task per trial while preserving sequential and bounded concurrent execution.
+14. Successful trial tasks remaining directly accessible when other trial tasks fail.
+15. Early disposal of a combined stream cancelling active trials and leaving pending trials unstarted.
+16. Cancellation settling every task returned by `StartTrials(...)`.
+17. Explicit cancellation taking precedence over trial failures.
 
 ## Current Implementation Problems To Remove
 

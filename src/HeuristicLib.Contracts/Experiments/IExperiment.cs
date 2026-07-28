@@ -12,7 +12,7 @@ public interface IExperiment<TCandidate, in TSearchSpace, in TProblem, TSearchSt
     where TSearchState : class, ISearchState
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    IReadOnlyList<ExperimentCase<TAlgorithm, TKey>> MaterializeCases();
+    ImmutableArray<ExperimentCase<TAlgorithm, TKey>> MaterializeCases();
 }
 
 public sealed record ExperimentCase<TAlgorithm, TKey>(TAlgorithm Algorithm, TKey Key, ImmutableArray<int> RandomForkPath);

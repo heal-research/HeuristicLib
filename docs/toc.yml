@@ -29,6 +29,8 @@
           href: operator-composition.md
     - name: Algorithm
       href: algorithm.md
+    - name: Experiments
+      href: experiments.md
     - name: Search state
       href: algorithm-state.md
     - name: Execution model

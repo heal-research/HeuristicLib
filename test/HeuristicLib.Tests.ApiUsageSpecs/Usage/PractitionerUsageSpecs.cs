@@ -578,7 +578,7 @@ public class PractitionerUsageSpecs
           RandomNumberGenerator.Create(999),
           cancellationToken: TestContext.Current.CancellationToken);
 
-        results.Count.ShouldBe(3);
+        results.Length.ShouldBe(3);
         results.Select(result => result.Trial.Key).ShouldBe([0, 1, 2]);
         results.All(result => problem.SearchSpace.Contains(result.State.EvaluatedCandidate.Candidate)).ShouldBeTrue();
     }

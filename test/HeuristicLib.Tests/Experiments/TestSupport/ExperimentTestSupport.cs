@@ -16,7 +16,7 @@ internal sealed record FixedExperiment<TAlgorithm>(ImmutableArray<ExperimentCase
     : Experiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int>
     where TAlgorithm : class, IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
-    public override IReadOnlyList<ExperimentCase<TAlgorithm, int>> MaterializeCases() => Cases;
+    public override ImmutableArray<ExperimentCase<TAlgorithm, int>> MaterializeCases() => Cases;
 }
 
 internal sealed record ProbeAlgorithm(
@@ -26,7 +26,8 @@ internal sealed record ProbeAlgorithm(
     bool UseRandomValue = false,
     bool FailDuringSetup = false,
     bool FailDuringExecution = false,
-    bool YieldState = true)
+    bool YieldState = true,
+    int HoldAfterYieldMilliseconds = 0)
     : Algorithm<ProbeAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
 {
     protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
@@ -37,10 +38,10 @@ internal sealed record ProbeAlgorithm(
             throw new InvalidOperationException($"Setup failed for {Value}.");
         }
 
-        return new Instance(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState);
+        return new Instance(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
     }
 
-    private sealed class Instance(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState)
+    private sealed class Instance(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
         : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
         public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
@@ -68,6 +69,10 @@ internal sealed record ProbeAlgorithm(
                     var candidate = useRandomValue ? random.NextInt() : value;
                     probe?.RecordCandidate(candidate);
                     yield return ExperimentTestSupport.CreateState(candidate);
+                    if (holdAfterYieldMilliseconds > 0)
+                    {
+                        await Task.Delay(holdAfterYieldMilliseconds, ct);
+                    }
                 }
             }
             finally

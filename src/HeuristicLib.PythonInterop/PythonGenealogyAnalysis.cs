@@ -41,8 +41,7 @@ public class PythonGenealogyAnalysis
         RunConfigurableRepeated<TCandidate>(int repetitions, Func<int, ExperimentResult<TCandidate>> experiment,
                                             int seed)
     {
-        return BatchExecution.Parallel<ExperimentResult<TCandidate>>(repetitions, r => experiment(r.NextInt()),
-                                 RandomNumberGenerator.Create(seed), maxDegreeOfParallelism: -1)
+        return BatchExecution.Parallel<ExperimentResult<TCandidate>>(repetitions, r => experiment(r.NextInt()), RandomNumberGenerator.Create(seed))
                              .ToArray();
     }
 
