@@ -6,17 +6,17 @@ Composition policies describe how child operations are coordinated. `Wrapping*` 
 
 The built in composition overview is:
 
-| Composition aspect | Coordination semantics | Helpers and examples | Applicability |
-| --- | --- | --- | --- |
-| Weighted alternatives per element | Chooses a child independently for each element of a batch, invokes grouped child batches and restores input order | `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator` | Creators, crossovers and mutators |
-| Weighted alternatives per call | Chooses one child for the complete operation call | `ChooseOneSelector`, `ChooseOneReplacer` | Selectors and replacers |
-| Conditional application | Chooses between an operation and role specific unchanged behavior | `mutator.WithRate(...)`, `crossover.WithRate(...)` | Mutators and crossovers |
-| Sequential composition | Passes each stage result to the next stage in order | `PipelineMutator`, `PipelineInterceptor` | Mutators and interceptors |
-| Unconditional postprocessing | Invokes a source operation and always transforms its complete result | `TransformedCreator`, `TransformedCrossover` | Creators and crossovers with a mutator transformation |
-| Logical composition | Combines child conditions with short circuit Boolean logic | `AnyTerminator`, `AllTerminator` | Terminators |
-| Fallback composition | Handles part of a request directly and delegates the remainder | `PredefinedCandidatesCreator` | Creators |
-| Specialized coordination | Applies a policy whose meaning depends on one operator contract | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors |
-| Observation and instrumentation | Wraps an operation boundary to observe, count or measure calls | `Observable*`, `Counting*` and `DurationMeasuring*` | All operator roles |
+| Composition aspect                | Coordination semantics                                                                                            | Helpers and examples                                                                                        | Applicability                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Weighted alternatives per element | Chooses a child independently for each element of a batch, invokes grouped child batches and restores input order | `ChooseOneCreator`, `ChooseOneCrossover`, `ChooseOneMutator`                                                | Creators, crossovers and mutators                     |
+| Weighted alternatives per call    | Chooses one child for the complete operation call                                                                 | `ChooseOneSelector`, `ChooseOneReplacer`                                                                    | Selectors and replacers                               |
+| Conditional application           | Chooses between an operation and role specific unchanged behavior                                                 | `mutator.WithRate(...)`, `crossover.WithRate(...)`                                                          | Mutators and crossovers                               |
+| Sequential composition            | Passes each stage result to the next stage in order                                                               | `PipelineMutator`, `PipelineInterceptor`                                                                    | Mutators and interceptors                             |
+| Unconditional postprocessing      | Invokes a source operation and always transforms its complete result                                              | `TransformedCreator`, `TransformedCrossover`                                                                | Creators and crossovers with a mutator transformation |
+| Logical composition               | Combines child conditions with short circuit Boolean logic                                                        | `AnyTerminator`, `AllTerminator`                                                                            | Terminators                                           |
+| Fallback composition              | Handles part of a request directly and delegates the remainder                                                    | `PredefinedCandidatesCreator`                                                                               | Creators                                              |
+| Specialized coordination          | Applies a policy whose meaning depends on one operator contract                                                   | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors                              |
+| Observation and instrumentation   | Wraps an operation boundary to observe, count or measure calls                                                    | `Observable*`, `Counting*` and `DurationMeasuring*`                                                         | All operator roles                                    |
 
 A missing helper usually means that the role does not provide the inputs needed by that policy or that the intermediate result has no single clear meaning. It does not prohibit authors from implementing a domain specific composition with explicit semantics.
 

@@ -25,8 +25,8 @@ public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchSt
         Context = context;
     }
 
-    protected GenotypeAwareTreeSearchState(GenotypeAwareTreeSearchState<T, TS, TP, TM> other) : this(other.Context){}
-    
+    protected GenotypeAwareTreeSearchState(GenotypeAwareTreeSearchState<T, TS, TP, TM> other) : this(other.Context) { }
+
 
     protected abstract T Genotype { get; }
 

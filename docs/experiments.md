@@ -4,6 +4,20 @@ An experiment expands one or more algorithm configurations into independent tria
 
 Use experiments when you want to repeat an algorithm or compare a grid of configurations without making those executions part of one algorithm.
 
+## Experiments and meta algorithms
+
+Experiments and meta algorithms both coordinate algorithms, but their ownership and result models differ:
+
+| Meta algorithm                                        | Experiment                                                  |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| Coordinates child algorithms inside one algorithm run | Coordinates several independent algorithm runs              |
+| May pass search state between child algorithms        | Does not pass search state between trials                   |
+| May intentionally share execution instances           | Gives every trial its own root execution registry           |
+| Produces one search state stream                      | Provides one stream per trial and an optional combined view |
+| Has one analyzer state per attached analyzer          | Creates isolated analyzer states for every trial            |
+
+An experiment is not an algorithm. Grid and repetition composition describe which independent trials to create, not execution steps inside one search process.
+
 ## Creating experiments
 
 Repeat one algorithm configuration:
@@ -30,23 +44,37 @@ var experiment = algorithm
 
 Grid values are accepted as `IReadOnlyList<T>` and copied into immutable experiment configuration. Arrays, lists and immutable arrays can therefore be supplied without letting later caller mutation change the grid.
 
+Each `VaryBy(...)` performs a left to right Cartesian expansion. Its transformation receives every configuration produced by the preceding dimensions. Trial order follows dimension declaration order then value declaration order. Repetition extends each inner case before moving to the next inner case, so a grid containing `A`, `B` followed by `Repeat(2)` produces `(A, 0)`, `(A, 1)`, `(B, 0)`, `(B, 1)`.
+
+Repetition counts must be positive and every grid dimension must contain at least one value. A grid that produces equal algorithm configurations throws because the algorithm configuration is its trial key. Use `Repeat(...)` when executing an equal configuration several times is intentional. Experiment runs also reject empty materialization and duplicate trial keys.
+
+Materialized cases, trials, completion results and analysis results are exposed as immutable arrays in their canonical materialization order.
+
 Every materialized trial has a deterministic typed key:
 
-| Composition | Key |
-| --- | --- |
-| `algorithm.Repeat(n)` | repetition index |
-| `algorithm.AsGrid()` | concrete algorithm configuration |
+| Composition                    | Key                                                   |
+| ------------------------------ | ----------------------------------------------------- |
+| `algorithm.Repeat(n)`          | repetition index                                      |
+| `algorithm.AsGrid()`           | concrete algorithm configuration                      |
 | `algorithm.AsGrid().Repeat(n)` | concrete algorithm configuration and repetition index |
 
 The concrete key for a repeated grid is `(TAlgorithm Inner, int Repetition)`. Materialization order determines trial collections, completion results, analysis results and aggregate failure order.
 
-Creating an experiment run materializes its trials but does not start them:
+Creating an experiment run materializes its trials but does not start execution:
 
 ```csharp
 var run = experiment.CreateRun(problem, random);
 ```
 
-An experiment run is single use. Calling any execution method starts the run, prevents further analyzer attachment and prevents direct execution of its trial runs.
+`CreateRun(...)` expands the finite configuration, creates the typed trial keys, assigns structural random fork paths and creates the child algorithm run setup objects. Analyzer states, execution registries and execution instances are created only when execution starts.
+
+`MaterializeCases()` is an advanced inspection and integration API for callers that need the concrete algorithm configurations, keys and random fork paths without creating a run:
+
+```csharp
+var cases = experiment.MaterializeCases();
+```
+
+Normal experiment execution does not require this method.
 
 For simple execution without analysis configuration, convenience extensions create the run internally:
 
@@ -54,21 +82,36 @@ For simple execution without analysis configuration, convenience extensions crea
 var results = await experiment.CompleteAsync(problem, random);
 ```
 
+## Run lifecycle
+
+Experiment runs are configurable until execution starts and single use afterwards:
+
+| `ExecutionStarted` | Analyzer attachment | Execution                               |
+| ------------------ | ------------------- | --------------------------------------- |
+| `false`            | Allowed             | The first execution call starts the run |
+| `true`             | Rejected            | Another execution call is rejected      |
+
+`Stream(...)`, `StartTrials(...)`, `Complete(...)` and `CompleteAsync(...)` start execution when called, not when a returned stream or task is first awaited. Starting combined execution prepares every trial through its ordinary algorithm run API and prevents later direct execution of those trial runs.
+
+Starting one trial run directly prevents later combined execution of the experiment run. Other unstarted trials remain available for individual execution. Runs remain single use after success, failure or cancellation.
+
+The lifecycle guards are usage checks rather than synchronization. Configuring or starting the same run concurrently is unsupported.
+
 ## Execution choices
 
 `ExperimentRun` provides two core execution methods:
 
-| API | Use |
-| --- | --- |
-| `Stream()` | Observe one combined stream containing the trial and state for every entry |
+| API             | Use                                                                               |
+| --------------- | --------------------------------------------------------------------------------- |
+| `Stream()`      | Observe one combined stream containing the trial and state for every entry        |
 | `StartTrials()` | Receive one hot completion task per trial and choose how to await or inspect them |
 
 Completion and manual trial execution are projections over those core methods:
 
-| API | Use |
-| --- | --- |
+| API                                | Use                                                                                                |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `Complete()` and `CompleteAsync()` | Convenience extensions over `StartTrials()` that return all final states when every trial succeeds |
-| `Trials` | Execute or stream selected algorithm runs manually |
+| `Trials`                           | Execute or stream selected algorithm runs manually                                                 |
 
 All combined forms accept the general `ExecutionConcurrency` from `HEAL.HeuristicLib.Execution`:
 
@@ -194,9 +237,11 @@ Every trial owns an independent algorithm run, execution registry, random number
 
 A supplied initial search state is also forwarded to every trial. If that state is mutable and trials must not share it, execute the trial runs manually with separate initial states. Per trial problem and initial state factories are deferred.
 
+Random assignments are based on each trial's structural `RandomForkPath`, not object hash codes or scheduling order. The path is exposed on the trial for reproducibility. The same experiment root generator therefore gives each trial the same child sequence under sequential, unbounded concurrent and bounded concurrent execution.
+
 ## Analysis
 
-Attach trial analyzers before execution:
+An experiment analysis uses a `TrialAnalyzer`. It contains a selector from the concrete trial algorithm configuration to exactly one operator and a factory that creates one analyzer for the selected operator:
 
 ```csharp
 var run = experiment.CreateRun(problem, random)
@@ -215,9 +260,25 @@ var results = run.GetResults(bestQuality);
 
 Every trial receives its own analyzer configuration and run scoped analyzer state. See [Observability and analysis](observability-and-analysis.md) for the analyzer model.
 
+`ExperimentRun` accepts analyzers only through this trial specific binding because each materialized algorithm may expose a different operator configuration. Attach an analyzer directly to `trial.Run` only when configuring that one trial for individual execution.
+
+`WithAnalyzer(...)` evaluates the selector and factory for every already materialized trial before attaching anything from that trial analyzer. If selection or creation fails, that attachment adds no analyzers and the run remains configurable. Attaching the same `TrialAnalyzer` object twice throws.
+
+Selectors and factories are runtime setup helpers. The run retains the concrete analyzer configurations attached to its child algorithm runs. It does not treat the delegates, active runs or execution infrastructure as persistable configuration.
+
+Use another `WithAnalyzer(...)` call when attaching another analyzer, including another analyzer for the same selected operator. Attachments are applied in call order and observation registrations for the same operator are merged without discarding earlier analyzers.
+
+The `TrialAnalyzer` returned through `out` is also the typed lookup object:
+
+```csharp
+var results = run.GetResults(bestQuality);
+```
+
+Each `TrialAnalysisResult` contains the trial, its concrete analyzer configuration and its typed result. The ordered aggregate is available after every trial run has started. A separately attached analyzer on one trial remains accessible through `trial.Run.GetResult(...)`.
+
 ## Failure and cancellation
 
-Trial failures do not cancel independent trials. Successful trials remain successful and their analyzer results remain available through their algorithm runs.
+Failures during trial preparation or execution do not cancel independent trials. Successful trials remain successful and their analyzer results remain available through their algorithm runs.
 
 Explicit cancellation is different. The shared cancellation token stops active trials and prevents pending trials from starting. Combined execution then throws cancellation rather than reporting it as an experiment trial failure.
 

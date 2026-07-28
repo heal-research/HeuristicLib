@@ -91,7 +91,7 @@ public class CycleAlgorithmTests
     }
 
     [Fact]
-    public void CycleAlgorithm_RunStreaming_RepeatsStagesAndPassesStateAcrossCycles()
+    public void CycleAlgorithm_Stream_RepeatsStagesAndPassesStateAcrossCycles()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var cycle = new CycleAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(

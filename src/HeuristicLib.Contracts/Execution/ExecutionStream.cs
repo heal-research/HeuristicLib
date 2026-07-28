@@ -7,7 +7,7 @@ public sealed class ExecutionStream<T> : IAsyncEnumerable<T>, IEnumerable<T>
     private readonly IAsyncEnumerable<T> source;
     private readonly CancellationToken cancellationToken;
 
-    public ExecutionStream(IAsyncEnumerable<T> source, CancellationToken cancellationToken = default)
+    internal ExecutionStream(IAsyncEnumerable<T> source, CancellationToken cancellationToken = default)
     {
         this.source = source;
         this.cancellationToken = cancellationToken;

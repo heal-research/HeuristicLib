@@ -109,19 +109,18 @@ public interface IAnalyzerRunState<out TResult> : IAnalyzerRunState
 }
 ```
 
-There is also a small optional convenience base class in `HEAL.HeuristicLib`:
+The usual authoring base combines analyzer configuration and run state setup:
 
 ```csharp
-public abstract class AnalyzerRunState<TAnalyzer>(TAnalyzer analyzer) : IAnalyzerRunState
-  where TAnalyzer : IAnalyzer
+public abstract record Analyzer<TResult> : IAnalyzer<TResult>
+    where TResult : class
 {
-  protected TAnalyzer Analyzer { get; } = analyzer;
-
-  public abstract void RegisterObservations(ObservationPlan observations);
+    public abstract TResult CreateInitialResult();
+    public abstract void RegisterObservations(ObservationPlan observations, TResult result);
 }
 ```
 
-This helper is only a convenience. It is **not** part of the abstraction assembly, and it does not own run state beyond the analyzer reference.
+Derive from `Analyzer<TResult>` for the common case where one result object holds all mutable analysis data. The base creates that result once when execution starts and registers observations against it. Implement `IAnalyzer<TResult>` directly only when custom run state behavior is required.
 
 ## Ownership and lifetimes
 
@@ -150,7 +149,7 @@ This result exists only for the current run.
 
 ### Run owns analyzer result lookup
 
-The `Run` object creates one analyzer run state per analyzer configuration and stores that mapping.
+The `AlgorithmRun` creates one analyzer run state per analyzer configuration and stores that mapping.
 Users retrieve analyzer results through the run:
 
 ```csharp
@@ -167,19 +166,24 @@ This makes analyzer retrieval:
 
 ## Execution flow
 
-### Run creation
+### Run setup
 
 1. Create analyzer configurations.
-2. Create a run with those analyzers:
+2. Create a run and attach the analyzers:
 
 ```csharp
-var run = algorithm.CreateRun(problem, analyzer1, analyzer2);
+var run = algorithm.CreateRun(problem, random)
+    .WithAnalyzer(analyzer1)
+    .WithAnalyzer(analyzer2);
 ```
 
-3. `Run` creates one analyzer state for each analyzer.
-4. Each analyzer state calls `RegisterObservations(...)`.
-5. `Run` collects those observation requests in an `ObservationPlan`.
-6. When the root registry or a fresh registry is created, `Run` installs the merged observation registrations into that registry. Child registries inherit those replacements from their parent registry.
+3. The first call to `Stream()`, `Complete()` or `CompleteAsync()` starts execution and freezes analyzer setup.
+4. `AlgorithmRun` creates one analyzer state for each analyzer.
+5. Each analyzer state calls `RegisterObservations(...)`.
+6. `AlgorithmRun` collects those observation requests in an `ObservationPlan`.
+7. When the root registry or a child registry is created, `AlgorithmRun` installs the merged observation registrations into that registry. Child registries inherit those replacements from their parent registry.
+
+An algorithm run can be executed only once. Attaching an analyzer after execution has started throws.
 
 ### Observation installation
 
@@ -197,9 +201,9 @@ This keeps analyzer registration declarative while avoiding deep wrapper chains 
 1. The operator or algorithm performs its normal work.
 2. The observable wrapper invokes the analyzer callback.
 3. The analyzer callback updates its analyzer result.
-4. Users can inspect that result through `Run.GetResult(...)` during or after execution.
+4. Users can inspect that result through `AlgorithmRun.GetResult(...)` during or after execution has started.
 
-There is currently **no separate publish step**. The analyzer run state exposes the result object directly through `IAnalyzerRunState<TResult>.Result`, and `Run.GetResult(...)` returns that result.
+There is currently **no separate publish step**. The analyzer run state exposes the result object directly through `IAnalyzerRunState<TResult>.Result`, and `AlgorithmRun.GetResult(...)` returns that result.
 
 ## Why the run is the right scope
 
@@ -220,7 +224,7 @@ For example, with `CycleAlgorithm`:
 - or may persist per inner algorithm
 - but the analyzer result should still describe the whole run
 
-Because analyzer run states are created by `Run` and then registered into every relevant registry, analyzer scope stays stable even when execution registries change.
+Because analyzer run states are created by `AlgorithmRun` and then registered into every relevant registry, analyzer scope stays stable even when execution registries change.
 
 ## Configuration-side hooks vs execution-side logic
 
@@ -248,15 +252,13 @@ This is handled by the analyzer result.
 
 ## Example patterns
 
-### `QualityCurveAnalysis<TCandidate, ...>`
+### Best quality
 
-This analyzer observes evaluator events and stores a best-so-far quality curve.
+`Analyzer.BestQuality(...)` observes evaluator events and stores the best evaluated candidate found during the run.
 
 Its analyzer result stores:
 
 - current best evaluated candidate
-- current evaluation count
-- collected curve points
 
 ### `BestMedianWorstAnalysis<T, ...>`
 
@@ -283,11 +285,13 @@ Consumers retrieve analyzer results from the run.
 Preferred pattern:
 
 ```csharp
-var analyzer = new QualityCurveAnalysis<MyCandidate, MySearchSpace, MyProblem>(evaluator);
-var run = algorithm.CreateRun(problem, analyzer);
-var finalState = run.RunToCompletion(random);
+var run = algorithm.CreateRun(problem, random)
+    .WithAnalyzer(
+        Analyzer.BestQuality(algorithm.Evaluator),
+        out var bestQuality);
 
-var qualityCurve = run.GetResult(analyzer);
+var finalState = run.Complete();
+var result = run.GetResult(bestQuality);
 ```
 
 Avoid treating observable wrapper instances or execution registries as the result container.
@@ -300,7 +304,7 @@ The registry is an execution detail; the run is the public analyzer-result scope
 - keep analyzer configurations reusable and configuration-only
 - put mutable analysis data into the analyzer result
 - register observation needs through `RegisterObservations(...)`
-- retrieve analyzer results through `Run.GetResult(...)`
+- retrieve analyzer results through `AlgorithmRun.GetResult(...)`
 - rely on observable wrappers as the callback mechanism
 
 ### Do not
@@ -346,7 +350,7 @@ In practice:
   - analysis that must stay stable across registry recreation in meta-algorithms
 
 If you only need a callback, `ObserveWith(...)` is often enough.
-If you want users to retrieve a coherent result object from `Run`, prefer an analyzer.
+If you want users to retrieve a coherent result object from `AlgorithmRun`, prefer an analyzer.
 
 ## Related pages
 

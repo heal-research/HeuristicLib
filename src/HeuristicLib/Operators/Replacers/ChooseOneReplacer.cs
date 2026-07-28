@@ -65,6 +65,6 @@ public static class ChooseOneReplacer
 
     public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, ImmutableArray<double>? weights = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => 
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(replacers, weights);
 }

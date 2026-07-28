@@ -6,31 +6,36 @@ Algorithms use one authoring path: a configuration paired with an explicitly aut
 
 ## Authoring an iterative algorithm
 
-Derive the reusable configuration from `IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>`. Put settings and child operator configurations on that type.
+Derive the reusable configuration from `IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>`. `TSelf` is the concrete algorithm configuration type. It preserves that type for fluent experiment APIs without requiring callers to supply generic arguments. Put settings and child operator configurations on the configuration type.
 
 Create a nested execution instance derived from `IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>`. Resolve child operators eagerly in `CreateIterativeAlgorithmInstance(...)` then pass them into the instance. Mutable counters, caches and other run scoped data belong on the instance.
 
 ```csharp
 public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
+    : IterativeAlgorithm<MyAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    public int MaximumStates { get; init; } = 1;
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
         ExecutionInstanceRegistry registry,
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
-        new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator));
+        new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator), MaximumStates);
 
     private sealed class Instance(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
         ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
+        int maximumStates)
         : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
     {
         private int producedStates;
+
+        protected override bool HasCompleted(int yieldedStateCount, SingleSolutionState<TCandidate>? previousState, TProblem problem) =>
+            producedStates >= maximumStates;
 
         protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
         {
@@ -69,12 +74,11 @@ Resolution remains local and eager for ordinary algorithms. Do not retain the re
 
 ## Noniterative algorithms
 
-Derive from `Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState>` when the iterative lifecycle is not appropriate. Implement `CreateAlgorithmInstance(...)` and return an `AlgorithmInstance<...>` that owns the complete streaming behavior.
-
+Derive from `Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>` when the iterative lifecycle is not appropriate. Implement `CreateAlgorithmInstance(...)` and return an `AlgorithmInstance<...>` that owns the complete streaming behavior.
 
 ## Related pages
 
-* [Search state](algorithm-state.md)
-* [Execution model](execution-model.md)
-* [Configuration and execution instances](execution-instances.md)
-* [Operators](operators.md)
+- [Search state](algorithm-state.md)
+- [Execution model](execution-model.md)
+- [Configuration and execution instances](execution-instances.md)
+- [Operators](operators.md)

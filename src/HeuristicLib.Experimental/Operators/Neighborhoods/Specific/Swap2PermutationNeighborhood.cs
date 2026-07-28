@@ -12,8 +12,8 @@ public record Swap2PermutationNeighborhood : PermutationNeighborhood<Swap2Permut
     public override IEnumerable<Move> Moves(Permutation genotype, IRandomNumberGenerator random, PermutationSearchSpace searchSpace, IProblem<Permutation, PermutationSearchSpace> problem)
     {
         for (var i = 0; i < genotype.Count; i++)
-        for (var j = 0; j < i; j++)
-            yield return new Move(i, j);
+            for (var j = 0; j < i; j++)
+                yield return new Move(i, j);
     }
 
     public override Permutation Apply(Permutation genotype, Move move, IRandomNumberGenerator random, PermutationSearchSpace searchSpace, IProblem<Permutation, PermutationSearchSpace> problem)

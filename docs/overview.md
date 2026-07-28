@@ -33,7 +33,7 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 var problem = TravelingSalesmanProblem.CreateDefault();
-var rng = new SystemRandomNumberGenerator(seed: 123);
+var random = RandomNumberGenerator.Create(seed: 123);
 
 var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
    PopulationSize = 200,
@@ -49,7 +49,7 @@ var ga = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSale
 
 var generation = 0;
 
-await foreach (var state in ga.RunStreamingAsync(problem, rng))
+await foreach (var state in ga.Stream(problem, random))
 {
    var best = state.Population.EvaluatedCandidates
       .MinBy(s => s.ObjectiveVector, problem.ObjectiveDirections.TotalOrderComparer)!;
@@ -59,7 +59,7 @@ await foreach (var state in ga.RunStreamingAsync(problem, rng))
 ```
 
 > [!NOTE]
-> The default execution loop is streaming-first. If you want progress reporting, `RunStreamingAsync(...)` is the most natural hook. For this genetic algorithm, each streamed population state is one generation.
+> The default execution loop is streaming first. If you want progress reporting, `Stream(...)` is the natural hook. For this genetic algorithm, each streamed population state is one generation.
 
 ## Where to go next
 

@@ -15,7 +15,8 @@ public record TuringOperations(TuringOperations.Move[,] Transitions) : Operation
     public IEnumerable<RoarNet.Move> moves(Neighbourhood neighbourhood, RoarNet.Solution solution)
     {
         var m = random_move((TuringOperations)neighbourhood, solution);
-        if (m != null) yield return m;
+        if (m != null)
+            yield return m;
     }
 
     public double? objective_value(RoarNet.Solution solution) => -((Solution)solution).Steps;

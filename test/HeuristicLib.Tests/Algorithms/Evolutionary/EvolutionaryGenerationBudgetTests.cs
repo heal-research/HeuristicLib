@@ -17,7 +17,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 public class EvolutionaryGenerationBudgetTests
 {
     [Fact]
-    public void EvolutionStrategy_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void EvolutionStrategy_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateEvolutionStrategy(problem) with
@@ -35,7 +35,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void NSGA2_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void NSGA2_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateMultiObjectiveProblem();
         var algorithm = CreateNSGA2(problem) with
@@ -56,7 +56,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void AlpsGeneticAlgorithm_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void AlpsGeneticAlgorithm_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateAlpsGeneticAlgorithm(problem) with
@@ -75,7 +75,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void OpenEndedRelevantAllelesPreservingGeneticAlgorithm_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void OpenEndedRelevantAllelesPreservingGeneticAlgorithm_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(problem) with

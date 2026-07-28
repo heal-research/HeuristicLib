@@ -10,13 +10,13 @@ At the user level, the important idea is simple:
 - a run executes that configuration on a problem
 - execution produces a stream of search states
 
-The core streaming shape is:
+The public streaming shape is:
 
 ```csharp
-IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
+ExecutionStream<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 ```
 
-Convenience methods such as `Complete(...)` and `CompleteAsync(...)` are ways of consuming that stream.
+`Stream(...)`, `Complete(...)` and `CompleteAsync(...)` each create and execute a fresh `AlgorithmRun`. Create the run explicitly when attaching analyzers or when the run object itself is needed.
 
 Run-level `CancellationToken` parameters are for immediate execution interruption. Algorithms and operators may check that token before or during a step, so cancellation can stop the current iteration before it produces another state.
 
@@ -40,7 +40,7 @@ Maximum concurrency describes active operations, not worker objects or dedicated
 
 ## The main authoring model
 
-Ordinary iterative algorithm configurations derive from `IterativeAlgorithm<...>`. Their execution instances derive from `IterativeAlgorithmInstance<...>`.
+Ordinary iterative algorithm configurations derive from `IterativeAlgorithm<TSelf, ...>`. `TSelf` is the concrete configuration type and supports type inference in fluent composition. Their execution instances derive from `IterativeAlgorithmInstance<...>`.
 
 The configuration creates the instance and eagerly resolves its children:
 
@@ -59,10 +59,10 @@ protected override TSearchState ExecuteStep(TSearchState? previousState, TProble
 
 The intended pattern is:
 
-* keep settings and child operator configurations on the reusable algorithm configuration
-* resolve child execution instances once in `CreateIterativeAlgorithmInstance(...)`
-* store resolved children and mutable execution data on the algorithm execution instance
-* keep configuration objects unchanged during execution
+- keep settings and child operator configurations on the reusable algorithm configuration
+- resolve child execution instances once in `CreateIterativeAlgorithmInstance(...)`
+- store resolved children and mutable execution data on the algorithm execution instance
+- keep configuration objects unchanged during execution
 
 Algorithms that can exhaust their own structure while trying to produce the next state can override `TryExecuteStep(...)` instead. Returning `false` means the algorithm has structurally completed and the stream ends without yielding another state.
 
@@ -124,10 +124,10 @@ Budget names should say what they count.
 - `MaximumGenerations` counts produced generation states owned by a generation-producing evolutionary algorithm.
 - `MaximumCycles` counts attempted cycles owned by a cycle algorithm, including cycles that yield no state.
 - `WithMaxIterations(...)` is an external early-stopping wrapper. It counts yielded stream states from the wrapped algorithm or composition, regardless of whether those states are generations, local-search moves, pipeline outputs, or cycle outputs.
-* `WithMaxEvaluatorCalls(evaluator, ...)` is an external early stopping wrapper over observed `Evaluate(...)` calls. It installs a counted evaluator replacement for the run and stops future stream consumption after the configured call count has been observed. It does not make the wrapped algorithm internally complete.
-* `WithMaxEvaluatedCandidates(evaluator, ...)` is an external early stopping wrapper over candidates processed inside observed evaluator batches. If one batch crosses the configured candidate count, the produced state for that batch is still yielded and future stream consumption stops afterward.
+- `WithMaxEvaluatorCalls(evaluator, ...)` is an external early stopping wrapper over observed `Evaluate(...)` calls. It installs a counted evaluator replacement for the run and stops future stream consumption after the configured call count has been observed. It does not make the wrapped algorithm internally complete.
+- `WithMaxEvaluatedCandidates(evaluator, ...)` is an external early stopping wrapper over candidates processed inside observed evaluator batches. If one batch crosses the configured candidate count, the produced state for that batch is still yielded and future stream consumption stops afterward.
 - `WithMaxAlgorithmDuration(...)` is an external early-stopping wrapper over active state-production duration. It measures time spent pulling produced states from the wrapped algorithm and excludes caller idle time between pulls.
-* `WithMaxEvaluatorDuration(evaluator, ...)` is an external early stopping wrapper over measured evaluator work duration. It installs a measured evaluator replacement for the run and stops future stream consumption after the configured cumulative evaluator duration has been observed.
+- `WithMaxEvaluatorDuration(evaluator, ...)` is an external early stopping wrapper over measured evaluator work duration. It installs a measured evaluator replacement for the run and stops future stream consumption after the configured cumulative evaluator duration has been observed.
 - Typed operator-budget helpers such as `WithMaxMutatorCalls(...)`, `WithMaxMutatedCandidates(...)`, `WithMaxSelectedCandidates(...)`, `WithMaxReplacementCandidates(...)`, and `WithMaxSelectorDuration(...)` observe an explicitly supplied operator and install the matching counted or measured replacement for that run.
 - `WithMaxOperatorDuration(...)` is the general external operator-duration wrapper. It observes an explicitly supplied operator and a measured replacement factory, so users can apply duration budgets to custom wrappers or unusual operator boundaries.
 - `WithMaxCount(...)` is the general external operator-budget wrapper. It observes an explicitly supplied operator and a counted replacement factory, so users can count custom units or operator boundaries that do not fit a typed helper.
@@ -180,5 +180,6 @@ Pipeline execution checks cancellation before starting each stage. Cycle executi
 ## Related pages
 
 - [Algorithm](algorithm.md)
+- [Operator authoring](operator-authoring.md)
 - [Configuration vs execution instances](execution-instances.md)
 - [Observability & analysis](observability-and-analysis.md)

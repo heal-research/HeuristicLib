@@ -70,6 +70,8 @@ The `OperatorAuthoringAnalyzer` applies across operator roles. `HLib0002` report
 
 These diagnostics are guardrails for common authoring mistakes, not a proof that configuration and state obey every invariant. In particular, the analyzer cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate. Operator authors remain responsible for keeping configurations reusable and keeping execution graph dependencies out of framework managed state.
 
+See [Operator authoring](operator-authoring.md) for focused examples of each path and their ownership rules.
+
 ## Terminator ownership
 
 `ITerminator` is a state-based stopping role: it receives a produced public search state and returns whether execution should stop after that state has been observed.
@@ -94,5 +96,6 @@ See [Operator composition](operator-composition.md) for the available forms, the
 ## Next
 
 - [Algorithm](algorithm.md)
+- [Operator authoring](operator-authoring.md)
 - [Operator composition](operator-composition.md)
 - [Execution model](execution-model.md)

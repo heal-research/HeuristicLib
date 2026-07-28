@@ -48,11 +48,12 @@ The default streaming loop accepts an optional `initialState` parameter. Concept
 This supports a simple checkpointing pattern:
 
 ```csharp
-var last = algorithm.RunToCompletion(problem, rng);
+var last = algorithm.Complete(problem, random);
 
 // Continue from the checkpoint.
-foreach (var state in algorithm.RunStreaming(problem, rng, initialState: last)) {
-   // ...
+await foreach (var state in algorithm.Stream(problem, random, initialState: last))
+{
+    // ...
 }
 ```
 

@@ -40,7 +40,7 @@ public class PipelineAlgorithmTests
     }
 
     [Fact]
-    public void PipelineAlgorithm_RunStreaming_PassesEachStageResultToNextStage()
+    public void PipelineAlgorithm_Stream_PassesEachStageResultToNextStage()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var pipeline =

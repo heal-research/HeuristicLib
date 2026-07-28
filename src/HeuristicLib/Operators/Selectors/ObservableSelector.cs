@@ -61,7 +61,7 @@ public sealed class ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>(
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public void AfterSelection(IReadOnlyList<EvaluatedCandidate<TCandidate>> selected, IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TSearchSpace searchSpace, TProblem problem) => 
+    public void AfterSelection(IReadOnlyList<EvaluatedCandidate<TCandidate>> selected, IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, TSearchSpace searchSpace, TProblem problem) =>
         afterSelection(selected, population, objective, count, searchSpace, problem);
 }
 
@@ -71,7 +71,7 @@ public static class ObservableSelectorExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ObservableSelector<TCandidate, TSearchSpace, TProblem> ObserveWith(ISelectorObserver<TCandidate, TSearchSpace, TProblem> observer) => 
+        public ObservableSelector<TCandidate, TSearchSpace, TProblem> ObserveWith(ISelectorObserver<TCandidate, TSearchSpace, TProblem> observer) =>
             new ObservableSelector<TCandidate, TSearchSpace, TProblem>(selector, observer);
         public ObservableSelector<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableSelector<TCandidate, TSearchSpace, TProblem>(selector, observers);

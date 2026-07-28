@@ -4,9 +4,9 @@ This page is the shortest path from having a problem to running an algorithm and
 
 The most important ideas are:
 
-1. configure problems and operators as plain objects
-2. run algorithms streaming-first
-3. when you implement your own algorithm, start from `IterativeAlgorithm<...>`
+1. Configure problems and operators as plain objects.
+2. Run algorithms streaming first.
+3. When you implement your own algorithm, start from `IterativeAlgorithm<...>`.
 
 ## Run a genetic algorithm
 
@@ -24,22 +24,24 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 var problem = TravelingSalesmanProblem.CreateDefault();
-var rng = new SystemRandomNumberGenerator(seed: 123);
+var random = RandomNumberGenerator.Create(seed: 123);
 
-var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem> {
-  PopulationSize = 200,
-  MaximumGenerations = 200,
-  Creator = new RandomPermutationCreator(),
-  Crossover = new OrderCrossover(),
-  Mutator = new SwapSingleSolutionMutator(),
-  MutationRate = 0.20,
-  Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
-  Elites = 2,
-  Evaluator = new DirectEvaluator<Permutation>()
+var algorithm = new GeneticAlgorithm<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
+{
+    PopulationSize = 200,
+    MaximumGenerations = 200,
+    Creator = new RandomPermutationCreator(),
+    Crossover = new OrderCrossover(),
+    Mutator = new SwapSingleSolutionMutator(),
+    MutationRate = 0.20,
+    Selector = new TournamentSelector<Permutation>(tournamentSize: 3),
+    Elites = 2,
+    Evaluator = new DirectEvaluator<Permutation>()
 };
 
-await foreach (var state in algorithm.RunStreamingAsync(problem, rng)) {
-  Console.WriteLine(state.Population.EvaluatedCandidates.Count);
+await foreach (var state in algorithm.Stream(problem, random))
+{
+    Console.WriteLine(state.Population.EvaluatedCandidates.Count);
 }
 ```
 
@@ -64,36 +66,42 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 public sealed record MyAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
+    : IterativeAlgorithm<MyAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-  public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
+    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    public int MaximumStates { get; init; } = 1;
 
     protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateIterativeAlgorithmInstance(
         ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? resolvedInterceptor) =>
-        new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator));
+        new Instance(resolvedInterceptor, registry.Resolve(Creator), registry.Resolve(Evaluator), MaximumStates);
 
     private sealed class Instance(
         IInterceptorInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
         ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
+        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
+        int maximumStates)
         : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
     {
-        private int producedStates  ;  
-    
+        private int producedStates;
+
+        protected override bool HasCompleted(int yieldedStateCount, SingleSolutionState<TCandidate>? previousState, TProblem problem) =>
+            producedStates >= maximumStates;
+
         protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
         {
             producedStates++;
             var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
             var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
-    
-            return new SingleSolutionState<TCandidate> {
-        Population = Population.From([candidate], [objectiveVector])
-      };
+
+            return new SingleSolutionState<TCandidate>
+            {
+                Population = Population.From([candidate], [objectiveVector])
+            };
+        }
     }
-  }
 }
 ```
 
@@ -111,3 +119,4 @@ You do not need full registry control or meta algorithm infrastructure to implem
 - [Algorithm](algorithm.md)
 - [Execution model](execution-model.md)
 - [Operators](operators.md)
+- [Operator authoring](operator-authoring.md)

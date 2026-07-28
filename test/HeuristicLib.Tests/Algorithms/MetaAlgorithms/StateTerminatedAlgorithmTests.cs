@@ -15,7 +15,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 public class StateTerminatedAlgorithmTests
 {
     [Fact]
-    public void RunStreaming_DoesNotCheckSuppliedInitialState()
+    public void Stream_DoesNotCheckSuppliedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => false);
@@ -29,7 +29,7 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void RunStreaming_YieldsFirstProducedStateBeforeCheckingTerminator()
+    public void Stream_YieldsFirstProducedStateBeforeCheckingTerminator()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => true);
@@ -43,7 +43,7 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void RunStreaming_TerminatorThatStopsImmediatelyStillIncludesTriggeringState()
+    public void Stream_TerminatorThatStopsImmediatelyStillIncludesTriggeringState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => true);
@@ -73,7 +73,7 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void RunStreaming_WithCanceledRunToken_InterruptsBeforeProducingState()
+    public void Stream_WithCanceledRunToken_InterruptsBeforeProducingState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();
@@ -83,7 +83,7 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void RunStreaming_WithCanceledTerminatorToken_YieldsProducedStateThenStops()
+    public void Stream_WithCanceledTerminatorToken_YieldsProducedStateThenStops()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();
@@ -96,7 +96,7 @@ public class StateTerminatedAlgorithmTests
     }
 
     [Fact]
-    public void RunStreaming_WithTerminatorTokenCanceledImmediatelyBeforeRun_YieldsProducedStateThenStops()
+    public void Stream_WithTerminatorTokenCanceledImmediatelyBeforeRun_YieldsProducedStateThenStops()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();

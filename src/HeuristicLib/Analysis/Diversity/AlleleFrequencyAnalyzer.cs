@@ -61,7 +61,8 @@ public record PopulationSimilarityAnalyzer<TCandidate, TSearchSpace, TProblem, T
             avgSimilarities[i] /= count - 1;
         }
 
-        if (!StoreHistory) bestSolutions.Similarities.Clear();
+        if (!StoreHistory)
+            bestSolutions.Similarities.Clear();
         bestSolutions.Similarities.Add(similarities);
         bestSolutions.AvgSimilarities.Add((minSimilarities.Average(), avgSimilarities.Average(),
             maxSimilarities.Average()));

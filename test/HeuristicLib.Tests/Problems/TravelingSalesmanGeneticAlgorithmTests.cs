@@ -15,7 +15,7 @@ namespace HEAL.HeuristicLib.Tests.Problems;
 public class TravelingSalesmanGeneticAlgorithmTests
 {
     [Fact]
-    public void GaWithDefaultTsp_RunToCompletion_ReturnsPopulationWithinProblemSearchSpace()
+    public void GaWithDefaultTsp_Complete_ReturnsPopulationWithinProblemSearchSpace()
     {
         var problem = TravelingSalesmanProblem.CreateDefault();
         var ga = GeneticAlgorithm.GetBuilder(

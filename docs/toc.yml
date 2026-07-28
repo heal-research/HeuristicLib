@@ -25,6 +25,8 @@
     - name: Operators
       href: operators.md
       items:
+        - name: Operator authoring
+          href: operator-authoring.md
         - name: Operator composition
           href: operator-composition.md
     - name: Algorithm

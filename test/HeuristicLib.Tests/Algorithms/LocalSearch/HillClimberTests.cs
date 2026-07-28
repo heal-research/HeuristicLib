@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.LocalSearch;
 public class HillClimberTests
 {
     [Fact]
-    public void RunStreaming_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
+    public void Stream_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
@@ -27,7 +27,7 @@ public class HillClimberTests
     }
 
     [Fact]
-    public void RunStreaming_WithInitialLocalOptimum_YieldsNoStates()
+    public void Stream_WithInitialLocalOptimum_YieldsNoStates()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);

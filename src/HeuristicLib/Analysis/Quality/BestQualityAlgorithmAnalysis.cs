@@ -25,7 +25,8 @@ public record BestQualityAlgorithmAnalysis<TCandidate, TSearchSpace, TProblem> :
         void AfterEvaluation(IReadOnlyList<TCandidate> candidates, IReadOnlyList<ObjectiveVector> objectives,
                              TSearchSpace searchSpace, TProblem problem)
         {
-            if (objectives.Count == 0) return;
+            if (objectives.Count == 0)
+                return;
             result.CurrentScore ??= objectives[0];
             var comp = problem.Objective.TotalOrderComparer;
             foreach (var o in objectives)

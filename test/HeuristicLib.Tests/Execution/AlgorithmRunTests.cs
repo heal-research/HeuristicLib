@@ -4,10 +4,10 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
-public class RunTests
+public class AlgorithmRunTests
 {
     [Fact]
-    public void Run_CannotBeExecutedMoreThanOnce()
+    public void AlgorithmRun_CannotBeExecutedMoreThanOnce()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42));

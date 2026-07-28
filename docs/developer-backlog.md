@@ -8,7 +8,10 @@ It is intentionally narrow: it should track only partial and unfinished follow-u
 
 These items have meaningful progress behind them, but should still stay on the backlog until the remaining work is done:
 
-- desired-state experiment API, beside the current-state experiment specs
+- decide whether the current mutable single use `AlgorithmRun` and `ExperimentRun` lifecycle should remain or be replaced by separate immutable setup and running types. Any replacement must preserve the direct fluent API while making repeated execution and analyzer attachment after execution impossible through the available types
+- define the intended serialization boundary for experiments. Grid configurators and trial analyzer selectors and factories are runtime setup delegates, while materialized algorithm, operator and analyzer configurations remain serialization friendly in principle. Decide whether experiment configurations themselves need a persistable representation
+- extend experiment composition only from concrete user needs. Deferred candidates include per trial problem and initial state creation, heterogeneous algorithm comparison, benchmark experiments across problem instances and dedicated individual cancellation handles
+- reconsider typed hierarchical trial paths only if composed tuple keys and `RandomForkPath` metadata prove insufficient. Do not introduce untyped path tags that require casts
 - desired-state analysis API, beside the current-state analysis specs
 - execution-graph invariants within one run
 - separate operation concurrency capability from requested execution policy. A future run-level execution context should let users select sequential or concurrent operation execution once, while operators and other execution boundaries declare the concurrency they safely allow. Define how the effective policy is constrained, how it reaches run-scoped instances through the execution registry without ambient state, how stateless operator bases capture run-specific settings, how problem evaluation participates, how per-trial experiment concurrency remains separate and whether maximum concurrency is per batch or shared across a whole run
@@ -23,6 +26,7 @@ These items have meaningful progress behind them, but should still stay on the b
 - improve the main `README.md` as the repository and NuGet front door: add install commands, a compact representative code example, a package overview, links to usage guides, and a visible example of what HeuristicLib can do, such as the Python interactive demonstrator GIF
 - move to a more standard C# formatting baseline, including a more conventional editor configuration and CI enforcement that fails pull requests on formatting violations
 - actively pay down solution warning debt and define a staged warning policy: fix the existing compiler, analyzer, and test warnings intentionally instead of normalizing them, then ratchet toward warning-clean builds and stricter CI enforcement in steps that avoid drowning active work in noise
+
 Why these are only partial today:
 
 - the experiment and analysis specs cover the current API well, but there is not yet a separate desired-state API story
