@@ -186,11 +186,11 @@ public sealed class RegressionVariableImpactsCalculatorTests
 
     private sealed class WeightedSumRegressionModel : IRegressionModel
     {
-        public IEnumerable<double> Predict(Dataset dataset, IEnumerable<int> rows)
+        public IEnumerable<double> Predict(Dataset data, IEnumerable<int> rows)
         {
             var rowArray = rows.ToArray();
-            var x1 = dataset.GetDoubleValues("x1", rowArray).ToArray();
-            var x2 = dataset.GetDoubleValues("x2", rowArray).ToArray();
+            var x1 = data.GetDoubleValues("x1", rowArray).ToArray();
+            var x2 = data.GetDoubleValues("x2", rowArray).ToArray();
 
             for (var i = 0; i < rowArray.Length; i++)
             {

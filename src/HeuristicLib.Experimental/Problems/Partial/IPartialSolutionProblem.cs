@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Partial;
 
-public interface IPartialSolutionProblem<in TCandidate, out TSearchSpace>
+public interface IPartialSolutionProblem<TCandidate, out TSearchSpace>
     : IProblem<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
@@ -25,7 +25,7 @@ public static class PartialSolutionProblemExtensions
         => problem.EvaluatePartial([candidate], random)[0];
 }
 
-public interface IBoundedProblem<in TCandidate, out TSearchSpace>
+public interface IBoundedProblem<TCandidate, out TSearchSpace>
     : IProblem<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {

@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 /// </remarks>
 public record SinglePointCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-    public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
+    public override IntegerVector Cross(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
       => Cross(parents.Parent1, parents.Parent2, random);
 
     public static IntegerVector Cross(IntegerVector parent1, IntegerVector parent2, IRandomNumberGenerator random, int? crossoverPoint = null)

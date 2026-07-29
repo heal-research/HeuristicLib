@@ -18,26 +18,26 @@ public static class PythonCorrelationAnalysis
 {
     public delegate void GenerationCallback(PopulationState<RealVector> current, RealVectorProblem problem);
 
-    public static double[] GetPseudoCorrelations(IReadOnlyList<RealVector> solutions, MultiObjectiveTestFunctionProblem problem)
+    public static double[] GetPseudoCorrelations(IReadOnlyList<RealVector> candidates, MultiObjectiveTestFunctionProblem problem)
     {
         var gradcal = (IMultiObjectiveGradientTestFunction)problem.TestFunction;
-        var res = new double[solutions.Count];
-        for (var i = 0; i < solutions.Count; i++)
+        var res = new double[candidates.Count];
+        for (var i = 0; i < candidates.Count; i++)
         {
-            var grads = gradcal.EvaluateGradient(solutions[i]);
+            var grads = gradcal.EvaluateGradient(candidates[i]);
             res[i] = 0.5 - Math.Abs(grads[0].Angle(grads[1])) / Math.PI;
         }
 
         return res;
     }
 
-    public static double[] GetCorrelations(IReadOnlyList<RealVector> solutions, RealVectorProblem problem, double[] delta, int count, int seed = 0)
+    public static double[] GetCorrelations(IReadOnlyList<RealVector> candidates, RealVectorProblem problem, double[] delta, int count, int seed = 0)
     {
         var random = RandomNumberGenerator.Create(seed);
         var evaluator = DirectEvaluator.For(problem);
-        var res = new double[solutions.Count];
+        var res = new double[candidates.Count];
         var sigma = RealVector.Create(delta);
-        Parallel.ForEach(solutions, (vector, state, i) =>
+        Parallel.ForEach(candidates, (vector, state, i) =>
         {
             var r = random.Fork((int)i);
             var n = Enumerable.Range(0, count).Select(_ => NextSphere(r, vector, sigma, vector.Count, false)).ToArray();
@@ -64,12 +64,12 @@ public static class PythonCorrelationAnalysis
         return d;
     }
 
-    public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> solutions, RealVectorProblem problem)
+    public static ObjectiveVector[] GetQualities(IReadOnlyList<RealVector> candidates, RealVectorProblem problem)
     {
         var random = RandomNumberGenerator.Create(42);
         var evaluator = DirectEvaluator.For(problem);
 
-        return evaluator.Evaluate(solutions, random, problem.SearchSpace, problem).ToArray();
+        return evaluator.Evaluate(candidates, random, problem.SearchSpace, problem).ToArray();
     }
 
     public static ExperimentResult<RealVector> RunCorrelationNsga2(GenerationCallback? callback, int generations, int populationSize, RealVectorProblem problem, int seed = 0)

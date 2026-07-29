@@ -42,7 +42,7 @@ public partial record ObservableEvaluator<TCandidate, TSearchSpace, TProblem>
     }
 }
 
-public interface IEvaluatorObserver<in TCandidate, in TSearchSpace, in TProblem>
+public interface IEvaluatorObserver<TCandidate, in TSearchSpace, in TProblem>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {

@@ -130,6 +130,16 @@ Design APIs for the pit of success.
 - Do not add marker interfaces without behavior or a concrete static typing requirement.
 - Do not preserve overloads or base classes only for symmetry when their semantics are unclear.
 
+### Generic variance
+
+The framework `TCandidate` type parameter must be invariant throughout the public API, even when the compiler permits covariance or contravariance. The candidate type identifies the exact representation shared by an algorithm, its problem, its search space and its operators. Do not declare `TCandidate` with `in` or `out`.
+
+Variance remains appropriate for search space and problem type parameters when it enables an operator or observer defined for a general contract to work with a more specific search space or problem. Declare variance on `TSearchSpace` and `TProblem` only where the type positions are valid and the substitution supports that specialization model.
+
+Domain specific type parameters may use variance when there is a concrete substitution requirement. Name such parameters after their domain role rather than `TCandidate`.
+
+Sonar rule S3246 is disabled because it recommends variance based only on permitted type positions and cannot express these semantic policies. Treat variance as an intentional API decision rather than an automatic style improvement.
+
 ### Type inference helpers
 
 Callers should not have to spell generic arguments that available values can determine.
@@ -209,5 +219,9 @@ Choose the enforcement mechanism that matches the rule.
 - Use Roslyn analyzers and code fixes for recognizable source level mistakes or conventions where immediate contributor feedback is valuable.
 - Use architecture tests for assembly wide relationships and cross cutting public type rules.
 - Use documentation for judgment based guidance that cannot be reduced to a reliable mechanical check.
+- Prefer fixing a diagnostic over suppressing it.
+- Use a narrowly scoped `#pragma warning disable` and `#pragma warning restore` pair for an intentional local exception when the diagnostic has a standard compiler or analyzer ID.
+- Reserve `.editorconfig` severity changes for repository wide policy. Do not use them for isolated exceptions.
+- Do not commit IDE vendor specific suppression comments or suppression attributes. Configure inspections that exist only in one IDE in personal IDE settings when the code should remain unchanged.
 
 Follow the validation order in [AGENTS.md](../AGENTS.md) and the placement guidance in [the test suite guide](../test/README.md).

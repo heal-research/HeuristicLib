@@ -45,7 +45,7 @@ public class PermutationSearchSpaceTests
     {
         var space = new PermutationSearchSpace(0);
 
-        space.Contains(Permutation.Create(Array.Empty<int>())).ShouldBeTrue();
+        space.Contains(Permutation.Create()).ShouldBeTrue();
     }
 
     [Fact]

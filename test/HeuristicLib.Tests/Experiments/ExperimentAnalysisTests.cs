@@ -19,12 +19,12 @@ public class ExperimentAnalysisTests
         var experiment = algorithm.Repeat(2);
         var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
             .WithAnalyzer(
-                algorithm => algorithm.Evaluator,
-                evaluator => new OrderedEvaluationAnalyzer(evaluator, 1, invocationOrder),
+                alg => alg.Evaluator,
+                eval => new OrderedEvaluationAnalyzer(eval, 1, invocationOrder),
                 out var first)
             .WithAnalyzer(
-                algorithm => algorithm.Evaluator,
-                evaluator => new OrderedEvaluationAnalyzer(evaluator, 2, invocationOrder),
+                alg => alg.Evaluator,
+                eval => new OrderedEvaluationAnalyzer(eval, 2, invocationOrder),
                 out var second);
 
         Should.Throw<InvalidOperationException>(() => run.WithAnalyzer(first));
@@ -39,8 +39,8 @@ public class ExperimentAnalysisTests
         run.GetResults(first).ShouldAllBe(result => result.Result.Count == 1);
         run.GetResults(second).ShouldAllBe(result => result.Result.Count == 1);
         var third = TrialAnalyzer.Create(
-            (CountingInstanceAlgorithm algorithm) => algorithm.Evaluator,
-            evaluator => new OrderedEvaluationAnalyzer(evaluator, 3, invocationOrder));
+            (CountingInstanceAlgorithm alg) => alg.Evaluator,
+            eval => new OrderedEvaluationAnalyzer(eval, 3, invocationOrder));
         Should.Throw<InvalidOperationException>(() => run.WithAnalyzer(third));
     }
 
@@ -75,7 +75,7 @@ public class ExperimentAnalysisTests
         var experiment = algorithm.Repeat(2);
         _ = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(1))
             .WithAnalyzer(
-                algorithm => algorithm.Evaluator,
+                alg => alg.Evaluator,
                 evaluator => new OrderedEvaluationAnalyzer(evaluator, 1, invocations),
                 out var trialAnalyzer);
         var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(2))
@@ -94,7 +94,7 @@ public class ExperimentAnalysisTests
         var run = algorithm.Repeat(2)
             .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
             .WithAnalyzer(
-                algorithm => algorithm.Evaluator,
+                alg => alg.Evaluator,
                 evaluator => new OrderedEvaluationAnalyzer(evaluator, 1, []),
                 out var trialAnalyzer);
 

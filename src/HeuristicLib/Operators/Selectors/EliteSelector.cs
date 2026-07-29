@@ -5,7 +5,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-// ToDo: If we assume that a selector cannot select the whole requested number of solutions, the EliteSelector could simply be a PipelineSelector with a BestSelector and then another selector for the remaining.
 public record EliteSelector<TCandidate, TSearchSpace, TProblem>
     : WrappingSelector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>

@@ -1,7 +1,5 @@
 using System.Collections;
 
-#pragma warning disable S2368 // The work with 2-dimensional rectangular  arrays is explicitly wanted here 
-
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public abstract class Dataset
@@ -188,7 +186,7 @@ public abstract class Dataset
         return list switch
         {
             List<T> values => values,
-            IList<T> => throw new NotImplementedException($"Dataset is supposed to work on List<T> directly. This is a bug. Actual type is {list.GetType()}"),
+            IList<T> => throw new InvalidOperationException($"Dataset is supposed to work on List<T> directly. This is a bug. Actual type is {list.GetType()}"),
             _ => throw new ArgumentException("The variable " + variableName + " is not a " + typeof(T) + " variable.")
         };
     }

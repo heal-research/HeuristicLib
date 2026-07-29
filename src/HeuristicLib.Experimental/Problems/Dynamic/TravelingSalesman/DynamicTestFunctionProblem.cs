@@ -5,8 +5,6 @@ using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-#pragma warning disable S2368
-
 namespace HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
 
 public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorSearchSpace>

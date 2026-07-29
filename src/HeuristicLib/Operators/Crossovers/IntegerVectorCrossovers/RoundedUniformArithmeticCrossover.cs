@@ -28,7 +28,7 @@ public record RoundedUniformArithmeticCrossover : SingleSolutionCrossover<Intege
         }
     } = 1;
 
-    public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
+    public override IntegerVector Cross(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
       => Cross(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Probability);
 
     public static IntegerVector Cross(

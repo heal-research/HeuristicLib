@@ -23,7 +23,7 @@ public sealed record OnePointShaker : SymbolicExpressionTreeManipulator
         var parametricNodes = new List<SymbolicExpressionTreeNode?>();
         tree.Root.ForEachNodePostfix(n =>
         {
-            if (n!.HasLocalParameters)
+            if (n.HasLocalParameters)
             {
                 parametricNodes.Add(n);
             }

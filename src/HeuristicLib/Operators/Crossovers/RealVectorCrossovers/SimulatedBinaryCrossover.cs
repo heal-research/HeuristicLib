@@ -9,7 +9,7 @@ public record SimulatedBinaryCrossover : SingleSolutionCrossover<RealVector, Rea
 {
     public double Contiguity { get; } = 2;
 
-    public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, Contiguity);
+    public override RealVector Cross(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, Contiguity);
 
     /// <summary>
     ///   Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if
@@ -222,5 +222,5 @@ public record SelfAdaptiveSimulatedBinaryCrossover : SingleSolutionCrossover<Rea
         return (c1, c2);
     }
 
-    public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Do(parents.Item1, parents.Item2, searchSpace, random).child1;
+    public override RealVector Cross(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Do(parents.Parent1, parents.Parent2, searchSpace, random).child1;
 }

@@ -49,14 +49,14 @@ public class ExtendedSymbolicRegressionProblem(ObjectiveDirections objective, Sy
 
     public static Population<SymbolicExpressionTree> RunDefault(
       string file, int trainingRowCount,
-      Func<SymbolicExpressionTree, ObjectiveVector, double[]> individualPythonCallback,
+      Func<SymbolicExpressionTree, ObjectiveVector, double[]>? individualPythonCallback,
       Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> populationwidePythonCallback, int seed = 42)
     {
 
         var data = RegressionCsvInstanceProvider.ImportData(file, trainingRowCount); //rows are not shuffled
         var grammar = new SimpleSymbolicExpressionGrammar(); //Trees have 3 node min
         var root = grammar.AddLinearScaling(); //adds Keijzer scaling to top of tree (+4 Nodes)
-        var symbols = new Symbol[] { //add a bunch of symbols and allow all combinations of them 
+        var symbols = new Symbol[] { //add a bunch of symbols and allow all combinations of them
       new Addition(),
       new Subtraction(),
       new Multiplication(),
@@ -73,12 +73,12 @@ public class ExtendedSymbolicRegressionProblem(ObjectiveDirections objective, Sy
           symbolicExpressionTreeSearchSpace,
           new PearsonR2Evaluator()
 
-        // !! if other evaluators are added, the length of the objective vectors returned by the python 
+        // !! if other evaluators are added, the length of the objective vectors returned by the python
         // !! callback needs to be increased accordingly, and the problem's objective directions need to
         // !! be updated to reflect the new objectives (e.g. more maximization objectives if you add more
         // !! evaluators that you want to maximize)
 
-        // new RootMeanSquaredErrorEvaluator(), 
+        // new RootMeanSquaredErrorEvaluator(),
         // new TreeLengthEvaluator() //... other evaluators
         )
         {
@@ -86,9 +86,9 @@ public class ExtendedSymbolicRegressionProblem(ObjectiveDirections objective, Sy
         };
 
         //tell the objective that your func is going to append 3 maximization objectives to whatever your inner problem does
-        var directions = new ObjectiveDirection[]{
+        var directions = new[]{
 
-      // !! number of evalutors in SymbolicRegressionProblem, these objectives, and the length 
+      // !! number of evalutors in SymbolicRegressionProblem, these objectives, and the length
       // !! of the objective vectors returned by the python callbacks all need to be in sync
 
       ObjectiveDirection.Maximize, // newly added python objectives, as weigthed sum
@@ -105,7 +105,7 @@ public class ExtendedSymbolicRegressionProblem(ObjectiveDirections objective, Sy
             // !! number of evalutors in SymbolicRegressionProblem, objectives, and this length
             // !! of the objective vectors returned by the python callbacks all need to be in sync
 
-            individualPythonCallback = (SymbolicExpressionTree tree, ObjectiveVector objectiveVector) => new double[] { objectiveVector[0], 0, 0, 0, 0 }; //dummy values to keep the objective vectors at expected length
+            individualPythonCallback = (_, objectiveVector) => [objectiveVector[0], 0, 0, 0, 0]; //dummy values to keep the objective vectors at expected length
         }
 
         var problem = new ExtendedSymbolicRegressionProblem(objective, symbolicExpressionTreeSearchSpace, individualPythonCallback) { InnerProblem = p };

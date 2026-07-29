@@ -134,6 +134,6 @@ internal static class ExperimentTestSupport
 
     public static PopulationState<int> CreateState(int candidate) => new()
     {
-        Population = Population.From([EvaluatedCandidate.From(candidate, (ObjectiveVector)candidate)])
+        Population = Population.From([EvaluatedCandidate.From(candidate, candidate)])
     };
 }

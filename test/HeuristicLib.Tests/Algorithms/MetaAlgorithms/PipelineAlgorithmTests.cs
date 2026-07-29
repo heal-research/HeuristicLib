@@ -55,7 +55,7 @@ public class PipelineAlgorithmTests
     public void PipelineAlgorithm_Stream_PassesEachStageResultToNextStage()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var pipeline = new AdditiveStepAlgorithm(1).Then([new AdditiveStepAlgorithm(10), new AdditiveStepAlgorithm(100)]);
+        var pipeline = new AdditiveStepAlgorithm(1).Then(new AdditiveStepAlgorithm(10), new AdditiveStepAlgorithm(100));
 
         var states = pipeline
                      .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
@@ -70,10 +70,7 @@ public class PipelineAlgorithmTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new ForwardingEvaluator();
-        var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then([
-            new AdditiveStepAlgorithm(10) { Evaluator = evaluator },
-            new AdditiveStepAlgorithm(100) { Evaluator = evaluator }
-        ]);
+        var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
         var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analysis);
 

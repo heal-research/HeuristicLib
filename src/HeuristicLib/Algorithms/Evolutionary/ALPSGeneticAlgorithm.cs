@@ -87,7 +87,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             var offspringCount = populationSize;
             var oldPopulation = previousState.Population[0].ToArray();
             var selectedParents = selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, searchSpace, problem);
-            var parentPairs = new IParents<TCandidate>[offspringCount];
+            var parentPairs = new Parents<TCandidate>[offspringCount];
             var offspringAges = new int[offspringCount];
             var nextAge = previousState.Ages[0].DefaultIfEmpty(0).Max() + 1;
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)

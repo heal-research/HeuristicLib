@@ -4,10 +4,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
-public abstract class DataAnalysisProblem<TProblemData, TISolution, TSearchSpace>(TProblemData problemData, ObjectiveDirections objective, TSearchSpace encoding)
-  : SingleSolutionProblem<TISolution, TSearchSpace>(objective, encoding)
+public abstract class DataAnalysisProblem<TProblemData, TCandidate, TSearchSpace>(TProblemData problemData, ObjectiveDirections objective, TSearchSpace encoding)
+  : SingleSolutionProblem<TCandidate, TSearchSpace>(objective, encoding)
   where TProblemData : DataAnalysisProblemData
-  where TSearchSpace : class, ISearchSpace<TISolution>
+  where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public virtual TProblemData ProblemData
     {
@@ -15,6 +15,6 @@ public abstract class DataAnalysisProblem<TProblemData, TISolution, TSearchSpace
     } = problemData;
 
     // Maybe earlier in the hierarchy for general deterministic problems?
-    public sealed override ObjectiveVector Evaluate(TISolution solution, IRandomNumberGenerator random) => Evaluate(solution);
-    public abstract ObjectiveVector Evaluate(TISolution solution);
+    public sealed override ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random) => Evaluate(candidate);
+    public abstract ObjectiveVector Evaluate(TCandidate candidate);
 }

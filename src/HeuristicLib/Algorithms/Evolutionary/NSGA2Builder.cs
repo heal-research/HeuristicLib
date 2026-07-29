@@ -9,15 +9,13 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 #pragma warning disable S101
-// ReSharper disable once IdentifierTypo
-// ReSharper disable once InconsistentNaming
 public record NSGA2Builder<TCandidate, TSearchSpace, TProblem>
+#pragma warning restore S101
     : AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>, NSGA2<TCandidate, TSearchSpace, TProblem>>,
       IBuilderWithCreator<TCandidate, TSearchSpace, TProblem>,
       IBuilderWithSelector<TCandidate, TSearchSpace, TProblem>,
       IBuilderWithCrossover<TCandidate, TSearchSpace, TProblem>,
       IBuilderWithMutator<TCandidate, TSearchSpace, TProblem>
-#pragma warning restore S101
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {

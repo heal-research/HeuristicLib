@@ -4,20 +4,20 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Classification;
 
-public class ClassificationProblem<TProblemData, TSolution, TSearchSpace>(TProblemData problemData, ICollection<IClassificationEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace)
-  : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>(problemData, new ObjectiveDirections(objective.Select(x => x.Direction).ToArray(), a), searchSpace)
+public class ClassificationProblem<TProblemData, TCandidate, TSearchSpace>(TProblemData problemData, ICollection<IClassificationEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace searchSpace)
+  : DataAnalysisProblem<TProblemData, TCandidate, TSearchSpace>(problemData, new ObjectiveDirections(objective.Select(x => x.Direction).ToArray(), a), searchSpace)
   where TProblemData : ClassificationProblemData
-  where TSearchSpace : class, ISearchSpace<TSolution>
-  where TSolution : IRegressionModel
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TCandidate : IRegressionModel
 {
     public List<IClassificationEvaluator> Evaluators { get; set; } = objective.ToList();
 
     private double[]? trainingTargetCache;
 
-    public override ObjectiveVector Evaluate(TSolution solution)
+    public override ObjectiveVector Evaluate(TCandidate candidate)
     {
         trainingTargetCache ??= ProblemData.TargetVariableValues(DataAnalysisProblemData.PartitionType.Training).ToArray();
-        var predictions = solution.Predict(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
+        var predictions = candidate.Predict(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
         if (Evaluators.Count == 1)
         {
             return new ObjectiveVector(Evaluators[0].Evaluate(trainingTargetCache, predictions));

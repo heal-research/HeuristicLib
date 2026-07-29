@@ -100,6 +100,4 @@ public class VariableStrengthMutatorTests
 
         public IRandomNumberGenerator Fork(ulong forkKey) => this;
     }
-
-    private sealed class TestRun : AlgorithmRun;
 }

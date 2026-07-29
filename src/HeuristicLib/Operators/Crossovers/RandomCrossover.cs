@@ -18,7 +18,7 @@ public record RandomCrossover<TCandidate>
         Bias = bias;
     }
 
-    public override TCandidate Cross(IParents<TCandidate> parents, IRandomNumberGenerator random)
+    public override TCandidate Cross(Parents<TCandidate> parents, IRandomNumberGenerator random)
     {
         return random.NextDouble() < Bias ? parents.Parent1 : parents.Parent2;
     }

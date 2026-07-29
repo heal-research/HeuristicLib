@@ -7,5 +7,5 @@ public class TreeLengthEvaluator : IRegressionEvaluator<SymbolicExpressionTree>
 {
     public ObjectiveDirection Direction => ObjectiveDirection.Minimize;
 
-    public double Evaluate(SymbolicExpressionTree solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => solution.Length;
+    public double Evaluate(SymbolicExpressionTree model, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => model.Length;
 }

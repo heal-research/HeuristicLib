@@ -40,7 +40,7 @@ public partial record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
     private sealed class Instance(ImmutableArray<ICrossoverInstance<TCandidate, TSearchSpace, TProblem>> innerCrossovers, WeightedBatchDispatch dispatcher)
         : MultiCrossoverInstance<TCandidate, TSearchSpace, TProblem>(innerCrossovers)
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
             dispatcher.Dispatch(parents, InnerCrossovers, random, (crossover, batchParents) => crossover.Cross(batchParents, random, searchSpace, problem));
     }
 }
@@ -52,7 +52,7 @@ public static class ChooseOneCrossover
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         => new(crossovers);
 
-    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, IReadOnlyList<double>? weights = null)
+    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(crossovers, weights);
 

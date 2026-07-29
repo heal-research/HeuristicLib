@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 
 public record SinglePointCrossover : SingleSolutionCrossover<RealVector, RealVectorSearchSpace>
 {
-    public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
+    public override RealVector Cross(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
       => Cross(parents.Parent1, parents.Parent2, random, searchSpace);
 
     public static RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, int? crossoverPoint = null)

@@ -2,7 +2,7 @@ namespace HEAL.HeuristicLib.SearchSpaces;
 
 public interface ISearchSpace;
 
-public interface ISearchSpace<in TCandidate> : ISearchSpace
+public interface ISearchSpace<TCandidate> : ISearchSpace
 {
     bool Contains(TCandidate candidate);
 

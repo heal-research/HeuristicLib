@@ -12,8 +12,8 @@ public class ExtendedSymbolicRegressionProblemTest
         var file = Path.Combine("TestData", "192_vineyard.tsv");
 
         //take the original r2 and add 4 dummy objectives that we will ignore in this test, but could be used for other things in a real scenario
-        Func<SymbolicExpressionTree, ObjectiveVector, double[]> individualCallback = (t, o) => [o[0], 0, 0, 0, 0];
-        Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> populationCallback = (ts, os) => os.Select(o => new double[] { o[0], 0, 0, 0, 0 }).ToArray();
+        Func<SymbolicExpressionTree, ObjectiveVector, double[]> individualCallback = (_, o) => [o[0], 0, 0, 0, 0];
+        Func<SymbolicExpressionTree[], ObjectiveVector[], double[][]> populationCallback = (_, os) => os.Select(o => new[] { o[0], 0, 0, 0, 0 }).ToArray();
 
         var pop = ExtendedSymbolicRegressionProblem.RunDefault(file, 40, individualCallback, populationCallback);
         pop.EvaluatedCandidates.Length.ShouldBe(300);

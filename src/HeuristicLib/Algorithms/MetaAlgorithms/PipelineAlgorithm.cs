@@ -8,9 +8,6 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-// ToDo: Add Pipeline with different State types
-// ToDo: Add support for Transformation between different (or the same typed) states.
-
 [Equatable]
 public partial record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
     : Algorithm<PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>

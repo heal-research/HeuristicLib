@@ -56,7 +56,7 @@ public static class ChooseOneReplacer
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         => new(replacers);
 
-    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, IReadOnlyList<double>? weights = null)
+    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(replacers, weights);

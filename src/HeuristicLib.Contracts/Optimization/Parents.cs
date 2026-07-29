@@ -1,14 +1,25 @@
 namespace HEAL.HeuristicLib.Optimization;
 
-public static class Extensions
+public readonly record struct Parents<T>(T Parent1, T Parent2);
+
+public static class Parents
 {
-    // ToDo: pack the extensions to the actual classes they belong to, not in a global extensions class.
+    public static Parents<T> From<T>(T parent1, T parent2) => new(parent1, parent2);
+}
+
+public static class ParentsExtensions
+{
+    extension<T>((T Parent1, T Parent2) parents)
+    {
+        public Parents<T> ToParents() => Parents.From(parents.Parent1, parents.Parent2);
+    }
+
     extension<TCandidate>(IReadOnlyList<TCandidate> parents)
     {
-        public IReadOnlyList<IParents<TCandidate>> ToParentPairs()
+        public IReadOnlyList<Parents<TCandidate>> ToParentPairs()
         {
             var offspringCount = parents.Count / 2;
-            var parentPairs = new IParents<TCandidate>[offspringCount];
+            var parentPairs = new Parents<TCandidate>[offspringCount];
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
             {
                 var p1 = parents[j];
@@ -22,10 +33,10 @@ public static class Extensions
 
     extension<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> parents)
     {
-        public IParents<TCandidate>[] ToParents(ObjectiveDirections? objective = null)
+        public Parents<TCandidate>[] ToParents(ObjectiveDirections? objective = null)
         {
             var offspringCount = parents.Count / 2;
-            var parentPairs = new IParents<TCandidate>[offspringCount];
+            var parentPairs = new Parents<TCandidate>[offspringCount];
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
             {
                 var p1 = parents[j];
@@ -40,32 +51,16 @@ public static class Extensions
             return parentPairs;
         }
 
-        public (EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>)[] ToSolutionPairs()
+        public Parents<EvaluatedCandidate<TCandidate>>[] ToEvaluatedCandidatesPairs()
         {
             var offspringCount = parents.Count / 2;
-            var parentPairs = new (EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>)[offspringCount];
+            var parentPairs = new Parents<EvaluatedCandidate<TCandidate>>[offspringCount];
             for (int i = 0, j = 0; i < offspringCount; i++, j += 2)
             {
-                parentPairs[i] = (parents[j], parents[j + 1]);
+                parentPairs[i] = Parents.From(parents[j], parents[j + 1]);
             }
 
             return parentPairs;
         }
-    }
-
-    public static bool IsAlmost(this double a, double b, double tolerance = 1E-10) => Math.Abs(a - b) <= tolerance;
-
-    // Convenience overload using default comparer for T2
-
-    public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue defaultValue)
-    {
-        if (dict.TryGetValue(key, out var v))
-        {
-            return v;
-        }
-
-        dict[key] = defaultValue;
-
-        return defaultValue;
     }
 }

@@ -84,8 +84,7 @@ public class CycleAlgorithmAnalysisTests
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         Should.Throw<InvalidOperationException>(() => run.GetResult(analyzer));
-        Should.Throw<InvalidOperationException>(() =>
-            run.TryGetResult<MalformedAnalyzer.Result>(analyzer, out _));
+        Should.Throw<InvalidOperationException>(() => run.TryGetResult<MalformedAnalyzer.Result>(analyzer, out _));
     }
 
     private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IAnalyzer analyzer)

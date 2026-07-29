@@ -8,5 +8,5 @@ public class NumberOfVariablesEvaluator : IRegressionEvaluator<SymbolicExpressio
 {
     public ObjectiveDirection Direction => ObjectiveDirection.Minimize;
 
-    public double Evaluate(SymbolicExpressionTree solution, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => solution.IterateNodesPostfix().OfType<VariableTreeNode>().Count();
+    public double Evaluate(SymbolicExpressionTree model, IEnumerable<double> predictedValues, IEnumerable<double> trueValues) => model.IterateNodesPostfix().OfType<VariableTreeNode>().Count();
 }

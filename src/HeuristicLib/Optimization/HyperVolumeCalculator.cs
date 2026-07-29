@@ -1,6 +1,5 @@
-// ReSharper disable CompareOfFloatsByEqualityOperator
+using MathNet.Numerics.Statistics;
 
-#pragma warning disable S1244
 namespace HEAL.HeuristicLib.Optimization
 {
     public static class HyperVolumeCalculator
@@ -8,11 +7,11 @@ namespace HEAL.HeuristicLib.Optimization
         /// <summary>
         /// The Hypervolume-metric is defined as the Hypervolume enclosed between a given reference point,
         /// that is fixed for every evaluation function and the evaluated front.
-        /// 
+        ///
         /// Example:
         /// r is the reference Point at (1|1) and every Point p is part of the evaluated front
-        /// The filled Area labeled HV is the 2-dimensional Hypervolume enclosed by this front. 
-        /// 
+        /// The filled Area labeled HV is the 2-dimensional Hypervolume enclosed by this front.
+        ///
         /// (0|1)                (1|1)
         ///   +      +-------------r
         ///   |      |###### HV ###|
@@ -21,14 +20,14 @@ namespace HEAL.HeuristicLib.Optimization
         ///   |              |#####|
         ///   |              p-+###|
         ///   |                p---+
-        ///   |                 
+        ///   |
         ///   +--------------------1
         /// (0|0)                (1|0)
-        /// 
-        ///  Please note that in this example both dimensions are minimized. The reference Point need to be dominated by EVERY point in the evaluated front 
-        /// 
+        ///
+        ///  Please note that in this example both dimensions are minimized. The reference Point need to be dominated by EVERY point in the evaluated front
+        ///
         /// </summary>
-        /// 
+        ///
         public static double Calculate(IEnumerable<ObjectiveVector> front, ObjectiveVector referencePoint, ObjectiveDirections maximization)
         {
             var dominatingVectors = GetDominatingVectors(front, referencePoint, maximization);
@@ -39,7 +38,7 @@ namespace HEAL.HeuristicLib.Optimization
 
             return maximization.Directions.All(x => x == ObjectiveDirection.Minimize)
               ? CalculateMultiDimensional(dominatingVectors, referencePoint)
-              : throw new NotImplementedException("Hypervolume calculation for more than two dimensions is supported only with minimization problems.");
+              : throw new NotSupportedException("Hypervolume calculation for more than two dimensions is supported only with minimization problems.");
         }
 
         private static List<ObjectiveVector> GetDominatingVectors(IEnumerable<ObjectiveVector> qualities, ObjectiveVector reference, ObjectiveDirections objective)
@@ -117,20 +116,20 @@ namespace HEAL.HeuristicLib.Optimization
         {
             var coverOld = cover;
             var coverIndex = 0;
-            var coverIndexOld = -1;
-            int c;
             double result = 0;
 
             var dMeasure = GetMeasure(regionLow, regionUp, objectives);
-            while (cover == coverOld && coverIndex < front.Count)
+            if (double.IsNaN(cover))
+                return result;
+
+            var coverFound = false;
+            while (!coverFound && coverIndex < front.Count)
             {
-                if (coverIndexOld == coverIndex)
-                    break;
-                coverIndexOld = coverIndex;
                 if (Covers(front[coverIndex], regionLow, objectives))
                 {
                     cover = front[coverIndex][objectives - 1];
                     result += dMeasure * (coverOld - cover);
+                    coverFound = true;
                 }
                 else
                 {
@@ -138,9 +137,12 @@ namespace HEAL.HeuristicLib.Optimization
                 }
             }
 
-            for (c = coverIndex; c > 0; c--)
+#pragma warning disable S1244
+            for (var c = coverIndex; c > 0; c--)
                 if (front[c - 1][objectives - 1] == cover)
                     coverIndex--;
+#pragma warning restore S1244
+
             if (coverIndex == 0)
                 return result;
 
@@ -163,9 +165,11 @@ namespace HEAL.HeuristicLib.Optimization
                     trellis[j] = regionUp[j];
                 double next;
                 var i = 0;
+                var reachedCover = false;
                 do
                 {
                     var current = front[i][objectives - 1];
+#pragma warning disable S1244
                     do
                     {
                         if (front[i][piles[i]] < trellis[piles[i]])
@@ -176,16 +180,18 @@ namespace HEAL.HeuristicLib.Optimization
                         else
                         {
                             next = cover;
+                            reachedCover = true;
                             break;
                         }
                     } while (next == current);
+#pragma warning restore S1244
 
                     result += ComputeTrellis(regionLow, regionUp, trellis, objectives) * (next - current);
-                } while (next != cover);
+                } while (!reachedCover);
             }
             else
             {
-                double bound = -1;
+                double? bound = null;
                 var boundaries = new double[coverIndex];
                 var noBoundaries = new double[coverIndex];
                 var boundIdx = 0;
@@ -213,7 +219,7 @@ namespace HEAL.HeuristicLib.Optimization
                         bound = GetMedian(noBoundaries, noBoundIdx);
                     else
                         split++;
-                } while (bound == -1.0);
+                } while (!bound.HasValue);
 
                 var pointsChildLow = new List<ObjectiveVector>();
                 var pointsChildUp = new List<ObjectiveVector>();

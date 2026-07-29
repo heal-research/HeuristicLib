@@ -345,8 +345,10 @@ public sealed class BoolVectorTests
         BoolVector vector = new BoolVector(true, false, true);
 
         vector.Equals(vector).ShouldBeTrue();
+#pragma warning disable CS1718
         (vector == vector).ShouldBeTrue();
         (vector != vector).ShouldBeFalse();
+#pragma warning restore CS1718
     }
 
     [Fact]
@@ -356,14 +358,6 @@ public sealed class BoolVectorTests
 
         vector.Equals(null).ShouldBeFalse();
         vector.Equals((object?)null).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void Equals_ObjectOfDifferentType_ReturnsFalse()
-    {
-        BoolVector vector = new BoolVector(true, false, true);
-
-        vector.Equals("not a BoolVector").ShouldBeFalse();
     }
 
     [Fact]

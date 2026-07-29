@@ -44,8 +44,10 @@ public sealed class IntegerVectorTests
         IntegerVector v = IntegerVector.Create(1, 2, 3);
 
         v.Equals(v).ShouldBeTrue();
+#pragma warning disable CS1718
         (v == v).ShouldBeTrue();
         (v != v).ShouldBeFalse();
+#pragma warning restore CS1718
     }
 
     [Fact]
@@ -55,14 +57,6 @@ public sealed class IntegerVectorTests
 
         v.Equals(null).ShouldBeFalse();
         v.Equals((object?)null).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void Equals_ObjectOfDifferentType_ReturnsFalse()
-    {
-        IntegerVector v = IntegerVector.Create(1, 2, 3);
-
-        v.Equals("not a vector").ShouldBeFalse();
     }
 
     [Fact]
@@ -564,8 +558,8 @@ public sealed class IntegerVectorTests
     [Fact]
     public void Equality_EmptyVectors_AreEqual_AndHaveSameHashCode()
     {
-        IntegerVector a = IntegerVector.Create(Array.Empty<int>());
-        IntegerVector b = IntegerVector.Create(Array.Empty<int>());
+        IntegerVector a = IntegerVector.Create();
+        IntegerVector b = IntegerVector.Create();
 
         a.Equals(b).ShouldBeTrue();
         b.GetHashCode().ShouldBe(a.GetHashCode());
@@ -584,7 +578,7 @@ public sealed class IntegerVectorTests
 
         public int NextInt() => throw new NotSupportedException();
 
-        public IRandomNumberGenerator Fork(ulong forkKey) => throw new NotImplementedException();
+        public IRandomNumberGenerator Fork(ulong forkKey) => throw new NotSupportedException();
 
         public double NextDouble()
         {

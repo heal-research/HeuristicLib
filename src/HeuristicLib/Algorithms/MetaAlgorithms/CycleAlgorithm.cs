@@ -8,8 +8,6 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 
-// ToDo: maybe we need another base class for MetaAlgorithms like this?
-// ToDo: think if we want the CycleAlgorithm to terminate internally by checking each result of the inner algorihtms
 [Equatable]
 public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
     : Algorithm<CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -21,7 +19,6 @@ public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProb
     [OrderedEquality]
     public ImmutableArray<TAlgorithm> Algorithms { get; }
 
-    // ToDo: think if better place outside and keep CycleAlgorithm as infinite cycles?
     public int? MaximumCycles
     {
         get;
@@ -30,7 +27,6 @@ public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProb
             : throw new ArgumentOutOfRangeException(nameof(MaximumCycles), "MaximumCycles must be positive when set.");
     }
 
-    // ToDo: maybe execution-instance reuse needs a clearer lifecycle concept if this comes up more often.
     public bool NewExecutionInstancesPerCycle { get; init; } = true;
 
     public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)

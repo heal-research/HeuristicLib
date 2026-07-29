@@ -28,7 +28,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var mutator = new PullTowardZeroMutator();
-        var instance = ResolveMutator(mutator, problem);
+        var instance = ResolveMutator(mutator);
 
         var offspring = instance.Mutate(
             [RealVector.Repeat(1.0, 3)],
@@ -44,8 +44,8 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var mutator = new CountingStatefulMutator();
-        var firstInstance = ResolveMutator(mutator, problem);
-        var secondInstance = ResolveMutator(mutator, problem);
+        var firstInstance = ResolveMutator(mutator);
+        var secondInstance = ResolveMutator(mutator);
         var parent = RealVector.Repeat(0.0, 3);
 
         var first = firstInstance.Mutate([parent], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -62,7 +62,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var mutator = new ApplyTwiceMutator(new PullTowardZeroMutator());
-        var instance = ResolveMutator(mutator, problem);
+        var instance = ResolveMutator(mutator);
 
         var offspring = instance.Mutate(
             [RealVector.Repeat(1.0, 3)],
@@ -99,8 +99,8 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var creator = new CountingStatefulCreator();
-        var firstInstance = CreateRegistry(problem).Resolve(creator);
-        var secondInstance = CreateRegistry(problem).Resolve(creator);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(creator);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(creator);
 
         var first = firstInstance.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         var second = firstInstance.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
@@ -116,8 +116,8 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var crossover = new CountingStatefulCrossover();
-        var firstInstance = CreateRegistry(problem).Resolve(crossover);
-        var secondInstance = CreateRegistry(problem).Resolve(crossover);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(crossover);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(crossover);
         var parents = Parents.From(RealVector.Repeat(0.0, 3), RealVector.Repeat(10.0, 3));
 
         var first = firstInstance.Cross([parents], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -134,7 +134,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var crossover = new ForwardingCrossover(SelectFirstParentCrossover.For(problem));
-        var instance = CreateRegistry(problem).Resolve(crossover);
+        var instance = new ExecutionInstanceRegistry().Resolve(crossover);
         var parents = Parents.From(RealVector.Repeat(1.0, 3), RealVector.Repeat(2.0, 3));
 
         var offspring = instance.Cross([parents], RandomNumberGenerator.Create(4), problem.SearchSpace, problem);
@@ -147,7 +147,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new FirstValueEvaluator();
-        var instance = CreateRegistry(problem).Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         var objectives = instance.Evaluate([RealVector.Repeat(2.0, 3)], RandomNumberGenerator.Create(5), problem.SearchSpace, problem);
 
@@ -159,7 +159,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new ConcurrentFirstValueEvaluator { Concurrency = ExecutionConcurrency.Concurrent(2) };
-        var instance = CreateRegistry(problem).Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         var objectives = instance.Evaluate(
             [RealVector.Repeat(2.0, 3), RealVector.Repeat(4.0, 3)],
@@ -175,8 +175,8 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new CountingStatefulEvaluator();
-        var firstInstance = CreateRegistry(problem).Resolve(evaluator);
-        var secondInstance = CreateRegistry(problem).Resolve(evaluator);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var candidates = new[] { RealVector.Repeat(0.0, 3) };
 
         var first = firstInstance.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -193,7 +193,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new ForwardingEvaluator(new FirstValueEvaluator());
-        var instance = CreateRegistry(problem).Resolve(evaluator);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
 
         var objectives = instance.Evaluate([RealVector.Repeat(4.0, 3)], RandomNumberGenerator.Create(6), problem.SearchSpace, problem);
 
@@ -205,7 +205,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var selector = new FirstSelector();
-        var instance = CreateRegistry(problem).Resolve(selector);
+        var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var population = CreatePopulation(1.0, 2.0);
 
         var selected = instance.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(7), problem.SearchSpace, problem);
@@ -218,8 +218,8 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var selector = new RotatingStatefulSelector();
-        var firstInstance = CreateRegistry(problem).Resolve(selector);
-        var secondInstance = CreateRegistry(problem).Resolve(selector);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(selector);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(selector);
         var population = CreatePopulation(1.0, 2.0);
 
         var first = firstInstance.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -236,7 +236,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var selector = new ForwardingSelector(new FirstSelector());
-        var instance = CreateRegistry(problem).Resolve(selector);
+        var instance = new ExecutionInstanceRegistry().Resolve(selector);
         var population = CreatePopulation(1.0, 2.0);
 
         var selected = instance.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(8), problem.SearchSpace, problem);
@@ -249,7 +249,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var replacer = new OffspringReplacer();
-        var instance = CreateRegistry(problem).Resolve(replacer);
+        var instance = new ExecutionInstanceRegistry().Resolve(replacer);
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
@@ -263,8 +263,8 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var replacer = new AlternatingStatefulReplacer();
-        var firstInstance = CreateRegistry(problem).Resolve(replacer);
-        var secondInstance = CreateRegistry(problem).Resolve(replacer);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(replacer);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(replacer);
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
@@ -282,7 +282,7 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var replacer = new ForwardingReplacer(new OffspringReplacer());
-        var instance = CreateRegistry(problem).Resolve(replacer);
+        var instance = new ExecutionInstanceRegistry().Resolve(replacer);
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
@@ -295,7 +295,7 @@ public class OperatorAuthoringSpecs
     public void StatelessInterceptor_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var instance = CreateRegistry(problem).Resolve(new IncrementingInterceptor());
+        var instance = new ExecutionInstanceRegistry().Resolve(new IncrementingInterceptor());
 
         var transformed = instance.Transform(new CounterSearchState(1), previousState: null, problem.SearchSpace, problem);
 
@@ -307,8 +307,8 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var interceptor = new CountingStatefulInterceptor();
-        var firstInstance = CreateRegistry(problem).Resolve(interceptor);
-        var secondInstance = CreateRegistry(problem).Resolve(interceptor);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(interceptor);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(interceptor);
 
         var first = firstInstance.Transform(new CounterSearchState(0), previousState: null, problem.SearchSpace, problem);
         var second = firstInstance.Transform(new CounterSearchState(0), previousState: null, problem.SearchSpace, problem);
@@ -323,7 +323,7 @@ public class OperatorAuthoringSpecs
     public void ExplicitInterceptor_AuthoringExample_OwnsResolvedChildInstance()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var instance = CreateRegistry(problem).Resolve(new ForwardingInterceptor(new IncrementingInterceptor()));
+        var instance = new ExecutionInstanceRegistry().Resolve(new ForwardingInterceptor(new IncrementingInterceptor()));
 
         var transformed = instance.Transform(new CounterSearchState(1), previousState: null, problem.SearchSpace, problem);
 
@@ -334,7 +334,7 @@ public class OperatorAuthoringSpecs
     public void StatelessTerminator_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var instance = CreateRegistry(problem).Resolve(new ValueTerminator(2));
+        var instance = new ExecutionInstanceRegistry().Resolve(new ValueTerminator(2));
 
         instance.IsTerminalState(new CounterSearchState(1), problem.SearchSpace, problem).ShouldBeFalse();
         instance.IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
@@ -345,8 +345,8 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var terminator = new CountingStatefulTerminator();
-        var firstInstance = CreateRegistry(problem).Resolve(terminator);
-        var secondInstance = CreateRegistry(problem).Resolve(terminator);
+        var firstInstance = new ExecutionInstanceRegistry().Resolve(terminator);
+        var secondInstance = new ExecutionInstanceRegistry().Resolve(terminator);
         var state = new CounterSearchState(0);
 
         firstInstance.IsTerminalState(state, problem.SearchSpace, problem).ShouldBeFalse();
@@ -358,7 +358,7 @@ public class OperatorAuthoringSpecs
     public void ExplicitTerminator_AuthoringExample_OwnsResolvedChildInstance()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var instance = CreateRegistry(problem).Resolve(new ForwardingTerminator(new ValueTerminator(2)));
+        var instance = new ExecutionInstanceRegistry().Resolve(new ForwardingTerminator(new ValueTerminator(2)));
 
         instance.IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
     }
@@ -396,27 +396,13 @@ public class OperatorAuthoringSpecs
     private static IReadOnlyList<EvaluatedCandidate<RealVector>> CreatePopulation(params double[] values) =>
         values.Select(value => EvaluatedCandidate.From(RealVector.Repeat(value, 3), new ObjectiveVector(value))).ToArray();
 
-    private static IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> ResolveMutator(IMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem> mutator, TestFunctionProblem problem)
+    private static IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> ResolveMutator(IMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem> mutator)
     {
-        return CreateRegistry(problem).Resolve(mutator);
+        return new ExecutionInstanceRegistry().Resolve(mutator);
     }
 
-    private static ExecutionInstanceRegistry CreateRegistry(TestFunctionProblem problem)
-    {
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
-        {
-            Creator = new ConstantOriginCreator(),
-            Mutator = new NoChangeMutator(),
-            Direction = LocalSearchDirection.FirstImprovement,
-            BatchSize = 1,
-            MaxNeighbors = 1
-        };
-
-        return new ExecutionInstanceRegistry();
-    }
-
-    private sealed record PrefixingWrappingCreator(ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> Inner)
-      : WrappingCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(Inner)
+    private sealed record PrefixingWrappingCreator(ICreator<RealVector, RealVectorSearchSpace, TestFunctionProblem> InnerCreator)
+      : WrappingCreator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(InnerCreator)
     {
         protected override WrappingCreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateCreatorInstance(ICreatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> innerCreator) =>
             new Instance(innerCreator);
@@ -470,7 +456,7 @@ public class OperatorAuthoringSpecs
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override IReadOnlyList<RealVector> Cross(IReadOnlyList<IParents<RealVector>> parents, ExecutionState state, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, ExecutionState state, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             state.Calls++;
             return parents.Select(parent => new RealVector(parent.Parent1.Select(value => value + state.Calls))).ToArray();
@@ -665,7 +651,7 @@ public class OperatorAuthoringSpecs
         private sealed class Instance(ICrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> inner)
             : CrossoverInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
         {
-            public override IReadOnlyList<RealVector> Cross(IReadOnlyList<IParents<RealVector>> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
                 inner.Cross(parents, random, searchSpace, problem);
         }
     }
@@ -750,8 +736,8 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record PreferFirstMultiMutator(ImmutableArray<IMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>> Inner)
-        : MultiMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(Inner)
+    private sealed record PreferFirstMultiMutator(ImmutableArray<IMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>> InnerMutators)
+        : MultiMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(InnerMutators)
     {
         protected override MultiMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateMutatorInstance(ImmutableArray<IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>> innerMutators) =>
             new Instance(innerMutators);

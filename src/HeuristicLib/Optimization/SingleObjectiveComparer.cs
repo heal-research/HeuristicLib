@@ -33,7 +33,7 @@ public class SingleObjectiveComparer(ObjectiveDirection objectiveDirection) : IC
         {
             ObjectiveDirection.Minimize => x[0].CompareTo(y[0]),
             ObjectiveDirection.Maximize => y[0].CompareTo(x[0]),
-            _ => throw new NotImplementedException()
+            _ => throw new InvalidOperationException($"Unsupported objective direction: {objectiveDirection}.")
         };
     }
 }

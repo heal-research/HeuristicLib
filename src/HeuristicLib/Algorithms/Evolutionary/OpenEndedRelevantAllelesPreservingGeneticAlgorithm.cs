@@ -69,9 +69,9 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
 
             if (oldPopulation.Length <= 0)
             {
-                var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
-                var initialFitnesses = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
-                newPop = Population.From(initialSolutions, initialFitnesses).EvaluatedCandidates;
+                var initialCandidates = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                var initialFitnesses = evaluator.Evaluate(initialCandidates, random, problem.SearchSpace, problem);
+                newPop = Population.From(initialCandidates, initialFitnesses).EvaluatedCandidates;
             }
             else
             {
@@ -79,7 +79,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
                 var population = crossover.Cross(selected.ToParents(problem.Objective), random, problem.SearchSpace, problem);
                 population = mutator.Mutate(population, random, problem.SearchSpace, problem);
                 var fitnesses = evaluator.Evaluate(population, random, problem.SearchSpace, problem);
-                newPop = Population.From(population, fitnesses).EvaluatedCandidates.Zip(selected.ToSolutionPairs())
+                newPop = Population.From(population, fitnesses).EvaluatedCandidates.Zip(selected.ToEvaluatedCandidatesPairs())
                     .Where(pair => pair.Item1.ObjectiveVector.Dominates(Combine(pair.Item2, problem.Objective, strictness), problem.Objective))
                     .Select(pair => pair.Item1).ToArray();
             }
@@ -90,10 +90,10 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
             return Population.From(newPopulation).ToPopulationState();
         }
 
-        private static ObjectiveVector Combine((EvaluatedCandidate<TCandidate>, EvaluatedCandidate<TCandidate>) parents, ObjectiveDirections problemObjective, double strictness)
+        private static ObjectiveVector Combine(Parents<EvaluatedCandidate<TCandidate>> parents, ObjectiveDirections problemObjective, double strictness)
         {
-            var o1 = parents.Item1.ObjectiveVector;
-            var o2 = parents.Item2.ObjectiveVector;
+            var o1 = parents.Parent1.ObjectiveVector;
+            var o2 = parents.Parent2.ObjectiveVector;
             if (o2.Dominates(o1, problemObjective))
             {
                 (o1, o2) = (o2, o1);
@@ -109,7 +109,6 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
     }
 }
 
-// ReSharper disable once IdentifierTypo
 public record OerapgaBuildBuilder<TCandidate, TSearchSpace, TProblem>
   : AlgorithmBuilder<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>, OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>>,
     IBuilderWithCreator<TCandidate, TSearchSpace, TProblem>,

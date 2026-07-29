@@ -15,7 +15,7 @@ public static class TsplibTspInstanceProvider
         var data = new TspData
         {
             Dimension = parser.Dimension,
-            Coordinates = parser.Vertices ?? parser.DisplayVertices,
+            Coordinates = parser.Vertices,
             Distances = parser.Distances,
             DistanceMeasure = parser.EdgeWeightType switch
             {

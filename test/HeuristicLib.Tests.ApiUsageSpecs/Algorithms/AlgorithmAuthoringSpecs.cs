@@ -88,7 +88,6 @@ public class AlgorithmAuthoringSpecs
     [Fact]
     public void IterativeAlgorithm_CreateExecutionInstance_EagerlyResolvesRuntimeDependenciesOnce()
     {
-        var problem = new TestFunctionProblem(new SphereFunction(dimension: 3));
         var creator = new InstancingCreator();
         var evaluator = new InstancingEvaluator();
         var interceptor = new InstancingInterceptor();

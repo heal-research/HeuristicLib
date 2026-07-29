@@ -1,4 +1,3 @@
-#pragma warning disable S2368
 #pragma warning disable S3887
 namespace HEAL.HeuristicLib.Problems.QuadraticAssignment;
 

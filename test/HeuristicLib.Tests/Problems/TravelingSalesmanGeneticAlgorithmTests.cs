@@ -7,8 +7,6 @@ using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 
-#pragma warning disable S1481
-
 namespace HEAL.HeuristicLib.Tests.Problems;
 
 public class TravelingSalesmanGeneticAlgorithmTests

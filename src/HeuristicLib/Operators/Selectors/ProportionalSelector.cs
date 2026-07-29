@@ -13,7 +13,6 @@ public record ProportionalSelector<TCandidate>
         Windowing = windowing;
     }
 
-    // ToDo: Probability-based selection base class (fitness -> probability, rank -> probability, etc.)
     public bool Windowing { get; init; }
 
     public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)

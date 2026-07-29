@@ -170,22 +170,22 @@ public class PractitionerUsageSpecs
         var evaluations = DirectEvaluator.Evaluate([parent], RandomNumberGenerator.Create(2034), problem);
         evaluations.Count.ShouldBe(1);
 
-        IReadOnlyList<EvaluatedCandidate<RealVector>> solutions =
+        IReadOnlyList<EvaluatedCandidate<RealVector>> evaluatedCandidates =
         [
             EvaluatedCandidate.From(parent, new ObjectiveVector(2.0)),
             EvaluatedCandidate.From(otherParent, new ObjectiveVector(1.0))
         ];
 
-        RandomSelector.Select(solutions, count: 2, RandomNumberGenerator.Create(2035)).Count.ShouldBe(2);
-        ProportionalSelector.Select(solutions, problem.Objective, count: 2, RandomNumberGenerator.Create(2036), windowing: true).Count.ShouldBe(2);
-        CommaSelectionReplacer.Replace(solutions, problem.Objective, count: 1).Single().ShouldBe(solutions[1]);
+        RandomSelector.Select(evaluatedCandidates, count: 2, RandomNumberGenerator.Create(2035)).Count.ShouldBe(2);
+        ProportionalSelector.Select(evaluatedCandidates, problem.Objective, count: 2, RandomNumberGenerator.Create(2036), windowing: true).Count.ShouldBe(2);
+        CommaSelectionReplacer.Replace(evaluatedCandidates, problem.Objective, count: 1).Single().ShouldBe(evaluatedCandidates[1]);
 
         IReadOnlyList<EvaluatedCandidate<RealVector>> offspring =
         [
             EvaluatedCandidate.From(RealVector.Create(5.0, 5.0, 5.0), new ObjectiveVector(0.5)),
             EvaluatedCandidate.From(RealVector.Create(7.0, 7.0, 7.0), new ObjectiveVector(3.0))
         ];
-        var paretoReplacement = ParetoCrowdingReplacer.Replace(solutions, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
+        var paretoReplacement = ParetoCrowdingReplacer.Replace(evaluatedCandidates, offspring, problem.Objective, count: 2, dominateOnEqualities: false);
         paretoReplacement.Select(solution => solution.ObjectiveVector[0]).Order().ToArray().ShouldBe([0.5, 1.0]);
 
         NeverTerminator.IsTerminalState().ShouldBeFalse();

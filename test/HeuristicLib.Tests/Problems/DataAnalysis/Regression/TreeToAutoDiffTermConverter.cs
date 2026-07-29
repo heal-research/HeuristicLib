@@ -97,7 +97,7 @@ public class TreeToAutoDiffTermConverterTests
         initialParameters.ShouldHaveSingleItem();
         initialParameters[0].ShouldBe(3.5, 1e-12);
 
-        var y = func!([7.0], []);
+        var y = func([7.0], []);
         y.ShouldBe(7.0, 1e-12);
     }
 
@@ -160,9 +160,9 @@ public class TreeToAutoDiffTermConverterTests
 
         parameters.ShouldHaveSingleItem();
         initialParameters.ShouldHaveSingleItem();
-        initialParameters![0].ShouldBe(2.5, 1e-12);
+        initialParameters[0].ShouldBe(2.5, 1e-12);
 
-        var y = func!([3.0], [4.0]);
+        var y = func([3.0], [4.0]);
         y.ShouldBe(12.0, 1e-12);
     }
 
@@ -192,8 +192,8 @@ public class TreeToAutoDiffTermConverterTests
         funcGrad.ShouldNotBeNull();
 
         parameters.ShouldHaveSingleItem();
-        parameters![0].VariableName.ShouldBe("x");
-        initialParameters!.Length.ShouldBe(2);
+        parameters[0].VariableName.ShouldBe("x");
+        initialParameters.Length.ShouldBe(2);
         initialParameters[0].ShouldBe(2.0, 1e-12);
         initialParameters[1].ShouldBe(3.0, 1e-12);
 
@@ -243,10 +243,7 @@ public class TreeToAutoDiffTermConverterTests
         var success = TreeToAutoDiffTermConverter.TryConvertToAutoDiff(
           tree,
           makeVariableWeightsVariable: true,
-          out var parameters,
-          out var initialParameters,
-          out var func,
-          out var funcGrad);
+          out _, out _, out _, out _);
 
         success.ShouldBeFalse();
     }
@@ -265,10 +262,7 @@ public class TreeToAutoDiffTermConverterTests
         var success = TreeToAutoDiffTermConverter.TryConvertToAutoDiff(
           tree,
           makeVariableWeightsVariable: true,
-          out var parameters,
-          out var initialParameters,
-          out var func,
-          out var funcGrad);
+          out _, out _, out _, out _);
 
         success.ShouldBeFalse();
     }

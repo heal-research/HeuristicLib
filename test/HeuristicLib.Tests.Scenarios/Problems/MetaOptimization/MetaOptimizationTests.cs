@@ -37,7 +37,7 @@ public class MetaOptimizationTests
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();
         var mutatorExtractor = b.AddChoiceParameter(
-          new Mutator<RealVector, RealVectorSearchSpace>[] {//TODO c# can not infer array type
+          new Mutator<RealVector, RealVectorSearchSpace>[] {
       new GaussianMutator(0.5, 0.5),
       new GaussianMutator(0.5, 1),
       new PolynomialMutator(),

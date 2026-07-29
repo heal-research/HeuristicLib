@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 
-public record RealVectorConstructionNeighborhood() : RealVectorNeighborhood<double>
+public record RealVectorConstructionNeighborhood : RealVectorNeighborhood<double>
 {
     public override IEnumerable<double> Moves(RealVector genotype, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, IProblem<RealVector, RealVectorSearchSpace> problem)
     {

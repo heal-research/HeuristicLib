@@ -61,7 +61,7 @@ public abstract class AlgorithmRun
             return typedState.Result;
         }
 
-        throw CreateResultTypeMismatchException<TResult>(analyzer, state);
+        throw CreateResultTypeMismatchException(analyzer, state);
     }
 
     public bool TryGetResult<TResult>(IAnalyzer<TResult> analyzer, [MaybeNullWhen(false)] out TResult result) where TResult : class
@@ -79,7 +79,7 @@ public abstract class AlgorithmRun
             return true;
         }
 
-        throw CreateResultTypeMismatchException<TResult>(analyzer, state);
+        throw CreateResultTypeMismatchException(analyzer, state);
     }
 
     private Dictionary<IAnalyzer, IAnalyzerRunState> GetAnalyzerStates()
@@ -149,7 +149,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     private async IAsyncEnumerable<TSearchState> StreamStates(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmInstance, TSearchState? initialState, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var state in algorithmInstance.RunStreamingAsync(Problem, Random, initialState, cancellationToken).WithCancellation(cancellationToken))
+        await foreach (var state in algorithmInstance.RunStreamingAsync(Problem, Random, initialState, cancellationToken))
         {
             yield return state;
         }

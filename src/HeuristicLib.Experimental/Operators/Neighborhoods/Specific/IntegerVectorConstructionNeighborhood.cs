@@ -57,7 +57,7 @@ public record IntegerVectorConstructionNeighborhood(MoveMode mode, int maxSize =
 
                 break;
             default:
-                throw new ArgumentOutOfRangeException();
+                throw new InvalidOperationException();
         }
     }
 

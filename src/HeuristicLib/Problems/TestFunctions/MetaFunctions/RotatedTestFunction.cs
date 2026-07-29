@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Genotypes.Vectors;
 
-#pragma warning disable S2368
-
 namespace HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 
 public class RotatedTestFunction(double[,] rotation, ITestFunction inner) : MetaTestFunction(inner)

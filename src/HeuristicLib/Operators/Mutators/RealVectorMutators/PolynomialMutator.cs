@@ -100,10 +100,9 @@ public record PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSe
         for (var j = 0; j < nVar; j++)
         {
 #pragma warning disable S1244
-            // ReSharper disable once CompareOfFloatsByEqualityOperator
             if (xl[j % xl.Count] == xu[j % xu.Count])
-            {
 #pragma warning restore S1244
+            {
                 mut[j] = false;
             }
         }
@@ -140,15 +139,6 @@ public record PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSe
             var lb = xl[j % xl.Count];
             var ub = xu[j % xu.Count];
             var denom = ub - lb;
-
-            // Safety (shouldn't happen because fixed variables got masked out)
-#pragma warning disable S1244
-            if (denom == 0.0)
-            {
-#pragma warning restore S1244
-                xp[j] = xj;
-                continue;
-            }
 
             var delta1 = (xj - lb) / denom;
             var delta2 = (ub - xj) / denom;

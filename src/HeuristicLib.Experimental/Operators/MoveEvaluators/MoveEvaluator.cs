@@ -17,7 +17,7 @@ public abstract record MoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove, T
         : IMoveEvaluatorInstance<TGenotype, TSearchSpace, TProblem, TMove>
     {
         public ObjectiveVector Evaluate(
-            ObjectiveVector objective,
+            ObjectiveVector oldQuality,
             TGenotype genotype,
             TMove move,
             IRandomNumberGenerator random,
@@ -25,7 +25,7 @@ public abstract record MoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove, T
             TProblem problem)
             => MoveEvaluator.Apply(genotype, move, State, searchSpace, problem, random);
 
-        public ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotImplementedException();
+        public ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
     }
 
     protected abstract ObjectiveVector Apply(

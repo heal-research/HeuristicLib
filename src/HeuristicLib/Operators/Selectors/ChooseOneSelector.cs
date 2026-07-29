@@ -56,7 +56,7 @@ public static class ChooseOneSelector
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         => new(selectors);
 
-    public static ChooseOneSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> selectors, IReadOnlyList<double>? weights = null)
+    public static ChooseOneSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> selectors, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selectors, weights);
 }

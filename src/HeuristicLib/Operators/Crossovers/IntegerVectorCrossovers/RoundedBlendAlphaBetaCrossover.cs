@@ -27,7 +27,7 @@ public record RoundedBlendAlphaBetaCrossover : SingleSolutionCrossover<IntegerVe
         }
     } = 0.25;
 
-    public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
+    public override IntegerVector Cross(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
       => Cross(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Beta);
 
     public static IntegerVector Cross(

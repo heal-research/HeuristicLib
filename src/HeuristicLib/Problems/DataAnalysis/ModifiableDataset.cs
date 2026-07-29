@@ -1,7 +1,5 @@
 using System.Collections;
 
-#pragma warning disable S2368 // multidimensional parameters are explicitly allowed
-
 namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public class ModifiableDataset : Dataset

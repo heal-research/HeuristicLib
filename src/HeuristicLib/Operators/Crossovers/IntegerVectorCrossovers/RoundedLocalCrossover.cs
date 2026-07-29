@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.IntegerVectorCrossovers;
 
 public record RoundedLocalCrossover : SingleSolutionCrossover<IntegerVector, IntegerVectorSearchSpace>
 {
-    public override IntegerVector Cross(IParents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
+    public override IntegerVector Cross(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace)
       => Cross(random, parents.Parent1, parents.Parent2, searchSpace);
 
     public static IntegerVector Cross(

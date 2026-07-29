@@ -21,7 +21,7 @@ public class GeneticAlgorithmBuilderTests
         var selector = new RandomSelector<RealVector>();
         var evaluator = new DummyEvaluator<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>();
 
-        var builder = GeneticAlgorithm.GetBuilder<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>(
+        var builder = GeneticAlgorithm.GetBuilder(
           creator,
           crossover,
           mutator);
@@ -46,7 +46,7 @@ public class GeneticAlgorithmBuilderTests
     [Fact]
     public void GetBuilder_UsesCurrentDefaultParametersForUnconfiguredSettings()
     {
-        var builder = GeneticAlgorithm.GetBuilder<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>(
+        var builder = GeneticAlgorithm.GetBuilder(
           new UniformDistributedCreator(null, 3.0),
           new SinglePointCrossover(),
           new GaussianMutator(0.1, 0.1));

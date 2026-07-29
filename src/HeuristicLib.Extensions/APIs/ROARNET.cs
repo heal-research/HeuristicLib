@@ -8,8 +8,6 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
-#pragma warning disable S101
-
 namespace HEAL.HeuristicLib.RoarNetApi;
 
 /// <summary>
@@ -229,9 +227,7 @@ public record ProblemOperations<TCandidate, TSearchSpace, TProblem>(
 
   public override double? lower_bound_increment(MutationMove<TCandidate, TSearchSpace, TProblem> move, LazySolution<TCandidate> solution) => apply_move(move, solution).LowerBound() - solution.LowerBound();
 
-#pragma warning disable S2190
   public override IEnumerable<MutationMove<TCandidate, TSearchSpace, TProblem>> moves(MutationNeighborhood<TCandidate, TSearchSpace, TProblem> neighbourhood, LazySolution<TCandidate> solution)
-#pragma warning restore S2190
   {
     while (true) {
       yield return new MutationMove<TCandidate, TSearchSpace, TProblem>(rng.NextInt());
@@ -252,7 +248,7 @@ public record ProblemOperations<TCandidate, TSearchSpace, TProblem>(
 
   public double? Evaluate(TCandidate input, out bool bounded, out double? bound)
   {
-    if (!Problem.SearchSpace.Contains(input)) throw new NotImplementedException();
+    if (!Problem.SearchSpace.Contains(input)) throw new ArgumentException("Candidate is outside the problem search space.", nameof(input));
     bound = Problem.Evaluate([input], rng)[0][0];
     bounded = true;
     return bound;

@@ -17,7 +17,7 @@ public static class ExperimentExtensions
     {
         public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> CreateRun(TProblem problem, IRandomNumberGenerator random) => new(experiment, problem, random);
 
-        public Execution.ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(TProblem problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
+        public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(TProblem problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
             experiment.CreateRun(problem, random).Stream(concurrency, initialState, cancellationToken);
 
         public ImmutableArray<Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> StartTrials(TProblem problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>

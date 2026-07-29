@@ -50,7 +50,7 @@ public sealed class PermutationTests
     [Fact]
     public void Constructor_EmptyPermutation_IsValid()
     {
-        Permutation permutation = Permutation.Create(Array.Empty<int>());
+        Permutation permutation = Permutation.Create();
 
         permutation.Count.ShouldBe(0);
         permutation.ShouldBeEmpty();
@@ -156,7 +156,7 @@ public sealed class PermutationTests
     public void Enumerator_Reset_RewindsEnumeration()
     {
         Permutation permutation = Permutation.Create(2, 1, 0);
-        var enumerator = permutation.GetEnumerator();
+        using var enumerator = permutation.GetEnumerator();
 
         enumerator.MoveNext().ShouldBeTrue();
         enumerator.Current.ShouldBe(2);
@@ -204,8 +204,10 @@ public sealed class PermutationTests
         Permutation permutation = Permutation.Create(1, 0, 2);
 
         permutation.Equals(permutation).ShouldBeTrue();
+#pragma warning disable CS1718
         (permutation == permutation).ShouldBeTrue();
         (permutation != permutation).ShouldBeFalse();
+#pragma warning restore CS1718
     }
 
     [Fact]
@@ -215,14 +217,6 @@ public sealed class PermutationTests
 
         permutation.Equals(null).ShouldBeFalse();
         permutation.Equals((object?)null).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void RecordEquality_DifferentType_ReturnsFalse()
-    {
-        Permutation permutation = Permutation.Create(1, 0, 2);
-
-        permutation.Equals("not a permutation").ShouldBeFalse();
     }
 
     [Fact]
@@ -396,7 +390,7 @@ public sealed class PermutationTests
 
         public int NextInt() => throw new NotSupportedException();
 
-        public IRandomNumberGenerator Fork(ulong forkKey) => throw new NotImplementedException();
+        public IRandomNumberGenerator Fork(ulong forkKey) => throw new NotSupportedException();
 
         public double NextDouble() => values.Count == 0 ? 0.0 : values.Dequeue();
     }

@@ -440,7 +440,7 @@ public class ObservableOperatorCounterTests
       : StatelessCrossover<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<int> Cross(
-            IReadOnlyList<IParents<int>> parents,
+            IReadOnlyList<Parents<int>> parents,
             IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,
             FuncProblem<int, DummySearchSpace<int>> problem)

@@ -14,5 +14,7 @@ public static class NeverTerminator
     public static NeverTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
         where TSearchSpace : class, ISearchSpace<TCandidate> => new();
 
+#pragma warning disable S3400
     public static bool IsTerminalState() => false;
+#pragma warning restore S3400
 }

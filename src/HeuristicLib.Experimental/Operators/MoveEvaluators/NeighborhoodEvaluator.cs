@@ -13,7 +13,7 @@ public sealed record NeighborhoodEvaluator<TGenotype, TSearchSpace, TProblem, TM
     where TProblem : class, IProblem<TGenotype, TSearchSpace>
 {
     public override ObjectiveVector Evaluate(
-        ObjectiveVector objective,
+        ObjectiveVector oldQuality,
         TGenotype genotype,
         TMove move,
         IRandomNumberGenerator random,

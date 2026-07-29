@@ -35,7 +35,7 @@ public class LexicographicComparer : IComparer<ObjectiveVector>
                 {
                     ObjectiveDirection.Minimize => +comparison,
                     ObjectiveDirection.Maximize => -comparison,
-                    _ => throw new NotImplementedException()
+                    _ => throw new InvalidOperationException($"Unsupported objective direction: {objectives[dimension]}.")
                 };
             }
         }

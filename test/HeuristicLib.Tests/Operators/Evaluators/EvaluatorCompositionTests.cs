@@ -47,7 +47,7 @@ public class EvaluatorCompositionTests
     public void RepeatingEvaluator_InvokesResolvedChildForEveryEvaluation()
     {
         var counter = new ObservationCounter();
-        var evaluator = CreateEvaluator().CountEvaluatorCalls(counter).AsRepeatingAggregating(2, static (left, right) => left);
+        var evaluator = CreateEvaluator().CountEvaluatorCalls(counter).AsRepeatingAggregating(2, static (left, _) => left);
         var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 

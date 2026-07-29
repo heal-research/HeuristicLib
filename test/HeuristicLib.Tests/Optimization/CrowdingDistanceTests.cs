@@ -93,6 +93,16 @@ public class CrowdingDistanceTests
         double.IsPositiveInfinity(d[4]).ShouldBeTrue();
     }
 
+    [Fact]
+    public void AllObjectiveValuesEqual_ReturnsZeroDistances()
+    {
+        var pop = new[] { OV(5.0), OV(5.0), OV(5.0) };
+
+        var d = CrowdingDistance.CalculateCrowdingDistances(pop);
+
+        d.ShouldBe([0.0, 0.0, 0.0]);
+    }
+
     private static ObjectiveVector OV(params double[] values) => new(values);
 
     [Fact]

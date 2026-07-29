@@ -55,7 +55,7 @@ public static class ChooseOneMutator
       where TProblem : class, IProblem<TCandidate, TSearchSpace>
       => new(mutators);
 
-    public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null)
+    public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, IReadOnlyList<double> weights)
       where TSearchSpace : class, ISearchSpace<TCandidate>
       where TProblem : class, IProblem<TCandidate, TSearchSpace>
       => new(mutators, weights);

@@ -26,9 +26,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.States;
 
-#pragma warning disable S1104
-#pragma warning disable S1104
-
 namespace HEAL.HeuristicLib.PythonInterop;
 
 public class PythonGenealogyAnalysis
@@ -274,8 +271,7 @@ public class PythonGenealogyAnalysis
             }
 
             IReadOnlyList<EvaluatedCandidate<TCandidate>[]> apRes = [];
-            if (AllPopulations is not null && run.TryGetResult(AllPopulations, out var populations) &&
-                populations is not null)
+            if (AllPopulations is not null && run.TryGetResult(AllPopulations, out var populations))
             {
                 apRes = populations;
             }

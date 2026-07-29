@@ -7,35 +7,29 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-//these classes are used for cross language purposes
-//public fields instead of properties & public ctors
-
-// ReSharper disable MemberCanBeProtected.Global
-// ReSharper disable ConvertToConstant.Global
-// ReSharper disable FieldCanBeMadeReadOnly.Global
-// ReSharper disable UnusedMember.Global
-#pragma warning disable S1104
+// These classes are used for cross language purposes and therefore have public properties and constructors.
 
 namespace HEAL.HeuristicLib.PythonInterop;
 
 #region Parameters
 public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public string AlgorithmName = "ga";
-    public ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Creator;
-    public ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Crossover;
-    public int Elites = 1;
-    public int Iterations = 30;
-    public double MutationRate = 0.05;
-    public IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Mutator;
-    public int NoChildren = -1;
-    public int PopulationSize = 10;
-    public int Seed;
-    public ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Selector;
-    public EvolutionStrategyType Strategy = EvolutionStrategyType.Plus;
-    public bool TrackGenealogy;
-    public bool TrackPopulations;
-    public bool WithCrossover;
+    public string AlgorithmName { get; set; } = "ga";
+    public ICreator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Creator { get; set; }
+    public ICrossover<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Crossover { get; set; }
+    public int Elites { get; set; } = 1;
+    public int Iterations { get; set; } = 30;
+    public double MutationRate { get; set; } = 0.05;
+    public IMutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Mutator { get; set; }
+    public int NoChildren { get; set; } = -1;
+    public int PopulationSize { get; set; } = 10;
+    public int Seed { get; set; }
+    public ISelector<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>? Selector { get; set; }
+    public EvolutionStrategyType Strategy { get; set; } = EvolutionStrategyType.Plus;
+    public bool TrackGenealogy { get; set; }
+    public bool TrackPopulations { get; set; }
+    public bool WithCrossover { get; set; }
+
     public ExperimentParameters() { }
 
     public ExperimentParameters(ExperimentParameters<TCandidate, TSearchSpace> parameters)
@@ -60,10 +54,10 @@ public class ExperimentParameters<TCandidate, TSearchSpace> where TSearchSpace :
 
 public class SymRegExperimentParameters : ExperimentParameters<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
 {
-    public int ParameterOptimizationIterations = 10;
-    public double TrainingSplit = 0.66;
-    public int TreeDepth = 40;
-    public int TreeLength = 40;
+    public int ParameterOptimizationIterations { get; set; } = 10;
+    public double TrainingSplit { get; set; } = 0.66;
+    public int TreeDepth { get; set; } = 40;
+    public int TreeLength { get; set; } = 40;
 
     public SymRegExperimentParameters() { }
 
@@ -85,9 +79,10 @@ public class TravelingSalesmanExperimentParameters : ExperimentParameters<Permut
 
 public class TestFunctionExperimentParameters : ExperimentParameters<RealVector, RealVectorSearchSpace>
 {
-    public int Dimension = 10;
-    public int Instance = 1;
-    public int Problem = 1;
+    public int Dimension { get; set; } = 10;
+    public int Instance { get; set; } = 1;
+    public int Problem { get; set; } = 1;
+
     public TestFunctionExperimentParameters() { }
 
     public TestFunctionExperimentParameters(TestFunctionExperimentParameters parameters) : base(parameters) { }

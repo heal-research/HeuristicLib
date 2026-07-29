@@ -4,7 +4,7 @@ public static class ConfusionMatrixCalculator
 {
     public static readonly double[,] Empty = new double[0, 0];
 
-    // TODO this has heavy multi-enumeration issues and more importantly it is not online 
+    // TODO: Replace this batch implementation with an incremental calculator or move it out of OnlineCalculators.
     public static double[,] Calculate(IEnumerable<double> originalValues, IEnumerable<double> estimatedValues, out OnlineCalculatorError errorState)
     {
         var originals = originalValues as double[] ?? originalValues.ToArray();

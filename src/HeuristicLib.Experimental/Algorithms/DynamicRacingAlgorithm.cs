@@ -1,15 +1,11 @@
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Genotypes;
-using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 
 using MetaOptimizationGenotype = HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>;
@@ -26,8 +22,8 @@ public class EmptyMetaOptProblem : MetaOptimizationProblem
     }
 
     public MetaOptimizationSearchSpace SearchSpace { get; }
-    public ObjectiveDirections Objective => throw new NotImplementedException();
-    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<MetaOptimizationGenotype> candidates, IRandomNumberGenerator random) => throw new NotImplementedException();
+    public ObjectiveDirections Objective => throw new NotSupportedException("The empty meta optimization problem has no objective.");
+    public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<MetaOptimizationGenotype> candidates, IRandomNumberGenerator random) => throw new NotSupportedException("The empty meta optimization problem does not support evaluation.");
 }
 
 public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>

@@ -25,7 +25,7 @@ public partial record TransformedCrossover<TCandidate, TSearchSpace, TProblem>(I
     private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
         : CrossoverInstance<TCandidate, TSearchSpace, TProblem>
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var candidates = crossover.Cross(parents, random, searchSpace, problem);
             return mutator.Mutate(candidates, random, searchSpace, problem);

@@ -38,6 +38,9 @@ Why these are only partial today:
 These are still real open items:
 
 - multi-objective short-path usage
+- generalize `PipelineAlgorithm` so consecutive algorithms may use different search state types
+- add explicit state transformations between `PipelineAlgorithm` stages, including transformations where the input and output state types are the same
+- introduce a probability based selection abstraction that separates selection from mappings such as fitness to probability and rank to probability
 - rework the objective system around the glossary terms `objective value`, `objective vector`, `objective direction`, and `objective directions`: keep the conceptual model open enough for single-objective and multi-objective cases, and clarify when an algorithm/operator requires exactly one objective value, a total ordering over objective vectors, or multi-objective comparison semantics
 - island-style population workflow
 - fully implement ALPS-style age-layered workflow; the current ALPS algorithm still behaves like a simple single-layer evolutionary loop with a regular generation budget

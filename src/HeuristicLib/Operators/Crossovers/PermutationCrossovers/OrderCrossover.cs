@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
 public record OrderCrossover : SingleSolutionCrossover<Permutation, PermutationSearchSpace>
 {
-    public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
+    public override Permutation Cross(Parents<Permutation> parents, IRandomNumberGenerator random, PermutationSearchSpace searchSpace)
     {
         var (parent1, parent2) = (parents.Parent1, parents.Parent2);
         return Cross(parent1, parent2, random);

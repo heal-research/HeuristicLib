@@ -15,7 +15,7 @@ public record AlphaBetaBlendCrossover : SingleSolutionCrossover<RealVector, Real
     public double Alpha { get; }
     public double Beta => 1 - Alpha;
 
-    public override RealVector Cross(IParents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
+    public override RealVector Cross(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
       => Cross(parents.Parent1, parents.Parent2, random, searchSpace, Alpha);
 
     public static RealVector Cross(RealVector parent1, RealVector parent2, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double alpha)

@@ -7,7 +7,7 @@ public static class Population
 {
     public static Population<TCandidate> From<TCandidate>(IEnumerable<TCandidate> candidates, IEnumerable<ObjectiveVector> fitnesses) => new([.. candidates.Zip(fitnesses, EvaluatedCandidate.From)]);
 
-    public static Population<TCandidate> From<TCandidate>(IEnumerable<EvaluatedCandidate<TCandidate>> solutions) => new([.. solutions]);
+    public static Population<TCandidate> From<TCandidate>(IEnumerable<EvaluatedCandidate<TCandidate>> evaluatedCandidates) => new([.. evaluatedCandidates]);
 }
 
 [Equatable]
@@ -18,9 +18,9 @@ public partial record Population<TCandidate> : ISolutionLayout<TCandidate>
 
     public IEnumerable<TCandidate> Candidates => EvaluatedCandidates.Select(x => x.Candidate);
 
-    public Population(params IReadOnlyList<EvaluatedCandidate<TCandidate>> solutions)
+    public Population(params IReadOnlyList<EvaluatedCandidate<TCandidate>> evaluatedCandidates)
     {
-        EvaluatedCandidates = solutions.ToImmutableArray();
+        EvaluatedCandidates = evaluatedCandidates.ToImmutableArray();
     }
 
     public IEnumerator<EvaluatedCandidate<TCandidate>> GetEnumerator() => EvaluatedCandidates.AsReadOnly().GetEnumerator();

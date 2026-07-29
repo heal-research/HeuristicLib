@@ -45,7 +45,7 @@ public class BoolVectorSearchSpaceTests
     {
         var space = new BoolVectorSearchSpace(0);
 
-        space.Contains(BoolVector.Create(Array.Empty<bool>())).ShouldBeTrue();
+        space.Contains(BoolVector.Create()).ShouldBeTrue();
     }
 
     [Fact]

@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using static System.String;
 
@@ -686,8 +685,6 @@ public class TsplibParser
         EdgeWeightSection = 19
     }
 
-    [SuppressMessage("ReSharper", "IdentifierTypo")]
-    [SuppressMessage("ReSharper", "InconsistentNaming")]
     private enum TSPLIBEdgeWeightFormats
     {
         Unknown = 0,

@@ -30,7 +30,7 @@ public class RotatedGradientTestFunctionTests
     [Fact]
     public void EvaluateGradient_ShouldMatchFiniteDifferences()
     {
-        var rotation = new double[,] {
+        var rotation = new[,] {
       { 0.8, -0.6 },
       { 0.6, 0.8 }
     };

@@ -61,7 +61,7 @@ public class PythonInterOptEquationScoring(ObjectiveDirections objective, Symbol
             ParameterOptimizationIterations = 5 //this is the effort spent on Parameter-Optimization
         };
 
-        var directions = new ObjectiveDirection[] {
+        var directions = new[] {
       ObjectiveDirection.Maximize, // Combined Score, overridden by myEval, but we want to maximize it
       ObjectiveDirection.Maximize, // PearsonR2Evaluator score
       ObjectiveDirection.Maximize, // Dimensional Consistency

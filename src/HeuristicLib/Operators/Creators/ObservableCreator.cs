@@ -41,7 +41,7 @@ public partial record ObservableCreator<TCandidate, TSearchSpace, TProblem>
     }
 }
 
-public interface ICreatorObserver<in TCandidate, in TSearchSpace, in TProblem>
+public interface ICreatorObserver<TCandidate, in TSearchSpace, in TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {

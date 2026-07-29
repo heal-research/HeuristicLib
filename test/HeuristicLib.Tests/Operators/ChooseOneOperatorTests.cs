@@ -172,7 +172,7 @@ public class ChooseOneOperatorTests
         Should.Throw<ArgumentException>(() => ChooseOneSelector.Create(
             [new FirstCandidatesSelector(), new LastCandidatesSelector()],
             [double.NaN, 1.0]));
-        Should.Throw<ArgumentException>(() => ChooseOneReplacer.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>([]));
+        Should.Throw<ArgumentException>(() => ChooseOneReplacer.Create<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>());
     }
 
     [Fact]
@@ -287,8 +287,8 @@ public class ChooseOneOperatorTests
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var state = new TestAlgorithmState { Value = 1 };
         var registry = new Execution.ExecutionInstanceRegistry();
-        var any = registry.Resolve(new AnyTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>([]));
-        var all = registry.Resolve(new AllTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>([]));
+        var any = registry.Resolve(new AnyTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>());
+        var all = registry.Resolve(new AllTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>());
 
         any.IsTerminalState(state, DummySearchSpace<int>.Instance, problem).ShouldBeFalse();
         all.IsTerminalState(state, DummySearchSpace<int>.Instance, problem).ShouldBeTrue();
@@ -306,19 +306,19 @@ public class ChooseOneOperatorTests
 
     private sealed record FirstParentCrossover(int Offset) : SingleSolutionCrossover<int, DummySearchSpace<int>>
     {
-        public override int Cross(IParents<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parents.Parent1 + Offset;
+        public override int Cross(Parents<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parents.Parent1 + Offset;
     }
 
     private sealed record SecondParentCrossover(int Offset) : SingleSolutionCrossover<int, DummySearchSpace<int>>
     {
-        public override int Cross(IParents<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parents.Parent2 + Offset;
+        public override int Cross(Parents<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace) => parents.Parent2 + Offset;
     }
 
     private sealed record AddToStateInterceptor(int Offset)
       : StatelessInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>
     {
         public override TestAlgorithmState Transform(TestAlgorithmState currentState, TestAlgorithmState? previousState, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
-          => currentState with { Value = currentState.Value + Offset };
+            => currentState with { Value = currentState.Value + Offset };
     }
 
     private sealed record FirstCandidatesSelector : StatelessSelector<int>

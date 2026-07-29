@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 
 public record EdgeRecombinationCrossover : SingleSolutionCrossover<Permutation>
 {
-    public override Permutation Cross(IParents<Permutation> parents, IRandomNumberGenerator random)
+    public override Permutation Cross(Parents<Permutation> parents, IRandomNumberGenerator random)
       => Cross(parents.Parent1, parents.Parent2, random);
 
     public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random)

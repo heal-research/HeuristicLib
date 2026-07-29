@@ -18,7 +18,7 @@ public class CompositionTests
         RealVector x = [1.0, 1.0];
 
         var value = inner.Evaluate(x);
-        var gradient = inner.EvaluateGradient(x);
+        inner.EvaluateGradient(x);
 
         (value > 0).ShouldBeTrue();
         SingleObjectiveTestFunctionHelper.AssertGradientMatchesFiniteDifferences(inner, x);

@@ -16,7 +16,6 @@ public partial record PipelineMutator<TCandidate, TSearchSpace, TProblem>
     public PipelineMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
       : base(mutators)
     {
-        // ToDo: think if we want to allow empty pipelines.
         if (mutators.Count == 0)
             throw new ArgumentException("At least one mutator must be provided.", nameof(mutators));
     }

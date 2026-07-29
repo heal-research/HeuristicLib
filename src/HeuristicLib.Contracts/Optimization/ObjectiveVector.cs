@@ -72,7 +72,7 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
             {
                 ObjectiveDirection.Minimize => +1,
                 ObjectiveDirection.Maximize => -1,
-                _ => throw new NotImplementedException()
+                _ => throw new InvalidOperationException($"Unsupported objective direction: {objective.Directions[i]}.")
             };
         }
 

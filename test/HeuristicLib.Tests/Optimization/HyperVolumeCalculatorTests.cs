@@ -81,7 +81,7 @@ public class HyperVolumeCalculatorTests
     [Fact]
     public void Calculate_MoreThanTwoDimensions_WithMaximization_Throws()
     {
-        var ex = Should.Throw<NotImplementedException>(() =>
+        var ex = Should.Throw<NotSupportedException>(() =>
           HyperVolumeCalculator.Calculate(
             [Vec(1, 1, 1)],
             Vec(0, 0, 0),
@@ -107,5 +107,32 @@ public class HyperVolumeCalculatorTests
             ObjectiveDirection.Minimize));
 
         hv.ShouldBe(0.336, 1e-12);
+    }
+
+    [Fact]
+    public void Calculate_3D_Minimization_PointsOnSameSweepLevel_ReturnsUnionVolume()
+    {
+        var objective = Obj(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize, ObjectiveDirection.Minimize);
+        var hv = HyperVolumeCalculator.Calculate([Vec(0.2, 0.8, 0.5), Vec(0.8, 0.2, 0.5)], Vec(1, 1, 1), objective);
+
+        hv.ShouldBe(0.14, 1e-12);
+    }
+
+    [Fact]
+    public void Calculate_3D_Minimization_PointsOnDifferentSweepLevels_ReturnsUnionVolume()
+    {
+        var objective = Obj(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize, ObjectiveDirection.Minimize);
+        var hv = HyperVolumeCalculator.Calculate([Vec(0.2, 0.8, 0.4), Vec(0.8, 0.2, 0.6)], Vec(1, 1, 1), objective);
+
+        hv.ShouldBe(0.144, 1e-12);
+    }
+
+    [Fact]
+    public void Calculate_3D_Minimization_PointOnReferenceSweepLevel_AddsNoVolume()
+    {
+        var objective = Obj(ObjectiveDirection.Minimize, ObjectiveDirection.Minimize, ObjectiveDirection.Minimize);
+        var hv = HyperVolumeCalculator.Calculate([Vec(0.2, 0.8, 0.5), Vec(0.8, 0.2, 1.0)], Vec(1, 1, 1), objective);
+
+        hv.ShouldBe(0.08, 1e-12);
     }
 }

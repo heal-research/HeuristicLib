@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Random;
 public static class RandomEnumerable
 {
     // algorithm taken from programming pearls page 127
-    // IMPORTANT because IEnumerables with yield are used the seed must be specified to return always 
+    // IMPORTANT because IEnumerables with yield are used the seed must be specified to return always
     // the same sequence of numbers without caching the values.
     public static IEnumerable<int> SampleRandomNumbers(this IRandomNumberGenerator generator, int start, int end, int count)
     {
@@ -190,7 +190,6 @@ public static class RandomEnumerable
 
                 yield return sourceArray[index];
             }
-            // ReSharper disable once IteratorNeverReturns
         }
 
         private IEnumerable<T> SampleProportionalWithoutRepetition(IRandomNumberGenerator random, IEnumerable<double> weights, bool windowing, bool inverseProportional)

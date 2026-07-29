@@ -49,7 +49,7 @@ public class WeightedSumComparer : IComparer<ObjectiveVector>
         {
             ObjectiveDirection.Minimize => +1.0,
             ObjectiveDirection.Maximize => -1.0,
-            _ => throw new NotImplementedException()
+            _ => throw new InvalidOperationException($"Unsupported objective direction: {d}.")
         }));
         var directedWeights = weights * directions;
 

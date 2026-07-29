@@ -11,9 +11,9 @@ public abstract record SingleSolutionCrossover<TCandidate, TSearchSpace, TProble
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract TCandidate Cross(IParents<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    public abstract TCandidate Cross(Parents<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+    public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
       BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace, problem), random);
 }
 
@@ -21,17 +21,17 @@ public abstract record SingleSolutionCrossover<TCandidate, TSearchSpace>
   : StatelessCrossover<TCandidate, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public abstract TCandidate Cross(IParents<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    public abstract TCandidate Cross(Parents<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
+    public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
       BatchExecution.Sequential(parents, (p, r) => Cross(p, r, searchSpace), random);
 }
 
 public abstract record SingleSolutionCrossover<TCandidate>
   : StatelessCrossover<TCandidate>
 {
-    public abstract TCandidate Cross(IParents<TCandidate> parents, IRandomNumberGenerator random);
+    public abstract TCandidate Cross(Parents<TCandidate> parents, IRandomNumberGenerator random);
 
-    public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random) =>
+    public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) =>
       BatchExecution.Sequential(parents, (p, r) => Cross(p, r), random);
 }

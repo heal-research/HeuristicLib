@@ -55,7 +55,7 @@ public class OperatorStaticMethodGuidelineTests
     {
         var objective = CreateSingleObjective();
         var problem = new DummyProblem<int>(DummySearchSpace<int>.Instance, objective);
-        var state = Population.From<int>([
+        var state = Population.From([
             EvaluatedCandidate.From(1, new ObjectiveVector(2.0)),
             EvaluatedCandidate.From(2, new ObjectiveVector(0.5))
         ]).ToPopulationState();

@@ -3,17 +3,17 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.DataAnalysis.Clustering;
 
-public class ClusteringProblem<TProblemData, TSolution, TSearchSpace>(TProblemData problemData, ICollection<IClusteringEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace encoding)
-  : DataAnalysisProblem<TProblemData, TSolution, TSearchSpace>(problemData, new ObjectiveDirections(objective.Select(x => x.Direction).ToArray(), a), encoding)
+public class ClusteringProblem<TProblemData, TCandidate, TSearchSpace>(TProblemData problemData, ICollection<IClusteringEvaluator> objective, IComparer<ObjectiveVector> a, TSearchSpace encoding)
+  : DataAnalysisProblem<TProblemData, TCandidate, TSearchSpace>(problemData, new ObjectiveDirections(objective.Select(x => x.Direction).ToArray(), a), encoding)
   where TProblemData : ClusteringProblemData
-  where TSearchSpace : class, ISearchSpace<TSolution>
-  where TSolution : IClusteringModel
+  where TSearchSpace : class, ISearchSpace<TCandidate>
+  where TCandidate : IClusteringModel
 {
     public List<IClusteringEvaluator> Evaluators { get; set; } = objective.ToList();
 
-    public override ObjectiveVector Evaluate(TSolution solution)
+    public override ObjectiveVector Evaluate(TCandidate candidate)
     {
-        var predictions = solution.GetClusterValues(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
+        var predictions = candidate.GetClusterValues(ProblemData.Dataset, ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training].Enumerate());
         if (Evaluators.Count == 1)
         {
             return new ObjectiveVector(Evaluators[0].Evaluate(ProblemData, DataAnalysisProblemData.PartitionType.Training, predictions));

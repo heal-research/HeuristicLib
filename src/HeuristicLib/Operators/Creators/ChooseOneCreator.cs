@@ -55,7 +55,7 @@ public static class ChooseOneCreator
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         => new(creators);
 
-    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators, IReadOnlyList<double>? weights = null)
+    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(creators, weights);
 }

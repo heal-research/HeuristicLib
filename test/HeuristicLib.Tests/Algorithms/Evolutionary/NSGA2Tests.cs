@@ -11,9 +11,7 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 
-#pragma warning disable S101
 public class NSGA2Tests
-#pragma warning restore S101
 {
     [Fact]
     public void Complete_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()

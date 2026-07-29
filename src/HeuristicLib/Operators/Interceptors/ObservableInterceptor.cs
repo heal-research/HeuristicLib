@@ -41,7 +41,7 @@ public partial record ObservableInterceptor<TCandidate, TSearchSpace, TProblem, 
     }
 }
 
-public interface IInterceptorObserver<in TCandidate, in TSearchSpace, in TProblem, in TSearchState>
+public interface IInterceptorObserver<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState

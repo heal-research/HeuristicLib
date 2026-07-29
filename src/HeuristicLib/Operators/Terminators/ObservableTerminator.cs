@@ -41,7 +41,7 @@ public partial record ObservableTerminator<TCandidate, TSearchSpace, TProblem, T
 }
 
 
-public interface ITerminatorObserver<in TCandidate, in TSearchSpace, in TProblem, in TSearchState>
+public interface ITerminatorObserver<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState

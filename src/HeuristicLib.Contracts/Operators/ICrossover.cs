@@ -15,5 +15,5 @@ public interface ICrossoverInstance<TCandidate, in TSearchSpace, in TProblem>
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 }

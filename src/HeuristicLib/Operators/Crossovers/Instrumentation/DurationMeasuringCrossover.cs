@@ -34,7 +34,7 @@ public sealed record DurationMeasuringCrossover<TCandidate, TSearchSpace, TProbl
     private sealed class Instance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover, ObservationDuration duration, TimeProvider timeProvider)
         : WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem>(innerCrossover)
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<IParents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var startTimestamp = timeProvider.GetTimestamp();
             try

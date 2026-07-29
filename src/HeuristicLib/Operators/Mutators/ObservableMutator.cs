@@ -41,7 +41,7 @@ public partial record ObservableMutator<TCandidate, TSearchSpace, TProblem>
     }
 }
 
-public interface IMutatorObserver<in TCandidate, in TSearchSpace, in TProblem>
+public interface IMutatorObserver<TCandidate, in TSearchSpace, in TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
