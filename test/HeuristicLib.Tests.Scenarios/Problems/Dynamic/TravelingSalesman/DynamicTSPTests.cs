@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Algorithms.Evolutionary;
-using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
@@ -33,7 +32,7 @@ public class DynamicTSPTests
         //ga.RandomSeed = 42;
         ga.PopulationSize = 100;
         ga.MutationRate = 0.05;
-        ga.Selector = new TournamentSelector<Permutation>(2);
+        ga.Selector = TournamentSelector.For(prob, tournamentSize: 2);
         ga.Elites = 1;
         //ga.Evaluator = prob.WrapEvaluator(ga.Evaluator);
 
@@ -43,7 +42,7 @@ public class DynamicTSPTests
         var resGa = (ga.Build() with
         {
             MaximumGenerations = 1000
-        }).RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        }).Complete(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         //look at results
         var objGa = resGa.Population

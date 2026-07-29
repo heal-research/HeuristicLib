@@ -2,9 +2,9 @@ using System.Collections;
 using System.Linq.Expressions;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.DataAnalysis;
+using ValuesType = System.Collections.Generic.Dictionary<string, System.Collections.IList>;
 
-using ValuesType = Dictionary<string, IList>;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis;
 
 public static class DatasetUtil
 {

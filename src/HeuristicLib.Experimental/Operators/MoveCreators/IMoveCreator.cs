@@ -1,7 +1,7 @@
-namespace HEAL.HeuristicLib.Operators.MoveCreators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Problems;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveCreators;
 
 public interface IMoveCreator<in TGenotype, in TSearchSpace, in TProblem, out TMove>
     : IOperator<IMoveCreatorInstance<TGenotype, TSearchSpace, TProblem, TMove>>

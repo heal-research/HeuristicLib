@@ -11,33 +11,33 @@ public abstract record SingleSolutionEvaluator<TCandidate, TSearchSpace, TProble
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public int MaxDegreeOfParallelism { get; init; } = -1;
+    public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
     public abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-      BatchExecution.Parallel(candidates, (candidate, r) => Evaluate(candidate, r, searchSpace, problem), random, MaxDegreeOfParallelism);
+      BatchExecution.Execute(candidates, (candidate, r) => Evaluate(candidate, r, searchSpace, problem), random, Concurrency);
 }
 
 public abstract record SingleSolutionEvaluator<TCandidate, TSearchSpace>
   : StatelessEvaluator<TCandidate, TSearchSpace>
   where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public int MaxDegreeOfParallelism { get; init; } = -1;
+    public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
     public abstract ObjectiveVector Evaluate(TCandidate solution, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
-      BatchExecution.Parallel(candidates, (candidate, r) => Evaluate(candidate, r, searchSpace), random, MaxDegreeOfParallelism);
+      BatchExecution.Execute(candidates, (candidate, r) => Evaluate(candidate, r, searchSpace), random, Concurrency);
 }
 
 public abstract record SingleSolutionEvaluator<TCandidate>
   : StatelessEvaluator<TCandidate>
 {
-    public int MaxDegreeOfParallelism { get; init; } = -1;
+    public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
     public abstract ObjectiveVector Evaluate(TCandidate solution, IRandomNumberGenerator random);
 
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
-      BatchExecution.Parallel(candidates, (candidate, r) => Evaluate(candidate, r), random, MaxDegreeOfParallelism);
+      BatchExecution.Execute(candidates, (candidate, r) => Evaluate(candidate, r), random, Concurrency);
 }

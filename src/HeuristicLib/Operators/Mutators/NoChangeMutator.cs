@@ -1,4 +1,6 @@
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Mutators;
 
@@ -11,5 +13,8 @@ public record NoChangeMutator<TCandidate> : SingleSolutionMutator<TCandidate>
 
 public static class NoChangeMutator
 {
+    public static NoChangeMutator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => NoChangeMutator<TCandidate>.Instance;
+
     public static TCandidate Mutate<TCandidate>(TCandidate parent, IRandomNumberGenerator random) => parent;
 }

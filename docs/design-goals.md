@@ -1,12 +1,14 @@
 # Design Goals And Principles
 
-This page records the durable design principles for HeuristicLib. It should outlive the current implementation and the current redesign draft.
+This page records the durable product and architectural principles for HeuristicLib. It describes why the library is designed as it is and should outlive the current implementation.
 
-For contributor workflow and change rules, see the root `AGENTS.md`.
+HeuristicLib is in early alpha. Public APIs may change when a materially stronger design is identified and backward compatibility is not yet a design goal.
+
+For concrete implementation rules, public API conventions and contributor decisions, see [Developer guidelines](developer-guidelines.md). For repository workflow and validation commands, see the root [AGENTS.md](../AGENTS.md).
 
 ## North star
 
-HeuristicLib should become a modern, library-first toolkit for heuristic optimization that is:
+HeuristicLib should become a modern library first toolkit for heuristic optimization that is:
 
 - predictable
 - composable
@@ -21,173 +23,46 @@ This implies:
 - explicit execution control and integration points
 - a small number of strong concepts instead of many overlapping abstractions
 
-The library should serve researchers and practitioners first, while remaining easy to use from notebooks, services, automation, and AI-driven workflows.
-
-## Alpha stance
-
-HeuristicLib is still early alpha.
-
-Therefore:
-
-- backward compatibility is not a design goal
-- current APIs are evidence, not commitments
-- redesign is encouraged when it materially improves correctness, clarity, or usability
-
-Alpha status is not a license for arbitrary churn. Changes should still be intentional, documented, and clearly better.
-
-## Implementation path
-
-The active path is not a broad parallel rewrite. It is example-first, incremental improvement of the existing implementation.
-
-In practice:
-
-- executable API specs should expose the intended user flow first
-- implementation changes should follow those specs
-- archived redesign notes may inform the work, but they do not define it directly
+The library should serve researchers and practitioners first while remaining easy to use from notebooks, services, automation and AI driven workflows.
 
 ## Core principles
 
-### Small, honest concepts
+### Small coherent conceptual model
 
-The public model should revolve around a deliberately small vocabulary, including concepts such as:
+The public model should revolve around a deliberately small vocabulary such as:
 
 - problem
-- domain
-- evaluator
+- candidate
+- search space
 - objective
-- candidate and evaluation
 - algorithm
-- run and state
-- operators where they are genuinely useful
+- operator
+- run
+- search state
+- execution instance
 
-Prefer one honest unified concept over parallel hierarchies when the semantics are truly shared.
+Prefer one honest concept over parallel hierarchies when their semantics are truly shared.
 
 ### Pit of success and strong typing
 
 The library should make correct usage natural and incorrect usage difficult.
 
-- Prefer static typing over conventions.
-- Make invalid states unrepresentable where practical.
-- Validate at construction boundaries when the type system cannot express an invariant.
-- Avoid half-configured or ambiguous public objects.
-- If something should not be allowed, prefer preventing it by API shape.
+Static typing, explicit invariants and clear API shapes should prevent mistakes where practical. A user should not need deep framework knowledge to configure and run a standard algorithm.
 
 ### Explicit dependencies and data flow
 
-Behavior-affecting inputs must be explicit, especially:
+Behavior affecting inputs such as randomness, cancellation, time, scheduling and caches should remain explicit.
 
-- randomness
-- cancellation
-- time or scheduling concerns
-- caches or evaluator wrappers
+Avoid ambient state, hidden orchestration and opaque indirection. Execution should be understandable from the configuration and the data passed through it.
 
-Avoid ambient state, hidden global registries, and opaque orchestration.
+### Immutable candidate flow
 
-### No build-mode-dependent behavior
+Candidates represent values being searched. Existing candidates should remain stable while operators produce new candidates and search states describe public progress.
 
-Debug and release builds must not differ in behavior.
+This gives algorithms, analysis and concurrent execution a predictable value oriented foundation.
 
-- Build configuration must never change whether the library accepts, rejects, mutates, validates, or otherwise processes the same input.
-- Debug-only checks are not an acceptable place for behavioral validation.
-- `Debug.Assert` is not allowed in library code because it creates different observable behavior between debug and release builds.
-- If an invariant matters for correctness, enforce it explicitly in normal runtime code or express it through types and tests.
+### Clear execution and evaluation boundaries
 
-### Immutable candidates
+The problem defines canonical evaluation semantics. An explicit evaluator layer may sit between algorithms and problem evaluation when it provides meaningful composition such as caching, repeated evaluation, observation or scheduling.
 
-Any type used as `TCandidate` is part of the candidate model and must be immutable.
-
-- Candidate types must behave like values, not mutable containers.
-- Operators must not mutate parent candidates in place.
-- Mutation and crossover may produce new candidates, but they must not change the identity-bearing state of existing candidates.
-- Search spaces, problems, and algorithms should be designed around immutable candidate flow.
-
-### Honest execution and evaluation boundaries
-
-The problem defines canonical evaluation semantics.
-
-The design may place an explicit evaluator layer between algorithms and `Problem.Evaluate(...)` when that improves composability, for example for:
-
-- caching
-- repeated evaluation
-- observation
-- dynamic-problem-aware behavior
-- specialized scheduling
-
-Shared operators should prefer batch-first APIs when batch context is the honest semantic model.
-
-### Humans first, AI compatible
-
-Humans are the primary users. AI compatibility is a design constraint, not the main goal.
-
-In practice:
-
-- names should be descriptive and low-ambiguity
-- related abstractions should follow consistent patterns
-- defaults, costs, and side effects should be explicit
-- examples should be clear to both humans and tools
-
-### Stateless operator static methods
-
-Stateless operators should expose direct static methods that mirror the instance entry point.
-
-- The static method name should match the instance method name, for example `Create`, `Mutate`, `Cross`, `Select`, or `Evaluate`.
-- The instance method should delegate to a static method instead of owning separate logic.
-- One overload should be the core implementation overload and should accept the direct parameters the algorithm actually needs.
-- Search-space overloads should be thin adapters that extract the required parameters and forward to the core overload.
-- The core implementation overload should avoid taking a search space when the search space is only a container for already-extractable values such as length, bounds, or probabilities.
-- If the honest semantic dependency really is the search space itself, for example grammar-driven or topology-driven behavior that cannot be reduced to a smaller parameter set without hiding meaning, then the search space may remain part of the core overload.
-- Static overloads should be ordered top-down from adapters to the final core implementation, so a reader can follow the delegation path straight downward and reach the real implementation at the end.
-- Validation should live in the core overload when it protects the real operational contract, not only in adapter overloads, and it must behave the same in debug and release builds.
-- Convenience overloads are fine, but they should delegate inward rather than duplicate logic.
-
-### Responsibilities before packages
-
-Architectural guidance should be phrased in terms of concepts and responsibilities, not the current folder or assembly layout.
-
-- current package boundaries are provisional
-- no current project should be treated as uniquely central unless explicitly decided
-
-### Core model versus authoring layers
-
-Not every useful abstraction belongs in the conceptual core.
-
-Convenience layers may include:
-
-- builders
-- extension helpers
-- helper base classes
-
-These should serve the core model, not define it.
-
-### Extension concerns
-
-Extension methods should be grouped by user-facing concern rather than by implementation accident or target type alone.
-
-Observation hooks, counting helpers, duration measurement helpers, budget-composition helpers, factory helpers, and conversion helpers should live in separate extension classes when they represent different user intents. This keeps API discovery focused and prevents generic `*Extensions` classes from becoming unrelated method buckets.
-
-Source folders may group related extension concerns under a descriptive concern folder such as `Instrumentation` when the helpers belong to the same broad API area. This applies both to operator-level helpers, such as counted or measured operator wrappers, and to algorithm-level helpers, such as meta-algorithm budget composition. Folder organization does not have to create a matching public namespace; namespaces should follow the user-facing concept, while folders may serve maintainers by separating base types, implementations, and cross-cutting helper concerns.
-
-Concrete wrappers used only to implement an extension concern should remain private or internal unless callers have a clear reason to depend on their concrete type.
-
-### Patterns are tools, not law
-
-Some current patterns are promising, but should remain justified by use:
-
-- streaming execution
-- explicit runs
-- configuration versus execution-instance separation
-
-Use them where they solve a real problem. Do not preserve them as doctrine.
-
-## Change discipline
-
-When evolving the architecture:
-
-- start from the user problem
-- state the problem clearly
-- compare meaningful alternatives
-- justify the chosen direction with concrete examples
-- prefer designs that make misuse harder and intended use more obvious
-- update docs, examples, and tests together
-
-HeuristicLib should stay willing to redesign early, but each redesign should leave the library more coherent than before.
+Shared operators should support batch oriented APIs when batch context is part of the operation semantics.

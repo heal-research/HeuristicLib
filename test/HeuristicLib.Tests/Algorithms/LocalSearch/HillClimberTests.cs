@@ -14,30 +14,27 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.LocalSearch;
 public class HillClimberTests
 {
     [Fact]
-    public void RunStreaming_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
+    public void Stream_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
 
         var states = algorithm.WithMaxIterations(5)
-          .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+          .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
           .ToList();
 
         states.Select(StateCandidate).ShouldBe([0]);
     }
 
     [Fact]
-    public void RunStreaming_WithInitialLocalOptimum_YieldsNoStates()
+    public void Stream_WithInitialLocalOptimum_YieldsNoStates()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
-        var initialState = new SingleSolutionState<int>
-        {
-            Population = Population.From([0], [new ObjectiveVector(0.0)])
-        };
+        var initialState = SingleSolutionState.From(0, new ObjectiveVector(0.0));
 
         var states = algorithm.WithMaxIterations(5)
-          .RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
+          .Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
           .ToList();
 
         states.ShouldBeEmpty();

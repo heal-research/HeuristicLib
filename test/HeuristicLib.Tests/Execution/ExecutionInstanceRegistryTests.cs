@@ -1,5 +1,4 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
@@ -8,7 +7,7 @@ public class ExecutionInstanceRegistryTests
     [Fact]
     public void RegisterInstance_ReturnsRegisteredInstance()
     {
-        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new ExecutionInstanceRegistry();
         var resolvable = new CountingResolvable("created");
         var registeredInstance = new NamedInstance("registered");
 
@@ -21,7 +20,7 @@ public class ExecutionInstanceRegistryTests
     [Fact]
     public void RegisterInstance_ThrowsWhenInstanceWasAlreadyRegistered()
     {
-        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new ExecutionInstanceRegistry();
         var resolvable = new CountingResolvable("created");
 
         registry.RegisterInstance(resolvable, new NamedInstance("first"));
@@ -35,7 +34,7 @@ public class ExecutionInstanceRegistryTests
     [Fact]
     public void RegisterReplacement_StoresReplacementUnderOriginalIdentity()
     {
-        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new ExecutionInstanceRegistry();
         var original = new CountingResolvable("original");
         var replacement = new CountingResolvable("replacement");
 
@@ -52,7 +51,7 @@ public class ExecutionInstanceRegistryTests
     [Fact]
     public void RegisterReplacement_ThrowsWhenReplacementWasAlreadyRegistered()
     {
-        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new ExecutionInstanceRegistry();
         var original = new CountingResolvable("original");
 
         registry.RegisterReplacement(original, new CountingResolvable("first"));
@@ -66,7 +65,7 @@ public class ExecutionInstanceRegistryTests
     [Fact]
     public void RegisterReplacement_AllowsReplacementToResolveOriginal()
     {
-        var registry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var registry = new ExecutionInstanceRegistry();
         var original = new CountingResolvable("original");
         var replacement = new WrappingResolvable(original);
 
@@ -84,7 +83,7 @@ public class ExecutionInstanceRegistryTests
     [Fact]
     public void RegisterReplacement_IsInheritedByChildRegistry()
     {
-        var parentRegistry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var parentRegistry = new ExecutionInstanceRegistry();
         var childRegistry = parentRegistry.CreateChildRegistry();
         var original = new CountingResolvable("original");
         var replacement = new CountingResolvable("replacement");
@@ -103,7 +102,7 @@ public class ExecutionInstanceRegistryTests
     [Fact]
     public void RegisterReplacement_InChildRegistryOverridesParentReplacement()
     {
-        var parentRegistry = new ExecutionInstanceRegistry(TestRun.Instance);
+        var parentRegistry = new ExecutionInstanceRegistry();
         var childRegistry = parentRegistry.CreateChildRegistry();
         var original = new CountingResolvable("original");
         var parentReplacement = new CountingResolvable("parent replacement");
@@ -120,6 +119,19 @@ public class ExecutionInstanceRegistryTests
         original.CreateCount.ShouldBe(0);
         parentReplacement.CreateCount.ShouldBe(1);
         childReplacement.CreateCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void CreateChildRegistry_ReusesResolvedParentInstance()
+    {
+        var parentRegistry = new ExecutionInstanceRegistry();
+        var resolvable = new CountingResolvable("instance");
+        var parentInstance = parentRegistry.Resolve(resolvable);
+
+        var childInstance = parentRegistry.CreateChildRegistry().Resolve(resolvable);
+
+        childInstance.ShouldBeSameAs(parentInstance);
+        resolvable.CreateCount.ShouldBe(1);
     }
 
     private interface INamedInstance : IExecutionInstance

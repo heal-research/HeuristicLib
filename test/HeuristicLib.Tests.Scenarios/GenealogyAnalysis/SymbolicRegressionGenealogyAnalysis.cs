@@ -51,13 +51,12 @@ public class GenealogyGraphTests
             CreateSymRegAllMutator());
         builder.PopulationSize = 8;
         builder.MutationRate = 0.05;
-        builder.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+        builder.Selector = TournamentSelector.For(problem, tournamentSize: 3);
         builder.Elites = 1;
         //ga.RandomSeed = AlgorithmRandomSeed;
         //builder.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(100);
         var ga = builder.Build();
-        var interceptor = ga.Interceptor ??
-                          new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
+        var interceptor = ga.Interceptor ?? IdentityInterceptor.For(ga);
         ga = ga with
         {
             Interceptor = interceptor,
@@ -66,10 +65,9 @@ public class GenealogyGraphTests
 
         var analysis = Analyzer.BestMedianWorst(ga.Interceptor!);
 
-        var run = ga.CreateRun(problem, analysis);
-        var res = run.Complete(RandomNumberGenerator.Create(AlgorithmRandomSeed),
-            cancellationToken: TestContext.Current.CancellationToken);
-        var ares = run.GetAnalyzerResult(analysis);
+        var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzer(analysis);
+        var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
+        var ares = run.GetResult(analysis);
 
         ares.Count.ShouldBe(6);
         res.Population.EvaluatedCandidates.Count().ShouldBe(8);
@@ -90,13 +88,12 @@ public class GenealogyGraphTests
             CreateSymRegAllMutator());
         ga.PopulationSize = popsize;
         ga.MutationRate = 0.05;
-        ga.Selector = new TournamentSelector<SymbolicExpressionTree>(3);
+        ga.Selector = TournamentSelector.For(problem, tournamentSize: 3);
         ga.Elites = 1;
         //ga.Terminator = new AfterIterationsTerminator<SymbolicExpressionTree>(gens);
 
         var algorithm = ga.Build();
-        var interceptor = algorithm.Interceptor ??
-                          new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
+        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with
         {
             Interceptor = interceptor,
@@ -108,13 +105,12 @@ public class GenealogyGraphTests
         var genealogyAnalysis =
             ExperimentalAnalyzers.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
 
-        var run = algorithm.CreateRun(problem, evalQualities, qualities, genealogyAnalysis);
-        var res = run.Complete(RandomNumberGenerator.Create(AlgorithmRandomSeed),
-            cancellationToken: TestContext.Current.CancellationToken);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzers(evalQualities, qualities, genealogyAnalysis);
+        var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        var qres = run.GetAnalyzerResult(qualities);
-        var eres = run.GetAnalyzerResult(evalQualities);
-        var gres = run.GetAnalyzerResult(genealogyAnalysis);
+        var qres = run.GetResult(qualities);
+        var eres = run.GetResult(evalQualities);
+        var gres = run.GetResult(genealogyAnalysis);
 
         qres.Count.ShouldBe(gens);
         res.Population.EvaluatedCandidates.Length.ShouldBe(popsize);
@@ -133,19 +129,16 @@ public class GenealogyGraphTests
         var problem = CreateTestSymbolicRegressionProblem();
         var builder = HillClimber.GetBuilder(new ProbabilisticTreeCreator(), CreateSymRegAllMutator());
         var algorithm = builder.Build();
-        var interceptor = algorithm.Interceptor ??
-                          new IdentityInterceptor<SymbolicExpressionTree,
-                              SingleSolutionState<SymbolicExpressionTree>>();
+        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with { Interceptor = interceptor };
         var genealogy =
             new GenealogyAnalysis<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace,
                 IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>,
                 SingleSolutionState<SymbolicExpressionTree>>(
                 mutator: algorithm.Mutator, interceptor: algorithm.Interceptor);
-        var run = algorithm.WithMaxIterations(8).CreateRun(problem, genealogy);
-        var res = run.Complete(RandomNumberGenerator.Create(AlgorithmRandomSeed),
-            cancellationToken: TestContext.Current.CancellationToken);
-        var gres = run.GetAnalyzerResult(genealogy);
+        var run = algorithm.WithMaxIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzer(genealogy);
+        var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
+        var gres = run.GetResult(genealogy);
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
         problem.SearchSpace.Contains(res.Population.EvaluatedCandidates.Single().Candidate).ShouldBeTrue();
         res.Population.EvaluatedCandidates.Single().ObjectiveVector.Count.ShouldBe(1);
@@ -170,8 +163,7 @@ public class GenealogyGraphTests
         nsga2.MutationRate = mutationRate;
 
         var algorithm = nsga2.Build();
-        var interceptor = algorithm.Interceptor ??
-                          new IdentityInterceptor<SymbolicExpressionTree, PopulationState<SymbolicExpressionTree>>();
+        var interceptor = algorithm.Interceptor ?? IdentityInterceptor.For(algorithm);
         algorithm = algorithm with
         {
             Interceptor = interceptor,
@@ -181,11 +173,10 @@ public class GenealogyGraphTests
         var genealogy = ExperimentalAnalyzers.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm.Interceptor);
         var qualities = Analyzer.BestMedianWorst(algorithm.Interceptor!);
 
-        var run = algorithm.CreateRun(problem, genealogy, qualities);
-        var res = run.Complete(RandomNumberGenerator.Create(AlgorithmRandomSeed),
-            cancellationToken: TestContext.Current.CancellationToken);
-        var gres = run.GetAnalyzerResult(genealogy);
-        var qres = run.GetAnalyzerResult(qualities);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed)).WithAnalyzers(genealogy, qualities);
+        var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
+        var gres = run.GetResult(genealogy);
+        var qres = run.GetResult(qualities);
 
         qres.Count.ShouldBe(maximumIterations);
         res.Population.EvaluatedCandidates.Length.ShouldBe(populationSize);

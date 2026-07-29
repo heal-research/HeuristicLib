@@ -88,13 +88,13 @@ public class PythonInterOptEquationScoring(ObjectiveDirections objective, Symbol
 
         var ga = GeneticAlgorithm.GetBuilder(new ProbabilisticTreeCreator(), new SubtreeCrossover(), symRegAllMutator);
         ga.MutationRate = 0.1;
-        ga.Selector = new TournamentSelector<SymbolicExpressionTree>(4);
+        ga.Selector = TournamentSelector.For(p, tournamentSize: 4);
         ga.PopulationSize = 300;
 
         var res = (ga.Build() with
         {
             MaximumGenerations = 200
-        }).RunToCompletion(p, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
+        }).Complete(p, RandomNumberGenerator.Create(seed), null, CancellationToken.None);
         return res.Population;
     }
 

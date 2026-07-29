@@ -14,7 +14,8 @@ HeuristicLib is currently in an early alpha stage. Architecture and public APIs 
 ## Steering docs
 
 - [`AGENTS.md`](AGENTS.md) is the repository-wide contributor contract for humans and AI agents.
-- [`docs/design-goals.md`](docs/design-goals.md) records the durable design principles and clarifies which current patterns are still provisional.
+- [`docs/design-goals.md`](docs/design-goals.md) records the durable product and architectural principles.
+- [`docs/developer-guidelines.md`](docs/developer-guidelines.md) is the canonical implementation and public API design guide for contributors.
 
 Noticeable differences to HeuristicLab:
 

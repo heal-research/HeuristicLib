@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
@@ -11,6 +13,9 @@ public record GeneralizedRankSelector<TCandidate>(double Pressure) : StatelessSe
 
 public static class GeneralizedRankSelector
 {
+    public static GeneralizedRankSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, double pressure)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(pressure);
+
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
       IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
       ObjectiveDirections objective,

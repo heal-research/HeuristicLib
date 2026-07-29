@@ -16,7 +16,7 @@ public class NSGA2Tests
 #pragma warning restore S101
 {
     [Fact]
-    public void RunToCompletion_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
+    public void Complete_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
         var algorithm = NSGA2.GetBuilder<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>(
@@ -29,7 +29,7 @@ public class NSGA2Tests
         var result = (algorithm.Build() with
         {
             MaximumGenerations = 5
-        }).RunToCompletion(
+        }).Complete(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);

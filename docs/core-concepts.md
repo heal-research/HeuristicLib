@@ -8,18 +8,21 @@ The goal is a single dominant mental model:
 
 ## The contracts at a glance
 
-| Concept              | What it is                                              | Where it lives                                                                                              |
-| -------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Candidate            | The algorithm-facing object being searched              | Generic type parameter `TCandidate`                                                                         |
-| Search space         | Validity predicate for candidates                       | `ISearchSpace<TCandidate>`                                                                                  |
-| Objective directions | Minimize/maximize direction per objective               | `ObjectiveDirections`                                                                                       |
-| Objective vector     | The measured outcome of evaluation                      | `ObjectiveVector`                                                                                           |
-| Evaluated candidate  | Candidate + objective vector                            | `EvaluatedCandidate<TCandidate>`                                                                            |
-| Problem              | Owns search space, evaluation, and objective directions | `IProblem<TCandidate, TSearchSpace>`                                                                        |
-| Search state         | The public progress value produced by algorithms        | `ISearchState`                                                                                              |
-| Algorithm loop       | The step-based algorithm authoring model                | `IterativeAlgorithm<...>`                                                                                   |
-| Execution state      | Hidden per-run mutable execution state                  | `TExecutionState` on `IterativeAlgorithm<...>`                                                              |
-| Operators            | Pluggable building blocks used by algorithms            | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor` |
+| Concept              | What it is                                                                | Where it lives                                                                                              |
+| -------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Candidate            | The algorithm-facing object being searched                                | Generic type parameter `TCandidate`                                                                         |
+| Search space         | Validity predicate for candidates                                         | `ISearchSpace<TCandidate>`                                                                                  |
+| Objective directions | Minimize/maximize direction per objective                                 | `ObjectiveDirections`                                                                                       |
+| Objective vector     | The measured outcome of evaluation                                        | `ObjectiveVector`                                                                                           |
+| Evaluated candidate  | Candidate + objective vector                                              | `EvaluatedCandidate<TCandidate>`                                                                            |
+| Problem              | Owns search space, evaluation, and objective directions                   | `IProblem<TCandidate, TSearchSpace>`                                                                        |
+| Search state         | The public progress value produced by algorithms                          | `ISearchState`                                                                                              |
+| Algorithm loop       | The step based algorithm authoring model                                  | `IterativeAlgorithmInstance<...>`                                                                           |
+| Execution instance   | Run scoped behavior, resolved dependencies and mutable data               | `AlgorithmInstance<...>` or an operator instance contract                                                   |
+| Operators            | Pluggable building blocks used by algorithms                              | `ICreator`, `IEvaluator`, `ISelector`, `ICrossover`, `IMutator`, `IReplacer`, `ITerminator`, `IInterceptor` |
+| Algorithm run        | One executable algorithm setup with its problem, randomness and analyzers | `AlgorithmRun<...>`                                                                                         |
+| Experiment           | A reusable family of independent algorithm runs                           | `GridExperiment<...>` or `RepeatedExperiment<...>`                                                          |
+| Experiment run       | One materialized and schedulable execution of an experiment               | `ExperimentRun<...>`                                                                                        |
 
 ## How the types fit together
 
@@ -36,14 +39,16 @@ This is deliberate: once you’ve understood one family of types, the rest of th
 
 During execution, the loop looks like this:
 
-1. `CreateInitialExecutionState(resolver)` resolves dependencies and prepares per-run mutable state.
-2. `ExecuteStep(previousState, executionState, problem, random)` produces the next public state.
-3. Optional: `Interceptor.Transform(newState, previousState, ...)` post-processes the state.
+1. The algorithm configuration resolves child execution instances and creates an algorithm execution instance.
+2. `ExecuteStep(previousState, problem, random)` on the iterative execution instance produces the next public state.
+3. Optional: `Interceptor.Transform(newState, previousState, ...)` post processes the state.
 4. Streaming continues until the algorithm completes or an external termination wrapper stops it.
 
 The public search state is the “unit of progress”: it is what streaming execution yields, and it’s what termination and interception reason about.
 
-The execution state is the hidden carrier for resolved execution instances and per-run mutable data.
+The algorithm execution instance owns resolved child instances, private execution data and the execution behavior. Configurations remain reusable and unchanged during execution. Core configurations snapshot retained `IReadOnlyList<T>` inputs into immutable collections, so later changes to the caller's list do not alter an existing configuration.
+
+An `AlgorithmRun` supplies the problem and random number generator, owns analyzer setup and can execute once through `Stream`, `Complete` or `CompleteAsync`. An experiment materializes several independent algorithm runs as trials. It can stream identified trial states or start one completion task for each trial.
 
 ## Where to dive deeper
 
@@ -52,5 +57,6 @@ The execution state is the hidden carrier for resolved execution instances and p
 - [Objective vectors and evaluated candidates](objective-vectors-and-evaluated-candidates.md)
 - [Operators](operators.md)
 - [Algorithm](algorithm.md)
+- [Experiments](experiments.md)
 - [Search state](algorithm-state.md)
 - [Execution model](execution-model.md)

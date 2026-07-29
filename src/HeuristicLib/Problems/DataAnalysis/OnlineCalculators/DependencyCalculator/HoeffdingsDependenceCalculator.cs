@@ -68,9 +68,6 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
     ///   Calculates the joint rank with midranks for ties. Source: hoeffd.r from R package hmisc
     ///   http://cran.r-project.org/web/packages/Hmisc/index.html
     /// </summary>
-    /// <param name="xs"></param>
-    /// <param name="ys"></param>
-    /// <returns></returns>
     private static double[] TiedRank(IEnumerable<double> xs, IEnumerable<double> ys)
     {
         var xsArr = xs.ToArray();
@@ -128,7 +125,6 @@ public class HoeffdingsDependenceCalculator : IDependencyCalculator
     ///   Calculates midranks. Source: Numerical Recipes in C. p 642
     /// </summary>
     /// <param name="w">Sorted array of elements, replaces the elements by their rank, including midranking of ties</param>
-    /// <returns></returns>
     private static void CRank(double[] w)
     {
         var i = 0;

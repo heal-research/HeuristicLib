@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
@@ -25,6 +27,9 @@ public record ParetoCrowdingTournamentSelector<TCandidate>
 
 public static class ParetoCrowdingTournamentSelector
 {
+    public static ParetoCrowdingTournamentSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool dominateOnEqualities, int tournamentSize = 2)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(dominateOnEqualities, tournamentSize);
+
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(
       IReadOnlyList<EvaluatedCandidate<TCandidate>> population,
       ObjectiveDirections objective,

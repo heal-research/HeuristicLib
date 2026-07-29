@@ -30,14 +30,14 @@ public class MetaOptimizationTests
           new UniformDistributedCreator(),
           new SimulatedBinaryCrossover(),
           new GaussianMutator(0.5, 0.5), 0.25,
-          new TournamentSelector<RealVector>(2),
+          TournamentSelector.For(problem, tournamentSize: 2),
           100,
-          new DirectEvaluator<RealVector>());
+          DirectEvaluator.For(problem));
 
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();
         var mutatorExtractor = b.AddChoiceParameter(
-          new StatelessMutator<RealVector, RealVectorSearchSpace>[] {//TODO c# can not infer array type 
+          new Mutator<RealVector, RealVectorSearchSpace>[] {//TODO c# can not infer array type
       new GaussianMutator(0.5, 0.5),
       new GaussianMutator(0.5, 1),
       new PolynomialMutator(),
@@ -66,7 +66,7 @@ public class MetaOptimizationTests
         //run meta alg
         var finalState = hc.Build()
           .WithMaxIterations(5)
-          .RunToCompletion(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+          .Complete(metaProblem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         metaProblem.SearchSpace.Contains(finalState.EvaluatedCandidate.Candidate).ShouldBeTrue();
         finalState.EvaluatedCandidate.ObjectiveVector.Count.ShouldBe(1);

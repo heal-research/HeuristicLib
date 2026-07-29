@@ -1,9 +1,9 @@
-namespace HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems.Partial;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Optimization;
-using Problems.Partial;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
 
 public class CandidateTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchState<T, TS, TP, TM>
     where TP : class, IPartialSolutionProblem<T, TS>

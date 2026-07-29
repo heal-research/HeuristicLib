@@ -1,9 +1,9 @@
-namespace HEAL.HeuristicLib.Operators.Neighborhoods;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-using Genotypes.Vectors;
-using Problems;
-using Random;
-using SearchSpaces.Vectors;
+namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 
 public record RealVectorConstructionNeighborhood() : RealVectorNeighborhood<double>
 {

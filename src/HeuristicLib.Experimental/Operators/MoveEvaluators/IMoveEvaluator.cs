@@ -1,7 +1,7 @@
-namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Problems;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
 public interface IMoveEvaluator<in TGenotype, in TSearchSpace, in TProblem, in TMove>
     : IOperator<IMoveEvaluatorInstance<TGenotype, TSearchSpace, TProblem, TMove>>

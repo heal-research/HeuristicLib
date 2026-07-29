@@ -1,8 +1,5 @@
-using System.Collections;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
@@ -26,81 +23,81 @@ public class CycleAlgorithmAnalysisTests
         var algorithm = new SingleStepAlgorithm(1, evaluator, interceptor);
         var analysis1 = new EvaluationTraceAnalysis(evaluator);
         var analysis2 = new EvaluationTraceAnalysis(evaluator);
-        var problem = FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: x => x,
+        var problem = FuncProblem.Create(
+            evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, analysis1, analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzers(analysis1, analysis2);
 
-        GetReplacementCount(run).ShouldBe(1);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.Complete(RandomNumberGenerator.Create(0), cancellationToken: TestContext.Current.CancellationToken);
-
-        run.GetAnalyzerResult(analysis1).ObjectiveValues.ShouldBe([1.0]);
-        run.GetAnalyzerResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
+        run.GetResult(analysis1).ObjectiveValues.ShouldBe([1.0]);
+        run.GetResult(analysis2).ObjectiveValues.ShouldBe([1.0]);
     }
 
     [Fact]
-    public void GetAnalyzerResult_ReturnsDirectAnalyzerResult()
+    public void GetResult_ReturnsSameResultOnRepeatedCalls()
     {
         var evaluator = new IncrementingEvaluator();
         var analysis = new EvaluationTraceAnalysis(evaluator);
-        var run = new AnalyzerTestRun(analysis);
+        var run = CreateRun(analysis);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.GetAnalyzerResult(analysis).ShouldBeSameAs(run.GetResult(analysis));
+        var result = run.GetResult(analysis);
+
+        result.ShouldBeSameAs(run.GetResult(analysis));
     }
 
     [Fact]
-    public void TryGetAnalyzerResult_ReturnsDirectAnalyzerResultWhenPresent()
+    public void TryGetResult_ReturnsDirectResultWhenPresent()
     {
         var evaluator = new IncrementingEvaluator();
         var analysis = new EvaluationTraceAnalysis(evaluator);
-        var run = new AnalyzerTestRun(analysis);
+        var run = CreateRun(analysis);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.TryGetAnalyzerResult(analysis, out var result).ShouldBeTrue();
+        run.TryGetResult(analysis, out var result).ShouldBeTrue();
 
         result.ShouldNotBeNull();
-        result.ShouldBeSameAs(run.GetAnalyzerResult(analysis));
+        result.ShouldBeSameAs(run.GetResult(analysis));
     }
 
     [Fact]
-    public void TryGetAnalyzerResult_ReturnsFalseWhenAnalyzerWasNotAttached()
+    public void TryGetResult_ReturnsFalseWhenAnalyzerWasNotAttached()
     {
         var attached = new EvaluationTraceAnalysis(new IncrementingEvaluator());
         var missing = new EvaluationTraceAnalysis(new IncrementingEvaluator());
-        var run = new AnalyzerTestRun(attached);
+        var run = CreateRun(attached);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.TryGetAnalyzerResult(missing, out var result).ShouldBeFalse();
+        run.TryGetResult(missing, out var result).ShouldBeFalse();
 
         result.ShouldBeNull();
     }
 
     [Fact]
-    public void AnalyzerResultRetrieval_ThrowsInvalidOperationExceptionForMismatchedRunState()
+    public void ResultRetrieval_ThrowsInvalidOperationExceptionForMismatchedRunState()
     {
         var analyzer = new MalformedAnalyzer();
-        var run = new AnalyzerTestRun(analyzer);
+        var run = CreateRun(analyzer);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        Should.Throw<InvalidOperationException>(() => run.GetAnalyzerResult(analyzer));
+        Should.Throw<InvalidOperationException>(() => run.GetResult(analyzer));
         Should.Throw<InvalidOperationException>(() =>
-            run.TryGetAnalyzerResult<MalformedAnalyzer.Result>(analyzer, out _));
+            run.TryGetResult<MalformedAnalyzer.Result>(analyzer, out _));
     }
 
-    private static int GetReplacementCount(Run run)
+    private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(IAnalyzer analyzer)
     {
-        var rootRegistryField = typeof(Run).GetField("rootRegistry", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var rootRegistry = ((Lazy<ExecutionInstanceRegistry>)rootRegistryField.GetValue(run)!).Value;
-        var replacementResolvablesField = typeof(ExecutionInstanceRegistry).GetField("replacementResolvables",
-            BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var replacementResolvables = (IDictionary)replacementResolvablesField.GetValue(rootRegistry)!;
-        return replacementResolvables.Count;
+        var evaluator = new IncrementingEvaluator();
+        var problem = FuncProblem.Create(evaluateFunc: (int x) => x, encoding: DummySearchSpace<int>.Instance, objective: SingleObjective.Minimize);
+        var algorithm = new SingleStepAlgorithm(1, evaluator, new IdentityInterceptor<int, PopulationState<int>>());
+        return algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).WithAnalyzer(analyzer);
     }
-
-    private sealed class AnalyzerTestRun(params IAnalyzer[] analyzers) : Run(analyzers);
 
     private sealed record IncrementingEvaluator
-        : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,
+        : StatefulEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,
             IncrementingEvaluator.ExecutionState>
     {
         public sealed class ExecutionState
@@ -110,84 +107,45 @@ public class CycleAlgorithmAnalysisTests
 
         protected override ExecutionState CreateInitialState() => new();
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(
-            IReadOnlyList<int> candidates,
-            ExecutionState executionState,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            IProblem<int, DummySearchSpace<int>> problem)
+        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
             return candidates.Select(_ => new ObjectiveVector(++executionState.Value)).ToArray();
         }
     }
 
-    private sealed record SingleStepAlgorithm : Algorithm<int, DummySearchSpace<int>,
-        IProblem<int, DummySearchSpace<int>>, PopulationState<int>, SingleStepAlgorithm.ExecutionState>
+    private sealed record SingleStepAlgorithm : Algorithm<SingleStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public new sealed class ExecutionState
-            : Algorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>,
-                ExecutionState>.ExecutionState
-        {
-            public required
-                IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,
-                    PopulationState<int>> Interceptor { get; init; }
-        }
-
         public int Candidate { get; }
 
-        public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-            Interceptor { get; }
+        public IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator { get; }
 
-        public SingleStepAlgorithm(
-            int candidate,
-            IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator,
-            IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-                interceptor)
+        public IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Interceptor { get; }
+
+        public SingleStepAlgorithm(int candidate, IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor)
         {
             Candidate = candidate;
             Interceptor = interceptor;
             Evaluator = evaluator;
         }
 
-        protected override ExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver)
-            => new()
-            {
-                Evaluator = resolver.Resolve(Evaluator),
-                Interceptor = resolver.Resolve(Interceptor)
-            };
+        protected override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
+            new Instance(registry.Resolve(Evaluator), registry.Resolve(Interceptor), Candidate);
 
-        protected override
-            IAlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-            CreateAlgorithmInstance(Run run, ExecutionState executionState)
-            => new Instance(run, executionState.Evaluator, executionState.Interceptor, Candidate);
-
-        private sealed class Instance(
-            Run run,
-            IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator,
-            IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-                interceptor,
-            int candidate)
-            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-                run, evaluator)
+        private sealed class Instance(IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator, IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor, int candidate)
+            : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
         {
-            private readonly
-                IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,
-                    PopulationState<int>> interceptor = interceptor;
+            private readonly IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator = evaluator;
+
+            private readonly IInterceptorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> interceptor = interceptor;
+
             private readonly int candidate = candidate;
 
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-                IProblem<int, DummySearchSpace<int>> problem,
-                IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null,
-                [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 ct.ThrowIfCancellationRequested();
 
-                var objectiveVector = Evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
-                var currentState = new PopulationState<int>
-                {
-                    Population = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)])
-                };
+                var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
+                var currentState = Population.From([EvaluatedCandidate.From(candidate, objectiveVector)]).ToPopulationState();
 
                 yield return interceptor.Transform(currentState, initialState, problem.SearchSpace, problem);
                 await Task.CompletedTask;
@@ -195,16 +153,14 @@ public class CycleAlgorithmAnalysisTests
         }
     }
 
-    private sealed record EvaluationTraceAnalysis(
-        IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
+    private sealed record EvaluationTraceAnalysis(IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
         : Analyzer<EvaluationTraceAnalysis.ExecutionState>
     {
         public override ExecutionState CreateInitialResult() => new();
 
         public override void RegisterObservations(ObservationPlan observations, ExecutionState result)
         {
-            observations.Observe(Evaluator,
-                (_, objectiveVectors, _, _) => result.RecordObjectiveValues(objectiveVectors));
+            observations.Observe(Evaluator, (_, objectiveVectors, _, _) => result.RecordObjectiveValues(objectiveVectors));
         }
 
         public sealed class ExecutionState

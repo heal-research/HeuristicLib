@@ -11,14 +11,13 @@ using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 
 public class EvolutionaryGenerationBudgetTests
 {
     [Fact]
-    public void EvolutionStrategy_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void EvolutionStrategy_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateEvolutionStrategy(problem) with
@@ -26,7 +25,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -36,7 +35,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void NSGA2_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void NSGA2_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateMultiObjectiveProblem();
         var algorithm = CreateNSGA2(problem) with
@@ -44,7 +43,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -57,7 +56,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void AlpsGeneticAlgorithm_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void AlpsGeneticAlgorithm_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateAlpsGeneticAlgorithm(problem) with
@@ -65,7 +64,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -76,7 +75,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void OpenEndedRelevantAllelesPreservingGeneticAlgorithm_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void OpenEndedRelevantAllelesPreservingGeneticAlgorithm_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(problem) with
@@ -84,7 +83,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.RunStreaming(
+        var states = algorithm.Stream(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -138,7 +137,7 @@ public class EvolutionaryGenerationBudgetTests
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(0.1, 0.1),
             Crossover = null,
-            Selector = new RandomSelector<RealVector>()
+            Selector = RandomSelector.For(problem)
         };
     }
 
@@ -151,8 +150,8 @@ public class EvolutionaryGenerationBudgetTests
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
-            Selector = new ParetoCrowdingTournamentSelector<RealVector>(dominateOnEqualities: false, tournamentSize: 2),
-            Replacer = new ParetoCrowdingReplacer<RealVector>(true)
+            Selector = ParetoCrowdingTournamentSelector.For(problem, dominateOnEqualities: false, tournamentSize: 2),
+            Replacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true)
         };
     }
 
@@ -166,7 +165,7 @@ public class EvolutionaryGenerationBudgetTests
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
             MutationRate = 0.5,
-            Selector = new RandomSelector<RealVector>(),
+            Selector = RandomSelector.For(problem),
             Elites = 0
         };
     }
@@ -180,7 +179,7 @@ public class EvolutionaryGenerationBudgetTests
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SinglePointCrossover(),
             Mutator = new GaussianMutator(0.1, 0.1),
-            Selector = new RandomSelector<RealVector>(),
+            Selector = RandomSelector.For(problem),
             Elites = 1,
             MaxEffort = 6
         };

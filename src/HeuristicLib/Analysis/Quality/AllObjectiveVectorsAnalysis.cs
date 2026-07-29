@@ -13,16 +13,15 @@ public record AllObjectiveVectorsAnalysis<TCandidate, TSearchSpace, TProblem, TS
     where TSearchState : PopulationState<TCandidate>
 {
     private readonly bool resetAfterIntercept;
-    private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
-    private IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[] Interceptors { get; }
+    private ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
+    private ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> Interceptors { get; }
 
-    public AllObjectiveVectorsAnalysis(IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators,
-                                       IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[]
-                                           Interceptors, bool resetAfterIntercept = false)
+    public AllObjectiveVectorsAnalysis(IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators,
+                                       IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors, bool resetAfterIntercept = false)
     {
         this.resetAfterIntercept = resetAfterIntercept;
-        this.Evaluators = Evaluators;
-        this.Interceptors = Interceptors;
+        Evaluators = evaluators.ToImmutableArray();
+        Interceptors = interceptors.ToImmutableArray();
     }
 
     public override List<ObjectiveVector> CreateInitialResult() => [];
@@ -34,7 +33,8 @@ public record AllObjectiveVectorsAnalysis<TCandidate, TSearchSpace, TProblem, TS
             observations.Observe(evaluator,
                 (_, objectives, _, _) => result.AddRange(objectives));
 
-        if (!resetAfterIntercept) return;
+        if (!resetAfterIntercept)
+            return;
         foreach (var interceptor in Interceptors)
             observations.Observe(interceptor,
                 (_, _, _, _, _) => result.Clear());

@@ -19,6 +19,24 @@ The core roles used across algorithms in this repository are:
 
 The genetic algorithm (`GeneticAlgorithm<...>`) is the easiest place to see all of these roles working together.
 
+## Type inference helpers
+
+Generic methods can infer type arguments from an existing problem or algorithm even when an operator constructor has no type bearing argument. The static `For(...)` helpers use that argument as a type witness:
+
+```csharp
+var problemEvaluator = DirectEvaluator.For(problem);
+var tournamentSelector = TournamentSelector.For(problem, tournamentSize: 4);
+var randomSelector = RandomSelector.For(problem);
+var unchangedMutator = NoChangeMutator.For(problem);
+var firstParentCrossover = SelectFirstParentCrossover.For(problem);
+
+var algorithmEvaluator = DirectEvaluator.For(algorithm);
+var algorithmSelector = TournamentSelector.For(algorithm, tournamentSize: 4);
+var interceptor = IdentityInterceptor.For(algorithm);
+```
+
+Built in operator configurations whose concrete type otherwise contains only `TCandidate` consistently provide `For(problem, ...)`. The created operator does not retain or depend on the problem. It only supplies generic information to method inference. Direct generic construction remains appropriate when neither a problem nor a configured algorithm is available, such as a generic default declared on an algorithm configuration.
+
 ## The “shape” of an operator
 
 Operators are intentionally uniform:
@@ -35,55 +53,42 @@ This consistency reduces cognitive load: once you’ve implemented one operator,
 > - Operators assume their input candidates are already within the given search space. Passing out-of-space inputs is considered a usage error and may throw.
 > - Operators guarantee that any candidates they return are within the given search space.
 
-## Choosing a base class
+## Choosing an operator authoring path
 
-The base classes in `src/HeuristicLib/Operators` are authoring conveniences on top of the role interfaces.
+Operator authoring is based on who owns execution data and execution graph dependencies. Choose the narrowest path that fits the operator.
 
-Use this checklist:
+1. Use the role specific stateless base, such as `StatelessCreator`, `StatelessEvaluator`, `StatelessSelector`, `StatelessCrossover`, `StatelessMutator`, `StatelessReplacer`, `StatelessInterceptor` or `StatelessTerminator`, when operation logic needs configuration data but no mutable execution data.
+2. Use the role specific stateful base, such as `StatefulCreator<..., TState>`, `StatefulEvaluator<..., TState>`, `StatefulSelector<..., TState>`, `StatefulCrossover<..., TState>`, `StatefulMutator<..., TState>`, `StatefulReplacer<..., TState>`, `StatefulInterceptor<..., TState>` or `StatefulTerminator<..., TState>`, when operation logic needs execution instance scoped data but no execution graph dependencies.
+3. Derive directly from the unprefixed role base, such as `Creator`, `Evaluator`, `Selector`, `Crossover`, `Mutator`, `Replacer`, `Interceptor` or `Terminator`, and author the matching execution instance when the operator needs child execution instances or custom execution structure.
+4. Implement the role configuration and execution instance interfaces directly when the role bases do not fit.
 
-1. **First choose the operator role**
-   - creation -> `ICreator`
-   - evaluation -> `IEvaluator`
-   - selection -> `ISelector`
-   - variation of existing candidates -> `IMutator` / `ICrossover`
-   - survivor selection -> `IReplacer`
-   - stopping rule -> `ITerminator`
-   - state post-processing -> `IInterceptor`
+The unprefixed role base is the common base for all three paths. Stateless and stateful bases derive from it. Authors normally derive directly from the unprefixed base only for the full control path.
 
-2. **If the operator is stateless and naturally processes one item at a time, prefer `SingleSolution*`**
-   - Examples: `SingleSolutionCreator`, `SingleSolutionMutator`, `SingleSolutionCrossover`, `SingleSolutionEvaluator`
-   - Use this when the batch implementation is just “apply the same logic independently to each element”.
+### Stateless operators
 
-3. **If the operator is stateless but needs custom batch logic, use `Stateless*`**
-   - `Stateless*` is the special-case convenience layer built on `NoState`.
+A stateless operator configuration also performs the operation. Configuration values must remain unchanged during execution. Retained collection inputs use snapshot semantics: operator APIs accept `IReadOnlyList<T>` where appropriate then store an immutable snapshot. Later changes to the caller's list do not alter the operator configuration. Specialized role helpers may build on this path for common operation shapes.
 
-4. **If the operator needs mutable per-run memory, use the unprefixed role base**
-   - Examples: `Creator`, `Mutator`, `Evaluator`, `Selector`, `Crossover`, `Replacer`, `Terminator`, `Interceptor`
-   - Put configuration on the configuration object.
-   - Put mutable execution data into `TExecutionState`.
+### Stateful operators
 
-5. **If the operator wraps exactly one inner operator of the same role, use `Wrapping*<..., TExecutionState>`**
-   - Examples: `WrappingEvaluator`, `WrappingMutator`, `WrappingSelector`, ...
-   - The base resolves the inner execution instance once and passes it to your implementation as a delegate.
-   - Store that instance in `TExecutionState`.
+The framework creates one `TState` for each execution instance and passes it to operation logic. `CreateInitialState()` must return a fresh state object each time it is called. State may contain ordinary mutable data and helper data structures. It must not contain operator or algorithm configurations, execution instances, registries or delegates bound to child execution instances.
 
-6. **If the operator combines several inner operators of the same role, use `Multi*<..., TExecutionState>`**
-   - Examples: `MultiMutator`, `MultiCrossover`, `MultiTerminator`, ...
-   - The base resolves the inner execution instances once and passes them to your implementation as delegates.
-   - Store those instances in `TExecutionState`.
+Resolving the same operator configuration more than once in one registry returns the same execution instance and therefore the same state. Resolving it through independent registries creates independent execution instances and state objects. Stateful operators must not assume that operation calls are serialized or that their state is safe for concurrent access unless the owning execution path provides that guarantee.
 
-7. **If none of the convenience bases fit, implement the operator contract directly**
-   - This is the fallback when you need full control over instancing or execution behavior.
-   - If you do that, you also need to handle the configuration/execution-instance split correctly. See [Configuration vs execution instances](execution-instances.md).
+Framework managed state has no disposal lifecycle. State that owns disposable resources or requires explicit cleanup belongs in an explicitly authored execution instance after execution instance lifecycle support has been defined.
 
-## Short version
+### Explicit execution instances
 
-- plain stateless batch operator -> `Stateless*`
-- plain stateless per-item operator -> `SingleSolution*`
-- operator with mutable execution state -> `Creator` / `Mutator` / `Evaluator` / ...
-- operator that wraps one operator -> `Wrapping*<..., TExecutionState>`
-- operator that coordinates several operators -> `Multi*<..., TExecutionState>`
-- full custom behavior -> implement the contract directly and handle execution instances yourself
+The configuration describes reusable parameters and graph structure. The authored execution instance owns operation logic, mutable execution data and resolved child execution instances.
+
+Wrapping and multi bases are topology specific shortcuts within this path. A wrapping base resolves one child once. A multi base resolves several children once. They do not have separate stateless and stateful variants because their purpose is already execution graph coordination. The unprefixed role base remains available when those shortcuts do not fit.
+
+### Roslyn analyzer guardrails
+
+The `OperatorAuthoringAnalyzer` Roslyn analyzer applies across operator roles. `HLib0002` reports execution graph dependencies exposed through stateful operator state. `HLib0003` reports direct mutation of operator configuration members during operation logic.
+
+These diagnostics are guardrails for common authoring mistakes, not a proof that configuration and state obey every invariant. In particular, the Roslyn analyzer cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate. Operator authors remain responsible for keeping configurations reusable and keeping execution graph dependencies out of framework managed state.
+
+See [Operator authoring](operator-authoring.md) for focused examples of each path and their ownership rules.
 
 ## Terminator ownership
 
@@ -100,17 +105,15 @@ Supplying an `initialState` to resume an algorithm does not make that state newl
 
 `ITerminatorInstance.IsTerminalState(...)` may update run-local state. Treat it as an effectful transition, not as an idempotent predicate for speculative probing. An owning execution instance should call a terminator instance at most once for each produced public state. Sharing the same stateful terminator instance between an algorithm-owned internal criterion and a wrapper-owned external criterion should happen only when shared state is intentional.
 
-## Composition helpers
+## Operator composition
 
-HeuristicLib includes a few small composition patterns that keep calling code clean:
+Operators can be combined through weighted alternatives, conditional application, sequential pipelines, transformed composition, logical terminators and specialized wrappers. Composition policies define batching, ordering and any stronger cardinality requirements they need.
 
-- `mutator.WithRate(mutationRate)` wraps a mutator with a no-op mutator to achieve a per-offspring mutation probability
-- `ChooseOne*` helpers choose among several operators using weights
-- `Pipeline*` helpers apply several operators in sequence
-
-Operator observation helpers also follow explicit budget-unit names. For example, `CountMutatorCalls(...)` counts calls to the observed mutator boundary, while `CountMutatedCandidates(...)` counts candidates returned by those batched mutator calls. See [Observability & analysis](observability-and-analysis.md) for the counter and observation model.
+See [Operator composition](operator-composition.md) for the available forms, their semantics and authoring guidance.
 
 ## Next
 
 - [Algorithm](algorithm.md)
+- [Operator authoring](operator-authoring.md)
+- [Operator composition](operator-composition.md)
 - [Execution model](execution-model.md)

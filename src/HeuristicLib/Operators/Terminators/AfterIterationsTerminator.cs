@@ -1,7 +1,10 @@
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
+
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record AfterIterationsTerminator<TCandidate>
-  : Terminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
+  : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
 {
     public sealed class ExecutionState
     {
@@ -28,4 +31,10 @@ public record AfterIterationsTerminator<TCandidate>
         executionState.CurrentCount += 1;
         return executionState.CurrentCount >= MaximumIterations;
     }
+}
+
+public static class AfterIterationsTerminator
+{
+    public static AfterIterationsTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int maximumIterations)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(maximumIterations);
 }

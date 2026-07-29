@@ -1,0 +1,201 @@
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
+using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Experiments;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
+using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Interceptors;
+using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
+using HEAL.HeuristicLib.Operators.Replacers;
+using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.States;
+
+namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Operators;
+
+public class InferenceConstructionSpecs
+{
+    [Fact]
+    public void StaticAndFluentCompositionHelpers_InferTheirGenericArguments()
+    {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
+        var algorithm = CreateAlgorithm(problem);
+
+        var problemDirectEvaluator = DirectEvaluator.For(problem);
+        var directEvaluator = DirectEvaluator.For(algorithm);
+        var problemTournamentSelector = TournamentSelector.For(problem, tournamentSize: 3);
+        var tournamentSelector = TournamentSelector.For(algorithm, tournamentSize: 4);
+        var randomSelector = RandomSelector.For(problem);
+        var bestSelector = BestSelector.For(problem);
+        var worstSelector = WorstSelector.For(problem);
+        var linearRankSelector = LinearRankSelector.For(problem);
+        var generalizedRankSelector = GeneralizedRankSelector.For(problem, pressure: 2.0);
+        var proportionalSelector = ProportionalSelector.For(problem, windowing: false);
+        var paretoSelector = ParetoCrowdingTournamentSelector.For(problem, dominateOnEqualities: false);
+        var commaReplacer = CommaSelectionReplacer.For(problem);
+        var plusReplacer = PlusSelectionReplacer.For(problem);
+        var elitismReplacer = ElitismReplacer.For(problem, elites: 2);
+        var paretoReplacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true);
+        var randomCrossover = RandomCrossover.For(problem, bias: 0.75);
+        var identityInterceptor = IdentityInterceptor.For(algorithm);
+        var reconfiguredAlgorithm = algorithm with
+        {
+            Evaluator = directEvaluator,
+            Selector = tournamentSelector,
+            Interceptor = identityInterceptor
+        };
+
+        var pipelineMutator = PipelineMutator.Create(algorithm.Mutator, algorithm.Mutator);
+        var fluentPipelineMutator = algorithm.Mutator.Then(algorithm.Mutator);
+        var transformedCreator = TransformedCreator.Create(algorithm.Creator, algorithm.Mutator);
+        var fluentTransformedCreator = algorithm.Creator.TransformWith(algorithm.Mutator);
+        var transformedCrossover = TransformedCrossover.Create(algorithm.Crossover, algorithm.Mutator);
+        var fluentTransformedCrossover = algorithm.Crossover.TransformWith(algorithm.Mutator);
+        var pipelineInterceptor = PipelineInterceptor.Create(identityInterceptor, identityInterceptor);
+        var fluentPipelineInterceptor = identityInterceptor.Then(identityInterceptor);
+        var eliteSelector = EliteSelector.Create(algorithm.Selector, elites: 1);
+        var fluentEliteSelector = algorithm.Selector.WithElites(elites: 1);
+        var genderSpecificSelector = GenderSpecificSelector.Create(algorithm.Selector, algorithm.Selector);
+        var fluentGenderSpecificSelector = algorithm.Selector.PairWith(algorithm.Selector);
+        var noSameMatesSelector = NoSameMatesSelector.Create(algorithm.Selector, maximumAttempts: 3);
+        var fluentNoSameMatesSelector = algorithm.Selector.AvoidSameMates(maximumAttempts: 3);
+        var predefinedCreator = PredefinedCandidatesCreator.Create([RealVector.Create(0.0)], algorithm.Creator);
+        var fluentPredefinedCreator = algorithm.Creator.WithPredefinedCandidates([RealVector.Create(0.0)]);
+        var unchangedMutator = NoChangeMutator.For(problem);
+        var firstParentCrossover = SelectFirstParentCrossover.For(problem);
+        var secondParentCrossover = SelectSecondParentCrossover.For(problem);
+        var iterationTerminator = AfterIterationsTerminator.For(problem, maximumIterations: 3);
+        var stagnationTerminator = StagnationTerminator.For(problem, window: 4);
+        var targetTerminator = TargetTerminator.For(problem, new ObjectiveVector(0.0));
+        var neverTerminator = NeverTerminator.For(problem);
+
+        var firstTerminator = algorithm.WithMaxIterations(2).Terminator;
+        var secondTerminator = algorithm.WithMaxIterations(3).Terminator;
+        var anyTerminator = AnyTerminator.Create(firstTerminator, secondTerminator);
+        var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
+        var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
+        var fluentAllTerminator = firstTerminator.And(secondTerminator);
+        var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
+        var fluentTerminatedAlgorithm = algorithm.WithTerminator(firstTerminator);
+
+        var firstStage = algorithm.WithMaxIterations(2);
+        var secondStage = algorithm.WithMaxIterations(3);
+        var pipelineAlgorithm = PipelineAlgorithm.Create(firstStage, secondStage);
+        var fluentPipelineAlgorithm = firstStage.Then(secondStage);
+        var cycleAlgorithm = CycleAlgorithm.Create(firstStage, secondStage);
+        var fluentCycleAlgorithm = firstStage.CycleWith(secondStage, maximumCycles: 2);
+        var fluentMultiCycleAlgorithm = firstStage.CycleWith([secondStage], maximumCycles: 2);
+        var interfacePipelineAlgorithm = PipelineAlgorithm.Create(firstStage.Algorithm, firstStage);
+
+        problemDirectEvaluator.ShouldBeOfType<DirectEvaluator<RealVector>>();
+        directEvaluator.ShouldBeOfType<DirectEvaluator<RealVector>>();
+        problemTournamentSelector.TournamentSize.ShouldBe(3);
+        tournamentSelector.TournamentSize.ShouldBe(4);
+        randomSelector.ShouldBeOfType<RandomSelector<RealVector>>();
+        bestSelector.ShouldBeOfType<BestSelector<RealVector>>();
+        worstSelector.ShouldBeOfType<WorstSelector<RealVector>>();
+        linearRankSelector.ShouldBeOfType<LinearRankSelector<RealVector>>();
+        generalizedRankSelector.Pressure.ShouldBe(2.0);
+        proportionalSelector.Windowing.ShouldBeFalse();
+        paretoSelector.ShouldBeOfType<ParetoCrowdingTournamentSelector<RealVector>>();
+        commaReplacer.ShouldBeOfType<CommaSelectionReplacer<RealVector>>();
+        plusReplacer.ShouldBeOfType<PlusSelectionReplacer<RealVector>>();
+        elitismReplacer.Elites.ShouldBe(2);
+        paretoReplacer.ShouldBeOfType<ParetoCrowdingReplacer<RealVector>>();
+        randomCrossover.Bias.ShouldBe(0.75);
+        fluentCycleAlgorithm.MaximumCycles.ShouldBe(2);
+        fluentMultiCycleAlgorithm.MaximumCycles.ShouldBe(2);
+        identityInterceptor.ShouldBeOfType<IdentityInterceptor<RealVector, PopulationState<RealVector>>>();
+        reconfiguredAlgorithm.Evaluator.ShouldBeSameAs(directEvaluator);
+        reconfiguredAlgorithm.Selector.ShouldBeSameAs(tournamentSelector);
+        reconfiguredAlgorithm.Interceptor.ShouldBeSameAs(identityInterceptor);
+        pipelineMutator.Mutators.Length.ShouldBe(2);
+        fluentPipelineMutator.Mutators.Length.ShouldBe(2);
+        transformedCreator.Creator.ShouldBeSameAs(algorithm.Creator);
+        fluentTransformedCreator.Creator.ShouldBeSameAs(algorithm.Creator);
+        transformedCrossover.Crossover.ShouldBeSameAs(algorithm.Crossover);
+        fluentTransformedCrossover.Crossover.ShouldBeSameAs(algorithm.Crossover);
+        pipelineInterceptor.ShouldNotBeNull();
+        fluentPipelineInterceptor.ShouldNotBeNull();
+        eliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
+        fluentEliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
+        genderSpecificSelector.FemaleSelector.ShouldBeSameAs(algorithm.Selector);
+        fluentGenderSpecificSelector.MaleSelector.ShouldBeSameAs(algorithm.Selector);
+        noSameMatesSelector.MaxAttempts.ShouldBe(3);
+        fluentNoSameMatesSelector.MaxAttempts.ShouldBe(3);
+        predefinedCreator.PredefinedCandidates.Length.ShouldBe(1);
+        fluentPredefinedCreator.PredefinedCandidates.Length.ShouldBe(1);
+        unchangedMutator.ShouldBeSameAs(NoChangeMutator<RealVector>.Instance);
+        firstParentCrossover.ShouldBeSameAs(SelectFirstParentCrossover<RealVector>.Instance);
+        secondParentCrossover.ShouldBeSameAs(SelectSecondParentCrossover<RealVector>.Instance);
+        iterationTerminator.MaximumIterations.ShouldBe(3);
+        stagnationTerminator.ShouldBeOfType<StagnationTerminator<RealVector>>();
+        targetTerminator.Target.ShouldBe(new ObjectiveVector(0.0));
+        neverTerminator.ShouldBeOfType<NeverTerminator<RealVector>>();
+        anyTerminator.ShouldNotBeNull();
+        fluentAnyTerminator.ShouldNotBeNull();
+        allTerminator.ShouldNotBeNull();
+        fluentAllTerminator.ShouldNotBeNull();
+        terminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
+        fluentTerminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
+        pipelineAlgorithm.Algorithms.Length.ShouldBe(2);
+        pipelineAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        fluentPipelineAlgorithm.Algorithms.Length.ShouldBe(2);
+        fluentPipelineAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        cycleAlgorithm.Algorithms.Length.ShouldBe(2);
+        cycleAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        fluentCycleAlgorithm.Algorithms.Length.ShouldBe(2);
+        fluentCycleAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        interfacePipelineAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage.Algorithm);
+    }
+
+    [Fact]
+    public void SmallRecordHelpers_InferTheirGenericArguments()
+    {
+        var first = RealVector.Repeat(1.0, 3);
+        var second = RealVector.Repeat(2.0, 3);
+        var parents = Parents.From(first, second);
+        var fluentParents = (first, second).ToParents();
+        var evaluatedCandidate = EvaluatedCandidate.From(first, new ObjectiveVector(1.0));
+        var singleSolutionState = SingleSolutionState.From(evaluatedCandidate);
+        var fluentSingleSolutionState = evaluatedCandidate.ToSingleSolutionState();
+        var population = Population.From([evaluatedCandidate]);
+        var populationState = PopulationState.From(population);
+        var fluentPopulationState = population.ToPopulationState();
+        var bestMedianWorst = BestMedianWorstEntry.From(evaluatedCandidate, evaluatedCandidate, evaluatedCandidate);
+        var experimentCase = ExperimentCase.From("algorithm", "configuration", [1, 2]);
+        var streamEntry = ExperimentStreamEntry.From(experimentCase, populationState);
+
+        parents.Parent1.ShouldBeSameAs(first);
+        fluentParents.Parent2.ShouldBeSameAs(second);
+        singleSolutionState.EvaluatedCandidate.ShouldBeSameAs(evaluatedCandidate);
+        fluentSingleSolutionState.EvaluatedCandidate.ShouldBeSameAs(evaluatedCandidate);
+        populationState.Population.ShouldBeSameAs(population);
+        fluentPopulationState.Population.ShouldBeSameAs(population);
+        bestMedianWorst.Best.ShouldBeSameAs(evaluatedCandidate);
+        experimentCase.RandomForkPath.ShouldBe([1, 2]);
+        streamEntry.Trial.ShouldBeSameAs(experimentCase);
+    }
+
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem)
+    {
+        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        {
+            PopulationSize = 10,
+            MaximumGenerations = 2,
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new AlphaBetaBlendCrossover(),
+            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1),
+            Selector = TournamentSelector.For(problem, tournamentSize: 2)
+        };
+    }
+}

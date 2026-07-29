@@ -81,7 +81,7 @@ This is intentionally **post-hoc**: it observes the produced offspring.
 
 ## Attaching observers
 
-Most observable wrappers provide convenience extension methods.
+The preferred way to attach observers is through the fluent extension methods provided by the observable wrappers.
 
 For mutators:
 
@@ -98,6 +98,38 @@ var observed = mutator.ObserveWith(offspring => {
   // e.g. record offspring.Count, log stats, update metrics
 });
 ```
+
+## Public instrumentation operators
+
+Instrumentation is represented by regular public operator configurations. Each operator role provides the same three forms:
+
+- `Observable*` invokes one or more observers after a successful call.
+- `Counting*` updates an `ObservationCounter` after a successful call. Batched roles can count either calls or candidates through `OperatorCountMetric`.
+- `DurationMeasuring*` updates an `ObservationDuration` with time spent inside the wrapped operation. It records duration even when the wrapped call throws.
+
+Prefer the fluent methods for ordinary instrumentation. They keep instrumentation close to the operator being wrapped and are usually the most concise and readable authoring style:
+
+```csharp
+var observed = mutator.ObserveWith(offspring => Record(offspring));
+var counted = mutator.CountMutatedCandidates(counter);
+var measured = mutator.MeasureMutatorDuration(duration, timeProvider);
+```
+
+The fluent methods return the concrete instrumentation types, so their configuration remains available for inspection. The public wrapper constructors are an explicit alternative for factories or advanced composition where naming the configuration type directly is useful:
+
+```csharp
+var counted = new CountingMutator<TCandidate, TSearchSpace, TProblem>(
+    mutator,
+    counter,
+    OperatorCountMetric.Candidates);
+
+var measured = new DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>(
+    mutator,
+    duration,
+    timeProvider);
+```
+
+The wrapper exposes the instrumented operator and its sink as properties regardless of how it was created.
 
 ## External sinks: `ObservationCounter`
 
@@ -118,7 +150,7 @@ var observed = mutator.CountMutatorCalls(counter);
 // later: counter.CurrentCount contains total mutator calls
 ```
 
-For `ObservableMutator`, `CountMutatorCalls(...)` increments once per mutation call.
+`CountMutatorCalls(...)` creates a `CountingMutator` that increments once per successful mutation call.
 
 Use `CountMutatedCandidates(...)` when the budget should count the mutated candidates returned by those batched mutation calls instead:
 
@@ -177,7 +209,7 @@ This is not whole-run elapsed time or active algorithm duration. It increases on
 
 Terminator duration and call-count instrumentation exists for consistency because terminators are operators too. Treat it as an advanced diagnostic or budgeting tool for expensive or shared terminator checks, not as the ordinary way to cap a run.
 
-Budget helpers such as `WithMaxEvaluatorCalls(...)`, `WithMaxMutatorDuration(...)`, and `WithMaxCount(...)` install the observed replacement for the run and attach the matching external early-stopping policy. The helper form exists so ordinary users do not need to manually create a sink, wrap the operator, replace that operator on the algorithm, and wire a separate terminator against the same sink.
+Budget helpers such as `algorithm.WithMaxEvaluatorCalls(algorithm.Evaluator, ...)`, `WithMaxMutatorDuration(...)` and `WithMaxCount(...)` install the observed replacement for the run and attach the matching external early stopping policy. Evaluator helpers require the observed evaluator explicitly because the general algorithm contract does not imply that an algorithm has one. The helper form exists so ordinary users do not need to manually create a sink, wrap the operator, replace that operator on the algorithm and wire a separate terminator against the same sink.
 
 ## Relationship to analyzers
 
@@ -187,8 +219,8 @@ In this system:
 
 - analyzer states call `RegisterObservations(ObservationPlan)`
 - the observation plan stores merged observation entries
-- `Run` installs merged observable replacements into each relevant `ExecutionInstanceRegistry`
-- users retrieve analyzer results from the run via `GetAnalyzerResult(...)`
+- `AlgorithmRun` installs merged observable replacements into each relevant `ExecutionInstanceRegistry`
+- users retrieve analyzer results from the run via `GetResult(...)`
 
 So observable wrappers and analyzers solve different problems:
 
@@ -197,10 +229,10 @@ So observable wrappers and analyzers solve different problems:
 
 ## Observable operators vs analyzers: when to use which
 
-HeuristicLib currently has **two related systems**:
+HeuristicLib has **two related systems**:
 
 1. **observable operator** system (`ObserveWith(...)`, `I*Observer`, `Observable*` wrappers)
-2. **analyzer** system (`IAnalyzer`, `CreateRun(problem, analyzers...)`, `GetAnalyzerResult(...)`)
+2. **analyzer** system (`IAnalyzer`, `WithAnalyzer(...)`, `GetResult(...)`)
 
 They are not competitors. The analyzer system is built **on top of** observable operators.
 
@@ -246,11 +278,37 @@ Typical characteristics:
 Typical API shape:
 
 ```csharp
-var analyzer = new QualityCurveAnalysis<TCandidate, TSearchSpace, TProblem>(evaluator);
-var run = algorithm.CreateRun(problem, analyzer);
-var finalState = run.RunToCompletion(random);
-var result = run.GetAnalyzerResult(analyzer);
+var run = algorithm.CreateRun(problem, random)
+    .WithAnalyzer(
+        Analyzer.BestQuality(evaluator),
+        out var bestQuality);
+
+var finalState = await run.CompleteAsync();
+var result = run.GetResult(bestQuality);
 ```
+
+The `out` overload is useful when an analyzer helper is called inline. It returns the same analyzer configuration that was attached to the run, so the variable naturally becomes the typed lookup object. An existing analyzer can instead be attached directly:
+
+```csharp
+var bestQuality = Analyzer.BestQuality(evaluator);
+var run = algorithm.CreateRun(problem, random)
+    .WithAnalyzer(bestQuality);
+```
+
+Experiment runs use the same fluent method. Their selector and factory overload returns a `TrialAnalyzer`, which is the typed lookup object for all corresponding trial results:
+
+```csharp
+var run = experiment.CreateRun(problem, random)
+    .WithAnalyzer(
+        algorithm => algorithm.Evaluator,
+        evaluator => Analyzer.BestQuality(evaluator),
+        out var bestQuality);
+
+var finalStates = await run.CompleteAsync();
+var results = run.GetResults(bestQuality);
+```
+
+`GetResults(...)` retrieves the complete ordered result set and therefore requires every trial run to have started. When trials are executed individually, aggregate results become available after all trials have started. Results from a separately attached analyzer on one trial remain available through `trial.Run.GetResult(...)`.
 
 Good fits:
 
@@ -272,7 +330,7 @@ Use **analyzers** when you want a **run-owned analysis object**.
 | Main purpose                 | local callback / instrumentation               | reusable run-scoped analysis                         |
 | Lifetime                     | execution-instance-driven                      | run-driven                                           |
 | State lives where?           | usually in an external sink or observer object | in the analyzer result returned by the run           |
-| Retrieval model              | you keep the sink yourself                     | `run.GetAnalyzerResult(analyzer)`                    |
+| Retrieval model              | you keep the sink yourself                     | `run.GetResult(analyzer)`                            |
 | Number of hook points        | often one                                      | one or many                                          |
 | Best for                     | logging, counters, quick diagnostics           | quality curves, genealogy, reusable analysis modules |
 | Relation to the other system | foundation                                     | built on top of observable operators                 |
@@ -300,5 +358,6 @@ Examples include observable wrappers for mutators, crossovers, evaluators, termi
 
 - [Operators](operators.md)
 - [Execution model](execution-model.md)
+- [Experiments](experiments.md)
 - [Configuration vs execution instances](execution-instances.md)
 - [Analyzer architecture](analyzer-architecture.md)

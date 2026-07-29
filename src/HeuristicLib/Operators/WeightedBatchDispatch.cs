@@ -9,37 +9,27 @@ public sealed class WeightedBatchDispatch
     private readonly double totalWeight;
     private readonly double[] cumulativeWeights;
 
-    public WeightedBatchDispatch(ImmutableArray<double> weights)
+    public WeightedBatchDispatch(IReadOnlyList<double> weights)
     {
-        if (weights.Length == 0)
-        {
+        if (weights.Count == 0)
             throw new ArgumentException("At least one weight must be provided.", nameof(weights));
-        }
-
+        if (weights.Any(weight => !double.IsFinite(weight)))
+            throw new ArgumentException("Weights must be finite.", nameof(weights));
         if (weights.Any(weight => weight < 0))
-        {
             throw new ArgumentException("Weights must be non-negative.", nameof(weights));
-        }
-
         if (weights.All(weight => weight <= 0))
-        {
             throw new ArgumentException("At least one weight must be greater than zero.", nameof(weights));
-        }
 
-        Weights = weights;
-        cumulativeWeights = new double[weights.Length];
-        for (var i = 0; i < weights.Length; i++)
+        Weights = weights.ToImmutableArray();
+        cumulativeWeights = new double[weights.Count];
+        for (var i = 0; i < weights.Count; i++)
         {
             totalWeight += weights[i];
             cumulativeWeights[i] = totalWeight;
         }
     }
 
-    public IReadOnlyList<TOutput> Dispatch<TInput, TOutput, TOperator>(
-      IReadOnlyList<TInput> inputs,
-      IReadOnlyList<TOperator> operators,
-      IRandomNumberGenerator random,
-      Func<TOperator, IReadOnlyList<TInput>, IReadOnlyList<TOutput>> invokeBatch)
+    public IReadOnlyList<TOutput> Dispatch<TInput, TOutput, TOperator>(IReadOnlyList<TInput> inputs, IReadOnlyList<TOperator> operators, IRandomNumberGenerator random, Func<TOperator, IReadOnlyList<TInput>, IReadOnlyList<TOutput>> invokeBatch)
     {
         if (operators.Count != Weights.Length)
         {
@@ -99,6 +89,8 @@ public sealed class WeightedBatchDispatch
         return results;
     }
 
+    public int ChooseOperator(IRandomNumberGenerator random) => ChooseOperator(random.NextDouble());
+
     private int ChooseOperator(double sample)
     {
         var scaledSample = sample * totalWeight;
@@ -106,4 +98,3 @@ public sealed class WeightedBatchDispatch
         return operatorIndex >= 0 ? operatorIndex : cumulativeWeights.Length - 1;
     }
 }
-

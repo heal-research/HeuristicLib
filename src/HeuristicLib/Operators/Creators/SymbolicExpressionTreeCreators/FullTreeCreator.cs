@@ -13,11 +13,6 @@ public record FullTreeCreator : SymbolicExpressionTreeCreator
     ///   Function symbols are used for all nodes situated on a level above the maximum tree depth.
     ///   Nodes on the last tree level will have Terminal symbols.
     /// </summary>
-    /// <param name="random">Random generator</param>
-    /// <param name="grammar">Available tree grammar</param>
-    /// <param name="maxTreeDepth">Maximum tree depth</param>
-    /// <param name="maxTreeLength">Maximum tree length. This parameter is not used.</param>
-    /// <returns></returns>
     public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
 
     public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)

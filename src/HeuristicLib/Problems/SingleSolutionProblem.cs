@@ -6,19 +6,20 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Problems;
 
 public abstract class SingleSolutionProblem<TSolution, TSearchSpace> : Problem<TSolution, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TSolution>
+    where TSearchSpace : class, ISearchSpace<TSolution>
 {
-    public int DegreeOfParallelism { get; init; } = 1;
+    public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
     protected SingleSolutionProblem(ObjectiveDirections objective, TSearchSpace searchSpace) : base(objective, searchSpace) { }
 
-    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> candidates, IRandomNumberGenerator random) => BatchExecution.Parallel(candidates, Evaluate, random, DegreeOfParallelism);
+    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TSolution> candidates, IRandomNumberGenerator random) =>
+        BatchExecution.Execute(candidates, Evaluate, random, Concurrency);
 
     public abstract ObjectiveVector Evaluate(TSolution solution, IRandomNumberGenerator random);
 }
 
 public abstract class Problem<TSolution, TSearchSpace> : IProblem<TSolution, TSearchSpace>
-  where TSearchSpace : class, ISearchSpace<TSolution>
+    where TSearchSpace : class, ISearchSpace<TSolution>
 {
     protected Problem(ObjectiveDirections objective, TSearchSpace searchSpace)
     {

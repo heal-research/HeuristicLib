@@ -18,9 +18,9 @@ public partial record Population<TCandidate> : ISolutionLayout<TCandidate>
 
     public IEnumerable<TCandidate> Candidates => EvaluatedCandidates.Select(x => x.Candidate);
 
-    public Population(params ImmutableArray<EvaluatedCandidate<TCandidate>> Solutions)
+    public Population(params IReadOnlyList<EvaluatedCandidate<TCandidate>> solutions)
     {
-        this.EvaluatedCandidates = Solutions;
+        EvaluatedCandidates = solutions.ToImmutableArray();
     }
 
     public IEnumerator<EvaluatedCandidate<TCandidate>> GetEnumerator() => EvaluatedCandidates.AsReadOnly().GetEnumerator();

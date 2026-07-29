@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
@@ -13,6 +15,9 @@ public record SelectFirstParentCrossover<TCandidate>
 
 public static class SelectFirstParentCrossover
 {
+    public static SelectFirstParentCrossover<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => SelectFirstParentCrossover<TCandidate>.Instance;
+
     public static TCandidate Cross<TCandidate>(IParents<TCandidate> parents, IRandomNumberGenerator random)
     {
         return parents.Parent1;
@@ -29,6 +34,9 @@ public record SelectSecondParentCrossover<TCandidate>
 
 public static class SelectSecondParentCrossover
 {
+    public static SelectSecondParentCrossover<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => SelectSecondParentCrossover<TCandidate>.Instance;
+
     public static TCandidate Cross<TCandidate>(IParents<TCandidate> parents, IRandomNumberGenerator random)
     {
         return parents.Parent2;

@@ -7,11 +7,11 @@ namespace HEAL.HeuristicLib.Optimization;
 public partial record IslandPopulation<TCandidate> : ISolutionLayout<TCandidate>
 {
     [OrderedEquality]
-    public IReadOnlyList<Population<TCandidate>> Islands { get; init; }
+    public ImmutableArray<Population<TCandidate>> Islands { get; init; }
 
-    public IslandPopulation(IReadOnlyList<Population<TCandidate>> Islands)
+    public IslandPopulation(IReadOnlyList<Population<TCandidate>> islands)
     {
-        this.Islands = Islands;
+        Islands = islands.ToImmutableArray();
     }
     public IEnumerator<EvaluatedCandidate<TCandidate>> GetEnumerator() => Islands.SelectMany(island => island.EvaluatedCandidates).GetEnumerator();
 

@@ -1,7 +1,7 @@
-namespace HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
-
-using Optimization;
+using HEAL.HeuristicLib.Optimization;
 using TreesearchLib;
+
+namespace HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
 
 public abstract class TreeSearchState<TMove> : IState<TreeSearchState<TMove>, ObjectiveVectorQuality>
 {

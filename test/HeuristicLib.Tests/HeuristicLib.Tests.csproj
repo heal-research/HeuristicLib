@@ -9,6 +9,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\HeuristicLib\HeuristicLib.csproj" />
+        <ProjectReference Include="..\..\analyzers\HeuristicLib.Analyzers\HeuristicLib.Analyzers.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -20,8 +21,6 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
         <PackageReference Include="Shouldly" Version="4.3.0" />
         <PackageReference Include="System.Reactive" Version="6.1.0" />
-        <PackageReference Include="Verify" Version="31.10.0" />
-        <PackageReference Include="Verify.XunitV3" Version="31.10.0" />
         <PackageReference Include="xunit.analyzers" Version="1.27.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -35,5 +34,7 @@
 
     <ItemGroup>
         <Using Include="Shouldly" />
+        <Using Include="Xunit" />
+        <Using Include="System.Collections.Immutable" />
     </ItemGroup>
 </Project>

@@ -1,7 +1,4 @@
-using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -9,31 +6,19 @@ using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public abstract record Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>
+public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
     : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSelf : Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TExecutionState : Algorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TExecutionState>.ExecutionState
 {
-    public class ExecutionState
-    {
-        public required IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; }
-    }
+    internal TSelf Self => (TSelf)this;
 
-    // NOTE: Evaluator remains part of the base algorithm contract for now.
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
+    protected abstract AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry);
 
-    protected abstract TExecutionState CreateInitialExecutionState(IExecutionInstanceResolver resolver);
-
-    protected abstract IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(
-        Run run, TExecutionState executionState);
-
-    public IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
-    {
-        return CreateAlgorithmInstance(instanceRegistry.Run, CreateInitialExecutionState(instanceRegistry));
-    }
+    IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> IExecutionInstanceResolvable<IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateAlgorithmInstance(instanceRegistry);
 }
 
 public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -42,21 +27,7 @@ public abstract class AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSea
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    protected readonly IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> Evaluator;
-
-    public Run Run { get; }
-
-    protected AlgorithmInstance(Run run, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator)
-    {
-        Run = run;
-        Evaluator = evaluator;
-    }
-
-    public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(
-        TProblem problem,
-        IRandomNumberGenerator random,
-        TSearchState? initialState = null,
-        CancellationToken ct = default);
+    public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 }
 
 public static class AlgorithmExtensions
@@ -67,53 +38,24 @@ public static class AlgorithmExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public Run<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(
-            TProblem problem, params IReadOnlyList<IAnalyzer> analyzers)
+        public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun(TProblem problem, IRandomNumberGenerator random)
         {
-            return new Run<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem, analyzers);
+            return new(algorithm, problem, random);
         }
 
-        public IAsyncEnumerable<TSearchState> RunStreamingAsync(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            TSearchState? initialState = null,
-            CancellationToken ct = default)
+        public ExecutionStream<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            var run = algorithm.CreateRun(problem);
-            return run.StreamAsync(random, initialState, ct);
+            return algorithm.CreateRun(problem, random).Stream(initialState, ct);
         }
 
-        public async Task<TSearchState> RunToCompletionAsync(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            TSearchState? initialState = null,
-            CancellationToken ct = default
-        )
+        public async Task<TSearchState> CompleteAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            var run = algorithm.CreateRun(problem);
-            return await run.CompleteAsync(random, initialState, ct);
+            return await algorithm.CreateRun(problem, random).CompleteAsync(initialState, ct);
         }
 
-        public IEnumerable<TSearchState> RunStreaming(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            TSearchState? initialState = null,
-            CancellationToken ct = default
-        )
+        public TSearchState Complete(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            var run = algorithm.CreateRun(problem);
-            return run.Stream(random, initialState, ct);
-        }
-
-        public TSearchState RunToCompletion(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            TSearchState? initialState = null,
-            CancellationToken ct = default
-        )
-        {
-            var run = algorithm.CreateRun(problem);
-            return run.Complete(random, initialState, ct);
+            return algorithm.CreateRun(problem, random).Complete(initialState, ct);
         }
     }
 
@@ -123,34 +65,19 @@ public static class AlgorithmExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public async Task<TSearchState> RunToCompletionAsync(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            TSearchState? initialState = null,
-            CancellationToken ct = default
-        )
+        public async Task<TSearchState> CompleteAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
             return await algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
         }
 
-        public IEnumerable<TSearchState> RunStreaming(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            TSearchState? initialState = null,
-            CancellationToken ct = default
-        )
+        public IEnumerable<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
             return algorithmInstance.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
         }
 
-        public TSearchState RunToCompletion(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            TSearchState? initialState = null,
-            CancellationToken ct = default
-        )
+        public TSearchState Complete(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default)
         {
-            return algorithmInstance.RunToCompletionAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
+            return algorithmInstance.CompleteAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
         }
     }
 }

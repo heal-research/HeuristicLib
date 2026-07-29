@@ -1,5 +1,3 @@
-using System.Collections.Immutable;
-
 namespace HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
 
 public readonly record struct MovingPeaksParameters(

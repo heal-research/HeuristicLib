@@ -27,7 +27,7 @@ public record GeneticAlgorithmBuilder<TCandidate, TSearchSpace, TProblem>
 
     public override GeneticAlgorithm<TCandidate, TSearchSpace, TProblem> Build()
     {
-        return new GeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
+        return new()
         {
             PopulationSize = PopulationSize,
             Creator = Creator,

@@ -1,4 +1,6 @@
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
@@ -24,4 +26,10 @@ public record AfterOperatorCountTerminator<TCandidate> : StatelessTerminator<TCa
     {
         return Counter.CurrentCount >= MaximumCount;
     }
+}
+
+public static class AfterOperatorCountTerminator
+{
+    public static AfterOperatorCountTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, ObservationCounter counter, int maximumCount)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(counter, maximumCount);
 }

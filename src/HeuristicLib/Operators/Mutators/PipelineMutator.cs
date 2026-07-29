@@ -13,25 +13,47 @@ public partial record PipelineMutator<TCandidate, TSearchSpace, TProblem>
 {
     [IgnoreEquality] public ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> Mutators => InnerMutators;
 
-    public PipelineMutator(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
+    public PipelineMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
       : base(mutators)
     {
         // ToDo: think if we want to allow empty pipelines.
-        if (mutators.Length == 0)
-        {
+        if (mutators.Count == 0)
             throw new ArgumentException("At least one mutator must be provided.", nameof(mutators));
-        }
     }
 
-    protected override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents,
-      IReadOnlyList<InnerMutate> innerMutators, IRandomNumberGenerator random, TSearchSpace searchSpace,
-      TProblem problem)
+    protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(
+        ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators) => new Instance(innerMutators);
+
+    private sealed class Instance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators)
+        : MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(innerMutators)
     {
-        var current = parents;
-        foreach (var mutator in innerMutators)
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            current = mutator(current, random, searchSpace, problem);
+            var current = parents;
+            foreach (var mutator in InnerMutators)
+            {
+                current = mutator.Mutate(current, random, searchSpace, problem);
+            }
+
+            return current;
         }
-        return current;
+    }
+}
+
+public static class PipelineMutator
+{
+    public static PipelineMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. mutators]);
+}
+
+public static class PipelineMutatorExtensions
+{
+    extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public PipelineMutator<TCandidate, TSearchSpace, TProblem> Then(params IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> followingMutators) =>
+            PipelineMutator.Create([mutator, .. followingMutators]);
     }
 }

@@ -12,9 +12,6 @@ public record GrowTreeCreator : SymbolicExpressionTreeCreator
     ///   GetEvaluator a symbolic expression tree using the 'Grow' method.
     ///   All symbols are allowed for nodes, so the resulting trees can be of any shape and size.
     /// </summary>
-    /// <param name="random">Random generator</param>
-    /// <param name="searchSpace"></param>
-    /// <returns></returns>
     public override SymbolicExpressionTree Create(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Create(searchSpace, random);
 
     public static SymbolicExpressionTree Create(SymbolicExpressionTreeSearchSpace searchSpace, IRandomNumberGenerator random)

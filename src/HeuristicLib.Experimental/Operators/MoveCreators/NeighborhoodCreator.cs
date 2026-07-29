@@ -1,9 +1,9 @@
-namespace HEAL.HeuristicLib.Operators.MoveCreators;
+using HEAL.HeuristicLib.Operators.Neighborhoods;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Problems;
-using Random;
-using SearchSpaces;
-using Neighborhoods;
+namespace HEAL.HeuristicLib.Operators.MoveCreators;
 
 public sealed record NeighborhoodCreator<TGenotype, TSearchSpace, TProblem, TMove>(
     IDirectNeighborhood<TGenotype, TSearchSpace, TProblem, TMove> neighborhood)

@@ -3,16 +3,37 @@ using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Execution;
 
-// Note on usage: 
-// Per default, most operators will use the Sequential execution to simplify batch creation.
-// If an operator is parallel-safe, it can override the default implementation and offer a Parallel execution option.
-// It then should offer a MaxDegreeOfParallelism parameter to control the degree of parallelism and a sensible default. (e.g. -1 for (probably expensive) evaluators, 1 for most others)
-// If the degree of parallelism is set to 1, the Parallel execution method should internally fall back to the Sequential implementation to avoid overhead.
-
 public static class BatchExecution
 {
-    // ToDo: Think about if we treat the "count-version" as "list-version" with the list being the generated indices.
+    public static IReadOnlyList<TOut> Execute<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, ExecutionConcurrency concurrency)
+        => concurrency.Kind == ExecutionConcurrencyKind.Sequential
+            ? ExecuteSequentially(count, func, random)
+            : ExecuteConcurrently(count, func, random, concurrency.MaximumConcurrency);
+
+    public static IReadOnlyList<TOut> Execute<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, ExecutionConcurrency concurrency)
+        => concurrency.Kind == ExecutionConcurrencyKind.Sequential
+            ? ExecuteSequentially(list, func, random)
+            : ExecuteConcurrently(list, func, random, concurrency.MaximumConcurrency);
+
     public static IReadOnlyList<TOut> Sequential<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
+        => Execute(count, func, random, ExecutionConcurrency.Sequential());
+
+    public static IReadOnlyList<TOut> Sequential<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
+        => Execute(list, func, random, ExecutionConcurrency.Sequential());
+
+    public static IReadOnlyList<TOut> Parallel<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
+        => Execute(count, func, random, ExecutionConcurrency.Concurrent());
+
+    public static IReadOnlyList<TOut> Parallel<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maximumConcurrency)
+        => Execute(count, func, random, ExecutionConcurrency.Concurrent(maximumConcurrency));
+
+    public static IReadOnlyList<TOut> Parallel<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
+        => Execute(list, func, random, ExecutionConcurrency.Concurrent());
+
+    public static IReadOnlyList<TOut> Parallel<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maximumConcurrency)
+        => Execute(list, func, random, ExecutionConcurrency.Concurrent(maximumConcurrency));
+
+    private static IReadOnlyList<TOut> ExecuteSequentially<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
     {
         var result = new TOut[count];
         for (int i = 0; i < count; i++)
@@ -24,7 +45,7 @@ public static class BatchExecution
         return result;
     }
 
-    public static IReadOnlyList<TOut> Sequential<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
+    private static IReadOnlyList<TOut> ExecuteSequentially<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random)
     {
         var result = new TOut[list.Count];
         for (int i = 0; i < list.Count; i++)
@@ -36,17 +57,13 @@ public static class BatchExecution
         return result;
     }
 
-    public static IReadOnlyList<TOut> Parallel<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
+    private static IReadOnlyList<TOut> ExecuteConcurrently<TOut>(int count, Func<IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maximumConcurrency)
     {
-        ArgumentOutOfRangeException.ThrowIfZero(maxDegreeOfParallelism);
-        ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, -1);
-        if (maxDegreeOfParallelism == 1)
-        {
-            return Sequential(count, func, random);
-        }
+        if (count == 0)
+            return [];
 
         var partitions = Partitioner.Create(0, count);
-        var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
+        var options = new ParallelOptions { MaxDegreeOfParallelism = ToMaximumDegreeOfParallelism(maximumConcurrency) };
         var result = new TOut[count];
         System.Threading.Tasks.Parallel.ForEach(partitions, options, range =>
         {
@@ -57,21 +74,17 @@ public static class BatchExecution
                 result[i] = func(rng);
             }
         });
+
         return result;
     }
 
-    public static IReadOnlyList<TOut> Parallel<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maxDegreeOfParallelism)
+    private static IReadOnlyList<TOut> ExecuteConcurrently<TIn, TOut>(IReadOnlyList<TIn> list, Func<TIn, IRandomNumberGenerator, TOut> func, IRandomNumberGenerator random, int maximumConcurrency)
     {
-        ArgumentOutOfRangeException.ThrowIfZero(maxDegreeOfParallelism);
-        ArgumentOutOfRangeException.ThrowIfLessThan(maxDegreeOfParallelism, -1);
-
-        if (maxDegreeOfParallelism == 1)
-        {
-            return Sequential(list, func, random);
-        }
+        if (list.Count == 0)
+            return [];
 
         var partitions = Partitioner.Create(0, list.Count);
-        var options = new ParallelOptions { MaxDegreeOfParallelism = maxDegreeOfParallelism };
+        var options = new ParallelOptions { MaxDegreeOfParallelism = ToMaximumDegreeOfParallelism(maximumConcurrency) };
         var result = new TOut[list.Count];
         System.Threading.Tasks.Parallel.ForEach(partitions, options, range =>
         {
@@ -82,6 +95,9 @@ public static class BatchExecution
                 result[i] = func(list[i], rng);
             }
         });
+
         return result;
     }
+
+    private static int ToMaximumDegreeOfParallelism(int maximumConcurrency) => maximumConcurrency == int.MaxValue ? -1 : maximumConcurrency;
 }

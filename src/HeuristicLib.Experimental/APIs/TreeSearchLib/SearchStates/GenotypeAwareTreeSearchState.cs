@@ -1,12 +1,10 @@
+using HEAL.HeuristicLib.Operators.MoveAppliers;
+using HEAL.HeuristicLib.Operators.MoveCreators;
+using HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Problems.Partial;
+using HEAL.HeuristicLib.SearchSpaces;
+
 namespace HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
-
-using Operators.MoveAppliers;
-using Operators.MoveCreators;
-using Operators.MoveEvaluators;
-using Problems.Partial;
-using SearchSpaces;
-
-
 
 public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchState<TM>
     where TP : class, IPartialSolutionProblem<T, TS>
@@ -25,8 +23,8 @@ public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchSt
         Context = context;
     }
 
-    protected GenotypeAwareTreeSearchState(GenotypeAwareTreeSearchState<T, TS, TP, TM> other) : this(other.Context){}
-    
+    protected GenotypeAwareTreeSearchState(GenotypeAwareTreeSearchState<T, TS, TP, TM> other) : this(other.Context) { }
+
 
     protected abstract T Genotype { get; }
 

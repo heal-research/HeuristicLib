@@ -5,7 +5,6 @@ using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
@@ -17,7 +16,9 @@ public class ObservableEvaluatorTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatorCalls(counter);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        evaluator.Counter.ShouldBeSameAs(counter);
+        evaluator.Metric.ShouldBe(OperatorCountMetric.Calls);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -31,7 +32,7 @@ public class ObservableEvaluatorTests
     {
         var counter = new ObservationCounter();
         var evaluator = CreateEvaluator().CountEvaluatedCandidates(counter);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -46,7 +47,9 @@ public class ObservableEvaluatorTests
         var duration = new ObservationDuration();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var evaluator = CreateEvaluator().MeasureEvaluatorDuration(duration, timeProvider);
-        var instance = evaluator.CreateExecutionInstance(TestRun.Instance);
+        evaluator.Duration.ShouldBeSameAs(duration);
+        evaluator.TimeProvider.ShouldBeSameAs(timeProvider);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
         var problem = CreateProblem();
 
         instance.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -73,8 +76,8 @@ public class ObservableEvaluatorTests
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
     {
-        return FuncProblem.Create<int, DummySearchSpace<int>>(
-            evaluateFunc: static candidate => candidate,
+        return FuncProblem.Create(
+            evaluateFunc: static (int candidate) => candidate,
             encoding: DummySearchSpace<int>.Instance,
             objective: CreateObjective());
     }

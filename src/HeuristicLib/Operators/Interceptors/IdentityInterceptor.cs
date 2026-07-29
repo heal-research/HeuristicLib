@@ -1,3 +1,6 @@
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.States;
 
 namespace HEAL.HeuristicLib.Operators.Interceptors;
@@ -10,6 +13,11 @@ public record IdentityInterceptor<TCandidate, TSearchState> : StatelessIntercept
 
 public static class IdentityInterceptor
 {
+    public static IdentityInterceptor<TCandidate, TSearchState> For<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState => new();
+
     public static TSearchState Transform<TSearchState>(TSearchState currentState, TSearchState? previousState)
       where TSearchState : class, ISearchState => currentState;
 }

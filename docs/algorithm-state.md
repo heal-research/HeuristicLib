@@ -22,9 +22,11 @@ That base type does **not** imply any particular payload. In practice, concrete 
 - a best-so-far summary
 - any other public progress snapshot the algorithm wants to expose
 
-Built-in examples include `PopulationState<TCandidate>` and `SingleEvaluatedCandidateState<TCandidate>`.
+Built-in examples include `PopulationState<TCandidate>` and `SingleSolutionState<TCandidate>`. Use `PopulationState.From(population)` and `SingleSolutionState.From(evaluatedCandidate)` when the contained value should determine the generic type.
 
 Iteration counts are not part of the search-state contract. In nested, wrapped, or cycled executions there is no single globally meaningful notion of “the current iteration”, so that kind of counting remains an execution concern rather than public search state.
+
+Private counters, resolved operators, caches and other execution data belong to the algorithm execution instance. Search state should contain only progress that the algorithm intentionally exposes to stream consumers.
 
 ## Iteration semantics
 
@@ -46,11 +48,12 @@ The default streaming loop accepts an optional `initialState` parameter. Concept
 This supports a simple checkpointing pattern:
 
 ```csharp
-var last = algorithm.RunToCompletion(problem, rng);
+var last = algorithm.Complete(problem, random);
 
 // Continue from the checkpoint.
-foreach (var state in algorithm.RunStreaming(problem, rng, initialState: last)) {
-   // ...
+await foreach (var state in algorithm.Stream(problem, random, initialState: last))
+{
+    // ...
 }
 ```
 

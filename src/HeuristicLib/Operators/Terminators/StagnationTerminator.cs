@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public record StagnationTerminator<TCandidate>
-  : Terminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>, StagnationTerminator<TCandidate>.ExecutionState>
+    : StatefulTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>, StagnationTerminator<TCandidate>.ExecutionState>
 {
     public sealed class ExecutionState
     {
@@ -46,4 +46,10 @@ public record StagnationTerminator<TCandidate>
 
         return false;
     }
+}
+
+public static class StagnationTerminator
+{
+    public static StagnationTerminator<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int window = 20)
+        where TSearchSpace : class, ISearchSpace<TCandidate> => new(window);
 }

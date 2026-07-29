@@ -1,15 +1,13 @@
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.MoveAppliers;
 using HEAL.HeuristicLib.Operators.MoveCreators;
 using HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Operators.Neighborhoods;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.APIs.RoarNet;
-
-using Operators.Neighborhoods;
 
 public readonly struct RoarNetNeighborhood<TG, TS, TP, TM1>(
     INeighborhood<TG, TS, TP, TM1> neighborhood,

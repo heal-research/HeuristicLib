@@ -6,7 +6,7 @@
     "format:check": "npm run format:check:code && npm run format:check:text && npm run format:check:xml",
     "format:code": "dotnet format whitespace ./HEAL.HeuristicLib.sln --no-restore",
     "format:check:code": "dotnet format whitespace ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore",
-    "style:check": "dotnet format style ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error",
+    "style:check": "dotnet format style ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity warn",
     "analyzers:check": "dotnet format analyzers ./HEAL.HeuristicLib.sln --verify-no-changes --no-restore --severity error",
     "format:text": "prettier --write \"**/*.{json,yml,yaml}\"",
     "format:check:text": "prettier --check \"**/*.{json,yml,yaml}\"",

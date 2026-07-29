@@ -13,15 +13,14 @@ public record
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
 {
-    private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
-    private IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[] Interceptors { get; }
+    private ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
+    private ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> Interceptors { get; }
 
-    public BestMedianWorstPerEvaluationAnalysis(IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators,
-                                                IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[]
-                                                    Interceptors)
+    public BestMedianWorstPerEvaluationAnalysis(IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators,
+                                                IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
     {
-        this.Evaluators = Evaluators;
-        this.Interceptors = Interceptors;
+        Evaluators = evaluators.ToImmutableArray();
+        Interceptors = interceptors.ToImmutableArray();
     }
 
     public override BestMedianWorstPerEvaluationAnalysisState<TCandidate> CreateInitialResult() => new();
@@ -65,6 +64,6 @@ public sealed class BestMedianWorstPerEvaluationAnalysisState<TCandidate>
         var ordered = currentState.Population.OrderBy(keySelector: x => x.ObjectiveVector, comp).ToArray();
 
         bestSolutions.Add((currentEvaluationsCount,
-            new BestMedianWorstEntry<TCandidate>(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
+            BestMedianWorstEntry.From(ordered[0], ordered[ordered.Length / 2], ordered[^1])));
     }
 }

@@ -38,6 +38,6 @@ public record BestMedianWorstAnalysis<TCandidate, TSearchSpace, TProblem, TSearc
             return;
         }
 
-        bestSolutions.Add(new BestMedianWorstEntry<TCandidate>(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
+        bestSolutions.Add(BestMedianWorstEntry.From(ordered[0], ordered[ordered.Length / 2], ordered[^1]));
     }
 }

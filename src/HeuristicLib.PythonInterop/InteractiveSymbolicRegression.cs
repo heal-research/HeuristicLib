@@ -57,8 +57,7 @@ public record VisualizationCallbackEvaluator(
       SymbolicRegressionProblem problem)
     {
 
-        var objectives = new DirectEvaluator<SymbolicExpressionTree>()
-          .Evaluate(candidates, random, searchSpace, problem);
+        var objectives = DirectEvaluator.For(problem).Evaluate(candidates, random, searchSpace, problem);
 
         // Call Python callback for visualization side-effects.
         // Callback returns the objectives to use (allows pass-through).
@@ -232,7 +231,7 @@ public static class InteractiveSymbolicRegression
             Crossover = new SubtreeCrossover(),
             Mutator = mutator,
             MutationRate = parameters.MutationRate,
-            Selector = new TournamentSelector<SymbolicExpressionTree>(parameters.TournamentSize),
+            Selector = TournamentSelector.For(problem, parameters.TournamentSize),
             PopulationSize = parameters.PopulationSize,
             Elites = parameters.Elites,
             Evaluator = new VisualizationCallbackEvaluator(populationCallback)
@@ -246,7 +245,7 @@ public static class InteractiveSymbolicRegression
         {
             MaximumGenerations = parameters.Generations
         })
-          .RunToCompletion(problem, RandomNumberGenerator.Create(seed), null, ct);
+          .Complete(problem, RandomNumberGenerator.Create(seed), null, ct);
 
         return res.Population;
     }

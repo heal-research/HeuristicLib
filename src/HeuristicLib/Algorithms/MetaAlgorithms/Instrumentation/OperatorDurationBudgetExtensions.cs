@@ -42,7 +42,7 @@ public static class OperatorDurationBudgetExtensions
             Func<TOperator, ObservationDuration, TimeProvider, IOperator<TObservedInstance>> measuredOperatorFactory)
             where TOperator : IOperator<TObservedInstance>
         {
-            return new OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TOperator, TObservedInstance>
+            return new()
             {
                 Algorithm = algorithm,
                 ObservedOperator = observedOperator,
@@ -58,19 +58,6 @@ public static class OperatorDurationBudgetExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatorDuration(
-            TimeSpan maximumDuration)
-        {
-            return algorithm.WithMaxEvaluatorDuration(maximumDuration, TimeProvider.System);
-        }
-
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatorDuration(
-            TimeSpan maximumDuration,
-            TimeProvider timeProvider)
-        {
-            return algorithm.WithMaxEvaluatorDuration(algorithm.Evaluator, maximumDuration, timeProvider);
-        }
-
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, IEvaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorInstance<TCandidate, TSearchSpace, TProblem>> WithMaxEvaluatorDuration(
             IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator,
             TimeSpan maximumDuration)
