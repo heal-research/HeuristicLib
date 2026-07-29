@@ -16,9 +16,9 @@ public abstract partial record MultiInterceptor<TCandidate, TSearchSpace, TProbl
     [OrderedEquality]
     protected ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerInterceptors { get; }
 
-    protected MultiInterceptor(ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> innerInterceptors)
+    protected MultiInterceptor(IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> innerInterceptors)
     {
-        InnerInterceptors = innerInterceptors;
+        InnerInterceptors = innerInterceptors.ToImmutableArray();
     }
 
     protected sealed override IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(ExecutionInstanceRegistry registry) =>

@@ -17,15 +17,10 @@ public partial record ObservableEvaluator<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     public ImmutableArray<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, ImmutableArray<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+    public ObservableEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, params IReadOnlyList<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
         : base(evaluator)
     {
-        Observers = observers;
-    }
-
-    public ObservableEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator, params IEnumerable<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : this(evaluator, [.. observers])
-    {
+        Observers = observers.ToImmutableArray();
     }
 
     protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> innerEvaluator) =>
@@ -71,7 +66,7 @@ public static class ObservableEvaluatorExtensions
     {
         public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(IEvaluatorObserver<TCandidate, TSearchSpace, TProblem> observer) =>
             new ObservableEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, observer);
-        public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
+        public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(params IReadOnlyList<IEvaluatorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableEvaluator<TCandidate, TSearchSpace, TProblem>(evaluator, observers);
         public ObservableEvaluator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<ObjectiveVector>, TSearchSpace, TProblem> afterEvaluation) =>
             evaluator.ObserveWith(new ActionEvaluatorObserver<TCandidate, TSearchSpace, TProblem>(afterEvaluation));

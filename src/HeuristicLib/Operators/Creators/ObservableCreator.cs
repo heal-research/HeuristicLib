@@ -16,15 +16,10 @@ public partial record ObservableCreator<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     public ImmutableArray<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableCreator(ICreator<TCandidate, TSearchSpace, TProblem> creator, ImmutableArray<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : base(creator)
+    public ObservableCreator(ICreator<TCandidate, TSearchSpace, TProblem> creator, params IReadOnlyList<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(creator)
     {
-        Observers = observers;
-    }
-
-    public ObservableCreator(ICreator<TCandidate, TSearchSpace, TProblem> creator, params IEnumerable<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : this(creator, [.. observers])
-    {
+        Observers = observers.ToImmutableArray();
     }
 
     protected override WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator) =>
@@ -68,7 +63,7 @@ public static class ObservableCreatorExtensions
     {
         public ObservableCreator<TCandidate, TSearchSpace, TProblem> ObserveWith(ICreatorObserver<TCandidate, TSearchSpace, TProblem> observer) =>
             new ObservableCreator<TCandidate, TSearchSpace, TProblem>(creator, observer);
-        public ObservableCreator<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
+        public ObservableCreator<TCandidate, TSearchSpace, TProblem> ObserveWith(params IReadOnlyList<ICreatorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableCreator<TCandidate, TSearchSpace, TProblem>(creator, observers);
         public ObservableCreator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, int, TSearchSpace, TProblem> afterCreation) =>
             creator.ObserveWith(new ActionCreatorObserver<TCandidate, TSearchSpace, TProblem>(afterCreation));

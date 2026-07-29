@@ -33,14 +33,12 @@ public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProb
     // ToDo: maybe execution-instance reuse needs a clearer lifecycle concept if this comes up more often.
     public bool NewExecutionInstancesPerCycle { get; init; } = true;
 
-    public CycleAlgorithm(ImmutableArray<TAlgorithm> algorithms)
+    public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
     {
-        if (algorithms.Length == 0)
-        {
+        if (algorithms.Count == 0)
             throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
-        }
 
-        Algorithms = algorithms;
+        Algorithms = algorithms.ToImmutableArray();
     }
 
     protected override CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
@@ -50,14 +48,14 @@ public partial record CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProb
 public static class CycleAlgorithm
 {
     public static CycleAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
-        Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> firstAlgorithm, params IEnumerable<TAlgorithm> followingAlgorithms)
+        Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> firstAlgorithm, params IReadOnlyList<TAlgorithm> followingAlgorithms)
         where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState => new([firstAlgorithm.Self, .. followingAlgorithms]);
 
     public static CycleAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        params IEnumerable<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms)
+        params IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState => new([.. algorithms]);
@@ -101,7 +99,7 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     private readonly ExecutionInstanceRegistry registry;
-    protected readonly IReadOnlyList<TAlgorithm> Algorithms;
+    protected readonly ImmutableArray<TAlgorithm> Algorithms;
     protected readonly int? MaximumCycles;
     protected readonly bool NewExecutionInstancesPerCycle;
 
@@ -110,11 +108,11 @@ public class CycleAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProbl
     public CycleAlgorithmInstance(ExecutionInstanceRegistry registry, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles, bool newExecutionInstancesPerCycle)
     {
         this.registry = registry;
-        Algorithms = algorithms;
+        Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
         NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle;
 
-        algorithmInstances = new(capacity: NewExecutionInstancesPerCycle ? 0 : Algorithms.Count, ReferenceEqualityComparer.Instance);
+        algorithmInstances = new(capacity: NewExecutionInstancesPerCycle ? 0 : Algorithms.Length, ReferenceEqualityComparer.Instance);
     }
 
     public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)

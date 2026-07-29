@@ -17,15 +17,10 @@ public partial record ObservableInterceptor<TCandidate, TSearchSpace, TProblem, 
     [OrderedEquality]
     public ImmutableArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> Observers { get; }
 
-    public ObservableInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, ImmutableArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
-      : base(interceptor)
+    public ObservableInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, params IReadOnlyList<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
+        : base(interceptor)
     {
-        Observers = observers;
-    }
-
-    public ObservableInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, params IEnumerable<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
-      : this(interceptor, [.. observers])
-    {
+        Observers = observers.ToImmutableArray();
     }
 
     protected override WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateInterceptorInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerInterceptor) =>
@@ -74,7 +69,7 @@ public static class ObservableInterceptorExtensions
     {
         public ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer) =>
             new ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observer);
-        public ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(params IEnumerable<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers) =>
+        public ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(params IReadOnlyList<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers) =>
             new ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, observers);
         public ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(Action<TSearchState, TSearchState, TSearchState?, TSearchSpace, TProblem> afterInterception) =>
             interceptor.ObserveWith(new ActionInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterInterception));

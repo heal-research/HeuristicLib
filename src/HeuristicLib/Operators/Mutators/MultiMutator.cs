@@ -14,9 +14,9 @@ public abstract partial record MultiMutator<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     protected ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> InnerMutators { get; }
 
-    protected MultiMutator(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> innerMutators)
+    protected MultiMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> innerMutators)
     {
-        InnerMutators = innerMutators;
+        InnerMutators = innerMutators.ToImmutableArray();
     }
 
     protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>

@@ -13,8 +13,8 @@ namespace HEAL.HeuristicLib.Algorithms.Evolutionary;
 
 public record AlpsState<TCandidate> : SearchState
 {
-    public required IReadOnlyList<Population<TCandidate>> Population { get; init; }
-    public required IReadOnlyList<IReadOnlyList<int>> Ages { get; init; }
+    public required ImmutableArray<Population<TCandidate>> Population { get; init; }
+    public required ImmutableArray<ImmutableArray<int>> Ages { get; init; }
 }
 
 public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
@@ -80,7 +80,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
                 return new()
                 {
                     Population = [Population.From(initialLayerPopulation, initialFitnesses)],
-                    Ages = [Enumerable.Repeat(0, populationSize).ToArray()]
+                    Ages = [Enumerable.Repeat(0, populationSize).ToImmutableArray()]
                 };
             }
 
@@ -105,7 +105,7 @@ public record AlpsGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
             return new()
             {
                 Population = [Population.From(newPopulation)],
-                Ages = [offspringAges]
+                Ages = [offspringAges.ToImmutableArray()]
             };
         }
     }

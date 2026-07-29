@@ -14,9 +14,9 @@ public abstract partial record MultiReplacer<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     protected ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> InnerReplacers { get; }
 
-    protected MultiReplacer(ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> innerReplacers)
+    protected MultiReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> innerReplacers)
     {
-        InnerReplacers = innerReplacers;
+        InnerReplacers = innerReplacers.ToImmutableArray();
     }
 
     protected sealed override IReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(ExecutionInstanceRegistry registry) =>

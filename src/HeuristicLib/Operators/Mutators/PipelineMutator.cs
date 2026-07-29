@@ -13,14 +13,12 @@ public partial record PipelineMutator<TCandidate, TSearchSpace, TProblem>
 {
     [IgnoreEquality] public ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> Mutators => InnerMutators;
 
-    public PipelineMutator(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
+    public PipelineMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
       : base(mutators)
     {
         // ToDo: think if we want to allow empty pipelines.
-        if (mutators.Length == 0)
-        {
+        if (mutators.Count == 0)
             throw new ArgumentException("At least one mutator must be provided.", nameof(mutators));
-        }
     }
 
     protected override MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(
@@ -44,7 +42,7 @@ public partial record PipelineMutator<TCandidate, TSearchSpace, TProblem>
 
 public static class PipelineMutator
 {
-    public static PipelineMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
+    public static PipelineMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. mutators]);
 }
@@ -55,7 +53,7 @@ public static class PipelineMutatorExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public PipelineMutator<TCandidate, TSearchSpace, TProblem> Then(params IEnumerable<IMutator<TCandidate, TSearchSpace, TProblem>> followingMutators) =>
+        public PipelineMutator<TCandidate, TSearchSpace, TProblem> Then(params IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> followingMutators) =>
             PipelineMutator.Create([mutator, .. followingMutators]);
     }
 }

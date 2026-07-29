@@ -8,13 +8,25 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.States;
-using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
 public class PipelineAlgorithmTests
 {
+    [Fact]
+    public void PipelineAlgorithm_SnapshotsAlgorithms()
+    {
+        var first = new AdditiveStepAlgorithm(1);
+        var second = new AdditiveStepAlgorithm(2);
+        var algorithms = new List<AdditiveStepAlgorithm> { first, second };
+        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithms);
+
+        algorithms.Clear();
+
+        pipeline.Algorithms.ShouldBe([first, second]);
+    }
+
     [Fact]
     public void PipelineAlgorithm_RequiresAtLeastOneAlgorithm()
     {

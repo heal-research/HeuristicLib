@@ -12,7 +12,7 @@ public partial record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TS
   where TSearchSpace : class, ISearchSpace<TCandidate>
   where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public PipelineInterceptor(ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
+    public PipelineInterceptor(IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
       : base(interceptors)
     {
     }
@@ -30,7 +30,7 @@ public partial record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TS
 
 public static class PipelineInterceptor
 {
-    public static PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IEnumerable<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
+    public static PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
         where TSearchState : class, ISearchState
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. interceptors]);
@@ -43,7 +43,7 @@ public static class PipelineInterceptorExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IEnumerable<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> followingInterceptors) =>
+        public PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> followingInterceptors) =>
             PipelineInterceptor.Create([interceptor, .. followingInterceptors]);
     }
 }

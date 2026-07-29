@@ -2,24 +2,22 @@ namespace HEAL.HeuristicLib.Optimization;
 
 public sealed class ObjectiveDirections
 {
-    public ObjectiveDirection[] Directions { get; }
+    public ImmutableArray<ObjectiveDirection> Directions { get; }
     //public int Dimensions => Directions.Length;
 
     public IComparer<ObjectiveVector> TotalOrderComparer { get; }
     public ObjectiveVector Worst { get; }
     public ObjectiveVector Best { get; }
 
-    public ObjectiveDirections(ObjectiveDirection[] directions, IComparer<ObjectiveVector> totalOrderComparer)
+    public ObjectiveDirections(IReadOnlyList<ObjectiveDirection> directions, IComparer<ObjectiveVector> totalOrderComparer)
     {
-        if (directions.Length == 0)
-        {
+        if (directions.Count == 0)
             throw new ArgumentException("Direction vector must not be empty");
-        }
 
-        Directions = directions;
+        Directions = directions.ToImmutableArray();
         TotalOrderComparer = totalOrderComparer;
-        Worst = new ObjectiveVector(directions.Select(d => d == ObjectiveDirection.Minimize ? double.PositiveInfinity : double.NegativeInfinity));
-        Best = new ObjectiveVector(directions.Select(d => d == ObjectiveDirection.Maximize ? double.PositiveInfinity : double.NegativeInfinity));
+        Worst = new ObjectiveVector(Directions.Select(d => d == ObjectiveDirection.Minimize ? double.PositiveInfinity : double.NegativeInfinity));
+        Best = new ObjectiveVector(Directions.Select(d => d == ObjectiveDirection.Maximize ? double.PositiveInfinity : double.NegativeInfinity));
     }
 
     //public bool IsSingleObjective => Directions.Length == 1;

@@ -17,15 +17,10 @@ public partial record ObservableSelector<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     public ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> selector, ImmutableArray<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : base(selector)
+    public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> selector, params IReadOnlyList<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(selector)
     {
-        Observers = observers;
-    }
-
-    public ObservableSelector(ISelector<TCandidate, TSearchSpace, TProblem> selector, params IEnumerable<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : this(selector, [.. observers])
-    {
+        Observers = observers.ToImmutableArray();
     }
 
 
@@ -73,7 +68,7 @@ public static class ObservableSelectorExtensions
     {
         public ObservableSelector<TCandidate, TSearchSpace, TProblem> ObserveWith(ISelectorObserver<TCandidate, TSearchSpace, TProblem> observer) =>
             new ObservableSelector<TCandidate, TSearchSpace, TProblem>(selector, observer);
-        public ObservableSelector<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
+        public ObservableSelector<TCandidate, TSearchSpace, TProblem> ObserveWith(params IReadOnlyList<ISelectorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableSelector<TCandidate, TSearchSpace, TProblem>(selector, observers);
         public ObservableSelector<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, ObjectiveDirections, int, TSearchSpace, TProblem> afterSelection) =>
             selector.ObserveWith(new ActionSelectorObserver<TCandidate, TSearchSpace, TProblem>(afterSelection));

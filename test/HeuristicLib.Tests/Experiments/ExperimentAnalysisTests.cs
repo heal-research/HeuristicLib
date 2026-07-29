@@ -1,10 +1,8 @@
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.Experiments.TestSupport;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 

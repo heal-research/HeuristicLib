@@ -35,5 +35,6 @@
     <ItemGroup>
         <Using Include="Shouldly" />
         <Using Include="Xunit" />
+        <Using Include="System.Collections.Immutable" />
     </ItemGroup>
 </Project>

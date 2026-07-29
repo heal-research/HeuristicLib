@@ -13,15 +13,14 @@ public record
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : PopulationState<TCandidate>
 {
-    private IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators { get; }
-    private IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[] Interceptors { get; }
+    private ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> Evaluators { get; }
+    private ImmutableArray<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> Interceptors { get; }
 
-    public BestMedianWorstPerEvaluationAnalysis(IEvaluator<TCandidate, TSearchSpace, TProblem>[] Evaluators,
-                                                IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>[]
-                                                    Interceptors)
+    public BestMedianWorstPerEvaluationAnalysis(IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> evaluators,
+                                                IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
     {
-        this.Evaluators = Evaluators;
-        this.Interceptors = Interceptors;
+        Evaluators = evaluators.ToImmutableArray();
+        Interceptors = interceptors.ToImmutableArray();
     }
 
     public override BestMedianWorstPerEvaluationAnalysisState<TCandidate> CreateInitialResult() => new();

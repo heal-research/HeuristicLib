@@ -16,9 +16,9 @@ public abstract partial record MultiTerminator<TCandidate, TSearchSpace, TProble
     [OrderedEquality]
     protected ImmutableArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> InnerTerminators { get; }
 
-    protected MultiTerminator(ImmutableArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators)
+    protected MultiTerminator(IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> innerTerminators)
     {
-        InnerTerminators = innerTerminators;
+        InnerTerminators = innerTerminators.ToImmutableArray();
     }
 
     protected sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ExecutionInstanceRegistry registry) =>

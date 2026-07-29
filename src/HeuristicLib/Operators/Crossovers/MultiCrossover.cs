@@ -14,9 +14,9 @@ public abstract partial record MultiCrossover<TCandidate, TSearchSpace, TProblem
     [OrderedEquality]
     protected ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> InnerCrossovers { get; }
 
-    protected MultiCrossover(ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> innerCrossovers)
+    protected MultiCrossover(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> innerCrossovers)
     {
-        InnerCrossovers = innerCrossovers;
+        InnerCrossovers = innerCrossovers.ToImmutableArray();
     }
 
     protected sealed override ICrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ExecutionInstanceRegistry registry) =>

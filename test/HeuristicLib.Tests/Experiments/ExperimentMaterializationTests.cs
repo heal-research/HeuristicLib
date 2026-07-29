@@ -1,6 +1,4 @@
 using HEAL.HeuristicLib.Experiments;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.States;
 using HEAL.HeuristicLib.Tests.Experiments.TestSupport;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
@@ -43,6 +41,17 @@ public class ExperimentMaterializationTests
         increments[0] = 3;
 
         experiment.MaterializeCases().Select(experimentCase => experimentCase.Algorithm.Increment).ShouldBe([1, 2]);
+    }
+
+    [Fact]
+    public void ExperimentCase_SnapshotsRandomForkPath()
+    {
+        var path = new List<int> { 1, 2 };
+        var experimentCase = new ExperimentCase<AdditiveStepAlgorithm, int>(new AdditiveStepAlgorithm(1), 0, path);
+
+        path[0] = 3;
+
+        experimentCase.RandomForkPath.ShouldBe([1, 2]);
     }
 
     [Fact]

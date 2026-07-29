@@ -21,14 +21,12 @@ public partial record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TP
 {
     [OrderedEquality] public ImmutableArray<TAlgorithm> Algorithms { get; }
 
-    public PipelineAlgorithm(ImmutableArray<TAlgorithm> algorithms)
+    public PipelineAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
     {
-        if (algorithms.Length == 0)
-        {
+        if (algorithms.Count == 0)
             throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
-        }
 
-        Algorithms = algorithms;
+        Algorithms = algorithms.ToImmutableArray();
     }
 
     protected override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
@@ -38,14 +36,14 @@ public partial record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TP
 public static class PipelineAlgorithm
 {
     public static PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
-        Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> firstAlgorithm, params IEnumerable<TAlgorithm> followingAlgorithms)
+        Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> firstAlgorithm, params IReadOnlyList<TAlgorithm> followingAlgorithms)
         where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState => new([firstAlgorithm.Self, .. followingAlgorithms]);
 
     public static PipelineAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        params IEnumerable<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms)
+        params IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState => new([.. algorithms]);
@@ -59,7 +57,7 @@ public static class PipelineAlgorithmExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IEnumerable<TAlgorithm> followingAlgorithms) =>
+        public PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IReadOnlyList<TAlgorithm> followingAlgorithms) =>
             PipelineAlgorithm.Create(algorithm, followingAlgorithms);
     }
 
@@ -68,7 +66,7 @@ public static class PipelineAlgorithmExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public PipelineAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IEnumerable<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> followingAlgorithms) =>
+        public PipelineAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> followingAlgorithms) =>
             PipelineAlgorithm.Create([algorithm, .. followingAlgorithms]);
     }
 }
@@ -81,12 +79,12 @@ public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TPr
     where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
     private readonly ExecutionInstanceRegistry registry;
-    protected readonly IReadOnlyList<TAlgorithm> Algorithms;
+    protected readonly ImmutableArray<TAlgorithm> Algorithms;
 
     public PipelineAlgorithmInstance(ExecutionInstanceRegistry registry, IReadOnlyList<TAlgorithm> algorithms)
     {
         this.registry = registry;
-        Algorithms = algorithms;
+        Algorithms = algorithms.ToImmutableArray();
     }
 
     public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)

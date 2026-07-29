@@ -14,9 +14,9 @@ public abstract partial record MultiCreator<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     protected ImmutableArray<ICreator<TCandidate, TSearchSpace, TProblem>> InnerCreators { get; }
 
-    protected MultiCreator(ImmutableArray<ICreator<TCandidate, TSearchSpace, TProblem>> innerCreators)
+    protected MultiCreator(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> innerCreators)
     {
-        InnerCreators = innerCreators;
+        InnerCreators = innerCreators.ToImmutableArray();
     }
 
     protected sealed override ICreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ExecutionInstanceRegistry registry) =>

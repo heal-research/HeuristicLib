@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
@@ -11,7 +10,6 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.States;
-using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
@@ -19,6 +17,22 @@ namespace HEAL.HeuristicLib.Tests.Operators;
 
 public class ChooseOneOperatorTests
 {
+    [Fact]
+    public void ChooseOneMutator_SnapshotsMutatorsAndWeights()
+    {
+        var first = new AddOffsetMutator(1);
+        var second = new AddOffsetMutator(2);
+        var mutators = new List<IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var weights = new List<double> { 1.0, 2.0 };
+        var configuration = new ChooseOneMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutators, weights);
+
+        mutators.Clear();
+        weights[0] = 100.0;
+
+        configuration.Mutators.ShouldBe([first, second]);
+        configuration.Weights.ShouldBe([1.0, 2.0]);
+    }
+
     [Fact]
     public void ChooseOneCreator_ShouldPreserveAssignmentOrder()
     {

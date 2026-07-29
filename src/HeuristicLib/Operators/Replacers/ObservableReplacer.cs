@@ -17,15 +17,10 @@ public partial record ObservableReplacer<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     public ImmutableArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, ImmutableArray<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : base(replacer)
+    public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, params IReadOnlyList<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(replacer)
     {
-        Observers = observers;
-    }
-
-    public ObservableReplacer(IReplacer<TCandidate, TSearchSpace, TProblem> replacer, params IEnumerable<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : this(replacer, [.. observers])
-    {
+        Observers = observers.ToImmutableArray();
     }
 
     protected override WrappingReplacerInstance<TCandidate, TSearchSpace, TProblem> CreateReplacerInstance(IReplacerInstance<TCandidate, TSearchSpace, TProblem> innerReplacer) =>
@@ -71,7 +66,7 @@ public static class ObservableReplacerExtensions
     {
         public ObservableReplacer<TCandidate, TSearchSpace, TProblem> ObserveWith(IReplacerObserver<TCandidate, TSearchSpace, TProblem> observer) =>
             new ObservableReplacer<TCandidate, TSearchSpace, TProblem>(replacer, observer);
-        public ObservableReplacer<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
+        public ObservableReplacer<TCandidate, TSearchSpace, TProblem> ObserveWith(params IReadOnlyList<IReplacerObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableReplacer<TCandidate, TSearchSpace, TProblem>(replacer, observers);
         public ObservableReplacer<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, IReadOnlyList<EvaluatedCandidate<TCandidate>>, TSearchSpace, TProblem> afterReplacement) =>
             replacer.ObserveWith(new ActionReplacerObserver<TCandidate, TSearchSpace, TProblem>((newPopulation, previousPopulation, offspringPopulation, _, searchSpace, problem) => afterReplacement(newPopulation, previousPopulation, offspringPopulation, searchSpace, problem)));

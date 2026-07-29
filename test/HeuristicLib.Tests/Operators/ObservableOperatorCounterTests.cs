@@ -12,13 +12,24 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.States;
-using HEAL.HeuristicLib.Tests.TestSupport.Execution;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
 
 public class ObservableOperatorCounterTests
 {
+    [Fact]
+    public void ObservableCreator_SnapshotsObservers()
+    {
+        var observer = new ActionCreatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
+        var observers = new List<ICreatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>> { observer };
+        var observable = new ObservableCreator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new SequenceCreator(), observers);
+
+        observers.Clear();
+
+        observable.Observers.ShouldBe([observer]);
+    }
+
     [Fact]
     public void CountCreatorCalls_IncrementsOncePerCreateCall()
     {

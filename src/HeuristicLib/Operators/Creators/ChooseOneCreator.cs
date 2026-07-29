@@ -23,19 +23,15 @@ public partial record ChooseOneCreator<TCandidate, TSearchSpace, TProblem>
     [IgnoreEquality]
     private readonly WeightedBatchDispatch dispatcher;
 
-    public ChooseOneCreator(ImmutableArray<ICreator<TCandidate, TSearchSpace, TProblem>> creators, ImmutableArray<double>? weights = null)
+    public ChooseOneCreator(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators, IReadOnlyList<double>? weights = null)
         : base(creators)
     {
-        if (creators.Length == 0)
-        {
+        if (creators.Count == 0)
             throw new ArgumentException("At least one creator must be provided.", nameof(creators));
-        }
 
-        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / creators.Length, creators.Length)];
-        if (effectiveWeights.Length != creators.Length)
-        {
+        IReadOnlyList<double> effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / creators.Count, creators.Count)];
+        if (effectiveWeights.Count != creators.Count)
             throw new ArgumentException("Weights must have the same length as creators.", nameof(weights));
-        }
 
         dispatcher = new WeightedBatchDispatch(effectiveWeights);
         Weights = dispatcher.Weights;
@@ -54,15 +50,12 @@ public partial record ChooseOneCreator<TCandidate, TSearchSpace, TProblem>
 
 public static class ChooseOneCreator
 {
-    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<ICreator<TCandidate, TSearchSpace, TProblem>> creators)
+    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        var creatorArray = creators.ToImmutableArray();
-        return new(creatorArray);
-    }
+        => new(creators);
 
-    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICreator<TCandidate, TSearchSpace, TProblem>> creators, ImmutableArray<double>? weights = null)
+    public static ChooseOneCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICreator<TCandidate, TSearchSpace, TProblem>> creators, IReadOnlyList<double>? weights = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(creators, weights);
 }

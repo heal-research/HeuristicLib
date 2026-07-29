@@ -20,19 +20,15 @@ public partial record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
     [IgnoreEquality]
     private readonly WeightedBatchDispatch dispatcher;
 
-    public ChooseOneCrossover(ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+    public ChooseOneCrossover(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, IReadOnlyList<double>? weights = null)
         : base(crossovers)
     {
-        if (crossovers.Length == 0)
-        {
+        if (crossovers.Count == 0)
             throw new ArgumentException("At least one crossover must be provided.", nameof(crossovers));
-        }
 
-        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / crossovers.Length, crossovers.Length)];
-        if (effectiveWeights.Length != crossovers.Length)
-        {
+        IReadOnlyList<double> effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / crossovers.Count, crossovers.Count)];
+        if (effectiveWeights.Count != crossovers.Count)
             throw new ArgumentException("Weights must have the same length as crossovers.", nameof(weights));
-        }
 
         dispatcher = new WeightedBatchDispatch(effectiveWeights);
         Weights = dispatcher.Weights;
@@ -51,15 +47,12 @@ public partial record ChooseOneCrossover<TCandidate, TSearchSpace, TProblem>
 
 public static class ChooseOneCrossover
 {
-    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers)
+    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        var crossoverArray = crossovers.ToImmutableArray();
-        return new(crossoverArray);
-    }
+        => new(crossovers);
 
-    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, ImmutableArray<double>? weights = null)
+    public static ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ICrossover<TCandidate, TSearchSpace, TProblem>> crossovers, IReadOnlyList<double>? weights = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(crossovers, weights);
 

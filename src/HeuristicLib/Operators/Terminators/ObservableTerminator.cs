@@ -16,15 +16,10 @@ public partial record ObservableTerminator<TCandidate, TSearchSpace, TProblem, T
 
     [OrderedEquality] public ImmutableArray<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> Observers { get; }
 
-    public ObservableTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, ImmutableArray<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
-      : base(terminator)
+    public ObservableTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
+        : base(terminator)
     {
-        Observers = observers;
-    }
-
-    public ObservableTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, params IEnumerable<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
-      : this(terminator, [.. observers])
-    {
+        Observers = observers.ToImmutableArray();
     }
 
     protected override WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateTerminatorInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> innerTerminator) =>
@@ -74,7 +69,7 @@ public static class ObservableTerminatorExtensions
     {
         public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState> observer) =>
             new ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator, observer);
-        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(params IEnumerable<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers) =>
+        public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers) =>
             new ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>(terminator, observers);
         public ObservableTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> ObserveWith(Action<bool, TSearchState, TSearchSpace, TProblem> afterTerminalStateCheck) =>
             terminator.ObserveWith(new ActionTerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>(afterTerminalStateCheck));

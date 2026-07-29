@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;

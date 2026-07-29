@@ -24,19 +24,15 @@ public partial record ChooseOneSelector<TCandidate, TSearchSpace, TProblem>
     [IgnoreEquality]
     private readonly WeightedBatchDispatch dispatcher;
 
-    public ChooseOneSelector(ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> selectors, ImmutableArray<double>? weights = null)
+    public ChooseOneSelector(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> selectors, IReadOnlyList<double>? weights = null)
         : base(selectors)
     {
-        if (selectors.Length == 0)
-        {
+        if (selectors.Count == 0)
             throw new ArgumentException("At least one selector must be provided.", nameof(selectors));
-        }
 
-        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / selectors.Length, selectors.Length)];
-        if (effectiveWeights.Length != selectors.Length)
-        {
+        IReadOnlyList<double> effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / selectors.Count, selectors.Count)];
+        if (effectiveWeights.Count != selectors.Count)
             throw new ArgumentException("Weights must have the same length as selectors.", nameof(weights));
-        }
 
         dispatcher = new WeightedBatchDispatch(effectiveWeights);
         Weights = dispatcher.Weights;
@@ -55,15 +51,12 @@ public partial record ChooseOneSelector<TCandidate, TSearchSpace, TProblem>
 
 public static class ChooseOneSelector
 {
-    public static ChooseOneSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<ISelector<TCandidate, TSearchSpace, TProblem>> selectors)
+    public static ChooseOneSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> selectors)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        var selectorArray = selectors.ToImmutableArray();
-        return new(selectorArray);
-    }
+        => new(selectors);
 
-    public static ChooseOneSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> selectors, ImmutableArray<double>? weights = null)
+    public static ChooseOneSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> selectors, IReadOnlyList<double>? weights = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(selectors, weights);
 }

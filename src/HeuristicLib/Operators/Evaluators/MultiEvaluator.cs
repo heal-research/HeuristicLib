@@ -13,9 +13,9 @@ public abstract partial record MultiEvaluator<TCandidate, TSearchSpace, TProblem
 {
     [OrderedEquality] protected ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> InnerEvaluators { get; }
 
-    protected MultiEvaluator(ImmutableArray<IEvaluator<TCandidate, TSearchSpace, TProblem>> innerEvaluators)
+    protected MultiEvaluator(IReadOnlyList<IEvaluator<TCandidate, TSearchSpace, TProblem>> innerEvaluators)
     {
-        InnerEvaluators = innerEvaluators;
+        InnerEvaluators = innerEvaluators.ToImmutableArray();
     }
 
     protected sealed override IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateEvaluatorInstance(ExecutionInstanceRegistry registry) =>

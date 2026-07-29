@@ -68,6 +68,10 @@ Do not systematically validate `ImmutableArray<T>.IsDefault`. Assume immutable a
 
 Do not add validation solely to defend against `null!`, disabled nullable analysis, reflection or other deliberate contract bypasses.
 
+## Collection ownership
+
+Core configurations and durable value objects use snapshot semantics. Accept retained finite ordered inputs as `IReadOnlyList<T>`, immediately snapshot them into `ImmutableArray<T>` and expose owned immutable collections as `ImmutableArray<T>`. Later changes to caller-owned input collections must not affect an existing configuration or durable value. Keep transient operation batches on `IReadOnlyList<T>` and use mutable collection returns only when mutation or ownership transfer is intentional.
+
 ## Validation commands
 
 - Restore dependencies with `dotnet restore`.

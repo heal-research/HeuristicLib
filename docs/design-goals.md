@@ -101,6 +101,20 @@ Any type used as `TCandidate` is part of the candidate model and must be immutab
 - Mutation and crossover may produce new candidates, but they must not change the identity-bearing state of existing candidates.
 - Search spaces, problems, and algorithms should be designed around immutable candidate flow.
 
+### Collection boundaries and ownership
+
+Core configurations and durable value objects use snapshot semantics for retained collection inputs.
+
+- Public APIs accept the narrowest read-only collection abstraction that describes the required shape. Ordered finite inputs normally use `IReadOnlyList<T>`.
+- Constructors and methods that retain a collection immediately snapshot it into an immutable representation, normally `ImmutableArray<T>`.
+- Later changes to a caller-owned input collection must not change an existing configuration or durable value.
+- Owned immutable collections are exposed as `ImmutableArray<T>` so their stability is part of the public contract.
+- Transient operation batches normally use `IReadOnlyList<T>` because implementations may choose their materialized representation.
+- Mutable collections and arrays are returned only when caller mutation or ownership transfer is an intentional part of the API.
+- `IEnumerable<T>` is reserved for genuinely lazy or sequence-oriented APIs rather than retained finite configuration collections.
+
+Snapshotting is shallow. The immutable collection retains references to its elements, so those elements must independently satisfy their own immutability contracts.
+
 ### Honest execution and evaluation boundaries
 
 The problem defines canonical evaluation semantics.

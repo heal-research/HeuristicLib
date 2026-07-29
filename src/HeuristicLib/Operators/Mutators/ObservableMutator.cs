@@ -16,15 +16,10 @@ public partial record ObservableMutator<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     public ImmutableArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableMutator(IMutator<TCandidate, TSearchSpace, TProblem> mutator, ImmutableArray<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : base(mutator)
+    public ObservableMutator(IMutator<TCandidate, TSearchSpace, TProblem> mutator, params IReadOnlyList<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(mutator)
     {
-        Observers = observers;
-    }
-
-    public ObservableMutator(IMutator<TCandidate, TSearchSpace, TProblem> mutator, params IEnumerable<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : this(mutator, [.. observers])
-    {
+        Observers = observers.ToImmutableArray();
     }
 
     protected override WrappingMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(IMutatorInstance<TCandidate, TSearchSpace, TProblem> innerMutator) =>
@@ -70,7 +65,7 @@ public static class ObservableMutatorExtensions
     {
         public ObservableMutator<TCandidate, TSearchSpace, TProblem> ObserveWith(IMutatorObserver<TCandidate, TSearchSpace, TProblem> observer) =>
             new ObservableMutator<TCandidate, TSearchSpace, TProblem>(mutator, observer);
-        public ObservableMutator<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
+        public ObservableMutator<TCandidate, TSearchSpace, TProblem> ObserveWith(params IReadOnlyList<IMutatorObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableMutator<TCandidate, TSearchSpace, TProblem>(mutator, observers);
         public ObservableMutator<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<TCandidate>, TSearchSpace, TProblem> afterMutate) =>
             mutator.ObserveWith(new ActionMutatorObserver<TCandidate, TSearchSpace, TProblem>(afterMutate));

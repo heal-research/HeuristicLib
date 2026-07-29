@@ -8,8 +8,6 @@ using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
-using HEAL.HeuristicLib.States;
-using Xunit;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Algorithms.MetaAlgorithms;
 

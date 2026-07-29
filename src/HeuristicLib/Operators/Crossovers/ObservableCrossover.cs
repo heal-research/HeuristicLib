@@ -17,15 +17,10 @@ public partial record ObservableCrossover<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     public ImmutableArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> Observers { get; }
 
-    public ObservableCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, ImmutableArray<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : base(crossover)
+    public ObservableCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, params IReadOnlyList<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
+        : base(crossover)
     {
-        Observers = observers;
-    }
-
-    public ObservableCrossover(ICrossover<TCandidate, TSearchSpace, TProblem> crossover, params IEnumerable<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers)
-      : this(crossover, [.. observers])
-    {
+        Observers = observers.ToImmutableArray();
     }
 
     protected override WrappingCrossoverInstance<TCandidate, TSearchSpace, TProblem> CreateCrossoverInstance(ICrossoverInstance<TCandidate, TSearchSpace, TProblem> innerCrossover) =>
@@ -70,7 +65,7 @@ public static class ObservableCrossoverExtensions
     {
         public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(ICrossoverObserver<TCandidate, TSearchSpace, TProblem> observer) =>
             new ObservableCrossover<TCandidate, TSearchSpace, TProblem>(crossover, observer);
-        public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(params IEnumerable<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
+        public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(params IReadOnlyList<ICrossoverObserver<TCandidate, TSearchSpace, TProblem>> observers) =>
             new ObservableCrossover<TCandidate, TSearchSpace, TProblem>(crossover, observers);
         public ObservableCrossover<TCandidate, TSearchSpace, TProblem> ObserveWith(Action<IReadOnlyList<TCandidate>, IReadOnlyList<IParents<TCandidate>>, TSearchSpace, TProblem> afterCross) =>
             crossover.ObserveWith(new ActionCrossoverObserver<TCandidate, TSearchSpace, TProblem>(afterCross));

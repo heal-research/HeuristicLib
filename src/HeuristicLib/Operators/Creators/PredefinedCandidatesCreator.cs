@@ -18,10 +18,10 @@ public partial record PredefinedCandidatesCreator<TCandidate, TSearchSpace, TPro
 
     [OrderedEquality] public ImmutableArray<TCandidate> PredefinedCandidates { get; init; }
 
-    public PredefinedCandidatesCreator(ImmutableArray<TCandidate> predefinedCandidates, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates)
+    public PredefinedCandidatesCreator(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates)
       : base(creatorForRemainingCandidates)
     {
-        PredefinedCandidates = predefinedCandidates;
+        PredefinedCandidates = predefinedCandidates.ToImmutableArray();
     }
 
     protected override WrappingCreatorInstance<TCandidate, TSearchSpace, TProblem> CreateCreatorInstance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> innerCreator) =>
@@ -69,7 +69,7 @@ public static class PredefinedCandidatesCreator
         IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(predefinedCandidates.ToImmutableArray(), creatorForRemainingCandidates);
+        new(predefinedCandidates, creatorForRemainingCandidates);
 }
 
 public static class PredefinedCandidatesCreatorExtensions

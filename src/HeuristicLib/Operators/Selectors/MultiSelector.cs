@@ -14,9 +14,9 @@ public abstract partial record MultiSelector<TCandidate, TSearchSpace, TProblem>
     [OrderedEquality]
     protected ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> InnerSelectors { get; }
 
-    protected MultiSelector(ImmutableArray<ISelector<TCandidate, TSearchSpace, TProblem>> innerSelectors)
+    protected MultiSelector(IReadOnlyList<ISelector<TCandidate, TSearchSpace, TProblem>> innerSelectors)
     {
-        InnerSelectors = innerSelectors;
+        InnerSelectors = innerSelectors.ToImmutableArray();
     }
 
     protected sealed override ISelectorInstance<TCandidate, TSearchSpace, TProblem> CreateSelectorInstance(ExecutionInstanceRegistry registry) =>

@@ -37,7 +37,7 @@ namespace HEAL.HeuristicLib.Optimization
             if (maximization.Directions.Length == 2)
                 return Calculate2D(dominatingVectors, referencePoint, maximization);
 
-            return Array.TrueForAll(maximization.Directions, x => x == ObjectiveDirection.Minimize)
+            return maximization.Directions.All(x => x == ObjectiveDirection.Minimize)
               ? CalculateMultiDimensional(dominatingVectors, referencePoint)
               : throw new NotImplementedException("Hypervolume calculation for more than two dimensions is supported only with minimization problems.");
         }

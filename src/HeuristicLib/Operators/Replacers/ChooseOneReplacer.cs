@@ -24,19 +24,15 @@ public partial record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
     [IgnoreEquality]
     private readonly WeightedBatchDispatch dispatcher;
 
-    public ChooseOneReplacer(ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, ImmutableArray<double>? weights = null)
+    public ChooseOneReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, IReadOnlyList<double>? weights = null)
         : base(replacers)
     {
-        if (replacers.Length == 0)
-        {
+        if (replacers.Count == 0)
             throw new ArgumentException("At least one replacer must be provided.", nameof(replacers));
-        }
 
-        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / replacers.Length, replacers.Length)];
-        if (effectiveWeights.Length != replacers.Length)
-        {
+        IReadOnlyList<double> effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / replacers.Count, replacers.Count)];
+        if (effectiveWeights.Count != replacers.Count)
             throw new ArgumentException("Weights must have the same length as replacers.", nameof(weights));
-        }
 
         dispatcher = new WeightedBatchDispatch(effectiveWeights);
         Weights = dispatcher.Weights;
@@ -55,15 +51,12 @@ public partial record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
 
 public static class ChooseOneReplacer
 {
-    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers)
+    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        var replacerArray = replacers.ToImmutableArray();
-        return new(replacerArray);
-    }
+        => new(replacers);
 
-    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, ImmutableArray<double>? weights = null)
+    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, IReadOnlyList<double>? weights = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
         new(replacers, weights);

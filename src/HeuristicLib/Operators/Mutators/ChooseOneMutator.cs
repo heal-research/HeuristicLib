@@ -19,16 +19,16 @@ public partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
     [IgnoreEquality]
     private readonly WeightedBatchDispatch dispatcher;
 
-    public ChooseOneMutator(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
+    public ChooseOneMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null)
         : base(mutators)
     {
-        if (mutators.Length == 0)
+        if (mutators.Count == 0)
         {
             throw new ArgumentException("At least one mutator must be provided.", nameof(mutators));
         }
 
-        var effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / mutators.Length, mutators.Length)];
-        if (effectiveWeights.Length != mutators.Length)
+        IReadOnlyList<double> effectiveWeights = weights ?? [.. Enumerable.Repeat(1.0 / mutators.Count, mutators.Count)];
+        if (effectiveWeights.Count != mutators.Count)
         {
             throw new ArgumentException("Weights must have the same length as mutators.", nameof(weights));
         }
@@ -50,20 +50,15 @@ public partial record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
 
 public static class ChooseOneMutator
 {
-    public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IEnumerable<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
+    public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators)
       where TSearchSpace : class, ISearchSpace<TCandidate>
       where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        var mutatorArray = mutators.ToImmutableArray();
-        return new(mutatorArray);
-    }
+      => new(mutators);
 
-    public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, ImmutableArray<double>? weights = null)
+    public static ChooseOneMutator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> mutators, IReadOnlyList<double>? weights = null)
       where TSearchSpace : class, ISearchSpace<TCandidate>
       where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        return new(mutators, weights);
-    }
+      => new(mutators, weights);
 
     extension<TCandidate, TSearchSpace, TProblem>(IMutator<TCandidate, TSearchSpace, TProblem> mutator)
      where TSearchSpace : class, ISearchSpace<TCandidate>

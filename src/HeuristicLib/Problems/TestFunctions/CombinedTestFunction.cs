@@ -5,16 +5,16 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class CombinedTestFunction : IMultiObjectiveTestFunction
 {
-    public CombinedTestFunction(params IEnumerable<ITestFunction> functions)
+    public CombinedTestFunction(params IReadOnlyList<ITestFunction> functions)
     {
-        Functions = functions.ToArray();
+        Functions = functions.ToImmutableArray();
         Dimension = Functions.Select(f => f.Dimension).Distinct().Single();
         Min = Functions.Select(f => f.Min).Max();
         Max = Functions.Select(f => f.Max).Min();
         Objective = MultiObjective.Create(Functions.Select(f => f.Objective).ToArray());
     }
 
-    public ITestFunction[] Functions { get; }
+    public ImmutableArray<ITestFunction> Functions { get; }
     public int Dimension { get; }
     public double Min { get; }
     public double Max { get; }

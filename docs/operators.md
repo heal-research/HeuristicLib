@@ -66,7 +66,7 @@ The unprefixed role base is the common base for all three paths. Stateless and s
 
 ### Stateless operators
 
-A stateless operator configuration also performs the operation. Configuration values and referenced collections must remain unchanged during execution. Specialized role helpers may build on this path for common operation shapes.
+A stateless operator configuration also performs the operation. Configuration values must remain unchanged during execution. Retained collection inputs use snapshot semantics: operator APIs accept `IReadOnlyList<T>` where appropriate then store an immutable snapshot. Later changes to the caller's list do not alter the operator configuration. Specialized role helpers may build on this path for common operation shapes.
 
 ### Stateful operators
 

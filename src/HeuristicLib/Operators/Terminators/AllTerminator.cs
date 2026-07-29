@@ -12,7 +12,7 @@ public partial record AllTerminator<TCandidate, TSearchSpace, TProblem, TSearchS
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public AllTerminator(params ImmutableArray<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
+    public AllTerminator(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
       : base(terminators)
     {
     }
@@ -30,7 +30,7 @@ public partial record AllTerminator<TCandidate, TSearchSpace, TProblem, TSearchS
 
 public static class AllTerminator
 {
-    public static AllTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IEnumerable<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
+    public static AllTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
         where TSearchState : class, ISearchState
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. terminators]);
@@ -43,7 +43,7 @@ public static class AllTerminatorExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public AllTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> And(params IEnumerable<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> otherTerminators) =>
+        public AllTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> And(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> otherTerminators) =>
             AllTerminator.Create([terminator, .. otherTerminators]);
     }
 }

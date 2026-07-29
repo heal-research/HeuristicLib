@@ -54,7 +54,7 @@ The instance creation method returns the most concrete accessible instance type 
 
 ## Ownership rules
 
-The configuration owns reusable settings and child configurations. It must not be mutated during execution. Referenced child configurations and behavior affecting collections must also remain unchanged.
+The configuration owns reusable settings and child configurations. It must not be mutated during execution. Retained collection inputs use snapshot semantics: configuration APIs accept `IReadOnlyList<T>` where appropriate then store an immutable snapshot. Later changes to the caller's list do not alter the algorithm configuration. The snapshot is shallow, so referenced child configurations must still remain unchanged.
 
 The execution instance owns resolved child instances, mutable execution data and execution behavior. Repeated runs create independent execution graphs so their instance data is independent.
 

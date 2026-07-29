@@ -46,7 +46,7 @@ During execution, the loop looks like this:
 
 The public search state is the “unit of progress”: it is what streaming execution yields, and it’s what termination and interception reason about.
 
-The algorithm execution instance owns resolved child instances, private execution data and the execution behavior. Configurations remain reusable and unchanged during execution.
+The algorithm execution instance owns resolved child instances, private execution data and the execution behavior. Configurations remain reusable and unchanged during execution. Core configurations snapshot retained `IReadOnlyList<T>` inputs into immutable collections, so later changes to the caller's list do not alter an existing configuration.
 
 An `AlgorithmRun` supplies the problem and random number generator, owns analyzer setup and can execute once through `Stream`, `Complete` or `CompleteAsync`. An experiment materializes several independent algorithm runs as trials. It can stream identified trial states or start one completion task for each trial.
 
