@@ -82,11 +82,11 @@ The configuration describes reusable parameters and graph structure. The authore
 
 Wrapping and multi bases are topology specific shortcuts within this path. A wrapping base resolves one child once. A multi base resolves several children once. They do not have separate stateless and stateful variants because their purpose is already execution graph coordination. The unprefixed role base remains available when those shortcuts do not fit.
 
-### Analyzer guardrails
+### Roslyn analyzer guardrails
 
-The `OperatorAuthoringAnalyzer` applies across operator roles. `HLib0002` reports execution graph dependencies exposed through stateful operator state. `HLib0003` reports direct mutation of operator configuration members during operation logic.
+The `OperatorAuthoringAnalyzer` Roslyn analyzer applies across operator roles. `HLib0002` reports execution graph dependencies exposed through stateful operator state. `HLib0003` reports direct mutation of operator configuration members during operation logic.
 
-These diagnostics are guardrails for common authoring mistakes, not a proof that configuration and state obey every invariant. In particular, the analyzer cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate. Operator authors remain responsible for keeping configurations reusable and keeping execution graph dependencies out of framework managed state.
+These diagnostics are guardrails for common authoring mistakes, not a proof that configuration and state obey every invariant. In particular, the Roslyn analyzer cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate. Operator authors remain responsible for keeping configurations reusable and keeping execution graph dependencies out of framework managed state.
 
 See [Operator authoring](operator-authoring.md) for focused examples of each path and their ownership rules.
 

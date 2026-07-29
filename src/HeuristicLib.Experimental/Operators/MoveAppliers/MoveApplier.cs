@@ -1,9 +1,9 @@
-namespace HEAL.HeuristicLib.Operators.MoveAppliers;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Execution;
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
 public abstract record MoveApplier<TGenotype, TSearchSpace, TProblem, TMove, TState>
     : IMoveApplier<TGenotype, TSearchSpace, TProblem, TMove>

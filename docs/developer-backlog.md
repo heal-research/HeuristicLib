@@ -53,6 +53,7 @@ These are still real open items:
 - decide the broader run/resume/continue naming scheme and decide whether completion results should carry typed stop reasons; this should become its own API naming and lifecycle-result design discussion rather than remaining tied to the termination overhaul branch
 - re-discuss algorithm builder APIs before extending them further: decide whether builders should become a polished, first-class configuration style with full feature parity, better type inference, and clear naming, or whether the library should phase them out in favor of object initializers, static factories, and small helper APIs
 - introduce a dedicated architecture test suite and evaluate ArchUnitNET as its foundation. Cover assembly dependency directions and cross-cutting authoring API rules such as returning the most concrete accessible execution instance type from protected creation methods. The removed `PipelineAlgorithm_FactoryExposesItsConcretePublicInstanceType` unit test is the first concrete example to restore there as a generalized architecture rule rather than a Pipeline-specific test
+- add a Roslyn analyzer and code fix for missing type inference helpers on public operator configurations. Detect when direct construction requires generic arguments that could be inferred through a static `Create(...)`, `For(problem, ...)` or `For(algorithm, ...)` helper, generate the appropriate companion helper and cover the intended syntax with API usage specs. Start with operators. Reconsider algorithms after their builder and factory design is settled. Do not duplicate the same rule in architecture tests
 - consider static factory methods for concrete algorithms where constructors force callers to spell generic arguments that should be inferable from supplied collaborators. Keep this work aligned with the separate decision about builders and object initializer based configuration
 - redesign composite search space and composite genotype construction so common composition does not require callers to repeat every candidate and search space type argument. Preserve the fully typed relationship between each candidate part and its search space without relying on untyped component collections
 - clean up the test-suite organization and conventions: standardize test naming, file names, folders, and arrange/act/assert structure; use Shouldly consistently across all test projects, including extension tests; delete or restore commented-out tests; rethink `Explicit = true` for long-running tests and decide whether categories, traits, or separate projects should distinguish fast TDD/unit tests from manually triggered regression, smoke, and performance checks; CI should normally run all tests, but may run expensive regression groups only after the fast unit-test group passes; add a coverage-reporting baseline that highlights weak coverage for public APIs and important invariants
@@ -67,6 +68,7 @@ These are still real open items:
 The active guiding docs remain:
 
 - [design-goals.md](design-goals.md)
+- [developer-guidelines.md](developer-guidelines.md)
 - [requirements.md](requirements.md)
 
 ## Keep or delete?

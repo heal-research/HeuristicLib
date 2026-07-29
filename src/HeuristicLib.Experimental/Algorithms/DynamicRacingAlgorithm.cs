@@ -12,11 +12,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
 
-namespace HEAL.HeuristicLib.Algorithms;
+using MetaOptimizationGenotype = HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>;
+using MetaOptimizationProblem = HEAL.HeuristicLib.Problems.IProblem<HEAL.HeuristicLib.Genotypes.CompositeGenotype<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector>, HEAL.HeuristicLib.Genotypes.CompositeSearchSpace<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.SearchSpaces.Vectors.RealVectorSearchSpace, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector, HEAL.HeuristicLib.SearchSpaces.Vectors.IntegerVectorSearchSpace>>;
+using MetaOptimizationSearchSpace = HEAL.HeuristicLib.Genotypes.CompositeSearchSpace<HEAL.HeuristicLib.Genotypes.Vectors.RealVector, HEAL.HeuristicLib.SearchSpaces.Vectors.RealVectorSearchSpace, HEAL.HeuristicLib.Genotypes.Vectors.IntegerVector, HEAL.HeuristicLib.SearchSpaces.Vectors.IntegerVectorSearchSpace>;
 
-using MetaOptimizationGenotype = CompositeGenotype<RealVector, IntegerVector>;
-using MetaOptimizationProblem = IProblem<CompositeGenotype<RealVector, IntegerVector>, CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>>;
-using MetaOptimizationSearchSpace = CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>;
+namespace HEAL.HeuristicLib.Algorithms;
 
 public class EmptyMetaOptProblem : MetaOptimizationProblem
 {

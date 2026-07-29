@@ -6,6 +6,8 @@
   items:
     - name: Design goals & principles
       href: design-goals.md
+    - name: Developer guidelines
+      href: developer-guidelines.md
     - name: Requirements
       href: requirements.md
     - name: Developer backlog

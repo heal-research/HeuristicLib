@@ -1,9 +1,9 @@
-namespace HEAL.HeuristicLib.Operators.Neighborhoods;
+using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Mutators;
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 
 public record MutationNeighborhood<TG, TS, TP>(StatelessMutator<TG, TS, TP> mutator) : Neighborhood<TG, TS, TP, int>
     where TS : class, ISearchSpace<TG>

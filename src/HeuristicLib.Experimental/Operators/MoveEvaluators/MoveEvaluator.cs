@@ -1,10 +1,10 @@
-namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 
-using Execution;
-using Optimization;
-using Problems;
-using Random;
-using SearchSpaces;
+namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
 public abstract record MoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove, TState>
     : IMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove>

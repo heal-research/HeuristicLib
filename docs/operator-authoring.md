@@ -117,16 +117,16 @@ Composition helpers such as choosing one child, applying a transformation and ru
 
 ## Configuration and execution rules
 
-- Keep configuration values and referenced collections unchanged during execution.
+- Keep configuration values unchanged during execution. Retained collection inputs are immutable snapshots.
 - Keep randomness, the search space and the problem explicit in operation calls.
 - Store mutable run data in framework managed state or an explicitly authored execution instance.
 - Resolve the same configuration through one registry when sharing its execution instance is intentional.
 - Use independent registries when independent execution instances are required.
 - Do not assume stateful operation calls are serialized unless the owning execution path guarantees it.
 
-## Analyzer guardrails
+## Roslyn analyzer guardrails
 
-`OperatorAuthoringAnalyzer` assists with common mistakes across operator roles:
+The `OperatorAuthoringAnalyzer` Roslyn analyzer assists with common mistakes across operator roles:
 
 - `HLib0002` reports execution graph dependencies exposed through stateful operator state.
 - `HLib0003` reports direct mutation of operator configuration members during operation logic.
