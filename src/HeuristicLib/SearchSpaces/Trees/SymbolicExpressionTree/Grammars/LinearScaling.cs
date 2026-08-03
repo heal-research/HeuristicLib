@@ -1,10 +1,10 @@
 using HEAL.HeuristicLib.Problems.DataAnalysis;
-using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
+using HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators.Legacy;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Symbolic;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 
-namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+namespace HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars.Legacy;
 
 public static class LinearScaling
 {
@@ -55,40 +55,6 @@ public static class LinearScaling
         }
 
         return Multiplication;
-    }
-
-    public static double[] AdjustScalingFactors(this Genotypes.Trees.SymbolicExpressionTree tree, double[] predictions, double[] targets)
-    {
-        var start = tree.Root[0];
-        if (start.SubtreeCount == 0)
-        {
-            return predictions;
-        }
-        var add = start[0];
-        if (add.Symbol != Add)
-        {
-            return predictions; // not a tree with linear scaling
-        }
-        var offsetNode = (NumberTreeNode)add[1];
-        var interceptNode = (NumberTreeNode)add[0][1];
-
-        var o = offsetNode.Value;
-        var b = interceptNode.Value;
-        var unscaled = predictions.Select(x => (x - o) / b).ToArray();
-        OnlineLinearScalingParameterCalculator.Calculate(unscaled, targets, out var oNew, out var bNew, out var error);
-        if (error == OnlineCalculatorError.None)
-        {
-            offsetNode.Value = oNew;
-            interceptNode.Value = bNew;
-        }
-
-        // reuse unscaled array
-        for (var i = 0; i < unscaled.Length; i++)
-        {
-            unscaled[i] = unscaled[i] * bNew + oNew;
-        }
-
-        return unscaled;
     }
 
     public static IEnumerable<double> PredictAndAdjustScaling(this Genotypes.Trees.SymbolicExpressionTree tree, ISymbolicDataAnalysisExpressionTreeInterpreter interpreter, Dataset dataset, IEnumerable<int> rows, IEnumerable<double> targets)

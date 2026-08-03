@@ -143,14 +143,48 @@ public class SymbolicRegressionRedesignSpecs
     }
 
     [Fact]
+    public void LinearScaling_AuthoringShape_AffectsFitnessWithoutChangingTheExpression()
+    {
+        var data = new RegressionData(
+            DataFrame.FromMatrix(
+                ["x0"],
+                new double[,]
+                {
+                    { 1.0 },
+                    { 2.0 },
+                    { 3.0 }
+                }),
+            new Series<double>("y", [5.0, 8.0, 11.0]));
+        var searchSpace = new ExpressionTreeSearchSpace(
+            maximumLength: 15,
+            maximumDepth: 4,
+            operations: Symbols.MinimalOperations,
+            variables: ["x0"]);
+        var expression = Variable("x0").Build();
+        var problem = new SymbolicRegressionProblem(
+            data,
+            Metrics.MSE,
+            searchSpace,
+            useLinearScaling: true);
+
+        problem.Evaluate(expression).ShouldBe(new ObjectiveVector(0.0));
+        expression.ShouldBe(Variable("x0").Build());
+
+        var fitted = expression.ToRegressor("estimate").FitLinearScaling(data);
+        fitted.Parameters.Slope.ShouldBe(3.0, tolerance: 1e-12);
+        fitted.Parameters.Intercept.ShouldBe(2.0, tolerance: 1e-12);
+        fitted.Predict(data.Inputs).Values.ToArray().ShouldBe(data.Target.Values.ToArray(), tolerance: 1e-12);
+    }
+
+    [Fact]
     public void Problem_AuthoringShape_CombinesPredictionAndExpressionObjectives()
     {
         var data = CreateLinearRegressionData();
         var searchSpace = CreateSearchSpace();
         var problem = new SymbolicRegressionProblem(
             data,
-            [Metrics.MSE],
-            [ExpressionMetrics.Length],
+            Metrics.MSE,
+            ExpressionMetrics.Length,
             searchSpace);
 
         problem.Evaluate((Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build())

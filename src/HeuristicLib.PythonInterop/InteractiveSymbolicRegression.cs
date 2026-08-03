@@ -78,9 +78,6 @@ public static class InteractiveSymbolicRegression
 
     public static ExpressionTreeSearchSpace BuildSearchSpace(string[] allowedSymbols, string[] variableNames, bool useLinearScaling, int treeLength, int treeDepth)
     {
-        if (useLinearScaling)
-            throw new NotImplementedException("Linear scaling is not yet available.");
-
         var operations = new List<OperationSymbol>();
         foreach (var symbolName in allowedSymbols)
         {
@@ -119,14 +116,12 @@ public static class InteractiveSymbolicRegression
 
     public static Population<ExpressionTree> Run(double[] xValues, double[] yValues, Func<ExpressionTree[], ObjectiveVector[], double[][]> populationCallback, InteractiveSymRegParameters parameters, CancellationToken ct = default)
     {
-        if (parameters.UseLinearScaling)
-            throw new NotImplementedException("Linear scaling is not yet available.");
         if (parameters.ParameterOptimizationIterations > 0)
             throw new NotImplementedException("Parameter optimization is not yet available.");
 
         var data = CreateRegressionDataFromArrays(xValues, yValues);
         var searchSpace = BuildSearchSpace(parameters.AllowedSymbols, ["x"], parameters.UseLinearScaling, parameters.TreeLength, parameters.TreeDepth);
-        var problem = new SymbolicRegressionProblem(data, Metrics.R2, searchSpace);
+        var problem = new SymbolicRegressionProblem(data, Metrics.R2, searchSpace, parameters.UseLinearScaling);
         var mutator = new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(
             [
                 new NodeReplacementMutator(),

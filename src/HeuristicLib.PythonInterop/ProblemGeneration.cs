@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
+using HEAL.HeuristicLib.DataAnalysis.Regression;
+using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Problems.DataAnalysis;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
-using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Problems.TestFunctions.BBoB;
 using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
@@ -12,13 +12,11 @@ using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
-using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
+using HEAL.HeuristicLib.Random.Distributions;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using RastriginFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.RastriginFunction;
 using SphereFunction = HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives.SphereFunction;
-using SymbolicRegressionProblem = HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.SymbolicRegressionProblem;
 
 namespace HEAL.HeuristicLib.PythonInterop;
 
@@ -28,7 +26,7 @@ public class ProblemGeneration
 
     private static readonly ConcurrentDictionary<string, ITravelingSalesmanProblemData> TSPCache = [];
 
-    private static readonly ConcurrentDictionary<(string, double), RegressionProblemData> SymRegCache = [];
+    private static readonly ConcurrentDictionary<(string, double), RegressionData> SymRegCache = [];
 
     public static TravelingSalesmanProblem CreateTravellingSalesmanProblem(string file)
     {
@@ -44,22 +42,39 @@ public class ProblemGeneration
 
     public static SymbolicRegressionProblem CreateSymbolicRegressionProblem(string file, SymRegExperimentParameters parameters)
     {
-        var problemData = SymRegCache.GetOrAdd((file, parameters.TrainingSplit),
-            valueFactory: key => RegressionCsvInstanceProvider.ImportData(key.Item1, key.Item2));
-        var problem = new SymbolicRegressionProblem(problemData, new RootMeanSquaredErrorEvaluator(), new TreeLengthEvaluator())
-        {
-            SearchSpace =
-            {
-                TreeDepth = parameters.TreeDepth,
-                TreeLength = parameters.TreeLength
-            },
-            ParameterOptimizationIterations = parameters.ParameterOptimizationIterations
-        };
-        var root = problem.SearchSpace.Grammar.AddLinearScaling();
-        var symbols = new Symbol[] { new Addition(), new Subtraction(), new Multiplication(), new Division(), new Number(), new SquareRoot(), new Logarithm(), new Variable { VariableNames = problemData.InputVariables } };
-        problem.SearchSpace.Grammar.AddFullyConnectedSymbols(root, symbols);
+        if (parameters.ParameterOptimizationIterations > 0)
+            throw new NotImplementedException("Parameter optimization is not yet available.");
 
-        return problem;
+        var data = SymRegCache.GetOrAdd((file, parameters.TrainingSplit), static key => PythonRegressionData.ReadCsv(key.Item1, key.Item2));
+        var operations = new OperationSymbol[]
+        {
+            Symbols.Addition,
+            Symbols.Subtraction,
+            Symbols.Multiplication,
+            Symbols.Division,
+            Symbols.SquareRoot,
+            Symbols.Logarithm
+        };
+        var constant = new EvolvableConstantSymbol(
+            new UniformDoubleDistribution(-20.0, 20.0),
+            new ChooseNumericPerturbation(
+            [
+                (new AdditiveNumericPerturbation(new NormalDoubleDistribution(0.0, 1.0)), 0.5),
+                (new MultiplicativeNumericPerturbation(new NormalDoubleDistribution(0.0, 0.03)), 0.5)
+            ]));
+        var searchSpace = new ExpressionTreeSearchSpace(
+            parameters.TreeLength,
+            parameters.TreeDepth,
+            operations,
+            data.Inputs.Columns.Select(column => column.Name),
+            [constant]);
+
+        return new SymbolicRegressionProblem(
+            data,
+            Metrics.RMSE.ToFinite(),
+            ExpressionMetrics.Length,
+            searchSpace,
+            parameters.UseLinearScaling);
     }
 
     public static TestFunctionProblem CreateTestFunctionProblem(int function, int dimension, int instance) => new(BBoBSuite.GetProblem(function, dimension, instance));

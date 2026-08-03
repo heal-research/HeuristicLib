@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.DataAnalysis.Statistics;
+namespace HEAL.HeuristicLib.DataAnalysis;
 
 /// <summary>Accumulates the mean and variance without retaining observations.</summary>
 /// <remarks>Instances are mutable and not thread-safe. Independent accumulators can be merged.</remarks>
@@ -27,39 +27,33 @@ public sealed class RunningMeanVariance
     {
         if (values.IsEmpty)
             return;
-        if (!BatchStatistics.IsBeneficial(values.Length))
-        {
-            foreach (var value in values)
-                Add(value);
-            return;
-        }
 
-        BatchStatistics.CalculateMeanAndSecondCentralMomentSum(values, out var batchMean, out var batchSecondCentralMomentSum);
-        Merge(values.Length, batchMean, batchSecondCentralMomentSum);
+        var accumulator = Statistics.AccumulateMeanVariance(values);
+        Merge(accumulator);
     }
 
     public void Merge(RunningMeanVariance other)
     {
-        Merge(other.count, other.mean, other.secondCentralMomentSum);
+        Merge(new MeanVarianceAccumulator(other.count, other.mean, other.secondCentralMomentSum));
     }
 
-    private void Merge(long otherCount, double otherMean, double otherSecondCentralMomentSum)
+    private void Merge(MeanVarianceAccumulator other)
     {
-        if (otherCount <= 0)
+        if (other.Count <= 0)
             return;
 
         if (count == 0)
         {
-            count = otherCount;
-            mean = otherMean;
-            secondCentralMomentSum = otherSecondCentralMomentSum;
+            count = other.Count;
+            mean = other.Mean;
+            secondCentralMomentSum = other.SecondCentralMomentSum;
             return;
         }
 
-        var combinedCount = count + otherCount;
-        var delta = otherMean - mean;
-        secondCentralMomentSum += otherSecondCentralMomentSum + delta * delta * count * otherCount / combinedCount;
-        mean += delta * otherCount / combinedCount;
+        var combinedCount = count + other.Count;
+        var delta = other.Mean - mean;
+        secondCentralMomentSum += other.SecondCentralMomentSum + delta * delta * count * other.Count / combinedCount;
+        mean += delta * other.Count / combinedCount;
         count = combinedCount;
     }
 

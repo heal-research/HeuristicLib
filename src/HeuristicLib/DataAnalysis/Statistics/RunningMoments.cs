@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.DataAnalysis.Statistics;
+namespace HEAL.HeuristicLib.DataAnalysis;
 
 /// <summary>Accumulates the first four central moments without retaining observations.</summary>
 /// <remarks>Instances are mutable and not thread-safe. Independent accumulators can be merged.</remarks>
@@ -57,64 +57,58 @@ public sealed class RunningMoments
     {
         if (values.IsEmpty)
             return;
-        if (!BatchStatistics.IsBeneficial(values.Length))
-        {
-            foreach (var value in values)
-                Add(value);
-            return;
-        }
 
-        BatchStatistics.CalculateCentralMomentSums(values, out var batchMean, out var batchSecondCentralMomentSum, out var batchThirdCentralMomentSum, out var batchFourthCentralMomentSum);
-        Merge(values.Length, batchMean, batchSecondCentralMomentSum, batchThirdCentralMomentSum, batchFourthCentralMomentSum);
+        var accumulator = Statistics.AccumulateMoments(values);
+        Merge(accumulator);
     }
 
     public void Merge(RunningMoments other)
     {
-        Merge(other.count, other.mean, other.secondCentralMomentSum, other.thirdCentralMomentSum, other.fourthCentralMomentSum);
+        Merge(new MomentAccumulator(other.count, other.mean, other.secondCentralMomentSum, other.thirdCentralMomentSum, other.fourthCentralMomentSum));
     }
 
-    private void Merge(long otherCount, double otherMean, double otherSecondCentralMomentSum, double otherThirdCentralMomentSum, double otherFourthCentralMomentSum)
+    private void Merge(MomentAccumulator other)
     {
-        if (otherCount <= 0)
+        if (other.Count <= 0)
             return;
 
         if (count == 0)
         {
-            count = otherCount;
-            mean = otherMean;
-            secondCentralMomentSum = otherSecondCentralMomentSum;
-            thirdCentralMomentSum = otherThirdCentralMomentSum;
-            fourthCentralMomentSum = otherFourthCentralMomentSum;
+            count = other.Count;
+            mean = other.Mean;
+            secondCentralMomentSum = other.SecondCentralMomentSum;
+            thirdCentralMomentSum = other.ThirdCentralMomentSum;
+            fourthCentralMomentSum = other.FourthCentralMomentSum;
             return;
         }
 
         var firstCount = (double)count;
-        var secondCount = (double)otherCount;
+        var secondCount = (double)other.Count;
         var combinedCount = firstCount + secondCount;
-        var delta = otherMean - mean;
+        var delta = other.Mean - mean;
         var deltaSquared = delta * delta;
         var deltaCubed = deltaSquared * delta;
         var deltaFourth = deltaSquared * deltaSquared;
         var firstSecondCentralMomentSum = secondCentralMomentSum;
         var firstThirdCentralMomentSum = thirdCentralMomentSum;
 
-        fourthCentralMomentSum += otherFourthCentralMomentSum +
+        fourthCentralMomentSum += other.FourthCentralMomentSum +
                                   deltaFourth * firstCount * secondCount *
                                   (firstCount * firstCount - firstCount * secondCount + secondCount * secondCount) /
                                   (combinedCount * combinedCount * combinedCount) +
                                   6.0 * deltaSquared *
-                                  (firstCount * firstCount * otherSecondCentralMomentSum + secondCount * secondCount * firstSecondCentralMomentSum) /
+                                  (firstCount * firstCount * other.SecondCentralMomentSum + secondCount * secondCount * firstSecondCentralMomentSum) /
                                   (combinedCount * combinedCount) +
-                                  4.0 * delta * (firstCount * otherThirdCentralMomentSum - secondCount * firstThirdCentralMomentSum) / combinedCount;
+                                  4.0 * delta * (firstCount * other.ThirdCentralMomentSum - secondCount * firstThirdCentralMomentSum) / combinedCount;
 
-        thirdCentralMomentSum += otherThirdCentralMomentSum +
+        thirdCentralMomentSum += other.ThirdCentralMomentSum +
                                  deltaCubed * firstCount * secondCount * (firstCount - secondCount) /
                                  (combinedCount * combinedCount) +
-                                 3.0 * delta * (firstCount * otherSecondCentralMomentSum - secondCount * firstSecondCentralMomentSum) / combinedCount;
+                                 3.0 * delta * (firstCount * other.SecondCentralMomentSum - secondCount * firstSecondCentralMomentSum) / combinedCount;
 
-        secondCentralMomentSum += otherSecondCentralMomentSum + deltaSquared * firstCount * secondCount / combinedCount;
+        secondCentralMomentSum += other.SecondCentralMomentSum + deltaSquared * firstCount * secondCount / combinedCount;
         mean += delta * secondCount / combinedCount;
-        count += otherCount;
+        count += other.Count;
     }
 
     public void Reset()

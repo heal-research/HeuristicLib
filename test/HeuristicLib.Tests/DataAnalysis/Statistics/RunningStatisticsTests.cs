@@ -1,10 +1,86 @@
-using HEAL.HeuristicLib.DataAnalysis.Statistics;
+using HEAL.HeuristicLib.DataAnalysis;
 
-namespace HEAL.HeuristicLib.Tests.DataAnalysis.Statistics;
+namespace HEAL.HeuristicLib.Tests.DataAnalysis;
 
 public sealed class RunningStatisticsTests
 {
     private static readonly double[] Values = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
+
+    [Fact]
+    public void Statistics_CalculatesMeanVarianceAndMoments()
+    {
+        var mean = Statistics.Mean(Values);
+        var meanVariance = Statistics.MeanVariance(Values);
+        var moments = Statistics.Moments(Values);
+
+        mean.ShouldBe(5.0, tolerance: 1e-12);
+        meanVariance.Count.ShouldBe(Values.Length);
+        meanVariance.Mean.ShouldBe(5.0, tolerance: 1e-12);
+        meanVariance.PopulationVariance.ShouldBe(4.0, tolerance: 1e-12);
+        meanVariance.SampleVariance.ShouldBe(32.0 / 7.0, tolerance: 1e-12);
+        moments.Count.ShouldBe(Values.Length);
+        moments.Mean.ShouldBe(5.0, tolerance: 1e-12);
+        moments.PopulationVariance.ShouldBe(4.0, tolerance: 1e-12);
+        moments.PopulationSkewness.ShouldBe(0.65625, tolerance: 1e-12);
+        moments.PopulationExcessKurtosis.ShouldBe(-0.21875, tolerance: 1e-12);
+    }
+
+    [Fact]
+    public void Statistics_CalculatesCovarianceSummary()
+    {
+        double[] x = [1.0, 2.0, 3.0];
+        double[] y = [2.0, 4.0, 5.0];
+
+        var statistics = Statistics.Covariance(x, y);
+
+        statistics.Count.ShouldBe(3);
+        statistics.MeanX.ShouldBe(2.0, tolerance: 1e-12);
+        statistics.MeanY.ShouldBe(11.0 / 3.0, tolerance: 1e-12);
+        statistics.PopulationVarianceX.ShouldBe(2.0 / 3.0, tolerance: 1e-12);
+        statistics.PopulationVarianceY.ShouldBe(14.0 / 9.0, tolerance: 1e-12);
+        statistics.PopulationCovariance.ShouldBe(1.0, tolerance: 1e-12);
+        statistics.SampleCovariance.ShouldBe(1.5, tolerance: 1e-12);
+        statistics.Correlation.ShouldBe(3.0 / Math.Sqrt(28.0 / 3.0), tolerance: 1e-12);
+    }
+
+    [Fact]
+    public void Statistics_HandlesEmptyInputsAndRejectsMismatchedPairs()
+    {
+        Statistics.Mean([]).ShouldBe(double.NaN);
+
+        var meanVariance = Statistics.MeanVariance([]);
+        var moments = Statistics.Moments([]);
+        var covariance = Statistics.Covariance([], []);
+
+        meanVariance.Count.ShouldBe(0);
+        meanVariance.Mean.ShouldBe(double.NaN);
+        moments.Count.ShouldBe(0);
+        moments.Mean.ShouldBe(double.NaN);
+        covariance.Count.ShouldBe(0);
+        covariance.PopulationCovariance.ShouldBe(double.NaN);
+        Should.Throw<ArgumentException>(() => Statistics.Covariance([1.0], [1.0, 2.0]));
+    }
+
+    [Fact]
+    public void Statistics_ReportsUndefinedSampleStatisticsForInsufficientObservations()
+    {
+        var singleVariance = Statistics.MeanVariance([42.0]);
+        var singleMoments = Statistics.Moments([42.0]);
+        var pairedSingle = Statistics.Covariance([2.0], [3.0]);
+        var twoMoments = Statistics.Moments([1.0, 2.0]);
+
+        singleVariance.Count.ShouldBe(1);
+        singleVariance.PopulationVariance.ShouldBe(0.0);
+        singleVariance.SampleVariance.ShouldBe(double.NaN);
+        singleMoments.SampleSkewness.ShouldBe(double.NaN);
+        singleMoments.SampleExcessKurtosis.ShouldBe(double.NaN);
+        pairedSingle.PopulationCovariance.ShouldBe(0.0);
+        pairedSingle.SampleCovariance.ShouldBe(double.NaN);
+        pairedSingle.Correlation.ShouldBe(double.NaN);
+        twoMoments.SampleVariance.ShouldBe(0.5);
+        twoMoments.SampleSkewness.ShouldBe(double.NaN);
+        twoMoments.SampleExcessKurtosis.ShouldBe(double.NaN);
+    }
 
     [Fact]
     public void RunningMean_AccumulatesRangesAndResets()

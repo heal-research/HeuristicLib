@@ -157,23 +157,37 @@ legacy stack until grammar-guided immutable GP exists.
 bound training data already defines the eligible rows, and each dynamic window
 materializes the selected rows for evaluation.
 
-The Python genealogy, extended callback, and inter-objective workflows remain
-legacy consumers because they explicitly install a linear-scaling root. The
-legacy automatic-differentiation and parameter-optimization tests also remain
-on the mutable system until their maintained capability has a replacement.
+The Python genealogy, extended callback, and inter-objective workflows now use
+the immutable expression tree, unrestricted search space, modern metrics, and
+fitness-time linear scaling. Their parameter-optimization controls remain on
+the public interop API and report that the capability is not implemented when
+enabled. The legacy automatic-differentiation and parameter-optimization tests
+remain on the mutable system until their maintained capability has a
+replacement.
+
+The migrated default workflows retain the former add, subtract, multiply,
+divide, square-root, and logarithm symbol set; the `[-20, 20]` constant
+initialization; the former additive and multiplicative constant perturbations;
+the `0.9` internal crossover-point probability; and both one-point and all-point
+local perturbation choices. The immutable variable node does not carry the
+legacy occurrence-local numeric weight, so that behavior cannot be preserved
+without a separate weighted-variable design. The old program, start, and
+linear-scaling wrapper nodes also no longer count against expression length.
 
 The evaluator-based regression objective layer remains under
 `Problems/DataAnalysis/Regression` and uses the
 `Problems.DataAnalysis.Regression.Legacy` namespace where names collide. Modern
 symbolic regression uses `IRegressionMetric` and `IExpressionMetric` collections
-on `SymbolicRegressionProblem`. Explicit-grammar workflows and the unreplaced
+on `SymbolicRegressionProblem`. Explicit-grammar tests and the unreplaced
 automatic-differentiation parameter optimizer continue to import the legacy
 evaluators until those complete capabilities migrate.
 
 The complete still-operational `Dataset`-based support group remains under
 `Problems/DataAnalysis`. This includes the old data containers, problem-data
-base classes, regression model contracts, and CSV loader. Python workflows,
-parameter optimization, and their tests remain valid consumers.
+base classes, and regression model contracts used by parameter optimization and
+its tests. `RegressionCsvInstanceProvider` and `TableFileParser` no longer have
+consumers after the Python migration and are deletion candidates pending the
+required explicit approval.
 
 The maintained data-analysis layer now provides numeric perturbation feature
 importance for modern predictors and supervised data. The superseded legacy

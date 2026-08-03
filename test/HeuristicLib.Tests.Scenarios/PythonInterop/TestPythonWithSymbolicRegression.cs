@@ -16,7 +16,8 @@ public class TestPythonWithSymbolicRegression
           new SymRegExperimentParameters
           {
               Seed = AlgorithmRandomSeed,
-              Iterations = iterations
+              Iterations = iterations,
+              ParameterOptimizationIterations = 0
           },
           callback: _ => i++);
         i.ShouldBe(iterations);

@@ -5,25 +5,25 @@ using HEAL.HeuristicLib.Algorithms.MetaAlgorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Genotypes.Trees;
+using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
-using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionTreeCreators;
+using HEAL.HeuristicLib.Operators.Creators.SymbolicExpressionCreators;
 using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
-using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionTreeCrossovers;
+using HEAL.HeuristicLib.Operators.Crossovers.SymbolicExpressionCrossovers;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
-using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionTreeMutators;
+using HEAL.HeuristicLib.Operators.Mutators.SymbolicExpressionMutators;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.SearchSpaces.Trees;
+using HEAL.HeuristicLib.SearchSpaces.SymbolicExpressions;
 using HEAL.HeuristicLib.States;
 
 #pragma warning disable S1104
@@ -46,7 +46,7 @@ public class PythonGenealogyAnalysis
                              .ToArray();
     }
 
-    public static ExperimentResult<SymbolicExpressionTree>[] RunSymbolicRegressionConfigurable(
+    public static ExperimentResult<ExpressionTree>[] RunSymbolicRegressionConfigurable(
         string file, SymRegExperimentParameters parameters, int repetitions) =>
         RunConfigurableRepeated(
             repetitions,
@@ -72,7 +72,7 @@ public class PythonGenealogyAnalysis
             parameters.Seed);
     #endregion
 
-    public static ExperimentResult<SymbolicExpressionTree> RunSymbolicRegressionConfigurable(
+    public static ExperimentResult<ExpressionTree> RunSymbolicRegressionConfigurable(
         string file,
         SymRegExperimentParameters parameters,
         GenerationCallback? callback = null)
@@ -80,11 +80,13 @@ public class PythonGenealogyAnalysis
         parameters = new SymRegExperimentParameters(parameters)
         {
             Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
-            Crossover = parameters.Crossover ?? new SubtreeCrossover(),
-            Mutator = parameters.Mutator ?? CreateSymRegAllMutator()
+            Crossover = parameters.Crossover ?? new SubtreeCrossover(0.9),
+            Mutator = parameters.Mutator ??
+                new ChooseOneMutator<ExpressionTree, ExpressionTreeSearchSpace,
+                    IProblem<ExpressionTree, ExpressionTreeSearchSpace>>([.. SymbolicExpressionMutators.Default])
         };
         var problem = ProblemGeneration.CreateSymbolicRegressionProblem(file, parameters);
-        var actionCallback = callback is null ? null : new Action<PopulationState<SymbolicExpressionTree>>(callback);
+        var actionCallback = callback is null ? null : new Action<PopulationState<ExpressionTree>>(callback);
 
         return RunAlgorithmConfigurable(problem, actionCallback, parameters);
     }
@@ -349,16 +351,5 @@ public class PythonGenealogyAnalysis
         return new MyAnalyzers<TCandidate>(qualities, rankAnalysis, qc, apt, c);
     }
 
-    private static
-        ChooseOneMutator<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace,
-            IProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>> CreateSymRegAllMutator()
-    {
-        return ChooseOneMutator.Create(
-            new ChangeNodeTypeManipulation(),
-            new FullTreeShaker(),
-            new OnePointShaker(),
-            new RemoveBranchManipulation(),
-            new ReplaceBranchManipulation());
-    }
     #endregion
 }

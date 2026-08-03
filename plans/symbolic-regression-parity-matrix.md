@@ -15,8 +15,11 @@ foundation described in
 - `SymbolicRegressor` adapts an immutable expression tree to `IRegressor` and
   retains its name-based compiled expression;
 - `BoundedRegressor` decorates any `IRegressor` with output bounds;
+- `LinearlyScaledRegressor` decorates any `IRegressor` with fitted affine output
+  scaling;
 - `SymbolicRegressionProblem` binds training data plus ordered prediction and
-  expression metrics for algorithm evaluation;
+  expression metrics for algorithm evaluation and can apply linear scaling
+  transiently without changing the expression genotype;
 - the legacy mutable problem remains in the `.Legacy` namespace until its
   remaining consumers migrate.
 
@@ -36,7 +39,7 @@ foundation described in
 | Power and root | `Power` and `Root` symbols | Same symbols | Binary `Power` and `Root` opcodes | `pow(x, y)` and `pow(x, 1 / y)` | Covered by primitive operation and compiler tests | Exponents and root degrees are not rounded. |
 | Analytic quotient | `AnalyticQuotient` symbol | `AnalyticQuotient` | Binary `AnalyticQuotient` opcode | `x / sqrt(1 + y²)` | Covered by primitive operation and compiler tests | Implemented as an ordinary numeric operation. |
 | Factor variables | `FactorVariable` and `BinaryFactorVariable` | Same symbols | Deferred typed terminal design | Intermediate-term migration | Not started | Requires a deliberate categorical-data and terminal-payload design. |
-| Linear scaling | Regression model scaling | `PredictAndAdjustScaling` / grammar linear scaling | Ordinary `Add(Multiply(scale, model), offset)` expression nodes | Behavioral equivalence after lowering | Not started | No dedicated opcode in Stage 1. Scaling constants can be authored as fixed or optimizable literals depending on the caller. |
+| Linear scaling | Regression model scaling | `PredictAndAdjustScaling` / grammar linear scaling | Fitness-time least-squares scaling plus `LinearlyScaledRegressor` for the fitted predictor | Equivalent scaled predictions without genotype mutation | Implemented first draft | Scaling is opt-in on `SymbolicRegressionProblem`, is fitted once per candidate evaluation, and does not affect expression equality, length, depth, containment, mutation, or crossover. Final predictor construction fits and retains the coefficients separately. |
 
 ## Operator Parity
 
@@ -79,4 +82,4 @@ The new immutable expression-tree operator family targets behavioral coverage ra
 | Constant payloads | Settled: keep one `Constant` opcode with a `double` side table. `FixedConstant(value)` and `Constant(value)` are distinguished only in the expression tree. |
 | Buffer/cache boundary | Settled: scratch buffers and column caches are interpreter internals scoped to an evaluation call or execution instance. |
 | Thread safety | Settled: no shared mutable interpreter memory; shared state must be immutable. |
-| Extension migration | The interactive Python workflow and sliding-window regression use the immutable system. Python and scenario workflows with explicit linear-scaling grammars remain legacy consumers until grammar-guided immutable GP is available. |
+| Extension migration | Python interop symbolic-regression workflows and sliding-window regression use the immutable system, including fitness-time linear scaling. The remaining explicit-linear-scaling-grammar consumers are legacy core, experimental, and scenario tests retained with the grammar and parameter-optimization reference implementation. |

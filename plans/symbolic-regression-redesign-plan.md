@@ -147,7 +147,9 @@ Rules:
 - The interpreter reads compiled constant values only. Fixed versus evolvable identity remains on the expression-tree node symbol and participates in tree equality and hashing.
 - Numeric invalid results produce `NaN` only for now. Clamping, penalties, infinity handling, and objective handling remain outside the interpreter.
 - Variable coefficients lower to `Multiply(coef, variable)`.
-- Linear scaling lowers to ordinary nodes, for example `Add(Multiply(scale, model), offset)`, unless Stage 0 records a dedicated-opcode decision.
+- Linear scaling is an optional fitness-time prediction transformation. It fits
+  slope and intercept against the training target without changing or lowering
+  additional nodes into the expression genotype.
 - Expression complexity defaults to instruction count.
 - Stage 1 supports debug/infix formatting only; fully fledged JSON/binary serialization is deferred.
 
@@ -167,6 +169,15 @@ problem. `ExpressionTree.ToRegressor(...)` is the concise conversion path and
 performs the one-time compilation owned by the returned regressor.
 `IRegressor.ToBounded(...)` adds output bounds through normal predictor
 composition.
+
+Linear scaling is opt-in problem evaluation behavior. The problem evaluates an
+expression once, fits least-squares slope and intercept against its training
+target, applies the scaled predictions to all prediction metrics, and leaves
+the genotype unchanged. `LinearScaling` exposes the reusable span-based
+calculation, while `LinearlyScaledRegressor` retains fitted coefficients for
+validation, test, and production prediction. The future symbolic-regression
+estimator must fit this wrapper once for the selected final expression when
+linear scaling was enabled during search.
 
 The maintained data-analysis foundation and its migration sequence are
 specified in

@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.DataAnalysis.Statistics;
+namespace HEAL.HeuristicLib.DataAnalysis;
 
 /// <summary>Accumulates the arithmetic mean without retaining observations.</summary>
 /// <remarks>Instances are mutable and not thread-safe. Independent accumulators can be merged.</remarks>
@@ -20,14 +20,8 @@ public sealed class RunningMean
     {
         if (values.IsEmpty)
             return;
-        if (!BatchStatistics.IsBeneficial(values.Length))
-        {
-            foreach (var value in values)
-                Add(value);
-            return;
-        }
 
-        Merge(values.Length, BatchStatistics.CalculateMean(values));
+        Merge(values.Length, Statistics.Mean(values));
     }
 
     public void Merge(RunningMean other)

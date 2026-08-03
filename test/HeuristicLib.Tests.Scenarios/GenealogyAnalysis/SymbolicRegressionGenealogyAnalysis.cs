@@ -18,6 +18,7 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy;
 using HEAL.HeuristicLib.Problems.DataAnalysis.Regression.Legacy.Evaluators;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars;
+using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Grammars.Legacy;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols;
 using HEAL.HeuristicLib.SearchSpaces.Trees.SymbolicExpressionTree.Symbols.Math;
 using HEAL.HeuristicLib.States;

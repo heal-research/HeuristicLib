@@ -1,4 +1,4 @@
-namespace HEAL.HeuristicLib.DataAnalysis.Statistics;
+namespace HEAL.HeuristicLib.DataAnalysis;
 
 /// <summary>Accumulates paired means, variances, covariance, and correlation without retaining observations.</summary>
 /// <remarks>Instances are mutable and not thread-safe. Independent accumulators can be merged.</remarks>
@@ -44,47 +44,41 @@ public sealed class RunningCovariance
 
         if (xValues.IsEmpty)
             return;
-        if (!BatchStatistics.IsBeneficial(xValues.Length))
-        {
-            for (var i = 0; i < xValues.Length; i++)
-                Add(xValues[i], yValues[i]);
-            return;
-        }
 
-        BatchStatistics.CalculateCovarianceSums(xValues, yValues, out var batchMeanX, out var batchMeanY, out var batchSecondCentralMomentSumX, out var batchSecondCentralMomentSumY, out var batchCrossDeviationSum);
-        Merge(xValues.Length, batchMeanX, batchMeanY, batchSecondCentralMomentSumX, batchSecondCentralMomentSumY, batchCrossDeviationSum);
+        var accumulator = Statistics.AccumulateCovariance(xValues, yValues);
+        Merge(accumulator);
     }
 
     public void Merge(RunningCovariance other)
     {
-        Merge(other.count, other.meanX, other.meanY, other.secondCentralMomentSumX, other.secondCentralMomentSumY, other.crossDeviationSum);
+        Merge(new CovarianceAccumulator(other.count, other.meanX, other.meanY, other.secondCentralMomentSumX, other.secondCentralMomentSumY, other.crossDeviationSum));
     }
 
-    private void Merge(long otherCount, double otherMeanX, double otherMeanY, double otherSecondCentralMomentSumX, double otherSecondCentralMomentSumY, double otherCrossDeviationSum)
+    private void Merge(CovarianceAccumulator other)
     {
-        if (otherCount <= 0)
+        if (other.Count <= 0)
             return;
 
         if (count == 0)
         {
-            count = otherCount;
-            meanX = otherMeanX;
-            meanY = otherMeanY;
-            secondCentralMomentSumX = otherSecondCentralMomentSumX;
-            secondCentralMomentSumY = otherSecondCentralMomentSumY;
-            crossDeviationSum = otherCrossDeviationSum;
+            count = other.Count;
+            meanX = other.MeanX;
+            meanY = other.MeanY;
+            secondCentralMomentSumX = other.SecondCentralMomentSumX;
+            secondCentralMomentSumY = other.SecondCentralMomentSumY;
+            crossDeviationSum = other.CrossDeviationSum;
             return;
         }
 
-        var combinedCount = count + otherCount;
-        var factor = (double)count * otherCount / combinedCount;
-        var deltaX = otherMeanX - meanX;
-        var deltaY = otherMeanY - meanY;
-        secondCentralMomentSumX += otherSecondCentralMomentSumX + deltaX * deltaX * factor;
-        secondCentralMomentSumY += otherSecondCentralMomentSumY + deltaY * deltaY * factor;
-        crossDeviationSum += otherCrossDeviationSum + deltaX * deltaY * factor;
-        meanX += deltaX * otherCount / combinedCount;
-        meanY += deltaY * otherCount / combinedCount;
+        var combinedCount = count + other.Count;
+        var factor = (double)count * other.Count / combinedCount;
+        var deltaX = other.MeanX - meanX;
+        var deltaY = other.MeanY - meanY;
+        secondCentralMomentSumX += other.SecondCentralMomentSumX + deltaX * deltaX * factor;
+        secondCentralMomentSumY += other.SecondCentralMomentSumY + deltaY * deltaY * factor;
+        crossDeviationSum += other.CrossDeviationSum + deltaX * deltaY * factor;
+        meanX += deltaX * other.Count / combinedCount;
+        meanY += deltaY * other.Count / combinedCount;
         count = combinedCount;
     }
 

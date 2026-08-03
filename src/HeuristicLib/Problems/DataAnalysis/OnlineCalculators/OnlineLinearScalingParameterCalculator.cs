@@ -1,8 +1,8 @@
-using HEAL.HeuristicLib.DataAnalysis.Statistics;
+using HEAL.HeuristicLib.DataAnalysis;
 using HEAL.HeuristicLib.Optimization;
 
 #pragma warning disable S2178
-namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators;
+namespace HEAL.HeuristicLib.Problems.DataAnalysis.OnlineCalculators.Legacy;
 
 public class OnlineLinearScalingParameterCalculator
 {

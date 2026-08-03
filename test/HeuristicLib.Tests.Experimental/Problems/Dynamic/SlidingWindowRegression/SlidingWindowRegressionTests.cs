@@ -111,8 +111,8 @@ public class SlidingWindowRegressionTests
         var searchSpace = CreateSearchSpace();
         var inner = new SymbolicRegressionProblem(
             data,
-            [spy],
-            [ExpressionMetrics.Length],
+            spy,
+            ExpressionMetrics.Length,
             searchSpace);
         var problem = new SlidingWindowSymbolicRegressionProblem(inner, 2, 4, 1);
         var tree = MakeVariableTree(searchSpace, "x1");

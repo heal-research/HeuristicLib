@@ -93,12 +93,93 @@ public sealed class SymbolicRegressionProblemTests
     }
 
     [Fact]
+    public void Constructor_AcceptsOnePredictionAndOneExpressionMetric()
+    {
+        var problem = new SymbolicRegressionProblem(
+            CreateLinearRegressionData(),
+            Metrics.RMSE,
+            ExpressionMetrics.Length,
+            CreateSearchSpace());
+
+        problem.PredictionMetrics.ShouldBe([Metrics.RMSE]);
+        problem.ExpressionMetrics.ShouldBe([ExpressionMetrics.Length]);
+    }
+
+    [Fact]
+    public void Constructor_AcceptsOnePredictionAndMultipleExpressionMetrics()
+    {
+        var problem = new SymbolicRegressionProblem(
+            CreateLinearRegressionData(),
+            Metrics.RMSE,
+            [ExpressionMetrics.Length, ExpressionMetrics.VariableCount],
+            CreateSearchSpace());
+
+        problem.PredictionMetrics.ShouldBe([Metrics.RMSE]);
+        problem.ExpressionMetrics.ShouldBe(
+            [ExpressionMetrics.Length, ExpressionMetrics.VariableCount]);
+    }
+
+    [Fact]
     public void Evaluate_UsesMetricObjectiveDirection()
     {
         var problem = CreateProblem(CreateLinearRegressionData(), Metrics.R2);
 
         problem.Evaluate(CreateLinearExpression()).ShouldBe(new ObjectiveVector(1.0));
         problem.Objective.Directions.ShouldBe([ObjectiveDirection.Maximize]);
+    }
+
+    [Fact]
+    public void Evaluate_OptionallyFitsLinearScalingWithoutChangingExpression()
+    {
+        var expression = Variable("x0").Build();
+        var root = expression.Root;
+        var data = new RegressionData(
+            DataFrame.FromMatrix(
+                ["x0"],
+                new double[,]
+                {
+                    { 1.0 },
+                    { 2.0 },
+                    { 3.0 }
+                }),
+            new Series<double>("y", [5.0, 8.0, 11.0]));
+        var searchSpace = CreateSearchSpace(["x0"]);
+        var unscaled = new SymbolicRegressionProblem(data, Metrics.MSE, searchSpace);
+        var scaled = new SymbolicRegressionProblem(data, Metrics.MSE, searchSpace, useLinearScaling: true);
+
+        var unscaledObjective = unscaled.Evaluate(expression);
+        var scaledObjective = scaled.Evaluate(expression);
+
+        unscaled.UseLinearScaling.ShouldBeFalse();
+        scaled.UseLinearScaling.ShouldBeTrue();
+        unscaledObjective[0].ShouldBeGreaterThan(0.0);
+        scaledObjective[0].ShouldBe(0.0, tolerance: 1e-12);
+        expression.Root.ShouldBeSameAs(root);
+        expression.ShouldBe(Variable("x0").Build());
+    }
+
+    [Fact]
+    public void Evaluate_AppliesOneLinearScalingToAllPredictionMetrics()
+    {
+        var expression = Variable("x0").Build();
+        var data = new RegressionData(
+            DataFrame.FromMatrix(
+                ["x0"],
+                new double[,]
+                {
+                    { 1.0 },
+                    { 2.0 },
+                    { 3.0 }
+                }),
+            new Series<double>("y", [5.0, 8.0, 11.0]));
+        var problem = new SymbolicRegressionProblem(
+            data,
+            [Metrics.MSE, Metrics.MAE],
+            [],
+            CreateSearchSpace(["x0"]),
+            useLinearScaling: true);
+
+        problem.Evaluate(expression).ShouldBe(new ObjectiveVector(0.0, 0.0));
     }
 
     [Fact]

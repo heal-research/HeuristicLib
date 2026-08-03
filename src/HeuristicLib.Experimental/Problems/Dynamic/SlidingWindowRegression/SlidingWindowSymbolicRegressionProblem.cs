@@ -64,7 +64,7 @@ public class SlidingWindowSymbolicRegressionProblem
         var target = SelectRows(source.Target, rows);
 
         var windowData = new RegressionData(new DataFrame(inputColumns), target);
-        windowProblem = new SymbolicRegressionProblem(windowData, innerProblem.PredictionMetrics, innerProblem.ExpressionMetrics, innerProblem.SearchSpace, innerProblem.Objective.TotalOrderComparer);
+        windowProblem = new SymbolicRegressionProblem(windowData, innerProblem.PredictionMetrics, innerProblem.ExpressionMetrics, innerProblem.SearchSpace, innerProblem.UseLinearScaling, innerProblem.Objective.TotalOrderComparer);
     }
 
     private static Series<double> SelectRows(Series<double> source, IReadOnlyList<int> rows)

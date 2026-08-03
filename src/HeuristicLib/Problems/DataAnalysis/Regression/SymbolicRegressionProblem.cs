@@ -9,33 +9,45 @@ namespace HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 public sealed class SymbolicRegressionProblem
     : SingleSolutionProblem<ExpressionTree, ExpressionTreeSearchSpace>
 {
-    public SymbolicRegressionProblem(RegressionData trainingData, ExpressionTreeSearchSpace searchSpace)
-        : this(trainingData, [Metrics.MSE], [], searchSpace)
+    public SymbolicRegressionProblem(RegressionData trainingData, ExpressionTreeSearchSpace searchSpace, bool useLinearScaling = false)
+        : this(trainingData, [Metrics.MSE], [], searchSpace, useLinearScaling)
     {
     }
 
-    public SymbolicRegressionProblem(RegressionData trainingData, IRegressionMetric metric, ExpressionTreeSearchSpace searchSpace)
-        : this(trainingData, [metric], [], searchSpace)
+    public SymbolicRegressionProblem(RegressionData trainingData, IRegressionMetric predictionMetric, ExpressionTreeSearchSpace searchSpace, bool useLinearScaling = false)
+        : this(trainingData, [predictionMetric], [], searchSpace, useLinearScaling)
     {
     }
 
-    public SymbolicRegressionProblem(RegressionData trainingData, IEnumerable<IRegressionMetric> predictionMetrics, IEnumerable<IExpressionMetric> expressionMetrics, ExpressionTreeSearchSpace searchSpace, IComparer<ObjectiveVector>? totalOrderComparer = null)
-        : this(trainingData, predictionMetrics.ToImmutableArray(), expressionMetrics.ToImmutableArray(), searchSpace, totalOrderComparer)
+    public SymbolicRegressionProblem(RegressionData trainingData, IRegressionMetric predictionMetric, IExpressionMetric expressionMetric, ExpressionTreeSearchSpace searchSpace, bool useLinearScaling = false)
+        : this(trainingData, [predictionMetric], [expressionMetric], searchSpace, useLinearScaling)
     {
     }
 
-    private SymbolicRegressionProblem(RegressionData trainingData, ImmutableArray<IRegressionMetric> predictionMetrics, ImmutableArray<IExpressionMetric> expressionMetrics, ExpressionTreeSearchSpace searchSpace, IComparer<ObjectiveVector>? totalOrderComparer)
+    public SymbolicRegressionProblem(RegressionData trainingData, IRegressionMetric predictionMetric, IEnumerable<IExpressionMetric> expressionMetrics, ExpressionTreeSearchSpace searchSpace, bool useLinearScaling = false)
+        : this(trainingData, [predictionMetric], expressionMetrics.ToImmutableArray(), searchSpace, useLinearScaling)
+    {
+    }
+
+    public SymbolicRegressionProblem(RegressionData trainingData, IEnumerable<IRegressionMetric> predictionMetrics, IEnumerable<IExpressionMetric> expressionMetrics, ExpressionTreeSearchSpace searchSpace, bool useLinearScaling = false, IComparer<ObjectiveVector>? totalOrderComparer = null)
+        : this(trainingData, predictionMetrics.ToImmutableArray(), expressionMetrics.ToImmutableArray(), searchSpace, useLinearScaling, totalOrderComparer)
+    {
+    }
+
+    private SymbolicRegressionProblem(RegressionData trainingData, ImmutableArray<IRegressionMetric> predictionMetrics, ImmutableArray<IExpressionMetric> expressionMetrics, ExpressionTreeSearchSpace searchSpace, bool useLinearScaling, IComparer<ObjectiveVector>? totalOrderComparer)
         : base(CreateObjective(predictionMetrics, expressionMetrics, totalOrderComparer), searchSpace)
     {
         ValidateVariables(trainingData, searchSpace);
         TrainingData = trainingData;
         PredictionMetrics = predictionMetrics;
         ExpressionMetrics = expressionMetrics;
+        UseLinearScaling = useLinearScaling;
     }
 
     public RegressionData TrainingData { get; }
     public ImmutableArray<IRegressionMetric> PredictionMetrics { get; }
     public ImmutableArray<IExpressionMetric> ExpressionMetrics { get; }
+    public bool UseLinearScaling { get; }
 
     public ObjectiveVector Evaluate(ExpressionTree expression)
     {
@@ -45,6 +57,12 @@ public sealed class SymbolicRegressionProblem
         {
             var predictions = expression.Evaluate(TrainingData.Inputs);
             var targets = TrainingData.Target.Values.Span;
+            if (UseLinearScaling)
+            {
+                var parameters = LinearScaling.Fit(predictions, targets);
+                LinearScaling.Apply(predictions, parameters, predictions);
+            }
+
             for (var i = 0; i < PredictionMetrics.Length; i++)
                 values[i] = PredictionMetrics[i].Evaluate(predictions, targets);
         }
@@ -67,9 +85,7 @@ public sealed class SymbolicRegressionProblem
         {
             if (!trainingData.Inputs.TryGet<double>(variableName, out _))
             {
-                throw new ArgumentException(
-                    $"The search-space variable '{variableName}' must refer to a double series in the training inputs.",
-                    nameof(trainingData));
+                throw new ArgumentException($"The search-space variable '{variableName}' must refer to a double series in the training inputs.", nameof(trainingData));
             }
         }
     }

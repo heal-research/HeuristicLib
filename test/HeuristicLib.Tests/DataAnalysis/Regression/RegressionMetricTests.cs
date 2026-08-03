@@ -97,4 +97,50 @@ public sealed class RegressionMetricTests
         Metrics.RMSE.Evaluate(predictions, targets)
             .ShouldBe(Math.Sqrt(8.5), tolerance: 1e-12);
     }
+
+    [Theory]
+    [InlineData(ObjectiveDirection.Minimize, double.MaxValue)]
+    [InlineData(ObjectiveDirection.Maximize, double.MinValue)]
+    public void ToFinite_ReplacesNonFiniteResultsWithObjectiveWorst(
+        ObjectiveDirection direction,
+        double expected)
+    {
+        var metric = new StubRegressionMetric(direction, double.NaN).ToFinite();
+
+        metric.Evaluate([1.0], [1.0]).ShouldBe(expected);
+        metric.Direction.ShouldBe(direction);
+    }
+
+    [Fact]
+    public void ToFinite_UsesExplicitReplacementValue()
+    {
+        var metric = new StubRegressionMetric(ObjectiveDirection.Minimize, double.PositiveInfinity)
+            .ToFinite(123.0);
+
+        metric.Evaluate([1.0], [1.0]).ShouldBe(123.0);
+        metric.NonFiniteValue.ShouldBe(123.0);
+    }
+
+    [Fact]
+    public void ToFinite_PreservesFiniteResults()
+    {
+        var metric = new StubRegressionMetric(ObjectiveDirection.Minimize, 42.0)
+            .ToFinite();
+
+        metric.Evaluate([1.0], [1.0]).ShouldBe(42.0);
+    }
+
+    [Fact]
+    public void ToFinite_RequiresFiniteReplacementValue()
+    {
+        Should.Throw<ArgumentOutOfRangeException>(() =>
+            Metrics.MSE.ToFinite(double.NegativeInfinity));
+    }
+
+    private sealed class StubRegressionMetric(ObjectiveDirection direction, double value) : IRegressionMetric
+    {
+        public ObjectiveDirection Direction => direction;
+
+        public double Evaluate(ReadOnlySpan<double> predictedValues, ReadOnlySpan<double> targetValues) => value;
+    }
 }
