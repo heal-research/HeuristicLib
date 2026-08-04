@@ -544,6 +544,50 @@ This proves the memetic design before symbolic-regression-specific lowering is a
 
 ## Stage 4: Symbolic-Regression Constant Optimization
 
+### Expression-lowering design
+
+The first adapter increment lowers an `ExpressionTree` directly into the internal AD program without passing through `CompiledExpression`. Ordinary compiled expressions deliberately erase distinctions that constant optimization needs: fixed and evolvable constants share one opcode, constants may be folded, repeated variables are interned, and tree-occurrence identity is not retained.
+
+Use the existing `Symbol.Emit` and `IExpressionEmitter` semantic boundary with a differentiation-specific emitter. This preserves built-in and external macro behavior without introducing another symbol-type switch. The emitter maintains an AD-value stack and maps the initial supported opcodes to `Builder` operations. A macro is supported when every opcode it emits is supported; an unsupported emitted opcode produces an `ExpressionCompilationFailure` attributed to the current expression point and symbol before execution begins.
+
+The provisional internal result is a `DifferentiableExpression` produced by a `DifferentiableExpressionCompiler`. It retains:
+
+- the source `ExpressionTree`;
+- the immutable AD `Program`;
+- variable names in AD input order;
+- parameter bindings in AD parameter order.
+
+Each parameter binding retains its `ExpressionPoint`, originating `EvolvableConstantSymbol`, and initial value. Parameter order follows the first semantic emission of each logical occurrence. Rebuilding receives values in parameter order and performs one `ExpressionTree.ReplaceMany` operation with new `NumericConstantExpressionNode` instances using the originating symbols.
+
+Occurrence identity follows the tree path represented by `ExpressionPoint`, not `ExpressionNode` object identity. If the same immutable node object occurs at two different paths, lowering creates two parameters. Within one symbol emission, emitted children are cached by child index: if a macro emits the same logical child more than once, lowering reuses one AD `Value`, preserving one parameter identity and explicit DAG sharing so reverse contributions accumulate.
+
+Variable names are interned by ordinal name and follow first semantic-emission order. Repeated occurrences reuse one AD input handle. Fixed constants and constants emitted as part of a macro remain AD constants. Evolvable constants become parameters only while their own expression occurrence is being emitted. V1 performs no differentiation-specific constant folding or common-subexpression elimination.
+
+Pure expression lowering does not reference `DataFrame` or regression types. A later adapter checkpoint binds the retained variable names to `double` series in a data frame and reports missing variables or series whose element type is not `double` as structured binding failures. Invalid symbol-emitter behavior, inconsistent stacks, foreign expression points, and replacement shape mismatches remain programming errors and throw early.
+
+### Expression-lowering checkpoints
+
+| Checkpoint | Status | Deliverable |
+| --- | --- | --- |
+| EL-0 Design contract | Accepted | Document the semantic emitter boundary, occurrence rules, retained lowering result, supported-operation policy, rebuilding contract, failures, and checkpoints. No source code. |
+| EL-1 Semantic lowering | Accepted | Implement the differentiation-specific emitter, opcode mapping, variable interning, macro expansion, child reuse, program construction, and structured unsupported-operation results. |
+| EL-2 Parameter bindings and rebuilding | Accepted | Discover evolvable constant occurrences, preserve parameter order and originating symbols, distinguish structurally shared occurrences, and rebuild through one `ReplaceMany` call. |
+| EL-3 Data binding | Accepted | Bind retained variable names to `double` data-frame series in AD input order and report structured missing or incompatible-column failures. |
+| EL-4 Verification | Accepted | Compare expression and AD evaluation, cover supported operations and macros, verify unsupported models fail before execution, and test occurrence-safe rebuilding without source mutation. |
+| EL-5 Hardening | Accepted | Return unsupported-operation failures without exception-based control flow, enforce retained mapping invariants, and verify non-finite interpreter parity. |
+
+As with the AD checkpoints, implementation stops at `Awaiting review`, and only one expression-lowering checkpoint is implemented per request unless explicitly expanded.
+
+EL-1 reuses `Symbol.Emit` through a differentiation-specific stack emitter. Variables are interned by ordinal name, and each emission frame caches children by child index so repeated macro emission reuses one AD value without merging equal or reference-shared nodes at different expression points. `TryCompile` returns the differentiable expression on success or an `ExpressionCompilationFailure` containing its emitting expression point, derived symbol, and unsupported operation; null-state annotations make the two outcomes explicit to callers. During this semantic checkpoint numeric constants remain AD constants; EL-2 promotes evolvable constant occurrences to parameters and adds the retained bindings needed for rebuilding.
+
+EL-2 maps an evolvable numeric constant to an AD parameter only while emitting that constant's own expression point. Parameter order and bindings therefore follow first semantic emission. A binding stores only its expression point; its originating symbol and initial value are derived from the immutable node. Rebuilding validates the parameter count, creates occurrence-specific replacement nodes with the originating symbols, and applies them through one `ExpressionTree.ReplaceMany` call. Reference-shared nodes at different paths remain separate parameters, while a macro's repeated emission of one child reuses one parameter and accumulates all derivative contributions.
+
+EL-3 isolates the `DataFrame` dependency in a `DifferentiableExpression` extension. The compiler, retained differentiable expression, and numerical AD engine remain independent of data-analysis types. The extension resolves variables in retained AD input order, passes each `Series<double>.Values` memory directly to the AD execution without copying numerical data, and returns a structured failure for the first missing or incompatible series. Input-free expressions retain the AD engine's scalar one-result execution semantics rather than implicitly broadcasting to the data-frame row count.
+
+EL-4 compares every initially supported expression operation and the built-in sigmoid macro with ordinary expression-interpreter values and central finite differences over immutable parameter rebuilding. It verifies the parameter-major Jacobian layout, source-expression stability, and structured compilation failure for every currently unsupported built-in operation. Existing focused tests retain the occurrence-specific rebuilding, macro-child reuse, variable ordering, and binding-failure cases.
+
+EL-5 makes unsupported operations a genuinely non-throwing `TryCompile` outcome. The emitter records the first `ExpressionCompilationFailure` and substitutes one builder-owned placeholder value to preserve stack shape while the symbol finishes emitting; malformed emitters and exceptions thrown by symbols still propagate. `DifferentiableExpression` rejects mismatches between program inputs and variable names or between program parameters and parameter bindings. Division-by-zero and invalid-log tests verify that non-finite values retain ordinary interpreter semantics.
+
 ### Expression adapter responsibilities
 
 The symbolic-expression adapter owns:
