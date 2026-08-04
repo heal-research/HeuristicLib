@@ -26,6 +26,16 @@ internal sealed partial class Execution : IDisposable
         batchAdjoints = adjointBufferLength == 0 ? [] : ArrayPool<double>.Shared.Rent(adjointBufferLength);
     }
 
+    internal int ParameterCount => program.ParameterCount;
+
+    internal int RowCount => rowCount;
+
+    internal void ThrowIfDisposed()
+    {
+        if (isDisposed)
+            throw new ObjectDisposedException(nameof(Execution));
+    }
+
     internal void Evaluate(ReadOnlySpan<double> parameters, Span<double> outputs)
     {
         ValidateEvaluationArguments(parameters, outputs);
@@ -78,8 +88,7 @@ internal sealed partial class Execution : IDisposable
 
     private void ValidateEvaluationArguments(ReadOnlySpan<double> parameters, Span<double> outputs)
     {
-        if (isDisposed)
-            throw new ObjectDisposedException(nameof(Execution));
+        ThrowIfDisposed();
 
         if (parameters.Length != program.ParameterCount)
             throw new ArgumentException($"Expected {program.ParameterCount} parameters but received {parameters.Length}.", nameof(parameters));

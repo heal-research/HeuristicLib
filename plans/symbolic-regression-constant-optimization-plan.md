@@ -16,7 +16,7 @@ The sequence is:
 
 1. implement an internal automatic-differentiation engine with its own execution-oriented representation;
 2. lower an `ExpressionTree` into that representation while recording occurrence-safe bindings for optimizable constants;
-3. expose residuals and parameter derivatives to MathNet's Levenberg-Marquardt implementation through a thin, measured adapter;
+3. expose model values, raw targets, and parameter derivatives to MathNet's Levenberg-Marquardt implementation through a thin, measured adapter;
 4. optimize all training rows against raw targets using least-squares mean squared error;
 5. retain the best finite parameter point and reject a numerically worse result using the same raw full-data mean squared error;
 6. rebuild the immutable expression through one `ExpressionTree.ReplaceMany` operation;
@@ -24,7 +24,7 @@ The sequence is:
 
 MathNet is the first solver backend, not a permanent architectural commitment. The implementation should keep the backend boundary small enough to replace, but must not introduce dependency injection, reflection, virtual dispatch in hot loops, or a generalized plugin architecture merely to permit a hypothetical future solver. Direct use of MathNet storage types is acceptable where measurement shows that it avoids meaningful conversion or allocation cost.
 
-The first automatic-differentiation API is internal. Public authoring APIs, generic local-improvement composition, additional numerical optimizers, sampling, scaling-aware optimization, and evaluator integration follow only after the direct constant-optimization path is correct and fast.
+The first automatic-differentiation and Levenberg-Marquardt APIs are internal. Both are plausible standalone capabilities for HeuristicLib users, so completing constant optimization must be followed by an explicit public-API review. That review selects the useful authoring, compilation, execution, result, and failure types rather than making the complete internal implementation public by default. Public authoring APIs, generic local-improvement composition, additional numerical optimizers, sampling, scaling-aware optimization, and evaluator integration follow only after the direct constant-optimization path is correct and fast.
 
 ## Problem Statement
 
@@ -300,7 +300,8 @@ The reverse partials are:
 Evaluation uses ordinary IEEE 754 propagation. It does not protect operations,
 clamp values, or throw for non-finite intermediate results. Invalid graph
 construction, argument shape, buffer size, lifetime, and ownership errors throw
-early. The later solver adapter owns finite-value validation.
+early. The first solver adapter preserves non-finite numerical results rather
+than validating or sanitizing them.
 
 ### Execution ownership and memory
 
@@ -321,8 +322,9 @@ creates an `Execution`. The provisional default capacity is `256`.
   create separate executions over the same program.
 - Outputs and the final Jacobian are caller-owned.
 - Bound input columns may overlap one another because they are read-only. Output and Jacobian buffers must not overlap parameters, bound input columns, or one another; invalid overlap throws before evaluation.
-- Targets and residuals do not belong to automatic differentiation and are
-  owned later by the least-squares adapter.
+- Targets and residual semantics do not belong to automatic differentiation.
+  Targets enter through the least-squares adapter, while MathNet computes the
+  residuals for its model-plus-target formulation.
 
 The execution surface contains two explicit operations:
 
@@ -416,37 +418,48 @@ The V1 AD artifact is ready for expression lowering and solver integration after
 
 ### Internal least-squares contract
 
-Keep one small internal contract around the information Levenberg-Marquardt mathematically requires:
+The first backend is a thin internal adapter from an automatic-differentiation `Execution` to MathNet's Levenberg-Marquardt minimizer. It receives the differentiable model, initial parameters, target values, and the maximum number of solver iterations. The AD execution returns model values and their parameter derivatives; MathNet owns the residual convention `target - model`.
 
-- the current parameter vector;
-- residual values over an observation batch;
-- parameter derivatives in the orientation required to provide the solver's Jacobian efficiently;
-- explicit invalid-model, invalid-point, cancellation, and termination results.
+The initial non-throwing surface is:
 
-Do not force least-squares through a generic scalar-objective contract that loses residual structure. The first contract does not need to accommodate unrelated gradient algorithms.
+```csharp
+internal static bool TryMinimize(
+    AD.Execution model,
+    ReadOnlySpan<double> initialParameters,
+    ReadOnlySpan<double> targets,
+    int maximumIterations,
+    [NotNullWhen(true)] out LevenbergMarquardtResult? result,
+    [NotNullWhen(false)] out LevenbergMarquardtFailure? failure,
+    CancellationToken cancellationToken = default);
+```
 
-A future public numerical-optimization area may introduce separate value-only, value-and-gradient, and least-squares contracts. That generalization is informed by the working constant-optimization slice rather than required before it.
+Successful results contain only an owned copy of the final parameter vector and the final mean squared error:
+
+```csharp
+internal sealed record LevenbergMarquardtResult(double[] Parameters, double MeanSquaredError);
+
+internal sealed record LevenbergMarquardtFailure(string Message);
+```
+
+An expected unsuccessful solve returns `false` with a small immutable `LevenbergMarquardtFailure`. Neither outcome exposes MathNet result types. Invalid caller arguments and use of a disposed AD execution remain programming errors and throw. Cancellation propagates as `OperationCanceledException`; it is not represented as a solver failure.
+
+Do not force least squares through a generic scalar-objective contract that loses its model, target, and Jacobian structure. Do not introduce a generalized solver abstraction for the first backend. A future numerical-optimization area may add broader contracts after the complete constant-optimization slice provides implementation evidence.
+
+Although the initial adapter is internal, standalone least-squares fitting is a credible user-facing capability. Its eventual public surface is deliberately postponed until constant optimization exercises the full lifecycle and reveals which configuration, result, failure, cancellation, and ownership details are stable.
 
 ### Initial execution model
 
-The first implementation is a bounded, internal, one-shot least-squares run with:
+The adapter is the numerical workhorse for one synchronous, bounded solve. MathNet stops through convergence or its maximum-iteration setting. Reaching the maximum is a successful adapter result when MathNet returns a result; the adapter does not translate this into HeuristicLib termination semantics.
 
-- an immutable configuration where reuse is valuable;
-- run-scoped execution state and workspaces;
-- explicit stopping criteria and budgets;
-- a compact structured result;
-- cancellation support;
-- deterministic behavior when randomness is used;
-- structured termination and evaluation counters;
-- no hidden mutation of reusable configurations.
+This workhorse does not reference or participate in HeuristicLib algorithms, operators, terminators, execution-instance infrastructure, evaluation accounting, or search-state production. Coupling the constant optimizer to those facilities is a later orchestration task and is not part of LM-0 through LM-3.
 
-The design should leave room for numerical optimizers to become first-class HeuristicLib algorithms later. That algorithm model is not a gate for the first constant optimizer.
+Cancellation is checked before entering MathNet and from the model and Jacobian callbacks because the selected MathNet API has no direct `CancellationToken` parameter. The adapter introduces no randomness.
 
 ### Solver sequence
 
 Implement in this order:
 
-1. a thin adapter from the internal residual/Jacobian evaluation to MathNet's Levenberg-Marquardt implementation;
+1. a thin adapter from internal model-value/Jacobian evaluation and raw targets to MathNet's Levenberg-Marquardt implementation;
 2. the direct symbolic-regression constant-optimization vertical slice;
 3. focused benchmarks separating differentiation, Jacobian preparation, adapter overhead, solver work, and complete-pipeline cost;
 4. only then decide whether to retain MathNet, implement a specialized LM runner, or add other optimizers such as L-BFGS.
@@ -457,29 +470,40 @@ MathNet is the first backend only. Keep the boundary narrow and concrete, but av
 
 Do not implement or bury factorization code inside the symbolic-regression adapter while MathNet is the backend.
 
-Measure:
+The AD Jacobian uses parameter-major storage, `jacobian[(parameterIndex * rowCount) + rowIndex]`. This is the same memory order as a MathNet column-major matrix with rows representing model values and columns representing parameters. The adapter therefore wraps the existing Jacobian array directly in a `DenseMatrix` without transposition or copying.
 
-- MathNet solver APIs and their required storage layout;
-- whether a column-major dense Jacobian can be backed directly by parameter-major derivative storage;
-- whether MathNet can consume the caller's storage without a copy for the chosen API;
-- a focused span/array Cholesky implementation for small dense parameter systems;
-- possible platform tensor or BLAS-backed operations for larger systems.
+Likewise, callback output arrays are wrapped directly in `DenseVector` instances. Dense parameter vectors use their backing arrays directly when MathNet exposes them; a non-dense vector may require a fallback copy. Targets may be copied once into MathNet-owned observed storage, and the final parameter vector is copied once so the result owns its lifetime. Repeated callback work reuses output and Jacobian buffers.
 
-The last two alternatives are follow-up comparisons if MathNet's measured cost is material. Choose any replacement by correctness, failure reporting, allocation, and representative parameter sizes. If a custom kernel is retained later, give it focused numerical tests and a clear numerics owner.
+MathNet's separate model and Jacobian callbacks may cause a duplicated forward sweep because `EvaluateWithJacobian` also computes model values. Accept this for the first adapter and measure it later in the representative end-to-end benchmark. A custom `IObjectiveModel`, a specialized LM implementation, Cholesky kernels, and alternative linear algebra are deferred until that evidence shows a material cost.
 
 ### Levenberg-Marquardt requirements
 
-The MathNet adapter and constant-optimization orchestration must make the following semantics explicit, even when MathNet implements the underlying policy:
+The first adapter has these explicit semantics:
 
-- residual and Jacobian consumption and orientation;
-- residual and mean-squared-error normalization conventions;
-- option mapping to MathNet;
-- function, gradient/Jacobian, and row-evaluation accounting;
-- stopping criteria;
-- invalid trial behavior;
-- best-finite-result behavior at iteration limits.
+- MathNet receives model values, targets, and the model Jacobian `df/dp`; the adapter does not negate derivatives or allocate a residual buffer;
+- the returned mean squared error is MathNet's final residual sum of squares divided by the target count;
+- ordinary IEEE 754 non-finite values from AD pass through without clamping, replacement, or early rejection;
+- a result returned by MathNet remains successful even when its parameters or mean squared error are non-finite;
+- an exception originating from the MathNet solve is converted to `LevenbergMarquardtFailure`, except for cancellation, which propagates;
+- convergence and maximum iterations are controlled by MathNet; no HeuristicLib termination or accounting concepts enter the adapter;
+- the adapter does not retain a best finite point, decide whether a result is acceptable, rebuild an expression, or consult a regression metric.
 
-Solver mechanics belong to MathNet and the adapter. Expression discovery, rebuilding, raw full-data acceptance, and future observation sampling do not.
+Best-point retention, full-data acceptance, expression rebuilding, and symbolic-regression policy belong to later constant-optimization orchestration. Expression discovery, future row sampling, and HeuristicLib operator integration also remain outside the adapter.
+
+### MathNet adapter checkpoints
+
+Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
+
+| Checkpoint | Status | Deliverable |
+| --- | --- | --- |
+| LM-0 Design contract | Accepted | Document the `TryMinimize` boundary, model-plus-target formulation, Jacobian convention, result and failure semantics, non-finite behavior, cancellation, MathNet stopping behavior, storage ownership, and exclusions. No source code. |
+| LM-1 Successful solve path | Accepted | Implement the adapter, expose the required AD execution dimensions, wrap output and Jacobian arrays without copying, and verify a simple linear least-squares solve. |
+| LM-2 Outcome behavior | Accepted | Add argument validation, cancellation, MathNet-exception conversion, maximum-iteration behavior, and non-finite result propagation. |
+| LM-3 Verification and hardening | Accepted | Add fast nonlinear, mean-squared-error, Jacobian-orientation, repeated-solve, and storage-lifetime tests to the core suite; place calculation-intensive stress cases in the scenario suite; confirm the adapter remains independent of expressions, regression, and HeuristicLib algorithm/operator infrastructure; record duplicated-forward-sweep benchmarking as deferred work. |
+
+LM-0 through LM-3 cover only the MathNet workhorse adapter. They explicitly exclude HeuristicLib termination, evaluation accounting, algorithms, operators, general optimizer APIs, solver interchange abstractions, constant acceptance, and symbolic-expression rebuilding.
+
+LM-3 verifies exact nonlinear fitting, non-zero MSE normalization, the parameter-major-to-column-major Jacobian mapping, repeated solves over one execution, and result ownership beyond caller-buffer and execution lifetimes. These remain fast core tests. No calculation-intensive test is needed for the focused numerical contracts; representative large-row, large-parameter, repeated-solve, and duplicated-forward-sweep measurements remain scenario and benchmark work after the complete constant-optimization workload exists. A dependency audit confirms that the AD and optimization areas do not reference symbolic expressions, data analysis, regression, or HeuristicLib algorithm/operator infrastructure.
 
 ### Second usable artifact
 
@@ -487,8 +511,10 @@ Provide focused tests that optimize ordinary least-squares problems before the e
 
 - linear and nonlinear least squares with LM;
 - analytic derivatives checked against automatically differentiated derivatives;
-- invalid points, no-progress termination, iteration limits, and best-finite-result handling;
-- adapter allocation and conversion cost.
+- non-finite propagation, MathNet failures, cancellation, and iteration limits;
+- Jacobian orientation, mean-squared-error normalization, storage lifetime, and repeated solves.
+
+Ordinary contract and numerical examples must remain fast unit tests in `HeuristicLib.Tests`. Larger row counts, parameter counts, repetition counts, and other calculation-intensive stress coverage belong in `HeuristicLib.Tests.Scenarios` so the normal development loop remains fast.
 
 The artifact is complete when the AD engine and MathNet adapter can solve an ordinary least-squares problem without referencing symbolic regression. A general public numerical-optimization API is not required.
 
@@ -703,11 +729,12 @@ The final benchmark matrix also:
 - compares row-by-row and batched execution where their contracts can be held equivalent;
 - profiles retained-primal derivative recomputation before considering selective local-partial caching;
 - quantifies the end-to-end impact of replacing specialized scalar/vector paths with `Tensor<T>` broadcasting without making it part of V1 unless measurement justifies it;
+- compares the current `ArrayPool<double>`-backed `Execution` with a benchmark-only execution-owned-array variant across repeated construction, reuse, and complete constant-optimization workloads; report throughput, allocated bytes, and garbage-collection pressure, including large-object-heap-sized workspaces;
 - uses real lowered symbolic expressions and constant-optimization workloads in addition to focused synthetic kernels.
 
 For the first MathNet backend, report at least four costs separately:
 
-1. AD value/residual and derivative evaluation;
+1. AD model-value and derivative evaluation;
 2. Jacobian orientation, copying, and MathNet storage preparation;
 3. MathNet solver iterations;
 4. expression lowering, optimization, and immutable replacement as one end-to-end operation.
@@ -722,6 +749,7 @@ This evidence decides whether direct MathNet storage types, a different backend,
 - Reusable configurations and compiled models remain immutable.
 - Parallel candidate optimization uses isolated execution state.
 - Caches require an explicit owner and lifecycle; do not introduce global weak tables or registries.
+- `ArrayPool<double>` and the resulting `IDisposable` execution lifecycle are provisional until the final benchmark demonstrates a material benefit over ordinary execution-owned arrays. If the benefit is not material, prefer ordinary arrays and remove disposal complexity before the public-API review.
 
 ### Correctness before specialization
 
@@ -769,7 +797,8 @@ Remaining decisions should be made from implementation evidence:
 3. the exact MathNet API and storage shape with the lowest verified adapter overhead;
 4. stopping defaults and the numerical tolerance used by the MSE non-regression safeguard;
 5. whether MathNet performance justifies retention or replacement;
-6. the eventual public facade and generic local-improvement contract.
+6. the eventual public facade and generic local-improvement contract;
+7. whether pooled AD workspaces justify the `IDisposable` execution contract over ordinary execution-owned arrays.
 
 ## Incremental Delivery Sequence
 
@@ -777,7 +806,7 @@ Remaining decisions should be made from implementation evidence:
 | --- | --- | --- |
 | 0. Organization | Reviewed symbolic-regression ownership and namespace map | New solver or autodiff API |
 | 1. AD operation model | Internal operation semantics plus mutable builder/compiler | Regression objectives, public authoring API |
-| 2. Compiled AD execution | Immutable reusable program, mutable workspace, value/gradient/residual/Jacobian evaluation | `ExpressionTree`, MathNet solver policy |
+| 2. Compiled AD execution | Immutable reusable program, mutable workspace, value/gradient/Jacobian evaluation | Residuals, targets, `ExpressionTree`, MathNet solver policy |
 | 3. AD verification | Analytic, finite-difference, invalid-domain, and allocation tests for each operation | Solver-specific derivative changes |
 | 4. Expression lowering | Direct lowering with occurrence-safe optimizable-constant bindings | Optimization, mutation of the source tree |
 | 5. MathNet LM adapter | Ordinary least-squares problem solved through a thin measured adapter | Generic optimizer hierarchy, memetic policy |
@@ -823,11 +852,11 @@ These remain possible extensions. The first replacement should establish boundar
 
 The first constant-optimization implementation is complete when:
 
-- the internal AD program evaluates values, residuals, gradients, and the required Jacobian shape without per-operation allocation;
+- the internal AD program evaluates values, gradients, and the required Jacobian shape without per-operation allocation;
 - analytic and finite-difference tests cover every supported operation and its invalid-domain behavior;
 - `ExpressionTree` lowering preserves optimizable occurrence identity, fixed constants, macro semantics, and originating symbols;
 - MathNet LM can optimize all training rows through a measured adapter;
-- failures, unsupported models, no-parameter expressions, invalid trials, and termination are structured and tested;
+- compilation and binding failures, unsupported models, no-parameter expressions, invalid numerical outcomes, and solver outcomes are structured and tested at their owning layers;
 - the input tree remains unchanged and accepted values are applied through one `ReplaceMany` call;
 - raw full-data MSE cannot regress beyond the documented numerical tolerance;
 - predictions and raw MSE match retained behavior within documented tolerances where the behavioral contracts overlap;
