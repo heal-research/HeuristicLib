@@ -2,9 +2,7 @@
 
 ## Status
 
-This is a design and implementation plan, not a commitment to the API shape of the current prototype.
-
-The existing `NumericParameterExpression*` and `NumericParameterOptimization*` implementation is retained as an executable reference. It may provide algorithms, tests, performance techniques, and failure cases for the replacement, but its current naming, namespaces, public API, and responsibility boundaries are not the target design.
+This is a living design and implementation plan. Its internal API shapes may continue to evolve as the remaining stages are implemented and reviewed.
 
 This plan refines Stage 3.1 of [symbolic-regression-redesign-plan.md](symbolic-regression-redesign-plan.md). The redesign plan should be updated to point here after this plan has been reviewed.
 
@@ -20,7 +18,7 @@ The sequence is:
 4. optimize all training rows against raw targets using least-squares mean squared error;
 5. do not reject a successful numerical result because its parameter values or mean squared error are non-finite;
 6. rebuild the immutable expression through one `ExpressionTree.ReplaceMany` operation;
-7. verify output behavior against the retained implementations and measure the complete pipeline before generalizing it.
+7. verify output behavior through analytic expectations, finite-difference checks, and maintained legacy behavior where applicable, then measure the complete pipeline before generalizing it.
 
 MathNet is the first solver backend, not a permanent architectural commitment. The implementation should keep the backend boundary small enough to replace, but must not introduce dependency injection, reflection, virtual dispatch in hot loops, or a generalized plugin architecture merely to permit a hypothetical future solver. Direct use of MathNet storage types is acceptable where measurement shows that it avoids meaningful conversion or allocation cost.
 
@@ -35,7 +33,7 @@ Constant optimization in symbolic regression is not one isolated solver call. Th
 3. composing local improvement with another search algorithm to form a memetic algorithm;
 4. adapting an `ExpressionTree` and a symbolic-regression problem to those general capabilities.
 
-The current prototype implements all four concerns together under `Problems/DataAnalysis/Regression`. This creates several problems:
+Combining all four concerns in one regression-specific feature would create several problems:
 
 - differentiation is tied directly to `ExpressionTree`, `DataFrame`, regression targets, and evolvable constants;
 - Levenberg-Marquardt policy, linear algebra, sampling, metric acceptance, expression compilation, and immutable tree replacement are mixed into one feature;
@@ -62,37 +60,7 @@ The following terms are provisional until the corresponding design stage is comp
 
 Use `candidate`, `algorithm`, `operator`, `evaluator`, `configuration`, `execution instance`, and `objective vector` according to [docs/glossary.md](../docs/glossary.md).
 
-Do not use a prefix such as `NumericParameterExpression` on every type. Types should be named after one clear responsibility and placed in a namespace that supplies the broader context.
-
-## Current Prototype As Reference
-
-The prototype is archived under `references/symbolic-regression/constant-optimization-prototype`.
-
-Keep these files until their replacement has behavior and performance parity:
-
-- `NumericParameterExpressionCompiler.cs`
-- `NumericParameterExpressionProgram.cs`
-- `NumericParameterExpressionEvaluator.cs`
-- `OptimizationRowSelection.cs`
-- `NumericParameterOptimizer.cs`
-- `NumericParameterOptimizationOptions.cs`
-- `NumericParameterOptimizationResult.cs`
-- `NumericParameterOptimizerTests.cs`
-- `HeuristicLib.NumericParameterOptimizationBenchmarks`
-
-Also retain the legacy implementation as a behavioral reference:
-
-- `SymbolicRegressionParameterOptimization.cs`
-- `TreeToAutoDiffTermConverter.cs`
-- the existing AutoDiff and MathNet dependencies while their replacement value is being assessed
-
-Rules for the reference implementation:
-
-- do not expand its public API;
-- do not make it the architectural foundation of new code;
-- keep its focused tests and benchmarks runnable while replacement layers are introduced;
-- extract or reuse code only when the destination abstraction has already been designed;
-- remove or archive it only after replacement tests compare behavior and benchmarks compare performance.
+Do not prefix every type with the complete use-case name. Types should be named after one clear responsibility and placed in a namespace that supplies the broader context.
 
 ## Target Layering
 
@@ -123,12 +91,7 @@ Before designing new public numerical APIs, document and reorganize the current 
 
 Current status:
 
-- a snapshot of the legacy mutable symbolic-expression system is retained under
-  `references/symbolic-regression/legacy-mutable-system`;
-- the first numeric-parameter-optimization prototype is archived under `references/symbolic-regression/constant-optimization-prototype`;
-- maintained projects do not compile either reference snapshot, while
-  still-required mutable components remain active in their established domain
-  folders until their consumers migrate;
+- still-required mutable components remain active in their established domain folders until their consumers migrate;
 - the maintained expression domain is organized under
   `HEAL.HeuristicLib.Genotypes.SymbolicExpressions`;
 - tabular data and prediction contracts live under
@@ -165,10 +128,9 @@ Classify every symbolic-regression-related type as one of:
 - unrestricted search space and variation operators;
 - regression problem, data, metric, and evaluation;
 - experimental or future grammar-guided functionality;
-- legacy parameter optimization;
-- reference parameter-optimization prototype.
+- legacy parameter optimization.
 
-Record which types are active, transitional, reference-only, or obsolete. Do not infer ownership from the current folder alone.
+Record which types are active, transitional, or obsolete. Do not infer ownership from the current folder alone.
 
 ### Organization goals
 
@@ -177,7 +139,6 @@ Record which types are active, transitional, reference-only, or obsolete. Do not
 - A symbolic-regression problem composes expression search, regression data, and evaluation without owning generic differentiation or numerical solvers.
 - Old and new systems must be distinguishable by namespace and documentation while both remain in the repository.
 - Folder names and namespaces should express responsibility without repeating `SymbolicExpression` on every local type.
-- Reference prototypes should be clearly marked as transitional without hiding them in production-looking namespaces.
 
 ### Deliverable
 
@@ -365,7 +326,7 @@ allocates during execution.
 
 Composite reverse expressions such as `upstream * (1 + output²)` remain fused loops when expressing them with `TensorPrimitives` would require a temporary derivative vector, destructive primal reuse, or additional full-span passes. The end-to-end performance increment measures these loops before introducing scratch storage or selective in-place primal reuse.
 
-A preliminary AVX2 kernel comparison during AD-5 found explicit `Vector<double>` loops materially faster at the provisional batch capacity of `256` for trigonometric derivative accumulation, `tan`/`tanh` output-based derivatives, and vector-valued division derivatives. Those rules use a vector loop followed by a scalar tail. Increment 9 must confirm the gain end to end and across representative batch sizes rather than treating this machine-specific kernel result as final tuning evidence.
+A preliminary AVX2 kernel comparison during AD-5 found explicit `Vector<double>` loops materially faster at the provisional batch capacity of `256` for trigonometric derivative accumulation, `tan`/`tanh` output-based derivatives, and vector-valued division derivatives. Those rules use a vector loop followed by a scalar tail. The performance-decision increment must confirm the gain end to end and across representative batch sizes rather than treating this machine-specific kernel result as final tuning evidence.
 
 ### AD implementation checkpoints
 
@@ -385,7 +346,7 @@ acceptance moves a checkpoint to `Accepted` and permits work on the next one.
 | AD-6a Numerical and contract hardening | Accepted | Test non-finite propagation, SIMD paths and scalar tails, repeated execution, and settle caller-buffer aliasing rules. |
 | AD-6b Memory and concurrency | Accepted | Verify zero managed allocations after execution creation, pooled-buffer lifecycle, concurrent program reuse, and partial-batch adjoint clearing cost. |
 
-AD-6 ends after AD-6b. The formerly planned AD-6c through AD-6e work is postponed to Increment 9, after expression lowering, the solver adapter, constant optimization, immutable rebuilding, and behavioral comparison provide representative end-to-end workloads. The provisional capacity remains `256`; no performance specialization is accepted from isolated AD measurements alone.
+AD-6 ends after AD-6b. The formerly planned AD-6c through AD-6e work is postponed to the performance-decision increment, after expression lowering, the solver adapter, constant optimization, immutable rebuilding, and behavioral comparison provide representative end-to-end workloads. The provisional capacity remains `256`; no performance specialization is accepted from isolated AD measurements alone.
 
 AD-6a confirms ordinary IEEE 754 propagation without protected operations or finite-value exceptions, compares vectorized reverse rules with scalar tails at boundaries derived from `Vector<double>.Count`, and verifies that mixed forward and Jacobian evaluations retain no stale values. Writable caller buffers are required to be mutually disjoint and not overlap parameters or bound input columns; read-only input columns may overlap one another.
 
@@ -520,11 +481,69 @@ Ordinary contract and numerical examples must remain fast unit tests in `Heurist
 
 The artifact is complete when the AD engine and MathNet adapter can solve an ordinary least-squares problem without referencing symbolic regression. A general public numerical-optimization API is not required.
 
-## Stage 3: Refinement And Memetic Composition (Deferred)
+## Stage 3: Refinement And Memetic Composition
 
-This stage is not a prerequisite for direct symbolic-regression constant optimization. Revisit it after the direct vertical slice establishes the correct constant-optimization contract, costs, and result semantics.
+This stage was initially deferred until the direct constant-optimization slice established its transformation, failure, and cost semantics. That slice is now complete enough to settle the general integration model.
 
-Constant optimization fits constants and returns the resulting expression without deciding whether that expression is better than its input. A later `Refiner` operator of some form will own retention and improvement checking. Its exact contract and composition with evaluators or algorithms are deliberately deferred until the direct vertical slice provides enough experience to design them.
+### Canonical refiner role
+
+`Refiner` is a first-class HeuristicLib operator role with the semantic contract:
+
+```text
+Candidate → Candidate
+```
+
+A refiner transforms candidates without evaluating them and does not promise improvement according to the problem objective. Algorithms may place refinement wherever their lifecycle requires it. The conventional placement for ordinary optimization algorithms is after initial creation and after structural or stochastic variation, immediately before evaluation:
+
+```text
+Creation → Refinement → Evaluation
+Variation → Refinement → Evaluation
+```
+
+Already evaluated candidates carried forward unchanged, such as elites, are not normally refined again. Algorithms remain responsible for explicit placement because initialization, offspring production, neighborhood generation, restarts, and final postprocessing are not one universal lifecycle event. Shared orchestration may reduce repetitive refine-then-evaluate code, but it must not hide the `Refiner` operator from algorithm configuration.
+
+The explicit refiner path performs one problem evaluation. A successful refinement result is evaluated and used directly; the general refiner contract contains no before/after objective comparison or retention guarantee. A particular refiner may use its own internal numerical acceptance information, but that does not become a general problem-objective promise.
+
+### Objective-aware refinement evaluation
+
+`RefinementEvaluator` is the second canonical integration mechanism. It composes an inner evaluator with a refiner and deliberately performs objective-aware retention:
+
+```text
+Evaluate original candidate
+→ Refine candidate
+→ Evaluate refined candidate
+→ Return the better evaluated candidate
+```
+
+The refinement evaluator owns both evaluations and returns the retained `EvaluatedCandidate`; the algorithm must not evaluate that result a third time. Its result may therefore contain either the original or refined candidate, and its objective vector always describes the returned candidate. This requires retaining the evaluator contract in which the returned evaluated candidate is authoritative.
+
+The initial retention rule should use the problem's objective comparison and retain the original when the configured improvement requirement is not met. The precise configuration surface for strict improvement, equality, thresholds, multi-objective comparison, and refinement failure remains part of the evaluator checkpoint rather than the `Refiner` contract. A scalar improvement threshold is only meaningful where the objective model supports it explicitly.
+
+The explicit algorithm refiner and a refinement evaluator containing the same refiner are alternative placements; configuring both intentionally applies refinement more than once.
+
+### Deferred producer composition
+
+Users may compose a refiner around candidate-producing operators, for example through a refining creator, crossover, or mutator, or adapt refinement into a probabilistic variation policy. These placements are valid but narrower: a creator wrapper affects initialization only, a crossover wrapper runs before later mutation, and a mutator wrapper does not cover initial candidates. They are not the canonical refinement integration.
+
+HeuristicLib will not initially provide `RefiningCreator`, `RefiningCrossover`, `RefiningMutator`, generalized offspring-creation, or similar producer wrappers. Revisit those conveniences only after the explicit algorithm refiner and `RefinementEvaluator` are implemented and their composition and observability behavior are understood.
+
+### Development-branch integration prerequisite
+
+Before implementing the `Refiner` operator model, merge `dev` into the current working branch. The development branch contains operator-base improvements that may simplify or change the appropriate Refiner design. Reconcile the merge, review the resulting operator conventions, and validate the integrated code before proceeding. This is a separate integration checkpoint and must not include Refiner implementation.
+
+### Refinement checkpoints
+
+Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
+
+| Checkpoint | Status | Deliverable |
+| --- | --- | --- |
+| RF-0 Design contract | Awaiting review | Document the canonical `Candidate → Candidate` refiner role, conventional algorithm placement, absence of general improvement guarantees, objective-aware refinement evaluator, authoritative evaluator result, and deferred producer wrappers. No source code. |
+| RF-1 Development-branch integration | Pending | Merge `dev` into the working branch, reconcile and review its operator-base improvements, run appropriate validation, and stop before implementing Refiner. |
+| RF-2 Refiner operator model | Pending | Implement the general refiner configuration and execution-instance contracts, authoring bases, identity behavior, validation, and focused contract tests. |
+| RF-3 Explicit algorithm integration | Pending | Add configurable refinement to applicable built-in algorithms after creation and final variation but before evaluation, without re-refining carried evaluated candidates. |
+| RF-4 Constant-optimization refiner | Pending | Adapt symbolic-regression constant optimization to the general refiner role and define its failure behavior without adding problem-objective retention. |
+| RF-5 Refinement evaluator | Pending | Compose a refiner with an inner evaluator, evaluate original and refined candidates, apply a configurable acceptance policy, and return the retained authoritative evaluated candidate without a third evaluation. |
+| RF-6 Integration hardening | Pending | Verify batching, evaluator/refiner composition, objective directions, equality and threshold behavior, failure and cancellation, repeated refinement, observability, and explicit double-refinement configurations. |
 
 ## Stage 4: Symbolic-Regression Constant Optimization
 
@@ -633,7 +652,7 @@ Initially:
 
 ### Initial API boundary
 
-Do not begin from `NumericParameterOptimizer.Optimize(expression, problem, options)` and work inward.
+Do not begin with a regression-problem-shaped convenience facade and work inward.
 
 Begin with an internal direct constant-optimization entry point so the behavioral contract and performance can stabilize. Design a public symbolic-regression facade afterward. It should expose symbolic intent while allowing advanced users to select a numerical algorithm once multiple algorithms are genuinely supported. A later refiner may consume this capability, but its API is outside the current design. The final constant-optimization API must avoid exposing tape, Jacobian, row-selection, or solver-workspace details to ordinary symbolic-regression users.
 
@@ -690,8 +709,8 @@ Provide:
 - a direct test fixture optimizing constants in a fixed expression;
 - retained compiled/differentiable model reuse where lifecycle permits;
 - tests for fixed constants, occurrence identity, structurally shared nodes, macro re-emission, unsupported operations, invalid points, identity behavior without evolvable constants, non-finite propagation, and immutable replacement;
-- behavior-parity tests against the retained implementations using predictions and raw mean squared error within tolerance;
-- performance comparison against both retained reference implementations.
+- analytic and finite-difference correctness tests, plus behavioral comparison with the maintained legacy implementation where applicable;
+- end-to-end performance measurements of the maintained constant-optimization pipeline.
 
 Do not require identical optimized parameter vectors, iteration counts, or termination labels when different implementations produce behaviorally equivalent predictions and loss. Intentional design differences, including immutable rebuilding and exclusion of legacy variable-weight optimization, must be asserted explicitly rather than hidden by broad parity tolerances.
 
@@ -757,15 +776,14 @@ Every optimized kernel must have:
 
 Replacement proceeds by behavior, not by file name:
 
-1. establish general differentiation parity with the prototype's derivative tests;
+1. establish general differentiation correctness with analytic and finite-difference tests;
 2. establish MathNet-backed LM behavior on ordinary least-squares problems;
 3. establish symbolic-expression lowering parity;
 4. establish unconditional immutable replacement from successful LM results, including non-finite values;
-5. compare predictions and raw MSE with retained implementations within documented tolerances;
-6. compare performance on the retained benchmark corpus and decide whether MathNet remains the backend;
+5. compare predictions and raw MSE with the maintained legacy implementation where applicable;
+6. measure representative end-to-end workloads and decide whether MathNet remains the backend;
 7. design evaluator or memetic integration only after the direct path is stable;
-8. remove the prototype public API or archive it if it remains useful as a benchmark reference;
-9. remove AutoDiff or MathNet dependencies only when no retained implementation or other library feature uses them.
+8. remove old AutoDiff or MathNet dependencies only when no maintained library feature uses them.
 
 Do not delete tests merely because the implementation changes. Adapt behavioral tests to the owning replacement layer.
 
@@ -805,16 +823,20 @@ Remaining decisions should be made from implementation evidence:
 | 5. MathNet LM adapter | Ordinary least-squares problem solved through a thin measured adapter | Generic optimizer hierarchy, memetic policy |
 | 6. Direct constant optimization | Full-data LM run, simple high-level failure behavior, identity behavior without evolvable constants, and rebuilding after an LM run | Sampling, retention, acceptance, linear-scaling internals |
 | 7. Immutable rebuilding | One `ReplaceMany` operation produces the optimized expression | In-place mutation, fixed-constant replacement |
-| 8. Behavioral comparison | Predictions and raw MSE match retained implementations within tolerance | Exact parameter-vector or solver-trace equivalence |
-| 9. Performance decision | AD, adapter, solver, and complete pipeline benchmarked | Unmeasured backend abstraction or specialization |
-| 10. Later generalization | Public API, other optimizers, sampling, evaluator and memetic composition as justified | Changes made only for hypothetical reuse |
+| 8. Behavioral comparison | Predictions and raw MSE satisfy analytic expectations and match maintained legacy behavior where applicable | Exact parameter-vector or solver-trace equivalence |
+| 9. Development-branch integration | Current `dev` operator-base improvements integrated, reviewed, and validated | Refiner implementation |
+| 10. Refiner operator | Canonical candidate-to-candidate refinement plus explicit placement in applicable algorithms | Objective evaluation or retention inside the general refiner contract |
+| 11. Refinement evaluator | Objective-aware original-versus-refined retention with exactly two evaluator passes | A third evaluation or implicit use of the same refiner at two placement points |
+| 12. Producer refinement composition | Deferred creator, crossover, mutator, and offspring-production conveniences after canonical mechanisms are established | Producer wrappers treated as the primary refinement integration |
+| 13. Performance decision | AD, adapter, solver, refinement, evaluator, and complete pipeline benchmarked | Unmeasured backend abstraction or specialization |
+| 14. Later generalization | Public APIs, other optimizers, sampling, and additional memetic composition as justified | Changes made only for hypothetical reuse |
 
 Each increment requires:
 
 - a small internal or public API with one clear owner;
 - focused unit tests;
 - an executable API usage spec or example when public;
-- a named benchmark case when it introduces hot-path computation; measurement and specialization may remain deferred to Increment 9 unless performance blocks functional progress;
+- a named benchmark case when it introduces hot-path computation; measurement and specialization may remain deferred to the performance-decision increment unless performance blocks functional progress;
 - updated documentation before the next increment builds upon it.
 
 ## Explicit Non-Goals For The First Replacement
@@ -834,7 +856,7 @@ Each increment requires:
 - a public automatic-differentiation authoring API;
 - L-BFGS or a baseline gradient optimizer;
 - a general solver-backend plugin architecture;
-- generic local-improvement or memetic integration;
+- producer-specific refinement wrappers before the canonical refiner and refinement-evaluator mechanisms are established;
 - acceptance through the problem's configured regression metric;
 - differentiating through evaluation-time linear scaling or injecting root scaling parameters;
 - replacing every existing HeuristicLib optimization algorithm with a gradient-based one.
@@ -856,4 +878,4 @@ The first constant-optimization implementation is complete when:
 - benchmarks isolate AD, adapter, solver, and end-to-end costs and support an explicit MathNet retention or replacement decision;
 - the direct capability is documented well enough to design its eventual public facade without exposing AD internals.
 
-The broader redesign is complete later when justified public numerical-optimization APIs, generic local improvement, evaluator integration, additional solvers, and prototype retirement each have an explicit outcome. They are deliberately not conditions for completing the first vertical slice.
+The broader redesign is complete later when justified public numerical-optimization APIs, explicit refiner integration, the refinement evaluator, additional solvers, and legacy retirement each have an explicit outcome. They are deliberately not conditions for completing the first vertical slice.

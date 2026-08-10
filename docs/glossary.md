@@ -302,7 +302,7 @@ Operator roles are the named categories of work that operators perform inside al
 
 Use operator role names when discussing the responsibility of an operator. Use concrete operator type names only when discussing a specific implementation.
 
-See also: Creator, Crossover, Evaluator, Interceptor, Mutator, Operator, Replacer, Selector, Terminator.
+See also: Creator, Crossover, Evaluator, Interceptor, Mutator, Operator, Refiner, Replacer, Selector, Terminator.
 
 #### Creator
 
@@ -355,6 +355,18 @@ A mutator is the operator role that perturbs candidates to create variation.
 Use mutator for changes derived from existing candidates. Use creator when candidates are generated without depending on parent candidates.
 
 See also: Candidate, Creator, Crossover, Operator.
+
+#### Refiner
+
+Status: `Canonical`
+
+A refiner is the operator role that transforms a candidate into a refined candidate without evaluating either candidate. Refinement normally follows creation or variation and precedes evaluation. The general refiner contract does not guarantee improvement according to the problem objective.
+
+Do not use refiner as a synonym for mutator. Mutation creates search variation, while refinement intentionally applies a candidate-improvement or normalization procedure.
+
+A refinement evaluator combines a refiner with objective-aware retention: it evaluates the original candidate, applies the refiner, evaluates the refined candidate, and returns whichever evaluated candidate satisfies its configured acceptance policy. Use it when retention justifies the second evaluation; use an explicit refiner followed by ordinary evaluation when unconditional successful refinement and one evaluation are preferred.
+
+See also: Candidate, Creator, Crossover, Evaluated candidate, Evaluator, Mutator, Operator.
 
 #### Replacer
 

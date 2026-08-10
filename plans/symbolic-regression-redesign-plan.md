@@ -277,8 +277,6 @@ Current executable vertical slice:
 The detailed design and incremental implementation sequence now live in
 [symbolic-regression-constant-optimization-plan.md](symbolic-regression-constant-optimization-plan.md).
 
-The first direct `NumericParameterOptimizer` implementation was a useful prototype but combined expression lowering, differentiation, Levenberg-Marquardt, sampling, regression metrics, and immutable candidate replacement in one regression-specific feature. It is archived under `references/symbolic-regression/constant-optimization-prototype` and is not part of the maintained API.
-
 The replacement proceeds through independently usable layers:
 
 1. organize the old and new symbolic-regression systems;
