@@ -442,3 +442,4 @@ Desktop.ini
 *.DotSettings
 examples/PythonInteroperability/PythonInteroperability.sln
 examples/PythonInteroperability/.venv
+for_Agent/
