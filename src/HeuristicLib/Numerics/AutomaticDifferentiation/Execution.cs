@@ -119,7 +119,7 @@ internal sealed partial class Execution : IDisposable
         EvaluateScalarInstructions(parameters);
         if (program.InputCount == 0)
         {
-            outputs[0] = scalarPrimals[program.RootInstructionIndex];
+            outputs.Fill(scalarPrimals[program.RootInstructionIndex]);
             return;
         }
 
@@ -136,8 +136,10 @@ internal sealed partial class Execution : IDisposable
         EvaluateScalarInstructions(parameters);
         if (program.InputCount == 0)
         {
-            outputs[0] = scalarPrimals[program.RootInstructionIndex];
-            DifferentiateBatch(new BatchRange(0, 1), jacobian);
+            outputs.Fill(scalarPrimals[program.RootInstructionIndex]);
+            for (var offset = 0; offset < rowCount; offset += batchCapacity)
+                DifferentiateBatch(new BatchRange(offset, Math.Min(batchCapacity, rowCount - offset)), jacobian);
+
             return;
         }
 

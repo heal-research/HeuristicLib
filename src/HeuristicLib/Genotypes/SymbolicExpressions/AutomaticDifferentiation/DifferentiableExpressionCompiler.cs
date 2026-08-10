@@ -1,11 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using AD = HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
 
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiation;
 
 internal static class DifferentiableExpressionCompiler
 {
+    internal static bool TryCompile(ExpressionTree expression, [NotNullWhen(true)] out DifferentiableExpression? differentiableExpression) =>
+        TryCompile(expression, out differentiableExpression, out _);
+
     internal static bool TryCompile(ExpressionTree expression, [NotNullWhen(true)] out DifferentiableExpression? differentiableExpression, [NotNullWhen(false)] out ExpressionCompilationFailure? failure)
     {
         return new Compilation(expression).TryRun(out differentiableExpression, out failure);

@@ -170,10 +170,9 @@ public sealed class LevenbergMarquardtTests
         double[] targets = [-4.0, -1.0, 2.0, 5.0, 8.0];
         using var execution = CreateLinearExecution(input);
 
-        var success = LevenbergMarquardt.TryMinimize(execution, [0.0, 0.0], targets, 0, out var result, out var failure, TestContext.Current.CancellationToken);
+        var success = LevenbergMarquardt.TryMinimize(execution, [0.0, 0.0], targets, 0, out var result, TestContext.Current.CancellationToken);
 
         success.ShouldBeTrue();
-        failure.ShouldBeNull();
         result.ShouldNotBeNull();
         result.Parameters.ShouldBe([0.0, 0.0]);
         result.MeanSquaredError.ShouldBe(22.0, 1e-12);

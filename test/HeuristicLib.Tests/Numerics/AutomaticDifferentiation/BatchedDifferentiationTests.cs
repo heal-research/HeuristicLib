@@ -1,6 +1,5 @@
 using System.Numerics;
 using HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
-using DifferentiationProgram = HEAL.HeuristicLib.Numerics.AutomaticDifferentiation.Program;
 
 namespace HEAL.HeuristicLib.Tests.Numerics.AutomaticDifferentiation;
 
@@ -37,6 +36,22 @@ public sealed class BatchedDifferentiationTests
             jacobian[rowIndex].ShouldBe(inputValue, 1e-12);
             jacobian[rowCount + rowIndex].ShouldBe(Math.Cos(0.75 * inputValue) * inputValue, 1e-12);
         }
+    }
+
+    [Fact]
+    public void InputFreeExecutionRepeatsItsParameterDerivativesForEveryRow()
+    {
+        var builder = new Builder();
+        var parameter = builder.Parameter();
+        var program = builder.Build(builder.Multiply(parameter, parameter));
+        using var execution = program.CreateExecution([], 5, batchCapacity: 2);
+        var outputs = new double[5];
+        var jacobian = new double[5];
+
+        execution.EvaluateWithJacobian([3.0], outputs, jacobian);
+
+        outputs.ShouldBe([9.0, 9.0, 9.0, 9.0, 9.0]);
+        jacobian.ShouldBe([6.0, 6.0, 6.0, 6.0, 6.0]);
     }
 
     [Theory]
@@ -281,7 +296,7 @@ public sealed class BatchedDifferentiationTests
         }
     }
 
-    private static DifferentiationProgram CreateProgramCoveringVectorizedReverseRules()
+    private static Program CreateProgramCoveringVectorizedReverseRules()
     {
         var builder = new Builder();
         var input = builder.Input();

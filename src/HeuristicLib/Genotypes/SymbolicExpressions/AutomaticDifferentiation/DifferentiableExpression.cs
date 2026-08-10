@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
 using AD = HEAL.HeuristicLib.Numerics.AutomaticDifferentiation;
 
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiation;

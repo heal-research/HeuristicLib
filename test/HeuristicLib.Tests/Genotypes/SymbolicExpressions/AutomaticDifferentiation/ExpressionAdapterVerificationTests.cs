@@ -27,7 +27,7 @@ public sealed class ExpressionAdapterVerificationTests
     [Fact]
     public void MacroMatchesExpressionEvaluationAndFiniteDifferences()
     {
-        var expression = Sigmoid(Add(Multiply(Constant(0.2), Variable("x")), FixedConstant(0.8))).Build();
+        var expression = Sigmoid(Constant(0.2) * Variable("x") + FixedConstant(0.8)).Build();
 
         VerifyEvaluationAndJacobian(expression);
     }
@@ -64,7 +64,7 @@ public sealed class ExpressionAdapterVerificationTests
         var dataFrame = new DataFrame([Series<double>.FromOwnedArray("x", x)]);
         var expression = operation switch
         {
-            OpCode.Divide => Divide(FixedConstant(1.0), Variable("x")).Build(),
+            OpCode.Divide => (FixedConstant(1.0) / Variable("x")).Build(),
             OpCode.Log => Log(Variable("x")).Build(),
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
@@ -126,14 +126,14 @@ public sealed class ExpressionAdapterVerificationTests
     private static ExpressionTree CreateSupportedExpression(OpCode operation)
     {
         var x = Variable("x");
-        var left = Add(Multiply(Constant(0.2), x), FixedConstant(0.8));
-        var right = Add(Multiply(Constant(-0.15), x), FixedConstant(1.5));
+        var left = Constant(0.2) * x + FixedConstant(0.8);
+        var right = Constant(-0.15) * x + FixedConstant(1.5);
         return operation switch
         {
-            OpCode.Add => Add(left, right).Build(),
-            OpCode.Subtract => Subtract(left, right).Build(),
-            OpCode.Multiply => Multiply(left, right).Build(),
-            OpCode.Divide => Divide(left, right).Build(),
+            OpCode.Add => (left + right).Build(),
+            OpCode.Subtract => (left - right).Build(),
+            OpCode.Multiply => (left * right).Build(),
+            OpCode.Divide => (left / right).Build(),
             OpCode.Negate => Negate(left).Build(),
             OpCode.Exp => Exp(left).Build(),
             OpCode.Log => Log(left).Build(),

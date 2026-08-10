@@ -244,6 +244,14 @@ Status: `Canonical`
 
 An expression metric evaluates a symbolic expression's genotype without requiring prediction data. Examples include expression length, variable occurrence count, and structural complexity. A symbolic-regression problem may combine expression metrics with regression metrics in one objective vector.
 
+### Constant optimization
+
+Status: `Canonical`
+
+Constant optimization fits the optimizable numeric constants of a symbolic expression to supervised regression data and returns an immutable expression containing the fitted values. Numerical optimization treats those constants as parameters, but parameter optimization is the mechanism rather than the symbolic-regression capability.
+
+Each path from an expression root identifies a distinct constant occurrence. Two paths remain distinct occurrences even when they reference the same immutable node object, so constant optimization treats them as separate parameters.
+
 ## Algorithms and Operators
 
 ### Algorithm

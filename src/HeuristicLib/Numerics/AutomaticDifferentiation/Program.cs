@@ -53,9 +53,6 @@ internal sealed class Program
         if (batchCapacity <= 0)
             throw new ArgumentOutOfRangeException(nameof(batchCapacity), batchCapacity, "The batch capacity must be positive.");
 
-        if (InputCount == 0 && rowCount != 1)
-            throw new ArgumentOutOfRangeException(nameof(rowCount), rowCount, "An input-free scalar program produces exactly one result.");
-
         for (var inputIndex = 0; inputIndex < inputColumns.Length; inputIndex++)
         {
             if (inputColumns[inputIndex].Length != rowCount)

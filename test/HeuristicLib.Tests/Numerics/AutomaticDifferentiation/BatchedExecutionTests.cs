@@ -118,12 +118,16 @@ public sealed class BatchedExecutionTests
     }
 
     [Fact]
-    public void InputFreeBoundExecutionRequiresSingleResult()
+    public void InputFreeExecutionRepeatsItsScalarResultForEveryRow()
     {
         var builder = new Builder();
-        var program = builder.Build(builder.Constant(1.0));
+        var program = builder.Build(builder.Add(builder.Parameter(), builder.Constant(1.0)));
+        using var execution = program.CreateExecution([], 5, batchCapacity: 2);
+        var outputs = new double[5];
 
-        Should.Throw<ArgumentOutOfRangeException>(() => program.CreateExecution([], 2)).ParamName.ShouldBe("rowCount");
+        execution.Evaluate([2.0], outputs);
+
+        outputs.ShouldBe([3.0, 3.0, 3.0, 3.0, 3.0]);
     }
 
     [Fact]

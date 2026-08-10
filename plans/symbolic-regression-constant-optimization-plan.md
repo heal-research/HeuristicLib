@@ -18,7 +18,7 @@ The sequence is:
 2. lower an `ExpressionTree` into that representation while recording occurrence-safe bindings for optimizable constants;
 3. expose model values, raw targets, and parameter derivatives to MathNet's Levenberg-Marquardt implementation through a thin, measured adapter;
 4. optimize all training rows against raw targets using least-squares mean squared error;
-5. retain the best finite parameter point and reject a numerically worse result using the same raw full-data mean squared error;
+5. do not reject a successful numerical result because its parameter values or mean squared error are non-finite;
 6. rebuild the immutable expression through one `ExpressionTree.ReplaceMany` operation;
 7. verify output behavior against the retained implementations and measure the complete pipeline before generalizing it.
 
@@ -305,8 +305,10 @@ than validating or sanitizing them.
 
 ### Execution ownership and memory
 
-AD-2 introduces `Program.CreateExecution()` for input-free scalar programs. It
-owns one pooled scalar-primal buffer and produces exactly one result.
+AD-2 introduces `Program.CreateExecution()` for one-row input-free scalar programs. It
+owns one pooled scalar-primal buffer. The bound overload may give an input-free
+program any positive row count; evaluation repeats its scalar value and parameter
+derivatives for every requested row.
 AD-3 adds the bound-input overload described below together with batched vector
 storage; the scalar convenience remains available.
 
@@ -315,7 +317,7 @@ creates an `Execution`. The provisional default capacity is `256`.
 
 - Input bindings are copied as `ReadOnlyMemory<double>` descriptors; numerical
   input data is not copied.
-- A parameter-only scalar function uses no input columns and produces one result.
+- A parameter-only scalar function uses no input columns. The parameterless creation convenience produces one result, while the bound overload repeats the scalar result for its requested row count.
 - The execution rents scalar-primal, vector-primal, and batch-adjoint buffers from
   `ArrayPool<double>` and returns them on disposal.
 - The execution is mutable, non-reentrant, and not thread-safe. Concurrent runs
@@ -488,7 +490,7 @@ The first adapter has these explicit semantics:
 - convergence and maximum iterations are controlled by MathNet; no HeuristicLib termination or accounting concepts enter the adapter;
 - the adapter does not retain a best finite point, decide whether a result is acceptable, rebuild an expression, or consult a regression metric.
 
-Best-point retention, full-data acceptance, expression rebuilding, and symbolic-regression policy belong to later constant-optimization orchestration. Expression discovery, future row sampling, and HeuristicLib operator integration also remain outside the adapter.
+Expression rebuilding belongs to the constant-optimization component. Best-point retention and acceptance are separate later policies. Expression discovery, future row sampling, and HeuristicLib operator integration also remain outside the numerical adapter.
 
 ### MathNet adapter checkpoints
 
@@ -518,55 +520,11 @@ Ordinary contract and numerical examples must remain fast unit tests in `Heurist
 
 The artifact is complete when the AD engine and MathNet adapter can solve an ordinary least-squares problem without referencing symbolic regression. A general public numerical-optimization API is not required.
 
-## Stage 3: General Local Improvement And Memetic Composition (Deferred)
+## Stage 3: Refinement And Memetic Composition (Deferred)
 
 This stage is not a prerequisite for direct symbolic-regression constant optimization. Revisit it after the direct vertical slice establishes the correct constant-optimization contract, costs, and result semantics.
 
-### Design question
-
-Constant optimization is local search initialized from an existing candidate. The framework must decide how that work composes with population algorithms.
-
-Evaluate three forms:
-
-1. **Evaluator decoration:** improve selected candidates before final evaluation and return the authoritative improved evaluated candidate.
-2. **Dedicated local-improvement operator:** transform a candidate using problem evaluation semantics, then let an evaluator score the result.
-3. **Meta-algorithm composition:** coordinate a global algorithm and nested local-search algorithms explicitly.
-
-These forms are not necessarily mutually exclusive. The design must identify one canonical low-level contract and define higher-level facades in terms of it.
-
-### Required policies
-
-The composition layer, not LM and not automatic differentiation, owns:
-
-- which candidates receive local improvement;
-- probability or population fraction;
-- elite-only, random, all-candidate, or scheduled selection;
-- local-search budget per candidate and global budget accounting;
-- acceptance of equal, improved, or occasionally worse local results;
-- whether local-search observations are included in algorithm analysis;
-- random-source forking and reproducibility;
-- parallel execution and workspace isolation;
-- reuse of shared observation samples within one evaluation batch.
-
-This directly addresses the earlier uncertainty around putting a population fraction into solver options. Solver options describe one numerical optimization run. Memetic composition decides which candidates receive such a run.
-
-### Evaluator invariant
-
-If local improvement is evaluator-driven, the evaluator must return the candidate it actually evaluated. It must never attach the improved objective vector to the original candidate.
-
-The input candidate remains immutable. An unsuccessful or rejected improvement returns the original candidate and its objective vector.
-
-### Later usable artifact
-
-Demonstrate the composition with a non-symbolic candidate first:
-
-- a real-vector population algorithm;
-- a gradient-based local optimizer;
-- configurable all-candidate and probabilistic local improvement;
-- deterministic random behavior;
-- accounting that distinguishes global evaluations from local-search work.
-
-This proves the memetic design before symbolic-regression-specific lowering is added.
+Constant optimization fits constants and returns the resulting expression without deciding whether that expression is better than its input. A later `Refiner` operator of some form will own retention and improvement checking. Its exact contract and composition with evaluators or algorithms are deliberately deferred until the direct vertical slice provides enough experience to design them.
 
 ## Stage 4: Symbolic-Regression Constant Optimization
 
@@ -585,7 +543,7 @@ The provisional internal result is a `DifferentiableExpression` produced by a `D
 
 Each parameter binding retains its `ExpressionPoint`, originating `EvolvableConstantSymbol`, and initial value. Parameter order follows the first semantic emission of each logical occurrence. Rebuilding receives values in parameter order and performs one `ExpressionTree.ReplaceMany` operation with new `NumericConstantExpressionNode` instances using the originating symbols.
 
-Occurrence identity follows the tree path represented by `ExpressionPoint`, not `ExpressionNode` object identity. If the same immutable node object occurs at two different paths, lowering creates two parameters. Within one symbol emission, emitted children are cached by child index: if a macro emits the same logical child more than once, lowering reuses one AD `Value`, preserving one parameter identity and explicit DAG sharing so reverse contributions accumulate.
+Occurrence identity follows the tree path represented by `ExpressionPoint`, not `ExpressionNode` object identity. If the same immutable node object occurs at two different paths, those paths are separate logical occurrences and lowering creates two independent parameters. Reference sharing never implicitly ties parameter values. Within one symbol emission, emitted children are cached by child index: if a macro emits the same logical child more than once, lowering reuses one AD `Value`, preserving one parameter identity and explicit DAG sharing so reverse contributions accumulate.
 
 Variable names are interned by ordinal name and follow first semantic-emission order. Repeated occurrences reuse one AD input handle. Fixed constants and constants emitted as part of a macro remain AD constants. Evolvable constants become parameters only while their own expression occurrence is being emitted. V1 performs no differentiation-specific constant folding or common-subexpression elimination.
 
@@ -608,7 +566,9 @@ EL-1 reuses `Symbol.Emit` through a differentiation-specific stack emitter. Vari
 
 EL-2 maps an evolvable numeric constant to an AD parameter only while emitting that constant's own expression point. Parameter order and bindings therefore follow first semantic emission. A binding stores only its expression point; its originating symbol and initial value are derived from the immutable node. Rebuilding validates the parameter count, creates occurrence-specific replacement nodes with the originating symbols, and applies them through one `ExpressionTree.ReplaceMany` call. Reference-shared nodes at different paths remain separate parameters, while a macro's repeated emission of one child reuses one parameter and accumulates all derivative contributions.
 
-EL-3 isolates the `DataFrame` dependency in a `DifferentiableExpression` extension. The compiler, retained differentiable expression, and numerical AD engine remain independent of data-analysis types. The extension resolves variables in retained AD input order, passes each `Series<double>.Values` memory directly to the AD execution without copying numerical data, and returns a structured failure for the first missing or incompatible series. Input-free expressions retain the AD engine's scalar one-result execution semantics rather than implicitly broadcasting to the data-frame row count.
+Macro expansion exists only in the compiled AD program. If an evolvable constant occurs in a macro child or descendant, rebuilding replaces that occurrence and preserves the surrounding macro symbol in the returned expression tree. Constants emitted directly by the macro are fixed parts of its semantics because they have no expression occurrence or parameter binding. V1 does not optimize numeric state embedded directly in a macro symbol; a tunable macro value must be represented as an evolvable constant child.
+
+EL-3 isolates the `DataFrame` dependency in a `DifferentiableExpression` extension. The compiler, retained differentiable expression, and numerical AD engine remain independent of data-analysis types. The extension resolves variables in retained AD input order, passes each `Series<double>.Values` memory directly to the AD execution without copying numerical data, and returns a structured failure for the first missing or incompatible series. Input-free expressions are bound to the data-frame row count so their scalar value and parameter derivatives are repeated for every row.
 
 EL-4 compares every initially supported expression operation and the built-in sigmoid macro with ordinary expression-interpreter values and central finite differences over immutable parameter rebuilding. It verifies the parameter-major Jacobian layout, source-expression stability, and structured compilation failure for every currently unsupported built-in operation. Existing focused tests retain the occurrence-specific rebuilding, macro-child reuse, variable ordering, and binding-failure cases.
 
@@ -624,7 +584,7 @@ The symbolic-expression adapter owns:
 - compiling expression semantics into the general differentiable representation;
 - binding named variables to regression input columns;
 - preserving occurrence identity when a macro emits the same logical child more than once;
-- rebuilding accepted parameter values through one immutable `ExpressionTree.ReplaceMany` operation;
+- rebuilding returned parameter values through one immutable `ExpressionTree.ReplaceMany` operation;
 - preserving each node's originating symbol.
 
 The adapter must not implement LM, Cholesky factorization, generic reverse mode, or memetic selection.
@@ -648,18 +608,18 @@ All current built-in operations must either:
 
 Macro lowering must be tested independently from the optimizer.
 
-### Full-data objective and acceptance
+### Full-data objective and rebuilding
 
-The first implementation uses every training row. Observation sampling is deferred. When sampling is introduced later, it belongs to the symbolic-regression local-improvement adapter or evaluator composition, not the numerical solver.
+The first implementation uses every training row. Observation sampling is deferred. When sampling is introduced later, it belongs to the symbolic-regression constant-optimization adapter or a later refiner, not the numerical solver.
 
 The first symbolic integration defines:
 
 - least-squares residuals from raw expression predictions and raw training targets;
-- raw full-data mean squared error as the optimization and acceptance measure;
-- retention of the best finite point observed during the LM run;
-- rejection of a final replacement when its raw full-data mean squared error is non-finite or worse than the initial value beyond a small documented numerical tolerance.
+- raw full-data mean squared error as the numerical optimization measure;
+- unconditional rebuilding with the parameter vector returned by a successful LM call;
+- ordinary propagation of non-finite optimized parameter values and mean squared error.
 
-Acceptance deliberately does not consult the problem's configured `IRegressionMetric`. The safeguard prevents numerical regression in the objective LM actually optimizes; it does not claim that every other problem metric must improve.
+The constant-optimization component does not retain a best finite point, compare initial and final loss, consult the problem's configured `IRegressionMetric`, or decide whether the fitted expression should be retained. A later refiner owns retention and improvement checking around this fitting capability.
 
 Evaluation-time linear scaling is outside the first constant-optimization objective. The optimizer neither differentiates through fitted scaling coefficients nor injects scaling terms into the expression. Normal symbolic-regression evaluation may fit or apply linear scaling after constant optimization exactly as it otherwise would. Explicit root-level scaling parameters or a jointly scaling-aware objective remain future design options.
 
@@ -669,26 +629,59 @@ Initially:
 - leave fixed constants unchanged;
 - use least-squares residuals for LM;
 - require direct full-data optimization;
-- defer bounds, row sampling, sample weights, validation-driven acceptance, problem-metric acceptance, linear-scaling integration, and variable-weight optimization.
+- defer bounds, row sampling, sample weights, best-point retention, acceptance policy, linear-scaling integration, and variable-weight optimization.
 
 ### Initial API boundary
 
 Do not begin from `NumericParameterOptimizer.Optimize(expression, problem, options)` and work inward.
 
-Begin with an internal direct constant-optimization entry point so the behavioral contract and performance can stabilize. Design a public symbolic-regression facade afterward. It should expose symbolic intent while allowing advanced users to select a numerical algorithm once multiple algorithms are genuinely supported. Candidate directions to evaluate later:
+Begin with an internal direct constant-optimization entry point so the behavioral contract and performance can stabilize. Design a public symbolic-regression facade afterward. It should expose symbolic intent while allowing advanced users to select a numerical algorithm once multiple algorithms are genuinely supported. A later refiner may consume this capability, but its API is outside the current design. The final constant-optimization API must avoid exposing tape, Jacobian, row-selection, or solver-workspace details to ordinary symbolic-regression users.
+
+The capability retains the canonical symbolic-regression name constant optimization. Its first internal component is `ConstantOptimizer`, exposing `Optimize` and `TryOptimize`. Parameter optimization describes the numerical mechanism by which evolvable constant occurrences are fitted. V1 optimizes only occurrences represented by `ParameterBinding`; fixed constants remain unchanged.
+
+Its easy-to-use surface provides both throwing and non-throwing forms:
 
 ```csharp
-// Direct local improvement.
-var result = ConstantOptimization.Optimize(expression, problem, algorithm);
+internal static ExpressionTree Optimize(
+    ExpressionTree expression,
+    RegressionData data,
+    int maximumIterations,
+    CancellationToken cancellationToken = default);
 
-// Evaluator composition.
-var evaluator = SymbolicExpressionEvaluator.WithConstantOptimization(
-    innerEvaluator,
-    algorithm,
-    selectionPolicy);
+internal static bool TryOptimize(
+    ExpressionTree expression,
+    RegressionData data,
+    int maximumIterations,
+    [NotNullWhen(true)] out ExpressionTree? optimizedExpression,
+    CancellationToken cancellationToken = default);
+
+internal static bool TryOptimize(
+    ExpressionTree expression,
+    RegressionData data,
+    int maximumIterations,
+    [NotNullWhen(true)] out ExpressionTree? optimizedExpression,
+    [NotNullWhen(false)] out ConstantOptimizationFailure? failure,
+    CancellationToken cancellationToken = default);
 ```
 
-These names are provisional. The final API must avoid exposing tape, Jacobian, row-selection, or solver-workspace details to ordinary symbolic-regression users.
+The convenience `TryOptimize` overload collapses compilation, variable-binding, and numerical-solver failures to `false`. Its detailed overload additionally returns a small closed `ConstantOptimizationFailure` hierarchy that retains the owning lower-level failure. The expression compiler, data-binding adapter, and LM adapter follow the same convention by offering convenience and detailed `Try` overloads. `Optimize` translates compilation failure to an informative `NotSupportedException`, binding failure to `ArgumentException`, and numerical-solver failure to `InvalidOperationException`. Programming errors, invalid arguments, and cancellation continue to propagate from all forms; cancellation is represented by `OperationCanceledException` rather than `false`. Constant optimization requires non-empty regression data and a non-negative maximum iteration count. `RegressionData` already owns input/target row-count consistency, and nonnullable annotations are compile-time contracts rather than reasons for redundant runtime null checks.
+
+A successful LM result is always rebuilt through `DifferentiableExpression.WithParameterValues`, including non-finite parameter values. Input-free expressions with evolvable constants are fitted against every target row by repeating their scalar value and parameter derivatives across the data row count. Zero maximum iterations and expressions without evolvable constant occurrences succeed immediately and return the original `ExpressionTree` instance after validating the general call arguments and cancellation but before differentiable compilation, data binding, or LM. These identity shortcuts also allow unsupported operations or unbound variables that are irrelevant when no optimization is requested or no parameter can change.
+
+The component lives under `HEAL.HeuristicLib.DataAnalysis.Regression` because it couples a symbolic expression to supervised regression data. It depends on `ExpressionTree`, `RegressionData`, expression lowering and binding, and the internal numerical optimizer. It does not depend on `SymbolicRegressionProblem`, configured regression metrics, linear scaling, HeuristicLib algorithms or operators, evaluation accounting, retention, or acceptance policy.
+
+### Constant-optimization component checkpoints
+
+Checkpoint states are `Pending`, `In progress`, `Awaiting review`, and `Accepted`. Implementation stops at `Awaiting review`; only explicit user acceptance advances to the next checkpoint.
+
+| Checkpoint | Status | Deliverable |
+| --- | --- | --- |
+| CO-0 Component contract | Accepted | Document terminology, API shape, successful rebuilding semantics, behavior without evolvable constants, high-level failure behavior, cancellation, dependencies, and explicit exclusion of retention and acceptance. No source code. |
+| CO-1 Successful bridge | Accepted | Implement compilation, data binding, initial-value extraction, LM invocation, unconditional immutable rebuilding, and one successful fitting test. |
+| CO-2 Failure and identity behavior | Accepted | Verify convenience and detailed non-throwing failures, specific throwing behavior, cancellation propagation, lower-level failure retention, and identity shortcuts for zero iterations or no evolvable constants. |
+| CO-3 Semantic hardening | Accepted | Verify non-finite parameter propagation, fixed constants, occurrence identity, shared nodes, macro emission, source immutability, repeated calls, and independence from problem metrics, linear scaling, algorithms, operators, retention, and acceptance. |
+
+CO-3 verifies the complete rebuilding semantics at the direct component boundary. Reference-shared constant nodes at different expression paths are fitted as independent parameters; macro expansion remains compilation-only and the rebuilt expression preserves the macro; fixed constants and the source expression remain unchanged; repeated calls are independent; and successful non-finite results and parameter values are not sanitized. A production dependency audit confirms that `ConstantOptimizer` depends only on symbolic expressions, `RegressionData`, expression lowering and binding, and numerical optimization. It has no dependency on symbolic-regression problems, configured metrics, linear scaling, HeuristicLib algorithms or operators, retention, or acceptance policy.
 
 ### Direct vertical-slice artifact
 
@@ -696,7 +689,7 @@ Provide:
 
 - a direct test fixture optimizing constants in a fixed expression;
 - retained compiled/differentiable model reuse where lifecycle permits;
-- tests for fixed constants, occurrence identity, structurally shared nodes, macro re-emission, unsupported operations, invalid points, immutable replacement, and raw-MSE non-regression;
+- tests for fixed constants, occurrence identity, structurally shared nodes, macro re-emission, unsupported operations, invalid points, identity behavior without evolvable constants, non-finite propagation, and immutable replacement;
 - behavior-parity tests against the retained implementations using predictions and raw mean squared error within tolerance;
 - performance comparison against both retained reference implementations.
 
@@ -767,7 +760,7 @@ Replacement proceeds by behavior, not by file name:
 1. establish general differentiation parity with the prototype's derivative tests;
 2. establish MathNet-backed LM behavior on ordinary least-squares problems;
 3. establish symbolic-expression lowering parity;
-4. establish immutable replacement and raw full-data MSE non-regression;
+4. establish unconditional immutable replacement from successful LM results, including non-finite values;
 5. compare predictions and raw MSE with retained implementations within documented tolerances;
 6. compare performance on the retained benchmark corpus and decide whether MathNet remains the backend;
 7. design evaluator or memetic integration only after the direct path is stable;
@@ -785,7 +778,7 @@ The first vertical slice has settled these decisions:
 3. spans and contiguous buffers are preferred internally, while direct MathNet storage is allowed at the adapter boundary when it avoids measured cost;
 4. MathNet LM is the first backend, with no broad solver-plugin architecture;
 5. the first objective is raw full-data least squares over evolvable constant occurrences only;
-6. acceptance uses raw full-data MSE non-regression and the best finite LM point, not the problem metric;
+6. constant optimization always rebuilds a successful LM result; best-point retention and acceptance are separate later policies;
 7. linear scaling remains an evaluation concern outside constant optimization;
 8. output parity means predictions and loss within tolerance, not identical parameters or solver traces;
 9. generic numerical algorithms and memetic composition are later generalizations, not delivery gates.
@@ -795,7 +788,7 @@ Remaining decisions should be made from implementation evidence:
 1. the precise program instruction layout, derivative buffer layout, and Jacobian batch size;
 2. which built-in expression operations are supported in the first increment and their structured failure details;
 3. the exact MathNet API and storage shape with the lowest verified adapter overhead;
-4. stopping defaults and the numerical tolerance used by the MSE non-regression safeguard;
+4. stopping defaults and later retention or acceptance policy;
 5. whether MathNet performance justifies retention or replacement;
 6. the eventual public facade and generic local-improvement contract;
 7. whether pooled AD workspaces justify the `IDisposable` execution contract over ordinary execution-owned arrays.
@@ -810,7 +803,7 @@ Remaining decisions should be made from implementation evidence:
 | 3. AD verification | Analytic, finite-difference, invalid-domain, and allocation tests for each operation | Solver-specific derivative changes |
 | 4. Expression lowering | Direct lowering with occurrence-safe optimizable-constant bindings | Optimization, mutation of the source tree |
 | 5. MathNet LM adapter | Ordinary least-squares problem solved through a thin measured adapter | Generic optimizer hierarchy, memetic policy |
-| 6. Direct constant optimization | Full-data LM run, best-finite retention, and raw-MSE non-regression | Sampling, problem-metric acceptance, linear-scaling internals |
+| 6. Direct constant optimization | Full-data LM run, simple high-level failure behavior, identity behavior without evolvable constants, and rebuilding after an LM run | Sampling, retention, acceptance, linear-scaling internals |
 | 7. Immutable rebuilding | One `ReplaceMany` operation produces the optimized expression | In-place mutation, fixed-constant replacement |
 | 8. Behavioral comparison | Predictions and raw MSE match retained implementations within tolerance | Exact parameter-vector or solver-trace equivalence |
 | 9. Performance decision | AD, adapter, solver, and complete pipeline benchmarked | Unmeasured backend abstraction or specialization |
@@ -856,9 +849,9 @@ The first constant-optimization implementation is complete when:
 - analytic and finite-difference tests cover every supported operation and its invalid-domain behavior;
 - `ExpressionTree` lowering preserves optimizable occurrence identity, fixed constants, macro semantics, and originating symbols;
 - MathNet LM can optimize all training rows through a measured adapter;
-- compilation and binding failures, unsupported models, no-parameter expressions, invalid numerical outcomes, and solver outcomes are structured and tested at their owning layers;
-- the input tree remains unchanged and accepted values are applied through one `ReplaceMany` call;
-- raw full-data MSE cannot regress beyond the documented numerical tolerance;
+- compilation and binding failures, unsupported models, invalid numerical outcomes, and solver outcomes are structured and tested at their owning lower layers, while `ConstantOptimizer` deliberately exposes only success or failure;
+- the input tree remains unchanged and every successful LM parameter vector is applied through one `ReplaceMany` call;
+- non-finite optimized values propagate into the rebuilt expression without an implicit acceptance safeguard;
 - predictions and raw MSE match retained behavior within documented tolerances where the behavioral contracts overlap;
 - benchmarks isolate AD, adapter, solver, and end-to-end costs and support an explicit MathNet retention or replacement decision;
 - the direct capability is documented well enough to design its eventual public facade without exposing AD internals.

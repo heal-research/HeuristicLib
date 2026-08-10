@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Genotypes.SymbolicExpressions;
-
 namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiation;
 
 internal sealed class ParameterBinding

@@ -9,6 +9,10 @@ namespace HEAL.HeuristicLib.Numerics.Optimization;
 internal static class LevenbergMarquardt
 {
     internal static bool TryMinimize(AD.Execution model, ReadOnlySpan<double> initialParameters, ReadOnlySpan<double> targets, int maximumIterations,
+        [NotNullWhen(true)] out LevenbergMarquardtResult? result, CancellationToken cancellationToken = default) =>
+        TryMinimize(model, initialParameters, targets, maximumIterations, out result, out _, cancellationToken);
+
+    internal static bool TryMinimize(AD.Execution model, ReadOnlySpan<double> initialParameters, ReadOnlySpan<double> targets, int maximumIterations,
         [NotNullWhen(true)] out LevenbergMarquardtResult? result, [NotNullWhen(false)] out LevenbergMarquardtFailure? failure, CancellationToken cancellationToken = default)
     {
         ValidateArguments(model, initialParameters, targets, maximumIterations);

@@ -6,11 +6,14 @@ namespace HEAL.HeuristicLib.Genotypes.SymbolicExpressions.AutomaticDifferentiati
 
 internal static class DifferentiableExpressionDataFrameExtensions
 {
+    internal static bool TryCreateExecution(this DifferentiableExpression expression, DataFrame dataFrame, [NotNullWhen(true)] out AD.Execution? execution) =>
+        expression.TryCreateExecution(dataFrame, out execution, out _);
+
     internal static bool TryCreateExecution(this DifferentiableExpression expression, DataFrame dataFrame, [NotNullWhen(true)] out AD.Execution? execution, [NotNullWhen(false)] out VariableBindingFailure? failure)
     {
         if (expression.VariableNames.IsEmpty)
         {
-            execution = expression.Program.CreateExecution();
+            execution = expression.Program.CreateExecution([], dataFrame.RowCount);
             failure = null;
             return true;
         }

@@ -12,9 +12,7 @@ public sealed class DifferentiableExpressionCompilerTests
     public void Compile_LowersEveryInitiallySupportedOperation()
     {
         var x = Variable("x");
-        var expression = Add(
-            Add(Subtract(Multiply(Divide(Negate(x), FixedConstant(2.0)), Exp(x)), Log(Add(x, FixedConstant(2.0)))), Add(Sin(x), Cos(x))),
-            Add(Tan(Divide(x, FixedConstant(10.0))), Tanh(x))).Build();
+        var expression = (Negate(x) / FixedConstant(2.0) * Exp(x) - Log(x + FixedConstant(2.0)) + (Sin(x) + Cos(x)) + (Tan(x / FixedConstant(10.0)) + Tanh(x))).Build();
         double[] input = [-0.5, 0.0, 0.5];
         var data = new DataFrame([Series<double>.FromOwnedArray("x", input)]);
 
@@ -30,7 +28,7 @@ public sealed class DifferentiableExpressionCompilerTests
     [Fact]
     public void Compile_InternsVariablesByOrdinalNameInFirstEmissionOrder()
     {
-        var expression = Add(Add(Variable("x1"), Variable("x0")), Variable("x1")).Build();
+        var expression = (Variable("x1") + Variable("x0") + Variable("x1")).Build();
 
         var lowered = CompileSuccessfully(expression);
 
@@ -74,7 +72,7 @@ public sealed class DifferentiableExpressionCompilerTests
     public void Compile_MapsEvolvableConstantsToParametersAndPreservesFixedConstants()
     {
         var symbol = new EvolvableConstantSymbol();
-        var expression = Add(FixedConstant(1.0), Multiply(Constant(2.0, symbol), Variable("x"))).Build();
+        var expression = (FixedConstant(1.0) + Constant(2.0, symbol) * Variable("x")).Build();
         double[] input = [1.0, 2.0, 3.0];
 
         var lowered = CompileSuccessfully(expression);
@@ -152,7 +150,7 @@ public sealed class DifferentiableExpressionCompilerTests
     {
         var firstSymbol = new EvolvableConstantSymbol();
         var secondSymbol = new EvolvableConstantSymbol();
-        var expression = Add(Constant(1.0, firstSymbol), Multiply(FixedConstant(3.0), Constant(2.0, secondSymbol))).Build();
+        var expression = (Constant(1.0, firstSymbol) + FixedConstant(3.0) * Constant(2.0, secondSymbol)).Build();
         var lowered = CompileSuccessfully(expression);
 
         var rebuilt = lowered.WithParameterValues([10.0, 20.0]);
@@ -201,9 +199,21 @@ public sealed class DifferentiableExpressionCompilerTests
     }
 
     [Fact]
+    public void WithParameterValuesPreservesANonFiniteParameterValue()
+    {
+        var expression = Constant(2.0).Build();
+        var lowered = CompileSuccessfully(expression);
+
+        var rebuilt = lowered.WithParameterValues([double.NaN]);
+
+        double.IsNaN(GetNumericConstant(rebuilt.RootPoint).Value).ShouldBeTrue();
+        GetNumericConstant(expression.RootPoint).Value.ShouldBe(2.0);
+    }
+
+    [Fact]
     public void FixedOnlyExpressionHasNoParametersAndRebuildsToTheSourceExpression()
     {
-        var expression = Add(FixedConstant(1.0), FixedConstant(2.0)).Build();
+        var expression = (FixedConstant(1.0) + FixedConstant(2.0)).Build();
         var lowered = CompileSuccessfully(expression);
 
         lowered.ParameterBindings.ShouldBeEmpty();
@@ -271,8 +281,7 @@ public sealed class DifferentiableExpressionCompilerTests
 
     private static DifferentiableExpression CompileSuccessfully(ExpressionTree expression)
     {
-        DifferentiableExpressionCompiler.TryCompile(expression, out var differentiableExpression, out var failure).ShouldBeTrue();
-        failure.ShouldBeNull();
+        DifferentiableExpressionCompiler.TryCompile(expression, out var differentiableExpression).ShouldBeTrue();
         return differentiableExpression;
     }
 

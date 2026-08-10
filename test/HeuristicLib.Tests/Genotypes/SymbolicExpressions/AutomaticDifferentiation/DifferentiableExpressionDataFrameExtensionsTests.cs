@@ -10,7 +10,7 @@ public sealed class DifferentiableExpressionDataFrameExtensionsTests
     [Fact]
     public void TryCreateExecutionBindsDoubleSeriesInAdInputOrder()
     {
-        var expression = Subtract(Variable("x"), Variable("y")).Build();
+        var expression = (Variable("x") - Variable("y")).Build();
         var differentiableExpression = CompileSuccessfully(expression);
         var dataFrame = new DataFrame([
             Series<double>.FromOwnedArray("y", [1.0, 2.0]),
@@ -33,7 +33,7 @@ public sealed class DifferentiableExpressionDataFrameExtensionsTests
     [Fact]
     public void TryCreateExecutionReportsTheFirstMissingVariable()
     {
-        var differentiableExpression = CompileSuccessfully(Add(Variable("x"), Variable("y")).Build());
+        var differentiableExpression = CompileSuccessfully((Variable("x") + Variable("y")).Build());
         var dataFrame = new DataFrame([Series<double>.FromOwnedArray("y", [1.0])]);
 
         var success = differentiableExpression.TryCreateExecution(dataFrame, out var execution, out var failure);
@@ -61,19 +61,20 @@ public sealed class DifferentiableExpressionDataFrameExtensionsTests
     }
 
     [Fact]
-    public void TryCreateExecutionCreatesAScalarExecutionForAnInputFreeExpression()
+    public void TryCreateExecutionRepeatsAnInputFreeExpressionForEveryDataFrameRow()
     {
         var differentiableExpression = CompileSuccessfully(Constant(2.0).Build());
         var dataFrame = new DataFrame([Series<double>.FromOwnedArray("unused", [1.0, 2.0])]);
 
-        differentiableExpression.TryCreateExecution(dataFrame, out var execution, out var failure).ShouldBeTrue();
+        differentiableExpression.TryCreateExecution(dataFrame, out var execution).ShouldBeTrue();
 
-        failure.ShouldBeNull();
         using (execution)
         {
-            var outputs = new double[1];
-            execution.Evaluate([3.0], outputs);
-            outputs.ShouldBe([3.0]);
+            var outputs = new double[dataFrame.RowCount];
+            var jacobian = new double[dataFrame.RowCount];
+            execution.EvaluateWithJacobian([3.0], outputs, jacobian);
+            outputs.ShouldBe([3.0, 3.0]);
+            jacobian.ShouldBe([1.0, 1.0]);
         }
     }
 
