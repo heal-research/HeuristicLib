@@ -156,7 +156,7 @@ public sealed class PermutationTests
     public void Enumerator_Reset_RewindsEnumeration()
     {
         Permutation permutation = Permutation.Create(2, 1, 0);
-        using var enumerator = permutation.GetEnumerator();
+        using var enumerator = ((IEnumerable<int>)permutation).GetEnumerator();
 
         enumerator.MoveNext().ShouldBeTrue();
         enumerator.Current.ShouldBe(2);
@@ -344,36 +344,81 @@ public sealed class PermutationTests
     }
 
     [Fact]
-    public void SwapRandomElements_WhenIndicesDiffer_SwapsThem()
+    public void Swap_WhenIndicesDiffer_SwapsThemWithoutChangingOriginal()
+    {
+        var permutation = Permutation.Create(0, 1, 2, 3);
+
+        var result = permutation.Swap(1, 3);
+
+        result.ShouldBe(Permutation.Create(0, 3, 2, 1));
+        permutation.ShouldBe(Permutation.Create(0, 1, 2, 3));
+    }
+
+    [Fact]
+    public void Invert_ReversesInclusiveRangeWithoutChangingOriginal()
+    {
+        var permutation = Permutation.Create(0, 1, 2, 3, 4);
+
+        var result = permutation.Invert(1, 3);
+
+        result.ShouldBe(Permutation.Create(0, 3, 2, 1, 4));
+        permutation.ShouldBe(Permutation.Create(0, 1, 2, 3, 4));
+    }
+
+    [Fact]
+    public void InvertRandomRange_DrawsEndFromStartToCount()
+    {
+        var permutation = Permutation.Create(0, 1, 2, 3, 4);
+        var random = new StubRandomNumberGenerator(0.3, 0.9);
+
+        var result = permutation.InvertRandomRange(random);
+
+        result.ShouldBe(Permutation.Create(0, 4, 3, 2, 1));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void RandomTransformations_WhenPermutationIsTooShort_ReturnOriginalWithoutUsingRandom(int length)
+    {
+        var permutation = Permutation.Range(length);
+        var random = new ThrowingRandomNumberGenerator();
+
+        permutation.SwapRandomIndices(random).ShouldBeSameAs(permutation);
+        permutation.InvertRandomRange(random).ShouldBeSameAs(permutation);
+    }
+
+    [Fact]
+    public void SwapRandomIndices_WhenIndicesDiffer_SwapsThem()
     {
         Permutation permutation = Permutation.Create(0, 1, 2, 3);
         var rng = new StubRandomNumberGenerator(0.3, 0.9);
 
-        var result = Permutation.SwapRandomElements(permutation, rng);
+        var result = permutation.SwapRandomIndices(rng);
 
         result.ToArray().ShouldBe(new[] { 0, 3, 2, 1 });
         permutation.ToArray().ShouldBe(new[] { 0, 1, 2, 3 });
     }
 
     [Fact]
-    public void SwapRandomElements_WhenIndicesEqual_ReturnsEqualPermutation()
+    public void SwapRandomIndices_WhenIndicesEqual_ReturnsEqualPermutation()
     {
         Permutation permutation = Permutation.Create(0, 1, 2, 3);
         var rng = new StubRandomNumberGenerator(0.6, 0.6);
 
-        var result = Permutation.SwapRandomElements(permutation, rng);
+        var result = permutation.SwapRandomIndices(rng);
 
         result.ToArray().ShouldBe(new[] { 0, 1, 2, 3 });
         result.ShouldBe(permutation);
     }
 
     [Fact]
-    public void SwapRandomElements_ResultIsStillValidPermutation()
+    public void SwapRandomIndices_ResultIsStillValidPermutation()
     {
         Permutation permutation = Permutation.Create(3, 1, 0, 2);
         var rng = new StubRandomNumberGenerator(0.0, 0.6);
 
-        var result = Permutation.SwapRandomElements(permutation, rng);
+        var result = permutation.SwapRandomIndices(rng);
 
         result.Count.ShouldBe(4);
         result.OrderBy(x => x).ShouldBe(new[] { 0, 1, 2, 3 });
@@ -393,5 +438,14 @@ public sealed class PermutationTests
         public IRandomNumberGenerator Fork(ulong forkKey) => throw new NotSupportedException();
 
         public double NextDouble() => values.Count == 0 ? 0.0 : values.Dequeue();
+    }
+
+    private sealed class ThrowingRandomNumberGenerator : IRandomNumberGenerator
+    {
+        public int NextInt() => throw new InvalidOperationException();
+
+        public IRandomNumberGenerator Fork(ulong forkKey) => throw new InvalidOperationException();
+
+        public double NextDouble() => throw new InvalidOperationException();
     }
 }

@@ -73,6 +73,27 @@ public class BatchExecutionTests
     }
 
     [Fact]
+    public void StateCarryingOverloads_PreserveOutputOrder()
+    {
+        var sequential = BatchExecution.Sequential([3, 1, 2], 10, (value, _, offset) => value + offset, RandomNumberGenerator.Create(42));
+        var parallel = BatchExecution.Parallel([3, 1, 2], 10, (value, _, offset) => value + offset, RandomNumberGenerator.Create(42));
+
+        sequential.ShouldBe([13, 11, 12]);
+        parallel.ShouldBe(sequential);
+    }
+
+    [Fact]
+    public void StateCarryingRandomForks_DoNotDependOnConcurrency()
+    {
+        var inputs = Enumerable.Range(0, 20).ToArray();
+
+        var sequential = BatchExecution.Execute(inputs, 3, (value, random, factor) => value + (random.NextInt() * factor), RandomNumberGenerator.Create(42), ExecutionConcurrency.Sequential());
+        var concurrent = BatchExecution.Execute(inputs, 3, (value, random, factor) => value + (random.NextInt() * factor), RandomNumberGenerator.Create(42), ExecutionConcurrency.Concurrent(4));
+
+        concurrent.ShouldBe(sequential);
+    }
+
+    [Fact]
     public void EmptyInputs_ProduceEmptyOutputs()
     {
         Func<IRandomNumberGenerator, int> countOperation = _ => throw new InvalidOperationException();
@@ -82,6 +103,11 @@ public class BatchExecutionTests
         BatchExecution.Parallel(0, countOperation, RandomNumberGenerator.Create(42)).ShouldBeEmpty();
         BatchExecution.Sequential(Array.Empty<int>(), listOperation, RandomNumberGenerator.Create(42)).ShouldBeEmpty();
         BatchExecution.Parallel(Array.Empty<int>(), listOperation, RandomNumberGenerator.Create(42)).ShouldBeEmpty();
+
+        Func<int, IRandomNumberGenerator, int, int> statefulOperation = (_, _, _) => throw new InvalidOperationException();
+
+        BatchExecution.Sequential(Array.Empty<int>(), 0, statefulOperation, RandomNumberGenerator.Create(42)).ShouldBeEmpty();
+        BatchExecution.Parallel(Array.Empty<int>(), 0, statefulOperation, RandomNumberGenerator.Create(42)).ShouldBeEmpty();
     }
 
     [Fact]

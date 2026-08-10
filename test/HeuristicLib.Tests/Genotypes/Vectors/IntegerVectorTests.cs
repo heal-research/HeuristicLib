@@ -265,49 +265,81 @@ public sealed class IntegerVectorTests
     }
 
     [Fact]
-    public void AreCompatible_ReturnsTrue_ForSameLength()
+    public void AreBroadcastable_ReturnsTrue_ForSameLength()
     {
         IntegerVector a = IntegerVector.Create(1, 2);
         IntegerVector b = IntegerVector.Create(3, 4);
 
-        IntegerVector.AreCompatible(a, b).ShouldBeTrue();
+        IntegerVector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_ReturnsTrue_WhenLeftIsScalar()
+    public void AreBroadcastable_ReturnsTrue_WhenLeftIsScalar()
     {
         IntegerVector a = 1;
         IntegerVector b = IntegerVector.Create(3, 4, 5);
 
-        IntegerVector.AreCompatible(a, b).ShouldBeTrue();
+        IntegerVector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_ReturnsTrue_WhenRightIsScalar()
+    public void AreBroadcastable_ReturnsTrue_WhenRightIsScalar()
     {
         IntegerVector a = IntegerVector.Create(3, 4, 5);
         IntegerVector b = 1;
 
-        IntegerVector.AreCompatible(a, b).ShouldBeTrue();
+        IntegerVector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_ReturnsFalse_ForDifferentNonScalarLengths()
+    public void AreBroadcastable_ReturnsFalse_ForDifferentNonScalarLengths()
     {
         IntegerVector a = IntegerVector.Create(1, 2);
         IntegerVector b = IntegerVector.Create(3, 4, 5);
 
-        IntegerVector.AreCompatible(a, b).ShouldBeFalse();
+        IntegerVector.AreBroadcastable(a, b).ShouldBeFalse();
     }
 
     [Fact]
-    public void BroadcastLength_ReturnsMaxLength()
+    public void BroadcastLength_ReturnsNonScalarLength()
     {
         IntegerVector scalar = 1;
         IntegerVector vector = IntegerVector.Create(3, 4, 5);
 
         IntegerVector.BroadcastLength(scalar, vector).ShouldBe(3);
         IntegerVector.BroadcastLength(vector, scalar).ShouldBe(3);
+    }
+
+    [Fact]
+    public void BroadcastLength_ScalarAndEmptyVector_ReturnsZero()
+    {
+        IntegerVector scalar = 1;
+        var empty = IntegerVector.Create();
+
+        IntegerVector.BroadcastLength(scalar, empty).ShouldBe(0);
+        IntegerVector.BroadcastLength(empty, scalar).ShouldBe(0);
+        (scalar + empty).ShouldBeEmpty();
+        (empty + scalar).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void AreBroadcastable_VectorAndEnumerable_ReturnsFalse_WhenScalarPrecedesDifferentLengths()
+    {
+        IntegerVector scalar = 1;
+        var others = new[] { IntegerVector.Create(1, 2), IntegerVector.Create(3, 4, 5) };
+
+        IntegerVector.AreBroadcastable(scalar, others).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void BroadcastLength_VectorAndEnumerable_ReturnsCommonLengthOrThrows()
+    {
+        IntegerVector scalar = 1;
+        var compatible = new[] { IntegerVector.Create(1, 2, 3), (IntegerVector)2 };
+        var incompatible = new[] { IntegerVector.Create(1, 2), IntegerVector.Create(3, 4, 5) };
+
+        IntegerVector.BroadcastLength(scalar, compatible).ShouldBe(3);
+        Should.Throw<ArgumentException>(() => IntegerVector.BroadcastLength(scalar, incompatible));
     }
 
     [Fact]
@@ -411,6 +443,24 @@ public sealed class IntegerVectorTests
     }
 
     [Fact]
+    public void Clamp_EmptyInput_AcceptsEmptyAndScalarBounds()
+    {
+        var input = IntegerVector.Create();
+
+        var result = IntegerVector.Clamp(input, IntegerVector.Create(), 1);
+
+        result.ShouldBeSameAs(input);
+    }
+
+    [Fact]
+    public void Clamp_NonEmptyInput_RejectsEmptyBound()
+    {
+        var input = IntegerVector.Create(1, 2);
+
+        Should.Throw<ArgumentException>(() => IntegerVector.Clamp(input, IntegerVector.Create(), 3));
+    }
+
+    [Fact]
     public void ClampAt_UsesDimensionBounds()
     {
         IntegerVector input = IntegerVector.Create(-1, 2, 10);
@@ -495,6 +545,13 @@ public sealed class IntegerVectorTests
     }
 
     [Fact]
+    public void AreBroadcastableTo_AcceptsScalarsAndMatchingLengths()
+    {
+        IntegerVector.AreBroadcastableTo(3, IntegerVector.Create(1), IntegerVector.Create(1, 2, 3)).ShouldBeTrue();
+        IntegerVector.AreBroadcastableTo(3, IntegerVector.Create(1, 2)).ShouldBeFalse();
+    }
+
+    [Fact]
     public void CreateUniform_ReturnsVectorOfRequestedLength()
     {
         var rng = new StubRandomNumberGenerator(0.1, 0.2, 0.3);
@@ -531,6 +588,19 @@ public sealed class IntegerVectorTests
         var result = IntegerVector.CreateUniform(3, low, high, rng);
 
         result.ToArray().ShouldBe(new[] { 12, 22, 32 });
+    }
+
+    [Fact]
+    public void CreateUniform_CollapsesEqualAndReversedBoundsPerCoordinate()
+    {
+        var rng = new StubRandomNumberGenerator(0.5);
+
+        IntegerVector low = IntegerVector.Create(10, 20, 30);
+        IntegerVector high = IntegerVector.Create(10, 15, 32);
+
+        var result = IntegerVector.CreateUniform(3, low, high, rng);
+
+        result.ToArray().ShouldBe(new[] { 10, 20, 31 });
     }
 
     [Fact]

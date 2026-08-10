@@ -4,177 +4,95 @@ using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
 namespace HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 
-public record PolynomialMutator : SingleSolutionMutator<RealVector, RealVectorSearchSpace>
+public record PolynomialMutator : SingleCandidateMutator<RealVector, RealVectorSearchSpace>
 {
-    private readonly bool atLeastOnce;
-    private readonly double eta;
-
     public PolynomialMutator(double eta = 20, bool atLeastOnce = false)
     {
-        this.atLeastOnce = atLeastOnce;
-        this.eta = eta;
+        Eta = eta;
+        AtLeastOnce = atLeastOnce;
     }
 
-    private static bool[] mut_binomial(
-      int n,
-      double prob,
-      bool atLeastOnce,
-      IRandomNumberGenerator randomState)
+    public double Eta { get; init; }
+
+    public bool AtLeastOnce { get; init; }
+
+    public override RealVector MutateCandidate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) =>
+        Mutate(parent, random, searchSpace, Eta, AtLeastOnce);
+
+    public static RealVector Mutate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double eta, bool atLeastOnce)
     {
-        ArgumentNullException.ThrowIfNull(randomState);
-        // Create an n�m boolean matrix for mutations
-        var matrix = new bool[n];
+        if (candidate.Count != searchSpace.Length)
+            throw new ArgumentException("Candidate length must match the search space length.", nameof(candidate));
 
-        // Fill random mask (true with probability 'prob')
-        for (var i = 0; i < n; i++)
-        {
-            if (randomState.NextDouble() < prob)
-            {
-                matrix[i] = true;
-            }
-        }
-
-        if (atLeastOnce)
-        {
-            matrix = RowAtLeastOnceTrue(matrix, randomState);
-        }
-
-        return matrix;
+        return Mutate(candidate, random, searchSpace.Minimum, searchSpace.Maximum, eta, atLeastOnce);
     }
 
-    private static bool[] RowAtLeastOnceTrue(bool[] matrix, IRandomNumberGenerator randomState)
+    public static RealVector Mutate(RealVector candidate, IRandomNumberGenerator random, RealVector minimum, RealVector maximum, double eta, bool atLeastOnce)
     {
-        var n = matrix.Length;
-        var atLeastOnce = false;
-        for (var i = 0; i < n; i++)
-        {
-            if (!matrix[i])
-            {
-                continue;
-            }
+        if (!RealVector.AreBroadcastableTo(candidate.Count, minimum, maximum))
+            throw new ArgumentException("Minimum and maximum must each have length 1 or match the candidate length.");
 
-            atLeastOnce = true;
-            break;
-        }
+        if (candidate.Count == 0)
+            return candidate;
 
-        if (atLeastOnce)
-        {
-            return matrix;
-        }
+        var length = candidate.Count;
+        var mutationProbability = Math.Min(0.5, 1.0 / length);
+        var mutationMask = random.NextBools(length, mutationProbability);
+        if (atLeastOnce && !mutationMask.AsSpan().Contains(true))
+            mutationMask[random.NextInt(length)] = true;
 
-        var j1 = randomState.NextInt(n); // inclusive lower, exclusive upper
-        matrix[j1] = true;
-        return matrix;
-    }
-
-    public override RealVector Mutate(RealVector parent, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace)
-      => Mutate(parent, random, searchSpace, eta, atLeastOnce);
-
-    public static RealVector Mutate(
-      RealVector parent,
-      IRandomNumberGenerator random,
-      RealVectorSearchSpace searchSpace,
-      double eta,
-      bool atLeastOnce)
-      => Mutate(parent, random, eta, atLeastOnce, searchSpace.Minimum, searchSpace.Maximum);
-
-    public static RealVector Mutate(
-      RealVector parent,
-      IRandomNumberGenerator random,
-      double eta,
-      bool atLeastOnce,
-      RealVector minimum,
-      RealVector maximum)
-    {
-        var probVar = Math.Min(0.5, 1.0 / parent.Count);
-        var x = parent.ToArray(); // assume double[] (or expose as such)
-        var xl = minimum;
-        var xu = maximum;
-        var nVar = x.Length;
-
-        var xp = new double[nVar];
-        Array.Copy(x, xp, nVar);
-        var mut = mut_binomial(nVar, probVar, atLeastOnce, random);
-
-        // Do not mutate fixed variables (xl == xu)
-        for (var j = 0; j < nVar; j++)
+        for (var i = 0; i < length; i++)
         {
 #pragma warning disable S1244
-            if (xl[j % xl.Count] == xu[j % xu.Count])
+            if (minimum[i % minimum.Count] == maximum[i % maximum.Count])
 #pragma warning restore S1244
-            {
-                mut[j] = false;
-            }
+                mutationMask[i] = false;
         }
 
-        // If nothing mutates, still run the (cheap) repair for consistency and return
-        var any = false;
-        for (var j = 0; j < nVar; j++)
+        var result = candidate.ToArray();
+        if (!mutationMask.AsSpan().Contains(true))
+            return RealVector.Clamp(RealVector.FromOwnedArray(result), minimum, maximum);
+
+        var mutationExponent = 1.0 / (eta + 1.0);
+
+        for (var i = 0; i < length; i++)
         {
-            if (!mut[j])
-            {
+            if (!mutationMask[i])
                 continue;
-            }
 
-            any = true;
-            break;
-        }
+            var value = candidate[i];
+            var lowerBound = minimum[i % minimum.Count];
+            var upperBound = maximum[i % maximum.Count];
+            var range = upperBound - lowerBound;
 
-        if (!any)
-        // Very unlikely
-        {
-            return RealVector.Clamp(RealVector.FromOwnedArray(xp), xl, xu);
-        }
+            var distanceFromLowerBound = (value - lowerBound) / range;
+            var distanceFromUpperBound = (upperBound - value) / range;
 
-        var mutPow = 1.0 / (eta + 1.0);
+            var sample = random.NextDouble();
+            double mutationOffset;
 
-        for (var j = 0; j < nVar; j++)
-        {
-            if (!mut[j])
+            if (sample <= 0.5)
             {
-                continue;
-            }
-
-            var xj = x[j];
-            var lb = xl[j % xl.Count];
-            var ub = xu[j % xu.Count];
-            var denom = ub - lb;
-
-            var delta1 = (xj - lb) / denom;
-            var delta2 = (ub - xj) / denom;
-
-            var r = random.NextDouble();
-            double deltaQ;
-
-            if (r <= 0.5)
-            {
-                var xy = 1.0 - delta1;
-                var val = (2.0 * r) + ((1.0 - (2.0 * r)) * Math.Pow(xy, eta + 1.0));
-                deltaQ = Math.Pow(val, mutPow) - 1.0;
+                var distanceToBoundary = 1.0 - distanceFromLowerBound;
+                var distribution = (2.0 * sample) + ((1.0 - (2.0 * sample)) * Math.Pow(distanceToBoundary, eta + 1.0));
+                mutationOffset = Math.Pow(distribution, mutationExponent) - 1.0;
             }
             else
             {
-                var xy = 1.0 - delta2;
-                var val = (2.0 * (1.0 - r)) + (2.0 * (r - 0.5) * Math.Pow(xy, eta + 1.0));
-                deltaQ = 1.0 - Math.Pow(val, mutPow);
+                var distanceToBoundary = 1.0 - distanceFromUpperBound;
+                var distribution = (2.0 * (1.0 - sample)) + (2.0 * (sample - 0.5) * Math.Pow(distanceToBoundary, eta + 1.0));
+                mutationOffset = 1.0 - Math.Pow(distribution, mutationExponent);
             }
 
-            var y = xj + (deltaQ * denom);
+            var mutatedValue = value + (mutationOffset * range);
+            if (mutatedValue < lowerBound)
+                mutatedValue = lowerBound;
+            else if (mutatedValue > upperBound)
+                mutatedValue = upperBound;
 
-            // Clamp to [lb, ub] (floating-point drift)
-            if (y < lb)
-            {
-                y = lb;
-            }
-            else if (y > ub)
-            {
-                y = ub;
-            }
-
-            xp[j] = y;
+            result[i] = mutatedValue;
         }
 
-        // Final safety repair (very unlikely to do anything)
-        return RealVector.Clamp(RealVector.FromOwnedArray(xp), xl, xu);
+        return RealVector.Clamp(RealVector.FromOwnedArray(result), minimum, maximum);
     }
 }

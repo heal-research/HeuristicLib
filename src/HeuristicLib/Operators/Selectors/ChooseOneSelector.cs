@@ -45,7 +45,7 @@ public partial record ChooseOneSelector<TCandidate, TSearchSpace, TProblem>
         : MultiSelectorInstance<TCandidate, TSearchSpace, TProblem>(innerSelectors)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            InnerSelectors[dispatcher.ChooseOperator(random)].Select(population, objective, count, random, searchSpace, problem);
+            InnerSelectors[dispatcher.ChooseOperator(random, InnerSelectors.Length)].Select(population, objective, count, random, searchSpace, problem);
     }
 }
 

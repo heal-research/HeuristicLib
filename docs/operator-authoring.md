@@ -14,6 +14,47 @@ The same pattern exists for creators, crossovers, mutators, selectors, replacers
 
 The unprefixed role base is the common base of the three paths. Stateless and stateful bases derive from it. Derive directly from the unprefixed base when authoring an explicit execution instance.
 
+Some roles add a single-item base as a further stateless convenience, for operations that apply independently to each item of a batch: `SingleCandidateMutator<...>`, `SingleSolutionEvaluator<...>`, `SingleSolutionCrossover<...>` and `SingleSolutionCreator<...>`. Implement the single-item method for one item; the inherited batch-wise role operation handles deterministic per-item random forks and batching. Callers holding the specialized base may invoke the single-item method directly, while ordinary role consumers continue to use the batch role operation. A role gets such a base only when independent per-item application is a genuine shape for it, so Selector, Replacer, Interceptor and Terminator have no equivalent.
+
+A single-item base owns its batch operation and seals it. A subclass that replaced the batch operation would no longer be the single-item operator its type claims to be, and the single-item method it must still implement would become unreachable. Batching is a configuration decision instead: set the `Concurrency` property to run the per-item calls concurrently. Each item receives a random number generator forked from its batch position, so the result is identical for every concurrency setting and the choice is a performance decision rather than a semantic one. An operator that genuinely needs a different batch-wise operation derives from the stateless base directly, where the batch operation is the authoring surface.
+
+`SingleCandidateMutator` is the reference implementation of this rule. The evaluator, crossover and creator bases predate it: all three still expose an unsealed batch operation, and only the evaluator offers `Concurrency`. Align each with the rule above when its role is migrated rather than copying the older shape.
+
+## Choose an arity
+
+Each role base is available at three arities. Reduced arities exist so an author who needs neither the problem nor the search space does not have to name them.
+
+| Declared as | Operation receives | Use when |
+| ----------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
+| `SingleCandidateMutator<TCandidate, TSearchSpace, TProblem>` | parent, random, search space, problem | The operation depends on the problem |
+| `SingleCandidateMutator<TCandidate, TSearchSpace>` | parent, random, search space | The operation depends on the search space only |
+| `SingleCandidateMutator<TCandidate>` | parent, random | The operation depends on the candidate only |
+
+```csharp
+public record SwapMutator : SingleCandidateMutator<Permutation>
+{
+    public override Permutation MutateCandidate(Permutation parent, IRandomNumberGenerator random) =>
+        parent.SwapRandomIndices(random);
+}
+```
+
+Reduction changes what the author declares, not where the operator fits. Role contracts are contravariant in the search space and the problem, so the `SwapMutator` above is directly usable as an `IMutator<Permutation, PermutationSearchSpace, TravellingSalesmanProblem>`.
+
+The role contracts themselves exist only at the full arity. There is no `IMutator<Permutation>`, so a consumer, field or child property still names `IMutator<Permutation, ISearchSpace<Permutation>, IProblem<Permutation, ISearchSpace<Permutation>>>`. A reduced-arity interface would have to be implemented explicitly, which would make a hand-written role contract implementation second class; that trade is deliberately not taken.
+
+Wrapping and multi bases have **no** reduced arities. Their type arguments type the child slot rather than the operator's own inputs, so narrowing them widens what a child must satisfy: a `MultiMutator<Permutation>` would accept only mutators that work for every search space and every problem, and a problem-specific child could never be composed in. Leave `TSearchSpace` and `TProblem` open on a wrapping or multi type so they are inferred from the children.
+
+```csharp
+// Open type parameters: composes with universal and problem-specific children alike.
+public sealed record RetryingMutator<TCandidate, TSearchSpace, TProblem>(
+    IMutator<TCandidate, TSearchSpace, TProblem> ChildMutator)
+    : WrappingMutator<TCandidate, TSearchSpace, TProblem>(ChildMutator)
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
+```
+
+> Watch the last type argument. The stateful bases end in `TState`, so `StatefulMutator<TCandidate, TSearchSpace, TState>` and `StatefulMutator<TCandidate, TSearchSpace, TProblem>` have the same shape. Passing a problem where the state belongs compiles and silently produces a problem-agnostic operator whose state is a problem. `HLib0004` reports this.
+
 ## Stateless operators
 
 A stateless operator configuration also implements its operation logic. Its configuration values and referenced collections must remain unchanged during execution.
@@ -113,6 +154,8 @@ Wrapping and multi bases are shortcuts for common explicit execution topologies:
 
 These bases do not have separate stateless and stateful variants. Their purpose is already to coordinate an execution graph. Use the unprefixed role base when a wrapping or multi topology does not fit.
 
+Unlike the leaf authoring bases, these are available at the full arity only. See [Choose an arity](#choose-an-arity) for why narrowing a child slot is a restriction rather than a convenience.
+
 Composition helpers such as choosing one child, applying a transformation and running a pipeline are covered in [Operator composition](operator-composition.md).
 
 ## Configuration and execution rules
@@ -130,6 +173,7 @@ The `OperatorAuthoringAnalyzer` Roslyn analyzer assists with common mistakes acr
 
 - `HLib0002` reports execution graph dependencies exposed through stateful operator state.
 - `HLib0003` reports direct mutation of operator configuration members during operation logic.
+- `HLib0004` reports a framework contract type bound as the stateful state type argument, which is usually a reduced-arity mix-up.
 
 These diagnostics are guardrails, not a proof that every invariant is satisfied. They cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate.
 

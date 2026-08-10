@@ -54,6 +54,9 @@ public class PractitionerUsageSpecs
 
         RandomNumberGenerator.Create(2025).NextBools(3, probability: 0.0).ShouldBe([false, false, false]);
         RandomNumberGenerator.Create(2025).NextNormals(3, mu: 0.25, sigma: 0.0).ShouldBe([0.25, 0.25, 0.25]);
+        var randomValues = new double[3];
+        RandomNumberGenerator.Create(2025).NextDoubles(randomValues, low: -1, high: 1);
+        randomValues.All(x => x is >= -1 and < 1).ShouldBeTrue();
 
         var roundedVector = new RealVector(1.6, -2.8, 0.2).RoundToIntegerVector(new IntegerVector(-2), new IntegerVector(2));
         roundedVector.ShouldBe(new IntegerVector(2, -2, 0));
@@ -422,10 +425,10 @@ public class PractitionerUsageSpecs
         var counted = new CountingMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(mutator, counter, OperatorCountMetric.Candidates);
         var measured = mutator.MeasureMutatorDuration(duration);
 
-        counted.Mutator.ShouldBeSameAs(mutator);
+        counted.ChildMutator.ShouldBeSameAs(mutator);
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
-        measured.Mutator.ShouldBeSameAs(mutator);
+        measured.ChildMutator.ShouldBeSameAs(mutator);
         measured.Duration.ShouldBeSameAs(duration);
     }
 

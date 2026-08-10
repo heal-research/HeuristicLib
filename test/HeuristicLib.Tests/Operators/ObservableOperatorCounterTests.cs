@@ -78,6 +78,58 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void ObservableMutator_SnapshotsObservers()
+    {
+        var observer = new ActionMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
+        var observers = new List<IMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>> { observer };
+        var observable = new ObservableMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOneMutator(), observers);
+
+        observers.Clear();
+
+        observable.Observers.ShouldBe([observer]);
+    }
+
+    [Fact]
+    public void ObservableMutator_InvokesObserversInOrderWithOffspringAndParents()
+    {
+        var calls = new List<string>();
+        IReadOnlyList<int> observedOffspring = [];
+        IReadOnlyList<int> observedParents = [];
+        var problem = CreateProblem();
+
+        var mutator = new AddOneMutator().ObserveWith(
+            new ActionMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((offspring, parents, searchSpace, observedProblem) =>
+            {
+                calls.Add("first");
+                observedOffspring = offspring;
+                observedParents = parents;
+                searchSpace.ShouldBeSameAs(problem.SearchSpace);
+                observedProblem.ShouldBeSameAs(problem);
+            }),
+            new ActionMutatorObserver<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>((_, _, _, _) => calls.Add("second")));
+
+        var result = mutator.CreateExecutionInstance().Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+
+        calls.ShouldBe(["first", "second"]);
+        observedOffspring.ShouldBeSameAs(result);
+        observedOffspring.ShouldBe([2, 3, 4]);
+        observedParents.ShouldBe([1, 2, 3]);
+    }
+
+    [Fact]
+    public void ObservableMutator_DoesNotInvokeObserversWhenMutationThrows()
+    {
+        var observed = 0;
+        var instance = new ThrowingMutator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        observed.ShouldBe(0);
+    }
+
+    [Fact]
     public void CountMutatorCalls_IncrementsOncePerMutateCall()
     {
         var counter = new ObservationCounter();
@@ -108,6 +160,19 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void CountMutatorCalls_DoesNotIncrementWhenMutationThrows()
+    {
+        var counter = new ObservationCounter();
+        var instance = new ThrowingMutator().CountMutatorCalls(counter).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        counter.CurrentCount.ShouldBe(0);
+    }
+
+    [Fact]
     public void MeasureMutatorDuration_AddsElapsedMutatorExecutionDuration()
     {
         var duration = new ObservationDuration();
@@ -122,6 +187,79 @@ public class ObservableOperatorCounterTests
         instance.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
+    public void MeasureMutatorDuration_RecordsElapsedDurationWhenMutationThrows()
+    {
+        var duration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var mutator = new ThrowingMutator().MeasureMutatorDuration(duration, timeProvider);
+        var instance = mutator.CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+    }
+
+    [Fact]
+    public void NestedDurationMeasuringMutators_ForwardTheSameInvocationDataAndInvokeTheChildMutatorOnce()
+    {
+        var calls = 0;
+        IReadOnlyList<int> parents = [1, 2, 3];
+        var random = RandomNumberGenerator.Create(1);
+        var problem = CreateProblem();
+        var innerDuration = new ObservationDuration();
+        var outerDuration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var childMutator = new CallbackMutator((actualParents, actualRandom, actualSearchSpace, actualProblem) =>
+        {
+            calls++;
+            actualParents.ShouldBeSameAs(parents);
+            actualRandom.ShouldBeSameAs(random);
+            actualSearchSpace.ShouldBeSameAs(problem.SearchSpace);
+            actualProblem.ShouldBeSameAs(problem);
+            return actualParents;
+        });
+        var mutator = childMutator
+            .MeasureMutatorDuration(innerDuration, timeProvider)
+            .MeasureMutatorDuration(outerDuration, timeProvider);
+        var instance = mutator.CreateExecutionInstance();
+
+        var result = instance.Mutate(parents, random, problem.SearchSpace, problem);
+
+        result.ShouldBeSameAs(parents);
+        calls.ShouldBe(1);
+        innerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        outerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(9));
+    }
+
+    [Fact]
+    public void NestedDurationMeasuringMutators_RecordEveryDurationWhenTheChildMutatorThrows()
+    {
+        var calls = 0;
+        var problem = CreateProblem();
+        var innerDuration = new ObservationDuration();
+        var outerDuration = new ObservationDuration();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var childMutator = new CallbackMutator((_, _, _, _) =>
+        {
+            calls++;
+            throw new InvalidOperationException();
+        });
+        var mutator = childMutator
+            .MeasureMutatorDuration(innerDuration, timeProvider)
+            .MeasureMutatorDuration(outerDuration, timeProvider);
+        var instance = mutator.CreateExecutionInstance();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        calls.ShouldBe(1);
+        innerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        outerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(9));
     }
 
     [Fact]
@@ -424,7 +562,7 @@ public class ObservableOperatorCounterTests
     }
 
     private sealed record AddOneMutator
-      : StatelessMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        : StatelessMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<int> Mutate(
             IReadOnlyList<int> parents,
@@ -433,6 +571,42 @@ public class ObservableOperatorCounterTests
             FuncProblem<int, DummySearchSpace<int>> problem)
         {
             return parents.Select(parent => parent + 1).ToArray();
+        }
+    }
+
+    private sealed record ThrowingMutator
+        : StatelessMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override IReadOnlyList<int> Mutate(
+            IReadOnlyList<int> parents,
+            IRandomNumberGenerator random,
+            DummySearchSpace<int> searchSpace,
+            FuncProblem<int, DummySearchSpace<int>> problem) =>
+            throw new InvalidOperationException();
+    }
+
+    private delegate IReadOnlyList<int> MutateCallback(
+        IReadOnlyList<int> parents,
+        IRandomNumberGenerator random,
+        DummySearchSpace<int> searchSpace,
+        FuncProblem<int, DummySearchSpace<int>> problem);
+
+    private sealed class CallbackMutator(MutateCallback callback)
+        : IMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
+            ExecutionInstanceRegistry instanceRegistry) =>
+            new Instance(callback);
+
+        private sealed class Instance(MutateCallback callback)
+            : IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        {
+            public IReadOnlyList<int> Mutate(
+                IReadOnlyList<int> parents,
+                IRandomNumberGenerator random,
+                DummySearchSpace<int> searchSpace,
+                FuncProblem<int, DummySearchSpace<int>> problem) =>
+                callback(parents, random, searchSpace, problem);
         }
     }
 

@@ -37,12 +37,12 @@ public class MetaOptimizationTests
         //build meta problem (test some mutators
         var b = new MetaOptimizationProblemExamples.MetaOptimizationSearchSpaceBuilder();
         var mutatorExtractor = b.AddChoiceParameter(
-          new Mutator<RealVector, RealVectorSearchSpace>[] {
-      new GaussianMutator(0.5, 0.5),
-      new GaussianMutator(0.5, 1),
-      new PolynomialMutator(),
-      new PolynomialMutator(atLeastOnce: true)
-        });
+            new Mutator<RealVector, RealVectorSearchSpace>[] {
+                new GaussianMutator(0.5, 0.5),
+                new GaussianMutator(0.5, 1),
+                new PolynomialMutator(),
+                new PolynomialMutator(atLeastOnce: true)
+            });
         var metaSpace = b.Build();
         var metaProblem = problem.AsMetaProblem(metaSpace, x =>
         {
@@ -57,7 +57,7 @@ public class MetaOptimizationTests
             new Operators.Creators.IntegerVectorCreators.UniformDistributedCreator()), //operator name clash ...
           mutator: metaSpace.CombineMutator(
             new PolynomialMutator(),
-            new UniformOnePositionManipulator()));
+            new UniformOnePositionMutator()));
         hc.BatchSize = 4;
         hc.Evaluator = hc.Evaluator
                          .AsRepeated(11, objectives => objectives.Median(problem.Objective))

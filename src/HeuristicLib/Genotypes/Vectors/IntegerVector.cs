@@ -1,47 +1,26 @@
-using System.Collections;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
 [CollectionBuilder(typeof(IntegerVectorBuilder), nameof(IntegerVectorBuilder.Create))]
-public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector>
+public sealed class IntegerVector : Vector<int>, IEquatable<IntegerVector>
 {
-    private readonly int[] elements;
+    public IntegerVector(params ImmutableArray<int> elements)
+        : base(elements)
+    { }
 
-    public IntegerVector(params IEnumerable<int> elements) : this(elements.ToArray(), takeOwnership: true) { }
-
-    private IntegerVector(int[] elements, bool takeOwnership)
-      => this.elements = takeOwnership ? elements : elements.ToArray();
-
-    public int Count => elements.Length;
-
-    public int this[int index] => elements[index];
-
-    public int this[Index index] => elements[index];
-
-    public IEnumerator<int> GetEnumerator() => ((IEnumerable<int>)elements).GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => elements.GetEnumerator();
+    public IntegerVector(IEnumerable<int> elements)
+        : base(elements)
+    { }
 
     public bool Equals(IntegerVector? other) =>
-      other is not null && (ReferenceEquals(this, other) || elements.SequenceEqual(other.elements));
+      other is not null && (ReferenceEquals(this, other) || HasSameElements(other));
 
     public override bool Equals(object? obj) =>
       obj is IntegerVector other && Equals(other);
 
-    public override int GetHashCode()
-    {
-        var hash = new HashCode();
-        foreach (var element in elements)
-        {
-            hash.Add(element);
-        }
-
-        return hash.ToHashCode();
-    }
-
-    public override string ToString() => $"[{string.Join(", ", elements)}]";
+    public override int GetHashCode() => GetElementsHashCode();
 
     public RealVector ToRealVector() => ToRealVector(this);
 
@@ -55,7 +34,7 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static implicit operator RealVector(IntegerVector integerVector) => ToRealVector(integerVector);
 
-    public static IntegerVector Create(params int[] elements) => new(elements, takeOwnership: false);
+    public static IntegerVector Create(params ImmutableArray<int> elements) => new(elements);
 
     public static IntegerVector Create(IEnumerable<int> elements) => new(elements);
 
@@ -63,7 +42,7 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
     /// Creates a vector backed by <paramref name="elements"/> without copying it.
     /// The caller transfers ownership of the array and must not mutate it after this method returns.
     /// </summary>
-    public static IntegerVector FromOwnedArray(int[] elements) => new(elements, takeOwnership: true);
+    public static IntegerVector FromOwnedArray(int[] elements) => new(TakeOwnership(elements));
 
     public static IntegerVector CreateUniform(int length, IntegerVector low, IntegerVector high, IRandomNumberGenerator random)
       => random.NextIntegerVectorUniform(low, high, length);
@@ -88,9 +67,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static IntegerVector Add(IntegerVector a, IntegerVector b)
     {
-        if (!AreCompatible(a, b))
-            throw new ArgumentException("Vectors must be of the same length or one of length one");
-
         var length = BroadcastLength(a, b);
         var result = new int[length];
         for (var i = 0; i < length; i++)
@@ -105,9 +81,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static IntegerVector Subtract(IntegerVector a, IntegerVector b)
     {
-        if (!AreCompatible(a, b))
-            throw new ArgumentException("Vectors must be of the same length or one of length one");
-
         var length = BroadcastLength(a, b);
         var result = new int[length];
         for (var i = 0; i < length; i++)
@@ -122,9 +95,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static IntegerVector Multiply(IntegerVector a, IntegerVector b)
     {
-        if (!AreCompatible(a, b))
-            throw new ArgumentException("Vectors must be of the same length or one of length one");
-
         var length = BroadcastLength(a, b);
         var result = new int[length];
         for (var i = 0; i < length; i++)
@@ -139,9 +109,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static IntegerVector Divide(IntegerVector a, IntegerVector b)
     {
-        if (!AreCompatible(a, b))
-            throw new ArgumentException("Vectors must be of the same length or one of length one");
-
         var length = BroadcastLength(a, b);
         var result = new int[length];
         for (var i = 0; i < length; i++)
@@ -194,10 +161,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
         return Math.Clamp(value, lower, upper);
     }
 
-    public static bool AreCompatible(IntegerVector a, IntegerVector b) => a.Count == b.Count || a.Count == 1 || b.Count == 1;
-
-    public static int BroadcastLength(IntegerVector a, IntegerVector b) => Math.Max(a.Count, b.Count);
-
     public static IntegerVector operator +(IntegerVector a, IntegerVector b) => Add(a, b);
 
     public static IntegerVector operator -(IntegerVector a, IntegerVector b) => Subtract(a, b);
@@ -208,8 +171,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static BoolVector operator >(IntegerVector a, IntegerVector b)
     {
-        AssertComparable(a, b);
-
         var length = BroadcastLength(a, b);
         var result = new bool[length];
 
@@ -225,8 +186,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static BoolVector operator <(IntegerVector a, IntegerVector b)
     {
-        AssertComparable(a, b);
-
         var length = BroadcastLength(a, b);
         var result = new bool[length];
 
@@ -242,8 +201,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static BoolVector operator >=(IntegerVector a, IntegerVector b)
     {
-        AssertComparable(a, b);
-
         var length = BroadcastLength(a, b);
         var result = new bool[length];
 
@@ -259,8 +216,6 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static BoolVector operator <=(IntegerVector a, IntegerVector b)
     {
-        AssertComparable(a, b);
-
         var length = BroadcastLength(a, b);
         var result = new bool[length];
 
@@ -291,21 +246,23 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
 
     public static bool operator !=(IntegerVector? a, IntegerVector? b) => !(a == b);
 
-    private static void AssertComparable(IntegerVector a, IntegerVector b)
-    {
-        var test = AreCompatible(a, b);
-        if (!test)
-            throw new ArgumentException($"Integer vectors {a} and {b} are not compatible");
-    }
-
     private static void ValidateBounds(IntegerVector? minimum, IntegerVector? maximum, int? length = null, int? dimension = null)
     {
         if (length is not null)
         {
-            if (minimum is not null && minimum.Count != 1 && minimum.Count != length)
-                throw new ArgumentException($"Min vector must be of length 1 or match input length ({length})", nameof(minimum));
-            if (maximum is not null && maximum.Count != 1 && maximum.Count != length)
-                throw new ArgumentException($"Max vector must be of length 1 or match input length ({length})", nameof(maximum));
+            if (minimum is not null && maximum is not null)
+            {
+                if (!AreBroadcastableTo(length.Value, minimum, maximum))
+                    throw new ArgumentException($"Bounds must be of length 1 or match input length ({length}).");
+            }
+            else if (minimum is not null && !AreBroadcastableTo(length.Value, minimum))
+            {
+                throw new ArgumentException($"Min vector must be of length 1 or match input length ({length}).", nameof(minimum));
+            }
+            else if (maximum is not null && !AreBroadcastableTo(length.Value, maximum))
+            {
+                throw new ArgumentException($"Max vector must be of length 1 or match input length ({length}).", nameof(maximum));
+            }
         }
 
         if (dimension is not null)
@@ -322,7 +279,7 @@ public sealed class IntegerVector : IReadOnlyList<int>, IEquatable<IntegerVector
         if (minimum is null || maximum is null)
             return;
 
-        var broadcastLength = dimension is not null ? 1 : Math.Max(minimum.Count, maximum.Count);
+        var broadcastLength = dimension is not null ? 1 : BroadcastLength(minimum, maximum);
         for (var i = 0; i < broadcastLength; i++)
         {
             var index = dimension ?? i;

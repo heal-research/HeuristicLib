@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Random;
@@ -7,64 +6,37 @@ namespace HEAL.HeuristicLib.Genotypes.Vectors;
 
 [CollectionBuilder(typeof(RealVectorBuilder), nameof(RealVectorBuilder.Create))]
 [SuppressMessage("Blocker Code Smell", "S3877:Exceptions should not be thrown from unexpected methods")]
-public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
+public sealed class RealVector : Vector<double>, IEquatable<RealVector>
 {
-    private readonly double[] elements;
-
     private const double IntegerBoundaryTolerance = 1e-12;
 
-    public RealVector(params IEnumerable<double> elements) : this(elements.ToArray(), takeOwnership: true) { }
+    public RealVector(params ImmutableArray<double> elements)
+        : base(elements) { }
 
-    private RealVector(double[] elements, bool takeOwnership)
-      => this.elements = takeOwnership ? elements : elements.ToArray();
-
-    public double this[Index index] => elements[index];
+    public RealVector(IEnumerable<double> elements)
+        : base(elements) { }
 
     // public static implicit operator RealVector(IntegerVector intVector) => new RealVector(intVector);
-
-    public double this[int index] => elements[index];
-
-    public int Count => elements.Length;
-
-    public IEnumerator<double> GetEnumerator() => ((IEnumerable<double>)elements).GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => elements.GetEnumerator();
-
-    public bool Contains(double value) => elements.Contains(value);
 
     public bool Equals(RealVector? other)
     {
         if (other is null)
-        {
             return false;
-        }
 
-        return ReferenceEquals(this, other)
-               || elements.SequenceEqual(other.elements);
+        return ReferenceEquals(this, other) || HasSameElements(other);
     }
 
     public override bool Equals(object? obj) => obj is RealVector other && Equals(other);
 
-    public override int GetHashCode()
-    {
-        var hash = new HashCode();
-        foreach (var element in elements)
-        {
-            hash.Add(element);
-        }
-
-        return hash.ToHashCode();
-    }
-
-    public override string ToString() => $"[{string.Join(", ", elements)}]";
+    public override int GetHashCode() => GetElementsHashCode();
 
     public double Dot(RealVector other)
     {
         var sum = 0.0;
-        for (var i = 0; i < elements.Length; i++)
+        for (var i = 0; i < Elements.Length; i++)
         {
-            var d1 = elements[i];
-            var d2 = other.elements[i];
+            var d1 = Elements[i];
+            var d2 = other.Elements[i];
             sum += d1 * d2;
         }
 
@@ -81,9 +53,9 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
     public double Norm()
     {
         var sumSquares = 0.0;
-        for (var i = 0; i < elements.Length; i++)
+        for (var i = 0; i < Elements.Length; i++)
         {
-            var d1 = elements[i];
+            var d1 = Elements[i];
             sumSquares += d1 * d1;
         }
 
@@ -126,10 +98,10 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public IntegerVector AsIntegerVector()
     {
-        var iElements = new int[elements.Length];
-        for (int i = 0; i < elements.Length; i++)
+        var iElements = new int[Elements.Length];
+        for (int i = 0; i < Elements.Length; i++)
         {
-            iElements[i] = (int)Math.Round(elements[i]);
+            iElements[i] = (int)Math.Round(Elements[i]);
         }
 
         return IntegerVector.FromOwnedArray(iElements);
@@ -137,7 +109,7 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static implicit operator RealVector(double value) => new(value);
 
-    public static RealVector Create(params double[] elements) => new(elements, takeOwnership: false);
+    public static RealVector Create(params ImmutableArray<double> elements) => new(elements);
 
     public static RealVector Create(IEnumerable<double> elements) => new(elements);
 
@@ -145,9 +117,14 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
     /// Creates a vector backed by <paramref name="elements"/> without copying it.
     /// The caller transfers ownership of the array and must not mutate it after this method returns.
     /// </summary>
-    public static RealVector FromOwnedArray(double[] elements) => new(elements, takeOwnership: true);
+    public static RealVector FromOwnedArray(double[] elements) => new(TakeOwnership(elements));
 
-    public static RealVector Repeat(double value, int count) => new(Enumerable.Repeat(value, count));
+    public static RealVector Repeat(double value, int count)
+    {
+        var elements = new double[count];
+        Array.Fill(elements, value);
+        return FromOwnedArray(elements);
+    }
 
     public static RealVector CreateNormal(int length, RealVector mean, RealVector std, IRandomNumberGenerator random)
       => random.NextRealVectorNormal(mean, std, length);
@@ -157,9 +134,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static RealVector Add(RealVector a, RealVector b)
     {
-        if (!AreCompatible(a, b))
-            throw new ArgumentException("Vectors must be of the same length or one of length one");
-
         var length = BroadcastLength(a, b);
         var result = new double[length];
         for (var i = 0; i < length; i++)
@@ -174,9 +148,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static RealVector Subtract(RealVector a, RealVector b)
     {
-        if (!AreCompatible(a, b))
-            throw new ArgumentException("Vectors must be of the same length or one of length one");
-
         var length = BroadcastLength(a, b);
         var result = new double[length];
         for (var i = 0; i < length; i++)
@@ -191,9 +162,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static RealVector Multiply(RealVector a, RealVector b)
     {
-        if (!AreCompatible(a, b))
-            throw new ArgumentException("Vectors must be of the same length or one of length one");
-
         var length = BroadcastLength(a, b);
         var result = new double[length];
         for (var i = 0; i < length; i++)
@@ -208,9 +176,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static RealVector Divide(RealVector a, RealVector b)
     {
-        if (!AreCompatible(a, b))
-            throw new ArgumentException("Vectors must be of the same length or one of length one");
-
         var length = BroadcastLength(a, b);
         var result = new double[length];
         for (var i = 0; i < length; i++)
@@ -228,20 +193,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
     public static RealVector operator *(RealVector a, RealVector b) => Multiply(a, b);
     public static RealVector operator /(RealVector a, RealVector b) => Divide(a, b);
 
-    public static bool AreCompatible(RealVector a, RealVector b) => a.Count == b.Count || a.Count == 1 || b.Count == 1;
-
-    public static bool AreCompatible(RealVector vector, params IEnumerable<RealVector> others) => others.All(v => AreCompatible(vector, v));
-
-    public static bool AreCompatible(int length, params IEnumerable<RealVector> vectors) => vectors.All(v => v.Count == length || v.Count == 1);
-
-    public static int BroadcastLength(RealVector a, RealVector b) => Math.Max(a.Count, b.Count);
-
-    public static int BroadcastLength(RealVector vector, params IReadOnlyCollection<RealVector> others)
-    {
-        ArgumentNullException.ThrowIfNull(others);
-        return !AreCompatible(vector, others) ? throw new ArgumentException("Vectors must be compatible for broadcasting") : others.Append(vector).Max(v => v.Count);
-    }
-
     public static RealVector Sqrt(RealVector vector) => new(vector.Select(Math.Sqrt));
 
     public static RealVector Log(RealVector vector) => new(vector.Select(v => Math.Log(v)));
@@ -256,23 +207,24 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
         }
 
         var n = input.Count;
-        var values = input.elements;
+        var values = input.Elements;
 
-        var minIsScalar = min is null || min.Count <= 1;
-        var maxIsScalar = max is null || max.Count <= 1;
+        var minIsScalar = min is null || min.Count == 1;
+        var maxIsScalar = max is null || max.Count == 1;
 
-        if (!minIsScalar && min!.Count != n)
+        if (min is not null && max is not null)
         {
-            throw new ArgumentException($"Min vector must be of length 1 or match input length ({n})");
+            if (!AreBroadcastableTo(n, min, max))
+                throw new ArgumentException($"Bounds must be of length 1 or match input length ({n}).");
         }
-
-        if (!maxIsScalar && max!.Count != n)
+        else if (min is not null && !AreBroadcastableTo(n, min))
         {
-            throw new ArgumentException($"Max vector must be of length 1 or match input length ({n})");
+            throw new ArgumentException($"Min vector must be of length 1 or match input length ({n}).", nameof(min));
         }
-
-        var minVals = min?.elements;
-        var maxVals = max?.elements;
+        else if (max is not null && !AreBroadcastableTo(n, max))
+        {
+            throw new ArgumentException($"Max vector must be of length 1 or match input length ({n}).", nameof(max));
+        }
 
         var minScalarVal = min?.Count == 1 ? min[0] : double.NegativeInfinity;
         var maxScalarVal = max?.Count == 1 ? max[0] : double.PositiveInfinity;
@@ -282,8 +234,8 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
         for (var i = 0; i < n; i++)
         {
             var v = values[i];
-            var lo = minIsScalar ? minScalarVal : minVals![i];
-            var hi = maxIsScalar ? maxScalarVal : maxVals![i];
+            var lo = minIsScalar ? minScalarVal : min![i];
+            var hi = maxIsScalar ? maxScalarVal : max![i];
 
             var clamped = v;
             var changed = false;
@@ -307,7 +259,7 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
             else if (changed)
             {
                 result = new double[n];
-                Array.Copy(values, 0, result, 0, i);
+                values.AsSpan(0, i).CopyTo(result);
                 result[i] = clamped;
             }
         }
@@ -464,6 +416,8 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static int RoundToInteger(double value, int minimum, int maximum)
     {
+        if (double.IsNaN(value))
+            return Math.Clamp(0, minimum, maximum);
         if (value <= minimum)
             return minimum;
         if (value >= maximum)
@@ -494,10 +448,19 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
     {
         if (length is not null)
         {
-            if (minimum is not null && minimum.Count != 1 && minimum.Count != length)
-                throw new ArgumentException($"Min vector must be of length 1 or match input length ({length})", nameof(minimum));
-            if (maximum is not null && maximum.Count != 1 && maximum.Count != length)
-                throw new ArgumentException($"Max vector must be of length 1 or match input length ({length})", nameof(maximum));
+            if (minimum is not null && maximum is not null)
+            {
+                if (!AreBroadcastableTo(length.Value, minimum, maximum))
+                    throw new ArgumentException($"Bounds must be of length 1 or match input length ({length}).");
+            }
+            else if (minimum is not null && !AreBroadcastableTo(length.Value, minimum))
+            {
+                throw new ArgumentException($"Min vector must be of length 1 or match input length ({length}).", nameof(minimum));
+            }
+            else if (maximum is not null && !AreBroadcastableTo(length.Value, maximum))
+            {
+                throw new ArgumentException($"Max vector must be of length 1 or match input length ({length}).", nameof(maximum));
+            }
         }
 
         if (dimension is not null)
@@ -514,7 +477,7 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
         if (minimum is null || maximum is null)
             return;
 
-        var broadcastLength = dimension is not null ? 1 : Math.Max(minimum.Count, maximum.Count);
+        var broadcastLength = dimension is not null ? 1 : BroadcastLength(minimum, maximum);
         for (var i = 0; i < broadcastLength; i++)
         {
             var index = dimension ?? i;
@@ -527,13 +490,8 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     private static void ValidateBounds(IntegerVector minimum, IntegerVector maximum, int? length = null, int? dimension = null)
     {
-        if (length is not null)
-        {
-            if (minimum.Count != 1 && minimum.Count != length)
-                throw new ArgumentException("Minimum vector must be of length 1 or match input length.", nameof(minimum));
-            if (maximum.Count != 1 && maximum.Count != length)
-                throw new ArgumentException("Maximum vector must be of length 1 or match input length.", nameof(maximum));
-        }
+        if (length is not null && !AreBroadcastableTo(length.Value, minimum, maximum))
+            throw new ArgumentException("Bounds must be of length 1 or match input length.");
 
         if (dimension is not null)
         {
@@ -546,7 +504,7 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
                 throw new ArgumentOutOfRangeException(nameof(dimension), "Dimension must be within the maximum bounds vector or maximum must be scalar.");
         }
 
-        var broadcastLength = dimension is not null ? 1 : Math.Max(minimum.Count, maximum.Count);
+        var broadcastLength = dimension is not null ? 1 : BroadcastLength(minimum, maximum);
         for (var i = 0; i < broadcastLength; i++)
         {
             var index = dimension ?? i;
@@ -559,11 +517,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static BoolVector operator >(RealVector a, RealVector b)
     {
-        if (!AreCompatible(a, b))
-        {
-            throw new ArgumentException("Vectors must be compatible for comparison");
-        }
-
         var length = BroadcastLength(a, b);
         var result = new bool[length];
 
@@ -579,11 +532,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static BoolVector operator <(RealVector a, RealVector b)
     {
-        if (!AreCompatible(a, b))
-        {
-            throw new ArgumentException("Vectors must be compatible for comparison");
-        }
-
         var length = BroadcastLength(a, b);
         var result = new bool[length];
 
@@ -599,11 +547,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static BoolVector operator >=(RealVector a, RealVector b)
     {
-        if (!AreCompatible(a, b))
-        {
-            throw new ArgumentException("Vectors must be compatible for comparison");
-        }
-
         var length = BroadcastLength(a, b);
         var result = new bool[length];
 
@@ -619,11 +562,6 @@ public sealed class RealVector : IReadOnlyList<double>, IEquatable<RealVector>
 
     public static BoolVector operator <=(RealVector a, RealVector b)
     {
-        if (!AreCompatible(a, b))
-        {
-            throw new ArgumentException("Vectors must be compatible for comparison");
-        }
-
         var length = BroadcastLength(a, b);
         var result = new bool[length];
 

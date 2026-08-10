@@ -67,17 +67,15 @@ public class IntegerVectorSearchSpaceTests
     }
 
     [Fact]
-    public void Constructor_Throws_WhenMinimumIsGreaterThanMaximum()
+    public void Constructor_AllowsMinimumGreaterThanMaximum()
     {
-        Should.Throw<ArgumentException>(() =>
-        {
-            int[] values = [0, 5, 0];
-            int[] values1 = [10, 4, 10];
-            return new IntegerVectorSearchSpace(
-              Length: 3,
-              Minimum: IntegerVector.Create(values),
-              Maximum: IntegerVector.Create(values1));
-        });
+        var space = new IntegerVectorSearchSpace(
+          Length: 3,
+          Minimum: IntegerVector.Create(0, 5, 0),
+          Maximum: IntegerVector.Create(10, 4, 10));
+
+        space.Minimum.ShouldBe(IntegerVector.Create(0, 5, 0));
+        space.Maximum.ShouldBe(IntegerVector.Create(10, 4, 10));
     }
 
     [Fact]

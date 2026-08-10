@@ -11,24 +11,25 @@ public abstract partial record MultiMutator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    [OrderedEquality]
-    protected ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> InnerMutators { get; }
-
-    protected MultiMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> innerMutators)
+    protected MultiMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators)
     {
-        InnerMutators = innerMutators.ToImmutableArray();
+        var immutableChildMutators = childMutators.ToImmutableArray();
+        ChildMutators = immutableChildMutators.IsDefault ? [] : immutableChildMutators;
     }
 
-    protected sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
-        CreateMutatorInstance([.. InnerMutators.Select(registry.Resolve)]);
+    [OrderedEquality]
+    public ImmutableArray<IMutator<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; }
 
-    protected abstract MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateMutatorInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators);
+    public sealed override IMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateExecutionInstance([.. ChildMutators.Select(instanceRegistry.Resolve)]);
+
+    protected abstract MultiMutatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators);
 }
 
-public abstract class MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> innerMutators)
+public abstract class MultiMutatorInstance<TCandidate, TSearchSpace, TProblem>(ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> childMutators)
     : MutatorInstance<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> InnerMutators { get; } = innerMutators;
+    protected ImmutableArray<IMutatorInstance<TCandidate, TSearchSpace, TProblem>> ChildMutators { get; } = childMutators;
 }

@@ -44,6 +44,41 @@ public sealed class RealVectorTests
     }
 
     [Fact]
+    public void All_ReturnsWhetherEveryElementMatchesAndStopsAtFirstFailure()
+    {
+        var vector = RealVector.Create(1.0, 2.0, -1.0, 4.0);
+        var visited = 0;
+
+        var result = vector.All(value =>
+        {
+            visited++;
+            return value >= 0;
+        });
+
+        result.ShouldBeFalse();
+        visited.ShouldBe(3);
+    }
+
+    [Fact]
+    public void All_EmptyVector_ReturnsTrue()
+    {
+        RealVector.Create().All(static _ => false).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void CreateUniform_CollapsesEqualAndReversedBoundsPerCoordinate()
+    {
+        var random = new StubRandomNumberGenerator([0.5]);
+
+        RealVector low = RealVector.Create(10, 20, 30);
+        RealVector high = RealVector.Create(10, 15, 32);
+
+        var result = RealVector.CreateUniform(3, low, high, random);
+
+        result.ShouldBe(RealVector.Create(10, 20, 31));
+    }
+
+    [Fact]
     public void Equals_SameReference_ReturnsTrue()
     {
         RealVector v = RealVector.Create(1.0, 2.0, 3.0);
@@ -290,41 +325,53 @@ public sealed class RealVectorTests
     }
 
     [Fact]
-    public void AreCompatible_ReturnsTrue_ForSameLength()
+    public void AreBroadcastable_ReturnsTrue_ForSameLength()
     {
         RealVector a = RealVector.Create(1.0, 2.0);
         RealVector b = RealVector.Create(3.0, 4.0);
 
-        RealVector.AreCompatible(a, b).ShouldBeTrue();
+        RealVector.AreBroadcastable(a, b).ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_ReturnsTrue_WhenOneIsScalar()
+    public void AreBroadcastable_ReturnsTrue_WhenOneIsScalar()
     {
         RealVector scalar = 1.0;
         RealVector vector = RealVector.Create(3.0, 4.0);
 
-        RealVector.AreCompatible(scalar, vector).ShouldBeTrue();
-        RealVector.AreCompatible(vector, scalar).ShouldBeTrue();
+        RealVector.AreBroadcastable(scalar, vector).ShouldBeTrue();
+        RealVector.AreBroadcastable(vector, scalar).ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_ReturnsFalse_ForDifferentNonScalarLengths()
+    public void AreBroadcastable_ReturnsFalse_ForDifferentNonScalarLengths()
     {
         RealVector a = RealVector.Create(1.0, 2.0);
         RealVector b = RealVector.Create(3.0, 4.0, 5.0);
 
-        RealVector.AreCompatible(a, b).ShouldBeFalse();
+        RealVector.AreBroadcastable(a, b).ShouldBeFalse();
     }
 
     [Fact]
-    public void BroadcastLength_ReturnsMaxLength()
+    public void BroadcastLength_ReturnsNonScalarLength()
     {
         RealVector scalar = 1.0;
         RealVector vector = RealVector.Create(3.0, 4.0, 5.0);
 
         RealVector.BroadcastLength(scalar, vector).ShouldBe(3);
         RealVector.BroadcastLength(vector, scalar).ShouldBe(3);
+    }
+
+    [Fact]
+    public void BroadcastLength_ScalarAndEmptyVector_ReturnsZero()
+    {
+        RealVector scalar = 1.0;
+        var empty = RealVector.Create();
+
+        RealVector.BroadcastLength(scalar, empty).ShouldBe(0);
+        RealVector.BroadcastLength(empty, scalar).ShouldBe(0);
+        (scalar + empty).ShouldBeEmpty();
+        (empty + scalar).ShouldBeEmpty();
     }
 
     [Fact]
@@ -335,6 +382,24 @@ public sealed class RealVectorTests
         var result = RealVector.Clamp(input, null, null);
 
         result.ShouldBeSameAs(input);
+    }
+
+    [Fact]
+    public void Clamp_EmptyInput_AcceptsEmptyAndScalarBounds()
+    {
+        var input = RealVector.Create();
+
+        var result = RealVector.Clamp(input, RealVector.Create(), 1.0);
+
+        result.ShouldBeSameAs(input);
+    }
+
+    [Fact]
+    public void Clamp_NonEmptyInput_RejectsEmptyBound()
+    {
+        var input = RealVector.Create(1.0, 2.0);
+
+        Should.Throw<ArgumentException>(() => RealVector.Clamp(input, RealVector.Create(), 3.0));
     }
 
     [Fact]
@@ -499,9 +564,21 @@ public sealed class RealVectorTests
     [InlineData(9.5, 10)]
     [InlineData(10.0, 10)]
     [InlineData(99.0, 10)]
+    [InlineData(double.NaN, 0)]
+    [InlineData(double.PositiveInfinity, 10)]
+    [InlineData(double.NegativeInfinity, 0)]
     public void RoundToInteger_ClampsAndRoundsWithinBounds(double value, int expected)
     {
         RealVector.RoundToInteger(value, 0, 10).ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData(-5, 10, 0)]
+    [InlineData(5, 10, 5)]
+    [InlineData(-10, -5, -5)]
+    public void RoundToInteger_ClampsNaNReplacementToBounds(int minimum, int maximum, int expected)
+    {
+        RealVector.RoundToInteger(double.NaN, minimum, maximum).ShouldBe(expected);
     }
 
     [Fact]
@@ -793,56 +870,73 @@ public sealed class RealVectorTests
     }
 
     [Fact]
-    public void AreCompatible_VectorAndEnumerable_ReturnsTrue_WhenAllAreCompatible()
+    public void AreBroadcastable_VectorAndEnumerable_ReturnsTrue_WhenAllAreBroadcastable()
     {
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = new[] { RealVector.Create(4.0, 5.0, 6.0), 7.0, RealVector.Create(8.0, 9.0, 10.0) };
 
-        var result = RealVector.AreCompatible(vector, others);
+        var result = RealVector.AreBroadcastable(vector, others);
 
         result.ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_VectorAndEnumerable_ReturnsFalse_WhenAtLeastOneIsIncompatible()
+    public void AreBroadcastable_VectorAndEnumerable_ReturnsFalse_WhenAtLeastOneIsNotBroadcastable()
     {
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = new[] { RealVector.Create(4.0, 5.0, 6.0), RealVector.Create(7.0, 8.0) };
 
-        var result = RealVector.AreCompatible(vector, others);
+        var result = RealVector.AreBroadcastable(vector, others);
 
         result.ShouldBeFalse();
     }
 
     [Fact]
-    public void AreCompatible_VectorAndEmptyEnumerable_ReturnsTrue()
+    public void AreBroadcastable_VectorAndEnumerable_ReturnsFalse_WhenScalarPrecedesDifferentLengths()
+    {
+        RealVector scalar = 1.0;
+        var others = new[] { RealVector.Create(1.0, 2.0), RealVector.Create(3.0, 4.0, 5.0) };
+
+        RealVector.AreBroadcastable(scalar, others).ShouldBeFalse();
+        Should.Throw<ArgumentException>(() => RealVector.BroadcastLength(scalar, others));
+    }
+
+    [Fact]
+    public void AreBroadcastable_VectorAndEmptyEnumerable_ReturnsTrue()
     {
         RealVector vector = RealVector.Create(1.0, 2.0, 3.0);
         var others = Array.Empty<RealVector>();
 
-        var result = RealVector.AreCompatible(vector, others);
+        var result = RealVector.AreBroadcastable(vector, others);
 
         result.ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_LengthAndEnumerable_ReturnsTrue_WhenAllMatchLengthOrAreScalar()
+    public void AreBroadcastableTo_ReturnsTrue_WhenAllMatchLengthOrAreScalar()
     {
         var vectors = new[] { RealVector.Create(1.0, 2.0, 3.0), 4.0, RealVector.Create(5.0, 6.0, 7.0) };
 
-        var result = RealVector.AreCompatible(3, vectors);
+        var result = RealVector.AreBroadcastableTo(3, vectors);
 
         result.ShouldBeTrue();
     }
 
     [Fact]
-    public void AreCompatible_LengthAndEnumerable_ReturnsFalse_WhenAtLeastOneIsIncompatible()
+    public void AreBroadcastableTo_ReturnsFalse_WhenAtLeastOneIsIncompatible()
     {
         var vectors = new[] { RealVector.Create(1.0, 2.0, 3.0), RealVector.Create(4.0, 5.0) };
 
-        var result = RealVector.AreCompatible(3, vectors);
+        var result = RealVector.AreBroadcastableTo(3, vectors);
 
         result.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void AreBroadcastableTo_AcceptsScalarsAndMatchingLengths()
+    {
+        RealVector.AreBroadcastableTo(3, RealVector.Create(1), RealVector.Create(1, 2, 3)).ShouldBeTrue();
+        RealVector.AreBroadcastableTo(3, RealVector.Create(1, 2)).ShouldBeFalse();
     }
 
     [Fact]
@@ -865,6 +959,15 @@ public sealed class RealVectorTests
         var result = RealVector.BroadcastLength(vector, others);
 
         result.ShouldBe(4);
+    }
+
+    [Fact]
+    public void BroadcastLength_VectorAndEnumerable_WithScalarAndEmptyVector_ReturnsZero()
+    {
+        RealVector scalar = 1.0;
+        var others = new[] { RealVector.Create(), (RealVector)2.0 };
+
+        RealVector.BroadcastLength(scalar, others).ShouldBe(0);
     }
 
     [Fact]

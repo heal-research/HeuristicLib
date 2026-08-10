@@ -45,7 +45,7 @@ public partial record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
         : MultiReplacerInstance<TCandidate, TSearchSpace, TProblem>(innerReplacers)
     {
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            InnerReplacers[dispatcher.ChooseOperator(random)].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            InnerReplacers[dispatcher.ChooseOperator(random, InnerReplacers.Length)].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
     }
 }
 

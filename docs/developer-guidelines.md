@@ -67,14 +67,21 @@ Search states are public progress values. Do not place private counters, caches 
 
 Explicit operator and algorithm creation methods receive the full `ExecutionInstanceRegistry`. Do not introduce a second restricted resolver abstraction. Resolve ordinary declared children eagerly when creating the execution instance. Retain the registry only when runtime composition genuinely needs child registries, replacements or delayed child algorithm creation.
 
-Base configurations should implement `CreateExecutionInstance(...)` explicitly and expose a protected role specific creation method to derived types. Return the most concrete accessible execution instance type from that protected method when it is useful to callers.
+Base configurations should expose one public `CreateExecutionInstance(...)` method with the exact execution instance role as its return type. Do not replace it with a parallel role-named factory such as `CreateSelectorInstance`. A topology base may seal the public factory and expose one protected post-resolution overload to derived configurations. Return the most concrete accessible execution instance type from that overload when it is useful to derived authors.
+
+Keep public constructors as the direct construction path. Add a static `Create` helper when its arguments can infer otherwise repetitive generic type parameters. Add a fluent extension when the receiver naturally becomes a child configuration. These entry points should construct the same configuration rather than introduce different semantics.
+
+Configuration objects expose the information that describes their configured behavior through public read-only properties, including retained child operators. A wrapping base owns the canonical singular child property and a multi-operator base owns the canonical child collection. Name these properties `ChildOperator` and `ChildOperators`, or use role-specific forms such as `ChildMutator` and `ChildMutators`. Reserve nested operator for an operator at any descendant depth. Derived types should not add forwarding aliases unless a distinct name communicates additional domain semantics. Execution instances keep resolved child instances and other execution machinery private or protected by default.
 
 Operator authoring must follow the ownership paths described in [Operator authoring](operator-authoring.md):
 
 - Use a stateless role base when execution needs configuration data but no mutable execution data.
 - Use a stateful role base when execution needs ordinary run scoped state but no execution graph dependencies.
 - Use an explicitly authored execution instance when the operator owns child execution instances, disposable resources or custom execution structure.
+- Use a single-item role base when the role offers one and the operation applies independently to each item of the batch.
 - Do not store operator or algorithm configurations, execution instances, registries or delegates bound to child instances in framework managed operator state.
+
+A single-item base seals the batch role operation it implements, so the single-item method stays the only authoring surface, and exposes an `ExecutionConcurrency Concurrency` property so batching remains a visible configuration decision rather than an override. Per-item random number generators are forked from the batch position, which keeps the result independent of the chosen concurrency. `SingleCandidateMutator` is the reference; roles whose single-item base predates it are aligned as they are migrated.
 
 Algorithms coordinate operators and execution flow, so they use a configuration paired with an explicitly authored execution instance. See [Algorithm](algorithm.md).
 
@@ -91,6 +98,9 @@ Any type used as `TCandidate` must behave as an immutable value.
 Core configurations and durable value objects use snapshot semantics for retained collections.
 
 - Accept the narrowest read only abstraction that describes the required input shape.
+- Use HLib vector types for mathematical coordinates; use immutable arrays for immutable configuration topology.
+- Use `RealVector`, `IntegerVector` or `BoolVector` when positions represent mathematical dimensions and vector operations or broadcasting are meaningful.
+- Use `ImmutableArray<T>` when positions correspond to child operators, pipeline stages or another configuration collection. Accept such inputs as `IReadOnlyList<T>` and snapshot them.
 - Use `IReadOnlyList<T>` for finite ordered collection inputs.
 - Immediately snapshot retained collection inputs into `ImmutableArray<T>`.
 - Expose owned immutable collections as `ImmutableArray<T>`.
@@ -110,7 +120,30 @@ Nullable reference annotations are repository contracts.
 - Do not add checks solely to defend against `null!`, disabled nullable analysis, reflection or another deliberate contract bypass.
 - Do not systematically validate `ImmutableArray<T>.IsDefault`. Assume immutable array parameters are initialized unless a specific API gives the default value meaning or a concrete domain invariant requires validation.
 
-Validate domain invariants that the type system cannot express. Validation must be part of normal runtime behavior.
+Use minimal safety validation. Preserve caller supplied values exactly and accept unusual values when the operation has stable computational semantics for them. In particular, do not reject or clamp floating point values merely because they lie outside a conventional range or are `NaN` or infinite. IEEE comparison and propagation behavior is part of the computation unless a specific API defines a stricter contract.
+
+### Unusual numeric values
+
+Apply the following semantics consistently when an operation can give unusual floating point values a stable meaning:
+
+- A rate or probability used as a threshold against a random value in `[0, 1)` treats a finite value below zero, negative infinity and `NaN` as never; a finite value greater than one and positive infinity mean always. Do not clamp or reject these values. An explicit guarantee such as `AtLeastOnce` may still perform its documented fallback after no item passes the threshold.
+- Weighted selection retains the originally configured weights. An empty weight collection means uniform selection across all available entries. Positive finite weights participate proportionally. Zero, negative finite weights, negative infinity and `NaN` mean never. Positive infinity overrides all finite weights; multiple positive-infinity entries are selected uniformly. If no entry is selectable, fall back to uniform selection across all entries.
+- Do not shift finite weights by their minimum. Weights express ratios, and shifting `[1, 3]` to `[0, 2]` would incorrectly make the first entry impossible.
+- A negative normal-distribution sigma mirrors samples around the mean. A `NaN` sigma propagates `NaN`; infinite sigmas follow IEEE arithmetic.
+- When converting a floating point value to a bounded integer, map `NaN` to zero before clamping. Positive infinity maps to the maximum and negative infinity to the minimum.
+- Uniform random bounds use collapsed-range semantics: when `high <= low`, return `low` without consuming a random draw. Apply this per coordinate for vector bounds. Continue to validate structural requirements such as compatible dimensions.
+
+Configuration properties expose the caller supplied values rather than normalized substitutes. An implementation may compile those values into an internal effective distribution or another optimized execution representation as long as the documented behavior is preserved.
+
+Validate when a violation could:
+
+- Consume random draws or otherwise change state before failing.
+- Produce a structurally invalid candidate or configuration.
+- Cause unsafe indexing, invalid allocation, nontermination or corruption.
+- Fail only after substantial avoidable computation.
+- Break an essential relationship such as compatible dimensions or matching operator and weight counts.
+
+Do not add validation solely to replace an immediate underlying exception with a different exception type. Do not normalize or clamp configuration values unless normalization is the documented operation itself. Hard configuration invariants should be validated once when the configuration is authored. Public direct-operation methods may validate hard invariants at their boundary, but execution paths should use private trusted implementations when necessary to avoid repeating validation for every candidate.
 
 Debug and release builds must behave the same for the same input.
 
@@ -123,6 +156,7 @@ Debug and release builds must behave the same for the same input.
 Design APIs for the pit of success.
 
 - Use descriptive names instead of documentation to compensate for unclear APIs.
+- Public authoring base classes must expose the constructors, state and extension hooks required by external subclasses as `protected`, not `private protected`. If external inheritance is not supported, do not present the type as an authoring base.
 - Keep related abstractions and operator roles structurally consistent.
 - Make defaults, side effects and potentially expensive behavior visible.
 - Return the most concrete accessible type that is useful to callers.
@@ -140,6 +174,43 @@ Domain specific type parameters may use variance when there is a concrete substi
 
 Sonar rule S3246 is disabled because it recommends variance based only on permitted type positions and cannot express these semantic policies. Treat variance as an intentional API decision rather than an automatic style improvement.
 
+For operator role contracts this is not a free choice. Every role interface and role instance interface declares `in TSearchSpace` and `in TProblem`, and a new role must do the same. That contravariance is what allows an operator authored against a general contract to be used where a more specific one is expected — `NoChangeMutator<TCandidate>` is declared over `ISearchSpace<TCandidate>` and `IProblem<...>`, yet composes into a `ChooseOneMutator<TCandidate, TSearchSpace, TProblem>` over any concrete search space and problem. Without `in`, every arity-reduced operator stops being usable in a higher-arity composition, and the failure surfaces as unrelated-looking conversion errors at the composition site rather than at the interface.
+
+A type parameter that appears in a return position cannot be contravariant, so exceptions are structural rather than stylistic. `TSearchState` is contravariant on `ITerminator`, whose operation only consumes the state, and invariant on `IInterceptor`, whose operation returns it. Record such an exception where it occurs; do not generalize it to other roles.
+
+### Role arity reduction
+
+A role provides its operation at several arities: the full `<TCandidate, TSearchSpace, TProblem>` form, a search-space-only form, and a candidate-only form. Reduced arities exist so an author who needs neither the problem nor the search space does not have to name them.
+
+Reduce with an explicit interface implementation that forwards to a narrower abstract method, as `MutatorInstance<TCandidate, TSearchSpace>` and `StatelessMutator<TCandidate>` do. The narrower method is the authoring surface; the explicit implementation satisfies the full contract by supplying the arguments the author declined to take. This is the sanctioned use of explicit interface implementation and is unrelated to how the configuration factory is exposed.
+
+The ladder is not one shape repeated. Configuration bases reduce by narrowing generic arguments with no member changes, instance bases add a narrower abstract operation plus a forwarder, stateless bases combine both, and stateful bases pair a reduced configuration with a nested instance on the reduced instance base. Keep each family internally consistent across roles rather than forcing one mechanism onto all of them.
+
+The two sides of the ladder differ in how a reduced base attaches to the fuller one. This is deliberate, not an accident of the mutator implementation:
+
+- A reduced **configuration** base derives from the next fuller configuration base. `Mutator<TCandidate, TSearchSpace>` derives from `Mutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>`. Reduction substitutes type arguments and adds no member, so the inherited `CreateExecutionInstance` is already the correct one and inheritance costs nothing.
+- A reduced **execution instance** base does not derive from the fuller instance base. It implements the role instance interface directly and forwards explicitly, as `MutatorInstance<TCandidate, TSearchSpace>` does. Deriving would inherit the full-arity abstract operation, which the reduced base would then have to override and seal, leaving two public operations on the authoring surface where the author must implement one and ignore the other. Implementing the interface directly leaves exactly one visible `Mutate`.
+- A reduced **stateless** base follows both rules at once, because it is a configuration and its own execution instance: it derives from the reduced configuration base and implements the role instance interface directly.
+- A reduced **stateful** base derives from the reduced configuration base, and its nested instance derives from the reduced instance base.
+
+Apply the same split when reducing a new role. A reduced instance base that inherits from a fuller instance base is a review finding rather than a style variation.
+
+#### Which bases get reduced arities
+
+Reduce an arity only when the type arguments describe what the operator's own code consumes. Do not reduce when they describe a child slot the base owns.
+
+| Base | Reduced arities | Why |
+| --- | :--: | --- |
+| `Mutator`, `MutatorInstance` | Yes | The base owns no child; an author who needs children declares and types them itself |
+| `StatelessMutator`, `StatefulMutator`, `SingleCandidateMutator` | Yes | The type arguments are exactly the operation's own inputs |
+| `WrappingMutator`, `MultiMutator` | No | The type arguments type `ChildMutator` and `ChildMutators` |
+
+For a leaf, reduction is generalization: a `SingleCandidateMutator<Permutation>` declares that it needs neither the search space nor the problem, and role contravariance then lets it be used wherever a narrower mutator is expected.
+
+For a topology base the effect is reversed. Its type arguments are the child slot, and narrowing the slot widens the contract a child must satisfy: `MultiMutator<Permutation>` would type its children as `IMutator<Permutation, ISearchSpace<Permutation>, IProblem<Permutation, ISearchSpace<Permutation>>>` and therefore accept only mutators that work for every search space and every problem. A problem-specific child could not be composed in, and the composition an author needs is usually not known when the topology is written. Keep `TSearchSpace` and `TProblem` open on topology types so they are inferred from the children — which is what every shipped concern (`ObservableMutator`, `CountingMutator`, `DurationMeasuringMutator`, `PipelineMutator`, `ChooseOneMutator`) already does.
+
+The role contracts stay at the full arity for a related reason. A reduced-arity `IMutator<TCandidate>` would only be satisfied by types that implement it explicitly, so operators that implement the role contract directly would stop being interchangeable with those that derive from an authoring base. Reduced arities are an authoring convenience and must not become a second contract.
+
 ### Type inference helpers
 
 Callers should not have to spell generic arguments that available values can determine.
@@ -154,17 +225,22 @@ Callers should not have to spell generic arguments that available values can det
 
 Use API usage specs to prove that the intended calls compile without explicit generic arguments. Mechanically stable helper conventions may be enforced by Roslyn analyzers and code fixes. Assembly wide relationships belong in architecture tests rather than a duplicate analyzer rule.
 
+### Operator parameter order
+
+Order operator operation parameters as primary input, random number generator, search space, problem and operator-specific settings. Omit parameters that do not apply while preserving the relative order of the remaining parameters. Lower-level inputs that replace a search space, such as explicit minimum and maximum bounds, occupy the search-space position.
+
 ### Stateless operator implementation methods
 
-Stateless operators should expose direct static methods that mirror their instance entry point.
+Stateless operators should expose direct static implementation methods when the underlying candidate or genotype does not already provide the functionality executed by the operator. When the functionality belongs naturally to the candidate or genotype, use that API instead of duplicating it on the operator.
 
-- Match the static method name to the operation, for example `Create`, `Mutate`, `Cross`, `Select` or `Evaluate`.
+- Do not add a static operator method that only forwards to an existing candidate or genotype method.
+- When a static implementation method is needed, match its name to the operation, for example `Create`, `Mutate`, `Cross`, `Select` or `Evaluate`.
 - Let the instance method delegate to the static implementation.
 - Provide one core overload that accepts the direct inputs needed by the operation.
 - Keep search space overloads as thin adapters when they only extract bounds, lengths, probabilities or other direct values.
 - Retain the search space in the core overload when it is the honest semantic dependency, such as grammar or topology driven behavior.
 - Order overloads from adapters to the final core implementation so the delegation path reads downward.
-- Put validation protecting the operation contract in the core overload.
+- Put necessary public-boundary validation before random draws, state changes or expensive work. Use a private trusted implementation when operator execution would otherwise repeat validation for every candidate.
 - Let convenience overloads delegate inward rather than duplicate logic.
 
 ### Extension APIs

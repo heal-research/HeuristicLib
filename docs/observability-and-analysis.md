@@ -36,7 +36,7 @@ Concretely:
 
 When the observable wrapper creates its execution instance, it resolves the underlying mutator execution instance from the registry:
 
-- `CreateExecutionInstance(...)` resolves the inner mutator from `ExecutionInstanceRegistry`.
+- `CreateExecutionInstance(...)` resolves the child mutator from `ExecutionInstanceRegistry`.
 - The returned observable instance delegates to that inner instance.
 
 At execution time:
@@ -129,7 +129,7 @@ var measured = new DurationMeasuringMutator<TCandidate, TSearchSpace, TProblem>(
     timeProvider);
 ```
 
-The wrapper exposes the instrumented operator and its sink as properties regardless of how it was created.
+The wrapper exposes the instrumented operator through its `IMutator` role as `ChildMutator` and its sink as `Duration` regardless of how it was created.
 
 ## External sinks: `ObservationCounter`
 

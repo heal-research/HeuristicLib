@@ -61,6 +61,6 @@ public static class ChooseOneCrossover
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public ChooseOneCrossover<TCandidate, TSearchSpace, TProblem> WithRate(double crossoverRate) =>
-            Create([crossover, SelectFirstParentCrossover<TCandidate>.Instance], [crossoverRate, 1 - crossoverRate]);
+            Create([crossover, SelectFirstParentCrossover<TCandidate>.Instance], WeightedBatchDispatch.GetRateWeights(crossoverRate));
     }
 }

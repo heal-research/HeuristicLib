@@ -215,6 +215,16 @@ Use operator for the reusable configuration unless the text explicitly says oper
 
 See also: Algorithm, Configuration, Evaluator, Execution instance.
 
+### Child operator
+
+Status: `Canonical`
+
+A child operator is an operator configuration directly referenced by another configuration.
+
+Child describes one immediate edge in the configuration graph. The same child operator may be referenced by multiple configurations, so the term does not imply exclusive ownership or a tree structure. Use a role-specific form such as child mutator when the operator role matters. Use nested operator only when referring more generally to an operator at any depth below another configuration.
+
+See also: Configuration graph, Operator.
+
 ### Operator roles
 
 Status: `Canonical`
@@ -306,6 +316,16 @@ An interceptor is the operator role that transforms a produced search state befo
 Use interceptor for state post processing. Do not use it for read only analysis. Use observation or analyzers for that.
 
 See also: Analyzer, Observation, Operator, Search state.
+
+### Single-candidate operator
+
+Status: `Canonical`
+
+A single-candidate operator is a regular operator whose public role operation remains batch-wise. It can be used anywhere an ordinary operator of that role is expected and does not introduce a separate single-candidate execution contract.
+
+The term describes an authoring pattern: the operator author implements the role logic for one candidate, and the single-candidate operator applies that logic independently across a batch of candidates and handles the batching. Use a role-specific form such as single-candidate mutator when the operator role matters.
+
+See also: Candidate, Operator, Operator roles.
 
 ### Termination
 

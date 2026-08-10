@@ -16,13 +16,14 @@ public record GaussianMutator
     }
 
     public double MutationRate { get; init; }
+
     public double MutationStrength { get; init; }
 
-    protected override IMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> CreateMutatorInstance(ExecutionInstanceRegistry registry) =>
+    public override IMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
         CreateVariableStrengthMutatorInstance();
 
-    IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> IExecutionInstanceResolvable<IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>.CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry) => CreateVariableStrengthMutatorInstance();
+    IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> IExecutionInstanceResolvable<IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>.CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        CreateVariableStrengthMutatorInstance();
 
     private IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>> CreateVariableStrengthMutatorInstance() =>
         new Instance(MutationRate, MutationStrength);
@@ -33,15 +34,30 @@ public record GaussianMutator
         public double CurrentMutationStrength { get; set; } = mutationStrength;
 
         public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) =>
-            BatchExecution.Sequential(parents, (parent, itemRandom) => GaussianMutator.Mutate(parent, itemRandom, searchSpace, mutationRate, CurrentMutationStrength), random);
+            BatchExecution.Sequential(
+                parents,
+                (searchSpace, mutationRate, mutationStrength: CurrentMutationStrength),
+                static (parent, itemRandom, state) => GaussianMutator.Mutate(parent, itemRandom, state.searchSpace, state.mutationRate, state.mutationStrength),
+                random);
     }
 
-    public static RealVector Mutate(RealVector solution, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double mutationRate, double mutationStrength) =>
-        Mutate(solution, random, mutationRate, mutationStrength, searchSpace.Minimum, searchSpace.Maximum);
-
-    public static RealVector Mutate(RealVector solution, IRandomNumberGenerator random, double mutationRate, double mutationStrength, RealVector minimum, RealVector maximum)
+    public static RealVector Mutate(RealVector candidate, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, double mutationRate, double mutationStrength)
     {
-        var newElements = solution.ToArray();
+        if (candidate.Count != searchSpace.Length)
+            throw new ArgumentException("Candidate length must match the search space length.", nameof(candidate));
+
+        return Mutate(candidate, random, searchSpace.Minimum, searchSpace.Maximum, mutationRate, mutationStrength);
+    }
+
+    public static RealVector Mutate(RealVector candidate, IRandomNumberGenerator random, RealVector minimum, RealVector maximum, double mutationRate, double mutationStrength)
+    {
+        if (!RealVector.AreBroadcastableTo(candidate.Count, minimum, maximum))
+            throw new ArgumentException("Minimum and maximum must each have length 1 or match the candidate length.");
+
+        if (candidate.Count == 0)
+            return candidate;
+
+        var newElements = candidate.ToArray();
         for (var i = 0; i < newElements.Length; i++)
         {
             if (random.NextDouble() < mutationRate)

@@ -298,6 +298,48 @@ public class OperatorAuthoringAnalyzerTests
         diagnostic.GetMessage().ShouldContain("calls");
     }
 
+    [Fact]
+    public async Task StatefulMutator_RejectsProblemBoundAsStateTypeArgument()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record TrapMutator : StatefulMutator<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+          {
+              protected override IProblem<int, ISearchSpace<int>> CreateInitialState() => null!;
+
+              protected override IReadOnlyList<int> Mutate(
+                  IReadOnlyList<int> parents,
+                  IProblem<int, ISearchSpace<int>> state,
+                  IRandomNumberGenerator random,
+                  ISearchSpace<int> searchSpace) => parents;
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StateContractDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("IProblem");
+        diagnostic.GetMessage().ShouldContain("TProblem");
+    }
+
+    [Fact]
+    public async Task StatefulMutator_RejectsSearchSpaceBoundAsStateTypeArgument()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record TrapMutator : StatefulMutator<int, ISearchSpace<int>>
+          {
+              protected override ISearchSpace<int> CreateInitialState() => null!;
+
+              protected override IReadOnlyList<int> Mutate(
+                  IReadOnlyList<int> parents,
+                  ISearchSpace<int> state,
+                  IRandomNumberGenerator random) => parents;
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StateContractDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("ISearchSpace");
+    }
+
     private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source)
     {
         var platformAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
@@ -330,6 +372,6 @@ public class OperatorAuthoringAnalyzerTests
             .WithAnalyzers([new OperatorAuthoringAnalyzer()])
             .GetAnalyzerDiagnosticsAsync();
 
-        return [.. analyzerDiagnostics.Where(static diagnostic => diagnostic.Id is OperatorAuthoringAnalyzer.StatefulStateDiagnosticId or OperatorAuthoringAnalyzer.ConfigurationMutationDiagnosticId)];
+        return [.. analyzerDiagnostics.Where(static diagnostic => diagnostic.Id is OperatorAuthoringAnalyzer.StatefulStateDiagnosticId or OperatorAuthoringAnalyzer.ConfigurationMutationDiagnosticId or OperatorAuthoringAnalyzer.StateContractDiagnosticId)];
     }
 }
