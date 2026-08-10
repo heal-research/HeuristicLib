@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorSearchSpace>
 {
@@ -14,7 +14,8 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
     public DynamicTestFunctionProblem(IRandomNumberGenerator environmentRandom,
                                       TestFunctionProblem problem,
                                       UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                      int epochLength = int.MaxValue) : base(problem.Objective, problem.SearchSpace, environmentRandom, updatePolicy, epochLength)
+                                      int epochLength = int.MaxValue) : base(problem.Objective, problem.SearchSpace,
+        environmentRandom, updatePolicy, epochLength)
     {
         this.problem = problem;
         var rot = new double[problem.SearchSpace.Length, problem.SearchSpace.Length];
@@ -32,7 +33,8 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
     public State CurrentState { get; private set; }
     public required DeviationSigmas DeviationSigma { get; init; }
 
-    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random,
+                                             EvaluationTiming timing)
     {
         solution = RealVector.FromOwnedArray(RotatedTestFunction.Rotate(CurrentState.Rotation, solution));
         solution *= RealVector.Create(CurrentState.InputScaling);
@@ -45,14 +47,20 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
 
     protected override void Update()
     {
-        var shift = CurrentState.Shift.Select(x => x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.ShiftStrength)).ToArray();
-        var rot = RandomRotationMatrix(CurrentState.Rotation, EnvironmentRandom, EnvironmentRandom.NextNormal(sigma: DeviationSigma.RotationStrength));
-        var inScale = CurrentState.InputScaling.Select(x => x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.InputScalingStrength)).ToArray();
-        var outScale = CurrentState.OutputScaling + EnvironmentRandom.NextNormal(sigma: DeviationSigma.OutputScalingStrength);
+        var shift = CurrentState.Shift
+                                .Select(x => x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.ShiftStrength))
+                                .ToArray();
+        var rot = RandomRotationMatrix(CurrentState.Rotation, EnvironmentRandom,
+            EnvironmentRandom.NextNormal(sigma: DeviationSigma.RotationStrength));
+        var inScale = CurrentState.InputScaling
+                                  .Select(x =>
+                                      x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.InputScalingStrength))
+                                  .ToArray();
+        var outScale = CurrentState.OutputScaling +
+                       EnvironmentRandom.NextNormal(sigma: DeviationSigma.OutputScalingStrength);
         CurrentState = new State(shift, rot, inScale, outScale);
 
-        // Note: the scaling factors could become zero or negative, which may lead to degenerate situations.
-        // This is intentional to increase the dynamics of the problem.
+        // The scaling factors may become zero or negative; this intentionally increases the dynamics.
     }
 
     private static double[] RandomUnitVector(int n, IRandomNumberGenerator rng)
@@ -139,13 +147,11 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
 
         var p = new double[n, n];
 
-        // Start with identity
         for (var i = 0; i < n; i++)
         {
             p[i, i] = 1.0;
         }
 
-        // Apply plane rotation update
         for (var i = 0; i < n; i++)
         {
             for (var j = 0; j < n; j++)
@@ -160,5 +166,9 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
 
     public record State(double[] Shift, double[,] Rotation, double[] InputScaling, double OutputScaling);
 
-    public record DeviationSigmas(double ShiftStrength, double RotationStrength, double InputScalingStrength, double OutputScalingStrength);
+    public record DeviationSigmas(
+        double ShiftStrength,
+        double RotationStrength,
+        double InputScalingStrength,
+        double OutputScalingStrength);
 }

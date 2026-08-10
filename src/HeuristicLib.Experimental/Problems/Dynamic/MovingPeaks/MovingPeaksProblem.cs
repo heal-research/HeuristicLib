@@ -3,10 +3,10 @@ using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.MovingPeaks;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed class MovingPeaksProblem
-  : DynamicProblem<RealVector, RealVectorSearchSpace>
+    : DynamicProblem<RealVector, RealVectorSearchSpace>
 {
     private double[] peakHeights = null!;
 
@@ -17,11 +17,11 @@ public sealed class MovingPeaksProblem
                               IRandomNumberGenerator environmentRandom,
                               UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
                               int epochLength = int.MaxValue)
-      : base(SingleObjective.Maximize, new RealVectorSearchSpace(
-        parameters.Dimension,
-        parameters.LowerBound,
-        parameters.UpperBound
-      ), environmentRandom, updatePolicy, epochLength)
+        : base(SingleObjective.Maximize, new RealVectorSearchSpace(
+            parameters.Dimension,
+            parameters.LowerBound,
+            parameters.UpperBound
+        ), environmentRandom, updatePolicy, epochLength)
     {
         Validate(parameters);
         Parameters = parameters;
@@ -33,11 +33,11 @@ public sealed class MovingPeaksProblem
                               (double[] center, double height, double width)[] peaks,
                               UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
                               int epochLength = int.MaxValue)
-      : base(SingleObjective.Maximize, new RealVectorSearchSpace(
-        parameters.Dimension,
-        parameters.LowerBound,
-        parameters.UpperBound
-      ), environmentRandom, updatePolicy, epochLength)
+        : base(SingleObjective.Maximize, new RealVectorSearchSpace(
+            parameters.Dimension,
+            parameters.LowerBound,
+            parameters.UpperBound
+        ), environmentRandom, updatePolicy, epochLength)
     {
         Validate(parameters);
         Parameters = parameters;
@@ -77,7 +77,8 @@ public sealed class MovingPeaksProblem
         }
     }
 
-    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random,
+                                             EvaluationTiming timing)
     {
         var best = double.NegativeInfinity;
 
@@ -103,9 +104,9 @@ public sealed class MovingPeaksProblem
             for (var d = 0; d < Parameters.Dimension; d++)
             {
                 peakPositions[i][d] = ReflectIntoBounds(
-                  peakPositions[i][d] + Parameters.ShiftSeverity * dir[d],
-                  Parameters.LowerBound,
-                  Parameters.UpperBound
+                    peakPositions[i][d] + Parameters.ShiftSeverity * dir[d],
+                    Parameters.LowerBound,
+                    Parameters.UpperBound
                 );
             }
         }
@@ -184,7 +185,7 @@ public sealed class MovingPeaksProblem
     }
 
     private static double RandomSigned(IRandomNumberGenerator rng) =>
-      rng.NextBool() ? 1.0 : -1.0;
+        rng.NextBool() ? 1.0 : -1.0;
 
     private static double Clamp(double x, double lo, double hi)
     {

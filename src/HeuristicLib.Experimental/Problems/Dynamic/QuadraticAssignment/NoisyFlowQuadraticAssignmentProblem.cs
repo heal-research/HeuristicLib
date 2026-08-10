@@ -4,10 +4,10 @@ using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed class NoisyFlowQuadraticAssignmentProblem
-  : DynamicProblem<Permutation, PermutationSearchSpace>
+    : DynamicProblem<Permutation, PermutationSearchSpace>
 {
     private readonly QuadraticAssignmentProblemData baseProblemData;
 
@@ -15,12 +15,13 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
     private readonly double sigma;
 
     public NoisyFlowQuadraticAssignmentProblem(
-      QuadraticAssignmentProblemData problemData,
-      IRandomNumberGenerator environmentRandom,
-      double sigma,
-      UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-      int epochLength = int.MaxValue
-    ) : base(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size), environmentRandom, updatePolicy, epochLength)
+        QuadraticAssignmentProblemData problemData,
+        IRandomNumberGenerator environmentRandom,
+        double sigma,
+        UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+        int epochLength = int.MaxValue
+    ) : base(SingleObjective.Minimize, new PermutationSearchSpace(problemData.Size), environmentRandom, updatePolicy,
+        epochLength)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(sigma);
 
@@ -30,7 +31,8 @@ public sealed class NoisyFlowQuadraticAssignmentProblem
         Update(); // initialize state (or call RebuildNoisyFlows() directly)
     }
 
-    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random,
+                                             EvaluationTiming timing)
     {
         var n = baseProblemData.Size;
         var cost = 0.0;

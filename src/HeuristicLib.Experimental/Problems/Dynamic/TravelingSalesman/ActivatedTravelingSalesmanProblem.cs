@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, PermutationSearchSpace>
 {
@@ -14,7 +14,8 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
                                              double activationProb = 0.9,
                                              double switchProbability = 0.1,
                                              UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                             int epochLength = int.MaxValue) : base(SingleObjective.Minimize, new PermutationSearchSpace(tspData.NumberOfCities), environmentRandom, updatePolicy, epochLength)
+                                             int epochLength = int.MaxValue) : base(SingleObjective.Minimize,
+        new PermutationSearchSpace(tspData.NumberOfCities), environmentRandom, updatePolicy, epochLength)
     {
         SwitchProbability = switchProbability;
         CurrentState = Generate(tspData, activationProb, environmentRandom);
@@ -26,7 +27,8 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
                                              bool[] startState,
                                              double switchProbability = 0.1,
                                              UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                             int epochLength = int.MaxValue) : base(SingleObjective.Minimize, new PermutationSearchSpace(tspData.NumberOfCities), environmentRandom, updatePolicy, epochLength)
+                                             int epochLength = int.MaxValue) : base(SingleObjective.Minimize,
+        new PermutationSearchSpace(tspData.NumberOfCities), environmentRandom, updatePolicy, epochLength)
     {
         SwitchProbability = switchProbability;
         ArgumentOutOfRangeException.ThrowIfNotEqual(tspData.NumberOfCities, startState.Length);
@@ -38,7 +40,8 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
     public double SwitchProbability { get; init; }
     public ITravelingSalesmanProblemData ProblemData { get; }
 
-    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random,
+                                             EvaluationTiming timing)
     {
         return solution
                .Where(x => CurrentState[x])
@@ -100,6 +103,7 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
         }
     }
 
-    private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb, IRandomNumberGenerator random)
-      => Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.NextBool(activationProb)).ToArray();
+    private static bool[] Generate(ITravelingSalesmanProblemData tspData, double activationProb,
+                                   IRandomNumberGenerator random)
+        => Enumerable.Range(0, tspData.NumberOfCities).Select(_ => random.NextBool(activationProb)).ToArray();
 }

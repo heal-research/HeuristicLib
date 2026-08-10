@@ -5,10 +5,10 @@ using HEAL.HeuristicLib.Problems.DataAnalysis.Regression;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Trees;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.SlidingWindowRegression;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public class SlidingWindowSymbolicRegressionProblem
-  : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
+    : DynamicProblem<SymbolicExpressionTree, SymbolicExpressionTreeSearchSpace>
 {
     private readonly SymbolicRegressionProblem innerProblem;
 
@@ -16,12 +16,12 @@ public class SlidingWindowSymbolicRegressionProblem
     protected double[] CachedTargets = [];
 
     public SlidingWindowSymbolicRegressionProblem(
-      SymbolicRegressionProblem problem,
-      int windowStart = 0,
-      int windowLength = 100,
-      int stepSize = 10,
-      UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-      int epochLength = int.MaxValue
+        SymbolicRegressionProblem problem,
+        int windowStart = 0,
+        int windowLength = 100,
+        int stepSize = 10,
+        UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+        int epochLength = int.MaxValue
     ) : base(problem.Objective, problem.SearchSpace, RandomNumberGenerator.Create(0), updatePolicy, epochLength)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(windowStart);
@@ -40,7 +40,9 @@ public class SlidingWindowSymbolicRegressionProblem
 
     public (int StartIndex, int EndIndex) CurrentState { get; private set; }
 
-    public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random, EvaluationTiming timing) => innerProblem.Evaluate(solution, CachedRows, CachedTargets);
+    public override ObjectiveVector Evaluate(SymbolicExpressionTree solution, IRandomNumberGenerator random,
+                                             EvaluationTiming timing) =>
+        innerProblem.Evaluate(solution, CachedRows, CachedTargets);
 
     protected override void Update()
     {
@@ -52,7 +54,9 @@ public class SlidingWindowSymbolicRegressionProblem
     {
         var trainingRange = innerProblem.ProblemData.Partitions[DataAnalysisProblemData.PartitionType.Training];
         var rowCount = innerProblem.ProblemData.Dataset.Rows;
-        var rangeStart = trainingRange.Start.IsFromEnd ? rowCount - trainingRange.Start.Value : trainingRange.Start.Value;
+        var rangeStart = trainingRange.Start.IsFromEnd
+            ? rowCount - trainingRange.Start.Value
+            : trainingRange.Start.Value;
         var rangeEnd = trainingRange.End.IsFromEnd ? rowCount - trainingRange.End.Value : trainingRange.End.Value;
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(rangeEnd, rangeStart);
         var rangeLength = rangeEnd - rangeStart;

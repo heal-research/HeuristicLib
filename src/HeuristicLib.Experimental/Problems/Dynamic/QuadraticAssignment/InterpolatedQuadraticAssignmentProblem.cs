@@ -4,10 +4,10 @@ using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 
-namespace HEAL.HeuristicLib.Problems.Dynamic.QuadraticAssignment;
+namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 public sealed class InterpolatedQuadraticAssignmentProblem
-  : DynamicProblem<Permutation, PermutationSearchSpace>
+    : DynamicProblem<Permutation, PermutationSearchSpace>
 {
     private readonly QuadraticAssignmentProblemData a;
     private readonly double alphaStep;
@@ -19,15 +19,15 @@ public sealed class InterpolatedQuadraticAssignmentProblem
     private readonly bool pingPong;
 
     public InterpolatedQuadraticAssignmentProblem(
-      QuadraticAssignmentProblemData a,
-      QuadraticAssignmentProblemData b,
-      IRandomNumberGenerator environmentRandom,
-      double alphaStart = 0.0,
-      double alphaStep = 0.01,
-      bool interpolateDistances = false,
-      bool pingPong = true,
-      UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-      int epochLength = int.MaxValue
+        QuadraticAssignmentProblemData a,
+        QuadraticAssignmentProblemData b,
+        IRandomNumberGenerator environmentRandom,
+        double alphaStart = 0.0,
+        double alphaStep = 0.01,
+        bool interpolateDistances = false,
+        bool pingPong = true,
+        UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
+        int epochLength = int.MaxValue
     ) : base(SingleObjective.Minimize, new PermutationSearchSpace(a.Size), environmentRandom, updatePolicy, epochLength)
     {
         if (a.Size != b.Size)
@@ -55,7 +55,8 @@ public sealed class InterpolatedQuadraticAssignmentProblem
 
     public double Alpha { get; private set; }
 
-    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random, EvaluationTiming timing)
+    public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random,
+                                             EvaluationTiming timing)
     {
         var n = a.Size;
         var cost = 0.0;

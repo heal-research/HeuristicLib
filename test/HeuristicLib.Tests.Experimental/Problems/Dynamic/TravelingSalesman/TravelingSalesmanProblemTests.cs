@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Problems.Dynamic.TravelingSalesman;
+using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;

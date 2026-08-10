@@ -1,11 +1,10 @@
-using HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems.Partial;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using TreesearchLib;
 
-namespace HEAL.HeuristicLib.APIs.TreeSearchLib;
+namespace HEAL.HeuristicLib.APIs.TreeSearchLib.SearchStates;
 
 public class StackedTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchState<T, TS, TP, TM>,
                                                      IMutableState<StackedTreeSearchState<T, TS, TP, TM>, TM,
