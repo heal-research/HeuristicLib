@@ -4,16 +4,21 @@ using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Genotypes;
 using HEAL.HeuristicLib.Genotypes.Vectors;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Creators.PermutationCreators;
 using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.PermutationCrossovers;
 using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
+using HEAL.HeuristicLib.Operators.Mutators.PermutationMutators;
 using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Optimization;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.Dynamic.Analysis;
+using HEAL.HeuristicLib.Problems.Dynamic.Operators;
+using HEAL.HeuristicLib.Problems.TravelingSalesman.InstanceLoading;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces.Vectors;
 using HEAL.HeuristicLib.States;
@@ -22,6 +27,80 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
 
 public class AutoEcPaperScenarioTests
 {
+    [Fact]
+    public async Task DynamicRacingGa_OnActivatedTsp_UsesPaperLikeScenario()
+    {
+        var tspFile = FindLocalFile("tsp", "eil51.tsp");
+        var concordePath = FindLocalFile("for_Agent", "Concorde", "executablescygwin", "concorde.exe");
+        if (tspFile is null || concordePath is null)
+        {
+            return;
+        }
+
+        const int targetEpochChanges = 50;
+        var tspData = TsplibTspInstanceProvider.LoadData(tspFile).ToDistanceMatrixData();
+        var problem = new ActivatedTravelingSalesmanProblem(
+            tspData,
+            RandomNumberGenerator.Create(2024),
+            activationProb: 0.7,
+            switchProbability: 0.25,
+            UpdatePolicy.AfterEvaluation,
+            epochLength: 120);
+        var metaSpace = CreateTspHyperParameterSearchSpace();
+        var metaCreator = metaSpace.CombineCreators(
+            new UniformDistributedCreator(),
+            new HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator());
+        var metaMutator = metaSpace.CombineMutator(
+            new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
+            new UniformOnePositionManipulator());
+        var evaluator = DirectEvaluator.For(problem).WithDynamicRelativeQuality(
+            problem,
+            new ActivatedTravelingSalesmanExactBestKnownProvider(
+                new ConcordeTravelingSalesmanExactSolver(concordePath)));
+
+        var racing = new DynamicRacingAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem,
+            PopulationState<Permutation>,
+            GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>>(
+            metaSpace,
+            metaCreator,
+            metaMutator,
+            new BestPopulationStateMerger<Permutation>(),
+            candidate => CreatePermutationGa(problem, evaluator, candidate),
+            algorithm => algorithm.Evaluator)
+        {
+            NoRacers = 2,
+            BurnInEpochs = 1,
+            EarlyTerminationStrength = 0.0,
+            HallOfFameStrength = 0.25,
+            ModelObservationInterval = 10
+        };
+        var qualityCurve =
+            new QualityCurvePerEpochAnalysis<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(
+                problem,
+                evaluator);
+        var bbcp =
+            new BestBeforeChangePerformanceAnalysis<Permutation, PermutationSearchSpace,
+                ActivatedTravelingSalesmanProblem>(
+                problem,
+                [evaluator]);
+
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
+                        .WithAnalyzers(qualityCurve, bbcp);
+
+        var finalState = await RunUntilEpochChanges(
+            run.Stream(cancellationToken: TestContext.Current.CancellationToken),
+            problem, targetEpochChanges, TestContext.Current.CancellationToken);
+        var qualityResult = run.GetResult(qualityCurve);
+        var bbcpResult = run.GetResult(bbcp);
+
+        finalState.Population.EvaluatedCandidates.Length.ShouldBeGreaterThan(0);
+        finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
+            problem.SearchSpace.Contains(candidate.Candidate));
+        qualityResult.BestPerEpoch.Count.ShouldBeGreaterThanOrEqualTo(2);
+        bbcpResult.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
+        double.IsFinite(bbcpResult.Performance).ShouldBeTrue();
+    }
+
     [Fact]
     public async Task DynamicRacingGa_OnMovingPeaks_ProducesPaperExperimentSignals()
     {
@@ -63,7 +142,7 @@ public class AutoEcPaperScenarioTests
         var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
                         .WithAnalyzers(qualityCurve, bbcp);
 
-        var finalState = await RunUntilEpochChanges<RealVector, RealVectorSearchSpace, PopulationState<RealVector>>(
+        var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
             problem, targetEpochChanges, TestContext.Current.CancellationToken);
         var qualityResult = run.GetResult(qualityCurve);
@@ -91,6 +170,7 @@ public class AutoEcPaperScenarioTests
 
         var observedEpochChanges = 0;
         TSearchState? finalState = null;
+
         void OnEpochChange(object? sender, int epoch)
         {
             observedEpochChanges += 1;
@@ -140,6 +220,31 @@ public class AutoEcPaperScenarioTests
             .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(8), new IntegerVector(16)));
 
+    private static CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
+        CreateTspHyperParameterSearchSpace() =>
+        new RealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
+            .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+                new IntegerVectorSearchSpace(1, new IntegerVector(20), new IntegerVector(60)));
+
+    private static GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
+        CreatePermutationGa(
+            ActivatedTravelingSalesmanProblem problem,
+            IEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem> evaluator,
+            CompositeGenotype<RealVector, IntegerVector> hyperParameters)
+    {
+        return new GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
+        {
+            Creator = new RandomPermutationCreator(),
+            Crossover = new EdgeRecombinationCrossover(),
+            Mutator = new InversionMutator(),
+            MutationRate = hyperParameters.Part1[0],
+            Selector = GeneralizedRankSelector.For(problem, pressure: 4.0),
+            PopulationSize = hyperParameters.Part2[0],
+            Elites = 1,
+            Evaluator = evaluator
+        };
+    }
+
     private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem> CreateGa(
         MovingPeaksProblem problem,
         IEvaluator<RealVector, RealVectorSearchSpace, MovingPeaksProblem> evaluator,
@@ -156,5 +261,22 @@ public class AutoEcPaperScenarioTests
             Elites = 1,
             Evaluator = evaluator
         };
+    }
+
+    private static string? FindLocalFile(params string[] relativePathParts)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(new[] { directory.FullName }.Concat(relativePathParts).ToArray());
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+
+        return null;
     }
 }
