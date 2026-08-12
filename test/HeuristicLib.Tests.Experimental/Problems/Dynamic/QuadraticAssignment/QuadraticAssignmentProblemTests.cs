@@ -86,6 +86,28 @@ public class QuadraticAssignmentProblemTests
     }
 
     [Fact]
+    public void PingPongAlpha_ReturnsFromOneTowardZero()
+    {
+        var rng = TestRandoms.SystemRandomGenerator(1);
+        var a = QuadraticAssignmentProblemHelper.CreateDefaultA();
+        var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
+        var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 0.25, true);
+
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.25);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.5);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.75);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(1.0);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.75);
+        dyn.UpdateOnce();
+        dyn.Alpha.ShouldBe(0.5);
+    }
+
+    [Fact]
     public void SigmaZero_EqualsBaseCost_Always()
     {
         var baseData = QuadraticAssignmentProblemHelper.CreateDefaultA();

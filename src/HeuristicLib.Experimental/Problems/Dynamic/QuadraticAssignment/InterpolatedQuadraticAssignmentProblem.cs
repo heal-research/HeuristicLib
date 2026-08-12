@@ -17,6 +17,7 @@ public sealed class InterpolatedQuadraticAssignmentProblem
     private readonly double[,] currentFlows;
     private readonly bool interpolateDistances;
     private readonly bool pingPong;
+    private int alphaDirection = 1;
 
     public InterpolatedQuadraticAssignmentProblem(
         QuadraticAssignmentProblemData a,
@@ -76,12 +77,10 @@ public sealed class InterpolatedQuadraticAssignmentProblem
 
     protected override void Update()
     {
-        // advance alpha
-        var next = Alpha + alphaStep;
+        var next = Alpha + alphaDirection * alphaStep;
 
         if (!pingPong)
         {
-            // wrap 0..1
             if (next > 1.0)
             {
                 next -= Math.Floor(next);
@@ -96,20 +95,20 @@ public sealed class InterpolatedQuadraticAssignmentProblem
         }
         else
         {
-            // ping-pong 0..1..0..1...
-            // simplest: reflect at boundaries
-            if (next <= 1.0)
+            while (next is < 0.0 or > 1.0)
             {
-                Alpha = next;
+                if (next > 1.0)
+                {
+                    next = 2.0 - next;
+                    alphaDirection = -1;
+                    continue;
+                }
+
+                next = -next;
+                alphaDirection = 1;
             }
-            else
-            {
-                // reflect once; if alphaStep is huge, you could loop, but typical steps are small
-                Alpha = 2.0 - next;
-                // flip direction by negating step would be cleaner, but we keep it stateless/simple
-                // so we just rely on reflection each time (works for small step)
-            }
-            // If you want perfect ping-pong for any step size, I can give a robust sawtooth/triangle-wave mapping.
+
+            Alpha = next;
         }
 
         RebuildCurrentMatrices();
