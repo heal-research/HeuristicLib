@@ -48,6 +48,18 @@ public abstract class AlgorithmRun
         return registry;
     }
 
+    protected void DisposeAnalyzerStates()
+    {
+        if (analyzerStates is null)
+            return;
+
+        foreach (var state in analyzerStates.Values)
+        {
+            if (state is IDisposable disposable)
+                disposable.Dispose();
+        }
+    }
+
     public TResult GetResult<TResult>(IAnalyzer<TResult> analyzer) where TResult : class
     {
         var states = GetAnalyzerStates();
@@ -149,9 +161,16 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     private async IAsyncEnumerable<TSearchState> StreamStates(IAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmInstance, TSearchState? initialState, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        await foreach (var state in algorithmInstance.RunStreamingAsync(Problem, Random, initialState, cancellationToken))
+        try
         {
-            yield return state;
+            await foreach (var state in algorithmInstance.RunStreamingAsync(Problem, Random, initialState, cancellationToken))
+            {
+                yield return state;
+            }
+        }
+        finally
+        {
+            DisposeAnalyzerStates();
         }
     }
 }

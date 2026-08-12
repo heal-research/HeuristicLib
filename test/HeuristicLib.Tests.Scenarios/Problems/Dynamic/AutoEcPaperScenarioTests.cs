@@ -1,0 +1,160 @@
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Algorithms.Evolutionary;
+using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Genotypes;
+using HEAL.HeuristicLib.Genotypes.Vectors;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Creators.RealVectorCreators;
+using HEAL.HeuristicLib.Operators.Crossovers.RealVectorCrossovers;
+using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Operators.Mutators.IntegerVectorMutators;
+using HEAL.HeuristicLib.Operators.Mutators.RealVectorMutators;
+using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Optimization;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.Dynamic;
+using HEAL.HeuristicLib.Problems.Dynamic.Analysis;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces.Vectors;
+using HEAL.HeuristicLib.States;
+
+namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
+
+public class AutoEcPaperScenarioTests
+{
+    [Fact]
+    public async Task DynamicRacingGa_OnMovingPeaks_ProducesPaperExperimentSignals()
+    {
+        const int targetEpochChanges = 4;
+        var problem = CreateMovingPeaksProblem();
+        var metaSpace = CreateHyperParameterSearchSpace();
+        var metaCreator = metaSpace.CombineCreators(
+            new UniformDistributedCreator(),
+            new HEAL.HeuristicLib.Operators.Creators.IntegerVectorCreators.UniformDistributedCreator());
+        var metaMutator = metaSpace.CombineMutator(
+            new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
+            new UniformOnePositionManipulator());
+        var evaluator = DirectEvaluator.For(problem);
+
+        var racing = new DynamicRacingAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem,
+            PopulationState<RealVector>, GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem>>(
+            metaSpace,
+            metaCreator,
+            metaMutator,
+            new BestPopulationStateMerger<RealVector>(),
+            candidate => CreateGa(problem, evaluator, candidate),
+            algorithm => algorithm.Evaluator)
+        {
+            NoRacers = 2,
+            BurnInEpochs = 1,
+            EarlyTerminationStrength = 0.0,
+            HallOfFameStrength = 0.25,
+            ModelObservationInterval = 10
+        };
+        var qualityCurve =
+            new QualityCurvePerEpochAnalysis<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
+                problem,
+                evaluator);
+        var bbcp =
+            new BestBeforeChangePerformanceAnalysis<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
+                problem,
+                [evaluator]);
+
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
+                        .WithAnalyzers(qualityCurve, bbcp);
+
+        var finalState = await RunUntilEpochChanges<RealVector, RealVectorSearchSpace, PopulationState<RealVector>>(
+            run.Stream(cancellationToken: TestContext.Current.CancellationToken),
+            problem, targetEpochChanges, TestContext.Current.CancellationToken);
+        var qualityResult = run.GetResult(qualityCurve);
+        var bbcpResult = run.GetResult(bbcp);
+
+        finalState.Population.EvaluatedCandidates.Length.ShouldBeGreaterThan(0);
+        finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
+            problem.SearchSpace.Contains(candidate.Candidate));
+        qualityResult.BestPerEpoch.Count.ShouldBeGreaterThanOrEqualTo(3);
+        qualityResult.BestPerEpoch.Select(entry => entry.timing.Epoch).Distinct().Count()
+                     .ShouldBeGreaterThanOrEqualTo(3);
+        bbcpResult.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
+        double.IsFinite(bbcpResult.Performance).ShouldBeTrue();
+    }
+
+    private static async Task<TSearchState> RunUntilEpochChanges<TCandidate, TSearchSpace, TSearchState>(
+        IAsyncEnumerable<TSearchState> stream,
+        DynamicProblem<TCandidate, TSearchSpace> problem,
+        int epochChanges,
+        CancellationToken cancellationToken)
+        where TSearchSpace : class, HEAL.HeuristicLib.SearchSpaces.ISearchSpace<TCandidate>
+        where TSearchState : class
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochChanges);
+
+        var observedEpochChanges = 0;
+        TSearchState? finalState = null;
+        void OnEpochChange(object? sender, int epoch)
+        {
+            observedEpochChanges += 1;
+        }
+
+        problem.EpochClock.OnEpochChange += OnEpochChange;
+        try
+        {
+            await using var enumerator = stream.GetAsyncEnumerator(cancellationToken);
+            while (observedEpochChanges < epochChanges)
+            {
+                var hasNext = await enumerator.MoveNextAsync();
+                hasNext.ShouldBeTrue();
+                finalState = enumerator.Current;
+            }
+        }
+        finally
+        {
+            problem.EpochClock.OnEpochChange -= OnEpochChange;
+        }
+
+        return finalState ?? throw new InvalidOperationException("The stream did not produce a state.");
+    }
+
+    private static MovingPeaksProblem CreateMovingPeaksProblem() =>
+        new(new MovingPeaksParameters
+            {
+                Dimension = 2,
+                NumberOfPeaks = 3,
+                LowerBound = -5.0,
+                UpperBound = 5.0,
+                MinHeight = 20.0,
+                MaxHeight = 80.0,
+                MinWidth = 0.5,
+                MaxWidth = 2.0,
+                ShiftSeverity = 0.5,
+                HeightSeverity = 2.0,
+                WidthSeverity = 0.1
+            },
+            RandomNumberGenerator.Create(321),
+            UpdatePolicy.AfterEvaluation,
+            epochLength: 30);
+
+    private static CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
+        CreateHyperParameterSearchSpace() =>
+        new RealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
+            .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+                new IntegerVectorSearchSpace(1, new IntegerVector(8), new IntegerVector(16)));
+
+    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem> CreateGa(
+        MovingPeaksProblem problem,
+        IEvaluator<RealVector, RealVectorSearchSpace, MovingPeaksProblem> evaluator,
+        CompositeGenotype<RealVector, IntegerVector> hyperParameters)
+    {
+        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem>
+        {
+            Creator = new UniformDistributedCreator(problem.SearchSpace),
+            Crossover = new SimulatedBinaryCrossover(),
+            Mutator = new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5),
+            MutationRate = hyperParameters.Part1[0],
+            Selector = TournamentSelector.For(problem, tournamentSize: 2),
+            PopulationSize = hyperParameters.Part2[0],
+            Elites = 1,
+            Evaluator = evaluator
+        };
+    }
+}

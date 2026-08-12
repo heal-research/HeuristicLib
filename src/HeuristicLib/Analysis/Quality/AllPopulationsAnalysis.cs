@@ -17,11 +17,10 @@ public record AllPopulationsAnalysis<TCandidate, TSearchSpace, TProblem, TSearch
 
     public override void RegisterObservations(ObservationPlan observations,
                                               List<EvaluatedCandidate<TCandidate>[]> result)
-    {
-        observations.Observe(Interceptor, (populationState, _, _, _, _) => AfterInterception(result, populationState));
-    }
+        => observations.Observe(Interceptor,
+            (populationState, _, _, _, _) => AfterInterception(result, populationState));
 
     public void AfterInterception(List<EvaluatedCandidate<TCandidate>[]> state,
-                                  PopulationState<TCandidate> populationState) =>
-        state.Add(populationState.Population.ToArray());
+                                  PopulationState<TCandidate> populationState)
+        => state.Add(populationState.Population.ToArray());
 }
