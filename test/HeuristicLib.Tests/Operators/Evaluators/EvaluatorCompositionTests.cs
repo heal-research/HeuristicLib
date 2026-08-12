@@ -56,9 +56,45 @@ public class EvaluatorCompositionTests
         counter.CurrentCount.ShouldBe(3);
     }
 
+    [Fact]
+    public void RelativeQualityEvaluator_NormalizesElementwise()
+    {
+        var evaluator = CreateEvaluator().WithRelativeQuality(new ObjectiveVector(2.0, -4.0));
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var problem = new FuncProblem<int, DummySearchSpace<int>>(
+            static candidate => new ObjectiveVector(candidate, -2.0 * candidate),
+            DummySearchSpace<int>.Instance,
+            MultiObjective.Minimize(2));
+
+        var result = instance.Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+
+        result[0].ShouldBe(new ObjectiveVector(0.5, -0.5));
+    }
+
+    [Fact]
+    public void RelativeQualityEvaluator_AppliesZeroBestKnownPolicy()
+    {
+        var evaluator = CreateEvaluator().WithRelativeQuality(new ObjectiveVector(0.0),
+            RelativeQualityZeroBestKnownPolicy.Difference);
+        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var problem = CreateProblem();
+
+        var result = instance.Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+
+        result[0].ShouldBe(new ObjectiveVector(3.0));
+    }
+
     private static IEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateEvaluator() =>
-        new DummyEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
+        new ProblemEvaluator();
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
         FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+
+    private sealed record ProblemEvaluator : SingleSolutionEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+    {
+        public override ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random,
+                                                 DummySearchSpace<int> searchSpace,
+                                                 FuncProblem<int, DummySearchSpace<int>> problem)
+            => problem.Evaluate(candidate, random);
+    }
 }
