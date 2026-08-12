@@ -39,6 +39,27 @@ public class ActivatedTravelingSalesmanProblem : DynamicProblem<Permutation, Per
     public IReadOnlyList<bool> CurrentState { get; private set; }
     public double SwitchProbability { get; init; }
     public ITravelingSalesmanProblemData ProblemData { get; }
+    public ImmutableArray<int> ActiveCities => CurrentState
+                                                .Select((isActive, city) => (isActive, city))
+                                                .Where(x => x.isActive)
+                                                .Select(x => x.city)
+                                                .ToImmutableArray();
+
+    public ITravelingSalesmanProblemData CreateActiveSubproblemData()
+    {
+        var activeCities = ActiveCities;
+        var distances = new double[activeCities.Length, activeCities.Length];
+
+        for (var i = 0; i < activeCities.Length; i++)
+        {
+            for (var j = 0; j < activeCities.Length; j++)
+            {
+                distances[i, j] = ProblemData.GetDistance(activeCities[i], activeCities[j]);
+            }
+        }
+
+        return new TravelingSalesmanDistanceMatrixProblemData(distances);
+    }
 
     public override ObjectiveVector Evaluate(Permutation solution, IRandomNumberGenerator random,
                                              EvaluationTiming timing)
