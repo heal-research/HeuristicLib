@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public sealed record NeverTerminator<TCandidate>
-  : StatelessTerminator<TCandidate>
+    : StatelessTerminator<TCandidate>
 {
     public override bool IsTerminalState() => NeverTerminator.IsTerminalState();
 }

@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public sealed record IdentityInterceptor<TCandidate, TSearchState> : StatelessInterceptor<TCandidate, TSearchState>
-  where TSearchState : class, ISearchState
+    where TSearchState : class, ISearchState
 {
     public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => IdentityInterceptor.Transform(currentState, previousState);
 }
@@ -20,5 +20,5 @@ public static class IdentityInterceptor
         where TSearchState : class, ISearchState => new();
 
     public static TSearchState Transform<TSearchState>(TSearchState currentState, TSearchState? previousState)
-      where TSearchState : class, ISearchState => currentState;
+        where TSearchState : class, ISearchState => currentState;
 }

@@ -26,8 +26,7 @@ public sealed record DurationMeasuringTerminator<TCandidate, TSearchSpace, TProb
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
-        ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator) =>
+    protected override WrappingTerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator) =>
         new Instance(childTerminator, Duration, TimeProvider);
 
     private sealed class Instance(ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, ObservationDuration duration, TimeProvider timeProvider)

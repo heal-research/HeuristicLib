@@ -6,15 +6,15 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public sealed record ObservableInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-  : WrappingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
-  where TSearchState : class, ISearchState
+    : WrappingInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
 {
     public ValueArray<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> Observers { get; init; }
 
-    public ObservableInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> interceptor, params IReadOnlyList<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
-        : base(interceptor)
+    public ObservableInterceptor(IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, params IReadOnlyList<IInterceptorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
+        : base(childInterceptor)
     {
         Observers = observers.ToValueArray();
     }

@@ -26,7 +26,7 @@ public sealed record LimitEvaluator<TCandidate, TSearchSpace, TProblem>
     public bool EnforceLimitWithinBatch { get; init; }
 
     public LimitEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations)
-      : base(childEvaluator)
+        : base(childEvaluator)
     {
         MaxEvaluations = maxEvaluations;
     }

@@ -12,8 +12,8 @@ public sealed record ObservableTerminator<TCandidate, TSearchSpace, TProblem, TS
 {
     public ValueArray<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> Observers { get; init; }
 
-    public ObservableTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> terminator, params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
-        : base(terminator)
+    public ObservableTerminator(ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> childTerminator, params IReadOnlyList<ITerminatorObserver<TCandidate, TSearchSpace, TProblem, TSearchState>> observers)
+        : base(childTerminator)
     {
         Observers = observers.ToValueArray();
     }

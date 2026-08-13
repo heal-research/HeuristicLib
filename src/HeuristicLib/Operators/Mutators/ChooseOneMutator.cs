@@ -16,8 +16,13 @@ public sealed record ChooseOneMutator<TCandidate, TSearchSpace, TProblem>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     /// <summary>
-    /// Gets the configured weights, or an empty array when all child mutators are selected uniformly.
+    /// Relative selection weight of each child mutator, in child order. An empty collection selects every child
+    /// uniformly.
     /// </summary>
+    /// <remarks>
+    /// Weights are retained exactly as configured rather than normalized, so omitting them stays distinguishable from
+    /// passing equal weights.
+    /// </remarks>
     public ValueArray<double> Weights { get; init; }
 
     public ChooseOneMutator(IReadOnlyList<IMutator<TCandidate, TSearchSpace, TProblem>> childMutators)

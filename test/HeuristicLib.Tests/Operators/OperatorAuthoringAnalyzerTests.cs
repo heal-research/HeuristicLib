@@ -13,10 +13,12 @@ public class OperatorAuthoringAnalyzerTests
       using System.Collections.Generic;
       using HEAL.HeuristicLib.Execution;
       using HEAL.HeuristicLib.Operators;
+      using HEAL.HeuristicLib.Operators.Interceptors;
       using HEAL.HeuristicLib.Operators.Mutators;
       using HEAL.HeuristicLib.Problems;
       using HEAL.HeuristicLib.Random;
       using HEAL.HeuristicLib.SearchSpaces;
+      using HEAL.HeuristicLib.States;
 
       """;
 
@@ -338,6 +340,67 @@ public class OperatorAuthoringAnalyzerTests
         var diagnostic = diagnostics.ShouldHaveSingleItem();
         diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StateContractDiagnosticId);
         diagnostic.GetMessage().ShouldContain("ISearchSpace");
+    }
+
+    /// <summary>
+    /// Interceptor and terminator ladders carry a fifth type parameter, so a search state can land in the trailing
+    /// <c>TState</c> slot and still compile.
+    /// </summary>
+    [Fact]
+    public async Task StatefulInterceptor_RejectsSearchStateBoundAsStateTypeArgument()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed class TrapSearchState : ISearchState;
+
+          file sealed record TrapInterceptor : StatefulInterceptor<int, TrapSearchState, TrapSearchState>
+          {
+              protected override TrapSearchState CreateInitialState() => null!;
+
+              protected override TrapSearchState Transform(
+                  TrapSearchState currentState,
+                  TrapSearchState? previousState,
+                  TrapSearchState state,
+                  IRandomNumberGenerator random) => currentState;
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StateContractDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("TrapSearchState");
+        diagnostic.GetMessage().ShouldContain("TSearchState");
+    }
+
+    /// <summary>
+    /// An ordinary dedicated state type must remain valid on the same ladder.
+    /// </summary>
+    [Fact]
+    public async Task StatefulInterceptor_AllowsDedicatedStateType()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed class OrdinarySearchState : ISearchState;
+
+          file sealed record ValidInterceptor : StatefulInterceptor<int, OrdinarySearchState, ValidInterceptor.State>
+          {
+              public sealed class State
+              {
+                  public int Calls { get; set; }
+              }
+
+              protected override State CreateInitialState() => new();
+
+              protected override OrdinarySearchState Transform(
+                  OrdinarySearchState currentState,
+                  OrdinarySearchState? previousState,
+                  State state,
+                  IRandomNumberGenerator random)
+              {
+                  state.Calls++;
+                  return currentState;
+              }
+          }
+          """);
+
+        diagnostics.ShouldBeEmpty();
     }
 
     private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source)

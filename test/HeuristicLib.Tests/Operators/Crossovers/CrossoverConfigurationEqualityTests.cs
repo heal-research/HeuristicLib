@@ -326,8 +326,7 @@ public class CrossoverConfigurationEqualityTests
         {
         }
 
-        protected override MultiCrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-            ImmutableArray<ICrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers) =>
+        protected override MultiCrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<ICrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers) =>
             new Instance(childCrossovers);
 
         private sealed class Instance(ImmutableArray<ICrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers)

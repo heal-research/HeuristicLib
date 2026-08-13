@@ -59,6 +59,19 @@ public class ObservableEvaluatorTests
     }
 
     [Fact]
+    public void ObservableEvaluator_DoesNotInvokeObserversWhenEvaluationThrows()
+    {
+        var observed = 0;
+        var evaluator = new ThrowingEvaluator().ObserveWith((IReadOnlyList<int> _, IReadOnlyList<ObjectiveVector> _) => observed++);
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            evaluator.CreateExecutionInstance().Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        observed.ShouldBe(0);
+    }
+
+    [Fact]
     public void CountEvaluatorCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();

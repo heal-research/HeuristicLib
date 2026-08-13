@@ -267,8 +267,7 @@ public class MutatorConfigurationEqualityTests
         {
         }
 
-        protected override MultiMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-            ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators) =>
+        protected override MultiMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators) =>
             new Instance(childMutators);
 
         private sealed class Instance(ImmutableArray<IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childMutators)

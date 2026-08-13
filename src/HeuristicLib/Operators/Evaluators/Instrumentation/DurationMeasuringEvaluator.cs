@@ -26,8 +26,7 @@ public sealed record DurationMeasuringEvaluator<TCandidate, TSearchSpace, TProbl
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
+    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
         new Instance(childEvaluator, Duration, TimeProvider);
 
     private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObservationDuration duration, TimeProvider timeProvider)

@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
 public sealed record ParetoCrowdingReplacer<TCandidate>
-  : StatelessReplacer<TCandidate>
+    : StatelessReplacer<TCandidate>
 {
     public bool DominateOnEqualities { get; init; }
 

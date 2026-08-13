@@ -78,6 +78,19 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void ObservableCreator_DoesNotInvokeObserversWhenCreationThrows()
+    {
+        var observed = 0;
+        var instance = new ThrowingCreator().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        observed.ShouldBe(0);
+    }
+
+    [Fact]
     public void CountCreatorCalls_DoesNotIncrementWhenCreationThrows()
     {
         var counter = new ObservationCounter();
@@ -361,6 +374,19 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void ObservableCrossover_DoesNotInvokeObserversWhenCrossoverThrows()
+    {
+        var observed = 0;
+        var instance = new ThrowingCrossover().ObserveWith((IReadOnlyList<int> _) => observed++).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() =>
+            instance.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        observed.ShouldBe(0);
+    }
+
+    [Fact]
     public void CountCrossoverCalls_DoesNotIncrementWhenCrossoverThrows()
     {
         var counter = new ObservationCounter();
@@ -587,6 +613,25 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void ObservableReplacer_DoesNotInvokeObserversWhenReplacementThrows()
+    {
+        var observed = 0;
+        var instance = new ThrowingReplacer().ObserveWith((IReadOnlyList<EvaluatedCandidate<int>> _) => observed++).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.Replace(
+            CreateEvaluatedCandidates([1]),
+            CreateEvaluatedCandidates([2]),
+            problem.Objective,
+            1,
+            RandomNumberGenerator.Create(1),
+            problem.SearchSpace,
+            problem));
+
+        observed.ShouldBe(0);
+    }
+
+    [Fact]
     public void CountReplacerCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();
@@ -688,6 +733,18 @@ public class ObservableOperatorCounterTests
     }
 
     [Fact]
+    public void ObservableInterceptor_DoesNotInvokeObserversWhenTransformThrows()
+    {
+        var observed = 0;
+        var instance = new ThrowingInterceptor().ObserveWith((CounterState _) => observed++).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+
+        observed.ShouldBe(0);
+    }
+
+    [Fact]
     public void CountInterceptorCalls_DoesNotCountFailedCall()
     {
         var counter = new ObservationCounter();
@@ -741,6 +798,18 @@ public class ObservableOperatorCounterTests
         instance.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+    }
+
+    [Fact]
+    public void ObservableTerminator_DoesNotInvokeObserversWhenTerminalStateCheckThrows()
+    {
+        var observed = 0;
+        var instance = new ThrowingTerminator().ObserveWith((bool _) => observed++).CreateExecutionInstance();
+        var problem = CreateProblem();
+
+        Should.Throw<InvalidOperationException>(() => instance.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+
+        observed.ShouldBe(0);
     }
 
     [Fact]
@@ -828,8 +897,7 @@ public class ObservableOperatorCounterTests
     private sealed class CallbackMutator(MutateCallback callback)
         : IMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-            ExecutionInstanceRegistry instanceRegistry) =>
+        public IMutatorInstance<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
             new Instance(callback);
 
         private sealed class Instance(MutateCallback callback)

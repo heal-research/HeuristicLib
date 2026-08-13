@@ -14,8 +14,13 @@ public sealed record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     /// <summary>
-    /// Gets the configured weights, or an empty array when all child replacers are selected uniformly.
+    /// Relative selection weight of each child replacer, in child order. An empty collection selects every child
+    /// uniformly.
     /// </summary>
+    /// <remarks>
+    /// Weights are retained exactly as configured rather than normalized, so omitting them stays distinguishable from
+    /// passing equal weights.
+    /// </remarks>
     public ValueArray<double> Weights { get; init; }
 
     public ChooseOneReplacer(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> childReplacers)
@@ -43,13 +48,13 @@ public sealed record ChooseOneReplacer<TCandidate, TSearchSpace, TProblem>
 
 public static class ChooseOneReplacer
 {
-    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers)
+    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> childReplacers)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        => new(replacers);
+        => new(childReplacers);
 
-    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> replacers, IReadOnlyList<double> weights)
+    public static ChooseOneReplacer<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IReadOnlyList<IReplacer<TCandidate, TSearchSpace, TProblem>> childReplacers, IReadOnlyList<double> weights)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        new(replacers) { Weights = weights.ToValueArray() };
+        new(childReplacers) { Weights = weights.ToValueArray() };
 }

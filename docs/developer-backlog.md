@@ -37,6 +37,7 @@ Why these are only partial today:
 
 These are still real open items:
 
+- restructure the developer guidelines into a coherent, numbered hierarchy that separates document authority, contributor decision-making, architectural rules, contract and validation rules, public API design, implementation conventions, and enforcement. Treat the guide as policy for both human contributors and coding agents: normative decisions must be explicit, easy to locate and reference, and clearly distinguished from rationale and examples so agents can identify, explain, and warn about proposed code or documentation that conflicts with an established guideline. Preserve the guideline as the canonical policy document linked from `AGENTS.md`; perform the initial structural pass without intentionally changing policy, then review duplication and move topic-specific explanations only in a separate editorial pass
 - multi-objective short-path usage
 - generalize `PipelineAlgorithm` so consecutive algorithms may use different search state types
 - add explicit state transformations between `PipelineAlgorithm` stages, including transformations where the input and output state types are the same

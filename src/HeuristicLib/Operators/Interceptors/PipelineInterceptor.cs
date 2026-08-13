@@ -6,13 +6,13 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Interceptors;
 
 public sealed record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-  : MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-  where TSearchState : class, ISearchState
-  where TSearchSpace : class, ISearchSpace<TCandidate>
-  where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    : MultiInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchState : class, ISearchState
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public PipelineInterceptor(IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
-      : base(interceptors)
+    public PipelineInterceptor(IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
+        : base(childInterceptors)
     {
     }
 
@@ -37,10 +37,10 @@ public sealed record PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSe
 
 public static class PipelineInterceptor
 {
-    public static PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> interceptors)
+    public static PipelineInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<IInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
         where TSearchState : class, ISearchState
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. interceptors]);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childInterceptors);
 }
 
 public static class PipelineInterceptorExtensions

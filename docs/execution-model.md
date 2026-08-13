@@ -46,7 +46,7 @@ The configuration creates the instance and eagerly resolves its children:
 
 ```csharp
 protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    CreateIterativeAlgorithmInstance(ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
+    CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>? resolvedInterceptor);
 ```
 
 `resolvedInterceptor` is supplied by the base because the base declares and owns interceptor participation. The concrete instance creation method resolves its own dependencies through `registry`.
@@ -60,7 +60,7 @@ protected override TSearchState ExecuteStep(TSearchState? previousState, TProble
 The intended pattern is:
 
 - keep settings and child operator configurations on the reusable algorithm configuration
-- resolve child execution instances once in `CreateIterativeAlgorithmInstance(...)`
+- resolve child execution instances once in `CreateExecutionInstance(...)`
 - store resolved children and mutable execution data on the algorithm execution instance
 - keep configuration objects unchanged during execution
 

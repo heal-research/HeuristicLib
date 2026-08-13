@@ -8,10 +8,10 @@ using HEAL.HeuristicLib.States;
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
 public sealed record DirectEvaluator<TCandidate>
-  : StatelessEvaluator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    : StatelessEvaluator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
 {
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
-      => DirectEvaluator.Evaluate(candidates, random, problem);
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        DirectEvaluator.Evaluate(candidates, random, problem);
 }
 
 public static class DirectEvaluator
@@ -23,8 +23,6 @@ public static class DirectEvaluator
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState => new();
 
-    public static IReadOnlyList<ObjectiveVector> Evaluate<TCandidate>(
-      IReadOnlyList<TCandidate> candidates,
-      IRandomNumberGenerator random,
-      IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => problem.Evaluate(candidates, random);
+    public static IReadOnlyList<ObjectiveVector> Evaluate<TCandidate>(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        problem.Evaluate(candidates, random);
 }

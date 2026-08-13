@@ -14,12 +14,13 @@ The rejected typed-invocation spike led to a role-specific authoring rework rath
 
 - Mutator has been reworked and accepted as the reference role, including its arity ladders, stateless and stateful paths, single-candidate batching path, wrapping and multi topology, applicable concerns, construction paths, equality, and tests.
 - Selector has been reworked and accepted as the second common-shape role, including its arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and tests. Selector deliberately has no single-item base.
-- Crossover and Creator have been reworked to the same shape as the third slice and await acceptance, including their arity ladders, stateless and stateful paths, single-candidate batching paths, wrapping and multi topology, applicable concerns, construction paths, equality, and tests.
-- Replacer and Evaluator have been reworked together and await acceptance. Replacer follows the Selector whole-population shape; Evaluator follows the Creator batch shape and uses `SingleCandidateEvaluator` for scalar authoring with deterministic batching.
-- Interceptor and Terminator have been reworked together and await acceptance. Both include search-state-aware arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and tests. Interceptor operations receive the iteration RNG; Terminator additionally retains a state-agnostic candidate-only arity.
+- Crossover and Creator have been reworked to the same shape as the third slice and accepted, including their arity ladders, stateless and stateful paths, single-candidate batching paths, wrapping and multi topology, applicable concerns, construction paths, equality, and tests.
+- Replacer and Evaluator have been reworked together and accepted. Replacer follows the Selector whole-population shape; Evaluator follows the Creator batch shape and uses `SingleCandidateEvaluator` for scalar authoring with deterministic batching.
+- Interceptor and Terminator have been reworked together and accepted. Both include search-state-aware arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and tests. Interceptor operations receive the iteration RNG; Terminator additionally retains a state-agnostic candidate-only arity.
+- All eight roles have now passed a cross-role consistency review. The shared invariants are asserted by `OperatorTopologyTests` over every role namespace rather than checked by hand.
 - Source generation and deterministic scaffolding were considered and rejected for the current authoring model. New role families and cross-cutting concern adapters remain ordinary checked-in source; coding agents are the recommended optional scaffolding aid.
 
-The retained outcomes below describe architectural rules established by the spike and subsequent accepted slices. They must not be read as claiming that every operator role already implements those rules.
+The retained outcomes below describe architectural rules established by the spike and the subsequent accepted slices. All eight operator roles now implement them, and `OperatorTopologyTests` asserts the mechanically checkable ones over every role namespace.
 
 ## Original Goal
 
@@ -307,6 +308,7 @@ Reject the generator approach if the spike requires extensive string configurati
 - Resolve ordinary declared children eagerly through the supplied registry so registry identity and sharing remain authoritative.
 - A topology base may seal the public registry overload and expose a protected natural overload, also named `CreateExecutionInstance`, that receives the already-resolved child instance or instances.
 - Retain the registry only when runtime composition genuinely needs delayed resolution, replacements, or child registries.
+- Algorithms follow the same rule. `Algorithm.CreateExecutionInstance` is public and `IterativeAlgorithm` seals it beside a protected overload of the same name that also receives the resolved interceptor. The former `CreateAlgorithmInstance` and `CreateIterativeAlgorithmInstance` names, and the explicit interface implementation that hid the factory from concrete algorithm configurations, were removed.
 
 ### Genericity and public API usability
 
@@ -342,9 +344,8 @@ Reject the generator approach if the spike requires extensive string configurati
 ### Performance and deterministic randomness
 
 - High performance remains a first-class design constraint. Avoid unnecessary allocation, boxing, delegate creation, context construction, and interface indirection on operator hot paths.
-- Measure small abstractions before broad migration. Expensive operators do not excuse regressions that are material for lightweight operators.
-- Allocation measurements and throughput measurements are both required; success on one does not compensate automatically for regression on the other.
-- The measured spike result is historical decision evidence. Do not retain permanent benchmark infrastructure solely for a rejected design.
+- Expensive operators do not excuse regressions that are material for lightweight operators.
+- The repository has no benchmark project, and standing measurement is not required. The measured spike result below is historical decision evidence for a rejected design, not a baseline to maintain. Benchmark ad hoc when a specific change looks risky, and do not add permanent benchmark infrastructure without a separate decision.
 - Random sequences are assigned by logical item or key and remain independent of worker count, partitions, scheduling, concurrency limits, and CPU-core count.
 - Lightweight batching and per-item RNG-fork optimization remain a separate backlog concern. Do not require every RNG to become counter-based solely for that optimization.
 
@@ -372,13 +373,11 @@ Remove tests whose only purpose is proving generic `Invoke`, context forwarding,
 
 ## Rollback Review Task
 
-The rollback is one independently reviewable task:
+Completed. Retained as the record of what the rollback covered:
 
-1. Remove the rejected typed contracts, context types, and generic meta-operator bases.
-2. Restore direct role-method dispatch and role-specific mutator topology implementations.
-3. Preserve the retained configuration visibility, factory naming, registry ownership, variance, semantic tests, measured decision evidence, and backlog decisions described above.
-4. Update operator documentation so it does not present typed invocation as the intended architecture.
-5. Run focused mutator and operator tests, the complete core test project, API usage specs, the Release solution build, and formatting verification.
-6. Pause for explicit review before any further operator redesign or role migration.
+1. Removed the rejected typed contracts, context types, and generic meta-operator bases.
+2. Restored direct role-method dispatch and role-specific mutator topology implementations.
+3. Preserved the retained configuration visibility, factory naming, registry ownership, variance, semantic tests, measured decision evidence, and backlog decisions described above.
+4. Updated operator documentation so it does not present typed invocation as the intended architecture.
 
-The rollback must be selective. Existing user changes and unrelated accepted cleanup in the dirty worktree must not be reverted wholesale.
+The absence of the typed machinery listed under [Typed Machinery Not Retained](#typed-machinery-not-retained) has since been reverified across `src`, `test`, and `analyzers`.

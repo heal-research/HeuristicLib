@@ -13,7 +13,8 @@ public sealed record ElitismReplacer<TCandidate>
     /// </summary>
     /// <remarks>
     /// A nonpositive value retains no previous candidates. A negative value correspondingly increases the number
-    /// requested from the offspring population.
+    /// requested from the offspring population. The replacement never returns more than the requested count, so a
+    /// value above that count is capped and leaves no places for offspring.
     /// </remarks>
     public int Elites { get; init; }
 
@@ -22,10 +23,8 @@ public sealed record ElitismReplacer<TCandidate>
         Elites = elites;
     }
 
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
-    {
-        return ElitismReplacer.Replace(previousPopulation, offspringPopulation, objective, count, Elites);
-    }
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        ElitismReplacer.Replace(previousPopulation, offspringPopulation, objective, count, Elites);
 }
 
 public static class ElitismReplacer
@@ -35,8 +34,9 @@ public static class ElitismReplacer
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, int elites)
     {
-        var elitesPopulation = previousPopulation.OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer).Take(elites);
-        var remainingCount = count - Math.Min(previousPopulation.Count, elites);
+        var eliteCount = Math.Min(elites, count);
+        var elitesPopulation = previousPopulation.OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer).Take(eliteCount);
+        var remainingCount = count - Math.Min(previousPopulation.Count, eliteCount);
         var nonElites = offspringPopulation.Take(remainingCount);
 
         return elitesPopulation.Concat(nonElites).ToArray();

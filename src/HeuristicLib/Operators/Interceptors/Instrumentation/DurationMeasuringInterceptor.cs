@@ -27,8 +27,7 @@ public sealed record DurationMeasuringInterceptor<TCandidate, TSearchSpace, TPro
         TimeProvider = timeProvider;
     }
 
-    protected override WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor) =>
+    protected override WrappingInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor) =>
         new Instance(childInterceptor, Duration, TimeProvider);
 
     private sealed class Instance(IInterceptorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> childInterceptor, ObservationDuration duration, TimeProvider timeProvider)

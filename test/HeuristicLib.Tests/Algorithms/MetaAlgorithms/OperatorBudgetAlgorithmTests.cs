@@ -625,13 +625,19 @@ public class OperatorBudgetAlgorithmTests
         new AfterOperatorDurationTerminator<RealVector>(duration, TimeSpan.FromTicks(-1)).IsTerminalState().ShouldBeTrue();
     }
 
-    [Fact]
-    public void Constructor_Throws_WhenMaximumCountIsNotPositive()
+    /// <summary>
+    /// A nonpositive budget is a stable value rather than a rejected one. The budget is checked after each produced
+    /// state, so the stream stops after the first one.
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Stream_WithNonpositiveMaximumCount_StopsAfterFirstState(int maximumCount)
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
 
-        Should.Throw<ArgumentOutOfRangeException>(() =>
+        var budgeted =
             new OperatorBudgetAlgorithm<
                 RealVector,
                 RealVectorSearchSpace,
@@ -642,19 +648,23 @@ public class OperatorBudgetAlgorithmTests
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
-                MaximumCount = 0,
+                MaximumCount = maximumCount,
                 CountedOperatorFactory = static (observedOperator, counter) =>
                     observedOperator.CountEvaluatorCalls(counter)
-            });
+            };
+
+        budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
     }
 
-    [Fact]
-    public void OperatorDurationBudgetConstructor_Throws_WhenMaximumDurationIsNotPositive()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void OperatorDurationBudget_WithNonpositiveMaximumDuration_StopsAfterFirstState(int ticks)
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
 
-        Should.Throw<ArgumentOutOfRangeException>(() =>
+        var budgeted =
             new OperatorDurationBudgetAlgorithm<
                 RealVector,
                 RealVectorSearchSpace,
@@ -665,19 +675,23 @@ public class OperatorBudgetAlgorithmTests
             {
                 Algorithm = algorithm,
                 ObservedOperator = algorithm.Evaluator,
-                MaximumDuration = TimeSpan.Zero,
+                MaximumDuration = TimeSpan.FromTicks(ticks),
                 MeasuredOperatorFactory = static (observedOperator, duration, timeProvider) =>
                     observedOperator.MeasureEvaluatorDuration(duration, timeProvider)
-            });
+            };
+
+        budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
     }
 
-    [Fact]
-    public void AlgorithmDurationBudgetConstructor_Throws_WhenMaximumDurationIsNotPositive()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void AlgorithmDurationBudget_WithNonpositiveMaximumDuration_StopsAfterFirstState(int ticks)
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem);
 
-        Should.Throw<ArgumentOutOfRangeException>(() =>
+        var budgeted =
             new AlgorithmDurationBudgetAlgorithm<
                 RealVector,
                 RealVectorSearchSpace,
@@ -685,8 +699,10 @@ public class OperatorBudgetAlgorithmTests
                 PopulationState<RealVector>>
             {
                 Algorithm = algorithm,
-                MaximumDuration = TimeSpan.Zero
-            });
+                MaximumDuration = TimeSpan.FromTicks(ticks)
+            };
+
+        budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
     }
 
     private static TestFunctionProblem CreateProblem()

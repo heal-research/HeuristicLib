@@ -14,22 +14,22 @@ This decision supersedes the source-generation alternative retained in [typed-op
 
 ## Migration state at this decision
 
-The operator rework is partially complete. This status is retained here so the scaffolding decision is not mistaken for completion of the wider migration.
+All eight operator roles have been reworked and accepted. The table is retained as the record of what each role's accepted shape covers.
 
 | Operator role | Status | Accepted scope or remaining work |
 | --- | --- | --- |
 | Mutator | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateMutator`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. |
 | Selector | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. Selection has no single-item base because it is inherently a whole-population operation. |
-| Creator | Reworked, pending acceptance | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateCreator`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. `PredefinedCandidatesCreator` declares its fallback child directly instead of wrapping it. |
-| Crossover | Reworked, pending acceptance | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateCrossover`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. Crossover has no pipeline because it consumes parent groups rather than candidates produced by another crossover. |
-| Evaluator | Reworked, pending acceptance | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateEvaluator`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. |
-| Replacer | Reworked, pending acceptance | Role and execution-instance arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. Replacement has no single-item base because it is inherently a whole-population operation. |
-| Interceptor | Reworked, pending acceptance | Search-state-aware role and execution-instance arity ladders, stateless and stateful paths, wrapping and multi topology, pipeline composition, applicable concerns, construction paths, equality, and tests use the accepted shape. Interception receives the iteration RNG. |
-| Terminator | Reworked, pending acceptance | Search-state-aware role and execution-instance arity ladders, including the state-agnostic candidate-only form, stateless and stateful paths, wrapping and multi topology, logical composition, applicable concerns, construction paths, equality, and tests use the accepted shape. |
+| Creator | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateCreator`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. `PredefinedCandidatesCreator` declares its fallback child directly instead of wrapping it. |
+| Crossover | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateCrossover`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. Crossover has no pipeline because it consumes parent groups rather than candidates produced by another crossover. |
+| Evaluator | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, `SingleCandidateEvaluator`, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. |
+| Replacer | Reworked and accepted | Role and execution-instance arity ladders, stateless and stateful paths, wrapping and multi topology, applicable concerns, construction paths, equality, and focused authoring and behavior tests use the accepted shape. Replacement has no single-item base because it is inherently a whole-population operation. |
+| Interceptor | Reworked and accepted | Search-state-aware role and execution-instance arity ladders, stateless and stateful paths, wrapping and multi topology, pipeline composition, applicable concerns, construction paths, equality, and tests use the accepted shape. Interception receives the iteration RNG. |
+| Terminator | Reworked and accepted | Search-state-aware role and execution-instance arity ladders, including the state-agnostic candidate-only form, stateless and stateful paths, wrapping and multi topology, logical composition, applicable concerns, construction paths, equality, and tests use the accepted shape. |
 
-Some outstanding roles already received shared improvements such as `ValueArray<T>` for structural collection equality. Those changes do not complete their authoring migration: legacy role-named factories, `Inner*` topology, forwarding aliases, authoring conveniences, and concern shapes must still be reviewed role by role.
+Acceptance was confirmed by a cross-role consistency review covering the arity ladders, topology bases, construction paths, role contract variance, collection ownership and concern adapters. Legacy shapes such as role-named factories, `Inner*` topology and forwarding aliases are gone from all eight roles. `OperatorTopologyTests` now asserts the shared invariants over every role namespace, so a new role must be added to that matrix rather than reviewed by hand.
 
-The scaffolding mechanism is nevertheless settled for both completed and future migrations: do not build a Roslyn or deterministic code generator now; use ordinary source, optionally scaffolded and bulk-evolved by coding agents under normal review and validation.
+The scaffolding mechanism is settled for both completed and future migrations: do not build a Roslyn or deterministic code generator now; use ordinary source, optionally scaffolded and bulk-evolved by coding agents under normal review and validation.
 
 ## Scope
 
@@ -94,7 +94,7 @@ Coding agents are recommended for repetitive rollout, but their output is not as
 6. Add shared behavioral tests where possible and role-specific tests where semantics differ.
 7. Confirm that non-applicable roles were omitted deliberately rather than accidentally.
 
-An agent should inspect the current contracts and developer guidelines rather than copy the nearest file mechanically. Some roles may still contain legacy shapes while their migration is unfinished.
+An agent should inspect the current contracts and developer guidelines rather than copy the nearest file mechanically. All eight roles now follow the accepted shape, so any of them is a valid reference; Mutator remains the canonical one because its concerns and single-item base are the most complete.
 
 ## Correctness guardrails
 

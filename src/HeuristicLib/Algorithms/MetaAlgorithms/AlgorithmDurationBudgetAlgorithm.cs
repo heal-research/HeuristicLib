@@ -16,16 +16,14 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchSpace, TProble
     public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
-    public TimeSpan MaximumDuration
-    {
-        get;
-        init => field = value > TimeSpan.Zero
-            ? value
-            : throw new ArgumentOutOfRangeException(nameof(MaximumDuration), "MaximumDuration must be positive.");
-    }
+    /// <summary>
+    /// Gets the duration budget. The expected value is positive.
+    /// </summary>
+    /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
+    public TimeSpan MaximumDuration { get; init; }
 
-    protected override AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
-        new(registry.Resolve(Algorithm), MaximumDuration, TimeProvider);
+    public override AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new(instanceRegistry.Resolve(Algorithm), MaximumDuration, TimeProvider);
 }
 
 public sealed class AlgorithmDurationBudgetAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>

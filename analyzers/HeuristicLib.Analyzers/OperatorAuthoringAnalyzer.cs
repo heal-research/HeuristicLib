@@ -35,7 +35,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor StateContractRule = new(
         id: StateContractDiagnosticId,
         title: "Stateful operator state must be a dedicated state type",
-        messageFormat: "'{0}' is a framework contract type and cannot be operator state. Check the type argument order: a reduced stateful base ends in '<..., TState>' where the full base ends in '<..., TProblem, TState>'.",
+        messageFormat: "'{0}' is a framework contract type and cannot be operator state. Check the type argument order: the state type parameter is always last, so omitting an earlier argument such as TProblem or TSearchState shifts a framework contract into the TState position.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -102,6 +102,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         {
             "HEAL.HeuristicLib.Problems.IProblem`2",
             "HEAL.HeuristicLib.SearchSpaces.ISearchSpace",
+            "HEAL.HeuristicLib.States.ISearchState",
             "HEAL.HeuristicLib.Operators.IOperatorInstance"
         };
 

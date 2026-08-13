@@ -30,18 +30,16 @@ public record EvolutionStrategy<TCandidate, TSearchSpace, TProblem>
     public required ICrossover<TCandidate, TSearchSpace, TProblem>? Crossover { get; init; }
     public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new DirectEvaluator<TCandidate>();
     public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
-    public int? MaximumGenerations
-    {
-        get;
-        init => field = value is null or > 0
-          ? value
-          : throw new ArgumentOutOfRangeException(nameof(MaximumGenerations), "MaximumGenerations must be positive when set.");
-    }
+    /// <summary>
+    /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
+    /// </summary>
+    /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
+    public int? MaximumGenerations { get; init; }
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateIterativeAlgorithmInstance(ExecutionInstanceRegistry registry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
+    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor)
     {
-        var mutator = registry.Resolve(Mutator);
-        return new Instance(resolvedInterceptor, registry.Resolve(Evaluator), registry.Resolve(Creator), mutator, registry.Resolve(Selector), Crossover is null ? null : registry.Resolve(Crossover), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
+        var mutator = instanceRegistry.Resolve(Mutator);
+        return new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), mutator, instanceRegistry.Resolve(Selector), Crossover is null ? null : instanceRegistry.Resolve(Crossover), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
     }
 
     private sealed class Instance(

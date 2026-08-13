@@ -24,8 +24,8 @@ public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, 
         Algorithms = algorithms.ToValueArray();
     }
 
-    protected override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry) =>
-        new(registry, Algorithms);
+    public override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
+        new(instanceRegistry, Algorithms);
 }
 
 public static class PipelineAlgorithm

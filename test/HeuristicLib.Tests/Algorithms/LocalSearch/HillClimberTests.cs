@@ -60,8 +60,7 @@ public class HillClimberTests
       : ICreator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>,
         ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-          ExecutionInstanceRegistry instanceRegistry) => this;
+        public ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 
         public IReadOnlyList<int> Create(
           int count,
@@ -75,8 +74,7 @@ public class HillClimberTests
       : IMutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>,
         IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-          ExecutionInstanceRegistry instanceRegistry) => this;
+        public IMutatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
 
         public IReadOnlyList<int> Mutate(
           IReadOnlyList<int> parents,

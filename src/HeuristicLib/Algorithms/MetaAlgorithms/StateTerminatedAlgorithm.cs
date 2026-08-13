@@ -19,11 +19,11 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchSpace, TProblem, TSear
     public required IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm { get; init; }
     public required ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator { get; init; }
 
-    protected override StateTerminatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateAlgorithmInstance(ExecutionInstanceRegistry registry)
+    public override StateTerminatedAlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
     {
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start at the earliest point this wrapper controls, including wrapped algorithm instancing.
-        var terminator = registry.Resolve(Terminator);
-        return new(registry.Resolve(Algorithm), terminator);
+        var terminator = instanceRegistry.Resolve(Terminator);
+        return new(instanceRegistry.Resolve(Algorithm), terminator);
     }
 }
 

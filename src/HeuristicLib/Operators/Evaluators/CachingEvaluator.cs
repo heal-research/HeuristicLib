@@ -24,7 +24,7 @@ public record CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
     public long? SizeLimit { get; init; }
 
     public CachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
-      : base(childEvaluator)
+        : base(childEvaluator)
     {
         KeySelector = keySelector;
     }
@@ -102,20 +102,22 @@ public sealed record CachingEvaluator<TCandidate, TSearchSpace, TProblem>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     public CachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator)
-        : base(childEvaluator, CacheKeySelection<TCandidate>.Identity) { }
+        : base(childEvaluator, CacheKeySelection<TCandidate>.Identity)
+    {
+    }
 }
 
-public static class CachedEvaluatorExtensions
+public static class CachingEvaluatorExtensions
 {
     extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
         where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull
-            => new(evaluator, keySelector) { SizeLimit = sizeLimit };
+        public CachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>
+            new(evaluator, keySelector) { SizeLimit = sizeLimit };
 
-        public CachingEvaluator<TCandidate, TSearchSpace, TProblem> WithCache(long? sizeLimit = null)
-            => new(evaluator) { SizeLimit = sizeLimit };
+        public CachingEvaluator<TCandidate, TSearchSpace, TProblem> WithCache(long? sizeLimit = null) =>
+            new(evaluator) { SizeLimit = sizeLimit };
     }
 }

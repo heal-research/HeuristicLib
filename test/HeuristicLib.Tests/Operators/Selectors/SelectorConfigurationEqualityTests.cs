@@ -288,8 +288,7 @@ public class SelectorConfigurationEqualityTests
         {
         }
 
-        protected override MultiSelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-            ImmutableArray<ISelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childSelectors) =>
+        protected override MultiSelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<ISelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childSelectors) =>
             new Instance(childSelectors);
 
         private sealed class Instance(ImmutableArray<ISelectorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childSelectors)

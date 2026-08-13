@@ -4,7 +4,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public sealed record AfterIterationsTerminator<TCandidate>
-  : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
+    : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
 {
     public sealed class ExecutionState
     {

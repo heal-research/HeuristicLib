@@ -864,8 +864,7 @@ public class OperatorAuthoringSpecs
         {
         }
 
-        protected override WrappingSelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(
-            ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childSelector) =>
+        protected override WrappingSelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childSelector) =>
             new Instance(childSelector);
 
         private sealed class Instance(ISelectorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childSelector)
@@ -1263,8 +1262,7 @@ public class OperatorAuthoringSpecs
         {
         }
 
-        protected override WrappingMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(
-            IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childMutator) =>
+        protected override WrappingMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childMutator) =>
             new Instance(childMutator);
 
         private sealed class Instance(IMutatorInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> childMutator)

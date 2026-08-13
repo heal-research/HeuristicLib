@@ -112,15 +112,41 @@ public class GeneticAlgorithmSolvingTests
         results.All(result => result.Population.EvaluatedCandidates.Count == 5).ShouldBeTrue();
     }
 
-    [Fact]
-    public void Constructor_Throws_WhenMaximumGenerationsIsNotPositive()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Stream_WithNonpositiveMaximumGenerations_YieldsNoStates(int maximumGenerations)
     {
         var problem = CreateProblem();
-
-        Should.Throw<ArgumentOutOfRangeException>(() => CreateUnwrappedAlgorithm(problem) with
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
         {
-            MaximumGenerations = 0
-        });
+            MaximumGenerations = maximumGenerations
+        };
+
+        algorithm.Stream(problem, RandomNumberGenerator.Create(43), ct: TestContext.Current.CancellationToken).ShouldBeEmpty();
+    }
+
+    /// <summary>
+    /// The mutation rate is a threshold against a random value in <c>[0, 1)</c>, so values outside <c>[0, 1]</c> and
+    /// <c>NaN</c> have stable meanings instead of being rejected.
+    /// </summary>
+    [Theory]
+    [InlineData(-1.0)]
+    [InlineData(2.0)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void UnusualMutationRate_IsAccepted(double mutationRate)
+    {
+        var problem = CreateProblem();
+        var algorithm = CreateUnwrappedAlgorithm(problem) with
+        {
+            MutationRate = mutationRate,
+            MaximumGenerations = 2
+        };
+
+        algorithm.MutationRate.ShouldBe(mutationRate);
+        algorithm.Stream(problem, RandomNumberGenerator.Create(43), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
     }
 
     [Fact]

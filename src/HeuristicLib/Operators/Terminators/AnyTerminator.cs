@@ -10,8 +10,8 @@ public sealed record AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchSt
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public AnyTerminator(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
-      : base(terminators)
+    public AnyTerminator(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
+        : base(childTerminators)
     {
     }
 
@@ -28,10 +28,10 @@ public sealed record AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchSt
 
 public static class AnyTerminator
 {
-    public static AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> terminators)
+    public static AnyTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(params IReadOnlyList<ITerminator<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
         where TSearchState : class, ISearchState
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new([.. terminators]);
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childTerminators);
 }
 
 public static class AnyTerminatorExtensions

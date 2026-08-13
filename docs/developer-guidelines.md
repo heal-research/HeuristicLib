@@ -69,6 +69,8 @@ Explicit operator and algorithm creation methods receive the full `ExecutionInst
 
 Base configurations should expose one public `CreateExecutionInstance(...)` method with the exact execution instance role as its return type. Do not replace it with a parallel role-named factory such as `CreateSelectorInstance`. A topology base may seal the public factory and expose one protected post-resolution overload to derived configurations. Return the most concrete accessible execution instance type from that overload when it is useful to derived authors.
 
+This rule covers algorithms as well as operators. `Algorithm` declares the public `CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)`, and `IterativeAlgorithm` seals it and exposes the protected overload that additionally receives the resolved interceptor — the same shape `WrappingMutator` uses. Do not hide the factory behind an explicit interface implementation; a deliberate caller should not need a cast.
+
 Keep public constructors as the direct construction path. Add a static `Create` helper when its arguments can infer otherwise repetitive generic type parameters. Add a fluent extension when the receiver naturally becomes a child configuration. These entry points should construct the same configuration rather than introduce different semantics.
 
 A configuration setting is either required or optional, and that decision determines how it is declared. There is exactly one way to supply each setting.

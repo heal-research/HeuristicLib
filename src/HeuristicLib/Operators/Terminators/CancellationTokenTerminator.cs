@@ -4,12 +4,9 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
 public sealed record CancellationTokenTerminator<TCandidate>(CancellationToken CancellationToken)
-  : StatelessTerminator<TCandidate>
+    : StatelessTerminator<TCandidate>
 {
-    public override bool IsTerminalState()
-    {
-        return CancellationToken.IsCancellationRequested;
-    }
+    public override bool IsTerminalState() => CancellationToken.IsCancellationRequested;
 }
 
 public static class CancellationTokenTerminator

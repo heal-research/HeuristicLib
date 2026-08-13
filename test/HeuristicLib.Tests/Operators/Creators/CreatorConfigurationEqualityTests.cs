@@ -323,8 +323,7 @@ public class CreatorConfigurationEqualityTests
         {
         }
 
-        protected override MultiCreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(
-            ImmutableArray<ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators) =>
+        protected override MultiCreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators) =>
             new Instance(childCreators);
 
         private sealed class Instance(ImmutableArray<ICreatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCreators)
